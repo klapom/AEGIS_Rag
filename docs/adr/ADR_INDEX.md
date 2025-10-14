@@ -109,7 +109,7 @@ Für die Entwicklung und den Betrieb des AEGIS RAG Systems benötigen wir eine L
 - **Kosteneffizienz:** Entwicklung sollte ohne laufende API-Kosten möglich sein
 - **Offline-Fähigkeit:** Entwicklung auch ohne Internetverbindung
 - **Flexibilität:** Option für Production-Grade LLMs bei Bedarf
-- **Bundeswehr-Compliance:** Möglichkeit für vollständig lokalen Betrieb
+- **Compliance:** Möglichkeit für vollständig lokalen Betrieb
 - **Performance:** Akzeptable Latenz für Entwicklung und Testing
 
 ### Decision
@@ -158,7 +158,7 @@ Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **o
 - Nicht DSGVO-konform
 - Keine SLA/Enterprise Support
 - Daten gehen nach USA
-- Nicht für Bundeswehr geeignet
+
 
 #### 4. Vollständig lokale Lösung (nur Ollama)
 **Pro:**
@@ -187,10 +187,9 @@ Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **o
    - Keine API-Limits oder Throttling
    - Keine Abhängigkeit von Azure-Verfügbarkeit
 
-3. **Bundeswehr-Compliance:**
+3. **Compliance:**
    - Möglichkeit für vollständig air-gapped Deployment
    - Keine Daten verlassen lokales Netzwerk
-   - VS-NfD kompatibel (falls erforderlich)
 
 4. **Modern Model Performance:**
    - Llama 3.2 (3B/8B) sind hochperformant
@@ -255,7 +254,6 @@ def get_llm(task_type: str = "generation") -> BaseLLM:
 **Positive:**
 - ✅ **$0 Entwicklungskosten** für LLM API
 - ✅ **Offline-fähige Entwicklung** ohne Cloud-Abhängigkeit
-- ✅ **Bundeswehr-kompatibel** (air-gapped möglich)
 - ✅ **Kein Vendor Lock-in** - easy migration
 - ✅ **Fast Iteration** - keine API-Limits
 - ✅ **Privacy by Design** - Daten bleiben lokal
@@ -284,10 +282,10 @@ def get_llm(task_type: str = "generation") -> BaseLLM:
 
 ### Compliance & Security
 
-**Bundeswehr Requirements:**
-- ✅ **VS-NfD:** Ollama kann vollständig offline laufen
-- ✅ **Geheim:** Lokale Deployment ohne externe Verbindungen
-- ✅ **Data Residency:** 100% Deutschland/lokal
+**Security Requirements:**
+- ✅ Ollama kann vollständig offline laufen
+- ✅ Lokale Deployment ohne externe Verbindungen
+- ✅ **Data Residency:** 100% lokal
 - ⚠️ **Azure OpenAI:** Nur für nicht-klassifizierte Daten (DSGVO-konform)
 
 **Security Considerations:**

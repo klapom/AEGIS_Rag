@@ -1,5 +1,24 @@
 # CLAUDE.md - AegisRAG Project Context
 
+## 🔄 Session Continuity Check
+
+**Falls diese Session kompaktiert wurde:**
+1. Lies dieses gesamte CLAUDE.md Dokument
+2. Checke SPRINT_PLAN.md für aktuellen Sprint-Status
+3. Reaktiviere Subagenten-Context aus SUBAGENTS.md
+4. Verifiziere ADR-Awareness aus ADR_INDEX.md
+5. Bestätige Naming Conventions aus NAMING_CONVENTIONS.md
+
+**Zeichen für Context Loss:**
+- Du kennst Projekt-Struktur nicht mehr
+- Du fragst nach bereits beantworteten Architektur-Fragen
+- Du nutzt Subagenten nicht mehr systematisch
+- Du hältst dich nicht an Naming Conventions
+
+→ Dann: Context Refresh durchführen!
+
+---
+
 ## Project Overview
 **AegisRAG** (Agentic Enterprise Graph Intelligence System) ist ein produktionsreifes agentisches RAG-System mit vier Core-Komponenten:
 

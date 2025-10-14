@@ -1,13 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mv:*)",
-      "Bash(chmod:*)",
-      "Bash(tree:*)",
-      "Bash(git init:*)",
-      "Bash(git branch:*)",
-      "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(pwsh:*)",
+      "Bash(poetry install:*)"
     ],
     "deny": [],
     "ask": []

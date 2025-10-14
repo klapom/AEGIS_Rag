@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
 
 from src.api.health import router as health_router
+from src.api.v1.retrieval import router as retrieval_router
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -158,7 +159,8 @@ async def track_requests(request: Request, call_next):
 
 
 # Include routers
-app.include_router(health_router, prefix="/api/v1")
+app.include_router(health_router)
+app.include_router(retrieval_router)
 
 # Prometheus metrics endpoint
 metrics_app = make_asgi_app()
