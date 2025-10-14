@@ -38,7 +38,7 @@ class Settings(BaseSettings):
         default="http://localhost:11434", description="Ollama server URL"
     )
     ollama_model_generation: str = Field(
-        default="llama3.2:8b", description="Ollama model for generation"
+        default="llama3.1:8b", description="Ollama model for generation (128K context)"
     )
     ollama_model_query: str = Field(
         default="llama3.2:3b", description="Ollama model for query understanding"
