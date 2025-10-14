@@ -19,8 +19,8 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 | **Memory** | Graphiti | Latest | Custom | MemGPT | Temporal Awareness |
 | **Cache** | Redis | 7.x | Memcached | DragonflyDB | Persistence + Features |
 | **MCP** | Official Python SDK | Latest | TypeScript SDK | Custom | Native Support |
-| **LLM** | Ollama (Local) | Latest | Azure OpenAI GPT-4o | Anthropic Claude | Cost + Development (ADR-002) |
-| **Embeddings** | text-embedding-3-large | Latest | all-MiniLM-L6-v2 | Cohere | Quality + Dimension |
+| **LLM** | Ollama (llama3.2:3b/8b) | Latest | Azure OpenAI GPT-4o | Anthropic Claude | Cost-Free Dev + Local (ADR-002) |
+| **Embeddings** | nomic-embed-text (Ollama) | Latest | text-embedding-3-large | all-MiniLM-L6-v2 | Local + Cost-Free |
 | **Monitoring** | Prometheus + Grafana | Latest | Datadog | New Relic | Open Source |
 | **Logging** | Structlog | Latest | Python Logging | Loguru | Structured JSON |
 | **Container** | Docker | 24+ | Podman | - | Industry Standard |
@@ -67,9 +67,9 @@ pydantic-settings = "^2.5.0"
 ```toml
 langgraph = "^0.2.0"
 langchain-core = "^0.3.0"
-langchain-ollama = "^0.2.0"  # Primary for development
-langchain-openai = "^0.2.0"  # Optional for Azure OpenAI
-langchain-anthropic = "^0.2.0"  # Optional fallback
+langchain-ollama = "^0.2.0"  # Primary - Local & Cost-Free
+langchain-openai = "^0.2.0"  # Optional for Azure OpenAI (Production only)
+langchain-anthropic = "^0.2.0"  # Optional fallback (Production only)
 langgraph-checkpoint-postgres = "^0.2.0"  # State persistence
 ```
 
@@ -101,12 +101,12 @@ langgraph-checkpoint-postgres = "^0.2.0"  # State persistence
 **Key Dependencies:**
 ```toml
 llama-index = "^0.11.0"
-llama-index-llms-ollama = "^0.4.0"  # Primary for development
-llama-index-embeddings-ollama = "^0.4.0"  # Local embeddings
-llama-index-embeddings-openai = "^0.2.0"  # Optional for Azure
+llama-index-llms-ollama = "^0.4.0"  # Primary - Local & Cost-Free
+llama-index-embeddings-ollama = "^0.4.0"  # Primary - Local & Cost-Free
 llama-index-vector-stores-qdrant = "^0.3.0"
 llama-index-graph-stores-neo4j = "^0.3.0"
-llama-index-llms-openai = "^0.2.0"  # Optional for Azure
+llama-index-llms-openai = "^0.2.0"  # Optional for Azure (Production only)
+llama-index-embeddings-openai = "^0.2.0"  # Optional for Azure (Production only)
 ```
 
 **Why LlamaIndex?**
@@ -146,7 +146,7 @@ qdrant:
   port: 6333
   grpc_port: 6334
   collection: documents_v1
-  vector_size: 768  # nomic-embed-text (dev) or 3072 for Azure (prod)
+  vector_size: 768  # nomic-embed-text (Ollama, Primary) or 3072 for Azure (Optional)
   distance: Cosine
   quantization:
     type: scalar
@@ -282,9 +282,9 @@ graphiti = {git = "https://github.com/getzep/graphiti.git"}
 
 | Use Case | Development (Local) | Production (Optional) | Rationale |
 |----------|-------------------|---------------------|-----------|
-| **Query Understanding** | Ollama (llama3.2:3b) | Azure GPT-4o-mini | Speed + Cost-free Dev |
-| **Final Generation** | Ollama (llama3.2:8b) | Azure GPT-4o | Quality + Local Testing |
-| **Embedding** | nomic-embed-text | text-embedding-3-large | Local-first, Azure optional |
+| **Query Understanding** | Ollama (llama3.2:3b) | Azure GPT-4o-mini (Optional) | Speed + Cost-free Dev |
+| **Final Generation** | Ollama (llama3.2:8b) | Azure GPT-4o (Optional) | Quality + Local Testing |
+| **Embedding** | nomic-embed-text (Ollama) | text-embedding-3-large (Azure, Optional) | Local-first + Cost-Free |
 | **Reranking** | ms-marco-MiniLM-L12-v2 | cross-encoder/ms-marco-TinyBERT | Local processing |
 | **Entity Extraction** | Ollama (llama3.2:8b) | Azure GPT-4o | Structured output |
 | **Development/Testing** | Ollama (local) | N/A | Cost-free, offline capable |
@@ -503,10 +503,11 @@ langgraph = "^0.2.0"
 langchain-core = "^0.3.0"
 langchain-ollama = "^0.2.0"
 llama-index = "^0.11.0"
-llama-index-llms-ollama = "^0.4.0"
-ollama = "^0.3.0"
-openai = "^1.40.0"  # Optional for Azure OpenAI
-anthropic = "^0.34.0"  # Optional fallback
+llama-index-llms-ollama = "^0.4.0"  # Primary - Local & Cost-Free
+llama-index-embeddings-ollama = "^0.4.0"  # Primary - Local & Cost-Free
+ollama = "^0.3.0"  # Primary - Local & Cost-Free
+openai = "^1.40.0"  # Optional for Azure OpenAI (Production only)
+anthropic = "^0.34.0"  # Optional fallback (Production only)
 
 # Databases
 qdrant-client = "^1.11.0"
@@ -562,9 +563,10 @@ strict = true
 | **Total (Production - Cloud)** | - | **$300-1000** | With Azure OpenAI + managed services |
 
 **Cost Optimization Strategy:**
-- **Development:** 100% free with Ollama and local Docker containers
-- **Testing:** Use Ollama for all testing phases
-- **Production:** Optional Azure OpenAI integration only if needed
+- **Development:** 100% free with Ollama (llama3.2:3b/8b + nomic-embed-text) and local Docker containers
+- **Testing:** Use Ollama for all testing phases - no API costs
+- **Embeddings:** Always use nomic-embed-text (Ollama) - local and free
+- **Production:** Optional Azure OpenAI integration only if needed (LLM generation only)
 - **Caching:** Redis for frequent queries to reduce any API calls
 - **Scaling:** Start local, move to cloud only when necessary
 

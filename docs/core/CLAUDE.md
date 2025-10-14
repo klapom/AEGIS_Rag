@@ -31,8 +31,9 @@ Data Ingestion: LlamaIndex 0.11+
 Vector DB: Qdrant 1.10+
 Graph DB: Neo4j 5.x Community Edition
 Memory Cache: Redis 7.x with Persistence
-LLM: Ollama lokal (Primary), OpenAI GPT-4o (Fallback), Anthropic Claude (Fallback)
-Embeddings: text-embedding-3-large (OpenAI)
+LLM: Ollama (llama3.2:3b/8b) - Local & Cost-Free
+Embeddings: nomic-embed-text (Ollama) - Local & Cost-Free
+Optional Production: Azure OpenAI GPT-4o (if needed)
 MCP: Official Python SDK (anthropic/mcp)
 ```
 
@@ -226,11 +227,19 @@ async def retrieval_with_retry(query: str) -> List[Document]:
 
 ## Environment Variables
 
-### Required Secrets
+### Required Configuration
 ```bash
-# LLM APIs
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+# Ollama (Primary - No API Keys needed!)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL_GENERATION=llama3.2:8b
+OLLAMA_MODEL_QUERY=llama3.2:3b
+OLLAMA_MODEL_EMBEDDING=nomic-embed-text
+
+# Optional: Azure OpenAI (Production only)
+# USE_AZURE_LLM=false
+# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
+# AZURE_OPENAI_API_KEY=your-api-key
+# ANTHROPIC_API_KEY=sk-ant-...  # Optional fallback
 
 # Databases
 QDRANT_HOST=localhost

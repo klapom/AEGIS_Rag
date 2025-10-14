@@ -43,7 +43,7 @@ Core business logic, agent orchestration, retrieval algorithms, memory managemen
 - **Frameworks:** LangGraph, LangChain Core, LlamaIndex
 - **Libraries:** Pydantic v2, asyncio, tenacity
 - **Databases:** Qdrant SDK, Neo4j Python Driver, Redis-py
-- **AI/ML:** OpenAI API, Anthropic API, HuggingFace Transformers
+- **AI/ML:** Ollama (Primary), Azure OpenAI (Optional), HuggingFace Transformers
 
 ### File Ownership
 ```
