@@ -1,0 +1,300 @@
+{
+  "version": "1.0",
+  "project": "AegisRAG",
+  "description": "Safe command permissions for AegisRAG development with Claude Code",
+  
+  "auto_approve_patterns": [
+    {
+      "category": "Python Execution",
+      "patterns": [
+        "python -c *",
+        "python -m pytest*",
+        "python -m pip list",
+        "python -m pip show*",
+        "python scripts/*.py",
+        "python tests/*.py"
+      ]
+    },
+    {
+      "category": "Package Management",
+      "patterns": [
+        "poetry install*",
+        "poetry add*",
+        "poetry remove*",
+        "poetry update*",
+        "poetry show*",
+        "poetry check",
+        "poetry lock",
+        "poetry run*",
+        "pip install -e .*",
+        "pip install --upgrade pip",
+        "pip list",
+        "pip show*",
+        "pip freeze",
+        "uv pip*",
+        "uv venv",
+        "uv sync"
+      ]
+    },
+    {
+      "category": "Testing & Quality",
+      "patterns": [
+        "pytest*",
+        "black*",
+        "ruff check*",
+        "ruff format*",
+        "mypy*",
+        "bandit -r src/*",
+        "safety check*",
+        "pre-commit run*",
+        "pre-commit install",
+        "pre-commit autoupdate"
+      ]
+    },
+    {
+      "category": "Git (Safe Operations)",
+      "patterns": [
+        "git status",
+        "git diff*",
+        "git log*",
+        "git show*",
+        "git branch*",
+        "git remote -v",
+        "git fetch*",
+        "git pull*",
+        "git add*",
+        "git reset HEAD*",
+        "git restore*",
+        "git stash*",
+        "git checkout*",
+        "git switch*",
+        "git merge*",
+        "git rebase*",
+        "git tag*",
+        "git blame*",
+        "git commit -m *",
+        "git commit --amend"
+      ]
+    },
+    {
+      "category": "Docker (Local Development)",
+      "patterns": [
+        "docker compose up*",
+        "docker compose down",
+        "docker compose ps",
+        "docker compose logs*",
+        "docker compose exec*",
+        "docker compose restart*",
+        "docker compose stop",
+        "docker compose start",
+        "docker compose pull",
+        "docker compose build",
+        "docker compose config",
+        "docker ps*",
+        "docker images",
+        "docker logs*",
+        "docker exec -it*",
+        "docker inspect*",
+        "docker stats"
+      ]
+    },
+    {
+      "category": "File Operations (Read)",
+      "patterns": [
+        "cat *",
+        "head *",
+        "tail *",
+        "less *",
+        "more *",
+        "grep*",
+        "ls*",
+        "tree*",
+        "find*",
+        "wc*",
+        "file *",
+        "stat *"
+      ]
+    },
+    {
+      "category": "File Operations (Safe Modify)",
+      "patterns": [
+        "mkdir*",
+        "touch *",
+        "cp * *",
+        "mv * *",
+        "pwd",
+        "cd *"
+      ]
+    },
+    {
+      "category": "Development Servers",
+      "patterns": [
+        "uvicorn src.api.main:app*"
+      ]
+    },
+    {
+      "category": "Database CLI (Read-Only)",
+      "patterns": [
+        "redis-cli ping",
+        "redis-cli info",
+        "redis-cli --scan",
+        "cypher-shell * MATCH*",
+        "curl http://localhost:6333/*",
+        "curl http://localhost:7474/*"
+      ]
+    },
+    {
+      "category": "System Info",
+      "patterns": [
+        "which *",
+        "env | grep -v SECRET*",
+        "env | grep -v PASSWORD*",
+        "printenv PATH",
+        "uname -a",
+        "hostname",
+        "uptime",
+        "ps aux*",
+        "netstat -tulpn",
+        "lsof -i:*"
+      ]
+    },
+    {
+      "category": "Cleanup (Safe)",
+      "patterns": [
+        "find . -type d -name __pycache__ -exec rm -rf {} +",
+        "find . -type d -name *.egg-info -exec rm -rf {} +",
+        "find . -type d -name .pytest_cache -exec rm -rf {} +",
+        "find . -type d -name .mypy_cache -exec rm -rf {} +",
+        "find . -type d -name .ruff_cache -exec rm -rf {} +",
+        "find . -type f -name *.pyc -delete",
+        "find . -type f -name *.pyo -delete"
+      ]
+    },
+    {
+      "category": "Project Scripts",
+      "patterns": [
+        "python scripts/check_adr.py*",
+        "python scripts/check_naming.py*",
+        "bash scripts/setup_databases.sh",
+        "python scripts/migrate.py --dry-run*",
+        "python scripts/benchmark.py*"
+      ]
+    }
+  ],
+
+  "require_confirmation": [
+    {
+      "category": "Git (Potentially Destructive)",
+      "patterns": [
+        "git push*",
+        "git reset --hard*",
+        "git clean -fd*",
+        "git rm*"
+      ],
+      "reason": "Can affect remote repository or delete files"
+    },
+    {
+      "category": "File Deletion",
+      "patterns": [
+        "rm*",
+        "rmdir*"
+      ],
+      "reason": "File deletion requires explicit confirmation"
+    },
+    {
+      "category": "Database Modifications",
+      "patterns": [
+        "redis-cli del*",
+        "redis-cli flushdb*",
+        "redis-cli flushall*",
+        "cypher-shell * DELETE*",
+        "cypher-shell * CREATE*",
+        "cypher-shell * DROP*"
+      ],
+      "reason": "Database modifications need confirmation"
+    },
+    {
+      "category": "Docker (Potentially Destructive)",
+      "patterns": [
+        "docker rm*",
+        "docker rmi*",
+        "docker volume rm*",
+        "docker network rm*",
+        "docker system prune*"
+      ],
+      "reason": "Removes Docker resources"
+    },
+    {
+      "category": "Production Operations",
+      "patterns": [
+        "kubectl*",
+        "helm*",
+        "terraform apply*",
+        "aws*",
+        "gcloud*"
+      ],
+      "reason": "Production operations always require explicit approval"
+    }
+  ],
+
+  "always_deny": [
+    {
+      "patterns": [
+        "sudo *",
+        "rm -rf /",
+        "rm -rf /*",
+        "dd if=/dev/zero*",
+        ":(){ :|:& };:",
+        "curl * | bash",
+        "wget * | bash",
+        "curl * | sh",
+        "wget * | sh",
+        "chmod 777 -R /",
+        "chown -R * /",
+        "> /dev/sda"
+      ],
+      "reason": "Dangerous system operations that should never be auto-executed"
+    }
+  ],
+
+  "context_rules": {
+    "git_push": {
+      "condition": "branch in ['main', 'develop', 'master']",
+      "action": "require_confirmation",
+      "message": "Pushing to protected branch. Are you sure?"
+    },
+    "docker_down": {
+      "condition": "environment == 'production'",
+      "action": "always_deny",
+      "message": "Cannot stop production Docker services"
+    },
+    "database_delete": {
+      "condition": "environment == 'production'",
+      "action": "always_deny",
+      "message": "Cannot delete production database"
+    }
+  },
+
+  "environment_detection": {
+    "production_indicators": [
+      "ENVIRONMENT=production",
+      "ENV=prod",
+      "DEPLOY_ENV=production",
+      "kubernetes.io/namespace=production"
+    ],
+    "safe_indicators": [
+      "ENVIRONMENT=development",
+      "ENV=dev",
+      "ENVIRONMENT=local",
+      "localhost in connection strings"
+    ]
+  },
+
+  "notes": {
+    "usage": "This file defines which commands Claude Code can execute without asking for permission",
+    "safety": "Commands are categorized by risk level: auto_approve, require_confirmation, always_deny",
+    "context": "Some commands change behavior based on context (e.g., git branch, environment)",
+    "updates": "Update this file as new safe patterns emerge during development",
+    "override": "User can always override any decision with explicit approval"
+  }
+}

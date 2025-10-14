@@ -1,0 +1,361 @@
+# Claude Code - Approved Commands Configuration
+# Diese Befehle darf Claude Code ohne explizite Nachfrage ausführen
+
+# ==============================================================================
+# PYTHON & PACKAGE MANAGEMENT
+# ==============================================================================
+
+# Python Execution (Safe)
+python -c "..."
+python -m pytest
+python -m pip list
+python -m pip show
+python scripts/*.py
+python tests/*.py
+
+# Poetry (Package Manager)
+poetry install
+poetry install --no-root
+poetry add <package>
+poetry remove <package>
+poetry update
+poetry show
+poetry check
+poetry lock
+poetry run pytest
+poetry run python
+poetry run black
+poetry run ruff
+poetry run mypy
+
+# UV (Alternative Package Manager)
+uv pip install
+uv pip list
+uv pip show
+uv venv
+uv sync
+
+# Pip (Basic Package Management)
+pip install -e .
+pip install -e ".[dev]"
+pip install --upgrade pip
+pip list
+pip show <package>
+pip freeze
+
+# ==============================================================================
+# TESTING & CODE QUALITY
+# ==============================================================================
+
+# Pytest
+pytest
+pytest tests/
+pytest tests/unit/
+pytest tests/integration/
+pytest tests/e2e/
+pytest -v
+pytest -vv
+pytest --cov
+pytest --cov=src
+pytest --cov-report=html
+pytest --cov-report=term-missing
+pytest -k <test_name>
+pytest --lf
+pytest --failed-first
+pytest --cache-clear
+pytest -x
+pytest --maxfail=1
+
+# Code Formatting
+black .
+black src/
+black tests/
+black --check .
+black --diff .
+ruff check .
+ruff check src/
+ruff check --fix
+ruff format .
+ruff format src/
+
+# Type Checking
+mypy .
+mypy src/
+mypy --strict src/
+mypy --config-file=pyproject.toml
+
+# Linting
+ruff check src/ tests/
+bandit -r src/
+bandit -c pyproject.toml -r src/
+pydocstyle src/
+
+# Security
+safety check
+safety check --json
+
+# Pre-commit
+pre-commit run
+pre-commit run --all-files
+pre-commit install
+pre-commit uninstall
+pre-commit autoupdate
+pre-commit clean
+
+# ==============================================================================
+# GIT OPERATIONS
+# ==============================================================================
+
+# Safe Git Commands
+git status
+git diff
+git diff --staged
+git diff <file>
+git log
+git log --oneline
+git log --graph
+git show
+git show <commit>
+git branch
+git branch -a
+git remote -v
+git fetch
+git fetch --all
+git pull
+git pull origin <branch>
+git add .
+git add <file>
+git add -p
+git reset HEAD <file>
+git restore <file>
+git stash
+git stash list
+git stash pop
+git stash apply
+git checkout <branch>
+git checkout -b <branch>
+git switch <branch>
+git switch -c <branch>
+git merge <branch>
+git rebase <branch>
+git cherry-pick <commit>
+git tag
+git tag -l
+git describe
+git blame <file>
+
+# Git Commit (Safe Patterns)
+git commit -m "..."
+git commit --amend
+git commit --no-verify -m "..."
+
+# ==============================================================================
+# DOCKER & DOCKER COMPOSE
+# ==============================================================================
+
+# Docker Compose (Local Development)
+docker compose up
+docker compose up -d
+docker compose down
+docker compose ps
+docker compose logs
+docker compose logs -f
+docker compose logs <service>
+docker compose exec <service> sh
+docker compose exec <service> bash
+docker compose restart <service>
+docker compose stop
+docker compose start
+docker compose pull
+docker compose build
+docker compose config
+
+# Docker (Safe Commands)
+docker ps
+docker ps -a
+docker images
+docker logs <container>
+docker logs -f <container>
+docker exec -it <container> sh
+docker exec -it <container> bash
+docker inspect <container>
+docker stats
+docker system df
+docker volume ls
+docker network ls
+
+# ==============================================================================
+# FILE OPERATIONS (Safe)
+# ==============================================================================
+
+# Reading Files
+cat <file>
+head <file>
+tail <file>
+tail -f <file>
+less <file>
+more <file>
+grep <pattern> <file>
+grep -r <pattern> .
+
+# File Info
+ls
+ls -la
+ls -lh
+tree
+tree -L 2
+find . -name "*.py"
+find . -type f -name "*.py"
+wc -l <file>
+file <file>
+stat <file>
+
+# Directory Operations
+mkdir <dir>
+mkdir -p <dir>
+cd <dir>
+pwd
+
+# Safe File Modifications
+touch <file>
+cp <source> <dest>
+mv <source> <dest>
+
+# ==============================================================================
+# DEVELOPMENT TOOLS
+# ==============================================================================
+
+# FastAPI
+uvicorn src.api.main:app
+uvicorn src.api.main:app --reload
+uvicorn src.api.main:app --port 8000
+
+# Database CLIs (Read-Only preferred)
+redis-cli ping
+redis-cli info
+redis-cli --scan
+
+# Neo4j (via Cypher Shell)
+cypher-shell -u neo4j -p <password> "MATCH (n) RETURN count(n)"
+
+# Qdrant
+curl http://localhost:6333/health
+curl http://localhost:6333/collections
+
+# Environment
+env | grep -v SECRET
+env | grep -v PASSWORD
+printenv PATH
+
+# System Info
+which python
+which pip
+which docker
+uname -a
+hostname
+uptime
+
+# ==============================================================================
+# DOCUMENTATION & BUILD
+# ==============================================================================
+
+# Documentation
+mkdocs serve
+mkdocs build
+sphinx-build docs docs/_build
+
+# OpenAPI
+python -m scripts.generate_openapi
+
+# ==============================================================================
+# MONITORING & DEBUGGING
+# ==============================================================================
+
+# Logs
+tail -f logs/*.log
+journalctl -u <service> -f
+
+# Process Monitoring
+ps aux | grep python
+top -p <pid>
+htop
+
+# Network
+netstat -tulpn
+lsof -i :<port>
+curl localhost:8000/health
+curl localhost:6333/health
+
+# ==============================================================================
+# CLEANUP OPERATIONS (Safe)
+# ==============================================================================
+
+# Python Cache
+find . -type d -name "__pycache__" -exec rm -rf {} +
+find . -type d -name "*.egg-info" -exec rm -rf {} +
+find . -type d -name ".pytest_cache" -exec rm -rf {} +
+find . -type d -name ".mypy_cache" -exec rm -rf {} +
+find . -type d -name ".ruff_cache" -exec rm -rf {} +
+find . -type f -name "*.pyc" -delete
+find . -type f -name "*.pyo" -delete
+
+# ==============================================================================
+# EXPLICITLY FORBIDDEN COMMANDS
+# ==============================================================================
+
+# These commands should NEVER be auto-approved:
+# - rm -rf / (destructive)
+# - rm -rf * (destructive)
+# - sudo <anything> (privilege escalation)
+# - curl | bash (security risk)
+# - wget | bash (security risk)
+# - dd if=/dev/zero of=/dev/sda (disk wipe)
+# - iptables (network changes)
+# - systemctl stop/start (system services)
+# - kill -9 <production-pid> (production impact)
+# - docker rm -f $(docker ps -aq) (removes all containers)
+# - git push --force (potential data loss)
+# - git reset --hard HEAD~10 (potential data loss)
+# - dropdb <production-db> (data loss)
+# - kubectl delete (production impact)
+
+# ==============================================================================
+# NOTES FOR CLAUDE CODE
+# ==============================================================================
+
+# SAFE PATTERNS:
+# - Read operations (cat, ls, git status, docker ps)
+# - Local testing (pytest, black, mypy)
+# - Local dev environment (docker compose up)
+# - Package management with lock files (poetry, pip)
+# - Git operations without force-push
+
+# ASK USER FIRST:
+# - Any command with "rm -rf"
+# - Any command with "sudo"
+# - Any command affecting production
+# - Any command that modifies .git/config
+# - Any command that could expose secrets
+# - Any network-bound operations to production systems
+
+# CONTEXT-AWARE:
+# - "git push" is OK for feature branches
+# - "git push" requires confirmation for main/develop
+# - "docker compose down" is OK locally
+# - "kubectl" commands always require confirmation
+
+# ==============================================================================
+# CUSTOM SCRIPTS (Project-Specific)
+# ==============================================================================
+
+# Project-specific safe scripts
+python scripts/check_adr.py
+python scripts/check_naming.py
+python scripts/setup_databases.sh
+python scripts/migrate.py --dry-run
+python scripts/benchmark.py
+python tests/performance/benchmark.py
+
+# ==============================================================================
+# CONFIGURATION END
+# ==============================================================================

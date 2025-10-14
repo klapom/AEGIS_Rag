@@ -1,0 +1,48 @@
+# AEGIS RAG - Code Owners
+# This file defines who is responsible for code review in different parts of the repository.
+# GitHub will automatically request reviews from these owners when PRs affect their areas.
+
+# Documentation - requires review from documentation team
+/docs/ @aegis-rag-team/docs
+
+# Core application code
+/src/ @aegis-rag-team/backend
+
+# RAG implementation
+/src/rag/ @aegis-rag-team/rag-experts
+
+# API endpoints
+/src/api/ @aegis-rag-team/api
+
+# Database models and migrations
+/src/models/ @aegis-rag-team/data
+/src/repositories/ @aegis-rag-team/data
+
+# AI/ML components
+/src/agents/ @aegis-rag-team/ml
+/src/embeddings/ @aegis-rag-team/ml
+
+# Infrastructure and DevOps
+/.github/ @aegis-rag-team/devops
+/docker/ @aegis-rag-team/devops
+/scripts/ @aegis-rag-team/devops
+
+# Configuration files - requires careful review
+*.yaml @aegis-rag-team/devops
+*.yml @aegis-rag-team/devops
+*.toml @aegis-rag-team/backend
+*.json @aegis-rag-team/backend
+
+# Security-sensitive files - requires security team review
+/.env.* @aegis-rag-team/security
+/src/auth/ @aegis-rag-team/security
+/src/security/ @aegis-rag-team/security
+
+# Tests - can be reviewed by any team member
+/tests/ @aegis-rag-team/qa
+
+# Architecture Decision Records - requires architecture review
+/docs/adr/ @aegis-rag-team/architects
+
+# Default fallback - requires at least one review from any team member
+* @aegis-rag-team/core
