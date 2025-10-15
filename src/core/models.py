@@ -50,9 +50,7 @@ class QueryRequest(BaseModel):
     """Request model for RAG query."""
 
     query: str = Field(..., description="User query", min_length=1, max_length=2000)
-    mode: QueryMode = Field(
-        default=QueryMode.HYBRID, description="Query mode for retrieval"
-    )
+    mode: QueryMode = Field(default=QueryMode.HYBRID, description="Query mode for retrieval")
     top_k: int = Field(default=5, description="Number of results to retrieve", ge=1, le=50)
     score_threshold: float = Field(
         default=0.7, description="Minimum relevance score", ge=0.0, le=1.0
@@ -88,9 +86,7 @@ class QueryResponse(BaseModel):
     """Response model for RAG query."""
 
     answer: str = Field(..., description="Generated answer")
-    sources: list[DocumentChunk] = Field(
-        default_factory=list, description="Source documents used"
-    )
+    sources: list[DocumentChunk] = Field(default_factory=list, description="Source documents used")
     query_intent: QueryIntent = Field(..., description="Detected query intent")
     processing_time_ms: float = Field(..., description="Query processing time in milliseconds")
     conversation_id: str | None = Field(None, description="Conversation ID")

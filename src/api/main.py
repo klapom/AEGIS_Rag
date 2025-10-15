@@ -106,19 +106,19 @@ async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     """Handle Pydantic validation errors."""
-    logger.warning(
-        "validation_error", errors=exc.errors(), path=request.url.path
-    )
+    logger.warning("validation_error", errors=exc.errors(), path=request.url.path)
 
     # Convert validation errors to JSON-serializable format
     errors = []
     for error in exc.errors():
         # Only include essential fields to avoid serialization issues
-        errors.append({
-            "loc": error.get("loc", []),
-            "msg": error.get("msg", ""),
-            "type": error.get("type", ""),
-        })
+        errors.append(
+            {
+                "loc": error.get("loc", []),
+                "msg": error.get("msg", ""),
+                "type": error.get("type", ""),
+            }
+        )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -126,7 +126,9 @@ async def validation_exception_handler(
             error="ValidationError",
             message="Request validation failed",
             details={"errors": errors},
-        ).model_dump(mode="json"),  # mode="json" serializes datetime objects
+        ).model_dump(
+            mode="json"
+        ),  # mode="json" serializes datetime objects
     )
 
 
@@ -165,9 +167,7 @@ async def track_requests(request: Request, call_next):
     REQUEST_COUNT.labels(
         method=request.method, endpoint=request.url.path, status=response.status_code
     ).inc()
-    REQUEST_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(
-        latency
-    )
+    REQUEST_LATENCY.labels(method=request.method, endpoint=request.url.path).observe(latency)
 
     # Add response headers
     response.headers["X-Process-Time"] = str(latency)

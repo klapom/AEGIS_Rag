@@ -263,9 +263,7 @@ class EmbeddingService:
                 # Process in batches
                 for i in range(0, len(uncached_texts), self.batch_size):
                     batch = uncached_texts[i : i + self.batch_size]
-                    batch_embeddings = await self._embedding_model.aget_text_embedding_batch(
-                        batch
-                    )
+                    batch_embeddings = await self._embedding_model.aget_text_embedding_batch(batch)
                     new_embeddings.extend(batch_embeddings)
 
                 # Map embeddings back to original indices and cache them

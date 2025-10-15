@@ -38,14 +38,9 @@ class SearchRequest(BaseModel):
         description="Search query text",
         min_length=1,
         max_length=1000,  # P1: Prevent excessive queries
-        examples=["What is RAG?"]
+        examples=["What is RAG?"],
     )
-    top_k: int = Field(
-        10,
-        description="Number of results to return",
-        ge=1,
-        le=100
-    )
+    top_k: int = Field(10, description="Number of results to return", ge=1, le=100)
     search_type: str = Field(
         "hybrid",
         description="Search type: 'vector', 'bm25', or 'hybrid'",
@@ -95,20 +90,10 @@ class IngestionRequest(BaseModel):
         description="Directory containing documents (relative to documents_base_path)",
         min_length=1,
         max_length=500,  # P1: Prevent path injection
-        examples=["./data/sample_documents"]
+        examples=["./data/sample_documents"],
     )
-    chunk_size: int = Field(
-        512,
-        description="Maximum tokens per chunk",
-        ge=128,
-        le=2048
-    )
-    chunk_overlap: int = Field(
-        128,
-        description="Overlap between chunks",
-        ge=0,
-        le=512
-    )
+    chunk_size: int = Field(512, description="Maximum tokens per chunk", ge=128, le=2048)
+    chunk_overlap: int = Field(128, description="Overlap between chunks", ge=0, le=512)
     file_extensions: list[str] | None = Field(
         None,
         description="File extensions to process (default: .pdf, .txt, .md)",
@@ -230,8 +215,7 @@ async def search(
         logger.error("Search failed", error=str(e), query=search_params.query, exc_info=True)
         # P1: Don't expose internal error details to client
         raise HTTPException(
-            status_code=500,
-            detail="Search operation failed. Please try again or contact support."
+            status_code=500, detail="Search operation failed. Please try again or contact support."
         ) from None
 
 
@@ -311,11 +295,13 @@ async def ingest(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Ingestion failed", error=str(e), input_dir=ingest_params.input_dir, exc_info=True)
+        logger.error(
+            "Ingestion failed", error=str(e), input_dir=ingest_params.input_dir, exc_info=True
+        )
         # P1: Don't expose internal error details
         raise HTTPException(
             status_code=500,
-            detail="Document ingestion failed. Please check your input and try again."
+            detail="Document ingestion failed. Please check your input and try again.",
         ) from None
 
 
@@ -400,12 +386,14 @@ async def get_stats():
 # Authentication Endpoint
 class TokenRequest(BaseModel):
     """Token request model."""
+
     username: str = Field(..., description="Username")
     password: str = Field(..., description="Password")
 
 
 class TokenResponse(BaseModel):
     """Token response model."""
+
     access_token: str
     token_type: str = "bearer"
 

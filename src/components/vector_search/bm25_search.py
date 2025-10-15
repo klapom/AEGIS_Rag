@@ -81,7 +81,9 @@ class BM25Search:
                 "Tokenization complete",
                 total_docs=len(tokenized_corpus),
                 non_empty_docs=non_empty_docs,
-                sample_tokens=tokenized_corpus[0][:10] if tokenized_corpus and tokenized_corpus[0] else [],
+                sample_tokens=(
+                    tokenized_corpus[0][:10] if tokenized_corpus and tokenized_corpus[0] else []
+                ),
             )
 
             # Safety check: Ensure we have tokenized content

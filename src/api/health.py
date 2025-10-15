@@ -25,24 +25,18 @@ async def check_qdrant() -> ServiceHealth:
     try:
         client = QdrantClient(
             url=settings.qdrant_url,
-            api_key=settings.qdrant_api_key.get_secret_value()
-            if settings.qdrant_api_key
-            else None,
+            api_key=settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None,
             timeout=5.0,
         )
         # Simple health check
         _ = client.get_collections()
         latency_ms = (time.time() - start_time) * 1000
 
-        return ServiceHealth(
-            status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None
-        )
+        return ServiceHealth(status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None)
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
         logger.error("qdrant_health_check_failed", error=str(e))
-        return ServiceHealth(
-            status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e)
-        )
+        return ServiceHealth(status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e))
 
 
 async def check_neo4j() -> ServiceHealth:
@@ -62,15 +56,11 @@ async def check_neo4j() -> ServiceHealth:
         driver.close()
         latency_ms = (time.time() - start_time) * 1000
 
-        return ServiceHealth(
-            status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None
-        )
+        return ServiceHealth(status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None)
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
         logger.error("neo4j_health_check_failed", error=str(e))
-        return ServiceHealth(
-            status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e)
-        )
+        return ServiceHealth(status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e))
 
 
 async def check_redis() -> ServiceHealth:
@@ -79,22 +69,16 @@ async def check_redis() -> ServiceHealth:
     start_time = time.time()
 
     try:
-        client = Redis.from_url(
-            settings.redis_url, decode_responses=True, socket_timeout=5.0
-        )
+        client = Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=5.0)
         client.ping()
         client.close()
         latency_ms = (time.time() - start_time) * 1000
 
-        return ServiceHealth(
-            status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None
-        )
+        return ServiceHealth(status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None)
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
         logger.error("redis_health_check_failed", error=str(e))
-        return ServiceHealth(
-            status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e)
-        )
+        return ServiceHealth(status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e))
 
 
 async def check_ollama() -> ServiceHealth:
@@ -109,15 +93,11 @@ async def check_ollama() -> ServiceHealth:
 
         latency_ms = (time.time() - start_time) * 1000
 
-        return ServiceHealth(
-            status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None
-        )
+        return ServiceHealth(status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None)
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
         logger.error("ollama_health_check_failed", error=str(e))
-        return ServiceHealth(
-            status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e)
-        )
+        return ServiceHealth(status=HealthStatus.UNHEALTHY, latency_ms=latency_ms, error=str(e))
 
 
 @router.get(
@@ -150,12 +130,8 @@ async def health_check() -> HealthResponse:
     }
 
     # Determine overall status
-    unhealthy_count = sum(
-        1 for s in services.values() if s.status == HealthStatus.UNHEALTHY
-    )
-    degraded_count = sum(
-        1 for s in services.values() if s.status == HealthStatus.DEGRADED
-    )
+    unhealthy_count = sum(1 for s in services.values() if s.status == HealthStatus.UNHEALTHY)
+    degraded_count = sum(1 for s in services.values() if s.status == HealthStatus.DEGRADED)
 
     if unhealthy_count > 0:
         overall_status = HealthStatus.UNHEALTHY
@@ -171,9 +147,7 @@ async def health_check() -> HealthResponse:
         degraded=degraded_count,
     )
 
-    return HealthResponse(
-        status=overall_status, version=settings.app_version, services=services
-    )
+    return HealthResponse(status=overall_status, version=settings.app_version, services=services)
 
 
 @router.get(

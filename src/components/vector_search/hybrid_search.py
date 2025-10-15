@@ -78,15 +78,17 @@ class HybridSearch:
             # Format results
             formatted_results = []
             for rank, result in enumerate(results, start=1):
-                formatted_results.append({
-                    "id": str(result["id"]),
-                    "text": result["payload"].get("text", ""),
-                    "score": result["score"],
-                    "source": result["payload"].get("source", "unknown"),
-                    "document_id": result["payload"].get("document_id", ""),
-                    "rank": rank,
-                    "search_type": "vector",
-                })
+                formatted_results.append(
+                    {
+                        "id": str(result["id"]),
+                        "text": result["payload"].get("text", ""),
+                        "score": result["score"],
+                        "source": result["payload"].get("source", "unknown"),
+                        "document_id": result["payload"].get("document_id", ""),
+                        "rank": rank,
+                        "search_type": "vector",
+                    }
+                )
 
             logger.debug(
                 "Vector search completed",
@@ -120,15 +122,17 @@ class HybridSearch:
             # Format results
             formatted_results = []
             for result in results:
-                formatted_results.append({
-                    "id": result.get("metadata", {}).get("id", ""),
-                    "text": result["text"],
-                    "score": result["score"],
-                    "source": result.get("metadata", {}).get("source", "unknown"),
-                    "document_id": result.get("metadata", {}).get("document_id", ""),
-                    "rank": result["rank"],
-                    "search_type": "bm25",
-                })
+                formatted_results.append(
+                    {
+                        "id": result.get("metadata", {}).get("id", ""),
+                        "text": result["text"],
+                        "score": result["score"],
+                        "source": result.get("metadata", {}).get("source", "unknown"),
+                        "document_id": result.get("metadata", {}).get("document_id", ""),
+                        "rank": result["rank"],
+                        "search_type": "bm25",
+                    }
+                )
 
             logger.debug(
                 "BM25 search completed",
@@ -272,6 +276,7 @@ class HybridSearch:
                     if "_node_content" in point.payload:
                         # LlamaIndex format - parse JSON
                         import json
+
                         try:
                             node_content = json.loads(point.payload["_node_content"])
                             text = node_content.get("text", "")
@@ -285,7 +290,9 @@ class HybridSearch:
                         "id": str(point.id),
                         "text": text,
                         "source": point.payload.get("file_name", point.payload.get("source", "")),
-                        "document_id": point.payload.get("document_id", point.payload.get("doc_id", "")),
+                        "document_id": point.payload.get(
+                            "document_id", point.payload.get("doc_id", "")
+                        ),
                     }
                     documents.append(doc)
 

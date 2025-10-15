@@ -122,7 +122,9 @@ def weighted_reciprocal_rank_fusion(
     rrf_scores = defaultdict(float)
     doc_data = {}
 
-    for _ranking_idx, (ranking, weight) in enumerate(zip(rankings, normalized_weights, strict=False)):
+    for _ranking_idx, (ranking, weight) in enumerate(
+        zip(rankings, normalized_weights, strict=False)
+    ):
         for rank, doc in enumerate(ranking, start=1):
             doc_id = doc.get(id_field, doc.get("text", str(rank)))
 
@@ -179,10 +181,7 @@ def analyze_ranking_diversity(
     # Get top-k IDs from each ranking
     ranking_sets = []
     for ranking in rankings:
-        ids = [
-            doc.get(id_field, doc.get("text", str(i)))
-            for i, doc in enumerate(ranking[:top_k])
-        ]
+        ids = [doc.get(id_field, doc.get("text", str(i))) for i, doc in enumerate(ranking[:top_k])]
         ranking_sets.append(set(ids))
 
     # Calculate metrics

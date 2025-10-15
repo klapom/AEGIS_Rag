@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/v1/health", tags=["health"])
 
 class HealthStatus(BaseModel):
     """Health check status."""
+
     status: str  # "healthy", "degraded", "unhealthy"
     version: str
     environment: str
@@ -27,6 +28,7 @@ class HealthStatus(BaseModel):
 
 class DependencyHealth(BaseModel):
     """Individual dependency health."""
+
     name: str
     status: str  # "up", "down", "degraded"
     latency_ms: float
@@ -35,6 +37,7 @@ class DependencyHealth(BaseModel):
 
 class DetailedHealthResponse(BaseModel):
     """Detailed health check response."""
+
     status: str
     version: str
     environment: str
@@ -83,6 +86,7 @@ async def detailed_health_check():
     # Check Qdrant
     try:
         import time
+
         start = time.time()
 
         qdrant = QdrantClientWrapper()
@@ -98,7 +102,7 @@ async def detailed_health_check():
                 "host": settings.qdrant_host,
                 "port": settings.qdrant_port,
                 "collections_count": len(collections) if collections else 0,
-            }
+            },
         )
 
     except Exception as e:
@@ -107,13 +111,14 @@ async def detailed_health_check():
             name="Qdrant Vector Database",
             status="down",
             latency_ms=0.0,
-            details={"error": "Connection failed"}
+            details={"error": "Connection failed"},
         )
         overall_status = "unhealthy"
 
     # Check Ollama Embedding Service
     try:
         import time
+
         start = time.time()
 
         embedding_service = EmbeddingService()
@@ -129,7 +134,7 @@ async def detailed_health_check():
                 "model": settings.ollama_model_embedding,
                 "base_url": settings.ollama_base_url,
                 "embedding_dimension": len(test_embedding),
-            }
+            },
         )
 
     except Exception as e:
@@ -138,7 +143,7 @@ async def detailed_health_check():
             name="Ollama Embedding Service",
             status="down",
             latency_ms=0.0,
-            details={"error": "Service unavailable"}
+            details={"error": "Service unavailable"},
         )
         overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
 
@@ -171,9 +176,9 @@ async def readiness_check():
     except Exception as e:
         logger.warning("Readiness check failed", error=str(e))
         from fastapi import HTTPException
+
         raise HTTPException(
-            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service not ready"
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service not ready"
         ) from e
 
 
