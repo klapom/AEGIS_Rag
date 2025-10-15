@@ -9,6 +9,21 @@ the vector_search foundation:
 - Adaptive Chunking: Document-type specific chunking strategies
 """
 
-from src.components.retrieval.reranker import CrossEncoderReranker
+from src.components.retrieval.query_decomposition import (
+    DecompositionResult,
+    QueryClassification,
+    QueryDecomposer,
+    QueryType,
+    SubQuery,
+)
+from src.components.retrieval.reranker import CrossEncoderReranker, RerankResult
 
-__all__ = ["CrossEncoderReranker"]
+__all__ = [
+    "CrossEncoderReranker",
+    "RerankResult",
+    "QueryDecomposer",
+    "QueryType",
+    "QueryClassification",
+    "SubQuery",
+    "DecompositionResult",
+]
