@@ -12,7 +12,8 @@
       "Bash(where uv)",
       "Bash(uv run pytest:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(pytest:*)"
     ],
     "deny": [],
     "ask": []
