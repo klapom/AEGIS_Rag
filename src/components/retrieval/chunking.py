@@ -207,7 +207,7 @@ class AdaptiveChunker:
         # Filter out empty paragraphs
         paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-        nodes: list[Chunk] = []
+        nodes: list[TextNode] = []
         current_chunk: list[str] = []
         current_size: int = 0
 
@@ -301,7 +301,7 @@ class AdaptiveChunker:
                 chunks.append(section)
                 i += 1
 
-        nodes: list[Chunk] = []
+        nodes: list[TextNode] = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -371,8 +371,7 @@ class AdaptiveChunker:
         # If no functions found, fall back to sentence splitting
         if not function_starts:
             logger.debug("No functions detected, using sentence splitting")
-            sentence_nodes = self._sentence_splitter.get_nodes_from_documents([doc])
-            return [self._node_to_chunk(node, doc) for node in sentence_nodes]
+            return self._sentence_splitter.get_nodes_from_documents([doc])
 
         # Split content by functions
         chunks: list[str] = []
@@ -387,7 +386,7 @@ class AdaptiveChunker:
             if preamble.strip():
                 chunks.insert(0, preamble)
 
-        nodes: list[Chunk] = []
+        nodes: list[TextNode] = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -449,7 +448,7 @@ class AdaptiveChunker:
 
         return nodes
 
-    def chunk_document(self, doc: Document) -> list[Chunk]:
+    def chunk_document(self, doc: Document) -> list[TextNode]:
         """Chunk a single document using adaptive strategy.
 
         Main entry point for adaptive chunking.
