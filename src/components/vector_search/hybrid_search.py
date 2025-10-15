@@ -9,6 +9,7 @@ from typing import Any
 
 import structlog
 
+from src.components.retrieval.reranker import CrossEncoderReranker
 from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
@@ -27,6 +28,7 @@ class HybridSearch:
         qdrant_client: QdrantClientWrapper | None = None,
         embedding_service: EmbeddingService | None = None,
         bm25_search: BM25Search | None = None,
+        reranker: CrossEncoderReranker | None = None,
         collection_name: str | None = None,
     ):
         """Initialize hybrid search.
@@ -35,17 +37,31 @@ class HybridSearch:
             qdrant_client: Qdrant client for vector search
             embedding_service: Embedding service
             bm25_search: BM25 search instance
+            reranker: Cross-encoder reranker (optional, lazy-loaded if needed)
             collection_name: Qdrant collection name
         """
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or EmbeddingService()
         self.bm25_search = bm25_search or BM25Search()
+        self._reranker = reranker  # Lazy-loaded on first use
         self.collection_name = collection_name or settings.qdrant_collection
 
         logger.info(
             "Hybrid search initialized",
             collection=self.collection_name,
+            reranker_enabled=reranker is not None,
         )
+
+    @property
+    def reranker(self) -> CrossEncoderReranker:
+        """Lazy-load reranker instance.
+
+        Returns:
+            CrossEncoderReranker instance
+        """
+        if self._reranker is None:
+            self._reranker = CrossEncoderReranker()
+        return self._reranker
 
     async def vector_search(
         self,
@@ -154,6 +170,8 @@ class HybridSearch:
         bm25_top_k: int = 20,
         rrf_k: int = 60,
         score_threshold: float | None = None,
+        use_reranking: bool = True,
+        rerank_top_k: int | None = None,
     ) -> dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
 
@@ -164,14 +182,19 @@ class HybridSearch:
             bm25_top_k: Results from BM25 search (default: 20)
             rrf_k: RRF constant (default: 60)
             score_threshold: Minimum vector similarity score
+            use_reranking: Apply cross-encoder reranking (default: True)
+            rerank_top_k: Number of candidates to rerank (default: 2*top_k)
 
         Returns:
             Dictionary with fused results and metadata
 
         Example:
-            >>> results = await hybrid_search.hybrid_search("What is RAG?")
+            >>> results = await hybrid_search.hybrid_search(
+            ...     "What is RAG?",
+            ...     use_reranking=True
+            ... )
             >>> for doc in results['results'][:5]:
-            ...     print(f"{doc['rrf_rank']}: {doc['text'][:100]}")
+            ...     print(f"{doc['rank']}: {doc['text'][:100]}")
         """
         try:
             # Run vector and BM25 search in parallel
@@ -194,8 +217,58 @@ class HybridSearch:
                 id_field="id",
             )
 
-            # Limit to top_k
-            final_results = fused_results[:top_k]
+            # Apply reranking if enabled
+            reranking_applied = False
+            if use_reranking and fused_results:
+                # Determine how many candidates to rerank
+                rerank_candidates = rerank_top_k or min(top_k * 2, len(fused_results))
+                candidates = fused_results[:rerank_candidates]
+
+                logger.info(
+                    "applying_reranking",
+                    candidates=len(candidates),
+                    top_k=top_k,
+                )
+
+                # Rerank candidates
+                reranked = await self.reranker.rerank(
+                    query=query, documents=candidates, top_k=top_k
+                )
+
+                # Convert reranked results back to original format
+                final_results = []
+                for rerank_result in reranked:
+                    # Find original doc by ID
+                    original_doc = next(
+                        (
+                            doc
+                            for doc in candidates
+                            if doc.get("id") == rerank_result.doc_id
+                        ),
+                        None,
+                    )
+                    if original_doc:
+                        result = {
+                            **original_doc,
+                            "rerank_score": rerank_result.rerank_score,
+                            "normalized_rerank_score": rerank_result.final_score,
+                            "original_rrf_rank": rerank_result.original_rank,
+                            "final_rank": rerank_result.final_rank,
+                        }
+                        final_results.append(result)
+
+                reranking_applied = True
+                logger.info(
+                    "reranking_completed",
+                    original_top=candidates[0].get("id") if candidates else None,
+                    reranked_top=final_results[0].get("id") if final_results else None,
+                    rank_changed=candidates[0].get("id") != final_results[0].get("id")
+                    if candidates and final_results
+                    else False,
+                )
+            else:
+                # No reranking, just limit to top_k
+                final_results = fused_results[:top_k]
 
             # Analyze ranking diversity
             diversity_stats = analyze_ranking_diversity(
@@ -211,6 +284,7 @@ class HybridSearch:
                 bm25_results=len(bm25_results),
                 fused_results=len(fused_results),
                 final_results=len(final_results),
+                reranking_applied=reranking_applied,
                 common_percentage=diversity_stats.get("common_percentage", 0),
             )
 
@@ -223,6 +297,7 @@ class HybridSearch:
                     "vector_results_count": len(vector_results),
                     "bm25_results_count": len(bm25_results),
                     "rrf_k": rrf_k,
+                    "reranking_applied": reranking_applied,
                     "diversity_stats": diversity_stats,
                 },
             }

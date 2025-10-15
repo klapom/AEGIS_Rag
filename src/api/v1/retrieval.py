@@ -52,6 +52,16 @@ class SearchRequest(BaseModel):
         ge=0.0,
         le=1.0,
     )
+    # Sprint 3: Reranking parameters
+    use_reranking: bool = Field(
+        True, description="Apply cross-encoder reranking for improved relevance (Sprint 3)"
+    )
+    rerank_top_k: int | None = Field(
+        None,
+        description="Number of candidates to rerank (default: 2*top_k)",
+        ge=1,
+        le=100,
+    )
 
     class Config:
         # P1: Validate assignment to prevent invalid data
@@ -70,6 +80,11 @@ class SearchResult(BaseModel):
     document_id: str
     rank: int
     rrf_score: float | None = None
+    # Sprint 3: Reranking scores
+    rerank_score: float | None = Field(None, description="Cross-encoder relevance score")
+    normalized_rerank_score: float | None = Field(None, description="Normalized rerank score (0-1)")
+    original_rrf_rank: int | None = Field(None, description="Rank before reranking")
+    final_rank: int | None = Field(None, description="Rank after reranking")
 
 
 class SearchResponse(BaseModel):
@@ -161,11 +176,13 @@ async def search(
         hybrid_search = get_hybrid_search()
 
         if search_params.search_type == "hybrid":
-            # Hybrid search (Vector + BM25 + RRF)
+            # Hybrid search (Vector + BM25 + RRF + optional Reranking)
             result = await hybrid_search.hybrid_search(
                 query=search_params.query,
                 top_k=search_params.top_k,
                 score_threshold=search_params.score_threshold,
+                use_reranking=search_params.use_reranking,  # Sprint 3
+                rerank_top_k=search_params.rerank_top_k,  # Sprint 3
             )
 
             return SearchResponse(

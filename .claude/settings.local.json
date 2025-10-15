@@ -1,8 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pwsh:*)",
-      "Bash(poetry install:*)"
+      "Bash(poetry run pip install:*)",
+      "Bash(git push:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(git reset:*)",
+      "Bash(poetry add:*)",
+      "Bash(gh run download:*)"
     ],
     "deny": [],
     "ask": []

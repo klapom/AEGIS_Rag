@@ -90,6 +90,16 @@ class Settings(BaseSettings):
         default="./data", description="Base directory for document ingestion (security boundary)"
     )
 
+    # Reranker Settings (Sprint 3: Cross-Encoder Reranking)
+    reranker_model: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        description="HuggingFace cross-encoder model for reranking",
+    )
+    reranker_batch_size: int = Field(default=32, description="Batch size for reranking inference")
+    reranker_cache_dir: str = Field(
+        default="./data/models", description="Directory for caching HuggingFace models"
+    )
+
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")
