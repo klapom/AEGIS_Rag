@@ -4,13 +4,11 @@ This module provides rate limiting and other middleware functionality.
 """
 
 import structlog
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from fastapi import Request, Response
+from fastapi import Request
 from fastapi.responses import JSONResponse
-
-from src.core.config import settings
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 logger = structlog.get_logger(__name__)
 

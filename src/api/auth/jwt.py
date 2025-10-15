@@ -5,11 +5,10 @@ Authentication can be disabled via settings.api_auth_enabled for testing.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
 
 import structlog
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -28,7 +27,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def create_access_token(
     data: dict,
-    expires_delta: Optional[timedelta] = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Create JWT access token.
 
@@ -76,8 +75,8 @@ def create_access_token(
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> Optional[str]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> str | None:
     """Validate JWT token and extract user.
 
     This dependency can be used to protect endpoints with authentication.

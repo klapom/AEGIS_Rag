@@ -3,12 +3,14 @@
 Provides comprehensive health checks for all system dependencies.
 """
 
-from typing import Dict, Any
+from typing import Any
+
 import structlog
-from fastapi import APIRouter, status as http_status
+from fastapi import APIRouter
+from fastapi import status as http_status
 from pydantic import BaseModel
 
-from src.components.vector_search import QdrantClientWrapper, EmbeddingService
+from src.components.vector_search import EmbeddingService, QdrantClientWrapper
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
@@ -28,7 +30,7 @@ class DependencyHealth(BaseModel):
     name: str
     status: str  # "up", "down", "degraded"
     latency_ms: float
-    details: Dict[str, Any]
+    details: dict[str, Any]
 
 
 class DetailedHealthResponse(BaseModel):
@@ -36,7 +38,7 @@ class DetailedHealthResponse(BaseModel):
     status: str
     version: str
     environment: str
-    dependencies: Dict[str, DependencyHealth]
+    dependencies: dict[str, DependencyHealth]
 
 
 @router.get("/", response_model=HealthStatus, status_code=http_status.HTTP_200_OK)
@@ -172,7 +174,7 @@ async def readiness_check():
         raise HTTPException(
             status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Service not ready"
-        )
+        ) from e
 
 
 @router.get("/live")

@@ -31,7 +31,7 @@ async def check_qdrant() -> ServiceHealth:
             timeout=5.0,
         )
         # Simple health check
-        collections = client.get_collections()
+        _ = client.get_collections()
         latency_ms = (time.time() - start_time) * 1000
 
         return ServiceHealth(

@@ -3,21 +3,26 @@
 FastAPI endpoints for document ingestion and hybrid search retrieval.
 """
 
-from typing import List, Optional, Dict, Any
 from pathlib import Path
+from typing import Any
 
 import structlog
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks, Depends, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 from pydantic import BaseModel, Field
 
-from src.components.vector_search import (
-    HybridSearch,
-    DocumentIngestionPipeline,
-    ingest_documents,
-)
-from src.core.models import QueryRequest, QueryResponse, HealthResponse
 from src.api.auth.jwt import get_current_user
 from src.api.middleware import limiter
+from src.components.vector_search import (
+    DocumentIngestionPipeline,
+    HybridSearch,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -46,7 +51,7 @@ class SearchRequest(BaseModel):
         description="Search type: 'vector', 'bm25', or 'hybrid'",
         pattern="^(vector|bm25|hybrid)$",  # P1: Strict validation
     )
-    score_threshold: Optional[float] = Field(
+    score_threshold: float | None = Field(
         None,
         description="Minimum similarity score for vector search",
         ge=0.0,
@@ -69,17 +74,17 @@ class SearchResult(BaseModel):
     source: str
     document_id: str
     rank: int
-    rrf_score: Optional[float] = None
+    rrf_score: float | None = None
 
 
 class SearchResponse(BaseModel):
     """Search response model."""
 
     query: str
-    results: List[SearchResult]
+    results: list[SearchResult]
     total_results: int
     search_type: str
-    search_metadata: Optional[Dict[str, Any]] = None
+    search_metadata: dict[str, Any] | None = None
 
 
 class IngestionRequest(BaseModel):
@@ -104,7 +109,7 @@ class IngestionRequest(BaseModel):
         ge=0,
         le=512
     )
-    file_extensions: Optional[List[str]] = Field(
+    file_extensions: list[str] | None = Field(
         None,
         description="File extensions to process (default: .pdf, .txt, .md)",
         max_items=20,  # P1: Prevent DoS with excessive extensions
@@ -128,7 +133,7 @@ class IngestionResponse(BaseModel):
 
 
 # Global hybrid search instance
-_hybrid_search: Optional[HybridSearch] = None
+_hybrid_search: HybridSearch | None = None
 
 
 def get_hybrid_search() -> HybridSearch:
@@ -144,7 +149,7 @@ def get_hybrid_search() -> HybridSearch:
 async def search(
     request: Request,
     search_params: SearchRequest,
-    current_user: Optional[str] = Depends(get_current_user),
+    current_user: str | None = Depends(get_current_user),
 ) -> SearchResponse:
     """Search documents using vector, BM25, or hybrid search.
 
@@ -227,7 +232,7 @@ async def search(
         raise HTTPException(
             status_code=500,
             detail="Search operation failed. Please try again or contact support."
-        )
+        ) from None
 
 
 @router.post("/ingest", response_model=IngestionResponse)
@@ -236,7 +241,7 @@ async def ingest(
     request: Request,
     ingest_params: IngestionRequest,
     background_tasks: BackgroundTasks,
-    current_user: Optional[str] = Depends(get_current_user),
+    current_user: str | None = Depends(get_current_user),
 ) -> IngestionResponse:
     """Ingest documents from directory into vector database.
 
@@ -302,7 +307,7 @@ async def ingest(
     except ValueError as e:
         # P1: Path validation errors should be clear but not expose internals
         logger.warning("Invalid ingestion path", error=str(e), input_dir=ingest_params.input_dir)
-        raise HTTPException(status_code=400, detail="Invalid directory path")
+        raise HTTPException(status_code=400, detail="Invalid directory path") from None
     except HTTPException:
         raise
     except Exception as e:
@@ -311,14 +316,14 @@ async def ingest(
         raise HTTPException(
             status_code=500,
             detail="Document ingestion failed. Please check your input and try again."
-        )
+        ) from None
 
 
 @router.post("/prepare-bm25")
 @limiter.limit("2/hour")  # Rate limit: 2 requests per hour
 async def prepare_bm25(
     request: Request,
-    current_user: Optional[str] = Depends(get_current_user),
+    current_user: str | None = Depends(get_current_user),
 ):
     """Prepare BM25 index from Qdrant collection.
 
@@ -354,7 +359,7 @@ async def prepare_bm25(
         raise HTTPException(
             status_code=500,
             detail=f"BM25 preparation failed: {str(e)}",
-        )
+        ) from None
 
 
 @router.get("/stats")
@@ -389,7 +394,7 @@ async def get_stats():
 
     except Exception as e:
         logger.error("Failed to get stats", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}") from None
 
 
 # Authentication Endpoint

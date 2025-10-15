@@ -1,19 +1,19 @@
 """FastAPI application entry point."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
+from slowapi.errors import RateLimitExceeded
 
 from src.api.health import router as health_router
+from src.api.middleware import limiter, rate_limit_handler
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.retrieval import router as retrieval_router
-from src.api.middleware import limiter, rate_limit_handler
-from slowapi.errors import RateLimitExceeded
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
