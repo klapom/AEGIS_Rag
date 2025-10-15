@@ -90,7 +90,7 @@ async def detailed_health_check():
         start = time.time()
 
         qdrant = QdrantClientWrapper()
-        collections = await qdrant.list_collections()
+        collections = await qdrant.async_client.get_collections()
 
         latency_ms = (time.time() - start) * 1000
 
@@ -101,7 +101,7 @@ async def detailed_health_check():
             details={
                 "host": settings.qdrant_host,
                 "port": settings.qdrant_port,
-                "collections_count": len(collections) if collections else 0,
+                "collections_count": len(collections.collections) if collections else 0,
             },
         )
 
@@ -169,7 +169,7 @@ async def readiness_check():
     try:
         # Check critical dependencies
         qdrant = QdrantClientWrapper()
-        await qdrant.list_collections()
+        await qdrant.async_client.get_collections()
 
         return {"status": "ready", "message": "Service is ready to accept requests"}
 

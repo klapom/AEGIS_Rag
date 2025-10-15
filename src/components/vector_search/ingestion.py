@@ -72,7 +72,7 @@ class DocumentIngestionPipeline:
                 chunk_size=self.chunk_size,
                 chunk_overlap=self.chunk_overlap,
             )
-            self.adaptive_chunker = None
+            self.adaptive_chunker: AdaptiveChunker | None = None
 
         logger.info(
             "Document ingestion pipeline initialized",
@@ -203,12 +203,14 @@ class DocumentIngestionPipeline:
             VectorSearchError: If chunking fails
         """
         try:
-            if self.use_adaptive_chunking:
+            if self.use_adaptive_chunking and self.adaptive_chunker:
                 # Use adaptive chunking strategy
                 nodes = self.adaptive_chunker.chunk_documents(documents)
-            else:
+            elif self.text_splitter:
                 # Use traditional sentence-based splitting
                 nodes = self.text_splitter.get_nodes_from_documents(documents)
+            else:
+                raise ValueError("No chunking method available")
 
             logger.info(
                 "Documents chunked",

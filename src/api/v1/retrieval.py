@@ -124,9 +124,9 @@ class IngestionRequest(BaseModel):
     chunk_size: int = Field(512, description="Maximum tokens per chunk", ge=128, le=2048)
     chunk_overlap: int = Field(128, description="Overlap between chunks", ge=0, le=512)
     file_extensions: list[str] | None = Field(
-        None,
+        default=None,
         description="File extensions to process (default: .pdf, .txt, .md)",
-        max_items=20,  # P1: Prevent DoS with excessive extensions
+        max_length=20,  # P1: Prevent DoS with excessive extensions
     )
 
     class Config:

@@ -348,9 +348,9 @@ class HybridSearch:
             logger.info("Preparing BM25 index from Qdrant collection")
 
             # Get all points from Qdrant (scroll through collection)
-            documents = []
-            offset = None
-            batch_count = 0
+            documents: list[dict[str, str]] = []
+            offset: str | None = None
+            batch_count: int = 0
 
             while True:
                 # Scroll through collection
@@ -375,9 +375,9 @@ class HybridSearch:
                 for point in points:
                     # Extract text from payload
                     # Check multiple possible text fields (LlamaIndex vs custom format)
-                    text = ""
+                    text: str = ""
 
-                    if "_node_content" in point.payload:
+                    if point.payload and "_node_content" in point.payload:
                         # LlamaIndex format - parse JSON
                         import json
 
@@ -386,16 +386,22 @@ class HybridSearch:
                             text = node_content.get("text", "")
                         except (json.JSONDecodeError, KeyError):
                             logger.warning("Failed to parse _node_content", point_id=str(point.id))
-                    elif "text" in point.payload:
+                    elif point.payload and "text" in point.payload:
                         # Direct text field
-                        text = point.payload.get("text", "")
+                        text = str(point.payload.get("text", ""))
 
                     doc = {
                         "id": str(point.id),
                         "text": text,
-                        "source": point.payload.get("file_name", point.payload.get("source", "")),
-                        "document_id": point.payload.get(
-                            "document_id", point.payload.get("doc_id", "")
+                        "source": (
+                            str(point.payload.get("file_name", point.payload.get("source", "")))
+                            if point.payload
+                            else ""
+                        ),
+                        "document_id": (
+                            str(point.payload.get("document_id", point.payload.get("doc_id", "")))
+                            if point.payload
+                            else ""
                         ),
                     }
                     documents.append(doc)

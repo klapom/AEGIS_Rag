@@ -207,9 +207,9 @@ class AdaptiveChunker:
         # Filter out empty paragraphs
         paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-        nodes = []
-        current_chunk = []
-        current_size = 0
+        nodes: list[Chunk] = []
+        current_chunk: list[str] = []
+        current_size: int = 0
 
         for para in paragraphs:
             # Rough token estimate (1 token ≈ 4 chars)
@@ -301,7 +301,7 @@ class AdaptiveChunker:
                 chunks.append(section)
                 i += 1
 
-        nodes = []
+        nodes: list[Chunk] = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -371,10 +371,11 @@ class AdaptiveChunker:
         # If no functions found, fall back to sentence splitting
         if not function_starts:
             logger.debug("No functions detected, using sentence splitting")
-            return self._sentence_splitter.get_nodes_from_documents([doc])
+            sentence_nodes = self._sentence_splitter.get_nodes_from_documents([doc])
+            return [self._node_to_chunk(node, doc) for node in sentence_nodes]
 
         # Split content by functions
-        chunks = []
+        chunks: list[str] = []
         for i, start in enumerate(function_starts):
             end = function_starts[i + 1] if i + 1 < len(function_starts) else len(lines)
             function_lines = lines[start:end]
@@ -386,7 +387,7 @@ class AdaptiveChunker:
             if preamble.strip():
                 chunks.insert(0, preamble)
 
-        nodes = []
+        nodes: list[Chunk] = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -448,7 +449,7 @@ class AdaptiveChunker:
 
         return nodes
 
-    def chunk_document(self, doc: Document) -> list[TextNode]:
+    def chunk_document(self, doc: Document) -> list[Chunk]:
         """Chunk a single document using adaptive strategy.
 
         Main entry point for adaptive chunking.

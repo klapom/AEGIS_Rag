@@ -64,7 +64,7 @@ def create_access_token(
             expires_at=expire.isoformat(),
         )
 
-        return encoded_jwt  # type: ignore[no-any-return]
+        return encoded_jwt
 
     except Exception as e:
         logger.error("Failed to create access token", error=str(e))
@@ -118,7 +118,7 @@ async def get_current_user(
         payload = jwt.decode(token, secret_key, algorithms=[ALGORITHM])
 
         # Extract username
-        username: str = payload.get("sub")
+        username: str | None = payload.get("sub")
         if username is None:
             logger.warning("Token missing subject claim")
             raise HTTPException(
@@ -155,7 +155,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches hash
     """
-    return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -167,4 +167,4 @@ def get_password_hash(password: str) -> str:
     Returns:
         Bcrypt hashed password
     """
-    return pwd_context.hash(password)  # type: ignore[no-any-return]
+    return pwd_context.hash(password)

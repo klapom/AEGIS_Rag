@@ -26,7 +26,7 @@ async def check_qdrant() -> ServiceHealth:
         client = QdrantClient(
             url=settings.qdrant_url,
             api_key=settings.qdrant_api_key.get_secret_value() if settings.qdrant_api_key else None,
-            timeout=5.0,
+            timeout=5,
         )
         # Simple health check
         _ = client.get_collections()

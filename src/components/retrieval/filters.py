@@ -225,8 +225,8 @@ class MetadataFilterEngine:
             return None
 
         qdrant_filter = Filter(
-            must=conditions if conditions else None,
-            must_not=must_not_conditions if must_not_conditions else None,
+            must=conditions or None,
+            must_not=must_not_conditions or None,
         )
 
         logger.info(
