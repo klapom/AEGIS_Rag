@@ -132,8 +132,9 @@ async def test_e2e_hybrid_search_complete_workflow(integration_hybrid_setup):
     top_text = result["results"][0]["text"].lower()
     # Accept multiple relevant terms (vector, database, rag, retrieval, semantic, search)
     relevant_terms = ["rag", "retrieval", "vector", "database", "semantic", "search"]
-    assert any(term in top_text for term in relevant_terms), \
-        f"Top result should contain relevant terms. Got: {top_text[:100]}"
+    assert any(
+        term in top_text for term in relevant_terms
+    ), f"Top result should contain relevant terms. Got: {top_text[:100]}"
 
 
 @pytest.mark.integration
@@ -148,13 +149,13 @@ async def test_e2e_vector_search_only(integration_hybrid_setup):
     )
 
     assert len(results) > 0, "Should return vector search results"
-    assert all(r["search_type"] == "vector" for r in results), \
-        "All results should be vector type"
+    assert all(r["search_type"] == "vector" for r in results), "All results should be vector type"
     assert all("score" in r for r in results), "All results should have scores"
 
     # Verify relevance
-    relevant = any("vector" in r["text"].lower() or "qdrant" in r["text"].lower()
-                   for r in results[:2])
+    relevant = any(
+        "vector" in r["text"].lower() or "qdrant" in r["text"].lower() for r in results[:2]
+    )
     assert relevant, "Top results should mention vector or qdrant"
 
 
@@ -170,13 +171,11 @@ async def test_e2e_bm25_search_only(integration_hybrid_setup):
     )
 
     assert len(results) > 0, "Should return BM25 search results"
-    assert all(r["search_type"] == "bm25" for r in results), \
-        "All results should be BM25 type"
+    assert all(r["search_type"] == "bm25" for r in results), "All results should be BM25 type"
 
     # Verify keyword matching
     top_text = results[0]["text"].lower()
-    assert "hybrid" in top_text or "bm25" in top_text, \
-        "Top result should match keywords"
+    assert "hybrid" in top_text or "bm25" in top_text, "Top result should match keywords"
 
 
 @pytest.mark.integration
@@ -284,8 +283,9 @@ async def test_e2e_hybrid_search_ranking_diversity(integration_hybrid_setup):
     assert "average_pairwise_overlap" in diversity
 
     # There should be some unique documents from each method
-    assert diversity["total_unique_documents"] >= diversity["common_documents"], \
-        "Should have some unique documents"
+    assert (
+        diversity["total_unique_documents"] >= diversity["common_documents"]
+    ), "Should have some unique documents"
 
 
 @pytest.mark.integration

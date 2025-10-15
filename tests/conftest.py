@@ -9,7 +9,12 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from qdrant_client.models import PointStruct, ScoredPoint, CollectionsResponse, CollectionDescription
+from qdrant_client.models import (
+    PointStruct,
+    ScoredPoint,
+    CollectionsResponse,
+    CollectionDescription,
+)
 
 from src.api.main import app
 from src.core.config import get_settings
@@ -30,6 +35,7 @@ def disable_auth_for_tests(monkeypatch):
     monkeypatch.setenv("API_AUTH_ENABLED", "false")
     # Force reload settings
     from src.core.config import get_settings
+
     settings = get_settings()
     monkeypatch.setattr(settings, "api_auth_enabled", False)
     # Allow all paths for testing (security validation still runs, just with permissive base)
@@ -63,8 +69,8 @@ def test_client() -> TestClient:
         Test client for API testing
     """
     # Disable rate limiting by removing the limiter state from the app
-    if hasattr(app.state, 'limiter'):
-        delattr(app.state, 'limiter')
+    if hasattr(app.state, "limiter"):
+        delattr(app.state, "limiter")
 
     return TestClient(app)
 
@@ -271,21 +277,25 @@ def mock_qdrant_client(mock_qdrant_collections, mock_scored_points):
     wrapper.health_check = AsyncMock(return_value=True)
     wrapper.create_collection = AsyncMock(return_value=True)
     wrapper.upsert_points = AsyncMock(return_value=True)
-    wrapper.search = AsyncMock(return_value=[
-        {
-            "id": "point1",
-            "score": 0.95,
-            "payload": {
-                "text": "AEGIS RAG is a multi-agent system.",
-                "source": "docs.md",
-                "document_id": "doc1",
-            },
-        }
-    ])
-    wrapper.get_collection_info = AsyncMock(return_value=MagicMock(
-        vectors_count=100,
-        points_count=100,
-    ))
+    wrapper.search = AsyncMock(
+        return_value=[
+            {
+                "id": "point1",
+                "score": 0.95,
+                "payload": {
+                    "text": "AEGIS RAG is a multi-agent system.",
+                    "source": "docs.md",
+                    "document_id": "doc1",
+                },
+            }
+        ]
+    )
+    wrapper.get_collection_info = AsyncMock(
+        return_value=MagicMock(
+            vectors_count=100,
+            points_count=100,
+        )
+    )
     wrapper.delete_collection = AsyncMock(return_value=True)
     wrapper.close = AsyncMock(return_value=None)
 
@@ -356,15 +366,17 @@ def mock_bm25_search(sample_documents):
 
     # Configure methods
     search.fit = MagicMock()
-    search.search = MagicMock(return_value=[
-        {
-            "text": doc["text"],
-            "score": 10.0 - i,
-            "metadata": {"id": doc["id"], "source": doc["source"]},
-            "rank": i + 1,
-        }
-        for i, doc in enumerate(sample_documents[:3])
-    ])
+    search.search = MagicMock(
+        return_value=[
+            {
+                "text": doc["text"],
+                "score": 10.0 - i,
+                "metadata": {"id": doc["id"], "source": doc["source"]},
+                "rank": i + 1,
+            }
+            for i, doc in enumerate(sample_documents[:3])
+        ]
+    )
     search.get_corpus_size = MagicMock(return_value=len(sample_documents))
     search.is_fitted = MagicMock(return_value=True)
     search.clear = MagicMock()

@@ -23,9 +23,11 @@ from src.core.exceptions import VectorSearchError
 @pytest.mark.unit
 def test_hybrid_search_init_default():
     """Test HybridSearch initialization with defaults."""
-    with patch('src.components.vector_search.hybrid_search.QdrantClientWrapper'), \
-         patch('src.components.vector_search.hybrid_search.EmbeddingService'), \
-         patch('src.components.vector_search.hybrid_search.BM25Search'):
+    with (
+        patch("src.components.vector_search.hybrid_search.QdrantClientWrapper"),
+        patch("src.components.vector_search.hybrid_search.EmbeddingService"),
+        patch("src.components.vector_search.hybrid_search.BM25Search"),
+    ):
 
         search = HybridSearch()
 
@@ -55,7 +57,9 @@ def test_hybrid_search_init_custom(mock_qdrant_client, mock_embedding_service, m
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_vector_search_success(mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query):
+async def test_vector_search_success(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query
+):
     """Test successful vector search."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -75,7 +79,9 @@ async def test_vector_search_success(mock_qdrant_client, mock_embedding_service,
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_vector_search_with_threshold(mock_qdrant_client, mock_embedding_service, mock_bm25_search):
+async def test_vector_search_with_threshold(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search
+):
     """Test vector search with score threshold."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -115,7 +121,9 @@ async def test_vector_search_failure(mock_embedding_service, mock_bm25_search):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_keyword_search_success(mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query):
+async def test_keyword_search_success(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query
+):
     """Test successful BM25 keyword search."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -158,7 +166,9 @@ async def test_keyword_search_failure(mock_qdrant_client, mock_embedding_service
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_hybrid_search_success(mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query):
+async def test_hybrid_search_success(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_query
+):
     """Test successful hybrid search combining vector and BM25."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -186,7 +196,9 @@ async def test_hybrid_search_success(mock_qdrant_client, mock_embedding_service,
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_hybrid_search_rrf_fusion(mock_qdrant_client, mock_embedding_service, mock_bm25_search):
+async def test_hybrid_search_rrf_fusion(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search
+):
     """Test that hybrid search performs RRF fusion."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -204,11 +216,14 @@ async def test_hybrid_search_rrf_fusion(mock_qdrant_client, mock_embedding_servi
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@pytest.mark.parametrize("vector_top_k,bm25_top_k,final_top_k", [
-    (20, 20, 10),
-    (10, 10, 5),
-    (30, 20, 15),
-])
+@pytest.mark.parametrize(
+    "vector_top_k,bm25_top_k,final_top_k",
+    [
+        (20, 20, 10),
+        (10, 10, 5),
+        (30, 20, 15),
+    ],
+)
 async def test_hybrid_search_different_top_k(
     mock_qdrant_client,
     mock_embedding_service,
@@ -231,13 +246,14 @@ async def test_hybrid_search_different_top_k(
         bm25_top_k=bm25_top_k,
     )
 
-    assert len(result["results"]) <= final_top_k, \
-        f"Should return at most {final_top_k} results"
+    assert len(result["results"]) <= final_top_k, f"Should return at most {final_top_k} results"
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_hybrid_search_parallel_execution(mock_qdrant_client, mock_embedding_service, mock_bm25_search):
+async def test_hybrid_search_parallel_execution(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search
+):
     """Test that vector and BM25 search run in parallel."""
     # Track call order
     call_order = []
@@ -273,14 +289,20 @@ async def test_hybrid_search_parallel_execution(mock_qdrant_client, mock_embeddi
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_prepare_bm25_index_success(mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_documents):
+async def test_prepare_bm25_index_success(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search, sample_documents
+):
     """Test preparing BM25 index from Qdrant collection."""
     # Mock scroll to return documents
     mock_qdrant_client.async_client.scroll.return_value = (
         [
             MagicMock(
                 id="point1",
-                payload={"text": doc["text"], "source": doc["source"], "document_id": doc["document_id"]},
+                payload={
+                    "text": doc["text"],
+                    "source": doc["source"],
+                    "document_id": doc["document_id"],
+                },
             )
             for doc in sample_documents
         ],
@@ -389,9 +411,9 @@ async def test_hybrid_search_empty_results(mock_embedding_service, mock_bm25_sea
 async def test_hybrid_search_only_vector_results(mock_embedding_service):
     """Test hybrid search when only vector search returns results."""
     mock_client = MagicMock()
-    mock_client.search = AsyncMock(return_value=[
-        {"id": "doc1", "score": 0.9, "payload": {"text": "result"}}
-    ])
+    mock_client.search = AsyncMock(
+        return_value=[{"id": "doc1", "score": 0.9, "payload": {"text": "result"}}]
+    )
 
     mock_bm25 = MagicMock()
     mock_bm25.search = MagicMock(return_value=[])
@@ -416,9 +438,9 @@ async def test_hybrid_search_only_bm25_results(mock_qdrant_client, mock_embeddin
     mock_qdrant_client.search = AsyncMock(return_value=[])
 
     mock_bm25 = MagicMock()
-    mock_bm25.search = MagicMock(return_value=[
-        {"text": "result", "score": 10.0, "metadata": {"id": "doc1"}, "rank": 1}
-    ])
+    mock_bm25.search = MagicMock(
+        return_value=[{"text": "result", "score": 10.0, "metadata": {"id": "doc1"}, "rank": 1}]
+    )
 
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
@@ -433,7 +455,9 @@ async def test_hybrid_search_only_bm25_results(mock_qdrant_client, mock_embeddin
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_vector_search_empty_query(mock_qdrant_client, mock_embedding_service, mock_bm25_search):
+async def test_vector_search_empty_query(
+    mock_qdrant_client, mock_embedding_service, mock_bm25_search
+):
     """Test vector search with empty query."""
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,

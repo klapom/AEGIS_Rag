@@ -138,9 +138,7 @@ async def test_rerank_basic(mock_ce_class, sample_documents):
     mock_ce_class.return_value = mock_model
 
     reranker = CrossEncoderReranker()
-    results = await reranker.rerank(
-        query="What is hybrid search?", documents=sample_documents
-    )
+    results = await reranker.rerank(query="What is hybrid search?", documents=sample_documents)
 
     assert len(results) == 5
     assert isinstance(results[0], RerankResult)
@@ -209,9 +207,7 @@ async def test_rerank_score_normalization(mock_ce_class, sample_documents):
     mock_ce_class.return_value = mock_model
 
     reranker = CrossEncoderReranker()
-    results = await reranker.rerank(
-        query="test", documents=sample_documents[:3], top_k=3
-    )
+    results = await reranker.rerank(query="test", documents=sample_documents[:3], top_k=3)
 
     # Sigmoid(0.0) ≈ 0.5, Sigmoid(2.0) ≈ 0.88, Sigmoid(-2.0) ≈ 0.12
     assert results[0].rerank_score == 2.0

@@ -60,12 +60,8 @@ class DecompositionResult(BaseModel):
 
     original_query: str = Field(..., description="Original input query")
     classification: QueryClassification = Field(..., description="Query classification")
-    sub_queries: list[SubQuery] = Field(
-        default_factory=list, description="Extracted sub-queries"
-    )
-    execution_strategy: str = Field(
-        ..., description="parallel or sequential execution"
-    )
+    sub_queries: list[SubQuery] = Field(default_factory=list, description="Extracted sub-queries")
+    execution_strategy: str = Field(..., description="parallel or sequential execution")
 
 
 # Prompt templates
@@ -193,9 +189,7 @@ class QueryDecomposer:
                 reasoning=f"Fallback due to error: {e}",
             )
 
-    async def decompose_query(
-        self, query: str, query_type: QueryType
-    ) -> list[SubQuery]:
+    async def decompose_query(self, query: str, query_type: QueryType) -> list[SubQuery]:
         """Decompose complex query into sub-queries.
 
         Args:
@@ -242,9 +236,7 @@ class QueryDecomposer:
                         # Multi-hop: each query depends on previous
                         depends_on = [idx - 1]
 
-                    sub_queries.append(
-                        SubQuery(query=clean_line, index=idx, depends_on=depends_on)
-                    )
+                    sub_queries.append(SubQuery(query=clean_line, index=idx, depends_on=depends_on))
 
             # Fallback if parsing failed
             if not sub_queries:
@@ -341,16 +333,11 @@ class QueryDecomposer:
                 num_queries=len(decomposition.sub_queries),
             )
 
-            tasks = [
-                search_fn(query=sq.query, **search_kwargs)
-                for sq in decomposition.sub_queries
-            ]
+            tasks = [search_fn(query=sq.query, **search_kwargs) for sq in decomposition.sub_queries]
             sub_results = await asyncio.gather(*tasks)
 
             # Merge results
-            merged_result = self._merge_results(
-                sub_results, strategy=merge_strategy, query=query
-            )
+            merged_result = self._merge_results(sub_results, strategy=merge_strategy, query=query)
             merged_result["decomposition"] = {
                 "applied": True,
                 "query_type": decomposition.classification.query_type.value,
@@ -388,9 +375,7 @@ class QueryDecomposer:
 
             return merged_result
 
-    def _merge_results(
-        self, results: list[dict], strategy: str, query: str
-    ) -> dict:
+    def _merge_results(self, results: list[dict], strategy: str, query: str) -> dict:
         """Merge multiple search results.
 
         Args:

@@ -28,6 +28,7 @@ def client():
     """Create FastAPI test client."""
     # Clear rate limiter storage before each test
     from src.api.middleware import limiter
+
     try:
         limiter._storage.clear()
     except:
@@ -44,29 +45,31 @@ def client():
 @pytest.mark.unit
 def test_search_hybrid_success(client):
     """Test successful hybrid search."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.hybrid_search = AsyncMock(return_value={
-            "query": "test query",
-            "results": [
-                {
-                    "id": "doc1",
-                    "text": "Result 1",
-                    "score": 0.95,
-                    "source": "test.md",
-                    "document_id": "doc1",
-                    "rank": 1,
-                    "rrf_score": 0.032,
-                }
-            ],
-            "total_results": 1,
-            "search_metadata": {
-                "vector_results_count": 1,
-                "bm25_results_count": 1,
-                "rrf_k": 60,
-                "diversity_stats": {},
-            },
-        })
+        mock_search.hybrid_search = AsyncMock(
+            return_value={
+                "query": "test query",
+                "results": [
+                    {
+                        "id": "doc1",
+                        "text": "Result 1",
+                        "score": 0.95,
+                        "source": "test.md",
+                        "document_id": "doc1",
+                        "rank": 1,
+                        "rrf_score": 0.032,
+                    }
+                ],
+                "total_results": 1,
+                "search_metadata": {
+                    "vector_results_count": 1,
+                    "bm25_results_count": 1,
+                    "rrf_k": 60,
+                    "diversity_stats": {},
+                },
+            }
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post(
@@ -88,18 +91,20 @@ def test_search_hybrid_success(client):
 @pytest.mark.unit
 def test_search_vector_only(client):
     """Test vector-only search."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.vector_search = AsyncMock(return_value=[
-            {
-                "id": "doc1",
-                "text": "Vector result",
-                "score": 0.95,
-                "source": "test.md",
-                "document_id": "doc1",
-                "rank": 1,
-            }
-        ])
+        mock_search.vector_search = AsyncMock(
+            return_value=[
+                {
+                    "id": "doc1",
+                    "text": "Vector result",
+                    "score": 0.95,
+                    "source": "test.md",
+                    "document_id": "doc1",
+                    "rank": 1,
+                }
+            ]
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post(
@@ -120,18 +125,20 @@ def test_search_vector_only(client):
 @pytest.mark.unit
 def test_search_bm25_only(client):
     """Test BM25-only search."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.keyword_search = AsyncMock(return_value=[
-            {
-                "id": "doc1",
-                "text": "BM25 result",
-                "score": 10.5,
-                "source": "test.md",
-                "document_id": "doc1",
-                "rank": 1,
-            }
-        ])
+        mock_search.keyword_search = AsyncMock(
+            return_value=[
+                {
+                    "id": "doc1",
+                    "text": "BM25 result",
+                    "score": 10.5,
+                    "source": "test.md",
+                    "document_id": "doc1",
+                    "rank": 1,
+                }
+            ]
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post(
@@ -199,14 +206,16 @@ def test_search_invalid_top_k(client, top_k):
 @pytest.mark.unit
 def test_search_with_score_threshold(client):
     """Test search with score threshold parameter."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.hybrid_search = AsyncMock(return_value={
-            "query": "test",
-            "results": [],
-            "total_results": 0,
-            "search_metadata": {},
-        })
+        mock_search.hybrid_search = AsyncMock(
+            return_value={
+                "query": "test",
+                "results": [],
+                "total_results": 0,
+                "search_metadata": {},
+            }
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post(
@@ -228,7 +237,7 @@ def test_search_with_score_threshold(client):
 @pytest.mark.unit
 def test_search_error_handling(client):
     """Test search error handling."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
         mock_search.hybrid_search = AsyncMock(side_effect=Exception("Search failed"))
         mock_get_search.return_value = mock_search
@@ -255,18 +264,22 @@ def test_search_error_handling(client):
 @pytest.mark.unit
 def test_ingest_success(client, temp_test_dir):
     """Test successful document ingestion."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class, \
-         patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with (
+        patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
+        patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
+    ):
 
         mock_pipeline = MagicMock()
-        mock_pipeline.index_documents = AsyncMock(return_value={
-            "documents_loaded": 5,
-            "chunks_created": 20,
-            "embeddings_generated": 20,
-            "points_indexed": 20,
-            "duration_seconds": 10.5,
-            "collection_name": "test_collection",
-        })
+        mock_pipeline.index_documents = AsyncMock(
+            return_value={
+                "documents_loaded": 5,
+                "chunks_created": 20,
+                "embeddings_generated": 20,
+                "points_indexed": 20,
+                "duration_seconds": 10.5,
+                "collection_name": "test_collection",
+            }
+        )
         mock_pipeline_class.return_value = mock_pipeline
 
         mock_search = MagicMock()
@@ -326,18 +339,22 @@ def test_ingest_not_a_directory(client, tmp_path):
 @pytest.mark.unit
 def test_ingest_custom_parameters(client, temp_test_dir):
     """Test ingestion with custom chunk parameters."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class, \
-         patch('src.api.v1.retrieval.get_hybrid_search'):
+    with (
+        patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
+        patch("src.api.v1.retrieval.get_hybrid_search"),
+    ):
 
         mock_pipeline = MagicMock()
-        mock_pipeline.index_documents = AsyncMock(return_value={
-            "documents_loaded": 3,
-            "chunks_created": 10,
-            "embeddings_generated": 10,
-            "points_indexed": 10,
-            "duration_seconds": 5.0,
-            "collection_name": "test",
-        })
+        mock_pipeline.index_documents = AsyncMock(
+            return_value={
+                "documents_loaded": 3,
+                "chunks_created": 10,
+                "embeddings_generated": 10,
+                "points_indexed": 10,
+                "duration_seconds": 5.0,
+                "collection_name": "test",
+            }
+        )
         mock_pipeline_class.return_value = mock_pipeline
 
         response = client.post(
@@ -360,7 +377,7 @@ def test_ingest_custom_parameters(client, temp_test_dir):
 @pytest.mark.unit
 def test_ingest_error_handling(client, temp_test_dir):
     """Test ingestion error handling."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class:
+    with patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class:
         mock_pipeline = MagicMock()
         mock_pipeline.index_documents = AsyncMock(side_effect=Exception("Ingestion failed"))
         mock_pipeline_class.return_value = mock_pipeline
@@ -385,13 +402,15 @@ def test_ingest_error_handling(client, temp_test_dir):
 @pytest.mark.unit
 def test_prepare_bm25_success(client):
     """Test successful BM25 index preparation."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.prepare_bm25_index = AsyncMock(return_value={
-            "documents_indexed": 100,
-            "bm25_corpus_size": 100,
-            "collection_name": "test_collection",
-        })
+        mock_search.prepare_bm25_index = AsyncMock(
+            return_value={
+                "documents_indexed": 100,
+                "bm25_corpus_size": 100,
+                "collection_name": "test_collection",
+            }
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post("/api/v1/retrieval/prepare-bm25")
@@ -405,7 +424,7 @@ def test_prepare_bm25_success(client):
 @pytest.mark.unit
 def test_prepare_bm25_error(client):
     """Test BM25 preparation error handling."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
         mock_search.prepare_bm25_index = AsyncMock(side_effect=Exception("BM25 preparation failed"))
         mock_get_search.return_value = mock_search
@@ -424,15 +443,19 @@ def test_prepare_bm25_error(client):
 @pytest.mark.unit
 def test_get_stats_success(client):
     """Test getting retrieval statistics."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class, \
-         patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with (
+        patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
+        patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
+    ):
 
         mock_pipeline = MagicMock()
-        mock_pipeline.get_collection_stats = AsyncMock(return_value={
-            "collection_name": "test_collection",
-            "vectors_count": 100,
-            "points_count": 100,
-        })
+        mock_pipeline.get_collection_stats = AsyncMock(
+            return_value={
+                "collection_name": "test_collection",
+                "vectors_count": 100,
+                "points_count": 100,
+            }
+        )
         mock_pipeline_class.return_value = mock_pipeline
 
         mock_search = MagicMock()
@@ -453,8 +476,10 @@ def test_get_stats_success(client):
 @pytest.mark.unit
 def test_get_stats_bm25_not_fitted(client):
     """Test stats when BM25 is not fitted."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class, \
-         patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with (
+        patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
+        patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search,
+    ):
 
         mock_pipeline = MagicMock()
         mock_pipeline.get_collection_stats = AsyncMock(return_value={})
@@ -476,7 +501,7 @@ def test_get_stats_bm25_not_fitted(client):
 @pytest.mark.unit
 def test_get_stats_error(client):
     """Test stats endpoint error handling."""
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class:
+    with patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class:
         mock_pipeline = MagicMock()
         mock_pipeline.get_collection_stats = AsyncMock(side_effect=Exception("Stats failed"))
         mock_pipeline_class.return_value = mock_pipeline
@@ -493,32 +518,57 @@ def test_get_stats_error(client):
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("chunk_size,should_pass", [
-    pytest.param(128, True, marks=pytest.mark.skip(reason="Rate limit: test would pass individually but fails when run with other ingest tests")),
-    pytest.param(512, True, marks=pytest.mark.skip(reason="Rate limit: test would pass individually but fails when run with other ingest tests")),
-    pytest.param(2048, True, marks=pytest.mark.skip(reason="Rate limit: test would pass individually but fails when run with other ingest tests")),
-    (100, False),  # Too small
-    (3000, False),  # Too large
-])
+@pytest.mark.parametrize(
+    "chunk_size,should_pass",
+    [
+        pytest.param(
+            128,
+            True,
+            marks=pytest.mark.skip(
+                reason="Rate limit: test would pass individually but fails when run with other ingest tests"
+            ),
+        ),
+        pytest.param(
+            512,
+            True,
+            marks=pytest.mark.skip(
+                reason="Rate limit: test would pass individually but fails when run with other ingest tests"
+            ),
+        ),
+        pytest.param(
+            2048,
+            True,
+            marks=pytest.mark.skip(
+                reason="Rate limit: test would pass individually but fails when run with other ingest tests"
+            ),
+        ),
+        (100, False),  # Too small
+        (3000, False),  # Too large
+    ],
+)
 def test_ingest_chunk_size_validation(client, temp_test_dir, chunk_size, should_pass):
     """Test chunk size validation.
 
     Note: Tests with should_pass=True are skipped when run in sequence due to rate limiting (5/hour).
     They pass when run individually. Rate limiting is working as intended.
     """
-    with patch('src.api.v1.retrieval.DocumentIngestionPipeline') as mock_pipeline_class, \
-         patch('src.api.v1.retrieval.get_hybrid_search'):
+    with (
+        patch("src.api.v1.retrieval.DocumentIngestionPipeline") as mock_pipeline_class,
+        patch("src.api.v1.retrieval.get_hybrid_search"),
+    ):
 
         if should_pass:
             mock_pipeline = MagicMock()
-            mock_pipeline.index_documents = AsyncMock(return_value={
-                "documents_loaded": 1,
-                "chunks_created": 1,
-                "embeddings_generated": 1,
-                "points_indexed": 1,
-                "duration_seconds": 1.0,
-                "collection_name": "test",
-            })
+            mock_pipeline.index_documents = AsyncMock(
+                return_value={
+                    "documents_loaded": 1,
+                    "chunks_created": 1,
+                    "embeddings_generated": 1,
+                    "points_indexed": 1,
+                    "duration_seconds": 1.0,
+                    "collection_name": "test",
+                }
+            )
             mock_pipeline_class.return_value = mock_pipeline
 
         response = client.post(
@@ -538,14 +588,16 @@ def test_ingest_chunk_size_validation(client, temp_test_dir, chunk_size, should_
 @pytest.mark.unit
 def test_search_empty_query_allowed(client):
     """Test that empty query is allowed (might be a valid use case)."""
-    with patch('src.api.v1.retrieval.get_hybrid_search') as mock_get_search:
+    with patch("src.api.v1.retrieval.get_hybrid_search") as mock_get_search:
         mock_search = MagicMock()
-        mock_search.hybrid_search = AsyncMock(return_value={
-            "query": "",
-            "results": [],
-            "total_results": 0,
-            "search_metadata": {},
-        })
+        mock_search.hybrid_search = AsyncMock(
+            return_value={
+                "query": "",
+                "results": [],
+                "total_results": 0,
+                "search_metadata": {},
+            }
+        )
         mock_get_search.return_value = mock_search
 
         response = client.post(

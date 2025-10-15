@@ -232,9 +232,7 @@ class AdaptiveChunker:
                 )
                 para_nodes = self._sentence_splitter.get_nodes_from_documents([para_doc])
                 for node in para_nodes:
-                    nodes.append(
-                        self._create_node(doc, node.get_content(), len(nodes))
-                    )
+                    nodes.append(self._create_node(doc, node.get_content(), len(nodes)))
                 continue
 
             # Check if adding paragraph would exceed chunk size
@@ -317,13 +315,9 @@ class AdaptiveChunker:
                     metadata=doc.metadata,
                     doc_id=doc.doc_id,
                 )
-                chunk_nodes = self._sentence_splitter.get_nodes_from_documents(
-                    [chunk_doc]
-                )
+                chunk_nodes = self._sentence_splitter.get_nodes_from_documents([chunk_doc])
                 for node in chunk_nodes:
-                    nodes.append(
-                        self._create_node(doc, node.get_content(), len(nodes))
-                    )
+                    nodes.append(self._create_node(doc, node.get_content(), len(nodes)))
             else:
                 nodes.append(self._create_node(doc, chunk, len(nodes)))
 
@@ -406,13 +400,9 @@ class AdaptiveChunker:
                     metadata=doc.metadata,
                     doc_id=doc.doc_id,
                 )
-                chunk_nodes = self._sentence_splitter.get_nodes_from_documents(
-                    [chunk_doc]
-                )
+                chunk_nodes = self._sentence_splitter.get_nodes_from_documents([chunk_doc])
                 for node in chunk_nodes:
-                    nodes.append(
-                        self._create_node(doc, node.get_content(), len(nodes))
-                    )
+                    nodes.append(self._create_node(doc, node.get_content(), len(nodes)))
             else:
                 nodes.append(self._create_node(doc, chunk, len(nodes)))
 
@@ -521,9 +511,7 @@ class AdaptiveChunker:
             "Adaptive chunking completed",
             documents_count=len(documents),
             total_chunks=len(all_nodes),
-            avg_chunks_per_doc=(
-                round(len(all_nodes) / len(documents), 2) if documents else 0
-            ),
+            avg_chunks_per_doc=(round(len(all_nodes) / len(documents), 2) if documents else 0),
         )
 
         return all_nodes

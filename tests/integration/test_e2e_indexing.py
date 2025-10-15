@@ -174,8 +174,7 @@ async def test_e2e_indexing_and_search(
 
         # Verify relevance (top result should mention AEGIS or RAG)
         top_text = results[0]["payload"]["text"].lower()
-        assert "aegis" in top_text or "rag" in top_text, \
-            "Top result should be relevant to query"
+        assert "aegis" in top_text or "rag" in top_text, "Top result should be relevant to query"
 
     finally:
         await integration_qdrant_client.delete_collection(integration_collection_name)
@@ -196,10 +195,8 @@ async def test_e2e_batch_embedding(integration_embedding_service):
     embeddings = await integration_embedding_service.embed_batch(texts)
 
     assert len(embeddings) == len(texts), "Should return embedding for each text"
-    assert all(len(emb) == 768 for emb in embeddings), \
-        "All embeddings should be 768-dimensional"
-    assert all(isinstance(emb[0], float) for emb in embeddings), \
-        "Embeddings should be floats"
+    assert all(len(emb) == 768 for emb in embeddings), "All embeddings should be 768-dimensional"
+    assert all(isinstance(emb[0], float) for emb in embeddings), "Embeddings should be floats"
 
     # Verify embeddings are different
     assert embeddings[0] != embeddings[1], "Different texts should have different embeddings"
@@ -223,8 +220,7 @@ async def test_e2e_embedding_cache(integration_embedding_service):
     embedding2 = await integration_embedding_service.embed_text(text)
 
     assert embedding1 == embedding2, "Cached embedding should match"
-    assert integration_embedding_service.get_cache_size() == 1, \
-        "Cache size should remain 1"
+    assert integration_embedding_service.get_cache_size() == 1, "Cache size should remain 1"
 
 
 @pytest.mark.integration
@@ -289,8 +285,7 @@ async def test_e2e_indexing_large_documents(
 
         assert stats["documents_loaded"] == 1, "Should load 1 document"
         assert stats["chunks_created"] > 1, "Large document should be chunked"
-        assert stats["points_indexed"] == stats["chunks_created"], \
-            "All chunks should be indexed"
+        assert stats["points_indexed"] == stats["chunks_created"], "All chunks should be indexed"
 
     finally:
         await integration_qdrant_client.delete_collection(integration_collection_name)

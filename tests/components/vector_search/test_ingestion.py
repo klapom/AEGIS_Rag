@@ -27,8 +27,10 @@ from src.core.exceptions import VectorSearchError
 @pytest.mark.unit
 def test_ingestion_pipeline_init_default():
     """Test DocumentIngestionPipeline initialization with defaults."""
-    with patch('src.components.vector_search.ingestion.QdrantClientWrapper'), \
-         patch('src.components.vector_search.ingestion.EmbeddingService'):
+    with (
+        patch("src.components.vector_search.ingestion.QdrantClientWrapper"),
+        patch("src.components.vector_search.ingestion.EmbeddingService"),
+    ):
 
         pipeline = DocumentIngestionPipeline()
 
@@ -62,13 +64,15 @@ def test_ingestion_pipeline_init_custom(mock_qdrant_client, mock_embedding_servi
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_load_documents_success(mock_qdrant_client, mock_embedding_service, mock_llama_documents, tmp_path):
+async def test_load_documents_success(
+    mock_qdrant_client, mock_embedding_service, mock_llama_documents, tmp_path
+):
     """Test successful document loading."""
     # Create a temporary directory
     test_dir = tmp_path / "test"
     test_dir.mkdir()
 
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.return_value.load_data.return_value = mock_llama_documents
 
         pipeline = DocumentIngestionPipeline(
@@ -85,13 +89,15 @@ async def test_load_documents_success(mock_qdrant_client, mock_embedding_service
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_load_documents_custom_extensions(mock_qdrant_client, mock_embedding_service, tmp_path):
+async def test_load_documents_custom_extensions(
+    mock_qdrant_client, mock_embedding_service, tmp_path
+):
     """Test loading documents with custom extensions."""
     # Create a temporary directory
     test_dir = tmp_path / "test"
     test_dir.mkdir()
 
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.return_value.load_data.return_value = []
 
         pipeline = DocumentIngestionPipeline(
@@ -119,7 +125,7 @@ async def test_load_documents_failure(mock_qdrant_client, mock_embedding_service
     test_dir = tmp_path / "test"
     test_dir.mkdir()
 
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.side_effect = Exception("Directory not found")
 
         pipeline = DocumentIngestionPipeline(
@@ -141,9 +147,11 @@ async def test_load_documents_failure(mock_qdrant_client, mock_embedding_service
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_chunk_documents_success(mock_qdrant_client, mock_embedding_service, mock_llama_documents, mock_llama_nodes):
+async def test_chunk_documents_success(
+    mock_qdrant_client, mock_embedding_service, mock_llama_documents, mock_llama_nodes
+):
     """Test successful document chunking."""
-    with patch('src.components.vector_search.ingestion.SentenceSplitter') as mock_splitter:
+    with patch("src.components.vector_search.ingestion.SentenceSplitter") as mock_splitter:
         mock_splitter.return_value.get_nodes_from_documents.return_value = mock_llama_nodes
 
         pipeline = DocumentIngestionPipeline(
@@ -160,7 +168,7 @@ async def test_chunk_documents_success(mock_qdrant_client, mock_embedding_servic
 @pytest.mark.asyncio
 async def test_chunk_documents_empty_list(mock_qdrant_client, mock_embedding_service):
     """Test chunking empty document list."""
-    with patch('src.components.vector_search.ingestion.SentenceSplitter') as mock_splitter:
+    with patch("src.components.vector_search.ingestion.SentenceSplitter") as mock_splitter:
         mock_splitter.return_value.get_nodes_from_documents.return_value = []
 
         pipeline = DocumentIngestionPipeline(
@@ -175,15 +183,19 @@ async def test_chunk_documents_empty_list(mock_qdrant_client, mock_embedding_ser
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_chunk_documents_failure(mock_qdrant_client, mock_embedding_service, mock_llama_documents):
+async def test_chunk_documents_failure(
+    mock_qdrant_client, mock_embedding_service, mock_llama_documents
+):
     """Test chunking failure."""
-    with patch.object(DocumentIngestionPipeline, '__init__', lambda x, **kwargs: None):
+    with patch.object(DocumentIngestionPipeline, "__init__", lambda x, **kwargs: None):
         pipeline = DocumentIngestionPipeline()
         pipeline.qdrant_client = mock_qdrant_client
         pipeline.embedding_service = mock_embedding_service
 
-        with patch('src.components.vector_search.ingestion.SentenceSplitter') as mock_splitter:
-            mock_splitter.return_value.get_nodes_from_documents.side_effect = Exception("Chunking failed")
+        with patch("src.components.vector_search.ingestion.SentenceSplitter") as mock_splitter:
+            mock_splitter.return_value.get_nodes_from_documents.side_effect = Exception(
+                "Chunking failed"
+            )
 
             with pytest.raises(VectorSearchError) as exc_info:
                 await pipeline.chunk_documents(mock_llama_documents)
@@ -198,7 +210,9 @@ async def test_chunk_documents_failure(mock_qdrant_client, mock_embedding_servic
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_generate_embeddings_success(mock_qdrant_client, mock_embedding_service, mock_llama_nodes):
+async def test_generate_embeddings_success(
+    mock_qdrant_client, mock_embedding_service, mock_llama_nodes
+):
     """Test successful embedding generation."""
     pipeline = DocumentIngestionPipeline(
         qdrant_client=mock_qdrant_client,
@@ -236,10 +250,18 @@ async def test_generate_embeddings_failure(mock_qdrant_client, mock_llama_nodes)
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_index_documents_success(mock_qdrant_client, mock_embedding_service, mock_llama_documents, mock_llama_nodes, temp_test_dir):
+async def test_index_documents_success(
+    mock_qdrant_client,
+    mock_embedding_service,
+    mock_llama_documents,
+    mock_llama_nodes,
+    temp_test_dir,
+):
     """Test complete document ingestion pipeline."""
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader, \
-         patch.object(DocumentIngestionPipeline, 'chunk_documents') as mock_chunk:
+    with (
+        patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader,
+        patch.object(DocumentIngestionPipeline, "chunk_documents") as mock_chunk,
+    ):
 
         mock_reader.return_value.load_data.return_value = mock_llama_documents
         mock_chunk.return_value = mock_llama_nodes
@@ -265,9 +287,11 @@ async def test_index_documents_success(mock_qdrant_client, mock_embedding_servic
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_index_documents_no_documents_found(mock_qdrant_client, mock_embedding_service, temp_test_dir):
+async def test_index_documents_no_documents_found(
+    mock_qdrant_client, mock_embedding_service, temp_test_dir
+):
     """Test ingestion when no documents are found."""
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.return_value.load_data.return_value = []
 
         pipeline = DocumentIngestionPipeline(
@@ -286,7 +310,7 @@ async def test_index_documents_no_documents_found(mock_qdrant_client, mock_embed
 @pytest.mark.asyncio
 async def test_index_documents_failure(mock_qdrant_client, mock_embedding_service, temp_test_dir):
     """Test ingestion pipeline failure."""
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.side_effect = Exception("Loading failed")
 
         pipeline = DocumentIngestionPipeline(
@@ -348,7 +372,9 @@ async def test_get_collection_stats_not_found(mock_embedding_service):
 @pytest.mark.asyncio
 async def test_ingest_documents_function(temp_test_dir):
     """Test convenience ingest_documents function."""
-    with patch('src.components.vector_search.ingestion.DocumentIngestionPipeline') as mock_pipeline_class:
+    with patch(
+        "src.components.vector_search.ingestion.DocumentIngestionPipeline"
+    ) as mock_pipeline_class:
         mock_pipeline = MagicMock()
         mock_pipeline.index_documents = AsyncMock(return_value={"documents_loaded": 3})
         mock_pipeline_class.return_value = mock_pipeline
@@ -388,8 +414,10 @@ async def test_index_documents_large_batch(mock_qdrant_client, mock_embedding_se
         return_value=[[0.1 + i * 0.01] * 768 for i in range(large_doc_count)]
     )
 
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader, \
-         patch.object(DocumentIngestionPipeline, 'chunk_documents') as mock_chunk:
+    with (
+        patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader,
+        patch.object(DocumentIngestionPipeline, "chunk_documents") as mock_chunk,
+    ):
 
         mock_reader.return_value.load_data.return_value = documents
         mock_chunk.return_value = nodes
@@ -416,7 +444,7 @@ async def test_load_documents_recursive(mock_qdrant_client, mock_embedding_servi
     test_dir = tmp_path / "test"
     test_dir.mkdir()
 
-    with patch('src.components.vector_search.ingestion.SimpleDirectoryReader') as mock_reader:
+    with patch("src.components.vector_search.ingestion.SimpleDirectoryReader") as mock_reader:
         mock_reader.return_value.load_data.return_value = []
 
         pipeline = DocumentIngestionPipeline(

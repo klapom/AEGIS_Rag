@@ -52,9 +52,7 @@ class MetadataFilters(BaseModel):
     source_in: list[str] | None = Field(
         None, description="Include only these sources (e.g., ['docs.rag.com', 'arxiv.org'])"
     )
-    source_not_in: list[str] | None = Field(
-        None, description="Exclude these sources"
-    )
+    source_not_in: list[str] | None = Field(None, description="Exclude these sources")
     doc_type_in: list[str] | None = Field(
         None, description="Include only these document types (e.g., ['pdf', 'md', 'txt'])"
     )
@@ -71,9 +69,7 @@ class MetadataFilters(BaseModel):
         allowed = {"pdf", "txt", "md", "docx", "html", "json", "csv"}
         for doc_type in v:
             if doc_type.lower() not in allowed:
-                raise ValueError(
-                    f"Invalid doc_type: {doc_type}. Allowed: {allowed}"
-                )
+                raise ValueError(f"Invalid doc_type: {doc_type}. Allowed: {allowed}")
         return [dt.lower() for dt in v]
 
     @field_validator("created_after", "created_before")

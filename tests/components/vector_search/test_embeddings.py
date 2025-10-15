@@ -92,8 +92,9 @@ async def test_embed_text_cache_hit():
 
     # Second call - cache hit
     embedding2 = await service.embed_text(text)
-    assert service._embedding_model.aget_text_embedding.call_count == 1, \
-        "Should not call API on cache hit"
+    assert (
+        service._embedding_model.aget_text_embedding.call_count == 1
+    ), "Should not call API on cache hit"
 
     assert embedding1 == embedding2, "Cached embedding should match"
 
@@ -112,8 +113,9 @@ async def test_embed_text_cache_disabled():
     await service.embed_text(text)
     await service.embed_text(text)
 
-    assert service._embedding_model.aget_text_embedding.call_count == 2, \
-        "Should call API twice with cache disabled"
+    assert (
+        service._embedding_model.aget_text_embedding.call_count == 2
+    ), "Should call API twice with cache disabled"
 
 
 @pytest.mark.unit
@@ -200,7 +202,9 @@ async def test_embed_batch_with_cache():
 
     # _get_cache_key is called 2x per uncached text: once for lookup, once for caching result
     # text1 (cached): 1 call, text2 (uncached): 2 calls, text3 (uncached): 2 calls = 5 total
-    with patch.object(service, '_get_cache_key', side_effect=["hash1", "hash2", "hash3", "hash2", "hash3"]):
+    with patch.object(
+        service, "_get_cache_key", side_effect=["hash1", "hash2", "hash3", "hash2", "hash3"]
+    ):
         embeddings = await service.embed_batch(texts)
 
     assert len(embeddings) == 3, "Should return 3 embeddings"
@@ -219,9 +223,7 @@ async def test_embed_batch_batching():
     def mock_batch_embed(texts):
         return [[0.1 + i * 0.001] * 768 for i in range(len(texts))]
 
-    service._embedding_model.aget_text_embedding_batch = AsyncMock(
-        side_effect=mock_batch_embed
-    )
+    service._embedding_model.aget_text_embedding_batch = AsyncMock(side_effect=mock_batch_embed)
 
     # Create 25 texts (should be split into 3 batches: 10, 10, 5)
     texts = [f"text_{i}" for i in range(25)]
@@ -373,9 +375,7 @@ async def test_embed_batch_single_item():
     """Test batch embedding with single item."""
     service = EmbeddingService()
     service._embedding_model = AsyncMock()
-    service._embedding_model.aget_text_embedding_batch = AsyncMock(
-        return_value=[[0.1] * 768]
-    )
+    service._embedding_model.aget_text_embedding_batch = AsyncMock(return_value=[[0.1] * 768])
 
     embeddings = await service.embed_batch(["single text"])
 

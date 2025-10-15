@@ -62,8 +62,10 @@ def test_qdrant_client_init_custom():
 @pytest.mark.unit
 def test_qdrant_client_lazy_initialization():
     """Test that Qdrant clients are lazy initialized."""
-    with patch("src.components.vector_search.qdrant_client.QdrantClient") as mock_sync, \
-         patch("src.components.vector_search.qdrant_client.AsyncQdrantClient") as mock_async:
+    with (
+        patch("src.components.vector_search.qdrant_client.QdrantClient") as mock_sync,
+        patch("src.components.vector_search.qdrant_client.AsyncQdrantClient") as mock_async,
+    ):
 
         client = QdrantClientWrapper()
 
@@ -131,10 +133,7 @@ async def test_health_check_retry_logic():
 
     # Simulate transient failure
     client.get_collections.side_effect = UnexpectedResponse(
-        status_code=503,
-        reason_phrase="Service Unavailable",
-        content=b"",
-        headers=httpx.Headers()
+        status_code=503, reason_phrase="Service Unavailable", content=b"", headers=httpx.Headers()
     )
 
     wrapper = QdrantClientWrapper()
@@ -328,10 +327,7 @@ async def test_upsert_points_batching():
     wrapper._async_client = client
 
     # Create 250 points (should be split into 3 batches of 100)
-    points = [
-        PointStruct(id=f"point{i}", vector=[0.1] * 768, payload={})
-        for i in range(250)
-    ]
+    points = [PointStruct(id=f"point{i}", vector=[0.1] * 768, payload={}) for i in range(250)]
 
     result = await wrapper.upsert_points(
         collection_name="test_collection",
@@ -603,13 +599,13 @@ async def test_retry_on_unexpected_response():
             status_code=503,
             reason_phrase="Service Unavailable",
             content=b"",
-            headers=httpx.Headers()
+            headers=httpx.Headers(),
         ),
         UnexpectedResponse(
             status_code=503,
             reason_phrase="Service Unavailable",
             content=b"",
-            headers=httpx.Headers()
+            headers=httpx.Headers(),
         ),
         True,
     ]

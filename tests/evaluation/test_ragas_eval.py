@@ -131,9 +131,7 @@ class TestRAGASEvaluator:
 
     def test_get_metrics_unknown_metric(self):
         """Test handling unknown metric names."""
-        evaluator = RAGASEvaluator(
-            metrics=["context_precision", "unknown_metric", "faithfulness"]
-        )
+        evaluator = RAGASEvaluator(metrics=["context_precision", "unknown_metric", "faithfulness"])
         metrics = evaluator._get_metrics()
 
         # Should only include known metrics
@@ -251,9 +249,7 @@ class TestRAGASEvaluator:
         evaluator = RAGASEvaluator()
 
         test_dataset = [
-            EvaluationDataset(
-                question="Q1", ground_truth="A1", contexts=["C1"], answer="A1"
-            )
+            EvaluationDataset(question="Q1", ground_truth="A1", contexts=["C1"], answer="A1")
         ]
 
         # Mock evaluate_retrieval to return different results per scenario

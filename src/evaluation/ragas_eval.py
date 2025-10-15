@@ -224,7 +224,9 @@ class RAGASEvaluator:
             "question": [ex.question for ex in dataset],
             "ground_truth": [ex.ground_truth for ex in dataset],
             "contexts": [ex.contexts for ex in dataset],
-            "answer": [ex.answer or ex.ground_truth for ex in dataset],  # Use ground truth if no answer
+            "answer": [
+                ex.answer or ex.ground_truth for ex in dataset
+            ],  # Use ground truth if no answer
         }
 
         hf_dataset = Dataset.from_dict(data_dict)
@@ -262,15 +264,17 @@ class RAGASEvaluator:
         # Build result
         result = EvaluationResult(
             scenario=scenario,
-            context_precision=float(scores.get("context_precision", [0.0])[0])
-            if "context_precision" in scores
-            else 0.0,
-            context_recall=float(scores.get("context_recall", [0.0])[0])
-            if "context_recall" in scores
-            else 0.0,
-            faithfulness=float(scores.get("faithfulness", [0.0])[0])
-            if "faithfulness" in scores
-            else 0.0,
+            context_precision=(
+                float(scores.get("context_precision", [0.0])[0])
+                if "context_precision" in scores
+                else 0.0
+            ),
+            context_recall=(
+                float(scores.get("context_recall", [0.0])[0]) if "context_recall" in scores else 0.0
+            ),
+            faithfulness=(
+                float(scores.get("faithfulness", [0.0])[0]) if "faithfulness" in scores else 0.0
+            ),
             num_samples=len(dataset),
             duration_seconds=duration,
             timestamp=end_time.isoformat(),
@@ -381,9 +385,7 @@ class RAGASEvaluator:
         """Generate JSON report."""
         report_data = {
             "timestamp": datetime.utcnow().isoformat(),
-            "scenarios": {
-                scenario: result.model_dump() for scenario, result in results.items()
-            },
+            "scenarios": {scenario: result.model_dump() for scenario, result in results.items()},
             "summary": {
                 "best_context_precision": max(r.context_precision for r in results.values()),
                 "best_context_recall": max(r.context_recall for r in results.values()),

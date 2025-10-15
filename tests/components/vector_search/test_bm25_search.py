@@ -43,8 +43,7 @@ def test_tokenize_basic():
 
     tokens = search._tokenize("This is a test document")
 
-    assert tokens == ["this", "is", "a", "test", "document"], \
-        "Should tokenize and lowercase"
+    assert tokens == ["this", "is", "a", "test", "document"], "Should tokenize and lowercase"
 
 
 @pytest.mark.unit
@@ -70,12 +69,15 @@ def test_tokenize_empty_string():
 
 
 @pytest.mark.unit
-@pytest.mark.parametrize("text,expected_count", [
-    ("single", 1),
-    ("two words", 2),
-    ("three word sentence", 3),
-    ("a b c d e", 5),
-])
+@pytest.mark.parametrize(
+    "text,expected_count",
+    [
+        ("single", 1),
+        ("two words", 2),
+        ("three word sentence", 3),
+        ("a b c d e", 5),
+    ],
+)
 def test_tokenize_word_count(text, expected_count):
     """Test tokenization word count."""
     search = BM25Search()
@@ -147,8 +149,7 @@ def test_fit_stores_metadata(sample_documents):
     search = BM25Search()
     search.fit(sample_documents, text_field="text")
 
-    assert len(search._metadata) == len(sample_documents), \
-        "Should store metadata for each document"
+    assert len(search._metadata) == len(sample_documents), "Should store metadata for each document"
 
     # Metadata should not include text field
     for meta in search._metadata:
@@ -187,8 +188,9 @@ def test_search_ranking_order(sample_documents):
 
     # Verify scores are descending
     for i in range(len(results) - 1):
-        assert results[i]["score"] >= results[i + 1]["score"], \
-            "Scores should be in descending order"
+        assert (
+            results[i]["score"] >= results[i + 1]["score"]
+        ), "Scores should be in descending order"
 
     # Verify ranks are sequential
     for i, result in enumerate(results):
@@ -228,8 +230,7 @@ def test_search_different_top_k(sample_documents, top_k):
     results = search.search("test query", top_k=top_k)
 
     assert len(results) <= top_k, f"Should return at most {top_k} results"
-    assert len(results) <= len(sample_documents), \
-        "Results should not exceed corpus size"
+    assert len(results) <= len(sample_documents), "Results should not exceed corpus size"
 
 
 @pytest.mark.unit
@@ -242,9 +243,9 @@ def test_search_relevance(sample_documents):
     results = search.search("Vector Search Qdrant", top_k=5)
 
     # First result should mention vector search
-    assert "vector" in results[0]["text"].lower() or \
-           "qdrant" in results[0]["text"].lower(), \
-        "Top result should be relevant to query"
+    assert (
+        "vector" in results[0]["text"].lower() or "qdrant" in results[0]["text"].lower()
+    ), "Top result should be relevant to query"
 
 
 @pytest.mark.unit
@@ -273,8 +274,9 @@ def test_get_corpus_size(sample_documents):
 
     search.fit(sample_documents, text_field="text")
 
-    assert search.get_corpus_size() == len(sample_documents), \
-        f"Corpus size should be {len(sample_documents)}"
+    assert search.get_corpus_size() == len(
+        sample_documents
+    ), f"Corpus size should be {len(sample_documents)}"
 
 
 @pytest.mark.unit
@@ -434,5 +436,4 @@ def test_search_case_insensitive(sample_documents):
     results_upper = search.search("VECTOR SEARCH", top_k=3)
 
     # Should return same results (order and scores)
-    assert len(results_lower) == len(results_upper), \
-        "Case should not affect result count"
+    assert len(results_lower) == len(results_upper), "Case should not affect result count"

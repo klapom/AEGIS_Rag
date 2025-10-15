@@ -271,11 +271,7 @@ class HybridSearch:
                 for rerank_result in reranked:
                     # Find original doc by ID
                     original_doc = next(
-                        (
-                            doc
-                            for doc in candidates
-                            if doc.get("id") == rerank_result.doc_id
-                        ),
+                        (doc for doc in candidates if doc.get("id") == rerank_result.doc_id),
                         None,
                     )
                     if original_doc:
@@ -293,9 +289,11 @@ class HybridSearch:
                     "reranking_completed",
                     original_top=candidates[0].get("id") if candidates else None,
                     reranked_top=final_results[0].get("id") if final_results else None,
-                    rank_changed=candidates[0].get("id") != final_results[0].get("id")
-                    if candidates and final_results
-                    else False,
+                    rank_changed=(
+                        candidates[0].get("id") != final_results[0].get("id")
+                        if candidates and final_results
+                        else False
+                    ),
                 )
             else:
                 # No reranking, just limit to top_k
