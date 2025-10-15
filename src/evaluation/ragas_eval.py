@@ -173,7 +173,7 @@ class RAGASEvaluator:
         logger.info("loading_dataset", path=str(dataset_path))
 
         examples = []
-        with open(dataset_path, "r", encoding="utf-8") as f:
+        with open(dataset_path, encoding="utf-8") as f:
             for line_num, line in enumerate(f, start=1):
                 try:
                     data = json.loads(line)

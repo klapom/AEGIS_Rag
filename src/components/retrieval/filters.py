@@ -19,7 +19,6 @@ from datetime import datetime
 import structlog
 from pydantic import BaseModel, Field, field_validator
 from qdrant_client.models import (
-    Condition,
     FieldCondition,
     Filter,
     MatchAny,
