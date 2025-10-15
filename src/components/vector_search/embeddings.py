@@ -155,13 +155,16 @@ class EmbeddingService:
     def _get_cache_key(self, text: str) -> str:
         """Generate cache key for text.
 
+        Uses SHA-256 for cache key generation (non-cryptographic use).
+        Previous MD5 usage flagged by Bandit security scan (B324).
+
         Args:
             text: Input text
 
         Returns:
-            MD5 hash of text
+            SHA-256 hash of text (hex digest)
         """
-        return hashlib.md5(text.encode("utf-8")).hexdigest()
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     @retry(
         stop=stop_after_attempt(3),

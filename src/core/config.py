@@ -28,7 +28,14 @@ class Settings(BaseSettings):
     json_logs: bool = Field(default=False, description="Output logs in JSON format")
 
     # API Server
-    api_host: str = Field(default="0.0.0.0", description="API server host")
+    # Security Note: Binding to 0.0.0.0 is intentional for Docker/Kubernetes deployments.
+    # This allows the container to accept connections from any interface.
+    # Security is enforced via:
+    #   - Rate limiting (slowapi): 10 req/min (search), 5 req/hour (ingest)
+    #   - JWT authentication (optional, configurable)
+    #   - Input validation (Pydantic schemas)
+    # Bandit B104 finding accepted by design. See BACKLOG_SPRINT_3.md:27-48
+    api_host: str = Field(default="0.0.0.0", description="API server host")  # noqa: S104
     api_port: int = Field(default=8000, description="API server port")
     api_workers: int = Field(default=1, description="Number of Uvicorn workers")
     api_reload: bool = Field(default=False, description="Enable auto-reload")

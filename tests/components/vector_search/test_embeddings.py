@@ -255,7 +255,7 @@ async def test_embed_batch_failure():
 
 @pytest.mark.unit
 def test_get_cache_key():
-    """Test cache key generation (MD5 hash)."""
+    """Test cache key generation (SHA-256 hash)."""
     service = EmbeddingService()
 
     key1 = service._get_cache_key("test text")
@@ -264,7 +264,7 @@ def test_get_cache_key():
 
     assert key1 == key2, "Same text should generate same key"
     assert key1 != key3, "Different text should generate different key"
-    assert len(key1) == 32, "MD5 hash should be 32 characters"
+    assert len(key1) == 64, "SHA-256 hash should be 64 characters (hex digest)"
 
 
 @pytest.mark.unit
