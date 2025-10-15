@@ -9,6 +9,8 @@ the vector_search foundation:
 - Adaptive Chunking: Document-type specific chunking strategies
 """
 
+from src.components.retrieval.chunking import AdaptiveChunker, ChunkingStrategy
+from src.components.retrieval.filters import MetadataFilterEngine, MetadataFilters
 from src.components.retrieval.query_decomposition import (
     DecompositionResult,
     QueryClassification,
@@ -26,4 +28,8 @@ __all__ = [
     "QueryClassification",
     "SubQuery",
     "DecompositionResult",
+    "MetadataFilterEngine",
+    "MetadataFilters",
+    "AdaptiveChunker",
+    "ChunkingStrategy",
 ]

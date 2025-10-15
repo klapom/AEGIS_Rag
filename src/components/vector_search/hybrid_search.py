@@ -9,6 +9,7 @@ from typing import Any
 
 import structlog
 
+from src.components.retrieval.filters import MetadataFilterEngine, MetadataFilters
 from src.components.retrieval.reranker import CrossEncoderReranker
 from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.embeddings import EmbeddingService
@@ -45,6 +46,7 @@ class HybridSearch:
         self.bm25_search = bm25_search or BM25Search()
         self._reranker = reranker  # Lazy-loaded on first use
         self.collection_name = collection_name or settings.qdrant_collection
+        self.filter_engine = MetadataFilterEngine()
 
         logger.info(
             "Hybrid search initialized",
@@ -68,6 +70,7 @@ class HybridSearch:
         query: str,
         top_k: int = 20,
         score_threshold: float | None = None,
+        filters: MetadataFilters | None = None,
     ) -> list[dict[str, Any]]:
         """Perform vector-based semantic search.
 
@@ -75,6 +78,7 @@ class HybridSearch:
             query: Search query
             top_k: Number of results (default: 20)
             score_threshold: Minimum similarity score
+            filters: Metadata filters for targeted search
 
         Returns:
             List of results with text, score, and metadata
@@ -83,12 +87,24 @@ class HybridSearch:
             # Generate query embedding
             query_embedding = await self.embedding_service.embed_text(query)
 
+            # Build Qdrant filter from metadata filters
+            qdrant_filter = None
+            if filters is not None:
+                qdrant_filter = self.filter_engine.build_qdrant_filter(filters)
+                if qdrant_filter is not None:
+                    logger.info(
+                        "applying_metadata_filters_vector_search",
+                        active_filters=filters.get_active_filters(),
+                        selectivity=self.filter_engine.estimate_selectivity(filters),
+                    )
+
             # Search in Qdrant
             results = await self.qdrant_client.search(
                 collection_name=self.collection_name,
                 query_vector=query_embedding,
                 limit=top_k,
                 score_threshold=score_threshold,
+                query_filter=qdrant_filter,
             )
 
             # Format results
@@ -110,6 +126,7 @@ class HybridSearch:
                 "Vector search completed",
                 query_length=len(query),
                 results_count=len(formatted_results),
+                filters_applied=qdrant_filter is not None,
             )
 
             return formatted_results
@@ -172,6 +189,7 @@ class HybridSearch:
         score_threshold: float | None = None,
         use_reranking: bool = True,
         rerank_top_k: int | None = None,
+        filters: MetadataFilters | None = None,
     ) -> dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
 
@@ -184,6 +202,7 @@ class HybridSearch:
             score_threshold: Minimum vector similarity score
             use_reranking: Apply cross-encoder reranking (default: True)
             rerank_top_k: Number of candidates to rerank (default: 2*top_k)
+            filters: Metadata filters for targeted search
 
         Returns:
             Dictionary with fused results and metadata
@@ -197,12 +216,24 @@ class HybridSearch:
             ...     print(f"{doc['rank']}: {doc['text'][:100]}")
         """
         try:
+            # Validate filters if provided
+            if filters is not None and not filters.is_empty():
+                is_valid, error_msg = self.filter_engine.validate_filter(filters)
+                if not is_valid:
+                    raise VectorSearchError(f"Invalid filters: {error_msg}")
+                logger.info(
+                    "hybrid_search_with_filters",
+                    active_filters=filters.get_active_filters(),
+                    estimated_selectivity=self.filter_engine.estimate_selectivity(filters),
+                )
+
             # Run vector and BM25 search in parallel
             vector_results, bm25_results = await asyncio.gather(
                 self.vector_search(
                     query=query,
                     top_k=vector_top_k,
                     score_threshold=score_threshold,
+                    filters=filters,
                 ),
                 self.keyword_search(
                     query=query,

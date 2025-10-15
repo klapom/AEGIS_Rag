@@ -3,6 +3,7 @@
 FastAPI endpoints for document ingestion and hybrid search retrieval.
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from src.api.auth.jwt import get_current_user
 from src.api.middleware import limiter
+from src.components.retrieval import MetadataFilters
 from src.components.vector_search import (
     DocumentIngestionPipeline,
     HybridSearch,
@@ -61,6 +63,18 @@ class SearchRequest(BaseModel):
         description="Number of candidates to rerank (default: 2*top_k)",
         ge=1,
         le=100,
+    )
+    # Sprint 3: Metadata filters
+    filters: dict[str, Any] | None = Field(
+        None,
+        description="Metadata filters for targeted search (Sprint 3)",
+        examples=[
+            {
+                "created_after": "2024-01-01T00:00:00",
+                "doc_type_in": ["pdf", "md"],
+                "tags_contains": ["tutorial"],
+            }
+        ],
     )
 
     class Config:
@@ -175,14 +189,41 @@ async def search(
     try:
         hybrid_search = get_hybrid_search()
 
+        # Parse metadata filters if provided
+        metadata_filters = None
+        if search_params.filters:
+            try:
+                # Convert datetime strings to datetime objects
+                filter_dict = search_params.filters.copy()
+                if "created_after" in filter_dict and filter_dict["created_after"]:
+                    filter_dict["created_after"] = datetime.fromisoformat(
+                        filter_dict["created_after"].replace("Z", "+00:00")
+                    )
+                if "created_before" in filter_dict and filter_dict["created_before"]:
+                    filter_dict["created_before"] = datetime.fromisoformat(
+                        filter_dict["created_before"].replace("Z", "+00:00")
+                    )
+                metadata_filters = MetadataFilters(**filter_dict)
+                logger.info(
+                    "metadata_filters_parsed",
+                    active_filters=metadata_filters.get_active_filters(),
+                )
+            except Exception as e:
+                logger.warning("Failed to parse metadata filters", error=str(e))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid metadata filters: {str(e)}",
+                ) from None
+
         if search_params.search_type == "hybrid":
-            # Hybrid search (Vector + BM25 + RRF + optional Reranking)
+            # Hybrid search (Vector + BM25 + RRF + optional Reranking + optional Filters)
             result = await hybrid_search.hybrid_search(
                 query=search_params.query,
                 top_k=search_params.top_k,
                 score_threshold=search_params.score_threshold,
                 use_reranking=search_params.use_reranking,  # Sprint 3
                 rerank_top_k=search_params.rerank_top_k,  # Sprint 3
+                filters=metadata_filters,  # Sprint 3
             )
 
             return SearchResponse(
@@ -194,11 +235,12 @@ async def search(
             )
 
         elif search_params.search_type == "vector":
-            # Vector-only search
+            # Vector-only search (with optional filters)
             results = await hybrid_search.vector_search(
                 query=search_params.query,
                 top_k=search_params.top_k,
                 score_threshold=search_params.score_threshold,
+                filters=metadata_filters,  # Sprint 3
             )
 
             return SearchResponse(
@@ -209,7 +251,7 @@ async def search(
             )
 
         elif search_params.search_type == "bm25":
-            # BM25-only search
+            # BM25-only search (no filter support for BM25)
             results = await hybrid_search.keyword_search(
                 query=search_params.query,
                 top_k=search_params.top_k,
@@ -228,6 +270,8 @@ async def search(
                 detail=f"Invalid search_type: {search_params.search_type}. Use 'vector', 'bm25', or 'hybrid'.",
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Search failed", error=str(e), query=search_params.query, exc_info=True)
         # P1: Don't expose internal error details to client
