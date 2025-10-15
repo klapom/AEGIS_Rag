@@ -179,9 +179,9 @@ jobs:
           NEO4J_AUTH: neo4j/testpassword
         options: >-
           --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 10
       
       redis:
         image: redis:7-alpine
