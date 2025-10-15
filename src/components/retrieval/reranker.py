@@ -122,7 +122,7 @@ class CrossEncoderReranker:
                     self.model_name,
                     max_length=512,
                     device="cpu",
-                    cache_folder=str(self.cache_dir),  # type: ignore[call-arg]
+                    cache_folder=str(self.cache_dir),
                 )
             logger.info("cross_encoder_model_loaded", model=self.model_name)
         return self._model
