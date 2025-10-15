@@ -4,7 +4,8 @@ This module provides BM25 (Best Matching 25) keyword-based search
 as the keyword component of hybrid search.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 import structlog
 from rank_bm25 import BM25Okapi
 
@@ -18,14 +19,14 @@ class BM25Search:
 
     def __init__(self):
         """Initialize BM25 search."""
-        self._corpus: List[str] = []
-        self._metadata: List[Dict[str, Any]] = []
-        self._bm25: Optional[BM25Okapi] = None
+        self._corpus: list[str] = []
+        self._metadata: list[dict[str, Any]] = []
+        self._bm25: BM25Okapi | None = None
         self._is_fitted = False
 
         logger.info("BM25 search initialized")
 
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """Simple tokenization (split by whitespace and lowercase).
 
         Args:
@@ -38,7 +39,7 @@ class BM25Search:
 
     def fit(
         self,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         text_field: str = "text",
     ) -> None:
         """Fit BM25 model on document corpus.
@@ -108,7 +109,7 @@ class BM25Search:
         self,
         query: str,
         top_k: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search documents using BM25.
 
         Args:

@@ -7,18 +7,19 @@ Reference: Cormack et al. 2009 - "Reciprocal Rank Fusion outperforms Condorcet
 and individual Rank Learning Methods"
 """
 
-from typing import List, Dict, Any, Optional
 from collections import defaultdict
+from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
 
 
 def reciprocal_rank_fusion(
-    rankings: List[List[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     k: int = 60,
     id_field: str = "id",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Combine multiple rankings using Reciprocal Rank Fusion.
 
     Args:
@@ -44,7 +45,7 @@ def reciprocal_rank_fusion(
     rrf_scores = defaultdict(float)
     doc_data = {}  # Store original document data
 
-    for ranking_idx, ranking in enumerate(rankings):
+    for _ranking_idx, ranking in enumerate(rankings):
         for rank, doc in enumerate(ranking, start=1):
             # Extract document ID
             doc_id = doc.get(id_field, doc.get("text", str(rank)))
@@ -83,11 +84,11 @@ def reciprocal_rank_fusion(
 
 
 def weighted_reciprocal_rank_fusion(
-    rankings: List[List[Dict[str, Any]]],
-    weights: Optional[List[float]] = None,
+    rankings: list[list[dict[str, Any]]],
+    weights: list[float] | None = None,
     k: int = 60,
     id_field: str = "id",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Weighted version of RRF for different ranking importance.
 
     Args:
@@ -121,7 +122,7 @@ def weighted_reciprocal_rank_fusion(
     rrf_scores = defaultdict(float)
     doc_data = {}
 
-    for ranking_idx, (ranking, weight) in enumerate(zip(rankings, normalized_weights)):
+    for _ranking_idx, (ranking, weight) in enumerate(zip(rankings, normalized_weights, strict=False)):
         for rank, doc in enumerate(ranking, start=1):
             doc_id = doc.get(id_field, doc.get("text", str(rank)))
 
@@ -158,10 +159,10 @@ def weighted_reciprocal_rank_fusion(
 
 
 def analyze_ranking_diversity(
-    rankings: List[List[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     top_k: int = 10,
     id_field: str = "id",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze diversity and overlap between multiple rankings.
 
     Args:

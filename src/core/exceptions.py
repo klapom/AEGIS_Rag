@@ -1,8 +1,12 @@
 """Custom exceptions for the AEGIS RAG application."""
 
 
-class AegisRAGException(Exception):
-    """Base exception for all AEGIS RAG errors."""
+class AegisRAGException(Exception):  # noqa: N818
+    """Base exception for all AEGIS RAG errors.
+
+    Note: Name intentionally uses 'Exception' suffix instead of 'Error'
+    to match the base Exception class naming convention.
+    """
 
     def __init__(self, message: str, details: dict | None = None) -> None:
         """

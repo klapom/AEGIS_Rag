@@ -4,18 +4,17 @@ This module provides embedding generation using Ollama's nomic-embed-text model
 with automatic batching, caching, and error handling.
 """
 
-from typing import List, Optional, Dict, Any
-from functools import lru_cache
-from collections import OrderedDict
 import hashlib
+from collections import OrderedDict
+from typing import Any
 
 import structlog
 from llama_index.embeddings.ollama import OllamaEmbedding
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from src.core.config import settings
@@ -37,12 +36,12 @@ class LRUCache:
         Args:
             max_size: Maximum number of items to cache (default: 10000)
         """
-        self.cache: OrderedDict[str, List[float]] = OrderedDict()
+        self.cache: OrderedDict[str, list[float]] = OrderedDict()
         self.max_size = max_size
         self._hits = 0
         self._misses = 0
 
-    def get(self, key: str) -> Optional[List[float]]:
+    def get(self, key: str) -> list[float] | None:
         """Get item from cache.
 
         Args:
@@ -59,7 +58,7 @@ class LRUCache:
         self._misses += 1
         return None
 
-    def set(self, key: str, value: List[float]) -> None:
+    def set(self, key: str, value: list[float]) -> None:
         """Add item to cache.
 
         Args:
@@ -100,7 +99,7 @@ class LRUCache:
         total = self._hits + self._misses
         return self._hits / total if total > 0 else 0.0
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "size": len(self.cache),
@@ -116,8 +115,8 @@ class EmbeddingService:
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
-        base_url: Optional[str] = None,
+        model_name: str | None = None,
+        base_url: str | None = None,
         batch_size: int = 32,
         enable_cache: bool = True,
     ):
@@ -169,7 +168,7 @@ class EmbeddingService:
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type(Exception),
     )
-    async def embed_text(self, text: str) -> List[float]:
+    async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text.
 
         Args:
@@ -218,7 +217,7 @@ class EmbeddingService:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
     )
-    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts in batches.
 
         IMPORTANT: Maintains input order - embeddings[i] corresponds to texts[i].
@@ -236,7 +235,7 @@ class EmbeddingService:
             return []
 
         # Dictionary to store embeddings by index (preserves order)
-        embeddings_dict: Dict[int, List[float]] = {}
+        embeddings_dict: dict[int, list[float]] = {}
         cache_hits = 0
         cache_misses = 0
 
@@ -270,7 +269,7 @@ class EmbeddingService:
                     new_embeddings.extend(batch_embeddings)
 
                 # Map embeddings back to original indices and cache them
-                for uncached_idx, embedding in zip(uncached_indices, new_embeddings):
+                for uncached_idx, embedding in zip(uncached_indices, new_embeddings, strict=False):
                     embeddings_dict[uncached_idx] = embedding
 
                     # Cache result
@@ -321,7 +320,7 @@ class EmbeddingService:
         """
         return self._cache.size()
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -330,7 +329,7 @@ class EmbeddingService:
         return self._cache.stats()
 
     @property
-    def model_info(self) -> Dict[str, Any]:
+    def model_info(self) -> dict[str, Any]:
         """Get model information.
 
         Returns:
@@ -347,7 +346,7 @@ class EmbeddingService:
 
 
 # Global embedding service instance (singleton pattern)
-_embedding_service: Optional[EmbeddingService] = None
+_embedding_service: EmbeddingService | None = None
 
 
 def get_embedding_service() -> EmbeddingService:

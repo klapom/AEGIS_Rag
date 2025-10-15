@@ -8,27 +8,24 @@ This module provides a production-ready wrapper around the Qdrant client with:
 - Batch operations
 """
 
-import asyncio
-from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
+from typing import Any
 
 import structlog
-from qdrant_client import QdrantClient, AsyncQdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
-    SearchRequest,
-    ScrollRequest,
-    CollectionInfo,
-)
+from qdrant_client import AsyncQdrantClient, QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.models import (
+    CollectionInfo,
+    Distance,
+    Filter,
+    PointStruct,
+    VectorParams,
+)
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from src.core.config import settings
@@ -42,9 +39,9 @@ class QdrantClientWrapper:
 
     def __init__(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        grpc_port: Optional[int] = None,
+        host: str | None = None,
+        port: int | None = None,
+        grpc_port: int | None = None,
         prefer_grpc: bool = True,
         timeout: int = 30,
     ):
@@ -63,8 +60,8 @@ class QdrantClientWrapper:
         self.prefer_grpc = prefer_grpc
         self.timeout = timeout
 
-        self._client: Optional[QdrantClient] = None
-        self._async_client: Optional[AsyncQdrantClient] = None
+        self._client: QdrantClient | None = None
+        self._async_client: AsyncQdrantClient | None = None
 
         logger.info(
             "Initializing Qdrant client",
@@ -200,7 +197,7 @@ class QdrantClientWrapper:
     async def upsert_points(
         self,
         collection_name: str,
-        points: List[PointStruct],
+        points: list[PointStruct],
         batch_size: int = 100,
     ) -> bool:
         """Upsert points to collection in batches.
@@ -244,11 +241,11 @@ class QdrantClientWrapper:
     async def search(
         self,
         collection_name: str,
-        query_vector: List[float],
+        query_vector: list[float],
         limit: int = 10,
-        score_threshold: Optional[float] = None,
-        query_filter: Optional[Filter] = None,
-    ) -> List[Dict[str, Any]]:
+        score_threshold: float | None = None,
+        query_filter: Filter | None = None,
+    ) -> list[dict[str, Any]]:
         """Search for similar vectors in collection.
 
         Args:
@@ -299,7 +296,7 @@ class QdrantClientWrapper:
             )
             raise VectorSearchError(f"Vector search failed: {e}") from e
 
-    async def get_collection_info(self, collection_name: str) -> Optional[CollectionInfo]:
+    async def get_collection_info(self, collection_name: str) -> CollectionInfo | None:
         """Get information about a collection.
 
         Args:
@@ -350,7 +347,7 @@ class QdrantClientWrapper:
 
 
 # Global client instance (singleton pattern)
-_qdrant_client: Optional[QdrantClientWrapper] = None
+_qdrant_client: QdrantClientWrapper | None = None
 
 
 def get_qdrant_client() -> QdrantClientWrapper:

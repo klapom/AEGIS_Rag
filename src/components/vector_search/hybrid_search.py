@@ -4,16 +4,17 @@ This module combines vector-based semantic search (Qdrant) with
 keyword-based BM25 search using Reciprocal Rank Fusion for optimal retrieval.
 """
 
-from typing import List, Dict, Any, Optional
 import asyncio
+from typing import Any
+
 import structlog
 
-from src.components.vector_search.qdrant_client import QdrantClientWrapper
-from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.bm25_search import BM25Search
-from src.utils.fusion import reciprocal_rank_fusion, analyze_ranking_diversity
+from src.components.vector_search.embeddings import EmbeddingService
+from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
+from src.utils.fusion import analyze_ranking_diversity, reciprocal_rank_fusion
 
 logger = structlog.get_logger(__name__)
 
@@ -23,10 +24,10 @@ class HybridSearch:
 
     def __init__(
         self,
-        qdrant_client: Optional[QdrantClientWrapper] = None,
-        embedding_service: Optional[EmbeddingService] = None,
-        bm25_search: Optional[BM25Search] = None,
-        collection_name: Optional[str] = None,
+        qdrant_client: QdrantClientWrapper | None = None,
+        embedding_service: EmbeddingService | None = None,
+        bm25_search: BM25Search | None = None,
+        collection_name: str | None = None,
     ):
         """Initialize hybrid search.
 
@@ -50,8 +51,8 @@ class HybridSearch:
         self,
         query: str,
         top_k: int = 20,
-        score_threshold: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        score_threshold: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Perform vector-based semantic search.
 
         Args:
@@ -103,7 +104,7 @@ class HybridSearch:
         self,
         query: str,
         top_k: int = 20,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform BM25 keyword search.
 
         Args:
@@ -148,8 +149,8 @@ class HybridSearch:
         vector_top_k: int = 20,
         bm25_top_k: int = 20,
         rrf_k: int = 60,
-        score_threshold: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        score_threshold: float | None = None,
+    ) -> dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
 
         Args:
@@ -226,7 +227,7 @@ class HybridSearch:
             logger.error("Hybrid search failed", error=str(e))
             raise VectorSearchError(f"Hybrid search failed: {e}") from e
 
-    async def prepare_bm25_index(self) -> Dict[str, Any]:
+    async def prepare_bm25_index(self) -> dict[str, Any]:
         """Prepare BM25 index from Qdrant collection.
 
         This loads all documents from Qdrant and fits the BM25 model.

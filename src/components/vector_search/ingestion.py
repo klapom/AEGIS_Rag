@@ -6,17 +6,17 @@ Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 
 import asyncio
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Any
 from uuid import uuid4
 
 import structlog
-from llama_index.core import SimpleDirectoryReader, Document
+from llama_index.core import Document, SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import TextNode
 from qdrant_client.models import PointStruct
 
-from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.components.vector_search.embeddings import EmbeddingService
+from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 
@@ -28,12 +28,12 @@ class DocumentIngestionPipeline:
 
     def __init__(
         self,
-        qdrant_client: Optional[QdrantClientWrapper] = None,
-        embedding_service: Optional[EmbeddingService] = None,
-        collection_name: Optional[str] = None,
+        qdrant_client: QdrantClientWrapper | None = None,
+        embedding_service: EmbeddingService | None = None,
+        collection_name: str | None = None,
         chunk_size: int = 512,
         chunk_overlap: int = 128,
-        allowed_base_path: Optional[Union[str, Path]] = None,
+        allowed_base_path: str | Path | None = None,
     ):
         """Initialize document ingestion pipeline.
 
@@ -71,7 +71,7 @@ class DocumentIngestionPipeline:
             allowed_base_path=str(self.allowed_base_path),
         )
 
-    def _validate_path(self, input_path: Union[str, Path]) -> Path:
+    def _validate_path(self, input_path: str | Path) -> Path:
         """Validate path to prevent directory traversal attacks.
 
         Args:
@@ -121,10 +121,10 @@ class DocumentIngestionPipeline:
 
     async def load_documents(
         self,
-        input_dir: Union[str, Path],
-        required_exts: Optional[List[str]] = None,
+        input_dir: str | Path,
+        required_exts: list[str] | None = None,
         recursive: bool = True,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Load documents from directory using LlamaIndex.
 
         Args:
@@ -164,7 +164,7 @@ class DocumentIngestionPipeline:
 
             return documents
 
-        except ValueError as e:
+        except ValueError:
             # Path validation error - re-raise as-is (security error)
             raise
         except Exception as e:
@@ -177,8 +177,8 @@ class DocumentIngestionPipeline:
 
     async def chunk_documents(
         self,
-        documents: List[Document],
-    ) -> List[TextNode]:
+        documents: list[Document],
+    ) -> list[TextNode]:
         """Split documents into chunks using sentence-based splitting.
 
         Args:
@@ -208,8 +208,8 @@ class DocumentIngestionPipeline:
 
     async def generate_embeddings(
         self,
-        nodes: List[TextNode],
-    ) -> List[List[float]]:
+        nodes: list[TextNode],
+    ) -> list[list[float]]:
         """Generate embeddings for text nodes.
 
         Args:
@@ -242,10 +242,10 @@ class DocumentIngestionPipeline:
 
     async def index_documents(
         self,
-        input_dir: Union[str, Path],
+        input_dir: str | Path,
         batch_size: int = 100,
-        required_exts: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        required_exts: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Complete ingestion pipeline: load, chunk, embed, index.
 
         Args:
@@ -296,7 +296,7 @@ class DocumentIngestionPipeline:
             # Step 5: Create Qdrant points
             logger.info("Step 4/4: Indexing to Qdrant")
             points = []
-            for node, embedding in zip(nodes, embeddings):
+            for node, embedding in zip(nodes, embeddings, strict=False):
                 point_id = str(uuid4())
                 point = PointStruct(
                     id=point_id,
@@ -343,7 +343,7 @@ class DocumentIngestionPipeline:
             logger.error("Document ingestion failed", error=str(e))
             raise VectorSearchError(f"Document ingestion failed: {e}") from e
 
-    async def get_collection_stats(self) -> Optional[Dict[str, Any]]:
+    async def get_collection_stats(self) -> dict[str, Any] | None:
         """Get statistics about the indexed collection.
 
         Returns:
@@ -370,11 +370,11 @@ class DocumentIngestionPipeline:
 
 # Convenience function for quick ingestion
 async def ingest_documents(
-    input_dir: Union[str, Path],
-    collection_name: Optional[str] = None,
+    input_dir: str | Path,
+    collection_name: str | None = None,
     chunk_size: int = 512,
     chunk_overlap: int = 128,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Quick document ingestion helper function.
 
     Args:
