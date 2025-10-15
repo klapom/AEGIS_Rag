@@ -310,7 +310,7 @@ Nach Sprint 6 evaluieren wir:
 - [Ollama Documentation](https://ollama.ai/docs)
 - [LangChain Ollama Integration](https://python.langchain.com/docs/integrations/llms/ollama)
 - [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
-- [Llama 3.2 Model Card](https://huggingface.co/meta-llama/Llama-3.2-8B)
+- [Llama 3.2 Release](https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/)
 
 ---
 

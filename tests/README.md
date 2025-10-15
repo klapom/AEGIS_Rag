@@ -244,4 +244,4 @@ Parallel execution (with pytest-xdist):
 - [Pytest Documentation](https://docs.pytest.org/)
 - [pytest-asyncio](https://pytest-asyncio.readthedocs.io/)
 - [pytest-cov](https://pytest-cov.readthedocs.io/)
-- [Testing Best Practices](https://testdriven.io/blog/testing-best-practices/)
+- [Python Testing Best Practices](https://realpython.com/python-testing/)
