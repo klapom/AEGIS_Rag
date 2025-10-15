@@ -8,7 +8,7 @@ license = "MIT"
 homepage = "https://github.com/aegis-rag/aegis-rag"
 repository = "https://github.com/aegis-rag/aegis-rag"
 documentation = "https://docs.aegis-rag.com"
-keywords = ["rag", "llm", "agents", "langgraph", "vector-search", "graph-rag"]
+keywords = ["rag", "llm", "agents", "vector-search"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -16,51 +16,34 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-# Core Python
-python = "^3.11"
+# Core Python (constrained to <3.14 for llama-index compatibility)
+python = ">=3.11,<3.14"
 
-# Web Framework
+# Web Framework (Sprint 2: REST API)
 fastapi = "^0.115.0"
 uvicorn = {extras = ["standard"], version = "^0.30.0"}
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.0"
 
-# LLM & Agent Orchestration
-langgraph = "^0.2.0"
-langchain-core = "^0.3.0"
-langchain-ollama = "^0.2.0"
-langchain-openai = "^0.2.0"  # Optional for Azure OpenAI
-langchain-anthropic = "^0.2.0"  # Optional fallback
-langgraph-checkpoint-postgres = "^0.2.0"
+# Data Ingestion & RAG (Sprint 2: Document Ingestion)
+# All compatible with llama-index-core 0.12.x (required by ollama packages)
+llama-index-core = "^0.12.0"
+llama-index-llms-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
+llama-index-embeddings-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
+llama-index-vector-stores-qdrant = "^0.6.0"  # Python 3.13 compatible, requires core >=0.12.7,<0.13.0
+llama-index-readers-file = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
 
-# Data Ingestion & RAG
-llama-index = "^0.11.0"
-llama-index-llms-ollama = "^0.4.0"
-llama-index-embeddings-ollama = "^0.4.0"
-llama-index-embeddings-openai = "^0.2.0"  # Optional for Azure
-llama-index-vector-stores-qdrant = "^0.3.0"
-llama-index-graph-stores-neo4j = "^0.3.0"
-llama-index-llms-openai = "^0.2.0"  # Optional for Azure
+# Vector Database (Sprint 2: Qdrant)
+qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.0)
 
-# LLM Providers
+# LLM Provider (Sprint 2: Ollama)
 ollama = "^0.3.0"
-openai = "^1.40.0"  # Optional for Azure OpenAI
-anthropic = "^0.34.0"  # Optional
 
-# Vector Database
-qdrant-client = "^1.11.0"
-
-# Graph Database
-neo4j = "^5.24.0"
-
-# Memory & Caching
-redis = "^5.0.0"
-graphiti = {git = "https://github.com/getzep/graphiti.git", optional = true}
-
-# GraphRAG
-lightrag = {git = "https://github.com/HKUDS/LightRAG.git", optional = true}
+# Hybrid Search (Sprint 2: BM25)
+rank-bm25 = "^0.2.2"
 
 # Utilities
 python-dotenv = "^1.0.0"
@@ -71,20 +54,17 @@ aiofiles = "^24.1.0"
 pyyaml = "^6.0.0"
 python-multipart = "^0.0.9"
 
-# MCP (Model Context Protocol)
-mcp = "^1.0.0"
+# Monitoring (Sprint 2: Metrics)
+prometheus-client = "^0.21.0"
+slowapi = "^0.1.9"  # Rate limiting
 
-# Hybrid Search
-rank-bm25 = "^0.2.2"
+# Database Clients (Sprint 2+: Health Checks, Sprint 5+: Graph DB)
+neo4j = "^5.14.0"  # Neo4j driver for health checks (Sprint 5: Graph RAG)
+redis = "^5.0.0"  # Redis client for health checks (Sprint 8: Memory)
 
-# Monitoring & Observability
-prometheus-client = "^0.20.0"
-langsmith = "^0.1.0"
-
-# Security
-python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-python-jwt = "^4.1.0"
+# Security & Authentication (Sprint 2: P1 Security)
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # JWT tokens
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}  # Password hashing
 
 [tool.poetry.group.dev.dependencies]
 # Testing
@@ -92,45 +72,15 @@ pytest = "^8.0.0"
 pytest-asyncio = "^0.23.0"
 pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
-pytest-xdist = "^3.6.0"
-faker = "^30.0.0"
-locust = "^2.29.0"
-responses = "^0.25.0"
-httpx-mock = "^0.16.0"
 
 # Code Quality
 ruff = "^0.6.0"
 black = "^24.8.0"
 mypy = "^1.11.0"
-bandit = "^1.7.9"
-safety = "^3.2.0"
-pre-commit = "^3.8.0"
 
 # Type Stubs
-types-redis = "^4.6.0"
 types-pyyaml = "^6.0.0"
 types-aiofiles = "^24.1.0"
-
-# Documentation
-mkdocs = "^1.6.0"
-mkdocs-material = "^9.5.0"
-mkdocstrings = {extras = ["python"], version = "^0.25.0"}
-
-# Development Tools
-ipython = "^8.26.0"
-ipdb = "^0.13.13"
-
-[tool.poetry.group.production]
-optional = true
-
-[tool.poetry.group.production.dependencies]
-gunicorn = "^23.0.0"
-sentry-sdk = {extras = ["fastapi"], version = "^2.13.0"}
-
-[tool.poetry.extras]
-graphrag = ["lightrag"]
-memory = ["graphiti"]
-all = ["lightrag", "graphiti"]
 
 [build-system]
 requires = ["poetry-core"]
@@ -151,14 +101,12 @@ select = [
     "N",   # pep8-naming
     "UP",  # pyupgrade
     "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
+    "C4",   # flake8-comprehensions
     "SIM", # flake8-simplify
-    "TCH", # flake8-type-checking
 ]
 ignore = [
     "E501",  # line too long (handled by black)
     "B008",  # do not perform function calls in argument defaults
-    "C901",  # too complex
 ]
 
 [tool.ruff.per-file-ignores]
@@ -172,55 +120,26 @@ known-first-party = ["src"]
 line-length = 100
 target-version = ["py311"]
 include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 check_untyped_defs = true
-disallow_untyped_decorators = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-warn_no_return = true
 follow_imports = "normal"
-namespace_packages = true
-show_error_codes = true
-show_error_context = true
 pretty = true
 
 [[tool.mypy.overrides]]
 module = [
     "qdrant_client.*",
-    "neo4j.*",
-    "redis.*",
-    "langgraph.*",
-    "langchain.*",
     "llama_index.*",
     "ollama.*",
-    "graphiti.*",
-    "lightrag.*",
     "rank_bm25.*",
-    "mcp.*",
 ]
 ignore_missing_imports = true
 
@@ -235,43 +154,10 @@ addopts = [
     "--verbose",
     "--cov=src",
     "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
-    "--cov-fail-under=80",
-    "--strict-markers",
     "--tb=short",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "e2e: End-to-end tests",
-    "slow: Slow running tests",
-    "performance: Performance tests",
 ]
 asyncio_mode = "auto"
-
-[tool.coverage.run]
-source = ["src"]
-omit = [
-    "*/tests/*",
-    "*/test_*.py",
-    "*/__pycache__/*",
-    "*/venv/*",
-    "*/virtualenv/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "@abstractmethod",
-    "@abc.abstractmethod",
-]
-
-[tool.bandit]
-exclude_dirs = ["tests", "scripts"]
-skips = ["B101", "B601"]

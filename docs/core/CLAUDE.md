@@ -102,10 +102,41 @@ aegis-rag/
 
 ## Development Workflow
 
+### 🎯 Feature-basierte Sprint-Entwicklung (WICHTIG!)
+
+**Neue Regel ab Sprint 2:**
+Jeder Sprint wird in **einzelne Features** heruntergebrochen, um granulare Git-Commits zu ermöglichen.
+
+**Vorteile:**
+✅ 1 Feature = 1 Git Commit (Atomic Rollbacks)
+✅ Bessere Nachvollziehbarkeit und Code-Review
+✅ Parallele Entwicklung mehrerer Features
+✅ Klare Ownership und Zuständigkeiten
+
+**Feature-Definition:**
+Jedes Feature hat:
+1. **Feature-ID:** {Sprint}.{Nr} (z.B. 2.1, 2.2, 2.3)
+2. **Feature-Name:** Kurz und prägnant
+3. **Deliverables:** Konkrete Outputs
+4. **Technical Tasks:** Implementation Steps
+5. **Git Commit:** feat(scope): description
+6. **Tests:** Unit + Integration (>80% coverage)
+7. **Dependencies:** Benötigt andere Features?
+
+**Beispiel Sprint 2:**
+- Feature 2.1: Qdrant Client Foundation
+- Feature 2.2: Document Ingestion Pipeline
+- Feature 2.3: Embedding Service
+- Feature 2.4: Text Chunking Strategy
+- Feature 2.5: BM25 Search Engine
+- Feature 2.6: Hybrid Search (Vector + BM25)
+- Feature 2.7: Retrieval API Endpoints
+- Feature 2.8: Security Hardening
+
 ### Branch Strategy
 - `main`: Production-ready code
 - `develop`: Integration branch
-- `feature/*`: Feature development
+- `feature/*`: Feature development (1 Feature = 1 Branch)
 - `fix/*`: Bug fixes
 - `sprint-N`: Sprint-specific branches
 
@@ -117,15 +148,19 @@ aegis-rag/
 [optional footer]
 ```
 
-**Types:** feat, fix, docs, style, refactor, test, chore  
-**Scopes:** vector, graph, memory, mcp, agent, api, infra
+**Types:** feat, fix, docs, style, refactor, test, chore
+**Scopes:** vector, graph, memory, mcp, agent, api, infra, security
 
 **Examples:**
 ```
 feat(vector): implement hybrid search with BM25
+feat(qdrant): implement client wrapper with connection pooling
+feat(security): add P0 input validation and injection prevention
 fix(graph): resolve neo4j connection pooling issue
 docs(api): add OpenAPI schema for retrieval endpoints
 ```
+
+**REGEL:** 1 Feature = 1 Commit (außer bei sehr großen Features: dann Feature-Teilschritte)
 
 ### Code Quality Gates
 - **Linting:** Ruff (replaces Flake8, isort, pyupgrade)

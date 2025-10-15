@@ -21,20 +21,46 @@ Sprint {N} Start - {Sprint Name}
 - SUBAGENTS.md: Delegation Strategy
 - ADR_INDEX.md: Relevante ADRs
 
-🎯 AUFGABEN DIESER WOCHE:
-{Liste aus SPRINT_PLAN.md}
+🎯 FEATURE-BREAKDOWN (OBLIGATORISCH):
+⚠️ WICHTIG: Brich den Sprint in einzelne Features herunter!
+
+Für jedes Feature definiere:
+1. **Feature-ID**: {Sprint}.{Nr} (z.B. 2.1, 2.2, 2.3)
+2. **Feature-Name**: Kurz und prägnant
+3. **Deliverables**: Konkrete Outputs
+4. **Technical Tasks**: Implementation Steps
+5. **Git Commit Message**: feat(scope): description
+6. **Tests**: Unit + Integration
+7. **Dependencies**: Benötigt andere Features?
+
+Beispiel Sprint 2 Feature-Breakdown:
+- Feature 2.1: Qdrant Client Foundation
+- Feature 2.2: Document Ingestion Pipeline
+- Feature 2.3: Embedding Service
+- Feature 2.4: Text Chunking Strategy
+- Feature 2.5: BM25 Search Engine
+- Feature 2.6: Hybrid Search (Vector + BM25)
+- Feature 2.7: Retrieval API Endpoints
+- Feature 2.8: Security Hardening
+
+Vorteile Feature-Breakdown:
+✅ Granulare Git-Commits (1 Commit = 1 Feature)
+✅ Bessere Nachvollziehbarkeit
+✅ Atomic Rollbacks
+✅ Parallele Entwicklung
 
 🤝 SUBAGENTEN-DELEGATION:
 Bitte plane die optimale Subagenten-Verteilung:
-1. Analysiere alle Tasks
-2. Identifiziere Abhängigkeiten
+1. Analysiere alle Features
+2. Identifiziere Abhängigkeiten zwischen Features
 3. Schlage vor: Parallel vs. Sequential
-4. Definiere Handoff-Punkte
+4. Definiere Handoff-Punkte zwischen Features
 
 WICHTIG:
 - Nutze SUBAGENTS.md für Responsibilities
 - Beachte File Ownership
 - Plane Kontext-Sharing
+- 1 Feature = 1 Git Commit
 ```
 
 ---

@@ -68,10 +68,36 @@ Reviewer Guidelines:
 
 **Antwort:** Strukturierte Prompt-Templates + CODEOWNERS
 
-#### Mechanismus A: Prompt-Templates (PROMPT_TEMPLATES.md)
+#### Mechanismus A: Feature-basierte Sprint-Entwicklung ✅
+```
+🎯 NEUE REGEL ab Sprint 2:
+Jeder Sprint wird in einzelne Features heruntergebrochen:
+
+Vorteile:
+✅ Granulare Git-Commits (1 Commit = 1 Feature)
+✅ Bessere Nachvollziehbarkeit und Code-Review
+✅ Atomic Rollbacks bei Problemen
+✅ Parallele Entwicklung mehrerer Features
+
+Beispiel Sprint 2:
+- Feature 2.1: Qdrant Client Foundation
+- Feature 2.2: Document Ingestion Pipeline
+- Feature 2.3: Embedding Service
+- Feature 2.4: Text Chunking Strategy
+- Feature 2.5: BM25 Search Engine
+- Feature 2.6: Hybrid Search (Vector + BM25)
+- Feature 2.7: Retrieval API Endpoints
+- Feature 2.8: Security Hardening (P0/P1/P2)
+
+Git Commit Convention:
+feat(scope): brief description
+Beispiel: feat(qdrant): implement client wrapper with connection pooling
+```
+
+#### Mechanismus B: Prompt-Templates (PROMPT_TEMPLATES.md)
 ```
 8 vordefinierte Templates für jeden Task-Typ:
-1. Sprint Start
+1. Sprint Start (mit Feature-Breakdown!)
 2. Feature Implementation
 3. Bug Fix
 4. ADR-pflichtige Änderung

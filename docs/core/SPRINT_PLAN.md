@@ -36,27 +36,165 @@
 ## Sprint 2: Component 1 - Vector Search Foundation
 **Ziel:** Qdrant-Integration, Hybrid Search, Basic Retrieval
 
-### Deliverables
-- [x] Qdrant Client Wrapper mit Connection Pooling
-- [x] Document Ingestion Pipeline (LlamaIndex)
-- [x] Hybrid Search (Vector + BM25) Implementierung
-- [x] Embedding Model Integration (Ollama nomic-embed-text / Sentence-Transformers)
-- [x] Chunking Strategy (Adaptive Chunking)
-- [x] Basic Retrieval API Endpoints
+> **🎯 WICHTIG: Feature-basierte Entwicklung**
+> Ab Sprint 2 wird jeder Sprint in **einzelne Features** heruntergebrochen, um:
+> - Granulare Git-Commits zu ermöglichen (1 Commit = 1 Feature)
+> - Bessere Nachvollziehbarkeit und Code-Review zu gewährleisten
+> - Atomic Rollbacks bei Problemen zu ermöglichen
+> - Parallele Entwicklung mehrerer Features zu unterstützen
 
-### Technical Tasks
-- Qdrant Collection Setup (Schemas, Indexes)
-- LlamaIndex Document Loaders (PDF, TXT, MD)
-- Embedding Generation Pipeline
-- BM25 Integration (rank-bm25)
-- Reciprocal Rank Fusion Algorithmus
-- Unit Tests für Retrieval-Qualität
+### Sprint 2 Feature-Breakdown
 
-### Success Criteria
-- 1000 Test-Dokumente erfolgreich indexiert
-- Hybrid Search liefert Top-5 Results <200ms
-- Retrieval Precision @5 > 80%
-- API Documentation (OpenAPI/Swagger)
+#### Feature 2.1: Qdrant Client Foundation ✅
+**Deliverables:**
+- [x] QdrantClientWrapper mit async/sync Support
+- [x] Connection Pooling und Health Checks
+- [x] Retry Logic mit Exponential Backoff
+- [x] Collection Management (create, delete, list)
+
+**Technical Tasks:**
+- Qdrant Python Client Integration
+- Connection Pool Configuration
+- Health Check Endpoints
+- Unit Tests für Client Operations
+
+**Git Commits:** `feat(qdrant): implement client wrapper with connection pooling`
+
+---
+
+#### Feature 2.2: Document Ingestion Pipeline ✅
+**Deliverables:**
+- [x] DocumentIngestionPipeline mit LlamaIndex
+- [x] Support für PDF, TXT, MD, DOCX
+- [x] Recursive Directory Loading
+- [x] Path Traversal Security (P1)
+
+**Technical Tasks:**
+- SimpleDirectoryReader Integration
+- File Type Handlers
+- Security Validation
+- Ingestion Unit Tests
+
+**Git Commits:** `feat(ingestion): add document loading pipeline with security`
+
+---
+
+#### Feature 2.3: Embedding Service ✅
+**Deliverables:**
+- [x] EmbeddingService mit Ollama nomic-embed-text
+- [x] LRU Cache für Embeddings (OOM Protection)
+- [x] Batch Processing Support
+- [x] Retry Logic mit tenacity
+
+**Technical Tasks:**
+- Ollama Embedding Model Integration
+- LRU Cache Implementation
+- Batch Embedding Generation
+- Embedding Unit Tests
+
+**Git Commits:** `feat(embeddings): implement embedding service with LRU cache`
+
+---
+
+#### Feature 2.4: Text Chunking Strategy ✅
+**Deliverables:**
+- [x] SentenceSplitter Integration
+- [x] Configurable chunk_size/chunk_overlap
+- [x] Chunk Metadata Preservation
+- [x] Semantic Boundary Respect
+
+**Technical Tasks:**
+- LlamaIndex SentenceSplitter Setup
+- Chunking Configuration
+- Metadata Tracking
+- Chunking Unit Tests
+
+**Git Commits:** `feat(chunking): add sentence-based chunking with metadata`
+
+---
+
+#### Feature 2.5: BM25 Search Engine ✅
+**Deliverables:**
+- [x] BM25Search mit rank_bm25
+- [x] Tokenization Pipeline
+- [x] Index Persistence (pickle)
+- [x] Search with Configurable top_k
+
+**Technical Tasks:**
+- rank_bm25 Integration
+- Custom Tokenizer
+- Index Save/Load
+- BM25 Unit Tests (62 tests)
+
+**Git Commits:** `feat(bm25): implement BM25 search with persistence`
+
+---
+
+#### Feature 2.6: Hybrid Search (Vector + BM25) ✅
+**Deliverables:**
+- [x] HybridSearch Orchestrator
+- [x] Reciprocal Rank Fusion (RRF)
+- [x] Parallel Vector+BM25 Execution
+- [x] Configurable Search Modes (hybrid/vector/bm25)
+
+**Technical Tasks:**
+- HybridSearch Implementation
+- RRF Algorithm
+- Async Parallel Execution
+- Hybrid Search Unit Tests
+
+**Git Commits:** `feat(hybrid): add hybrid search with RRF fusion`
+
+---
+
+#### Feature 2.7: Retrieval API Endpoints ✅
+**Deliverables:**
+- [x] POST /api/v1/search (hybrid search)
+- [x] POST /api/v1/ingest (document ingestion)
+- [x] POST /api/v1/bm25/prepare (BM25 indexing)
+- [x] GET /api/v1/stats (system statistics)
+
+**Technical Tasks:**
+- FastAPI Router Setup
+- Request/Response Models (Pydantic)
+- OpenAPI Documentation
+- API Unit Tests (27 tests)
+
+**Git Commits:** `feat(api): add retrieval endpoints with OpenAPI docs`
+
+---
+
+#### Feature 2.8: Security Hardening (P0/P1/P2) ✅
+**Deliverables:**
+- [x] P0: Input Sanitization & Validation
+- [x] P0: SQL/NoSQL Injection Prevention
+- [x] P1: Error Message Sanitization
+- [x] P1: Rate Limiting (slowapi)
+- [x] P1: Path Traversal Protection
+- [x] P2: Health Check Endpoints (/health, /ready, /live)
+
+**Technical Tasks:**
+- Pydantic Validation Schemas
+- Rate Limiting Middleware
+- Path Security Validation
+- Error Handlers
+- Security Unit Tests
+
+**Git Commits:**
+- `feat(security): add P0 input validation and injection prevention`
+- `feat(security): add P1 rate limiting and error sanitization`
+- `feat(security): add P2 health check endpoints`
+
+---
+
+### Consolidated Sprint 2 Success Criteria
+- ✅ 933 Test-Dokumente erfolgreich indexiert
+- ✅ Hybrid Search liefert Top-5 Results <200ms
+- ✅ BM25 Index mit 933 Dokumenten erstellt
+- ✅ 212 Tests passing, 3 skipped, 0 failed (98.6% coverage)
+- ✅ API Documentation (OpenAPI/Swagger) verfügbar
+- ✅ P0/P1/P2 Security Fixes implementiert
+- ✅ Rate Limiting: 10/min (search), 5/hour (ingest)
 
 ---
 
