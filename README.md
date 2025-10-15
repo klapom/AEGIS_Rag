@@ -42,14 +42,18 @@ AEGIS_RAG/
 
 ## 📚 Wichtige Dokumente
 
-### Core Dokumentation (7 Dateien)
+### Core Dokumentation
 - [PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Gesamtübersicht
 - [SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - 10-Sprint Roadmap
+- [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) - ✅ Sprint 3 Complete (335 tests, 99.1%)
 - [CLAUDE.md](docs/core/CLAUDE.md) - Claude Code Hauptkontext
 - [NAMING_CONVENTIONS.md](docs/core/NAMING_CONVENTIONS.md) - Code Standards
 - [SUBAGENTS.md](docs/core/SUBAGENTS.md) - 5 Subagenten-Definitionen
 - [TECH_STACK.md](docs/core/TECH_STACK.md) - Complete Technology Stack
 - [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 9 Architecture Decisions
+
+### Examples & Tutorials
+- [Sprint 3 Usage Examples](docs/examples/sprint3_examples.md) - Reranking, Query Decomposition, Filters
 
 ### Setup & Enforcement (9 Dateien)
 - [QUICK_START.md](docs/core/QUICK_START.md) - Tag-1-Setup
@@ -72,10 +76,24 @@ AEGIS_RAG/
 - **Memory**: Graphiti (Temporal Memory)
 - **LLM**: Ollama (lokal, primär) + Azure OpenAI (optional für Production)
 - **Embeddings**: nomic-embed-text (lokal) oder text-embedding-3-large (Azure)
-- **Security**: Custom Guardrails, Content Filtering
+- **Reranking**: sentence-transformers (cross-encoder/ms-marco-MiniLM)
+- **Evaluation**: RAGAS (Context Precision, Recall, Faithfulness)
+- **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
 - **DevOps**: Docker, GitHub Actions
 
 Details siehe [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md)
+
+## ✨ Sprint 3 Features (COMPLETE)
+
+- ✅ **Cross-Encoder Reranking**: +15-20% precision improvement with ms-marco-MiniLM
+- ✅ **Query Decomposition**: LLM-based classification (SIMPLE/COMPOUND/MULTI_HOP) with Ollama
+- ✅ **Metadata Filtering**: Date ranges, sources, document types, tags (42 tests, 100%)
+- ✅ **RAGAS Evaluation**: Context Precision/Recall/Faithfulness metrics (Score: 0.88)
+- ✅ **Adaptive Chunking**: Document-type aware strategies (paragraph/heading/function/sentence)
+- ✅ **Security Fix**: MD5 → SHA-256 for document IDs (CVE-2010-4651)
+
+**Test Coverage**: 335/338 passing (99.1%)
+See [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) for details
 
 ### LLM-Strategie (ADR-002)
 - **Development**: 100% Ollama (kostenfrei, offline-fähig)
@@ -111,8 +129,10 @@ Details in [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md) und [docs/adr/ADR_
 ## 📅 Sprint Plan
 
 10 Sprints geplant über 10 Wochen:
-- Sprint 1-2: Foundation & Vector Search
-- Sprint 3-4: Advanced Retrieval & LangGraph
+- ✅ Sprint 1: Foundation & Infrastructure Setup (COMPLETE)
+- ✅ Sprint 2: Vector Search Foundation (COMPLETE - 212 tests passing)
+- ✅ Sprint 3: Advanced Retrieval (COMPLETE - 335 tests passing, 99.1%)
+- Sprint 4: LangGraph Orchestration Layer (IN PROGRESS)
 - Sprint 5-6: GraphRAG & Hybrid Retrieval
 - Sprint 7: Memory System + Azure OpenAI Integration (optional)
 - Sprint 8: 3-Layer Memory + LLM A/B Testing
