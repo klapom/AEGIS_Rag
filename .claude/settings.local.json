@@ -8,7 +8,11 @@
       "Bash(git reset:*)",
       "Bash(poetry add:*)",
       "Bash(gh run download:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(where uv)",
+      "Bash(uv run pytest:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

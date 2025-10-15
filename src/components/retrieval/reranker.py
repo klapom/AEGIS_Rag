@@ -108,12 +108,22 @@ class CrossEncoderReranker:
         """
         if self._model is None:
             logger.info("loading_cross_encoder_model", model=self.model_name)
-            self._model = CrossEncoder(
-                self.model_name,
-                max_length=512,  # Max sequence length for BERT-based models
-                device="cpu",  # Use CPU (sufficient for inference)
-                cache_folder=str(self.cache_dir),
-            )
+            # Note: sentence-transformers 3.4+ uses cache_dir instead of cache_folder
+            try:
+                self._model = CrossEncoder(
+                    self.model_name,
+                    max_length=512,  # Max sequence length for BERT-based models
+                    device="cpu",  # Use CPU (sufficient for inference)
+                    cache_dir=str(self.cache_dir),
+                )
+            except TypeError:
+                # Fallback for older sentence-transformers versions
+                self._model = CrossEncoder(
+                    self.model_name,
+                    max_length=512,
+                    device="cpu",
+                    cache_folder=str(self.cache_dir),
+                )
             logger.info("cross_encoder_model_loaded", model=self.model_name)
         return self._model
 

@@ -82,7 +82,7 @@ def test_reranker_initialization_defaults():
 
     assert reranker.model_name == "cross-encoder/ms-marco-MiniLM-L-6-v2"
     assert reranker.batch_size == 32
-    assert "data/models" in str(reranker.cache_dir)
+    assert "models" in str(reranker.cache_dir)  # Platform-independent path check
     assert reranker._model is None  # Lazy-loaded
 
 
@@ -113,11 +113,12 @@ def test_lazy_model_loading(mock_ce_class):
     assert reranker._model is mock_model
 
     # Verify model was instantiated correctly
+    # Note: sentence-transformers 3.4+ uses cache_dir instead of cache_folder
     mock_ce_class.assert_called_once_with(
         "cross-encoder/ms-marco-MiniLM-L-6-v2",
         max_length=512,
         device="cpu",
-        cache_folder=str(reranker.cache_dir),
+        cache_dir=str(reranker.cache_dir),
     )
 
 
