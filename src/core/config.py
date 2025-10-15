@@ -132,6 +132,13 @@ class Settings(BaseSettings):
     retrieval_top_k: int = Field(default=5, description="Number of documents to retrieve")
     retrieval_score_threshold: float = Field(default=0.7, description="Minimum relevance score")
 
+    # Chunking Configuration (Sprint 3: Adaptive Chunking)
+    pdf_chunk_size: int = Field(default=1024, description="Token limit for PDF/DOCX chunks")
+    code_chunk_size: int = Field(default=512, description="Token limit for code file chunks")
+    markdown_chunk_size: int = Field(default=768, description="Token limit for Markdown chunks")
+    text_chunk_size: int = Field(default=512, description="Token limit for plain text chunks")
+    chunk_overlap: int = Field(default=50, description="Overlap between chunks in tokens")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

@@ -15,6 +15,7 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import TextNode
 from qdrant_client.models import PointStruct
 
+from src.components.retrieval.chunking import AdaptiveChunker
 from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
@@ -34,6 +35,7 @@ class DocumentIngestionPipeline:
         chunk_size: int = 512,
         chunk_overlap: int = 128,
         allowed_base_path: str | Path | None = None,
+        use_adaptive_chunking: bool = False,
     ):
         """Initialize document ingestion pipeline.
 
@@ -44,12 +46,14 @@ class DocumentIngestionPipeline:
             chunk_size: Maximum tokens per chunk (default: 512)
             chunk_overlap: Overlap between chunks in tokens (default: 128)
             allowed_base_path: Base directory for security validation (default: from settings)
+            use_adaptive_chunking: Use adaptive chunking strategy (default: False)
         """
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or EmbeddingService()
         self.collection_name = collection_name or settings.qdrant_collection
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.use_adaptive_chunking = use_adaptive_chunking
 
         # Security: Base path for document ingestion
         if allowed_base_path:
@@ -57,17 +61,25 @@ class DocumentIngestionPipeline:
         else:
             self.allowed_base_path = Path(settings.documents_base_path).resolve()
 
-        # Initialize text splitter
-        self.text_splitter = SentenceSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-        )
+        # Initialize chunking strategy
+        if self.use_adaptive_chunking:
+            self.adaptive_chunker = AdaptiveChunker(
+                chunk_overlap=self.chunk_overlap,
+            )
+            self.text_splitter = None
+        else:
+            self.text_splitter = SentenceSplitter(
+                chunk_size=self.chunk_size,
+                chunk_overlap=self.chunk_overlap,
+            )
+            self.adaptive_chunker = None
 
         logger.info(
             "Document ingestion pipeline initialized",
             collection=self.collection_name,
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
+            use_adaptive_chunking=self.use_adaptive_chunking,
             allowed_base_path=str(self.allowed_base_path),
         )
 
@@ -179,7 +191,7 @@ class DocumentIngestionPipeline:
         self,
         documents: list[Document],
     ) -> list[TextNode]:
-        """Split documents into chunks using sentence-based splitting.
+        """Split documents into chunks using configured chunking strategy.
 
         Args:
             documents: List of LlamaIndex documents
@@ -191,13 +203,19 @@ class DocumentIngestionPipeline:
             VectorSearchError: If chunking fails
         """
         try:
-            nodes = self.text_splitter.get_nodes_from_documents(documents)
+            if self.use_adaptive_chunking:
+                # Use adaptive chunking strategy
+                nodes = self.adaptive_chunker.chunk_documents(documents)
+            else:
+                # Use traditional sentence-based splitting
+                nodes = self.text_splitter.get_nodes_from_documents(documents)
 
             logger.info(
                 "Documents chunked",
                 documents_count=len(documents),
                 chunks_count=len(nodes),
                 avg_chunks_per_doc=len(nodes) / len(documents) if documents else 0,
+                strategy="adaptive" if self.use_adaptive_chunking else "sentence",
             )
 
             return nodes
@@ -374,6 +392,7 @@ async def ingest_documents(
     collection_name: str | None = None,
     chunk_size: int = 512,
     chunk_overlap: int = 128,
+    use_adaptive_chunking: bool = False,
 ) -> dict[str, Any]:
     """Quick document ingestion helper function.
 
@@ -382,6 +401,7 @@ async def ingest_documents(
         collection_name: Target collection name
         chunk_size: Maximum tokens per chunk
         chunk_overlap: Overlap between chunks
+        use_adaptive_chunking: Use adaptive chunking strategy
 
     Returns:
         Ingestion statistics
@@ -394,6 +414,7 @@ async def ingest_documents(
         collection_name=collection_name,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
+        use_adaptive_chunking=use_adaptive_chunking,
     )
 
     return await pipeline.index_documents(input_dir=input_dir)
