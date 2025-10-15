@@ -324,7 +324,7 @@ class QueryDecomposer:
                 "applied": False,
                 "query_type": decomposition.classification.query_type.value,
             }
-            return result
+            return result  # type: ignore[no-any-return]
 
         elif decomposition.execution_strategy == "parallel":
             # Compound query - parallel execution

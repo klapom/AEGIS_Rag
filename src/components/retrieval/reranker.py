@@ -118,11 +118,11 @@ class CrossEncoderReranker:
                 )
             except TypeError:
                 # Fallback for older sentence-transformers versions
-                self._model = CrossEncoder(
+                self._model = CrossEncoder(  # type: ignore[call-arg]
                     self.model_name,
                     max_length=512,
                     device="cpu",
-                    cache_folder=str(self.cache_dir),
+                    cache_folder=str(self.cache_dir),  # type: ignore[call-arg]
                 )
             logger.info("cross_encoder_model_loaded", model=self.model_name)
         return self._model

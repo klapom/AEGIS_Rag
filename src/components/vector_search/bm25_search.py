@@ -138,7 +138,7 @@ class BM25Search:
             top_indices = scores.argsort()[-top_k:][::-1]
 
             # Build results
-            results = []
+            results: list[dict[str, Any]] = []
             for idx in top_indices:
                 if idx < len(self._corpus):
                     result = {

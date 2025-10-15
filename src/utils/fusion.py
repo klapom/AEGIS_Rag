@@ -42,8 +42,8 @@ def reciprocal_rank_fusion(
         return []
 
     # Calculate RRF scores
-    rrf_scores = defaultdict(float)
-    doc_data = {}  # Store original document data
+    rrf_scores: dict[str, float] = defaultdict(float)
+    doc_data: dict[str, dict[str, Any]] = {}  # Store original document data
 
     for _ranking_idx, ranking in enumerate(rankings):
         for rank, doc in enumerate(ranking, start=1):
@@ -119,8 +119,8 @@ def weighted_reciprocal_rank_fusion(
     normalized_weights = [w / total_weight for w in weights]
 
     # Calculate weighted RRF scores
-    rrf_scores = defaultdict(float)
-    doc_data = {}
+    rrf_scores: dict[str, float] = defaultdict(float)
+    doc_data: dict[str, dict[str, Any]] = {}
 
     for _ranking_idx, (ranking, weight) in enumerate(
         zip(rankings, normalized_weights, strict=False)

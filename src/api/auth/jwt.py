@@ -64,7 +64,7 @@ def create_access_token(
             expires_at=expire.isoformat(),
         )
 
-        return encoded_jwt
+        return encoded_jwt  # type: ignore[no-any-return]
 
     except Exception as e:
         logger.error("Failed to create access token", error=str(e))
@@ -155,7 +155,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches hash
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
 
 
 def get_password_hash(password: str) -> str:
@@ -167,4 +167,4 @@ def get_password_hash(password: str) -> str:
     Returns:
         Bcrypt hashed password
     """
-    return pwd_context.hash(password)
+    return pwd_context.hash(password)  # type: ignore[no-any-return]
