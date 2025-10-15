@@ -14,6 +14,9 @@
     },
     {
       "pattern": ".*\\.md:[0-9]+-[0-9]+"
+    },
+    {
+      "pattern": ".*/components/?$"
     }
   ],
   "httpHeaders": [
