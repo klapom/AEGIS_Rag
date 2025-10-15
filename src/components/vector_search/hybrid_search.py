@@ -241,6 +241,7 @@ class HybridSearch:
             # Get all points from Qdrant (scroll through collection)
             documents = []
             offset = None
+            batch_count = 0
 
             while True:
                 # Scroll through collection
@@ -253,13 +254,37 @@ class HybridSearch:
                 )
 
                 points, next_offset = scroll_result
+                batch_count += 1
+
+                logger.debug(
+                    "Scroll batch retrieved",
+                    batch=batch_count,
+                    points_in_batch=len(points),
+                    total_documents=len(documents),
+                )
 
                 for point in points:
+                    # Extract text from payload
+                    # Check multiple possible text fields (LlamaIndex vs custom format)
+                    text = ""
+
+                    if "_node_content" in point.payload:
+                        # LlamaIndex format - parse JSON
+                        import json
+                        try:
+                            node_content = json.loads(point.payload["_node_content"])
+                            text = node_content.get("text", "")
+                        except (json.JSONDecodeError, KeyError):
+                            logger.warning("Failed to parse _node_content", point_id=str(point.id))
+                    elif "text" in point.payload:
+                        # Direct text field
+                        text = point.payload.get("text", "")
+
                     doc = {
                         "id": str(point.id),
-                        "text": point.payload.get("text", ""),
-                        "source": point.payload.get("source", ""),
-                        "document_id": point.payload.get("document_id", ""),
+                        "text": text,
+                        "source": point.payload.get("file_name", point.payload.get("source", "")),
+                        "document_id": point.payload.get("document_id", point.payload.get("doc_id", "")),
                     }
                     documents.append(doc)
 
@@ -267,6 +292,19 @@ class HybridSearch:
                     break
 
                 offset = next_offset
+
+            logger.info(
+                "All documents retrieved from Qdrant",
+                total_documents=len(documents),
+                batches=batch_count,
+            )
+
+            # Safety check for empty collection
+            if not documents:
+                raise VectorSearchError(
+                    f"No documents found in collection '{self.collection_name}'. "
+                    "Please ingest documents first."
+                )
 
             # Fit BM25 model
             self.bm25_search.fit(documents, text_field="text")

@@ -33,6 +33,20 @@ class Settings(BaseSettings):
     api_workers: int = Field(default=1, description="Number of Uvicorn workers")
     api_reload: bool = Field(default=False, description="Enable auto-reload")
 
+    # API Security
+    api_auth_enabled: bool = Field(
+        default=True,
+        description="Enable JWT authentication (disable for testing)"
+    )
+    api_secret_key: SecretStr = Field(
+        default=SecretStr("CHANGE-ME-IN-PRODUCTION-MIN-32-CHARS"),
+        description="JWT secret key (min 32 chars for production)"
+    )
+    api_admin_password: SecretStr = Field(
+        default=SecretStr("admin123"),
+        description="Admin password for token endpoint (CHANGE IN PRODUCTION)"
+    )
+
     # Ollama LLM (Primary)
     ollama_base_url: str = Field(
         default="http://localhost:11434", description="Ollama server URL"
@@ -68,8 +82,14 @@ class Settings(BaseSettings):
     qdrant_port: int = Field(default=6333, description="Qdrant HTTP port")
     qdrant_grpc_port: int = Field(default=6334, description="Qdrant gRPC port")
     qdrant_api_key: SecretStr | None = Field(default=None, description="Qdrant API key")
-    qdrant_collection: str = Field(default="documents_v1", description="Qdrant collection name")
+    qdrant_collection: str = Field(default="aegis_documents", description="Qdrant collection name")
     qdrant_use_grpc: bool = Field(default=False, description="Use gRPC for Qdrant")
+
+    # Document Ingestion Security
+    documents_base_path: str = Field(
+        default="./data",
+        description="Base directory for document ingestion (security boundary)"
+    )
 
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
@@ -140,3 +160,7 @@ def get_settings() -> Settings:
         Application settings
     """
     return Settings()
+
+
+# Global settings instance for convenience
+settings = get_settings()

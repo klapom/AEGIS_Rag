@@ -10,7 +10,10 @@ from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, make_asgi_app
 
 from src.api.health import router as health_router
+from src.api.v1.health import router as v1_health_router
 from src.api.v1.retrieval import router as retrieval_router
+from src.api.middleware import limiter, rate_limit_handler
+from slowapi.errors import RateLimitExceeded
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -64,6 +67,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Register rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -90,7 +97,7 @@ async def aegis_exception_handler(request: Request, exc: AegisRAGException) -> J
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
             error=exc.__class__.__name__, message=exc.message, details=exc.details
-        ).model_dump(),
+        ).model_dump(mode="json"),
     )
 
 
@@ -103,13 +110,23 @@ async def validation_exception_handler(
         "validation_error", errors=exc.errors(), path=request.url.path
     )
 
+    # Convert validation errors to JSON-serializable format
+    errors = []
+    for error in exc.errors():
+        # Only include essential fields to avoid serialization issues
+        errors.append({
+            "loc": error.get("loc", []),
+            "msg": error.get("msg", ""),
+            "type": error.get("type", ""),
+        })
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=ErrorResponse(
             error="ValidationError",
             message="Request validation failed",
-            details={"errors": exc.errors()},
-        ).model_dump(),
+            details={"errors": errors},
+        ).model_dump(mode="json"),  # mode="json" serializes datetime objects
     )
 
 
@@ -129,7 +146,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
             error="InternalServerError",
             message="An unexpected error occurred",
             details={"error": str(exc)} if settings.debug else None,
-        ).model_dump(),
+        ).model_dump(mode="json"),
     )
 
 
@@ -160,6 +177,7 @@ async def track_requests(request: Request, call_next):
 
 # Include routers
 app.include_router(health_router)
+app.include_router(v1_health_router)
 app.include_router(retrieval_router)
 
 # Prometheus metrics endpoint

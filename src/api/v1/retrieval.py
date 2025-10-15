@@ -7,7 +7,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks, Depends, Request, status
 from pydantic import BaseModel, Field
 
 from src.components.vector_search import (
@@ -16,6 +16,8 @@ from src.components.vector_search import (
     ingest_documents,
 )
 from src.core.models import QueryRequest, QueryResponse, HealthResponse
+from src.api.auth.jwt import get_current_user
+from src.api.middleware import limiter
 
 logger = structlog.get_logger(__name__)
 
@@ -24,20 +26,38 @@ router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 
 # Request/Response Models
 class SearchRequest(BaseModel):
-    """Search request model."""
+    """Search request model with enhanced validation."""
 
-    query: str = Field(..., description="Search query text", min_length=1)
-    top_k: int = Field(10, description="Number of results to return", ge=1, le=100)
+    query: str = Field(
+        ...,
+        description="Search query text",
+        min_length=1,
+        max_length=1000,  # P1: Prevent excessive queries
+        examples=["What is RAG?"]
+    )
+    top_k: int = Field(
+        10,
+        description="Number of results to return",
+        ge=1,
+        le=100
+    )
     search_type: str = Field(
         "hybrid",
         description="Search type: 'vector', 'bm25', or 'hybrid'",
+        pattern="^(vector|bm25|hybrid)$",  # P1: Strict validation
     )
     score_threshold: Optional[float] = Field(
         None,
         description="Minimum similarity score for vector search",
-        ge=0,
-        le=1,
+        ge=0.0,
+        le=1.0,
     )
+
+    class Config:
+        # P1: Validate assignment to prevent invalid data
+        validate_assignment = True
+        # P1: Strict validation
+        str_strip_whitespace = True
 
 
 class SearchResult(BaseModel):
@@ -63,15 +83,36 @@ class SearchResponse(BaseModel):
 
 
 class IngestionRequest(BaseModel):
-    """Document ingestion request."""
+    """Document ingestion request with enhanced validation."""
 
-    input_dir: str = Field(..., description="Directory containing documents")
-    chunk_size: int = Field(512, description="Maximum tokens per chunk", ge=128, le=2048)
-    chunk_overlap: int = Field(128, description="Overlap between chunks", ge=0, le=512)
+    input_dir: str = Field(
+        ...,
+        description="Directory containing documents (relative to documents_base_path)",
+        min_length=1,
+        max_length=500,  # P1: Prevent path injection
+        examples=["./data/sample_documents"]
+    )
+    chunk_size: int = Field(
+        512,
+        description="Maximum tokens per chunk",
+        ge=128,
+        le=2048
+    )
+    chunk_overlap: int = Field(
+        128,
+        description="Overlap between chunks",
+        ge=0,
+        le=512
+    )
     file_extensions: Optional[List[str]] = Field(
         None,
         description="File extensions to process (default: .pdf, .txt, .md)",
+        max_items=20,  # P1: Prevent DoS with excessive extensions
     )
+
+    class Config:
+        validate_assignment = True
+        str_strip_whitespace = True
 
 
 class IngestionResponse(BaseModel):
@@ -99,33 +140,42 @@ def get_hybrid_search() -> HybridSearch:
 
 
 @router.post("/search", response_model=SearchResponse)
+@limiter.limit("10/minute")  # Rate limit: 10 requests per minute
 async def search(
-    request: SearchRequest,
+    request: Request,
+    search_params: SearchRequest,
+    current_user: Optional[str] = Depends(get_current_user),
 ) -> SearchResponse:
     """Search documents using vector, BM25, or hybrid search.
 
+    Requires authentication (if enabled). Rate limited to 10 requests/minute.
+
     Args:
-        request: Search request parameters
+        request: FastAPI request (for rate limiting)
+        search_params: Search request parameters
+        current_user: Authenticated user (from JWT token)
 
     Returns:
         SearchResponse with ranked results
 
     Example:
         ```bash
+        # With authentication
         curl -X POST "http://localhost:8000/api/v1/retrieval/search" \\
              -H "Content-Type: application/json" \\
+             -H "Authorization: Bearer <your-token>" \\
              -d '{"query": "What is RAG?", "search_type": "hybrid", "top_k": 10}'
         ```
     """
     try:
         hybrid_search = get_hybrid_search()
 
-        if request.search_type == "hybrid":
+        if search_params.search_type == "hybrid":
             # Hybrid search (Vector + BM25 + RRF)
             result = await hybrid_search.hybrid_search(
-                query=request.query,
-                top_k=request.top_k,
-                score_threshold=request.score_threshold,
+                query=search_params.query,
+                top_k=search_params.top_k,
+                score_threshold=search_params.score_threshold,
             )
 
             return SearchResponse(
@@ -136,30 +186,30 @@ async def search(
                 search_metadata=result["search_metadata"],
             )
 
-        elif request.search_type == "vector":
+        elif search_params.search_type == "vector":
             # Vector-only search
             results = await hybrid_search.vector_search(
-                query=request.query,
-                top_k=request.top_k,
-                score_threshold=request.score_threshold,
+                query=search_params.query,
+                top_k=search_params.top_k,
+                score_threshold=search_params.score_threshold,
             )
 
             return SearchResponse(
-                query=request.query,
+                query=search_params.query,
                 results=[SearchResult(**r) for r in results],
                 total_results=len(results),
                 search_type="vector",
             )
 
-        elif request.search_type == "bm25":
+        elif search_params.search_type == "bm25":
             # BM25-only search
             results = await hybrid_search.keyword_search(
-                query=request.query,
-                top_k=request.top_k,
+                query=search_params.query,
+                top_k=search_params.top_k,
             )
 
             return SearchResponse(
-                query=request.query,
+                query=search_params.query,
                 results=[SearchResult(**r) for r in results],
                 total_results=len(results),
                 search_type="bm25",
@@ -168,24 +218,35 @@ async def search(
         else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid search_type: {request.search_type}. Use 'vector', 'bm25', or 'hybrid'.",
+                detail=f"Invalid search_type: {search_params.search_type}. Use 'vector', 'bm25', or 'hybrid'.",
             )
 
     except Exception as e:
-        logger.error("Search failed", error=str(e), query=request.query)
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error("Search failed", error=str(e), query=search_params.query, exc_info=True)
+        # P1: Don't expose internal error details to client
+        raise HTTPException(
+            status_code=500,
+            detail="Search operation failed. Please try again or contact support."
+        )
 
 
 @router.post("/ingest", response_model=IngestionResponse)
+@limiter.limit("5/hour")  # Rate limit: 5 requests per hour (heavy operation)
 async def ingest(
-    request: IngestionRequest,
+    request: Request,
+    ingest_params: IngestionRequest,
     background_tasks: BackgroundTasks,
+    current_user: Optional[str] = Depends(get_current_user),
 ) -> IngestionResponse:
     """Ingest documents from directory into vector database.
 
+    Requires authentication (if enabled). Rate limited to 5 requests/hour.
+
     Args:
-        request: Ingestion request parameters
+        request: FastAPI request (for rate limiting)
+        ingest_params: Ingestion request parameters
         background_tasks: FastAPI background tasks
+        current_user: Authenticated user (from JWT token)
 
     Returns:
         IngestionResponse with statistics
@@ -194,33 +255,34 @@ async def ingest(
         ```bash
         curl -X POST "http://localhost:8000/api/v1/retrieval/ingest" \\
              -H "Content-Type: application/json" \\
+             -H "Authorization: Bearer <your-token>" \\
              -d '{"input_dir": "./data/documents", "chunk_size": 512}'
         ```
     """
     try:
         # Validate input directory
-        input_path = Path(request.input_dir)
+        input_path = Path(ingest_params.input_dir)
         if not input_path.exists():
             raise HTTPException(
                 status_code=400,
-                detail=f"Input directory does not exist: {request.input_dir}",
+                detail=f"Input directory does not exist: {ingest_params.input_dir}",
             )
 
         if not input_path.is_dir():
             raise HTTPException(
                 status_code=400,
-                detail=f"Input path is not a directory: {request.input_dir}",
+                detail=f"Input path is not a directory: {ingest_params.input_dir}",
             )
 
         # Run ingestion
         pipeline = DocumentIngestionPipeline(
-            chunk_size=request.chunk_size,
-            chunk_overlap=request.chunk_overlap,
+            chunk_size=ingest_params.chunk_size,
+            chunk_overlap=ingest_params.chunk_overlap,
         )
 
         stats = await pipeline.index_documents(
             input_dir=input_path,
-            required_exts=request.file_extensions,
+            required_exts=ingest_params.file_extensions,
         )
 
         # Prepare BM25 index in background
@@ -237,26 +299,45 @@ async def ingest(
             collection_name=stats["collection_name"],
         )
 
+    except ValueError as e:
+        # P1: Path validation errors should be clear but not expose internals
+        logger.warning("Invalid ingestion path", error=str(e), input_dir=ingest_params.input_dir)
+        raise HTTPException(status_code=400, detail="Invalid directory path")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Ingestion failed", error=str(e), input_dir=request.input_dir)
-        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
+        logger.error("Ingestion failed", error=str(e), input_dir=ingest_params.input_dir, exc_info=True)
+        # P1: Don't expose internal error details
+        raise HTTPException(
+            status_code=500,
+            detail="Document ingestion failed. Please check your input and try again."
+        )
 
 
 @router.post("/prepare-bm25")
-async def prepare_bm25():
+@limiter.limit("2/hour")  # Rate limit: 2 requests per hour
+async def prepare_bm25(
+    request: Request,
+    current_user: Optional[str] = Depends(get_current_user),
+):
     """Prepare BM25 index from Qdrant collection.
 
     This endpoint loads all documents from Qdrant and builds the BM25 index.
     Should be called once after document ingestion.
+
+    Requires authentication (if enabled). Rate limited to 2 requests/hour.
+
+    Args:
+        request: FastAPI request (for rate limiting)
+        current_user: Authenticated user (from JWT token)
 
     Returns:
         Statistics about BM25 indexing
 
     Example:
         ```bash
-        curl -X POST "http://localhost:8000/api/v1/retrieval/prepare-bm25"
+        curl -X POST "http://localhost:8000/api/v1/retrieval/prepare-bm25" \\
+             -H "Authorization: Bearer <your-token>"
         ```
     """
     try:
@@ -309,3 +390,58 @@ async def get_stats():
     except Exception as e:
         logger.error("Failed to get stats", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+
+
+# Authentication Endpoint
+class TokenRequest(BaseModel):
+    """Token request model."""
+    username: str = Field(..., description="Username")
+    password: str = Field(..., description="Password")
+
+
+class TokenResponse(BaseModel):
+    """Token response model."""
+    access_token: str
+    token_type: str = "bearer"
+
+
+@router.post("/auth/token", response_model=TokenResponse)
+@limiter.limit("10/minute")  # Rate limit: 10 login attempts per minute
+async def login(
+    request: Request,
+    credentials: TokenRequest,
+):
+    """Authenticate and get JWT access token.
+
+    Args:
+        request: FastAPI request (for rate limiting)
+        credentials: Token request with credentials
+
+    Returns:
+        TokenResponse with JWT access token
+
+    Example:
+        ```bash
+        curl -X POST "http://localhost:8000/api/v1/retrieval/auth/token" \\
+             -H "Content-Type: application/json" \\
+             -d '{"username": "admin", "password": "admin123"}'
+        ```
+    """
+    from src.api.auth.jwt import create_access_token
+    from src.core.config import settings
+
+    # Simple hardcoded authentication (replace with database lookup in production)
+    if (
+        credentials.username == "admin"
+        and credentials.password == settings.api_admin_password.get_secret_value()
+    ):
+        token = create_access_token(data={"sub": credentials.username})
+        logger.info("User authenticated", username=credentials.username)
+        return TokenResponse(access_token=token)
+
+    logger.warning("Authentication failed", username=credentials.username)
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )

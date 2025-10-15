@@ -33,6 +33,7 @@ class DocumentIngestionPipeline:
         collection_name: Optional[str] = None,
         chunk_size: int = 512,
         chunk_overlap: int = 128,
+        allowed_base_path: Optional[Union[str, Path]] = None,
     ):
         """Initialize document ingestion pipeline.
 
@@ -42,12 +43,19 @@ class DocumentIngestionPipeline:
             collection_name: Target collection name (default: from settings)
             chunk_size: Maximum tokens per chunk (default: 512)
             chunk_overlap: Overlap between chunks in tokens (default: 128)
+            allowed_base_path: Base directory for security validation (default: from settings)
         """
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or EmbeddingService()
         self.collection_name = collection_name or settings.qdrant_collection
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+
+        # Security: Base path for document ingestion
+        if allowed_base_path:
+            self.allowed_base_path = Path(allowed_base_path).resolve()
+        else:
+            self.allowed_base_path = Path(settings.documents_base_path).resolve()
 
         # Initialize text splitter
         self.text_splitter = SentenceSplitter(
@@ -60,7 +68,56 @@ class DocumentIngestionPipeline:
             collection=self.collection_name,
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
+            allowed_base_path=str(self.allowed_base_path),
         )
+
+    def _validate_path(self, input_path: Union[str, Path]) -> Path:
+        """Validate path to prevent directory traversal attacks.
+
+        Args:
+            input_path: Path to validate
+
+        Returns:
+            Resolved and validated Path object
+
+        Raises:
+            ValueError: If path traversal is detected or path is outside allowed base
+        """
+        try:
+            # Convert to Path and resolve to absolute path
+            resolved_path = Path(input_path).resolve()
+
+            # Check if path starts with allowed base path
+            if not str(resolved_path).startswith(str(self.allowed_base_path)):
+                logger.error(
+                    "Path traversal attempt detected",
+                    input_path=str(input_path),
+                    resolved_path=str(resolved_path),
+                    allowed_base=str(self.allowed_base_path),
+                )
+                raise ValueError(
+                    f"Security: Path '{input_path}' is outside allowed base directory '{self.allowed_base_path}'"
+                )
+
+            # Check if path exists
+            if not resolved_path.exists():
+                raise ValueError(f"Path does not exist: {input_path}")
+
+            # Check if path is a directory
+            if not resolved_path.is_dir():
+                raise ValueError(f"Path is not a directory: {input_path}")
+
+            logger.debug(
+                "Path validation successful",
+                input_path=str(input_path),
+                resolved_path=str(resolved_path),
+            )
+
+            return resolved_path
+
+        except Exception as e:
+            logger.error("Path validation failed", input_path=str(input_path), error=str(e))
+            raise
 
     async def load_documents(
         self,
@@ -80,13 +137,17 @@ class DocumentIngestionPipeline:
 
         Raises:
             VectorSearchError: If document loading fails
+            ValueError: If path validation fails (path traversal)
         """
         if required_exts is None:
             required_exts = [".pdf", ".txt", ".md", ".docx", ".csv"]
 
         try:
+            # Security: Validate path to prevent directory traversal
+            validated_path = self._validate_path(input_dir)
+
             loader = SimpleDirectoryReader(
-                input_dir=str(input_dir),
+                input_dir=str(validated_path),
                 required_exts=required_exts,
                 recursive=recursive,
                 filename_as_id=True,
@@ -96,13 +157,16 @@ class DocumentIngestionPipeline:
 
             logger.info(
                 "Documents loaded",
-                input_dir=str(input_dir),
+                input_dir=str(validated_path),
                 documents_count=len(documents),
                 extensions=required_exts,
             )
 
             return documents
 
+        except ValueError as e:
+            # Path validation error - re-raise as-is (security error)
+            raise
         except Exception as e:
             logger.error(
                 "Failed to load documents",

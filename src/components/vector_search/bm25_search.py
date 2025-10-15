@@ -74,6 +74,22 @@ class BM25Search:
             # Tokenize corpus
             tokenized_corpus = [self._tokenize(doc) for doc in self._corpus]
 
+            # Debug: Check tokenization
+            non_empty_docs = sum(1 for tokens in tokenized_corpus if tokens)
+            logger.debug(
+                "Tokenization complete",
+                total_docs=len(tokenized_corpus),
+                non_empty_docs=non_empty_docs,
+                sample_tokens=tokenized_corpus[0][:10] if tokenized_corpus and tokenized_corpus[0] else [],
+            )
+
+            # Safety check: Ensure we have tokenized content
+            if not any(tokenized_corpus):
+                raise VectorSearchError(
+                    "All documents resulted in empty tokenization. "
+                    "Check that documents have non-empty text content."
+                )
+
             # Fit BM25
             self._bm25 = BM25Okapi(tokenized_corpus)
             self._is_fitted = True
@@ -81,6 +97,7 @@ class BM25Search:
             logger.info(
                 "BM25 model fitted",
                 corpus_size=len(self._corpus),
+                non_empty_docs=non_empty_docs,
             )
 
         except Exception as e:

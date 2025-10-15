@@ -83,7 +83,14 @@ class QdrantClientWrapper:
                 port=self.port,
                 grpc_port=self.grpc_port,
                 prefer_grpc=self.prefer_grpc,
-                timeout=self.timeout,
+                timeout=self.timeout,  # P1: Add timeout
+                # P1: Connection pool limits to prevent resource exhaustion
+                grpc_options={
+                    "grpc.max_receive_message_length": 100 * 1024 * 1024,  # 100MB
+                    "grpc.max_send_message_length": 100 * 1024 * 1024,
+                    "grpc.keepalive_time_ms": 30000,
+                    "grpc.keepalive_timeout_ms": 10000,
+                },
             )
             logger.info("Qdrant sync client initialized")
         return self._client
