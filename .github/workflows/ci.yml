@@ -139,7 +139,7 @@ jobs:
       - name: Run Unit Tests
         run: |
           echo "Running unit tests..."
-          poetry run pytest tests/unit/ \
+          poetry run pytest tests/unit/ tests/components/ tests/api/ \
             --cov=src \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -166,10 +166,10 @@ jobs:
         ports:
           - 6333:6333
         options: >-
-          --health-cmd "curl -f http://localhost:6333/health || exit 1"
+          --health-cmd "timeout 1 bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
       
       neo4j:
         image: neo4j:5.24-community
@@ -297,6 +297,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.api
           push: false
+          load: true
           tags: aegis-rag-api:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
