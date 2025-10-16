@@ -177,3 +177,145 @@ class ErrorResponse(BaseModel):
                 "timestamp": "2025-01-15T10:00:00Z",
             }
         }
+
+
+# ============================================================================
+# Graph RAG Models (Sprint 5)
+# ============================================================================
+
+
+class GraphEntity(BaseModel):
+    """Graph entity (node) representation."""
+
+    id: str = Field(..., description="Unique entity ID")
+    name: str = Field(..., description="Entity name")
+    type: str = Field(..., description="Entity type (PERSON, ORGANIZATION, etc.)")
+    description: str = Field(default="", description="Entity description")
+    properties: dict[str, Any] = Field(
+        default_factory=dict, description="Additional entity properties"
+    )
+    source_document: str | None = Field(None, description="Source document ID")
+    confidence: float = Field(default=1.0, description="Extraction confidence score", ge=0.0, le=1.0)
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "id": "entity_1",
+                "name": "John Smith",
+                "type": "PERSON",
+                "description": "Software engineer at Google",
+                "properties": {"aliases": ["J. Smith", "Johnny"]},
+                "source_document": "doc_123",
+                "confidence": 0.95,
+            }
+        }
+
+
+class GraphRelationship(BaseModel):
+    """Graph relationship (edge) representation."""
+
+    id: str = Field(..., description="Unique relationship ID")
+    source: str = Field(..., description="Source entity name or ID")
+    target: str = Field(..., description="Target entity name or ID")
+    type: str = Field(..., description="Relationship type (WORKS_AT, KNOWS, etc.)")
+    description: str = Field(default="", description="Relationship description")
+    properties: dict[str, Any] = Field(
+        default_factory=dict, description="Additional relationship properties"
+    )
+    source_document: str | None = Field(None, description="Source document ID")
+    confidence: float = Field(default=1.0, description="Extraction confidence score", ge=0.0, le=1.0)
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "id": "rel_1",
+                "source": "John Smith",
+                "target": "Google",
+                "type": "WORKS_AT",
+                "description": "John Smith works at Google",
+                "properties": {"since": "2020-01-01"},
+                "source_document": "doc_123",
+                "confidence": 0.92,
+            }
+        }
+
+
+class Topic(BaseModel):
+    """Topic/community extracted from knowledge graph."""
+
+    id: str = Field(..., description="Unique topic ID")
+    name: str = Field(..., description="Topic name")
+    summary: str = Field(default="", description="Topic summary/description")
+    entities: list[str] = Field(default_factory=list, description="Entity IDs in this topic")
+    keywords: list[str] = Field(default_factory=list, description="Topic keywords")
+    score: float = Field(default=0.0, description="Topic relevance score", ge=0.0, le=1.0)
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "id": "topic_1",
+                "name": "Machine Learning at Tech Companies",
+                "summary": "Discussion of machine learning applications in major tech companies",
+                "entities": ["entity_1", "entity_2", "entity_3"],
+                "keywords": ["machine learning", "AI", "Google", "technology"],
+                "score": 0.88,
+            }
+        }
+
+
+class GraphQueryResult(BaseModel):
+    """Graph query result with entities, relationships, and topics."""
+
+    query: str = Field(..., description="Original query")
+    answer: str = Field(default="", description="LLM-generated answer from graph context")
+    entities: list[GraphEntity] = Field(default_factory=list, description="Retrieved entities")
+    relationships: list[GraphRelationship] = Field(
+        default_factory=list, description="Retrieved relationships"
+    )
+    topics: list[Topic] = Field(default_factory=list, description="Retrieved topics (global search)")
+    context: str = Field(default="", description="Graph context used for answer generation")
+    mode: str = Field(default="local", description="Search mode (local/global/hybrid)")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Query metadata")
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "query": "What companies has John Smith worked for?",
+                "answer": "John Smith has worked for Google (2020-present) and Microsoft (2015-2020).",
+                "entities": [
+                    {
+                        "id": "e1",
+                        "name": "John Smith",
+                        "type": "PERSON",
+                        "description": "Software engineer",
+                        "properties": {},
+                        "source_document": "doc_1",
+                        "confidence": 0.95,
+                    }
+                ],
+                "relationships": [
+                    {
+                        "id": "r1",
+                        "source": "John Smith",
+                        "target": "Google",
+                        "type": "WORKS_AT",
+                        "description": "Employment relationship",
+                        "properties": {},
+                        "source_document": "doc_1",
+                        "confidence": 0.92,
+                    }
+                ],
+                "topics": [],
+                "context": "John Smith-WORKS_AT->Google...",
+                "mode": "local",
+                "metadata": {"execution_time_ms": 250, "entities_found": 2},
+            }
+        }

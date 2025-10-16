@@ -155,6 +155,45 @@ class Settings(BaseSettings):
         description="Maximum recursion depth for LangGraph execution",
     )
 
+    # LightRAG Settings (Sprint 5: Graph RAG)
+    lightrag_enabled: bool = Field(default=True, description="Enable LightRAG graph retrieval")
+    lightrag_working_dir: str = Field(
+        default="./data/lightrag", description="LightRAG working directory for graph storage"
+    )
+
+    # LightRAG LLM Configuration
+    lightrag_llm_model: str = Field(
+        default="llama3.2:8b", description="Ollama model for entity/relationship extraction"
+    )
+    lightrag_llm_temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature for extraction (low for consistency)",
+    )
+    lightrag_llm_max_tokens: int = Field(
+        default=4096, ge=100, le=32768, description="Max tokens for LLM response"
+    )
+
+    # LightRAG Embedding Configuration
+    lightrag_embedding_model: str = Field(
+        default="nomic-embed-text", description="Ollama embedding model"
+    )
+    lightrag_embedding_dim: int = Field(
+        default=768, ge=128, le=4096, description="Embedding dimension (nomic-embed-text=768)"
+    )
+
+    # Graph Construction Settings
+    lightrag_entity_extraction_batch_size: int = Field(
+        default=5, ge=1, le=50, description="Batch size for entity extraction"
+    )
+    lightrag_max_tokens_per_chunk: int = Field(
+        default=1200, ge=500, le=4000, description="Max tokens per chunk for extraction"
+    )
+    lightrag_max_entities_per_doc: int = Field(
+        default=50, ge=10, le=200, description="Maximum entities to extract per document"
+    )
+
     # MCP Server
     mcp_server_port: int = Field(default=3000, description="MCP server port")
     mcp_auth_enabled: bool = Field(default=False, description="Enable MCP authentication")

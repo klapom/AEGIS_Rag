@@ -5,10 +5,10 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, status
-from neo4j import GraphDatabase
 from qdrant_client import QdrantClient
 from redis import Redis
 
+from src.components.graph_rag.neo4j_client import get_neo4j_client
 from src.core.config import get_settings
 from src.core.logging import get_logger
 from src.core.models import HealthResponse, HealthStatus, ServiceHealth
@@ -41,19 +41,11 @@ async def check_qdrant() -> ServiceHealth:
 
 async def check_neo4j() -> ServiceHealth:
     """Check Neo4j graph database health."""
-    settings = get_settings()
     start_time = time.time()
 
     try:
-        driver = GraphDatabase.driver(
-            settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
-        )
-        with driver.session(database=settings.neo4j_database) as session:
-            result = session.run("RETURN 1 AS health")
-            _ = result.single()
-
-        driver.close()
+        client = get_neo4j_client()
+        await client.health_check()
         latency_ms = (time.time() - start_time) * 1000
 
         return ServiceHealth(status=HealthStatus.HEALTHY, latency_ms=latency_ms, error=None)

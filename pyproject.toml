@@ -20,7 +20,7 @@ packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 # Core Python
-python = ">=3.11,<4.0"
+python = ">=3.11,<3.13"  # Limited by graspologic dependency
 
 # Web Framework (Sprint 2: REST API)
 fastapi = "^0.115.0"
@@ -79,6 +79,11 @@ langgraph = "^0.6.10"
 langchain-core = "^0.3.79"
 # Note: langchain-ollama removed - incompatible with llama-index-embeddings-ollama
 # Sprint 4 uses ollama.AsyncClient directly for LLM calls
+
+# LightRAG & Graph Analysis (Sprint 5: Graph RAG)
+lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
+networkx = "^3.2"  # Graph algorithms
+graspologic = "^3.4.1"  # Graph statistics and community detection
 
 [tool.poetry.group.dev.dependencies]
 # Testing
@@ -159,6 +164,9 @@ module = [
     "rank_bm25.*",
     "ragas.*",
     "datasets.*",
+    "lightrag.*",
+    "networkx.*",
+    "graspologic.*",
 ]
 ignore_missing_imports = true
 

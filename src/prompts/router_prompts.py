@@ -22,8 +22,12 @@ Your task is to analyze the user's query and classify it into ONE of the followi
    - Questions about relationships between entities
    - Multi-hop reasoning queries
    - Questions asking "how are X and Y related?"
-   - Community or network analysis
+   - Entity-centric queries about connections
+   - Network analysis and relationship exploration
    - "How does X connect to Y?", "What is the relationship between A and B?"
+   - "Show me the knowledge graph about Z"
+   - "What entities are related to X?"
+   - "Find all connections between A and B"
 
 3. **HYBRID** - Use combined vector + graph retrieval (most comprehensive)
    - Complex questions requiring both semantic search and relationship exploration
@@ -46,7 +50,7 @@ Reasoning: Simple definition request, best served by semantic search
 
 Query: "How are RAG and knowledge graphs related?"
 Intent: GRAPH
-Reasoning: Asking about relationships between concepts, needs graph traversal
+Reasoning: Asking about relationships between concepts, needs graph traversal to explore connections
 
 Query: "Find documents about RAG systems and explain how they integrate with vector databases and knowledge graphs"
 Intent: HYBRID
@@ -58,7 +62,19 @@ Reasoning: Refers to past conversation, needs temporal memory
 
 Query: "What papers discuss the connection between transformers and attention mechanisms?"
 Intent: GRAPH
-Reasoning: Asking about connections between technical concepts
+Reasoning: Asking about connections between technical concepts, requires graph traversal
+
+Query: "Show me the knowledge graph about neural networks"
+Intent: GRAPH
+Reasoning: Explicitly requesting graph visualization/exploration of entity relationships
+
+Query: "What entities are related to LangChain in the knowledge base?"
+Intent: GRAPH
+Reasoning: Entity-centric query asking for related entities, requires graph traversal
+
+Query: "How are LLMs and embeddings connected?"
+Intent: GRAPH
+Reasoning: Asking about relationship between two specific entities/concepts
 
 Query: "Explain the architecture of BERT"
 Intent: VECTOR
