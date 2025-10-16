@@ -31,8 +31,11 @@ class VersionManager:
             retention_count: Max versions to retain per entity (default: from settings)
         """
         self.client = neo4j_client or get_neo4j_client()
-        self.retention_count = retention_count or getattr(
-            settings, "graph_version_retention_count", 10
+        # Use 'is not None' instead of 'or' to allow retention_count=0
+        self.retention_count = (
+            retention_count
+            if retention_count is not None
+            else getattr(settings, "graph_version_retention_count", 10)
         )
         logger.info("Initialized VersionManager", retention_count=self.retention_count)
 
