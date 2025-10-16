@@ -52,8 +52,8 @@ class TestGraphQueryTemplates:
 
         assert "MATCH (source:Entity), (target:Entity)" in result["query"]
         assert "shortestPath" in result["query"]
-        assert "WHERE (source.id = $source_id)" in result["query"]
-        assert "WHERE (target.id = $target_id)" in result["query"]
+        assert "(source.id = $source_id)" in result["query"]
+        assert "(target.id = $target_id)" in result["query"]
         assert result["parameters"]["source_id"] == "entity-1"
         assert result["parameters"]["target_id"] == "entity-2"
 

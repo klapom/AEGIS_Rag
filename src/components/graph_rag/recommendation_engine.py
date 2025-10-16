@@ -59,6 +59,10 @@ class RecommendationEngine:
 
         logger.info("Generating recommendations", entity_id=entity_id, method=method, top_k=top_k)
 
+        # Validate method before database operations
+        if method not in ["collaborative", "community", "relationships", "attributes"]:
+            raise ValueError(f"Unsupported recommendation method: {method}")
+
         try:
             if method == "collaborative":
                 recommendations = await self.recommend_by_collaborative(entity_id, top_k)
@@ -66,10 +70,8 @@ class RecommendationEngine:
                 recommendations = await self.recommend_by_community(entity_id, top_k)
             elif method == "relationships":
                 recommendations = await self.recommend_by_relationships(entity_id, top_k)
-            elif method == "attributes":
+            else:  # method == "attributes"
                 recommendations = await self.recommend_by_attributes(entity_id, top_k)
-            else:
-                raise ValueError(f"Unsupported recommendation method: {method}")
 
             logger.info(
                 "Recommendations generated", entity_id=entity_id, count=len(recommendations)
