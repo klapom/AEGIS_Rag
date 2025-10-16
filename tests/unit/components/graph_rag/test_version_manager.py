@@ -11,8 +11,9 @@ from src.components.graph_rag.version_manager import VersionManager, get_version
 def mock_neo4j_client():
     """Create mock Neo4j client."""
     client = MagicMock()
-    client.execute_read = AsyncMock()
-    client.execute_write = AsyncMock()
+    client.execute_read = AsyncMock(return_value=[])
+    # Default return value for execute_write to prevent coroutine errors
+    client.execute_write = AsyncMock(return_value={"nodes_created": 0, "properties_set": 0})
     return client
 
 
@@ -357,14 +358,16 @@ class TestVersionManagerEdgeCases:
 
     async def test_concurrent_version_creation(self, version_manager, mock_neo4j_client):
         """Test handling concurrent version creation."""
-        mock_neo4j_client.execute_read.return_value = [
-            {"e": {"version_number": 5, "version_id": "v5"}}
+        # Simulate sequential version increments: first call sees v5, second sees v6
+        mock_neo4j_client.execute_read.side_effect = [
+            [{"e": {"version_number": 5, "version_id": "v5"}}],  # First create_version call
+            [{"e": {"version_number": 6, "version_id": "v6"}}],  # Second create_version call
         ]
         mock_neo4j_client.execute_write.return_value = {"nodes_created": 1}
 
         entity = {"id": "test", "name": "Test"}
 
-        # Create multiple versions rapidly
+        # Create multiple versions sequentially (simulates concurrent behavior via mocks)
         v1 = await version_manager.create_version(entity)
         v2 = await version_manager.create_version(entity)
 
