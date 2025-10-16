@@ -123,7 +123,7 @@ class VersionManager:
         RETURN e
         """
 
-        create_result = await self.client.execute_write(create_query, params)
+        await self.client.execute_write(create_query, params)
 
         # Enforce retention policy
         await self._enforce_retention(entity_id)
@@ -177,9 +177,8 @@ class VersionManager:
             entity_data = dict(record["e"])
             # Convert datetime objects to ISO strings
             for key in ["valid_from", "valid_to", "transaction_from", "transaction_to"]:
-                if key in entity_data and entity_data[key]:
-                    if hasattr(entity_data[key], "isoformat"):
-                        entity_data[key] = entity_data[key].isoformat()
+                if key in entity_data and entity_data[key] and hasattr(entity_data[key], "isoformat"):
+                    entity_data[key] = entity_data[key].isoformat()
             versions.append(entity_data)
 
         logger.debug("Retrieved versions", entity_id=entity_id, count=len(versions))
@@ -218,9 +217,8 @@ class VersionManager:
             entity_data = dict(results[0]["e"])
             # Convert datetime objects
             for key in ["valid_from", "valid_to", "transaction_from", "transaction_to"]:
-                if key in entity_data and entity_data[key]:
-                    if hasattr(entity_data[key], "isoformat"):
-                        entity_data[key] = entity_data[key].isoformat()
+                if key in entity_data and entity_data[key] and hasattr(entity_data[key], "isoformat"):
+                    entity_data[key] = entity_data[key].isoformat()
 
             logger.debug(
                 "Retrieved version at timestamp",
