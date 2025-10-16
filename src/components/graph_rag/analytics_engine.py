@@ -228,9 +228,7 @@ class GraphAnalyticsEngine:
             logger.warning("Eigenvector centrality failed to converge", entity_id=entity_id)
             return 0.0
 
-    async def calculate_pagerank(
-        self, entity_ids: list[str] | None = None
-    ) -> list[dict[str, Any]]:
+    async def calculate_pagerank(self, entity_ids: list[str] | None = None) -> list[dict[str, Any]]:
         """Calculate PageRank scores for entities.
 
         Args:
@@ -276,9 +274,7 @@ class GraphAnalyticsEngine:
                 else:
                     result = [
                         {"entity_id": eid, "score": score}
-                        for eid, score in sorted(
-                            pagerank.items(), key=lambda x: x[1], reverse=True
-                        )
+                        for eid, score in sorted(pagerank.items(), key=lambda x: x[1], reverse=True)
                     ]
 
             self._set_cached(cache_key, result)
@@ -422,9 +418,7 @@ class GraphAnalyticsEngine:
             relationship_types = {row["type"]: row["count"] for row in rel_types_result}
 
             # Calculate average degree and density
-            avg_degree = (
-                (2.0 * total_relationships / total_entities) if total_entities > 0 else 0.0
-            )
+            avg_degree = (2.0 * total_relationships / total_entities) if total_entities > 0 else 0.0
             max_edges = total_entities * (total_entities - 1) / 2
             density = total_relationships / max_edges if max_edges > 0 else 0.0
 

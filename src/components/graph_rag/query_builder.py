@@ -323,7 +323,9 @@ class CypherQueryBuilder:
 
         self._set_clauses.extend(assignments)
         self._parameters.update(properties)
-        logger.debug("Added SET clause", assignments=assignments, properties=list(properties.keys()))
+        logger.debug(
+            "Added SET clause", assignments=assignments, properties=list(properties.keys())
+        )
         return self
 
     def delete(self, *items: str) -> "CypherQueryBuilder":
@@ -434,7 +436,9 @@ class CypherQueryBuilder:
         if not query:
             raise ValueError("Cannot build empty query")
 
-        logger.info("Built Cypher query", query_length=len(query), param_count=len(self._parameters))
+        logger.info(
+            "Built Cypher query", query_length=len(query), param_count=len(self._parameters)
+        )
 
         return {"query": query, "parameters": self._parameters}
 

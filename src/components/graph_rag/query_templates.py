@@ -47,10 +47,7 @@ class GraphQueryTemplates:
             >>> templates.entity_lookup("John Doe").limit(1).build()
         """
         return (
-            CypherQueryBuilder()
-            .match("(e:Entity)")
-            .where("e.name = $name", name=name)
-            .return_("e")
+            CypherQueryBuilder().match("(e:Entity)").where("e.name = $name", name=name).return_("e")
         )
 
     def entity_neighbors(
@@ -80,9 +77,9 @@ class GraphQueryTemplates:
 
         # Add relationship pattern with depth
         if rel_type:
-            builder.match(
-                f"(e)-[r:{rel_type}*1..{depth}]-(neighbor:Entity)"
-            ).param("rel_type", rel_type)
+            builder.match(f"(e)-[r:{rel_type}*1..{depth}]-(neighbor:Entity)").param(
+                "rel_type", rel_type
+            )
         else:
             builder.match(f"(e)-[r*1..{depth}]-(neighbor:Entity)")
 
@@ -169,9 +166,7 @@ class GraphQueryTemplates:
 
         return builder.return_("r", "other", "type(r) as relationship_type")
 
-    def subgraph_extraction(
-        self, entity_ids: list[str], depth: int = 1
-    ) -> CypherQueryBuilder:
+    def subgraph_extraction(self, entity_ids: list[str], depth: int = 1) -> CypherQueryBuilder:
         """Extract subgraph around specified entities.
 
         Args:
@@ -436,7 +431,9 @@ class GraphQueryTemplates:
 
         # Count common neighbors
         builder.with_("similar", "count(DISTINCT common) as common_count")
-        builder.where("common_count >= $min_common_neighbors", min_common_neighbors=min_common_neighbors)
+        builder.where(
+            "common_count >= $min_common_neighbors", min_common_neighbors=min_common_neighbors
+        )
 
         return (
             builder.return_("similar", "similar.name as name", "common_count")

@@ -132,9 +132,7 @@ class Settings(BaseSettings):
     neo4j_database: str = Field(default="neo4j", description="Neo4j database name")
 
     # Graph Query Configuration (Sprint 6: Advanced Query Operations)
-    graph_query_cache_enabled: bool = Field(
-        default=True, description="Enable query result caching"
-    )
+    graph_query_cache_enabled: bool = Field(default=True, description="Enable query result caching")
     graph_query_cache_max_size: int = Field(
         default=1000, ge=10, le=10000, description="Maximum cache entries (LRU eviction)"
     )

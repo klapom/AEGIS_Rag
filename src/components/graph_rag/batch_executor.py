@@ -150,7 +150,9 @@ class BatchQueryExecutor:
         except TimeoutError:
             execution_time = asyncio.get_event_loop().time() - start_time
             error_msg = f"Query timeout after {self.timeout_seconds}s"
-            logger.warning("Query timeout", index=index, query=query[:50], timeout=self.timeout_seconds)
+            logger.warning(
+                "Query timeout", index=index, query=query[:50], timeout=self.timeout_seconds
+            )
 
             return (
                 index,
@@ -201,7 +203,9 @@ class BatchQueryExecutor:
             logger.warning("Empty query batch provided")
             return []
 
-        logger.info("Executing batch queries", batch_size=len(queries), max_concurrent=self.max_concurrent)
+        logger.info(
+            "Executing batch queries", batch_size=len(queries), max_concurrent=self.max_concurrent
+        )
 
         # Create tasks for all queries with their indices
         tasks = [
@@ -304,7 +308,9 @@ class BatchQueryExecutor:
         except Exception as e:
             execution_time = asyncio.get_event_loop().time() - start_time
             error_msg = f"{type(e).__name__}: {str(e)}"
-            logger.error("Write query execution failed", index=index, query=query[:50], error=error_msg)
+            logger.error(
+                "Write query execution failed", index=index, query=query[:50], error=error_msg
+            )
 
             return (
                 index,
@@ -339,7 +345,11 @@ class BatchQueryExecutor:
             logger.warning("Empty write query batch provided")
             return []
 
-        logger.info("Executing batch write queries", batch_size=len(queries), max_concurrent=self.max_concurrent)
+        logger.info(
+            "Executing batch write queries",
+            batch_size=len(queries),
+            max_concurrent=self.max_concurrent,
+        )
 
         # Create tasks for all queries with their indices
         tasks = [

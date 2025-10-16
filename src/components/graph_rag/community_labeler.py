@@ -53,9 +53,7 @@ class CommunityLabeler:
         self.neo4j_client = neo4j_client or Neo4jClient()
         self.llm_model = llm_model or settings.graph_community_labeling_model
         self.ollama_base_url = ollama_base_url or settings.ollama_base_url
-        self.enabled = (
-            enabled if enabled is not None else settings.graph_community_labeling_enabled
-        )
+        self.enabled = enabled if enabled is not None else settings.graph_community_labeling_enabled
 
         # Initialize Ollama client
         self.ollama_client = AsyncClient(host=self.ollama_base_url)
@@ -178,7 +176,7 @@ Label:"""
             label = response.get("response", "").strip()
 
             # Clean up label (remove quotes, extra whitespace)
-            label = label.strip('"\'')
+            label = label.strip("\"'")
             label = " ".join(label.split())
 
             # Validate length (should be 2-5 words)

@@ -206,9 +206,7 @@ class GraphEntity(BaseModel):
     transaction_from: datetime | None = Field(
         None, description="Transaction time start (database time)"
     )
-    transaction_to: datetime | None = Field(
-        None, description="Transaction time end (None=current)"
-    )
+    transaction_to: datetime | None = Field(None, description="Transaction time end (None=current)")
     changed_by: str = Field(default="system", description="User/system that made the change")
     change_reason: str = Field(default="", description="Reason for the change")
 
@@ -380,9 +378,7 @@ class CommunitySearchResult(BaseModel):
     """Search result filtered by communities."""
 
     query: str = Field(..., description="Original query")
-    communities: list[Community] = Field(
-        default_factory=list, description="Retrieved communities"
-    )
+    communities: list[Community] = Field(default_factory=list, description="Retrieved communities")
     entities: list[GraphEntity] = Field(
         default_factory=list, description="Entities from matched communities"
     )

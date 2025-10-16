@@ -40,7 +40,10 @@ class RecommendationEngine:
         )
 
     async def recommend_similar_entities(
-        self, entity_id: str, method: RecommendationMethod = "collaborative", top_k: int | None = None
+        self,
+        entity_id: str,
+        method: RecommendationMethod = "collaborative",
+        top_k: int | None = None,
     ) -> list[Recommendation]:
         """Recommend similar entities based on the specified method.
 
@@ -82,9 +85,7 @@ class RecommendationEngine:
             logger.error("Failed to generate recommendations", error=str(e), entity_id=entity_id)
             raise DatabaseConnectionError(f"Recommendation generation failed: {e}") from e
 
-    async def recommend_by_collaborative(
-        self, entity_id: str, top_k: int
-    ) -> list[Recommendation]:
+    async def recommend_by_collaborative(self, entity_id: str, top_k: int) -> list[Recommendation]:
         """Recommend entities using collaborative filtering.
 
         Find entities that are connected to entities similar to the source entity.
@@ -196,9 +197,7 @@ class RecommendationEngine:
 
         return recommendations
 
-    async def recommend_by_relationships(
-        self, entity_id: str, top_k: int
-    ) -> list[Recommendation]:
+    async def recommend_by_relationships(self, entity_id: str, top_k: int) -> list[Recommendation]:
         """Recommend directly connected entities.
 
         Args:

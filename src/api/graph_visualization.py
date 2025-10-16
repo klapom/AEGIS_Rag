@@ -47,9 +47,7 @@ class VisualizationResponse(BaseModel):
 async def visualize_custom_subgraph(
     entity_ids: Annotated[list[str], Query(description="List of entity IDs")],
     depth: Annotated[int, Query(ge=1, le=5, description="Traversal depth")] = 1,
-    max_nodes: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum nodes to return")
-    ] = 100,
+    max_nodes: Annotated[int, Query(ge=1, le=1000, description="Maximum nodes to return")] = 100,
     format: Annotated[
         VisualizationFormat, Query(description="Output format (d3, cytoscape, visjs)")
     ] = "d3",
@@ -116,9 +114,7 @@ async def visualize_custom_subgraph(
 async def visualize_entity_neighborhood(
     entity_id: str,
     depth: Annotated[int, Query(ge=1, le=5, description="Traversal depth")] = 1,
-    max_nodes: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum nodes to return")
-    ] = 100,
+    max_nodes: Annotated[int, Query(ge=1, le=1000, description="Maximum nodes to return")] = 100,
     format: Annotated[
         VisualizationFormat, Query(description="Output format (d3, cytoscape, visjs)")
     ] = "d3",
@@ -178,9 +174,7 @@ async def visualize_entity_neighborhood(
 )
 async def visualize_community(
     community_id: str,
-    max_nodes: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum nodes to return")
-    ] = 100,
+    max_nodes: Annotated[int, Query(ge=1, le=1000, description="Maximum nodes to return")] = 100,
     format: Annotated[
         VisualizationFormat, Query(description="Output format (d3, cytoscape, visjs)")
     ] = "d3",
@@ -239,7 +233,9 @@ async def visualize_community(
     except HTTPException:
         raise
     except DatabaseConnectionError as e:
-        logger.error("Database error visualizing community", error=str(e), community_id=community_id)
+        logger.error(
+            "Database error visualizing community", error=str(e), community_id=community_id
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Database connection failed: {str(e)}",

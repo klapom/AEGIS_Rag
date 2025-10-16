@@ -153,9 +153,7 @@ class EvolutionTracker:
         LIMIT $limit
         """
 
-        results = await self.client.execute_read(
-            query, {"entity_id": entity_id, "limit": limit}
-        )
+        results = await self.client.execute_read(query, {"entity_id": entity_id, "limit": limit})
 
         changes = []
         for record in results:
@@ -225,16 +223,18 @@ class EvolutionTracker:
                 field_counts[field] = field_counts.get(field, 0) + 1
 
         # Sort fields by change count
-        most_changed_fields = sorted(
-            field_counts.items(), key=lambda x: x[1], reverse=True
-        )[:10]
+        most_changed_fields = sorted(field_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
         result = {
             "entity_id": entity_id,
             "total_changes": total_changes,
             "change_frequency": round(change_frequency, 2),
-            "first_change": first_change.isoformat() if isinstance(first_change, datetime) else first_change,
-            "last_change": last_change.isoformat() if isinstance(last_change, datetime) else last_change,
+            "first_change": (
+                first_change.isoformat() if isinstance(first_change, datetime) else first_change
+            ),
+            "last_change": (
+                last_change.isoformat() if isinstance(last_change, datetime) else last_change
+            ),
             "most_changed_fields": [
                 {"field": field, "change_count": count} for field, count in most_changed_fields
             ],

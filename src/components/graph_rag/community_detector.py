@@ -297,7 +297,9 @@ class CommunityDetector:
             for rel in relationships:
                 graph.add_edge(rel["source"], rel["target"])
 
-            logger.info("networkx_graph_built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges())
+            logger.info(
+                "networkx_graph_built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges()
+            )
 
             # Run community detection
             if algorithm.lower() == "leiden":

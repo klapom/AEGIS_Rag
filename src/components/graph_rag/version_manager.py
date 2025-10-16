@@ -177,7 +177,11 @@ class VersionManager:
             entity_data = dict(record["e"])
             # Convert datetime objects to ISO strings
             for key in ["valid_from", "valid_to", "transaction_from", "transaction_to"]:
-                if key in entity_data and entity_data[key] and hasattr(entity_data[key], "isoformat"):
+                if (
+                    key in entity_data
+                    and entity_data[key]
+                    and hasattr(entity_data[key], "isoformat")
+                ):
                     entity_data[key] = entity_data[key].isoformat()
             versions.append(entity_data)
 
@@ -217,7 +221,11 @@ class VersionManager:
             entity_data = dict(results[0]["e"])
             # Convert datetime objects
             for key in ["valid_from", "valid_to", "transaction_from", "transaction_to"]:
-                if key in entity_data and entity_data[key] and hasattr(entity_data[key], "isoformat"):
+                if (
+                    key in entity_data
+                    and entity_data[key]
+                    and hasattr(entity_data[key], "isoformat")
+                ):
                     entity_data[key] = entity_data[key].isoformat()
 
             logger.debug(

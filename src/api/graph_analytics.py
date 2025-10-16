@@ -209,7 +209,9 @@ async def get_entity_recommendations(
     entity_id: str,
     method: Annotated[
         RecommendationMethod,
-        Query(description="Recommendation method (collaborative, community, relationships, attributes)"),
+        Query(
+            description="Recommendation method (collaborative, community, relationships, attributes)"
+        ),
     ] = "collaborative",
     top_k: Annotated[int, Query(ge=1, le=50, description="Number of recommendations")] = 5,
 ) -> list[Recommendation]:
