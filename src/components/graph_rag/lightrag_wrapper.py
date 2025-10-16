@@ -61,9 +61,7 @@ class LightRAGWrapper:
         self.embedding_model = embedding_model or settings.lightrag_embedding_model
         self.neo4j_uri = neo4j_uri or settings.neo4j_uri
         self.neo4j_user = neo4j_user or settings.neo4j_user
-        self.neo4j_password = (
-            neo4j_password or settings.neo4j_password.get_secret_value()
-        )
+        self.neo4j_password = neo4j_password or settings.neo4j_password.get_secret_value()
 
         # Create working directory
         self.working_dir.mkdir(parents=True, exist_ok=True)

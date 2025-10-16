@@ -45,17 +45,13 @@ class GraphSearchResult(BaseModel):
     query: str = Field(..., description="Original query")
     mode: SearchMode = Field(..., description="Search mode used")
     answer: str = Field(default="", description="LLM-generated answer")
-    entities: list[dict[str, Any]] = Field(
-        default_factory=list, description="Retrieved entities"
-    )
+    entities: list[dict[str, Any]] = Field(default_factory=list, description="Retrieved entities")
     relationships: list[dict[str, Any]] = Field(
         default_factory=list, description="Retrieved relationships"
     )
     context: str = Field(default="", description="Graph context used")
     topics: list[str] = Field(default_factory=list, description="Topics/communities")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Search metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
 
 class DualLevelSearch:
@@ -88,9 +84,7 @@ class DualLevelSearch:
         """
         self.neo4j_uri = neo4j_uri or settings.neo4j_uri
         self.neo4j_user = neo4j_user or settings.neo4j_user
-        self.neo4j_password = (
-            neo4j_password or settings.neo4j_password.get_secret_value()
-        )
+        self.neo4j_password = neo4j_password or settings.neo4j_password.get_secret_value()
         self.llm_model = llm_model or settings.lightrag_llm_model
         self.ollama_base_url = ollama_base_url or settings.ollama_base_url
 
@@ -116,9 +110,7 @@ class DualLevelSearch:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def local_search(
-        self, query: str, top_k: int = 5
-    ) -> list[GraphEntity]:
+    async def local_search(self, query: str, top_k: int = 5) -> list[GraphEntity]:
         """Execute entity-level (local) search.
 
         Retrieves specific entities and their direct relationships relevant to the query.
@@ -190,9 +182,7 @@ class DualLevelSearch:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def global_search(
-        self, query: str, top_k: int = 3
-    ) -> list[Topic]:
+    async def global_search(self, query: str, top_k: int = 3) -> list[Topic]:
         """Execute topic-level (global) search.
 
         Retrieves high-level topics/communities relevant to the query.
@@ -311,9 +301,7 @@ Answer:"""
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def hybrid_search(
-        self, query: str, top_k: int = 10
-    ) -> GraphQueryResult:
+    async def hybrid_search(self, query: str, top_k: int = 10) -> GraphQueryResult:
         """Execute combined local + global search with answer generation.
 
         Combines entity-level and topic-level results, generates an answer
@@ -454,9 +442,7 @@ Answer:"""
         if entities:
             context_parts.append("Entities:")
             for entity in entities[:10]:  # Limit to top 10
-                context_parts.append(
-                    f"- {entity.name} ({entity.type}): {entity.description}"
-                )
+                context_parts.append(f"- {entity.name} ({entity.type}): {entity.description}")
 
         # Add relationships
         if relationships:

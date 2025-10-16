@@ -224,7 +224,9 @@ class GraphQueryAgent(BaseAgent):
                 )
             elif search_mode == SearchMode.GLOBAL:
                 # Topic-level search
-                topics = await self.dual_level_search.global_search(query=query, top_k=min(top_k, 5))
+                topics = await self.dual_level_search.global_search(
+                    query=query, top_k=min(top_k, 5)
+                )
                 graph_result = GraphSearchResult(
                     query=query,
                     answer=f"Found {len(topics)} topics related to the query.",
@@ -276,7 +278,11 @@ class GraphQueryAgent(BaseAgent):
             # Update state with graph results
             state["graph_query_result"] = {
                 "query": graph_result.query,
-                "mode": graph_result.mode if isinstance(graph_result.mode, str) else graph_result.mode.value,
+                "mode": (
+                    graph_result.mode
+                    if isinstance(graph_result.mode, str)
+                    else graph_result.mode.value
+                ),
                 "answer": graph_result.answer,
                 "entities": entities_list,
                 "relationships": relationships_list,

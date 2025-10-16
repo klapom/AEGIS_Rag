@@ -195,7 +195,9 @@ class GraphEntity(BaseModel):
         default_factory=dict, description="Additional entity properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
-    confidence: float = Field(default=1.0, description="Extraction confidence score", ge=0.0, le=1.0)
+    confidence: float = Field(
+        default=1.0, description="Extraction confidence score", ge=0.0, le=1.0
+    )
 
     class Config:
         """Pydantic config."""
@@ -225,7 +227,9 @@ class GraphRelationship(BaseModel):
         default_factory=dict, description="Additional relationship properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
-    confidence: float = Field(default=1.0, description="Extraction confidence score", ge=0.0, le=1.0)
+    confidence: float = Field(
+        default=1.0, description="Extraction confidence score", ge=0.0, le=1.0
+    )
 
     class Config:
         """Pydantic config."""
@@ -278,7 +282,9 @@ class GraphQueryResult(BaseModel):
     relationships: list[GraphRelationship] = Field(
         default_factory=list, description="Retrieved relationships"
     )
-    topics: list[Topic] = Field(default_factory=list, description="Retrieved topics (global search)")
+    topics: list[Topic] = Field(
+        default_factory=list, description="Retrieved topics (global search)"
+    )
     context: str = Field(default="", description="Graph context used for answer generation")
     mode: str = Field(default="local", description="Search mode (local/global/hybrid)")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Query metadata")
