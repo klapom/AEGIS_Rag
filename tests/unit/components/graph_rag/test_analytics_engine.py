@@ -82,14 +82,16 @@ class TestGraphAnalyticsEngine:
         """Test that centrality results are cached."""
         mock_neo4j_client.execute_query.return_value = [{"degree": 10}]
 
-        # First call
+        # First call - makes 3 queries: degree + pagerank (2 queries)
         metrics1 = await engine.calculate_centrality("entity_1", "degree")
+        first_call_count = mock_neo4j_client.execute_query.call_count
+
         # Second call (should use cache)
         metrics2 = await engine.calculate_centrality("entity_1", "degree")
 
         assert metrics1 == metrics2
-        # execute_query should only be called once (for degree calculation)
-        assert mock_neo4j_client.execute_query.call_count == 1
+        # Second call should not make any new queries (cache hit)
+        assert mock_neo4j_client.execute_query.call_count == first_call_count
 
     @pytest.mark.asyncio
     async def test_calculate_pagerank_networkx(self, engine, mock_neo4j_client):
