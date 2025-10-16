@@ -350,6 +350,9 @@ class TestEnforceRetention:
 
         manager = VersionManager(neo4j_client=client, retention_count=0)
 
+        # Reset mock to clear any setup calls
+        client.execute_write.reset_mock()
+
         deleted = await manager._enforce_retention("test_entity")
 
         assert deleted == 0
