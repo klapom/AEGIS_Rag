@@ -109,7 +109,7 @@ class GraphQueryTemplates:
         builder = CypherQueryBuilder()
 
         # Match source and target
-        builder.match("(source:Entity)", "(target:Entity)")
+        builder.match("(source:Entity), (target:Entity)")
 
         # Determine if using ID or name for source
         if source_id.startswith("entity-") or source_id.startswith("id-"):
@@ -464,7 +464,7 @@ class GraphQueryTemplates:
         builder = CypherQueryBuilder()
 
         # Match source and target
-        builder.match("(source:Entity)", "(target:Entity)")
+        builder.match("(source:Entity), (target:Entity)")
 
         # Match source
         if source_id.startswith("entity-") or source_id.startswith("id-"):

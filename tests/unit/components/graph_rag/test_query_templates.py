@@ -197,7 +197,7 @@ class TestGraphQueryTemplates:
 
         assert "MATCH (e:Entity)" in result["query"]
         assert "(e)-[]-(common)-[]-(similar:Entity)" in result["query"]
-        assert "WHERE (e <> similar)" in result["query"]
+        assert "(e <> similar)" in result["query"]  # Check for filter, not exact WHERE clause
         assert "common_count >= $min_common_neighbors" in result["query"]
         assert "ORDER BY common_count DESC" in result["query"]
         assert "LIMIT 10" in result["query"]

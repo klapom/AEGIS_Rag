@@ -137,7 +137,8 @@
       "Bash(powershell:*)",
       "Bash(New-Item -ItemType File -Path \"c:\\Users\\Klaus Pommer\\OneDrive - Pommer IT-Consulting GmbH\\99_Studium_Klaus\\AEGIS_Rag\\tests\\unit\\components\\graph_rag\\__init__.py\" -Force)",
       "Bash(.venvScriptspython.exe -m pytest tests/unit/agents/test_graph_query_agent.py::TestGraphQueryAgent::test_process_with_valid_query -v --tb=short)",
-      "Bash(where python)"
+      "Bash(where python)",
+      "Bash(gh workflow run:*)"
     ],
     "deny": [],
     "ask": [

@@ -82,7 +82,7 @@ class TestCypherQueryBuilder:
         builder = CypherQueryBuilder()
         result = builder.relationship("a", "KNOWS", "b").return_("a", "b").build()
 
-        assert "(a)-([:KNOWS])->(b)" in result["query"]
+        assert "(a)-[:KNOWS]->(b)" in result["query"]
 
     def test_multi_hop_relationship(self):
         """Test multi-hop relationship pattern."""
