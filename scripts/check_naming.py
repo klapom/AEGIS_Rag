@@ -14,7 +14,7 @@ class NamingChecker:
 
     # Naming patterns
     PATTERNS = {
-        'class': re.compile(r'^[A-Z][a-z]+(?:[A-Z][a-z]+)*(?:Service|Repository|Controller|Model|Config|Agent|Processor|Handler|Manager|Builder|Factory|Adapter|Strategy|Validator)?$'),
+        'class': re.compile(r'^[A-Z][A-Za-z0-9]*(?:Service|Repository|Controller|Model|Config|Agent|Processor|Handler|Manager|Builder|Factory|Adapter|Strategy|Validator|Error|Exception|Evaluator)?$'),
         'function': re.compile(r'^[a-z]+(?:_[a-z]+)*$'),
         'constant': re.compile(r'^[A-Z]+(?:_[A-Z]+)*$'),
         'variable': re.compile(r'^[a-z]+(?:_[a-z]+)*$'),
