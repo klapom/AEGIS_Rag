@@ -175,13 +175,17 @@ jobs:
         image: neo4j:5.24-community
         ports:
           - 7687:7687
+          - 7474:7474
         env:
           NEO4J_AUTH: neo4j/testpassword
+          NEO4J_server_memory_heap_initial__size: 512m
+          NEO4J_server_memory_heap_max__size: 1g
         options: >-
-          --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1'"
-          --health-interval 15s
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"
+          --health-interval 10s
           --health-timeout 10s
-          --health-retries 10
+          --health-retries 20
+          --health-start-period 60s
       
       redis:
         image: redis:7-alpine
@@ -215,10 +219,20 @@ jobs:
         run: |
           echo "Waiting for Qdrant..."
           timeout 60 bash -c 'until curl -f http://localhost:6333/ 2>/dev/null; do sleep 2; done'
-          echo "Waiting for Neo4j..."
-          timeout 60 bash -c 'until echo "RETURN 1" | cypher-shell -u neo4j -p testpassword 2>/dev/null; do sleep 2; done'
+          echo "✅ Qdrant ready"
+
+          echo "Waiting for Neo4j HTTP endpoint..."
+          timeout 120 bash -c 'until curl -f http://localhost:7474/ 2>/dev/null; do echo "Attempt $((++count))/60: Neo4j not ready..."; sleep 2; done'
+          echo "✅ Neo4j HTTP ready"
+
+          echo "Waiting for Neo4j Bolt to be fully ready..."
+          sleep 15
+          timeout 60 bash -c 'until echo "RETURN 1 AS result" | cypher-shell -u neo4j -p testpassword -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "Bolt not ready, waiting..."; sleep 3; done'
+          echo "✅ Neo4j Bolt ready"
+
           echo "Waiting for Redis..."
           timeout 60 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
+          echo "✅ Redis ready"
       
       - name: Run Integration Tests
         env:

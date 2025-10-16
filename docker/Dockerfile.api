@@ -28,7 +28,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies (without dev dependencies)
-RUN /opt/poetry/bin/poetry install --no-root --no-dev --no-interaction --no-ansi
+# Updated for Poetry 1.8+: --no-dev is deprecated, use --only main
+RUN /opt/poetry/bin/poetry install --no-root --only main --no-interaction --no-ansi
 
 # ============================================================
 # Stage 2: Runtime
