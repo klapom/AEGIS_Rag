@@ -341,23 +341,22 @@ class TestEnforceRetention:
         assert "SKIP" in call_args[0][0]
         assert "retention_count" in call_args[0][1]
 
-    async def test_no_retention_limit(self):
-        """Test with no retention limit (0)."""
-        # Create fresh mock to ensure no prior calls
-        client = MagicMock()
-        client.execute_read = AsyncMock(return_value=[])
-        client.execute_write = AsyncMock(return_value={"nodes_created": 0, "properties_set": 0})
 
-        manager = VersionManager(neo4j_client=client, retention_count=0)
+@pytest.mark.asyncio
+async def test_no_retention_limit():
+    """Test with no retention limit (0) - isolated test outside class to avoid fixture pollution."""
+    # Create fresh mock to ensure no prior calls
+    client = MagicMock()
+    client.execute_read = AsyncMock(return_value=[])
+    client.execute_write = AsyncMock(return_value={"nodes_created": 0, "properties_set": 0})
 
-        # Reset mock to clear any setup calls
-        client.execute_write.reset_mock()
+    manager = VersionManager(neo4j_client=client, retention_count=0)
 
-        deleted = await manager._enforce_retention("test_entity")
+    deleted = await manager._enforce_retention("test_entity")
 
-        assert deleted == 0
-        # With retention_count=0, _enforce_retention returns early and never calls execute_write
-        client.execute_write.assert_not_called()
+    assert deleted == 0
+    # With retention_count=0, _enforce_retention returns early and never calls execute_write
+    client.execute_write.assert_not_called()
 
 
 @pytest.mark.asyncio
