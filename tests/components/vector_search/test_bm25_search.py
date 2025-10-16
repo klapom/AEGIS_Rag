@@ -9,11 +9,9 @@ Tests BM25 keyword search including:
 """
 
 import pytest
-from typing import List, Dict, Any
 
 from src.components.vector_search.bm25_search import BM25Search
 from src.core.exceptions import VectorSearchError
-
 
 # ============================================================================
 # Test Initialization

@@ -2,23 +2,20 @@
 
 import asyncio
 from pathlib import Path
-from typing import List, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, Mock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 from qdrant_client.models import (
-    PointStruct,
-    ScoredPoint,
-    CollectionsResponse,
     CollectionDescription,
+    CollectionsResponse,
+    ScoredPoint,
 )
 
 from src.api.main import app
 from src.core.config import get_settings
-
 
 # ============================================================================
 # Basic Fixtures
@@ -50,6 +47,7 @@ def mock_rate_limiter(monkeypatch):
     """
     from slowapi import Limiter
     from slowapi.util import get_remote_address
+
     from src.api import middleware
 
     # Create a limiter with very high limits for testing
@@ -101,7 +99,7 @@ def sample_query() -> str:
 
 
 @pytest.fixture
-def sample_documents() -> List[Dict[str, Any]]:
+def sample_documents() -> list[dict[str, Any]]:
     """Sample documents for testing.
 
     Returns:
@@ -142,7 +140,7 @@ def sample_documents() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_texts() -> List[str]:
+def sample_texts() -> list[str]:
     """Sample texts for embedding testing.
 
     Returns:
@@ -158,7 +156,7 @@ def sample_texts() -> List[str]:
 
 
 @pytest.fixture
-def sample_embedding() -> List[float]:
+def sample_embedding() -> list[float]:
     """Sample embedding vector (768-dim for nomic-embed-text).
 
     Returns:
@@ -168,7 +166,7 @@ def sample_embedding() -> List[float]:
 
 
 @pytest.fixture
-def sample_embeddings(sample_texts: List[str]) -> List[List[float]]:
+def sample_embeddings(sample_texts: list[str]) -> list[list[float]]:
     """Sample embeddings for multiple texts.
 
     Returns:
@@ -204,7 +202,7 @@ def mock_qdrant_collections():
 
 
 @pytest.fixture
-def mock_scored_points() -> List[ScoredPoint]:
+def mock_scored_points() -> list[ScoredPoint]:
     """Mock Qdrant search results."""
     return [
         ScoredPoint(

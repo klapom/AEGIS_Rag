@@ -7,15 +7,15 @@ Tests the RRF algorithm implementation including:
 - Edge cases (empty rankings, single ranking, duplicate documents)
 """
 
+from typing import Any
+
 import pytest
-from typing import List, Dict, Any
 
 from src.utils.fusion import (
+    analyze_ranking_diversity,
     reciprocal_rank_fusion,
     weighted_reciprocal_rank_fusion,
-    analyze_ranking_diversity,
 )
-
 
 # ============================================================================
 # Test Data
@@ -23,7 +23,7 @@ from src.utils.fusion import (
 
 
 @pytest.fixture
-def vector_results() -> List[Dict[str, Any]]:
+def vector_results() -> list[dict[str, Any]]:
     """Mock vector search results."""
     return [
         {"id": "doc1", "text": "Vector result 1", "score": 0.95},
@@ -35,7 +35,7 @@ def vector_results() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def bm25_results() -> List[Dict[str, Any]]:
+def bm25_results() -> list[dict[str, Any]]:
     """Mock BM25 search results."""
     return [
         {"id": "doc3", "text": "BM25 result 1", "score": 15.3},

@@ -8,20 +8,17 @@ Tests the Qdrant client wrapper including:
 - Error handling and retries
 """
 
-import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
 
-from qdrant_client.models import Distance, PointStruct, ScoredPoint
+import pytest
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.models import Distance, PointStruct, ScoredPoint
 
 from src.components.vector_search.qdrant_client import (
     QdrantClientWrapper,
     get_qdrant_client,
 )
 from src.core.exceptions import DatabaseConnectionError, VectorSearchError
-
 
 # ============================================================================
 # Test Initialization
@@ -435,7 +432,7 @@ async def test_search_with_score_threshold():
 @pytest.mark.asyncio
 async def test_search_with_filter():
     """Test search with metadata filter."""
-    from qdrant_client.models import Filter, FieldCondition, MatchValue
+    from qdrant_client.models import FieldCondition, Filter, MatchValue
 
     client = AsyncMock()
     client.search.return_value = []

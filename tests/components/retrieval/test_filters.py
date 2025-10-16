@@ -15,7 +15,7 @@ Tests cover:
 from datetime import datetime, timedelta
 
 import pytest
-from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue, Range
+from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 
 from src.components.retrieval.filters import MetadataFilterEngine, MetadataFilters
 

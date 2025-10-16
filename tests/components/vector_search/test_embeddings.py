@@ -8,13 +8,11 @@ Tests embedding generation including:
 - Service configuration
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List
 
 from src.components.vector_search.embeddings import EmbeddingService, get_embedding_service
-from src.core.exceptions import LLMError
-
 
 # ============================================================================
 # Test Initialization

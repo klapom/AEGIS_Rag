@@ -8,16 +8,15 @@ Tests document ingestion including:
 - Error handling
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
+
+import pytest
 
 from src.components.vector_search.ingestion import (
     DocumentIngestionPipeline,
     ingest_documents,
 )
 from src.core.exceptions import VectorSearchError
-
 
 # ============================================================================
 # Test Initialization

@@ -8,17 +8,17 @@ Prerequisites:
 - Ollama running on localhost:11434 with nomic-embed-text model
 """
 
-import pytest
-import pytest_asyncio
 from pathlib import Path
 from uuid import uuid4
 
-from src.components.vector_search import (
-    QdrantClientWrapper,
-    EmbeddingService,
-    DocumentIngestionPipeline,
-)
+import pytest
+import pytest_asyncio
 
+from src.components.vector_search import (
+    DocumentIngestionPipeline,
+    EmbeddingService,
+    QdrantClientWrapper,
+)
 
 # ============================================================================
 # Test Fixtures
@@ -305,7 +305,7 @@ def check_integration_services():
         try:
             with socket.create_connection((host, port), timeout=2):
                 return True
-        except (socket.error, socket.timeout):
+        except (TimeoutError, OSError):
             return False
 
     qdrant_available = is_service_available("localhost", 6333)

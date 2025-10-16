@@ -8,12 +8,12 @@ Tests hybrid search combining vector and BM25:
 - Error handling
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.vector_search.hybrid_search import HybridSearch
 from src.core.exceptions import VectorSearchError
-
 
 # ============================================================================
 # Test Initialization
@@ -89,7 +89,7 @@ async def test_vector_search_with_threshold(
         bm25_search=mock_bm25_search,
     )
 
-    results = await search.vector_search("test query", top_k=5, score_threshold=0.8)
+    await search.vector_search("test query", top_k=5, score_threshold=0.8)
 
     # Mock should be called with threshold
     mock_qdrant_client.search.assert_called_once()
@@ -465,7 +465,7 @@ async def test_vector_search_empty_query(
         bm25_search=mock_bm25_search,
     )
 
-    results = await search.vector_search("", top_k=5)
+    await search.vector_search("", top_k=5)
 
     # Should still call embedding service with empty string
     mock_embedding_service.embed_text.assert_called_once_with("")

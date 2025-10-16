@@ -8,8 +8,9 @@ Tests FastAPI endpoints for:
 - Error handling and validation
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -27,12 +28,12 @@ pytestmark = pytest.mark.usefixtures("mock_rate_limiter")
 def client():
     """Create FastAPI test client."""
     # Clear rate limiter storage before each test
+    from contextlib import suppress
+
     from src.api.middleware import limiter
 
-    try:
-        limiter._storage.clear()
-    except:
-        pass  # Ignore if storage doesn't exist or can't be cleared
+    with suppress(Exception):
+        limiter._storage.clear()  # Ignore if storage doesn't exist or can't be cleared
 
     return TestClient(app)
 

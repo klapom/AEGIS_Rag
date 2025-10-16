@@ -16,7 +16,6 @@ from llama_index.core import Document
 
 from src.components.retrieval.chunking import AdaptiveChunker, ChunkingStrategy
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================

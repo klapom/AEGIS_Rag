@@ -66,6 +66,27 @@ class Settings(BaseSettings):
     ollama_model_embedding: str = Field(
         default="nomic-embed-text", description="Ollama embedding model"
     )
+    ollama_model_router: str = Field(
+        default="llama3.2:3b",
+        description="Ollama model for query routing and intent classification",
+    )
+
+    # Router Configuration (Sprint 4 Feature 4.2)
+    router_temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for router LLM (0.0 for deterministic)",
+    )
+    router_max_tokens: int = Field(
+        default=50, ge=1, le=500, description="Max tokens for router response"
+    )
+    router_max_retries: int = Field(
+        default=3, ge=1, le=10, description="Max retries for router LLM calls"
+    )
+    router_default_intent: str = Field(
+        default="hybrid", description="Default intent if LLM classification fails"
+    )
 
     # Azure OpenAI (Optional)
     use_azure_llm: bool = Field(default=False, description="Use Azure OpenAI instead of Ollama")
@@ -122,6 +143,18 @@ class Settings(BaseSettings):
     langsmith_project: str = Field(default="aegis-rag", description="LangSmith project name")
     langsmith_tracing: bool = Field(default=False, description="Enable LangSmith tracing")
 
+    # LangGraph Configuration (Sprint 4: Multi-Agent Orchestration)
+    langgraph_checkpointer: str = Field(
+        default="memory",
+        description="LangGraph checkpointer type (memory, sqlite, postgres)",
+    )
+    langgraph_recursion_limit: int = Field(
+        default=25,
+        ge=1,
+        le=100,
+        description="Maximum recursion depth for LangGraph execution",
+    )
+
     # MCP Server
     mcp_server_port: int = Field(default=3000, description="MCP server port")
     mcp_auth_enabled: bool = Field(default=False, description="Enable MCP authentication")
@@ -133,6 +166,15 @@ class Settings(BaseSettings):
     # Retrieval Configuration
     retrieval_top_k: int = Field(default=5, description="Number of documents to retrieve")
     retrieval_score_threshold: float = Field(default=0.7, description="Minimum relevance score")
+
+    # Vector Search Agent Configuration (Sprint 4.3)
+    vector_agent_timeout: int = Field(
+        default=30, description="Vector search agent timeout in seconds"
+    )
+    vector_agent_max_retries: int = Field(default=3, description="Max retries for vector search")
+    vector_agent_use_reranking: bool = Field(
+        default=True, description="Enable reranking in vector search agent"
+    )
 
     # Chunking Configuration (Sprint 3: Adaptive Chunking)
     pdf_chunk_size: int = Field(default=1024, description="Token limit for PDF/DOCX chunks")

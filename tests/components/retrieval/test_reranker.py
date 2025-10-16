@@ -11,12 +11,12 @@ Tests cover:
 - Error handling
 """
 
-import pytest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
 
 from src.components.retrieval.reranker import CrossEncoderReranker, RerankResult
-
 
 # ============================================================================
 # Fixtures

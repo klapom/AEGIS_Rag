@@ -1,0 +1,209 @@
+"""LangGraph Base Graph Implementation.
+
+This module defines the base graph structure for the multi-agent RAG system.
+The graph orchestrates query routing and agent coordination.
+
+Sprint 4 Features 4.1-4.4: Base Graph Structure with State Persistence
+Implements the foundational graph with optional checkpointing for conversation history.
+"""
+
+from typing import Any, Literal
+
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, StateGraph
+
+from src.agents.state import AgentState, create_initial_state
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+async def router_node(state: dict[str, Any]) -> dict[str, Any]:
+    """Route queries based on intent.
+
+    This is a placeholder router that will be enhanced in Feature 4.2.
+    Currently returns the state unchanged with routing metadata.
+
+    Args:
+        state: Current agent state
+
+    Returns:
+        State with routing decision added
+    """
+    logger.info(
+        "router_processing",
+        query=state.get("query", ""),
+        intent=state.get("intent", "hybrid"),
+    )
+
+    # Add router to agent path
+    if "metadata" not in state:
+        state["metadata"] = {}
+    if "agent_path" not in state["metadata"]:
+        state["metadata"]["agent_path"] = []
+
+    state["metadata"]["agent_path"].append("router")
+
+    # Default routing decision (will be enhanced in Feature 4.2)
+    state["route_decision"] = state.get("intent", "hybrid")
+
+    return state
+
+
+def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "hybrid", "end"]:
+    """Determine the next node based on intent.
+
+    This is a conditional edge function that determines routing.
+    Will be enhanced in Feature 4.2 with actual LLM-based routing.
+
+    Args:
+        state: Current agent state
+
+    Returns:
+        Next node name
+    """
+    intent = state.get("intent", "hybrid")
+    route_decision = state.get("route_decision", intent)
+
+    logger.info("routing_decision", intent=intent, route=route_decision)
+
+    # For now, all routes go to END (placeholder)
+    # Feature 4.2 will add actual agent nodes
+    return "end"
+
+
+def create_base_graph() -> StateGraph:
+    """Create the base LangGraph structure.
+
+    This creates the foundational graph with:
+    - START node
+    - Router node for query classification
+    - Conditional edges for routing
+    - END node
+
+    Additional agent nodes will be added in Feature 4.2.
+
+    Returns:
+        Compiled StateGraph ready for execution
+    """
+    logger.info("creating_base_graph")
+
+    # Initialize graph with AgentState schema
+    graph = StateGraph(AgentState)
+
+    # Add router node
+    graph.add_node("router", router_node)
+
+    # Add edge from START to router
+    graph.add_edge(START, "router")
+
+    # Add conditional edges from router
+    # This will be expanded in Feature 4.2 to route to actual agents
+    graph.add_conditional_edges(
+        "router",
+        route_query,
+        {
+            "vector": END,  # Placeholder - will route to vector_search agent
+            "graph": END,  # Placeholder - will route to graph_query agent
+            "hybrid": END,  # Placeholder - will route to both agents
+            "end": END,
+        },
+    )
+
+    logger.info("base_graph_created")
+
+    return graph
+
+
+def compile_graph(checkpointer: MemorySaver | None = None) -> Any:
+    """Compile the base graph for execution.
+
+    Args:
+        checkpointer: Optional checkpointer for state persistence.
+                     If provided, enables conversation history across invocations.
+                     Use create_checkpointer() from checkpointer module.
+
+    Returns:
+        Compiled graph ready for invocation
+
+    Example:
+        >>> from src.agents.checkpointer import create_checkpointer
+        >>> checkpointer = create_checkpointer()
+        >>> compiled = compile_graph(checkpointer=checkpointer)
+        >>> # State persists across invocations with same thread_id
+    """
+    logger.info(
+        "compiling_graph",
+        with_checkpointer=checkpointer is not None,
+    )
+
+    graph = create_base_graph()
+
+    # Compile with optional checkpointer
+    if checkpointer:
+        compiled = graph.compile(checkpointer=checkpointer)
+        logger.info("graph_compiled_with_persistence")
+    else:
+        compiled = graph.compile()
+        logger.info("graph_compiled_stateless")
+
+    return compiled
+
+
+async def invoke_graph(
+    query: str,
+    intent: str = "hybrid",
+    checkpointer: MemorySaver | None = None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Execute the graph with a query.
+
+    This is a convenience function for invoking the graph.
+
+    Args:
+        query: User query string
+        intent: Query intent (default: "hybrid")
+        checkpointer: Optional checkpointer for state persistence
+        config: Optional configuration (e.g., thread_id for session tracking)
+
+    Returns:
+        Final state after graph execution
+
+    Example:
+        >>> from src.agents.checkpointer import create_checkpointer, create_thread_config
+        >>> checkpointer = create_checkpointer()
+        >>> config = create_thread_config("session123")
+        >>> result = await invoke_graph(query, checkpointer=checkpointer, config=config)
+    """
+    logger.info(
+        "invoking_graph",
+        query=query,
+        intent=intent,
+        with_persistence=checkpointer is not None,
+        session_id=config.get("configurable", {}).get("thread_id") if config else None,
+    )
+
+    # Create initial state
+    initial_state = create_initial_state(query, intent)
+
+    # Compile and invoke graph
+    compiled_graph = compile_graph(checkpointer=checkpointer)
+    final_state = await compiled_graph.ainvoke(initial_state, config=config)
+
+    logger.info(
+        "graph_execution_complete",
+        query=query,
+        agent_path=final_state.get("metadata", {}).get("agent_path", []),
+    )
+
+    return final_state
+
+
+# Export for convenience
+__all__ = [
+    "create_base_graph",
+    "compile_graph",
+    "invoke_graph",
+    "router_node",
+    "route_query",
+]

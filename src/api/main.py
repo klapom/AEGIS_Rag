@@ -48,6 +48,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         environment=settings.environment,
     )
 
+    # Initialize LangSmith tracing (Sprint 4 Feature 4.5)
+    from src.core.tracing import setup_langsmith_tracing
+
+    tracing_enabled = setup_langsmith_tracing()
+    logger.info(
+        "langsmith_tracing_status",
+        enabled=tracing_enabled,
+        project=settings.langsmith_project if tracing_enabled else None,
+    )
+
     # TODO: Initialize database connections, load models, etc.
 
     yield

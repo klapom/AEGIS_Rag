@@ -1,11 +1,9 @@
 """Tests for RAGAS evaluation module."""
 
 import json
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from datasets import Dataset
 
 from src.evaluation.ragas_eval import (
     EvaluationDataset,
@@ -230,11 +228,13 @@ class TestRAGASEvaluator:
         }
         mock_result.to_pandas.return_value = mock_df
 
-        with patch("src.evaluation.ragas_eval.evaluate", return_value=mock_result):
-            with patch.object(evaluator, "_get_langchain_llm"):
-                result = await evaluator.evaluate_retrieval(
-                    dataset=test_dataset, scenario="test-scenario"
-                )
+        with (
+            patch("src.evaluation.ragas_eval.evaluate", return_value=mock_result),
+            patch.object(evaluator, "_get_langchain_llm"),
+        ):
+            result = await evaluator.evaluate_retrieval(
+                dataset=test_dataset, scenario="test-scenario"
+            )
 
         assert result.scenario == "test-scenario"
         assert result.context_precision == 0.85

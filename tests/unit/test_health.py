@@ -1,6 +1,7 @@
 """Unit tests for health check endpoints."""
 
 from unittest.mock import AsyncMock, patch
+
 from fastapi import status
 from fastapi.testclient import TestClient
 

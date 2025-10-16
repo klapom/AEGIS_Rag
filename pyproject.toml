@@ -19,8 +19,8 @@ classifiers = [
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-# Core Python (constrained to <3.14 for llama-index compatibility)
-python = ">=3.11,<3.14"
+# Core Python
+python = ">=3.11,<4.0"
 
 # Web Framework (Sprint 2: REST API)
 fastapi = "^0.115.0"
@@ -33,14 +33,15 @@ pydantic-settings = "^2.5.0"
 llama-index-core = "^0.12.0"
 llama-index-llms-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
 llama-index-embeddings-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
-llama-index-vector-stores-qdrant = "^0.6.0"  # Python 3.13 compatible, requires core >=0.12.7,<0.13.0
 llama-index-readers-file = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
+# Note: llama-index-vector-stores-qdrant removed - we use qdrant-client directly
 
 # Vector Database (Sprint 2: Qdrant)
 qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.0)
 
 # LLM Provider (Sprint 2: Ollama)
-ollama = "^0.3.0"
+# Pinned to 0.3.x for compatibility with llama-index-embeddings-ollama
+ollama = ">=0.3.1,<0.4.0"
 
 # Hybrid Search (Sprint 2: BM25)
 rank-bm25 = "^0.2.2"
@@ -72,6 +73,12 @@ redis = "^5.0.0"  # Redis client for health checks (Sprint 8: Memory)
 # Security & Authentication (Sprint 2: P1 Security)
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # JWT tokens
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}  # Password hashing
+
+# LangGraph & LangChain (Sprint 4: Multi-Agent Orchestration)
+langgraph = "^0.6.10"
+langchain-core = "^0.3.79"
+# Note: langchain-ollama removed - incompatible with llama-index-embeddings-ollama
+# Sprint 4 uses ollama.AsyncClient directly for LLM calls
 
 [tool.poetry.group.dev.dependencies]
 # Testing
