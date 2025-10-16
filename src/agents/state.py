@@ -58,6 +58,7 @@ class AgentState(MessagesState):
         intent: Detected intent (vector, hybrid, graph, direct)
         retrieved_contexts: List of retrieved documents
         search_mode: Search mode to use
+        graph_query_result: Results from graph RAG query (Sprint 5)
         metadata: Additional metadata for execution tracking
     """
 
@@ -73,6 +74,10 @@ class AgentState(MessagesState):
     search_mode: Literal["vector", "graph", "hybrid"] = Field(
         default="hybrid",
         description="Search mode to use for retrieval",
+    )
+    graph_query_result: dict[str, Any] | None = Field(
+        default=None,
+        description="Results from graph RAG query (Sprint 5)",
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
