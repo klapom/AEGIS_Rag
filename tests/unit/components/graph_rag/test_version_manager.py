@@ -86,8 +86,8 @@ class TestCreateVersion:
         assert result["change_reason"] == "Updated name"
 
     async def test_create_version_missing_id(self, version_manager):
-        """Test creating version without entity ID raises error."""
-        entity = {"name": "Test Entity"}  # Missing 'id'
+        """Test creating version without entity ID or name raises error."""
+        entity = {"type": "PERSON"}  # Missing both 'id' and 'name'
         with pytest.raises(ValueError, match="Entity must have 'id' or 'name' field"):
             await version_manager.create_version(entity)
 
@@ -341,15 +341,20 @@ class TestEnforceRetention:
         assert "SKIP" in call_args[0][0]
         assert "retention_count" in call_args[0][1]
 
-    async def test_no_retention_limit(self, mock_neo4j_client):
+    async def test_no_retention_limit(self):
         """Test with no retention limit (0)."""
-        manager = VersionManager(neo4j_client=mock_neo4j_client, retention_count=0)
+        # Create fresh mock to ensure no prior calls
+        client = MagicMock()
+        client.execute_read = AsyncMock(return_value=[])
+        client.execute_write = AsyncMock(return_value={"nodes_created": 0, "properties_set": 0})
+
+        manager = VersionManager(neo4j_client=client, retention_count=0)
 
         deleted = await manager._enforce_retention("test_entity")
 
         assert deleted == 0
-        # Should not call execute_write
-        mock_neo4j_client.execute_write.assert_not_called()
+        # With retention_count=0, _enforce_retention returns early and never calls execute_write
+        client.execute_write.assert_not_called()
 
 
 @pytest.mark.asyncio
