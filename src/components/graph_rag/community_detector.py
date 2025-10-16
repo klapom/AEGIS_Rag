@@ -320,7 +320,7 @@ class CommunityDetector:
                     label="",  # Will be filled by labeler
                     entity_ids=entity_ids,
                     size=len(entity_ids),
-                    density=self._calculate_density(G, entity_ids),
+                    density=self._calculate_density(graph, entity_ids),
                     created_at=datetime.utcnow(),
                     metadata={
                         "algorithm": "louvain",  # NetworkX uses Louvain
