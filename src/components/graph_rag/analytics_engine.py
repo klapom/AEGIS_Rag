@@ -194,8 +194,8 @@ class GraphAnalyticsEngine:
                 logger.warning("GDS betweenness failed, using NetworkX", error=str(e))
 
         # Fallback to NetworkX
-        G = await self._build_networkx_graph()
-        betweenness = nx.betweenness_centrality(G)
+        graph = await self._build_networkx_graph()
+        betweenness = nx.betweenness_centrality(graph)
         return betweenness.get(entity_id, 0.0)
 
     async def _calculate_closeness_centrality(self, entity_id: str) -> float:
@@ -207,8 +207,8 @@ class GraphAnalyticsEngine:
         Returns:
             Normalized closeness centrality (0-1)
         """
-        G = await self._build_networkx_graph()
-        closeness = nx.closeness_centrality(G)
+        graph = await self._build_networkx_graph()
+        closeness = nx.closeness_centrality(graph)
         return closeness.get(entity_id, 0.0)
 
     async def _calculate_eigenvector_centrality(self, entity_id: str) -> float:
@@ -220,9 +220,9 @@ class GraphAnalyticsEngine:
         Returns:
             Eigenvector centrality (0-1)
         """
-        G = await self._build_networkx_graph()
+        graph = await self._build_networkx_graph()
         try:
-            eigenvector = nx.eigenvector_centrality(G, max_iter=100)
+            eigenvector = nx.eigenvector_centrality(graph, max_iter=100)
             return eigenvector.get(entity_id, 0.0)
         except nx.PowerIterationFailedConvergence:
             logger.warning("Eigenvector centrality failed to converge", entity_id=entity_id)
@@ -266,8 +266,8 @@ class GraphAnalyticsEngine:
                 )
             else:
                 # Fallback to NetworkX
-                G = await self._build_networkx_graph()
-                pagerank = nx.pagerank(G, max_iter=self.pagerank_iterations)
+                graph = await self._build_networkx_graph()
+                pagerank = nx.pagerank(graph, max_iter=self.pagerank_iterations)
 
                 if entity_ids:
                     result = [
@@ -351,8 +351,8 @@ class GraphAnalyticsEngine:
             sparse = await self.neo4j_client.execute_query(sparse_query)
 
             # Count connected components using NetworkX
-            G = await self._build_networkx_graph()
-            num_components = nx.number_connected_components(G.to_undirected())
+            graph = await self._build_networkx_graph()
+            num_components = nx.number_connected_components(graph.to_undirected())
 
             result = {
                 "orphan_entities": orphans,
@@ -486,18 +486,18 @@ class GraphAnalyticsEngine:
             result = await self.neo4j_client.execute_query(query)
 
             # Build NetworkX graph
-            G = nx.DiGraph()
+            graph = nx.DiGraph()
             for row in result:
-                G.add_edge(row["source"], row["target"], type=row["rel_type"])
+                graph.add_edge(row["source"], row["target"], type=row["rel_type"])
 
             logger.info(
-                "NetworkX graph built", nodes=G.number_of_nodes(), edges=G.number_of_edges()
+                "NetworkX graph built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges()
             )
 
             # Cache for shorter duration (graph changes frequently)
-            self._set_cached(cache_key, G)
+            self._set_cached(cache_key, graph)
 
-            return G
+            return graph
 
         except Exception as e:
             logger.error("Failed to build NetworkX graph", error=str(e))

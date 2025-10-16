@@ -289,26 +289,26 @@ class CommunityDetector:
             relationships = await self.neo4j_client.execute_read(relationships_query)
 
             # Build NetworkX graph
-            G = nx.Graph()
+            graph = nx.Graph()
 
             for entity in entities:
-                G.add_node(entity["id"])
+                graph.add_node(entity["id"])
 
             for rel in relationships:
-                G.add_edge(rel["source"], rel["target"])
+                graph.add_edge(rel["source"], rel["target"])
 
-            logger.info("networkx_graph_built", nodes=G.number_of_nodes(), edges=G.number_of_edges())
+            logger.info("networkx_graph_built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges())
 
             # Run community detection
             if algorithm.lower() == "leiden":
                 # NetworkX doesn't have Leiden, use Louvain instead
                 logger.warning("leiden_not_available_in_networkx", using="louvain")
                 communities_generator = nx.community.louvain_communities(
-                    G, resolution=resolution, seed=42
+                    graph, resolution=resolution, seed=42
                 )
             else:  # louvain
                 communities_generator = nx.community.louvain_communities(
-                    G, resolution=resolution, seed=42
+                    graph, resolution=resolution, seed=42
                 )
 
             # Convert to Community objects
