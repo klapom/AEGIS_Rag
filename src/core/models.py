@@ -198,6 +198,19 @@ class GraphEntity(BaseModel):
     confidence: float = Field(
         default=1.0, description="Extraction confidence score", ge=0.0, le=1.0
     )
+    # Temporal fields (Sprint 6.4: Bi-Temporal Model)
+    version_id: str | None = Field(None, description="Unique version ID")
+    version_number: int = Field(default=1, description="Version sequence number")
+    valid_from: datetime | None = Field(None, description="Valid time start (real-world time)")
+    valid_to: datetime | None = Field(None, description="Valid time end (None=current)")
+    transaction_from: datetime | None = Field(
+        None, description="Transaction time start (database time)"
+    )
+    transaction_to: datetime | None = Field(
+        None, description="Transaction time end (None=current)"
+    )
+    changed_by: str = Field(default="system", description="User/system that made the change")
+    change_reason: str = Field(default="", description="Reason for the change")
 
     class Config:
         """Pydantic config."""
@@ -323,5 +336,179 @@ class GraphQueryResult(BaseModel):
                 "context": "John Smith-WORKS_AT->Google...",
                 "mode": "local",
                 "metadata": {"execution_time_ms": 250, "entities_found": 2},
+            }
+        }
+
+
+# ============================================================================
+# Community Detection Models (Sprint 6.3)
+# ============================================================================
+
+
+class Community(BaseModel):
+    """Community (cluster) in the knowledge graph."""
+
+    id: str = Field(..., description="Unique community ID")
+    label: str = Field(default="", description="Human-readable community label")
+    entity_ids: list[str] = Field(default_factory=list, description="Entity IDs in this community")
+    size: int = Field(..., description="Number of entities in the community", ge=0)
+    density: float = Field(default=0.0, description="Community graph density", ge=0.0, le=1.0)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Community creation timestamp"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional community metadata"
+    )
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "id": "community_1",
+                "label": "Machine Learning Research",
+                "entity_ids": ["entity_1", "entity_2", "entity_3"],
+                "size": 3,
+                "density": 0.85,
+                "created_at": "2025-01-15T10:00:00Z",
+                "metadata": {"algorithm": "leiden", "resolution": 1.0},
+            }
+        }
+
+
+class CommunitySearchResult(BaseModel):
+    """Search result filtered by communities."""
+
+    query: str = Field(..., description="Original query")
+    communities: list[Community] = Field(
+        default_factory=list, description="Retrieved communities"
+    )
+    entities: list[GraphEntity] = Field(
+        default_factory=list, description="Entities from matched communities"
+    )
+    answer: str = Field(default="", description="LLM-generated answer")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "query": "What are the main research areas?",
+                "communities": [
+                    {
+                        "id": "community_1",
+                        "label": "Machine Learning Research",
+                        "entity_ids": ["e1", "e2"],
+                        "size": 2,
+                        "density": 0.85,
+                        "created_at": "2025-01-15T10:00:00Z",
+                        "metadata": {},
+                    }
+                ],
+                "entities": [
+                    {
+                        "id": "e1",
+                        "name": "Neural Networks",
+                        "type": "CONCEPT",
+                        "description": "Deep learning architecture",
+                        "properties": {},
+                        "source_document": "doc_1",
+                        "confidence": 0.95,
+                    }
+                ],
+                "answer": "The main research areas include Machine Learning Research...",
+                "metadata": {"execution_time_ms": 150, "communities_found": 1},
+            }
+        }
+
+
+# ============================================================================
+# Graph Visualization & Analytics Models (Sprint 6.5 & 6.6)
+# ============================================================================
+
+
+class CentralityMetrics(BaseModel):
+    """Centrality metrics for a graph entity."""
+
+    entity_id: str = Field(..., description="Entity ID")
+    degree: float = Field(..., description="Degree centrality (number of connections)", ge=0.0)
+    betweenness: float = Field(default=0.0, description="Betweenness centrality", ge=0.0, le=1.0)
+    closeness: float = Field(default=0.0, description="Closeness centrality", ge=0.0, le=1.0)
+    eigenvector: float = Field(default=0.0, description="Eigenvector centrality", ge=0.0, le=1.0)
+    pagerank: float = Field(default=0.0, description="PageRank score", ge=0.0, le=1.0)
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "entity_id": "entity_1",
+                "degree": 15.0,
+                "betweenness": 0.35,
+                "closeness": 0.68,
+                "eigenvector": 0.42,
+                "pagerank": 0.08,
+            }
+        }
+
+
+class GraphStatistics(BaseModel):
+    """Overall graph statistics and metrics."""
+
+    total_entities: int = Field(..., description="Total number of entities", ge=0)
+    total_relationships: int = Field(..., description="Total number of relationships", ge=0)
+    entity_types: dict[str, int] = Field(
+        default_factory=dict, description="Count of entities by type"
+    )
+    relationship_types: dict[str, int] = Field(
+        default_factory=dict, description="Count of relationships by type"
+    )
+    avg_degree: float = Field(..., description="Average node degree", ge=0.0)
+    density: float = Field(..., description="Graph density", ge=0.0, le=1.0)
+    communities: int = Field(default=0, description="Number of detected communities", ge=0)
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "total_entities": 1500,
+                "total_relationships": 3200,
+                "entity_types": {"PERSON": 500, "ORGANIZATION": 300, "CONCEPT": 700},
+                "relationship_types": {"WORKS_AT": 450, "KNOWS": 1200, "RELATED_TO": 1550},
+                "avg_degree": 4.27,
+                "density": 0.0014,
+                "communities": 45,
+            }
+        }
+
+
+class Recommendation(BaseModel):
+    """Entity recommendation with score and reason."""
+
+    entity: GraphEntity = Field(..., description="Recommended entity")
+    score: float = Field(..., description="Recommendation score", ge=0.0, le=1.0)
+    reason: str = Field(
+        ...,
+        description="Recommendation reason (similar_community, connected, similar_attributes)",
+    )
+
+    class Config:
+        """Pydantic config."""
+
+        json_schema_extra = {
+            "example": {
+                "entity": {
+                    "id": "entity_2",
+                    "name": "Jane Doe",
+                    "type": "PERSON",
+                    "description": "Data scientist at Google",
+                    "properties": {},
+                    "source_document": "doc_2",
+                    "confidence": 0.92,
+                },
+                "score": 0.85,
+                "reason": "similar_community",
             }
         }

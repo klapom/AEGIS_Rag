@@ -190,6 +190,12 @@ app.include_router(health_router)
 app.include_router(v1_health_router)
 app.include_router(retrieval_router)
 
+# Graph visualization and analytics routers (Sprint 6: Features 6.5 & 6.6)
+from src.api import graph_analytics, graph_visualization
+
+app.include_router(graph_visualization.router, prefix="/api/v1", tags=["visualization"])
+app.include_router(graph_analytics.router, prefix="/api/v1", tags=["analytics"])
+
 # Prometheus metrics endpoint
 metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)

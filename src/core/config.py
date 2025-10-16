@@ -131,6 +131,89 @@ class Settings(BaseSettings):
     )
     neo4j_database: str = Field(default="neo4j", description="Neo4j database name")
 
+    # Graph Query Configuration (Sprint 6: Advanced Query Operations)
+    graph_query_cache_enabled: bool = Field(
+        default=True, description="Enable query result caching"
+    )
+    graph_query_cache_max_size: int = Field(
+        default=1000, ge=10, le=10000, description="Maximum cache entries (LRU eviction)"
+    )
+    graph_query_cache_ttl_seconds: int = Field(
+        default=300, ge=10, le=3600, description="Cache TTL in seconds (default: 5 minutes)"
+    )
+    graph_batch_query_max_concurrent: int = Field(
+        default=10, ge=1, le=50, description="Maximum concurrent batch queries"
+    )
+    graph_query_timeout_seconds: int = Field(
+        default=30, ge=5, le=300, description="Query execution timeout in seconds"
+    )
+
+    # Community Detection Configuration (Sprint 6.3: Community Detection & Clustering)
+    graph_community_algorithm: str = Field(
+        default="leiden", description="Community detection algorithm (leiden or louvain)"
+    )
+    graph_community_resolution: float = Field(
+        default=1.0, ge=0.1, le=5.0, description="Resolution parameter for community detection"
+    )
+    graph_community_min_size: int = Field(
+        default=3, ge=1, le=100, description="Minimum community size to include"
+    )
+    graph_community_use_gds: bool = Field(
+        default=True, description="Try Neo4j GDS first, fallback to NetworkX"
+    )
+    graph_community_labeling_enabled: bool = Field(
+        default=True, description="Enable automatic community labeling with LLM"
+    )
+    graph_community_labeling_model: str = Field(
+        default="llama3.2:3b", description="Ollama model for community labeling"
+    )
+
+    # Graph Visualization Settings (Sprint 6: Feature 6.5)
+    graph_visualization_max_nodes: int = Field(
+        default=100, ge=1, le=1000, description="Maximum nodes to return in visualization"
+    )
+    graph_visualization_default_depth: int = Field(
+        default=1, ge=1, le=5, description="Default depth for subgraph traversal"
+    )
+    graph_visualization_default_format: str = Field(
+        default="d3", description="Default visualization format (d3, cytoscape, visjs)"
+    )
+
+    # Graph Analytics Settings (Sprint 6: Feature 6.6)
+    graph_analytics_use_gds: bool = Field(
+        default=True, description="Use Neo4j GDS plugin if available, fallback to NetworkX"
+    )
+    graph_analytics_pagerank_iterations: int = Field(
+        default=20, ge=1, le=100, description="PageRank algorithm iterations"
+    )
+    graph_analytics_cache_ttl_seconds: int = Field(
+        default=600, ge=0, le=3600, description="Cache TTL for analytics results (10 min default)"
+    )
+    graph_recommendations_top_k: int = Field(
+        default=5, ge=1, le=50, description="Number of recommendations to return"
+    )
+    graph_recommendations_method: str = Field(
+        default="collaborative",
+        description="Default recommendation method (collaborative, community, relationships, attributes)",
+    )
+
+    # Temporal Graph Features (Sprint 6.4: Bi-Temporal Model)
+    graph_temporal_enabled: bool = Field(
+        default=True, description="Enable temporal features (bi-temporal model)"
+    )
+    graph_version_retention_count: int = Field(
+        default=10, ge=0, le=100, description="Max versions to retain per entity (0=unlimited)"
+    )
+    graph_temporal_index_enabled: bool = Field(
+        default=True, description="Create indexes on temporal properties"
+    )
+    graph_evolution_tracking_enabled: bool = Field(
+        default=True, description="Track entity changes and evolution"
+    )
+    graph_temporal_precision: str = Field(
+        default="second", description="Temporal precision (second or millisecond)"
+    )
+
     # Redis Cache
     redis_host: str = Field(default="localhost", description="Redis host")
     redis_port: int = Field(default=6379, description="Redis port")

@@ -237,6 +237,36 @@ class Neo4jClient:
             logger.error("Write transaction failed", query=query[:100], error=str(e))
             raise DatabaseConnectionError(f"Write transaction failed: {e}") from e
 
+    async def create_temporal_indexes(self) -> dict[str, bool]:
+        """Create indexes on temporal properties for performance.
+
+        Returns:
+            Dictionary with index creation status
+
+        Raises:
+            DatabaseConnectionError: If index creation fails
+        """
+        indexes = {
+            "entity_valid_from": "CREATE INDEX entity_valid_from IF NOT EXISTS FOR (e:Entity) ON (e.valid_from)",
+            "entity_valid_to": "CREATE INDEX entity_valid_to IF NOT EXISTS FOR (e:Entity) ON (e.valid_to)",
+            "entity_transaction_from": "CREATE INDEX entity_transaction_from IF NOT EXISTS FOR (e:Entity) ON (e.transaction_from)",
+            "entity_transaction_to": "CREATE INDEX entity_transaction_to IF NOT EXISTS FOR (e:Entity) ON (e.transaction_to)",
+            "entity_version_id": "CREATE INDEX entity_version_id IF NOT EXISTS FOR (e:Entity) ON (e.version_id)",
+            "entity_version_number": "CREATE INDEX entity_version_number IF NOT EXISTS FOR (e:Entity) ON (e.version_number)",
+        }
+
+        results = {}
+        for index_name, query in indexes.items():
+            try:
+                await self.execute_write(query)
+                results[index_name] = True
+                logger.info("Created temporal index", index_name=index_name)
+            except Exception as e:
+                logger.warning("Failed to create index", index_name=index_name, error=str(e))
+                results[index_name] = False
+
+        return results
+
     async def close(self) -> None:
         """Close the Neo4j driver connection."""
         if self._driver:
