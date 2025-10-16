@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import structlog
-from neo4j import AsyncGraphDatabase, AsyncDriver, AsyncSession
+from neo4j import AsyncDriver, AsyncGraphDatabase
 from neo4j.exceptions import Neo4jError, ServiceUnavailable
 from tenacity import (
     retry,

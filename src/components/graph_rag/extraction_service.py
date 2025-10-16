@@ -96,10 +96,7 @@ class ExtractionService:
 
         # Look for JSON array pattern
         json_match = re.search(r"\[.*\]", response, re.DOTALL)
-        if json_match:
-            json_str = json_match.group(0)
-        else:
-            json_str = response
+        json_str = json_match.group(0) if json_match else response
 
         # Clean up common JSON issues
         json_str = json_str.strip()

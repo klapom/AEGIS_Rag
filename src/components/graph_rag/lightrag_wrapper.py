@@ -9,7 +9,6 @@ This module wraps the LightRAG library to provide:
 Sprint 5: Feature 5.1 - LightRAG Core Integration
 """
 
-import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +21,7 @@ from tenacity import (
 )
 
 from src.core.config import settings
-from src.core.models import GraphEntity, GraphQueryResult, GraphRelationship
+from src.core.models import GraphQueryResult
 
 logger = structlog.get_logger(__name__)
 
@@ -88,8 +87,7 @@ class LightRAGWrapper:
 
         try:
             # Import LightRAG components (optional dependency)
-            from lightrag import LightRAG, QueryParam
-            from lightrag.llm import openai_complete_if_cache, openai_embedding
+            from lightrag import LightRAG
             from lightrag.storage import Neo4JStorage
 
             # Configure Ollama LLM function

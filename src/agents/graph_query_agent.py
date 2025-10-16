@@ -7,21 +7,21 @@ Sprint 5: Feature 5.5 - Graph Query Agent
 Integrates with Sprint 4 Router and Sprint 5 DualLevelSearch.
 """
 
-import time
 from typing import Any
 
 import structlog
 
 from src.agents.base_agent import BaseAgent
 from src.agents.retry import retry_on_failure
+
 try:
     # Try user's implementation first (Feature 5.4)
     from src.components.graph_rag.dual_level_search import (
         DualLevelSearch,
         SearchMode,
+        get_dual_level_search,
     )
     from src.core.models import GraphQueryResult as GraphSearchResult
-    from src.components.graph_rag.dual_level_search import get_dual_level_search
 except ImportError:
     # Fallback to placeholder if not available yet
     from src.components.graph_rag.dual_level_search_placeholder import (
