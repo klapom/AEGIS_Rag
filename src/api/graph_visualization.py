@@ -34,69 +34,8 @@ class VisualizationResponse(BaseModel):
 
 
 # Endpoints
-
-
-@router.get(
-    "/visualize/{entity_id}",
-    response_model=VisualizationResponse,
-    summary="Get entity neighborhood visualization",
-    description="Retrieve a visualization of the entity's neighborhood graph",
-)
-async def visualize_entity_neighborhood(
-    entity_id: str,
-    depth: Annotated[int, Query(ge=1, le=5, description="Traversal depth")] = 1,
-    max_nodes: Annotated[
-        int, Query(ge=1, le=1000, description="Maximum nodes to return")
-    ] = 100,
-    format: Annotated[
-        VisualizationFormat, Query(description="Output format (d3, cytoscape, visjs)")
-    ] = "d3",
-) -> VisualizationResponse:
-    """Get visualization of an entity's neighborhood.
-
-    Args:
-        entity_id: Entity ID to visualize
-        depth: Graph traversal depth (1-5)
-        max_nodes: Maximum number of nodes (1-1000)
-        format: Output format (d3, cytoscape, visjs)
-
-    Returns:
-        VisualizationResponse with graph data
-
-    Raises:
-        HTTPException: If visualization fails
-    """
-    logger.info(
-        "Visualizing entity neighborhood",
-        entity_id=entity_id,
-        depth=depth,
-        max_nodes=max_nodes,
-        format=format,
-    )
-
-    try:
-        exporter = get_visualization_exporter()
-        result = await exporter.export_subgraph(
-            entity_ids=[entity_id], depth=depth, max_nodes=max_nodes, format=format
-        )
-
-        # Extract metadata from result
-        metadata = result.pop("metadata", {})
-
-        return VisualizationResponse(data=result, metadata=metadata)
-
-    except DatabaseConnectionError as e:
-        logger.error("Database error visualizing entity", error=str(e), entity_id=entity_id)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Database connection failed: {str(e)}",
-        ) from e
-    except Exception as e:
-        logger.error("Failed to visualize entity", error=str(e), entity_id=entity_id)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Visualization failed: {str(e)}",
-        ) from e
+# NOTE: Specific routes MUST be defined BEFORE generic catch-all routes with path parameters
+# to ensure proper routing (e.g., /visualize/subgraph must come before /visualize/{entity_id})
 
 
 @router.get(
@@ -162,6 +101,69 @@ async def visualize_custom_subgraph(
         ) from e
     except Exception as e:
         logger.error("Failed to visualize subgraph", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Visualization failed: {str(e)}",
+        ) from e
+
+
+@router.get(
+    "/visualize/{entity_id}",
+    response_model=VisualizationResponse,
+    summary="Get entity neighborhood visualization",
+    description="Retrieve a visualization of the entity's neighborhood graph",
+)
+async def visualize_entity_neighborhood(
+    entity_id: str,
+    depth: Annotated[int, Query(ge=1, le=5, description="Traversal depth")] = 1,
+    max_nodes: Annotated[
+        int, Query(ge=1, le=1000, description="Maximum nodes to return")
+    ] = 100,
+    format: Annotated[
+        VisualizationFormat, Query(description="Output format (d3, cytoscape, visjs)")
+    ] = "d3",
+) -> VisualizationResponse:
+    """Get visualization of an entity's neighborhood.
+
+    Args:
+        entity_id: Entity ID to visualize
+        depth: Graph traversal depth (1-5)
+        max_nodes: Maximum number of nodes (1-1000)
+        format: Output format (d3, cytoscape, visjs)
+
+    Returns:
+        VisualizationResponse with graph data
+
+    Raises:
+        HTTPException: If visualization fails
+    """
+    logger.info(
+        "Visualizing entity neighborhood",
+        entity_id=entity_id,
+        depth=depth,
+        max_nodes=max_nodes,
+        format=format,
+    )
+
+    try:
+        exporter = get_visualization_exporter()
+        result = await exporter.export_subgraph(
+            entity_ids=[entity_id], depth=depth, max_nodes=max_nodes, format=format
+        )
+
+        # Extract metadata from result
+        metadata = result.pop("metadata", {})
+
+        return VisualizationResponse(data=result, metadata=metadata)
+
+    except DatabaseConnectionError as e:
+        logger.error("Database error visualizing entity", error=str(e), entity_id=entity_id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database connection failed: {str(e)}",
+        ) from e
+    except Exception as e:
+        logger.error("Failed to visualize entity", error=str(e), entity_id=entity_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Visualization failed: {str(e)}",
