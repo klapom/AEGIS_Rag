@@ -79,6 +79,10 @@ class AgentState(MessagesState):
         default=None,
         description="Results from graph RAG query (Sprint 5)",
     )
+    memory_results: dict[str, Any] | None = Field(
+        default=None,
+        description="Results from memory retrieval (Sprint 7)",
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata for execution tracking",

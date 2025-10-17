@@ -14,6 +14,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from src.agents.graph_query_agent import graph_query_node
+from src.agents.memory_agent import memory_node
 from src.agents.state import AgentState, create_initial_state
 from src.core.logging import get_logger
 
@@ -52,11 +53,12 @@ async def router_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "hybrid", "end"]:
+def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "memory", "hybrid", "end"]:
     """Determine the next node based on intent.
 
     This is a conditional edge function that determines routing.
     Routes GRAPH intent to graph_query node (Sprint 5 Feature 5.5).
+    Routes MEMORY intent to memory node (Sprint 7 Feature 7.4).
 
     Args:
         state: Current agent state
@@ -74,6 +76,11 @@ def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "hybrid", "
         logger.info("routing_to_graph_query", intent=intent)
         return "graph"
 
+    # Sprint 7: Route MEMORY intent to memory node
+    if route_decision.lower() == "memory":
+        logger.info("routing_to_memory", intent=intent)
+        return "memory"
+
     # For now, other routes go to END (placeholder)
     # Future sprints will add vector and hybrid nodes
     return "end"
@@ -86,6 +93,7 @@ def create_base_graph() -> StateGraph:
     - START node
     - Router node for query classification
     - Graph query node (Sprint 5 Feature 5.5)
+    - Memory node (Sprint 7 Feature 7.4)
     - Conditional edges for routing
     - END node
 
@@ -105,6 +113,9 @@ def create_base_graph() -> StateGraph:
     # Sprint 5: Add graph query node
     graph.add_node("graph_query", graph_query_node)
 
+    # Sprint 7: Add memory node
+    graph.add_node("memory", memory_node)
+
     # Add edge from START to router
     graph.add_edge(START, "router")
 
@@ -115,6 +126,7 @@ def create_base_graph() -> StateGraph:
         {
             "vector": END,  # Placeholder - will route to vector_search agent
             "graph": "graph_query",  # Sprint 5: Route to graph query agent
+            "memory": "memory",  # Sprint 7: Route to memory agent
             "hybrid": END,  # Placeholder - will route to both agents
             "end": END,
         },
@@ -123,7 +135,10 @@ def create_base_graph() -> StateGraph:
     # Sprint 5: Connect graph_query to END
     graph.add_edge("graph_query", END)
 
-    logger.info("base_graph_created", nodes=["router", "graph_query"])
+    # Sprint 7: Connect memory to END
+    graph.add_edge("memory", END)
+
+    logger.info("base_graph_created", nodes=["router", "graph_query", "memory"])
 
     return graph
 
