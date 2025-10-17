@@ -20,6 +20,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 007 | Model Context Protocol Integration | Accepted | 2025-01-15 |
 | 008 | Python + FastAPI für Backend | Accepted | 2025-01-15 |
 | 009 | Reciprocal Rank Fusion für Hybrid Search | Accepted | 2025-01-15 |
+| 014 | E2E Integration Testing Strategy | Accepted | 2025-10-17 |
+| 015 | Critical Path Testing Strategy | Accepted | 2025-10-17 |
 
 ---
 

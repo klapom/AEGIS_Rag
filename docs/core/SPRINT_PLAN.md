@@ -1,8 +1,10 @@
 # Sprint-Planung: Agentisches RAG-System
 ## Projektname: AegisRAG (Agentic Enterprise Graph Intelligence System)
 
-**Gesamtdauer:** 10 Sprints à 1 Woche (10 Wochen)
+**Gesamtdauer:** 11 Sprints à 1 Woche (11 Wochen)
 **Team-Setup:** 1-2 Entwickler + Claude Code Subagenten
+
+**Note:** Sprint 8 "Critical Path E2E Testing" was strategically inserted after Sprint 7 to validate critical integration paths from Sprint 1-6 before proceeding with new features. This decision (ADR-015) increases production confidence from 75% to 95%.
 
 ---
 
@@ -361,7 +363,120 @@
 
 ---
 
-## Sprint 8: 3-Layer Memory Architecture + LLM A/B Testing
+## Sprint 8: Critical Path E2E Testing
+**Ziel:** Production-Confidence durch E2E Tests für kritische Integration Paths aus Sprint 1-6
+**Status:** 📋 PLANNED (Inserted after Sprint 7)
+
+### Context & Rationale
+Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed locally, but 2/9 CI jobs failed** (Docker Build timeout, Neo4j integration timeout). This proves mocked tests provide false confidence.
+
+**Strategic Decision (ADR-015):** Insert Sprint 8 to validate 26 critical integration paths from Sprint 1-6 with E2E tests (NO MOCKS), focusing on highest-risk paths that could cause production failures.
+
+**Expected Impact:**
+- Production Confidence: 75% → 95% (20% increase)
+- Integration bugs: 10/quarter → 2/quarter (80% reduction)
+- CI debugging time: 5 hours/week → 1 hour/week (80% reduction)
+- ROI: 162% annual return (260 hours saved vs. 160 hours invested)
+
+### Deliverables
+- [ ] 40 E2E integration tests covering 26 critical paths
+- [ ] Real service integration (Redis, Qdrant, Neo4j, Ollama)
+- [ ] CI pipeline validation (all services running)
+- [ ] Test execution time <10 minutes total
+- [ ] Coverage report for critical paths
+- [ ] Sprint 8 completion report
+
+### Critical Paths to Test (26 total)
+
+#### High Risk (12 paths, ZERO current coverage)
+1. **Community Detection (Neo4j + Ollama)** - Most complex integration
+2. **Cross-Encoder Reranking** - External model dependency
+3. **RAGAS Evaluation with Ollama** - LLM-based metrics
+4. **LightRAG Entity Extraction** - Graph + LLM integration
+5. **Temporal Queries (Graphiti)** - Bi-temporal model
+6. **Memory Consolidation (Redis → Qdrant)** - Multi-database sync
+7. **Graph Query Cache Invalidation** - Cache consistency
+8. **Batch Query Executor** - Parallel execution
+9. **Version Manager (10 versions)** - Temporal history
+10. **PageRank Analytics** - Graph algorithm
+11. **Query Templates (19 patterns)** - Query generation
+12. **Community Search Filter** - Graph + vector hybrid
+
+#### Medium Risk (8 paths, partial coverage)
+13. **Hybrid Search (Vector + BM25)** - Dual retrieval
+14. **Document Ingestion Pipeline** - Multi-format support
+15. **Metadata Filtering** - Complex filter logic
+16. **Query Decomposition** - LLM classification
+17. **Graph Visualization Export** - 3 formats (D3, Cytoscape, vis.js)
+18. **Dual-Level Search (Entities + Topics)** - LightRAG integration
+19. **Reciprocal Rank Fusion** - Context fusion
+20. **Adaptive Chunking** - Document-type detection
+
+#### Lower Risk (6 paths, good coverage)
+21. **BM25 Search** - Already 62 tests
+22. **Embedding Service** - Cache + batch processing
+23. **Qdrant Client Operations** - Connection pooling
+24. **Neo4j Client Wrapper** - Basic CRUD
+25. **Redis Memory Manager** - TTL + eviction
+26. **API Endpoints** - FastAPI routes
+
+### Test Strategy (ADR-015)
+
+**Risk-Based Approach:**
+- Focus on High Risk paths first (60% of effort)
+- Add targeted tests for Medium Risk paths (30% of effort)
+- Validate existing coverage for Lower Risk (10% of effort)
+
+**NO MOCKS Policy (ADR-014):**
+- All tests use real services (Redis, Qdrant, Neo4j, Ollama)
+- Session-scoped fixtures for service reuse
+- Cleanup between tests to ensure isolation
+- Acceptable trade-off: ~10 min execution time for 95% production confidence
+
+**Test Distribution:**
+- High Risk: 24 tests (2 tests per critical path)
+- Medium Risk: 12 tests (1.5 tests per path)
+- Lower Risk: 4 tests (validation only)
+- **Total: 40 E2E tests**
+
+### Technical Tasks
+- [ ] Implement 24 E2E tests for High Risk paths
+- [ ] Implement 12 E2E tests for Medium Risk paths
+- [ ] Implement 4 validation tests for Lower Risk paths
+- [ ] Update CI pipeline to ensure all services running
+- [ ] Add test execution time monitoring
+- [ ] Create coverage report for critical paths
+- [ ] Document remaining gaps (if any)
+
+### Success Criteria
+- ✅ 40 E2E tests implemented and passing
+- ✅ All 12 High Risk paths have E2E coverage
+- ✅ Test execution time <10 minutes
+- ✅ CI pipeline validates service availability before tests
+- ✅ Coverage report shows 95%+ critical path coverage
+- ✅ No mocked tests for critical integration paths
+- ✅ Sprint 8 completion report created
+
+### Story Points: 40 SP
+**Breakdown:**
+- High Risk tests (24 tests): 24 SP (1 SP per test avg)
+- Medium Risk tests (12 tests): 10 SP (0.8 SP per test)
+- Lower Risk tests (4 tests): 2 SP (0.5 SP per test)
+- CI pipeline updates: 2 SP
+- Documentation: 2 SP
+
+**Timeline:**
+- Sequential: 4 weeks (1 developer, 10 SP/week)
+- Parallel: 1 week (4 subagents, 10 SP each)
+
+**References:**
+- [SPRINT_8_PLAN.md](../../SPRINT_8_PLAN.md) - Detailed plan with critical path analysis
+- [ADR-015](../adr/ADR-015-critical-path-testing.md) - Critical Path Testing Strategy
+- [ADR-014](../adr/ADR-014-e2e-integration-testing.md) - E2E Integration Testing Strategy
+
+---
+
+## Sprint 9: 3-Layer Memory Architecture + LLM A/B Testing
 **Ziel:** Redis Short-Term, Qdrant Long-Term, Graphiti Episodic, Ollama vs. Azure Benchmarking
 
 ### Deliverables
@@ -397,7 +512,7 @@
 
 ---
 
-## Sprint 9: Component 4 - MCP Server Integration
+## Sprint 10: Component 4 - MCP Server Integration
 **Ziel:** Model Context Protocol, Tool Integration, OAuth 2.1
 
 ### Deliverables
@@ -425,7 +540,7 @@
 
 ---
 
-## Sprint 10: Integration, Testing & Production Readiness
+## Sprint 11: Integration, Testing & Production Readiness
 **Ziel:** Full System Integration, Load Testing, Deployment
 
 ### Deliverables
@@ -456,7 +571,7 @@
 
 ---
 
-## Post-Sprint 10: Continuous Improvement Backlog
+## Post-Sprint 11: Continuous Improvement Backlog
 
 ### High Priority
 - Advanced Query Decomposition (Tree-of-Thought)
