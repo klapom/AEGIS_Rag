@@ -14,6 +14,7 @@ from src.api import graph_analytics, graph_visualization
 from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
 from src.api.v1.health import router as v1_health_router
+from src.api.v1.memory import router as memory_router
 from src.api.v1.retrieval import router as retrieval_router
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
@@ -190,6 +191,9 @@ async def track_requests(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(v1_health_router)
 app.include_router(retrieval_router)
+
+# Memory API router (Sprint 7: Feature 7.6)
+app.include_router(memory_router, prefix="/api/v1", tags=["memory"])
 
 # Graph visualization and analytics routers (Sprint 6: Features 6.5 & 6.6)
 app.include_router(graph_visualization.router, prefix="/api/v1", tags=["visualization"])
