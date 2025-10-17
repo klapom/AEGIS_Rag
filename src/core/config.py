@@ -303,6 +303,40 @@ class Settings(BaseSettings):
     text_chunk_size: int = Field(default=512, description="Token limit for plain text chunks")
     chunk_overlap: int = Field(default=50, description="Overlap between chunks in tokens")
 
+    # Graphiti Memory Configuration (Sprint 7: Episodic Memory)
+    graphiti_enabled: bool = Field(default=True, description="Enable Graphiti episodic memory")
+    graphiti_llm_model: str = Field(
+        default="llama3.2:8b", description="Ollama model for Graphiti entity extraction"
+    )
+    graphiti_embedding_model: str = Field(
+        default="nomic-embed-text", description="Ollama model for Graphiti embeddings"
+    )
+    graphiti_ollama_base_url: str = Field(
+        default="http://localhost:11434", description="Ollama base URL for Graphiti"
+    )
+
+    # Memory Router Configuration (Sprint 7: 3-Layer Memory)
+    memory_router_enabled: bool = Field(
+        default=True, description="Enable 3-layer memory routing"
+    )
+    redis_memory_url: str = Field(
+        default="redis://localhost:6379/0", description="Redis URL for working memory"
+    )
+    redis_memory_ttl_seconds: int = Field(
+        default=3600, description="Redis memory TTL in seconds (1 hour)"
+    )
+
+    # Memory Consolidation (Sprint 7: Background Consolidation)
+    memory_consolidation_enabled: bool = Field(
+        default=True, description="Enable automatic memory consolidation"
+    )
+    memory_consolidation_interval_minutes: int = Field(
+        default=30, description="Consolidation interval in minutes"
+    )
+    memory_consolidation_min_access_count: int = Field(
+        default=3, description="Minimum access count for consolidation"
+    )
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:

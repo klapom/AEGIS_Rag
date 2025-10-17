@@ -68,7 +68,7 @@ slowapi = "^0.1.9"  # Rate limiting
 
 # Database Clients (Sprint 2+: Health Checks, Sprint 5+: Graph DB)
 neo4j = "^5.14.0"  # Neo4j driver for health checks (Sprint 5: Graph RAG)
-redis = "^5.0.0"  # Redis client for health checks (Sprint 8: Memory)
+redis = {extras = ["asyncio"], version = "^5.0.0"}  # Redis with async support (Sprint 7: Memory)
 
 # Security & Authentication (Sprint 2: P1 Security)
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # JWT tokens
@@ -84,6 +84,9 @@ langchain-core = "^0.3.79"
 lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
 networkx = "^3.2"  # Graph algorithms
 graspologic = "^3.4.1"  # Graph statistics and community detection
+
+# Graphiti Memory (Sprint 7: Episodic Memory)
+graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
 
 [tool.poetry.group.dev.dependencies]
 # Testing
