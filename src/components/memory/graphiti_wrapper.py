@@ -13,7 +13,7 @@ from typing import Any
 import structlog
 from graphiti_core import Graphiti
 from graphiti_core.llm_client import LLMClient
-from graphiti_core.search import SearchConfig
+from graphiti_core.search.search_config import SearchConfig
 from ollama import AsyncClient
 
 from src.components.graph_rag.neo4j_client import get_neo4j_client
