@@ -481,3 +481,258 @@ def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
+
+# ============================================================================
+# E2E Integration Test Fixtures (Sprint 7: NO MOCKS - Real Services Only)
+# ============================================================================
+
+
+@pytest.fixture(scope="session")
+async def redis_client():
+    """Real Redis client for Layer 1 short-term memory (E2E testing).
+
+    Connects to real Redis instance at localhost:6379/0.
+    Automatically cleans up test data after session.
+
+    Returns:
+        Async Redis client
+    """
+    from redis.asyncio import Redis
+
+    client = await Redis.from_url(
+        "redis://localhost:6379/0",
+        encoding="utf-8",
+        decode_responses=True,
+    )
+
+    # Verify connection
+    try:
+        await client.ping()
+    except Exception as e:
+        pytest.skip(f"Redis not available: {e}")
+
+    yield client
+
+    # Cleanup: flush test database
+    await client.flushdb()
+    await client.close()
+
+
+@pytest.fixture(scope="session")
+def qdrant_client_real():
+    """Real Qdrant client for Layer 2 long-term memory (E2E testing).
+
+    Connects to real Qdrant instance at localhost:6333.
+    Automatically cleans up test collections after session.
+
+    Returns:
+        Qdrant client
+    """
+    from qdrant_client import QdrantClient
+
+    client = QdrantClient(host="localhost", port=6333)
+
+    # Verify connection
+    try:
+        client.get_collections()
+    except Exception as e:
+        pytest.skip(f"Qdrant not available: {e}")
+
+    yield client
+
+    # Cleanup: delete test collections
+    try:
+        collections = client.get_collections()
+        for collection in collections.collections:
+            if collection.name.startswith("test_"):
+                client.delete_collection(collection_name=collection.name)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="session")
+def neo4j_driver():
+    """Real Neo4j driver for Layer 3 episodic memory (E2E testing).
+
+    Connects to real Neo4j instance at localhost:7687.
+    Automatically cleans up test nodes/relationships after session.
+
+    Returns:
+        Neo4j driver
+    """
+    from neo4j import GraphDatabase
+
+    from src.core.config import settings
+
+    driver = GraphDatabase.driver(
+        settings.neo4j_uri,
+        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
+    )
+
+    # Verify connection
+    try:
+        driver.verify_connectivity()
+    except Exception as e:
+        pytest.skip(f"Neo4j not available: {e}")
+
+    yield driver
+
+    # Cleanup: delete test nodes and relationships
+    with driver.session() as session:
+        session.run(
+            """
+            MATCH (n)
+            WHERE n.name STARTS WITH 'test_' OR n.source = 'test'
+            DETACH DELETE n
+            """
+        )
+
+    driver.close()
+
+
+@pytest.fixture(scope="session")
+async def ollama_client_real():
+    """Real Ollama client for LLM calls (E2E testing).
+
+    Connects to real Ollama instance at localhost:11434.
+    Verifies required models are available.
+
+    Returns:
+        Async Ollama client
+    """
+    from ollama import AsyncClient
+
+    client = AsyncClient(host="http://localhost:11434")
+
+    # Verify models exist
+    try:
+        models_response = await client.list()
+        available_models = [m.model for m in models_response.models]
+
+        required_models = ["llama3.2:8b", "llama3.2:3b", "nomic-embed-text"]
+        missing_models = [m for m in required_models if m not in available_models]
+
+        if missing_models:
+            pytest.skip(f"Required Ollama models not available: {missing_models}")
+
+    except Exception as e:
+        pytest.skip(f"Ollama not available: {e}")
+
+    yield client
+
+
+@pytest.fixture
+async def redis_memory_manager(redis_client):
+    """Real RedisMemoryManager instance for E2E testing.
+
+    Uses real Redis connection for testing Layer 1 short-term memory.
+
+    Returns:
+        RedisMemoryManager instance
+    """
+    from src.components.memory import RedisMemoryManager
+
+    manager = RedisMemoryManager()
+    yield manager
+
+    # Cleanup: flush test keys
+    await redis_client.flushdb()
+
+
+@pytest.fixture
+async def graphiti_wrapper(neo4j_driver, ollama_client_real):
+    """Real GraphitiWrapper instance for E2E testing.
+
+    Uses real Neo4j + Ollama for testing Layer 3 episodic memory.
+
+    Returns:
+        GraphitiWrapper instance
+    """
+    from src.components.memory import GraphitiWrapper
+
+    try:
+        wrapper = GraphitiWrapper()
+        yield wrapper
+
+        # Cleanup: delete test episodes
+        with neo4j_driver.session() as session:
+            session.run(
+                """
+                MATCH (e)
+                WHERE e.source = 'test' OR e.name STARTS WITH 'test_'
+                DETACH DELETE e
+                """
+            )
+
+        await wrapper.close()
+    except Exception as e:
+        pytest.skip(f"Graphiti not available: {e}")
+
+
+@pytest.fixture
+async def memory_router(redis_memory_manager, qdrant_client_real, graphiti_wrapper):
+    """Real MemoryRouter instance for E2E testing.
+
+    Uses real services for testing 3-layer memory routing.
+
+    Returns:
+        MemoryRouter instance
+    """
+    from src.components.memory import MemoryRouter
+
+    router = MemoryRouter(session_id="test_session_e2e")
+    yield router
+
+    # Cleanup handled by individual service fixtures
+
+
+@pytest.fixture
+async def temporal_query(neo4j_driver):
+    """Real TemporalMemoryQuery instance for E2E testing.
+
+    Uses real Neo4j for testing bi-temporal queries.
+
+    Returns:
+        TemporalMemoryQuery instance
+    """
+    from src.components.memory import TemporalMemoryQuery
+
+    query = TemporalMemoryQuery()
+    yield query
+
+    # Cleanup handled by neo4j_driver fixture
+
+
+@pytest.fixture
+async def consolidation_pipeline(redis_memory_manager, qdrant_client_real, graphiti_wrapper):
+    """Real MemoryConsolidationPipeline instance for E2E testing.
+
+    Uses real services for testing memory consolidation.
+
+    Returns:
+        MemoryConsolidationPipeline instance
+    """
+    from src.components.memory import MemoryConsolidationPipeline
+
+    pipeline = MemoryConsolidationPipeline()
+    yield pipeline
+
+    # Cleanup handled by individual service fixtures
+
+
+@pytest.fixture
+async def test_client_async():
+    """Async FastAPI TestClient for E2E API testing.
+
+    Uses httpx AsyncClient for testing real API endpoints.
+
+    Returns:
+        Async HTTP client
+    """
+    from httpx import AsyncClient
+
+    from src.api.main import app
+
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
