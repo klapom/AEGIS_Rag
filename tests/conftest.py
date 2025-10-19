@@ -622,8 +622,12 @@ async def ollama_client_real():
         models_response = await client.list()
         available_models = [m.model for m in models_response.models]
 
-        required_models = ["llama3.2:8b", "llama3.2:3b", "nomic-embed-text"]
-        missing_models = [m for m in required_models if m not in available_models]
+        required_models = ["llama3.2:3b", "nomic-embed-text"]
+        # Check if models exist (with or without tag like :latest)
+        missing_models = []
+        for required in required_models:
+            if not any(required in model or model.startswith(required + ":") for model in available_models):
+                missing_models.append(required)
 
         if missing_models:
             pytest.skip(f"Required Ollama models not available: {missing_models}")

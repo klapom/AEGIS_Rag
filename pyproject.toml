@@ -50,7 +50,7 @@ rank-bm25 = "^0.2.2"
 sentence-transformers = "^3.3.1"  # HuggingFace cross-encoder models
 
 # Evaluation (Sprint 3: RAGAS)
-ragas = "^0.2.5"  # RAG evaluation framework
+ragas = "^0.3.7"  # RAG evaluation framework (0.3.7 for better Ollama support)
 datasets = "^3.2.0"  # HuggingFace datasets for evaluation
 
 # Utilities

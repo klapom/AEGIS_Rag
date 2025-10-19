@@ -1,7 +1,7 @@
 # Sprint-Planung: Agentisches RAG-System
 ## Projektname: AegisRAG (Agentic Enterprise Graph Intelligence System)
 
-**Gesamtdauer:** 11 Sprints à 1 Woche (11 Wochen)
+**Gesamtdauer:** 12 Sprints à 1 Woche (12 Wochen)
 **Team-Setup:** 1-2 Entwickler + Claude Code Subagenten
 
 **Note:** Sprint 8 "Critical Path E2E Testing" was strategically inserted after Sprint 7 to validate critical integration paths from Sprint 1-6 before proceeding with new features. This decision (ADR-015) increases production confidence from 75% to 95%.
@@ -327,8 +327,8 @@
 
 ---
 
-## Sprint 7: Component 3 - Graphiti Memory + Azure OpenAI Integration (Optional)
-**Ziel:** Temporal Memory, Episodic vs. Semantic, Long-Term Context, Optional Azure OpenAI Support
+## Sprint 7: Component 3 - Graphiti Memory Integration
+**Ziel:** Temporal Memory, Episodic vs. Semantic, Long-Term Context
 
 ### Deliverables
 - [x] Graphiti Installation mit Neo4j Backend
@@ -337,9 +337,6 @@
 - [x] Semantic Subgraph (Extracted Facts)
 - [x] Memory Agent (LangGraph Integration)
 - [x] Point-in-Time Query API
-- [ ] **NEW: Azure OpenAI Integration Layer (Optional)**
-- [ ] **NEW: LLM Abstraction Interface**
-- [ ] **NEW: Environment-based LLM Selection**
 
 ### Technical Tasks
 - Graphiti Config und Schema Design
@@ -348,18 +345,12 @@
 - Memory Retrieval Agent Implementation
 - Memory Decay Strategy (Time-based + Relevance)
 - Redis für Short-Term Working Memory
-- **NEW: Azure OpenAI Client Wrapper (langchain-openai)**
-- **NEW: LLM Factory Pattern (Ollama vs. Azure)**
-- **NEW: Environment Variables für Azure Config**
-- **NEW: Fallback Logic (Azure unavailable → Ollama)**
 
 ### Success Criteria
 - Conversations werden automatisch in Episodic Memory persistiert
 - Facts werden extrahiert und in Semantic Memory gespeichert
 - Point-in-Time Queries rekonstruieren historischen Kontext
 - Memory Retrieval <100ms
-- **NEW: System läuft mit Ollama (default) UND Azure OpenAI (optional)**
-- **NEW: LLM-Switch ohne Code-Änderung (nur .env)**
 
 ---
 
@@ -476,19 +467,20 @@ Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed loc
 
 ---
 
-## Sprint 9: 3-Layer Memory Architecture + LLM A/B Testing
-**Ziel:** Redis Short-Term, Qdrant Long-Term, Graphiti Episodic, Ollama vs. Azure Benchmarking
+## Sprint 9: 3-Layer Memory Architecture + MCP Client Integration
+**Ziel:** Vollständige Memory-Architektur mit MCP Client für externe Tool-Nutzung
 
 ### Deliverables
-- [x] Redis Working Memory Manager
-- [x] Memory Router (welche Layer für Query?)
-- [x] Memory Consolidation Pipeline (Short → Long)
-- [x] Memory Decay & Eviction Policies
-- [x] Unified Memory API
-- [x] Memory Health Monitoring
-- [ ] **NEW: LLM A/B Testing Framework**
-- [ ] **NEW: Performance Benchmarks (Ollama vs. Azure)**
-- [ ] **NEW: Quality Metrics (RAGAS for both LLMs)**
+- [ ] Redis Working Memory Manager
+- [ ] Memory Router (welche Layer für Query?)
+- [ ] Memory Consolidation Pipeline (Short → Long)
+- [ ] Memory Decay & Eviction Policies
+- [ ] Unified Memory API
+- [ ] Memory Health Monitoring
+- [ ] **MCP Client Implementation** (Python SDK)
+- [ ] **MCP Tool Discovery** (Connect to external MCP Servers)
+- [ ] **Action Agent** (LangGraph Integration mit MCP Tools)
+- [ ] **Tool Execution Handler** (Call external MCP Tools)
 
 ### Technical Tasks
 - Redis Cluster Setup mit Eviction Policies
@@ -497,60 +489,102 @@ Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed loc
 - Relevance Scoring für Memory Ranking
 - Memory Search across all Layers
 - Prometheus Metrics für Memory Stats
-- **NEW: A/B Test Harness (gleiche Queries, beide LLMs)**
-- **NEW: Latency Comparison (p50, p95, p99)**
-- **NEW: Quality Comparison (RAGAS, Human Eval)**
-- **NEW: Cost Tracking Dashboard**
+- MCP Client SDK Setup (connect to external servers)
+- Tool Discovery (list available tools from MCP servers)
+- Action Agent mit MCP Tool Calls
+- Error Handling für Tool Execution
 
 ### Success Criteria
 - Memory Router entscheidet korrekt zwischen Layers (90%+)
 - Consolidation läuft automatisch ohne Data Loss
 - Memory Retrieval latency: Redis <10ms, Qdrant <50ms, Graphiti <100ms
 - Memory Capacity Planning Dashboard
-- **NEW: Benchmark Report (Ollama vs. Azure) erstellt**
-- **NEW: Decision Matrix für LLM-Wahl dokumentiert**
+- MCP Client verbindet zu externen Servern
+- Tool Discovery listet verfügbare Tools
+- Action Agent kann externe MCP Tools aufrufen
+- Tool Execution mit Error Handling funktioniert
 
 ---
 
-## Sprint 10: Component 4 - MCP Server Integration
-**Ziel:** Model Context Protocol, Tool Integration, OAuth 2.1
+## Sprint 10: End-User Interface
+**Ziel:** Benutzerfreundliche Web-Oberfläche für End-User Interaktion
 
 ### Deliverables
-- [x] MCP Server Implementation (Python SDK)
-- [x] stdio Transport für lokale Tools
-- [x] Streamable HTTP für Remote Services
-- [x] OAuth 2.1 Authentication Flow
-- [x] Action Agent (LangGraph Integration)
-- [x] MCP Tool Registry & Discovery
+- [ ] Web-basierte Chat-Oberfläche
+- [ ] Document Upload Interface
+- [ ] Search Results Visualization
+- [ ] Conversation History View
+- [ ] Real-time Response Streaming
+- [ ] Multi-turn Conversation Support
+- [ ] Source Citation Display
+- [ ] Responsive Design (Desktop/Mobile)
 
 ### Technical Tasks
-- MCP Python SDK Setup
-- Tool Definitions (Resources, Prompts, Sampling)
-- stdio Server für File System, Shell
-- HTTP Server für REST APIs
-- OAuth Provider Integration (Auth0/Clerk)
-- Action Agent mit MCP Tool Calls
+- Frontend Framework Setup (React/Vue/Svelte - TBD)
+- WebSocket Integration für Streaming
+- File Upload Component
+- Chat UI Components
+- Result Visualization (Citations, Relevance Scores)
+- Session Management
+- API Client Integration
+- Responsive Layout Implementation
 
 ### Success Criteria
-- MCP Server startet und registriert Tools
-- stdio Tools (ls, cat, grep) funktional
-- HTTP Tools können Remote APIs aufrufen
-- OAuth Flow funktioniert End-to-End
-- Action Agent nutzt MCP Tools korrekt
+- User kann Documents hochladen via Drag & Drop
+- Chat-Interface zeigt Responses in Real-time
+- Source Citations sind klickbar und nachvollziehbar
+- Multi-turn Conversations bleiben konsistent
+- Interface ist responsive (Mobile + Desktop)
+- Latency <500ms für User Input → Response Start
+- User Testing: 90%+ Satisfaction Score
 
 ---
 
-## Sprint 11: Integration, Testing & Production Readiness
+## Sprint 11: Configuration & Admin Interface
+**Ziel:** Admin-Oberfläche für System-Konfiguration und Management
+
+### Deliverables
+- [ ] Admin Dashboard
+- [ ] LLM Model Configuration UI
+- [ ] Vector Database Management
+- [ ] Memory Layer Configuration
+- [ ] User & Permission Management
+- [ ] System Monitoring Dashboard
+- [ ] Configuration Import/Export
+- [ ] API Key Management
+
+### Technical Tasks
+- Admin Frontend Setup
+- Configuration Forms (LLM Models, Databases)
+- System Status Monitoring UI
+- User Management CRUD
+- Permission/Role Management
+- Configuration Validation
+- Live System Metrics Display
+- Export/Import Configuration (JSON/YAML)
+
+### Success Criteria
+- Admin kann LLM Models ohne Code-Änderung wechseln
+- Vector Database Konfiguration über UI möglich
+- Memory Layer Settings sind anpassbar
+- User Management funktioniert vollständig
+- System Metrics sind in Real-time sichtbar
+- Configuration Export/Import funktioniert
+- Admin Testing: 95%+ Task Success Rate
+
+---
+
+## Sprint 12: Integration, Testing & Production Readiness
 **Ziel:** Full System Integration, Load Testing, Deployment
 
 ### Deliverables
-- [x] End-to-End Integration aller 4 Komponenten
-- [x] Full Evaluation Suite (RAGAS, Custom Metrics)
-- [x] Load Testing (Locust/K6)
-- [x] Production Docker Images (Multi-Stage Builds)
-- [x] Kubernetes Manifests (Helm Charts)
-- [x] Monitoring Stack (Prometheus, Grafana, Loki)
-- [x] Documentation (Architecture, API, Deployment)
+- [ ] End-to-End Integration aller Komponenten
+- [ ] Full Evaluation Suite (RAGAS, Custom Metrics)
+- [ ] Load Testing (Locust/K6)
+- [ ] Production Docker Images (Multi-Stage Builds)
+- [ ] Kubernetes Manifests (Helm Charts)
+- [ ] Monitoring Stack (Prometheus, Grafana, Loki)
+- [ ] Documentation (Architecture, API, Deployment)
 
 ### Technical Tasks
 - Integration Tests für alle Agent Paths
@@ -571,7 +605,9 @@ Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed loc
 
 ---
 
-## Post-Sprint 11: Continuous Improvement Backlog
+---
+
+## Post-Sprint 12: Continuous Improvement Backlog
 
 ### High Priority
 - Advanced Query Decomposition (Tree-of-Thought)

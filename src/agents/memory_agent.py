@@ -113,15 +113,18 @@ class MemoryAgent(BaseAgent):
         self._add_trace(state, "processing memory query")
 
         try:
-            # Get top_k from state config or use default
-            top_k = state.get("metadata", {}).get("config", {}).get("top_k", 5)
+            # Get limit from state config or use default
+            limit = state.get("metadata", {}).get("config", {}).get("top_k", 5)
+
+            # Get session_id from state metadata
+            session_id = state.get("metadata", {}).get("session_id")
 
             # Route query to appropriate memory layer(s)
-            # layers=None means auto-route based on query type
+            # MemoryRouter automatically selects layers based on query analysis
             results = await self.memory_router.search_memory(
                 query=query,
-                layers=None,  # Auto-route
-                top_k=top_k,
+                session_id=session_id,
+                limit=limit,
             )
 
             # Calculate latency

@@ -6,6 +6,10 @@ This module provides evaluation capabilities using RAGAS (RAG Assessment) metric
 - Faithfulness: Is the answer grounded in the retrieved contexts?
 
 RAGAS requires an LLM for evaluation. We use Ollama (llama3.2) by default.
+
+NOTE: Due to RAGAS library compatibility issues with Ollama (404 errors),
+this module falls back to custom implementation (src/evaluation/custom_metrics.py)
+when RAGAS evaluation fails.
 """
 
 import asyncio
@@ -17,9 +21,11 @@ from typing import Any, Literal
 import structlog
 from datasets import Dataset
 from pydantic import BaseModel, Field
-from ragas import evaluate
+# RAGAS 0.3.x imports (API changed from 0.2.x)
+from ragas import evaluate, EvaluationDataset as RagasDataset, SingleTurnSample
 from ragas.llms import LangchainLLMWrapper
-from ragas.metrics import context_precision, context_recall, faithfulness
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.metrics import ContextPrecision, ContextRecall, Faithfulness
 
 from src.core.config import settings
 
@@ -118,13 +124,19 @@ class RAGASEvaluator:
 
         Note:
             RAGAS requires LangChain LLM interface. We wrap Ollama client.
+            Using ChatOllama for better structured output support.
         """
-        from langchain_community.llms import Ollama
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            # Fallback to community version
+            from langchain_community.chat_models import ChatOllama
 
-        llm = Ollama(
+        llm = ChatOllama(
             model=self.llm_model,
             base_url=self.llm_base_url,
             temperature=0.0,  # Deterministic for evaluation
+            format="json",  # Request JSON output for better parsing
         )
 
         # Wrap in RAGAS LLM wrapper
@@ -135,11 +147,14 @@ class RAGASEvaluator:
 
         Returns:
             List of RAGAS metric objects
+
+        Note:
+            RAGAS 0.3.x uses classes instead of functions
         """
         metric_map = {
-            "context_precision": context_precision,
-            "context_recall": context_recall,
-            "faithfulness": faithfulness,
+            "context_precision": ContextPrecision(),
+            "context_recall": ContextRecall(),
+            "faithfulness": Faithfulness(),
         }
 
         metrics = []
@@ -219,35 +234,37 @@ class RAGASEvaluator:
 
         start_time = datetime.utcnow()
 
-        # Convert to HuggingFace Dataset format
-        data_dict = {
-            "question": [ex.question for ex in dataset],
-            "ground_truth": [ex.ground_truth for ex in dataset],
-            "contexts": [ex.contexts for ex in dataset],
-            "answer": [
-                ex.answer or ex.ground_truth for ex in dataset
-            ],  # Use ground truth if no answer
-        }
+        # Convert to RAGAS 0.3 EvaluationDataset format
+        # RAGAS 0.3 uses SingleTurnSample instead of raw dicts
+        samples = []
+        for ex in dataset:
+            sample = SingleTurnSample(
+                user_input=ex.question,
+                reference=ex.ground_truth,
+                retrieved_contexts=ex.contexts,
+                response=ex.answer or ex.ground_truth,  # Use ground truth if no answer
+            )
+            samples.append(sample)
 
-        hf_dataset = Dataset.from_dict(data_dict)
+        ragas_dataset = RagasDataset(samples=samples)
 
         logger.debug(
-            "converted_to_hf_dataset",
-            num_rows=len(hf_dataset),
-            columns=hf_dataset.column_names,
+            "converted_to_ragas_dataset",
+            num_samples=len(ragas_dataset.samples),
         )
 
         # Get LLM and metrics
         llm = self._get_langchain_llm()
         metrics = self._get_metrics()
 
+        # RAGAS 0.3 evaluate() signature changed
         # Run evaluation (blocking, but RAGAS doesn't have async support)
         # We run in executor to avoid blocking event loop
         loop = asyncio.get_event_loop()
         eval_result = await loop.run_in_executor(
             None,
             lambda: evaluate(
-                dataset=hf_dataset,
+                dataset=ragas_dataset,
                 metrics=metrics,
                 llm=llm,
                 raise_exceptions=False,  # Continue on errors
@@ -258,7 +275,16 @@ class RAGASEvaluator:
         duration = (end_time - start_time).total_seconds()
 
         # Extract scores
-        scores = eval_result.to_pandas().to_dict()
+        df = eval_result.to_pandas()
+        print(f"[DEBUG RAGAS] DataFrame columns: {df.columns.tolist()}")
+        print(f"[DEBUG RAGAS] DataFrame shape: {df.shape}")
+        print(f"[DEBUG RAGAS] DataFrame head:\n{df.head()}")
+
+        scores = df.to_dict()
+        print(f"[DEBUG RAGAS] Scores dict keys: {scores.keys()}")
+        for key, value in scores.items():
+            print(f"[DEBUG RAGAS] {key}: {value}")
+
         logger.debug("ragas_scores", scores=scores)
 
         # Build result
@@ -286,6 +312,105 @@ class RAGASEvaluator:
 
         logger.info(
             "ragas_evaluation_complete",
+            scenario=scenario,
+            context_precision=result.context_precision,
+            context_recall=result.context_recall,
+            faithfulness=result.faithfulness,
+            duration_seconds=duration,
+        )
+
+        return result
+
+    async def evaluate_retrieval_custom(
+        self,
+        dataset: list[EvaluationDataset],
+        scenario: str = "default",
+    ) -> EvaluationResult:
+        """Evaluate retrieval using custom Ollama-based metrics.
+
+        Fallback method when RAGAS library has compatibility issues.
+        Uses custom implementation from src/evaluation/custom_metrics.py
+
+        Args:
+            dataset: List of evaluation examples
+            scenario: Scenario name
+
+        Returns:
+            Evaluation result with metrics
+
+        Example:
+            >>> evaluator = RAGASEvaluator()
+            >>> result = await evaluator.evaluate_retrieval_custom(
+            ...     dataset=dataset,
+            ...     scenario="custom-ollama"
+            ... )
+        """
+        from src.evaluation.custom_metrics import CustomMetricsEvaluator
+
+        logger.info(
+            "starting_custom_evaluation",
+            scenario=scenario,
+            num_samples=len(dataset),
+        )
+
+        start_time = datetime.utcnow()
+
+        # Initialize custom evaluator
+        custom_evaluator = CustomMetricsEvaluator(
+            model=self.llm_model,
+            base_url=self.llm_base_url,
+        )
+
+        # Evaluate each sample
+        precision_scores = []
+        recall_scores = []
+        faithfulness_scores = []
+
+        for i, sample in enumerate(dataset):
+            logger.debug(
+                "evaluating_sample",
+                sample_idx=i,
+                question=sample.question[:50],
+            )
+
+            results = await custom_evaluator.evaluate_all(
+                query=sample.question,
+                retrieved_contexts=sample.contexts,
+                response=sample.answer or sample.ground_truth,
+                ground_truth=sample.ground_truth,
+            )
+
+            precision_scores.append(results.context_precision)
+            recall_scores.append(results.context_recall)
+            faithfulness_scores.append(results.faithfulness)
+
+        end_time = datetime.utcnow()
+        duration = (end_time - start_time).total_seconds()
+
+        # Calculate averages
+        avg_precision = sum(precision_scores) / len(precision_scores) if precision_scores else 0.0
+        avg_recall = sum(recall_scores) / len(recall_scores) if recall_scores else 0.0
+        avg_faithfulness = (
+            sum(faithfulness_scores) / len(faithfulness_scores) if faithfulness_scores else 0.0
+        )
+
+        result = EvaluationResult(
+            scenario=scenario,
+            context_precision=avg_precision,
+            context_recall=avg_recall,
+            faithfulness=avg_faithfulness,
+            num_samples=len(dataset),
+            duration_seconds=duration,
+            timestamp=end_time.isoformat(),
+            metadata={
+                "llm_model": self.llm_model,
+                "evaluator": "custom_ollama",
+                "metrics": self.metrics_list,
+            },
+        )
+
+        logger.info(
+            "custom_evaluation_complete",
             scenario=scenario,
             context_precision=result.context_precision,
             context_recall=result.context_recall,

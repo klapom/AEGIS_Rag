@@ -11,7 +11,7 @@ AEGIS_RAG/
 │   │   ├── PROJECT_SUMMARY.md      # ⭐ Gesamtübersicht - Start hier!
 │   │   ├── QUICK_START.md          # Tag-1-Setup
 │   │   ├── CLAUDE.md               # Hauptkontext für Claude Code
-│   │   ├── SPRINT_PLAN.md          # 10-Sprint Roadmap
+│   │   ├── SPRINT_PLAN.md          # 12-Sprint Roadmap
 │   │   ├── NAMING_CONVENTIONS.md   # Code Standards
 │   │   ├── TECH_STACK.md           # Complete Technology Stack
 │   │   ├── SUBAGENTS.md            # 5 Subagenten-Definitionen
@@ -44,7 +44,7 @@ AEGIS_RAG/
 
 ### Core Dokumentation
 - [PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Gesamtübersicht
-- [SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - 10-Sprint Roadmap
+- [SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - 12-Sprint Roadmap
 - [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) - ✅ Sprint 3 Complete (335 tests, 99.1%)
 - [CLAUDE.md](docs/core/CLAUDE.md) - Claude Code Hauptkontext
 - [NAMING_CONVENTIONS.md](docs/core/NAMING_CONVENTIONS.md) - Code Standards
@@ -74,8 +74,8 @@ AEGIS_RAG/
 - **Vector DB**: Qdrant
 - **Graph DB**: Neo4j
 - **Memory**: Graphiti (Temporal Memory)
-- **LLM**: Ollama (lokal, primär) + Azure OpenAI (optional für Production)
-- **Embeddings**: nomic-embed-text (lokal) oder text-embedding-3-large (Azure)
+- **LLM**: Ollama (llama3.2:3b/8b, qwen2.5:7b, qwen3:0.6b, smollm2:1.7b)
+- **Embeddings**: nomic-embed-text (lokal, 768-dim)
 - **Reranking**: sentence-transformers (cross-encoder/ms-marco-MiniLM)
 - **Evaluation**: RAGAS (Context Precision, Recall, Faithfulness)
 - **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
@@ -96,9 +96,9 @@ Details siehe [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md)
 See [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) for details
 
 ### LLM-Strategie (ADR-002)
-- **Development**: 100% Ollama (kostenfrei, offline-fähig)
-- **Production**: Wählbar zwischen Ollama (lokal) oder Azure OpenAI (Cloud)
-- **Compliance**: Vollständig air-gapped Deployment möglich
+- **Development & Production**: 100% Ollama (kostenfrei, offline-fähig)
+- **Compliance**: Vollständig air-gapped Deployment
+- **Privacy**: Keine Daten verlassen lokales Netzwerk
 
 ## 📋 Entwicklungsprozess
 
@@ -128,15 +128,19 @@ Details in [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md) und [docs/adr/ADR_
 
 ## 📅 Sprint Plan
 
-10 Sprints geplant über 10 Wochen:
+12 Sprints geplant über 12 Wochen:
 - ✅ Sprint 1: Foundation & Infrastructure Setup (COMPLETE)
 - ✅ Sprint 2: Vector Search Foundation (COMPLETE - 212 tests passing)
 - ✅ Sprint 3: Advanced Retrieval (COMPLETE - 335 tests passing, 99.1%)
-- Sprint 4: LangGraph Orchestration Layer (IN PROGRESS)
-- Sprint 5-6: GraphRAG & Hybrid Retrieval
-- Sprint 7: Memory System + Azure OpenAI Integration (optional)
-- Sprint 8: 3-Layer Memory + LLM A/B Testing
-- Sprint 9-10: MCP Integration, Testing & Production Readiness
+- ✅ Sprint 4: LangGraph Orchestration Layer (COMPLETE)
+- ✅ Sprint 5: LightRAG Integration (COMPLETE)
+- ✅ Sprint 6: Hybrid Vector-Graph Retrieval (COMPLETE)
+- ✅ Sprint 7: Graphiti Memory Integration (COMPLETE)
+- ✅ Sprint 8: Critical Path E2E Testing (COMPLETE - 80% baseline)
+- Sprint 9: 3-Layer Memory Architecture + MCP Server Integration (IN PLANNING)
+- Sprint 10: End-User Interface (IN PLANNING)
+- Sprint 11: Configuration & Admin Interface (IN PLANNING)
+- Sprint 12: Integration, Testing & Production Readiness (IN PLANNING)
 
 Details siehe [docs/core/SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md)
 

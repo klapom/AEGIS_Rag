@@ -380,10 +380,11 @@ class CommunityDetector:
                     },
                 )
 
+                updated_count = result[0].get("updated_count", 0) if result and len(result) > 0 else 0
                 logger.debug(
                     "community_stored",
                     community_id=community.id,
-                    entities_updated=result[0].get("updated_count", 0),
+                    entities_updated=updated_count,
                 )
 
         except Exception as e:

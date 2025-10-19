@@ -12,7 +12,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | # | Title | Status | Date |
 |---|-------|--------|------|
 | 001 | LangGraph als Orchestrierungs-Framework | Accepted | 2025-01-15 |
-| 002 | Ollama-First LLM Strategy mit optionalem Azure OpenAI | Accepted | 2025-01-15 |
+| 002 | Ollama-Only LLM Strategy | Accepted | 2025-01-15 |
 | 003 | Hybrid Vector-Graph Retrieval Architecture | Accepted | 2025-01-15 |
 | 004 | Qdrant als primäre Vector Database | Accepted | 2025-01-15 |
 | 005 | LightRAG statt Microsoft GraphRAG | Accepted | 2025-01-15 |
@@ -101,30 +101,29 @@ Die höhere Lernkurve wird durch bessere Debuggability und Production-Reife komp
 
 ---
 
-## ADR-002: Ollama-First LLM Strategy mit optionalem Azure OpenAI
+## ADR-002: Ollama-Only LLM Strategy
 
 ### Status
-**Accepted** (2025-01-15, Updated: 2025-10-14)
+**Accepted** (2025-01-15, Updated: 2025-10-19)
 
 ### Context
 Für die Entwicklung und den Betrieb des AEGIS RAG Systems benötigen wir eine LLM-Strategie, die folgende Anforderungen erfüllt:
-- **Kosteneffizienz:** Entwicklung sollte ohne laufende API-Kosten möglich sein
-- **Offline-Fähigkeit:** Entwicklung auch ohne Internetverbindung
-- **Flexibilität:** Option für Production-Grade LLMs bei Bedarf
-- **Compliance:** Möglichkeit für vollständig lokalen Betrieb
-- **Performance:** Akzeptable Latenz für Entwicklung und Testing
+- **Kosteneffizienz:** Entwicklung und Production ohne laufende API-Kosten
+- **Offline-Fähigkeit:** Voller Betrieb ohne Internetverbindung
+- **Compliance:** Vollständig lokaler Betrieb ohne externe Abhängigkeiten
+- **Performance:** Akzeptable Latenz für alle Szenarien
+- **Simplicity:** Keine komplexen Multi-LLM Abstraktionen
 
 ### Decision
-Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **optionaler Azure OpenAI Integration für Production**.
+Wir verwenden **Ollama als einziges LLM-Backend** für Entwicklung, Testing und Production.
 
-**Dual-Stack Approach:**
-1. **Development/Testing (Sprint 1-6):** 100% Ollama (lokal, kostenfrei)
-2. **Integration (Sprint 7):** Azure OpenAI Support hinzufügen (optional)
-3. **Production (Sprint 8-10):** Konfigurierbar zwischen Ollama und Azure OpenAI
+**Ollama-Only Approach:**
+1. **Development/Testing (Sprint 1-8):** 100% Ollama (lokal, kostenfrei)
+2. **Production (Sprint 9-12):** 100% Ollama (lokal, kostenfrei)
 
 ### Alternatives Considered
 
-#### 1. Azure OpenAI Primär
+#### 1. Azure OpenAI
 **Pro:**
 - Höchste Qualität (GPT-4o, GPT-4o-mini)
 - Beste Strukturierte Outputs
@@ -132,11 +131,12 @@ Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **o
 - DSGVO-konform durch EU-Hosting
 
 **Contra:**
-- Laufende Kosten ab Tag 1 ($200-500/Monat bei Entwicklung)
+- Laufende Kosten ($200-500/Monat bei Entwicklung, mehr bei Production)
 - Internetverbindung erforderlich
 - Vendor Lock-in
 - API-Limits und Quotas
 - Nicht für vollständig air-gapped Deployment geeignet
+- Zusätzliche Komplexität durch Multi-LLM Abstraktionen
 
 #### 2. Anthropic Claude (via API)
 **Pro:**
@@ -149,6 +149,7 @@ Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **o
 - Keine EU-Hosting Option
 - Kleineres Ecosystem als OpenAI
 - Vendor Lock-in
+- Zusätzliche Komplexität
 
 #### 3. OpenAI API (direkt)
 **Pro:**
@@ -160,159 +161,126 @@ Wir verwenden **Ollama als primäres LLM für Entwicklung und Testing**, mit **o
 - Nicht DSGVO-konform
 - Keine SLA/Enterprise Support
 - Daten gehen nach USA
-
-
-#### 4. Vollständig lokale Lösung (nur Ollama)
-**Pro:**
-- 100% kostenfrei
-- Volle Datenkontrolle
-- Kein Vendor Lock-in
-- Air-gapped deployment möglich
-
-**Contra:**
-- Qualität unter Cloud-LLMs (besonders für komplexe Reasoning)
-- Höhere Hardware-Anforderungen
-- Langsamere Inferenz
-- Weniger Structured Output Support
+- Zusätzliche Komplexität
 
 ### Rationale
 
-**Warum Ollama-First?**
+**Warum Ollama-Only?**
 
-1. **Kosteneffizienz:** $0 während gesamter Entwicklung (Sprint 1-6)
-   - Azure OpenAI: ~$300-500/Monat für Development
+1. **Kosteneffizienz:** $0 für gesamten Lebenszyklus (Development + Production)
+   - Azure OpenAI: ~$300-500/Monat für Development, $1000+/Monat für Production
    - Ollama: Vollständig kostenfrei
-   - ROI: ~$2000-3000 Ersparnis in Entwicklungsphase
+   - ROI: ~$18,000-24,000 Ersparnis pro Jahr
 
-2. **Offline Development:**
-   - Entwicklung im Zug, zu Hause, ohne VPN
+2. **Offline-Fähigkeit:**
+   - Entwicklung und Betrieb ohne Internetverbindung
    - Keine API-Limits oder Throttling
-   - Keine Abhängigkeit von Azure-Verfügbarkeit
+   - Keine Abhängigkeit von Cloud-Verfügbarkeit
 
-3. **Compliance:**
-   - Möglichkeit für vollständig air-gapped Deployment
-   - Keine Daten verlassen lokales Netzwerk
+3. **Compliance & Privacy:**
+   - Vollständig air-gapped Deployment möglich
+   - 100% Datenkontrolle - keine Daten verlassen lokales Netzwerk
+   - DSGVO-konform durch Design
 
 4. **Modern Model Performance:**
    - Llama 3.2 (3B/8B) sind hochperformant
-   - Ausreichend für 80-90% der Use Cases
+   - Qwen 2.5 (7B/14B) für komplexere Tasks
+   - SmolLM2 (1.7B) für ressourcenlimitierte Umgebungen
+   - Ausreichende Qualität für 90%+ der Use Cases
    - Schnelle lokale Inferenz
 
-5. **Flexibilität für Production:**
-   - Azure OpenAI bleibt Option für Production
-   - Konfigurierbar per Environment Variable
-   - Keine Code-Änderungen nötig für Switch
-
-**Warum Azure OpenAI Optional?**
-
-- **Quality:** Falls Ollama-Qualität nicht ausreicht
-- **Speed:** Cloud-Inferenz kann schneller sein für große Modelle
-- **Features:** Structured Outputs, Function Calling besser unterstützt
-- **Enterprise:** Falls Support und SLA benötigt werden
+5. **Architektur-Simplicity:**
+   - Kein Multi-LLM Abstraction Layer nötig
+   - Reduzierte Komplexität im Code
+   - Einfacheres Testing (nur ein Backend)
+   - Kein Configuration-Overhead für LLM-Switching
 
 ### Implementation Strategy
 
 **Ollama Models:**
 ```bash
-# Primäre Models für Development
+# Primäre Models für Development und Production
 ollama pull llama3.2:3b        # Fast, 2GB RAM, Query Understanding
 ollama pull llama3.2:8b        # Quality, 4.7GB RAM, Generation
 ollama pull nomic-embed-text   # Embeddings, 768-dim, 274MB
-ollama pull mistral:7b         # Alternative/Fallback
+ollama pull qwen2.5:7b         # Alternative für komplexe Tasks
+ollama pull qwen3:0.6b         # Ultra-lightweight, Entity Extraction
+ollama pull smollm2:1.7b       # Ressourcen-limitierte Umgebungen
 ```
 
-**Environment-Based LLM Selection:**
+**LLM Selection:**
 ```python
 # config/llm_config.py
 def get_llm(task_type: str = "generation") -> BaseLLM:
-    """Select LLM based on environment and task."""
+    """Select LLM based on task type."""
 
-    # Check if Azure OpenAI is configured
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    use_azure = os.getenv("USE_AZURE_LLM", "false").lower() == "true"
-
-    if azure_endpoint and use_azure:
-        # Production: Azure OpenAI
-        if task_type == "query_understanding":
-            return AzureChatOpenAI(model="gpt-4o-mini")
-        else:
-            return AzureChatOpenAI(model="gpt-4o")
+    if task_type == "query_understanding":
+        return ChatOllama(model="llama3.2:3b")
+    elif task_type == "entity_extraction":
+        return ChatOllama(model="qwen3:0.6b")  # Lightweight für LightRAG
+    elif task_type == "complex_reasoning":
+        return ChatOllama(model="qwen2.5:7b")
     else:
-        # Development: Ollama
-        if task_type == "query_understanding":
-            return ChatOllama(model="llama3.2:3b")
-        else:
-            return ChatOllama(model="llama3.2:8b")
+        return ChatOllama(model="llama3.2:8b")
 ```
 
-**Migration Path:**
-- **Sprint 1-6:** Develop with Ollama only
-- **Sprint 7:** Add Azure OpenAI integration layer
-- **Sprint 8:** A/B testing between Ollama and Azure
-- **Sprint 9-10:** Performance benchmarking, final decision
+**Development Path:**
+- **Sprint 1-8:** Core features mit Ollama
+- **Sprint 9-12:** Production-Readiness, Performance Optimierung
 
 ### Consequences
 
 **Positive:**
-- ✅ **$0 Entwicklungskosten** für LLM API
-- ✅ **Offline-fähige Entwicklung** ohne Cloud-Abhängigkeit
-- ✅ **Kein Vendor Lock-in** - easy migration
-- ✅ **Fast Iteration** - keine API-Limits
+- ✅ **$0 Kosten** für LLM (Development + Production)
+- ✅ **Offline-fähig** ohne Cloud-Abhängigkeit
+- ✅ **Kein Vendor Lock-in**
+- ✅ **Keine API-Limits** - unbegrenzte Nutzung
 - ✅ **Privacy by Design** - Daten bleiben lokal
+- ✅ **Simplere Architektur** - keine Multi-LLM Abstraktion
+- ✅ **DSGVO-konform** durch lokalen Betrieb
 
 **Negative:**
-- ⚠️ **Qualität:** Lokale Modelle unter Cloud-LLMs für komplexe Tasks
+- ⚠️ **Qualität:** Lokale Modelle unter Cloud-LLMs für sehr komplexe Tasks
 - ⚠️ **Hardware:** Mindestens 8GB RAM für llama3.2:8b
-- ⚠️ **Entwicklungsaufwand:** LLM-Abstraction Layer nötig
-- ⚠️ **Testing:** Beide LLM-Backends müssen getestet werden
+- ⚠️ **Maintenance:** Eigene Modell-Updates erforderlich
 
 **Mitigations:**
-- **Qualität:** Azure OpenAI als Fallback für kritische Use Cases
-- **Hardware:** Kleinere Modelle (3B) für schwächere Hardware
-- **Abstraction:** Clean LLM interface von Anfang an
-- **Testing:** Automated tests mit beiden Backends (CI/CD)
+- **Qualität:** Größere Ollama-Modelle (qwen2.5:14b) für kritische Tasks
+- **Hardware:** Kleinere Modelle (llama3.2:3b, smollm2:1.7b) für schwächere Hardware
+- **Maintenance:** Automatische Modell-Updates via Ollama API
 
-### Performance Comparison
+### Performance Expectations
 
-| Metric | Ollama (llama3.2:8b) | Azure GPT-4o-mini | Azure GPT-4o |
-|--------|---------------------|-------------------|--------------|
-| **Latency** | 200-500ms | 150-300ms | 300-600ms |
-| **Quality** | Good (7/10) | Very Good (8.5/10) | Excellent (9.5/10) |
-| **Cost** | $0 | $0.15/1M tokens | $2.50/1M tokens |
-| **Context** | 128K | 128K | 128K |
-| **Offline** | ✅ Yes | ❌ No | ❌ No |
+| Metric | qwen3:0.6b | llama3.2:3b | llama3.2:8b | qwen2.5:7b |
+|--------|-----------|-------------|-------------|------------|
+| **Latency** | 50-150ms | 100-300ms | 200-500ms | 250-600ms |
+| **Quality** | Good (6.5/10) | Good (7/10) | Very Good (8/10) | Very Good (8.5/10) |
+| **Cost** | $0 | $0 | $0 | $0 |
+| **Context** | 32K | 128K | 128K | 128K |
+| **Offline** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
+| **RAM** | 0.5GB | 2GB | 4.7GB | 4.5GB |
+| **Use Case** | Entity Extraction | Query Understanding | Generation | Complex Reasoning |
 
 ### Compliance & Security
 
 **Security Requirements:**
-- ✅ Ollama kann vollständig offline laufen
+- ✅ Ollama läuft vollständig offline
 - ✅ Lokale Deployment ohne externe Verbindungen
 - ✅ **Data Residency:** 100% lokal
-- ⚠️ **Azure OpenAI:** Nur für nicht-klassifizierte Daten (DSGVO-konform)
+- ✅ **DSGVO-konform** durch Design
+- ✅ **Air-gapped** deployment möglich
 
 **Security Considerations:**
-- Ollama: Keine Daten verlassen Netzwerk
-- Azure OpenAI: EU-Hosting, DSGVO-konform, aber Cloud-Service
-- Empfehlung: Ollama für sensible Daten, Azure optional für öffentliche Daten
-
-### Review Criteria
-
-Nach Sprint 6 evaluieren wir:
-1. **Quality:** Ist Ollama-Qualität ausreichend? (Target: >80% user satisfaction)
-2. **Performance:** Sind Latenzen akzeptabel? (Target: <500ms p95)
-3. **Cost:** Rechtfertigen Einsparungen die Qualitäts-Unterschiede?
-4. **Compliance:** Ist air-gapped deployment tatsächlich erforderlich?
-
-**Decision Matrix:**
-- Ollama ausreichend → Bleibe bei Ollama (auch Production)
-- Ollama nicht ausreichend → Aktiviere Azure OpenAI für Production
-- Hybrid → Ollama für unkritische Queries, Azure für kritische
+- Alle Daten bleiben im lokalen Netzwerk
+- Keine externe API-Calls
+- Volle Kontrolle über Datenverarbeitung
+- Ideal für sensible/klassifizierte Daten
 
 ### References
 - [Ollama Documentation](https://ollama.ai/docs)
 - [LangChain Ollama Integration](https://python.langchain.com/docs/integrations/llms/ollama)
-- [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 - [Llama 3.2 Release](https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/)
+- [Qwen 2.5 Release](https://qwenlm.github.io/blog/qwen2.5/)
 
 ---
 
@@ -614,16 +582,22 @@ Wir implementieren **3-Layer Memory Architecture**:
 
 ---
 
-## ADR-007: Model Context Protocol Integration
+## ADR-007: Model Context Protocol Client Integration
 
 ### Status
-**Accepted** (2025-01-15)
+**Accepted** (2025-01-15, Updated: 2025-10-19)
 
 ### Context
 Tool-Integration benötigt standardisierten Ansatz. Custom Integrations skalieren nicht (N×M Problem). MCP etabliert sich als Universal-Standard mit Industry-wide Adoption.
 
+**Wichtige Unterscheidung:**
+- **MCP Server:** Bietet Tools für andere Systeme an (wir SIND der Tool-Provider)
+- **MCP Client:** Nutzt Tools von anderen Systemen (wir NUTZEN externe Tools)
+
 ### Decision
-Wir implementieren **Model Context Protocol (MCP)** für alle Tool-Integrationen.
+Wir implementieren einen **MCP Client** um externe MCP-Tools zu nutzen (Filesystem, GitHub, Slack, etc.).
+
+**Kein MCP Server:** Wir bieten vorerst KEINE Tools für andere Systeme an.
 
 ### Alternatives Considered
 
@@ -660,32 +634,61 @@ Wir implementieren **Model Context Protocol (MCP)** für alle Tool-Integrationen
 - Authentication manuell
 
 ### Rationale
-MCP ist der emerging Standard:
-1. **Industry Adoption:** OpenAI, Google, Microsoft, Anthropic
-2. **Framework Support:** LangChain, LlamaIndex, CrewAI, OpenAI SDK
-3. **Standardisierung:** OAuth 2.1, JSON-RPC, Type-Safe Schemas
-4. **Ecosystem:** 500+ Community Servers, 9 Official SDKs
-5. **Future-Proof:** Spec Maturity (2025-06-18 Spec)
 
-**Strategisch:** Investing in MCP now = Compatibility mit zukünftigen AI Systems.
+**Warum MCP Client?**
+
+1. **Standardisierte Tool-Nutzung:**
+   - Zugriff auf 500+ Community MCP Servers (Filesystem, GitHub, Slack, Databases)
+   - Keine custom Integration für jedes Tool nötig
+
+2. **Industry Adoption:**
+   - OpenAI, Google, Microsoft, Anthropic unterstützen MCP
+   - Framework Support: LangChain, LlamaIndex, CrewAI
+
+3. **Zukunftssicherheit:**
+   - MCP wird Standard für AI Tool Integration
+   - Kompatibilität mit allen MCP-fähigen Systemen
+
+4. **Entwickler-Effizienz:**
+   - Nutze bestehende MCP Servers statt eigene zu bauen
+   - Standardisierte API, keine custom Protokolle
+
+**Warum KEIN MCP Server (vorerst)?**
+
+- **Bedarf unklar:** Aktuell keine Anforderung, RAG-Tools für andere Systeme bereitzustellen
+- **Komplexität:** Server-Implementierung + Maintenance würde Sprint 9 überladen
+- **Spätere Option:** Kann bei Bedarf in Post-Sprint 12 hinzugefügt werden
 
 ### Consequences
+
 **Positive:**
-- Kompatibel mit allen Major AI Frameworks
-- Wiederverwendbare Tool Definitions
-- Community-built Servers (Slack, Jira, Drive)
-- Standardisierte Authentication (OAuth 2.1)
+- ✅ Zugriff auf 500+ Community MCP Servers (ohne eigene Implementation)
+- ✅ Standardisierte Tool-Integration (kein N×M Problem)
+- ✅ Future-Proof (MCP wird Industry-Standard)
+- ✅ Action Agent kann externe Tools nutzen (Filesystem, GitHub, etc.)
 
 **Negative:**
-- Zusätzliche Abstraction Layer
-- Lernkurve für neues Protokoll
-- MCP Server Maintenance
+- ⚠️ Abhängigkeit von externen MCP Servers
+- ⚠️ Lernkurve für MCP Client SDK
+- ⚠️ Zusätzliche Abstraction Layer
 
 **Mitigations:**
-- Start mit Official Python SDK (gut dokumentiert)
-- Nutze Community Servers wo möglich
-- stdio Transport für MVP (einfacher als HTTP)
-- Plain-HTTP Fallback für kritische Services
+- **Abhängigkeit:** Fallback zu direkten API-Calls wenn MCP Server unavailable
+- **Lernkurve:** Start mit Official Python SDK (gut dokumentiert)
+- **Abstraction:** Thin Wrapper, minimal Overhead
+
+### Implementation Scope
+
+**Sprint 9 (MCP Client Only):**
+- ✅ MCP Client Implementation
+- ✅ Connection zu 1-2 externen Servern (Filesystem, GitHub)
+- ✅ Tool Discovery + Execution
+- ✅ Action Agent Integration
+
+**Post-Sprint 12 (Optional: MCP Server):**
+- ⏸️ MCP Server Implementation (falls Bedarf)
+- ⏸️ RAG-Tools als MCP Services anbieten
+- ⏸️ Integration mit Cursor, Claude Desktop, etc.
 
 ---
 
