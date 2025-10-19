@@ -85,68 +85,129 @@ class LightRAGWrapper:
 
         try:
             # Import LightRAG components (optional dependency)
+            import os
             from lightrag import LightRAG
-            from lightrag.storage import Neo4JStorage
+
+            # Set Neo4j environment variables (required by Neo4JStorage)
+            os.environ["NEO4J_URI"] = self.neo4j_uri
+            os.environ["NEO4J_USERNAME"] = self.neo4j_user
+            os.environ["NEO4J_PASSWORD"] = self.neo4j_password
 
             # Configure Ollama LLM function
             async def ollama_llm_complete(
                 prompt: str,
+                system_prompt: str | None = None,
                 model: str = self.llm_model,
                 **kwargs: Any,
             ) -> str:
-                """Ollama LLM completion function for LightRAG."""
+                """Ollama LLM completion function for LightRAG.
+
+                Uses Ollama Chat API to properly support system prompts.
+                LightRAG sends entity extraction instructions in system_prompt
+                and the actual task in prompt.
+                """
                 from ollama import AsyncClient
+
+                # 🔍 DETAILED LOGGING: Log prompts being sent to LLM
+                logger.info(
+                    "lightrag_llm_request",
+                    model=model,
+                    system_prompt_length=len(system_prompt) if system_prompt else 0,
+                    system_prompt_preview=(system_prompt[:500] if system_prompt else ""),
+                    user_prompt_length=len(prompt),
+                    user_prompt_preview=prompt[:500],
+                    system_prompt_full=system_prompt,  # Full system prompt
+                    user_prompt_full=prompt,  # Full user prompt
+                )
 
                 client = AsyncClient(host=settings.ollama_base_url)
 
-                response = await client.generate(
+                # Build messages for Chat API
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                # Use Chat API instead of Generate for proper system prompt support
+                response = await client.chat(
                     model=model,
-                    prompt=prompt,
+                    messages=messages,
                     options={
                         "temperature": settings.lightrag_llm_temperature,
                         "num_predict": settings.lightrag_llm_max_tokens,
+                        "num_ctx": 32768,  # LightRAG requires 32k context window
                     },
                 )
 
-                result: str = response.get("response", "")
+                # Extract message content from chat response
+                result: str = response.get("message", {}).get("content", "")
+
+                # 🔍 DETAILED LOGGING: Log response from LLM
+                logger.info(
+                    "lightrag_llm_response",
+                    model=model,
+                    response_length=len(result),
+                    response_preview=result[:500],  # First 500 chars
+                    response_full=result,  # Full response for debugging
+                )
+
                 return result
 
-            # Configure Ollama embedding function
-            async def ollama_embedding_func(
-                texts: list[str],
-                model: str = self.embedding_model,
-                **kwargs: Any,
-            ) -> list[list[float]]:
-                """Ollama embedding function for LightRAG."""
-                from ollama import AsyncClient
+            # Configure Ollama embedding function with embedding_dim attribute
+            class OllamaEmbeddingFunc:
+                """Wrapper for Ollama embedding function with embedding_dim attribute."""
 
-                client = AsyncClient(host=settings.ollama_base_url)
+                def __init__(self, model: str, embedding_dim: int = 768):
+                    self.model = model
+                    self.embedding_dim = embedding_dim
 
-                embeddings: list[list[float]] = []
-                for text in texts:
-                    response = await client.embeddings(
-                        model=model,
-                        prompt=text,
-                    )
-                    embedding = response.get("embedding", [])
-                    embeddings.append(list(embedding))
+                async def __call__(
+                    self,
+                    texts: list[str],
+                    **kwargs: Any,
+                ) -> list[list[float]]:
+                    """Ollama embedding function for LightRAG."""
+                    from ollama import AsyncClient
 
-                return embeddings
+                    client = AsyncClient(host=settings.ollama_base_url)
 
-            # Initialize Neo4j storage
-            neo4j_storage = Neo4JStorage(
-                uri=self.neo4j_uri,
-                user=self.neo4j_user,
-                password=self.neo4j_password,
+                    embeddings: list[list[float]] = []
+                    for text in texts:
+                        response = await client.embeddings(
+                            model=self.model,
+                            prompt=text,
+                        )
+                        embedding = response.get("embedding", [])
+                        embeddings.append(list(embedding))
+
+                    return embeddings
+
+                # LightRAG checks for async_func or func attributes to determine if function is async
+                @property
+                def async_func(self):
+                    """Return self to indicate this is an async function."""
+                    return self
+
+            # Create embedding function instance
+            embedding_func = OllamaEmbeddingFunc(
+                model=self.embedding_model,
+                embedding_dim=768,  # nomic-embed-text uses 768 dimensions
             )
 
-            # Initialize LightRAG
+            # Initialize LightRAG with Neo4j backend (uses env vars)
             self.rag = LightRAG(
                 working_dir=str(self.working_dir),
                 llm_model_func=ollama_llm_complete,
-                embedding_func=ollama_embedding_func,
-                graph_storage=neo4j_storage,
+                embedding_func=embedding_func,
+                graph_storage="Neo4JStorage",  # Storage type name as string
+                llm_model_max_async=2,  # Reduce from 4 to 2 workers (halves memory usage)
             )
+
+            # Initialize storages (required by lightrag-hku 1.4.9+)
+            from lightrag.kg.shared_storage import initialize_pipeline_status
+
+            await self.rag.initialize_storages()
+            await initialize_pipeline_status()
 
             self._initialized = True
             logger.info("lightrag_initialized_successfully")
@@ -307,8 +368,8 @@ class LightRAGWrapper:
             )
 
             async with driver.session() as session:
-                # Get entity count
-                entity_result = await session.run("MATCH (e:Entity) RETURN count(e) AS count")
+                # Get entity count (LightRAG uses 'base' label, not 'Entity')
+                entity_result = await session.run("MATCH (e:base) RETURN count(e) AS count")
                 entity_record = await entity_result.single()
                 entity_count = entity_record["count"] if entity_record else 0
 
