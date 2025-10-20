@@ -29,19 +29,19 @@ pydantic = "^2.9.0"
 pydantic-settings = "^2.5.0"
 
 # Data Ingestion & RAG (Sprint 2: Document Ingestion)
-# All compatible with llama-index-core 0.12.x (required by ollama packages)
-llama-index-core = "^0.12.0"
-llama-index-llms-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
-llama-index-embeddings-ollama = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
-llama-index-readers-file = "^0.4.0"  # Requires core >=0.12.0,<0.13.0
+# Updated to latest versions with better ollama compatibility
+llama-index-core = "^0.14.3"  # Upgraded for newer ollama packages
+llama-index-llms-ollama = "^0.8.0"  # Requires core >=0.14.3, ollama >=0.5.1
+llama-index-embeddings-ollama = "^0.8.3"  # Requires core >=0.13.0, ollama >=0.3.1 (no upper limit!)
+llama-index-readers-file = "^0.5.4"  # Latest version
 # Note: llama-index-vector-stores-qdrant removed - we use qdrant-client directly
 
 # Vector Database (Sprint 2: Qdrant)
 qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.0)
 
 # LLM Provider (Sprint 2: Ollama)
-# Pinned to 0.3.x for compatibility with llama-index-embeddings-ollama
-ollama = ">=0.3.1,<0.4.0"
+# Updated to >=0.6.0 for langchain-ollama 1.0.0 compatibility
+ollama = ">=0.6.0,<1.0.0"
 
 # Hybrid Search (Sprint 2: BM25)
 rank-bm25 = "^0.2.2"
@@ -60,7 +60,7 @@ structlog = "^24.4.0"
 httpx = "^0.27.0"
 aiofiles = "^24.1.0"
 pyyaml = "^6.0.0"
-python-multipart = "^0.0.9"
+python-multipart = "^0.0.20"  # Updated for Gradio compatibility
 numpy = "^1.26.0"  # For vector operations in consolidation
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
 
@@ -78,9 +78,9 @@ passlib = {extras = ["bcrypt"], version = "^1.7.4"}  # Password hashing
 
 # LangGraph & LangChain (Sprint 4: Multi-Agent Orchestration)
 langgraph = "^0.6.10"
-langchain-core = "^0.3.79"
-# Note: langchain-ollama removed - incompatible with llama-index-embeddings-ollama
-# Sprint 4 uses ollama.AsyncClient directly for LLM calls
+langchain-core = "^1.0.0"  # Upgraded for langchain-ollama 1.0.0
+langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
+# Note: Sprint 4 uses ollama.AsyncClient directly for LLM calls
 
 # LightRAG & Graph Analysis (Sprint 5: Graph RAG)
 lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
@@ -90,6 +90,9 @@ graspologic = "^3.4.1"  # Graph statistics and community detection
 # Graphiti Memory (Sprint 7: Episodic Memory)
 graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
 
+# UI Framework (Sprint 10: Gradio MVP)
+gradio = "^5.49.0"  # Gradio for rapid prototyping UI
+
 [tool.poetry.group.dev.dependencies]
 # Testing
 pytest = "^8.0.0"
@@ -98,7 +101,7 @@ pytest-cov = "^5.0.0"
 pytest-mock = "^3.14.0"
 
 # Code Quality
-ruff = "^0.6.0"
+ruff = "^0.14.0"  # Upgraded for Gradio 5.x compatibility
 black = "^24.8.0"
 mypy = "^1.11.0"
 bandit = "^1.7.9"
