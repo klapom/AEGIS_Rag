@@ -168,14 +168,14 @@
       "Bash(tee:*)",
       "Bash(ping:*)",
       "Bash(tasklist:*)",
+      "Bash(git push:*)",
+      "Bash(git clean -fd:*)",
       "Read(//c/Users/Klaus Pommer/AppData/Local/pypoetry/Cache/virtualenvs/aegis-rag--u84tAYU-py3.12/Lib/site-packages/lightrag/**)",
       "Bash(del SPRINT_9_FEATURES_9.1_9.2_IMPLEMENTATION_SUMMARY.md SPRINT_9_SUBAGENT2_IMPLEMENTATION_SUMMARY.md SPRINT_9_SUBAGENT4_SUMMARY.md)"
     ],
     "deny": [],
     "ask": [
-      "Bash(git push:*)",
       "Bash(git reset --hard:*)",
-      "Bash(git clean -fd:*)",
       "Bash(git rm:*)",
       "Bash(rm:*)",
       "Bash(rmdir:*)",
