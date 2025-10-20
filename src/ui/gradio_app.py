@@ -42,7 +42,7 @@ logger = structlog.get_logger(__name__)
 # API Configuration
 API_BASE_URL = f"http://localhost:{settings.api_port}"
 CHAT_ENDPOINT = f"{API_BASE_URL}/api/v1/chat/"
-HEALTH_ENDPOINT = f"{API_BASE_URL}/health/memory"
+HEALTH_ENDPOINT = f"{API_BASE_URL}/health"  # Use main health endpoint instead
 
 
 class GradioApp:
