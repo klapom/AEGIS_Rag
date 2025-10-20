@@ -306,20 +306,69 @@ class LightRAGWrapper:
         """
         await self._ensure_initialized()
 
-        logger.info("lightrag_query", query=query[:100], mode=mode)
+        logger.info("🔍 [QUERY START] lightrag_query", query=query, mode=mode)
 
         try:
             # Import QueryParam
             from lightrag import QueryParam
 
+            # 🔍 ULTRATHINK: Check LightRAG internal state before query
+            logger.info("🔍 [PRE-QUERY CHECK] Checking LightRAG state before query")
+
+            # Check if graph has entities
+            try:
+                stats = await self.get_stats()
+                logger.info("🔍 [GRAPH STATS]", **stats)
+
+                if stats.get("entity_count", 0) == 0:
+                    logger.warning("⚠️ [NO ENTITIES] Graph is empty! Query will likely return empty answer.")
+            except Exception as e:
+                logger.warning("🔍 [STATS CHECK FAILED]", error=str(e))
+
+            # 🔍 ULTRATHINK: Log QueryParam details
+            query_param = QueryParam(mode=mode)
+            logger.info(
+                "🔍 [QUERY PARAM]",
+                mode=mode,
+                param_type=type(query_param).__name__,
+                param_attrs=dir(query_param),
+            )
+
+            # 🔍 ULTRATHINK: Log aquery call details
+            logger.info(
+                "🔍 [CALLING AQUERY] About to call self.rag.aquery()",
+                rag_instance=str(type(self.rag).__name__),
+                rag_working_dir=str(self.working_dir),
+                rag_llm_func=str(self.rag.llm_model_func if hasattr(self.rag, 'llm_model_func') else 'NOT SET'),
+                rag_embedding_func=str(type(self.rag.embedding_func).__name__ if hasattr(self.rag, 'embedding_func') else 'NOT SET'),
+            )
+
             # Query LightRAG
             # - local: Entity-level retrieval (specific entities and relationships)
             # - global: Topic-level retrieval (high-level summaries, communities)
             # - hybrid: Combined local + global
+            logger.info("🔍 [AQUERY] Calling rag.aquery() now...")
             answer = await self.rag.aquery(
                 query=query,
-                param=QueryParam(mode=mode),
+                param=query_param,
             )
+            logger.info(
+                "🔍 [AQUERY COMPLETE] rag.aquery() returned",
+                answer_type=type(answer).__name__,
+                answer_length=len(answer) if answer else 0,
+                answer_is_empty=(not answer or answer.strip() == ""),
+                answer_preview=(answer[:200] if answer else "EMPTY"),
+                answer_full=answer,  # Full answer for debugging
+            )
+
+            # 🔍 ULTRATHINK: Check answer content
+            if not answer or answer.strip() == "":
+                logger.error(
+                    "❌ [EMPTY ANSWER] aquery() returned empty answer!",
+                    query=query,
+                    mode=mode,
+                    answer_repr=repr(answer),
+                )
 
             # LightRAG returns a string answer
             # We need to parse/structure it for our response
@@ -338,16 +387,24 @@ class LightRAGWrapper:
             )
 
             logger.info(
-                "lightrag_query_complete",
+                "✅ [QUERY COMPLETE] lightrag_query_complete",
                 query=query[:100],
                 mode=mode,
                 answer_length=len(answer) if answer else 0,
+                result_has_answer=bool(result.answer),
             )
 
             return result
 
         except Exception as e:
-            logger.error("lightrag_query_failed", query=query[:100], mode=mode, error=str(e))
+            logger.error(
+                "❌ [QUERY FAILED] lightrag_query_failed",
+                query=query[:100],
+                mode=mode,
+                error=str(e),
+                error_type=type(e).__name__,
+                traceback=str(e.__traceback__) if hasattr(e, '__traceback__') else None,
+            )
             raise
 
     async def get_stats(self) -> dict[str, Any]:

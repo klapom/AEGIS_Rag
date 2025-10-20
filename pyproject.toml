@@ -51,7 +51,7 @@ sentence-transformers = "^3.3.1"  # HuggingFace cross-encoder models
 
 # Evaluation (Sprint 3: RAGAS)
 ragas = "^0.3.7"  # RAG evaluation framework (0.3.7 for better Ollama support)
-datasets = "^3.2.0"  # HuggingFace datasets for evaluation
+datasets = "^4.0.0"  # HuggingFace datasets for evaluation (>=4.0 required by ragas 0.3.7)
 
 # Utilities
 python-dotenv = "^1.0.0"
@@ -61,6 +61,8 @@ httpx = "^0.27.0"
 aiofiles = "^24.1.0"
 pyyaml = "^6.0.0"
 python-multipart = "^0.0.9"
+numpy = "^1.26.0"  # For vector operations in consolidation
+apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
 
 # Monitoring (Sprint 2: Metrics)
 prometheus-client = "^0.21.0"
