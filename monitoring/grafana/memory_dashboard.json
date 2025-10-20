@@ -1,0 +1,355 @@
+{
+  "dashboard": {
+    "title": "AEGIS RAG - Memory System Health",
+    "description": "3-Layer Memory Architecture Monitoring Dashboard",
+    "tags": ["aegis-rag", "memory", "monitoring"],
+    "timezone": "browser",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Memory Capacity by Layer",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "memory_redis_capacity",
+            "legendFormat": "Redis (Layer 1)",
+            "refId": "A"
+          },
+          {
+            "expr": "memory_qdrant_capacity",
+            "legendFormat": "Qdrant (Layer 2)",
+            "refId": "B"
+          },
+          {
+            "expr": "memory_graphiti_capacity",
+            "legendFormat": "Graphiti (Layer 3)",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Capacity (0-1)",
+            "format": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.8],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "name": "High Memory Capacity Alert"
+        }
+      },
+      {
+        "id": 2,
+        "title": "Memory Entry Counts",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "memory_redis_entries_total",
+            "legendFormat": "Redis Entries",
+            "refId": "A"
+          },
+          {
+            "expr": "memory_qdrant_entries_total",
+            "legendFormat": "Qdrant Vectors",
+            "refId": "B"
+          },
+          {
+            "expr": "memory_graphiti_entries_total",
+            "legendFormat": "Graphiti Nodes",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Entry Count",
+            "format": "short",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Redis Latency (p95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_redis_read_latency_seconds_bucket[5m]))",
+            "legendFormat": "Read p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_redis_write_latency_seconds_bucket[5m]))",
+            "legendFormat": "Write p95",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Latency (seconds)",
+            "format": "s",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Qdrant Latency (p95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 8,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_qdrant_search_latency_seconds_bucket[5m]))",
+            "legendFormat": "Search p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_qdrant_upsert_latency_seconds_bucket[5m]))",
+            "legendFormat": "Upsert p95",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Latency (seconds)",
+            "format": "s",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Graphiti Latency (p95)",
+        "type": "graph",
+        "gridPos": {
+          "x": 16,
+          "y": 8,
+          "w": 8,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_graphiti_query_latency_seconds_bucket[5m]))",
+            "legendFormat": "Query p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(memory_graphiti_add_latency_seconds_bucket[5m]))",
+            "legendFormat": "Add p95",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Latency (seconds)",
+            "format": "s",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate by Layer",
+        "type": "graph",
+        "gridPos": {
+          "x": 0,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(memory_cache_hits_total{layer=\"redis\"}[5m]) / (rate(memory_cache_hits_total{layer=\"redis\"}[5m]) + rate(memory_cache_misses_total{layer=\"redis\"}[5m]))",
+            "legendFormat": "Redis Hit Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(memory_cache_hits_total{layer=\"qdrant\"}[5m]) / (rate(memory_cache_hits_total{layer=\"qdrant\"}[5m]) + rate(memory_cache_misses_total{layer=\"qdrant\"}[5m]))",
+            "legendFormat": "Qdrant Hit Rate",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(memory_cache_hits_total{layer=\"graphiti\"}[5m]) / (rate(memory_cache_hits_total{layer=\"graphiti\"}[5m]) + rate(memory_cache_misses_total{layer=\"graphiti\"}[5m]))",
+            "legendFormat": "Graphiti Hit Rate",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Hit Rate",
+            "format": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Memory Operations Rate",
+        "type": "graph",
+        "gridPos": {
+          "x": 12,
+          "y": 16,
+          "w": 12,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(memory_operations_total{layer=\"redis\"}[5m])",
+            "legendFormat": "Redis - {{operation}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(memory_operations_total{layer=\"qdrant\"}[5m])",
+            "legendFormat": "Qdrant - {{operation}}",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(memory_operations_total{layer=\"graphiti\"}[5m])",
+            "legendFormat": "Graphiti - {{operation}}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Operations/sec",
+            "format": "ops",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Memory Layer Health Status",
+        "type": "stat",
+        "gridPos": {
+          "x": 0,
+          "y": 24,
+          "w": 8,
+          "h": 4
+        },
+        "targets": [
+          {
+            "expr": "memory_layer_health{layer=\"redis\"}",
+            "legendFormat": "Redis",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value_and_name"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "value": 0,
+                  "color": "red"
+                },
+                {
+                  "value": 1,
+                  "color": "green"
+                }
+              ]
+            },
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Unhealthy"
+                  },
+                  "1": {
+                    "text": "Healthy"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Error Rate by Layer",
+        "type": "graph",
+        "gridPos": {
+          "x": 8,
+          "y": 24,
+          "w": 16,
+          "h": 8
+        },
+        "targets": [
+          {
+            "expr": "rate(memory_operation_errors_total[5m])",
+            "legendFormat": "{{layer}} - {{operation}} - {{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Errors/sec",
+            "format": "ops",
+            "min": 0
+          }
+        ]
+      }
+    ],
+    "refresh": "10s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": []
+  }
+}

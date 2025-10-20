@@ -1,0 +1,225 @@
+# Prometheus Alert Rules for AEGIS RAG Memory System
+# Sprint 9 Feature 9.5 - Memory Health Monitoring
+
+groups:
+  - name: memory_capacity_alerts
+    interval: 30s
+    rules:
+      # Redis Capacity Alerts
+      - alert: RedisMemoryCapacityHigh
+        expr: memory_redis_capacity > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          layer: redis
+          component: memory
+        annotations:
+          summary: "Redis memory capacity exceeds 80%"
+          description: "Redis memory utilization is at {{ $value | humanizePercentage }}. Eviction may be triggered soon."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-capacity-high"
+
+      - alert: RedisMemoryCapacityCritical
+        expr: memory_redis_capacity > 0.9
+        for: 1m
+        labels:
+          severity: critical
+          layer: redis
+          component: memory
+        annotations:
+          summary: "Redis memory capacity exceeds 90%"
+          description: "Redis memory utilization is at {{ $value | humanizePercentage }}. Immediate action required."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-capacity-critical"
+
+      # Qdrant Capacity Alerts
+      - alert: QdrantMemoryCapacityHigh
+        expr: memory_qdrant_capacity > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          layer: qdrant
+          component: memory
+        annotations:
+          summary: "Qdrant memory capacity exceeds 80%"
+          description: "Qdrant memory utilization is at {{ $value | humanizePercentage }}."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/qdrant-capacity-high"
+
+      - alert: QdrantMemoryCapacityCritical
+        expr: memory_qdrant_capacity > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          layer: qdrant
+          component: memory
+        annotations:
+          summary: "Qdrant memory capacity exceeds 90%"
+          description: "Qdrant memory utilization is at {{ $value | humanizePercentage }}. Scale up vector storage."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/qdrant-capacity-critical"
+
+      # Graphiti Capacity Alerts
+      - alert: GraphitiMemoryCapacityHigh
+        expr: memory_graphiti_capacity > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          layer: graphiti
+          component: memory
+        annotations:
+          summary: "Graphiti memory capacity exceeds 80%"
+          description: "Graphiti memory utilization is at {{ $value | humanizePercentage }}."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/graphiti-capacity-high"
+
+      - alert: GraphitiMemoryCapacityCritical
+        expr: memory_graphiti_capacity > 0.9
+        for: 2m
+        labels:
+          severity: critical
+          layer: graphiti
+          component: memory
+        annotations:
+          summary: "Graphiti memory capacity exceeds 90%"
+          description: "Graphiti memory utilization is at {{ $value | humanizePercentage }}. Scale up graph storage."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/graphiti-capacity-critical"
+
+  - name: memory_latency_alerts
+    interval: 30s
+    rules:
+      # Redis Latency Alerts
+      - alert: RedisReadLatencyHigh
+        expr: histogram_quantile(0.95, rate(memory_redis_read_latency_seconds_bucket[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          layer: redis
+          component: memory
+          operation: read
+        annotations:
+          summary: "Redis read latency p95 exceeds 50ms"
+          description: "Redis p95 read latency is {{ $value | humanizeDuration }}. Performance degradation detected."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-latency-high"
+
+      - alert: RedisWriteLatencyHigh
+        expr: histogram_quantile(0.95, rate(memory_redis_write_latency_seconds_bucket[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          layer: redis
+          component: memory
+          operation: write
+        annotations:
+          summary: "Redis write latency p95 exceeds 50ms"
+          description: "Redis p95 write latency is {{ $value | humanizeDuration }}. Performance degradation detected."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-latency-high"
+
+      # Qdrant Latency Alerts
+      - alert: QdrantSearchLatencyHigh
+        expr: histogram_quantile(0.95, rate(memory_qdrant_search_latency_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          layer: qdrant
+          component: memory
+          operation: search
+        annotations:
+          summary: "Qdrant search latency p95 exceeds 1 second"
+          description: "Qdrant p95 search latency is {{ $value | humanizeDuration }}. Vector search may be slow."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/qdrant-latency-high"
+
+      - alert: QdrantUpsertLatencyHigh
+        expr: histogram_quantile(0.95, rate(memory_qdrant_upsert_latency_seconds_bucket[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          layer: qdrant
+          component: memory
+          operation: upsert
+        annotations:
+          summary: "Qdrant upsert latency p95 exceeds 2 seconds"
+          description: "Qdrant p95 upsert latency is {{ $value | humanizeDuration }}. Vector indexing may be slow."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/qdrant-latency-high"
+
+      # Graphiti Latency Alerts
+      - alert: GraphitiQueryLatencyHigh
+        expr: histogram_quantile(0.95, rate(memory_graphiti_query_latency_seconds_bucket[5m])) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          layer: graphiti
+          component: memory
+          operation: query
+        annotations:
+          summary: "Graphiti query latency p95 exceeds 2 seconds"
+          description: "Graphiti p95 query latency is {{ $value | humanizeDuration }}. Graph queries may be slow."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/graphiti-latency-high"
+
+  - name: memory_health_alerts
+    interval: 30s
+    rules:
+      # Layer Health Alerts
+      - alert: RedisLayerUnhealthy
+        expr: memory_layer_health{layer="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          layer: redis
+          component: memory
+        annotations:
+          summary: "Redis memory layer is unhealthy"
+          description: "Redis layer health check is failing. Working memory is unavailable."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-unhealthy"
+
+      - alert: QdrantLayerUnhealthy
+        expr: memory_layer_health{layer="qdrant"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          layer: qdrant
+          component: memory
+        annotations:
+          summary: "Qdrant memory layer is unhealthy"
+          description: "Qdrant layer health check is failing. Episodic memory is unavailable."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/qdrant-unhealthy"
+
+      - alert: GraphitiLayerUnhealthy
+        expr: memory_layer_health{layer="graphiti"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          layer: graphiti
+          component: memory
+        annotations:
+          summary: "Graphiti memory layer is unhealthy"
+          description: "Graphiti layer health check is failing. Long-term memory is unavailable."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/graphiti-unhealthy"
+
+  - name: memory_error_alerts
+    interval: 30s
+    rules:
+      # Error Rate Alerts
+      - alert: MemoryOperationErrorRateHigh
+        expr: rate(memory_operation_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory operation error rate is high"
+          description: "Memory operations are failing at {{ $value | humanize }} errors/sec for {{ $labels.layer }}/{{ $labels.operation }}."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/memory-errors-high"
+
+  - name: memory_cache_alerts
+    interval: 30s
+    rules:
+      # Cache Hit Rate Alerts
+      - alert: RedisCacheHitRateLow
+        expr: |
+          rate(memory_cache_hits_total{layer="redis"}[5m]) /
+          (rate(memory_cache_hits_total{layer="redis"}[5m]) + rate(memory_cache_misses_total{layer="redis"}[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          layer: redis
+          component: memory
+        annotations:
+          summary: "Redis cache hit rate is below 50%"
+          description: "Redis cache hit rate is {{ $value | humanizePercentage }}. Consider increasing TTL or cache size."
+          runbook_url: "https://docs.aegis-rag.com/runbooks/redis-hit-rate-low"

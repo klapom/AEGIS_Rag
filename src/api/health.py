@@ -13,8 +13,14 @@ from src.core.config import get_settings
 from src.core.logging import get_logger
 from src.core.models import HealthResponse, HealthStatus, ServiceHealth
 
+# Import memory health router (Sprint 9 Feature 9.5)
+from src.api.health.memory_health import router as memory_health_router
+
 logger = get_logger(__name__)
 router = APIRouter(tags=["health"])
+
+# Include memory health endpoints
+router.include_router(memory_health_router)
 
 
 async def check_qdrant() -> ServiceHealth:
