@@ -87,13 +87,14 @@ class GradioApp:
         logger.info("chat_message_received", message=message[:100], session_id=self.session_id)
 
         try:
-            # Call chat API
+            # Call chat API (Feature 10.7: include tool calls)
             response = await self.client.post(
                 CHAT_ENDPOINT,
                 json={
                     "query": message,
                     "session_id": self.session_id,
-                    "include_sources": True
+                    "include_sources": True,
+                    "include_tool_calls": True  # Feature 10.7
                 }
             )
 
@@ -101,9 +102,12 @@ class GradioApp:
                 data = response.json()
                 answer = data["answer"]
                 sources = data.get("sources", [])
+                tool_calls = data.get("tool_calls", [])  # Feature 10.7
 
-                # Format answer with sources
-                formatted_answer = self._format_answer_with_sources(answer, sources)
+                # Format answer with sources and tool calls (Feature 10.7)
+                formatted_answer = self._format_answer_with_sources_and_tools(
+                    answer, sources, tool_calls
+                )
 
                 # Add to history
                 history.append([message, formatted_answer])
@@ -112,6 +116,7 @@ class GradioApp:
                     "chat_response_success",
                     answer_length=len(answer),
                     sources_count=len(sources),
+                    tool_calls_count=len(tool_calls),  # Feature 10.7
                     session_id=self.session_id
                 )
 
@@ -128,20 +133,55 @@ class GradioApp:
             logger.error("chat_exception", error=str(e), session_id=self.session_id)
             return history, ""
 
-    def _format_answer_with_sources(self, answer: str, sources: list[dict]) -> str:
-        """Format answer with source citations.
+    def _format_answer_with_sources_and_tools(
+        self,
+        answer: str,
+        sources: list[dict],
+        tool_calls: list[dict]
+    ) -> str:
+        """Format answer with source citations and MCP tool call information (Feature 10.7).
 
         Args:
             answer: Generated answer
             sources: List of source documents
+            tool_calls: List of MCP tool calls
 
         Returns:
-            Formatted answer string with citations
+            Formatted answer string with citations and tool calls
         """
         formatted = answer
 
+        # Add tool calls section (Feature 10.7)
+        if tool_calls:
+            formatted += "\n\n---\n**🔧 MCP Tool Calls:**\n"
+            for i, call in enumerate(tool_calls, 1):
+                tool_name = call.get("tool_name", "unknown")
+                server = call.get("server", "unknown")
+                duration = call.get("duration_ms", 0.0)
+                success = call.get("success", True)
+                error = call.get("error")
+
+                # Format each tool call
+                status_icon = "✅" if success else "❌"
+                formatted += f"{i}. {status_icon} **{tool_name}** ({server})\n"
+                formatted += f"   ⏱️ {duration:.1f}ms"
+
+                if error:
+                    formatted += f"\n   ⚠️ Error: {error}"
+                else:
+                    # Show result preview (first 100 chars)
+                    result = call.get("result")
+                    if result:
+                        result_preview = str(result)[:100]
+                        if len(str(result)) > 100:
+                            result_preview += "..."
+                        formatted += f"\n   📄 Result: {result_preview}"
+
+                formatted += "\n"
+
+        # Add sources section
         if sources:
-            formatted += "\n\n---\n**📚 Quellen:**\n"
+            formatted += "\n---\n**📚 Quellen:**\n"
             for i, source in enumerate(sources[:3], 1):  # Top 3 sources
                 title = source.get("title", "Unknown")
                 score = source.get("score", 0.0)

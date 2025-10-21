@@ -52,13 +52,18 @@ class ChatRequest(BaseModel):
         default=True,
         description="Include source documents in response"
     )
+    include_tool_calls: bool = Field(
+        default=False,
+        description="Include MCP tool call information in response"
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "query": "Was ist AEGIS RAG?",
                 "session_id": "user-123-session",
-                "include_sources": True
+                "include_sources": True,
+                "include_tool_calls": False
             }
         }
 
@@ -73,6 +78,18 @@ class SourceDocument(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
+class ToolCallInfo(BaseModel):
+    """MCP tool call information."""
+
+    tool_name: str = Field(..., description="Name of the MCP tool called")
+    server: str = Field(..., description="MCP server name")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool call arguments")
+    result: Any | None = Field(default=None, description="Tool call result")
+    duration_ms: float = Field(..., description="Tool call duration in milliseconds")
+    success: bool = Field(..., description="Whether tool call succeeded")
+    error: str | None = Field(default=None, description="Error message if failed")
+
+
 class ChatResponse(BaseModel):
     """Chat response model."""
 
@@ -83,6 +100,10 @@ class ChatResponse(BaseModel):
     sources: list[SourceDocument] = Field(
         default_factory=list,
         description="Source documents used for answer generation"
+    )
+    tool_calls: list[ToolCallInfo] = Field(
+        default_factory=list,
+        description="MCP tool calls made during query processing"
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
@@ -102,6 +123,17 @@ class ChatResponse(BaseModel):
                         "title": "CLAUDE.md",
                         "source": "docs/core/CLAUDE.md",
                         "score": 0.92
+                    }
+                ],
+                "tool_calls": [
+                    {
+                        "tool_name": "read_file",
+                        "server": "filesystem-server",
+                        "arguments": {"path": "/docs/CLAUDE.md"},
+                        "result": {"content": "# CLAUDE.md - AegisRAG..."},
+                        "duration_ms": 45.2,
+                        "success": True,
+                        "error": None
                     }
                 ],
                 "metadata": {
@@ -179,6 +211,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
         if request.include_sources:
             sources = _extract_sources(result)
 
+        # Extract tool calls if requested
+        tool_calls = []
+        if request.include_tool_calls:
+            tool_calls = _extract_tool_calls(result)
+
         # Extract metadata
         metadata = result.get("metadata", {})
 
@@ -189,6 +226,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             session_id=session_id,
             intent=result.get("intent"),
             sources=sources,
+            tool_calls=tool_calls,
             metadata=metadata
         )
 
@@ -392,3 +430,35 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
 
     logger.debug("sources_extracted", count=len(sources))
     return sources[:5]  # Return top 5 sources
+
+
+def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
+    """Extract MCP tool call information from coordinator result.
+
+    Args:
+        result: Result dictionary from CoordinatorAgent
+
+    Returns:
+        List of ToolCallInfo objects
+    """
+    tool_calls: list[ToolCallInfo] = []
+
+    # Check for tool calls in metadata
+    metadata = result.get("metadata", {})
+    tool_call_data = metadata.get("tool_calls", [])
+
+    for call in tool_call_data:
+        if isinstance(call, dict):
+            tool_info = ToolCallInfo(
+                tool_name=call.get("tool_name", "unknown"),
+                server=call.get("server", "unknown"),
+                arguments=call.get("arguments", {}),
+                result=call.get("result"),
+                duration_ms=call.get("duration_ms", 0.0),
+                success=call.get("success", True),
+                error=call.get("error")
+            )
+            tool_calls.append(tool_info)
+
+    logger.debug("tool_calls_extracted", count=len(tool_calls))
+    return tool_calls
