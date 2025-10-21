@@ -61,6 +61,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         project=settings.langsmith_project if tracing_enabled else None,
     )
 
+    # Sprint 10: Initialize BM25 model on startup
+    try:
+        from src.api.v1.retrieval import get_hybrid_search
+
+        hybrid_search = get_hybrid_search()
+        await hybrid_search.prepare_bm25_index()
+        logger.info("bm25_initialized_on_startup", status="success")
+    except Exception as e:
+        # Non-fatal: BM25 can be initialized later via API
+        logger.warning("bm25_initialization_failed", error=str(e), note="Can be initialized via /api/v1/retrieval/prepare-bm25")
+
     # TODO: Initialize database connections, load models, etc.
 
     yield
