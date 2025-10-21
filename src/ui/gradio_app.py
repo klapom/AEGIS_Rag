@@ -54,7 +54,8 @@ class GradioApp:
     def __init__(self):
         """Initialize Gradio app."""
         self.session_id = str(uuid.uuid4())
-        self.client = httpx.AsyncClient(timeout=30.0)
+        # Increased timeout for document upload (embedding generation can take 60+ seconds)
+        self.client = httpx.AsyncClient(timeout=180.0)
 
         logger.info(
             "gradio_app_initialized",
@@ -147,11 +148,12 @@ class GradioApp:
 
         return formatted
 
-    async def upload_document(self, file) -> str:
-        """Upload and index a document.
+    async def upload_document(self, file, progress=gr.Progress()) -> str:
+        """Upload and index a document with progress tracking.
 
         Args:
             file: Uploaded file object from Gradio
+            progress: Gradio Progress tracker
 
         Returns:
             Status message
@@ -162,23 +164,66 @@ class GradioApp:
         logger.info("document_upload_started", filename=file.name)
 
         try:
+            # Progress: Start upload
+            progress(0, desc="📤 Datei wird hochgeladen...")
+
             # Call ingestion API
             files = {"file": (file.name, open(file.name, "rb"), "application/octet-stream")}
 
-            response = await self.client.post(
-                f"{API_BASE_URL}/api/v1/retrieval/upload",
-                files=files
-            )
+            # Progress: Processing
+            progress(0.2, desc="📄 Dokument wird geladen...")
+
+            # Start async task for progress simulation
+            async def simulate_progress():
+                """Simulate progress for long-running embedding generation."""
+                steps = [
+                    (0.3, "✂️ Text wird in Chunks aufgeteilt..."),
+                    (0.5, "🧠 Embeddings werden generiert (kann 60+ Sek. dauern)..."),
+                    (0.7, "🔍 Chunks werden in Qdrant indexiert..."),
+                    (0.9, "✅ Finalisierung...")
+                ]
+                for prog, desc in steps:
+                    await asyncio.sleep(15)  # Update every 15 seconds
+                    progress(prog, desc=desc)
+
+            # Start progress simulation
+            progress_task = asyncio.create_task(simulate_progress())
+
+            try:
+                response = await self.client.post(
+                    f"{API_BASE_URL}/api/v1/retrieval/upload",
+                    files=files
+                )
+            finally:
+                # Cancel progress simulation
+                progress_task.cancel()
+                try:
+                    await progress_task
+                except asyncio.CancelledError:
+                    pass
+
+            progress(1.0, desc="✅ Upload abgeschlossen!")
 
             if response.status_code == 200:
                 data = response.json()
                 chunks = data.get("chunks_created", 0)
+                embeddings = data.get("embeddings_generated", 0)
+                duration = data.get("duration_seconds", 0)
+
                 logger.info("document_upload_success", filename=file.name, chunks=chunks)
-                return f"✅ Dokument '{Path(file.name).name}' erfolgreich indexiert!\n📊 {chunks} Chunks erstellt."
+                return f"""✅ Dokument '{Path(file.name).name}' erfolgreich indexiert!
+
+📊 Statistik:
+  • {chunks} Chunks erstellt
+  • {embeddings} Embeddings generiert
+  • ⏱️ Dauer: {duration:.1f} Sekunden"""
             else:
                 logger.error("document_upload_failed", status=response.status_code)
                 return f"❌ Fehler beim Hochladen: {response.text}"
 
+        except asyncio.CancelledError:
+            logger.warning("document_upload_cancelled", filename=file.name)
+            return "⚠️ Upload wurde abgebrochen."
         except Exception as e:
             logger.error("document_upload_exception", error=str(e))
             return f"❌ Fehler beim Hochladen: {str(e)}"
