@@ -304,23 +304,25 @@ async def test_relationship_extraction_e2e(ollama_client_real, neo4j_driver):
 async def test_graph_construction_full_pipeline_e2e(neo4j_driver):
     """E2E Test 5.3: Full graph construction pipeline with LightRAG.
 
+    Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
+    Previously used qwen3:0.6b which produced malformed entity extraction.
+
     Priority: P0 (CRITICAL)
     Story Points: 2 SP
-    Services: Ollama (llama3.2:8b), Neo4j, LightRAG
+    Services: Ollama (llama3.2:3b), Neo4j, LightRAG
 
     Critical Path:
     - Document ingestion via LightRAG
     - Automatic entity/relationship extraction
     - Graph construction in Neo4j
     - Verification of graph structure
+    - Explicit entity/relationship count assertions
 
-    NOTE: LightRAG requires 32k context window. Using qwen3:0.6b with num_ctx=32768.
-    qwen3:4b requires 10GB RAM (only 5.7GB available). Testing qwen3:0.6b (32K context, 522MB).
     """
     from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 
     lightrag = LightRAGWrapper(
-        llm_model="qwen3:0.6b",
+        llm_model="llama3.2:3b",
         embedding_model="nomic-embed-text",
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
@@ -360,24 +362,28 @@ async def test_graph_construction_full_pipeline_e2e(neo4j_driver):
 @pytest.mark.asyncio
 @pytest.mark.integration
 @pytest.mark.sprint8
-@pytest.mark.skip(reason="LightRAG query requires model >3B (qwen3:0.6b produces malformed entity extraction, qwen3:4b needs 10GB RAM but only 7.7GB available). Infrastructure constraint: WSL2 Docker limited to 9GB total. See docs/LIGHTRAG_ROOT_CAUSE_ANALYSIS.md")
+@pytest.mark.slow
 async def test_local_search_entity_level_e2e(neo4j_driver):
     """E2E Test 5.4: LightRAG local search (entity-level retrieval).
 
+    Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
+    Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
     Priority: P1 (HIGH)
     Story Points: 1 SP
-    Services: Ollama, Neo4j, LightRAG
+    Services: Ollama (llama3.2:3b), Neo4j, LightRAG
 
     Critical Path:
     - Insert documents with entities
     - Query using local search mode (entity-level)
     - Verify relevant entities retrieved
+    - Verify graph statistics (entities/relationships)
 
     """
     from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 
     lightrag = LightRAGWrapper(
-        llm_model="qwen3:0.6b",
+        llm_model="llama3.2:3b",
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
         neo4j_password="aegis-rag-neo4j-password",
@@ -387,6 +393,11 @@ async def test_local_search_entity_level_e2e(neo4j_driver):
     await lightrag.insert_documents([
         {"text": "Python is a programming language created by Guido van Rossum."}
     ])
+
+    # Verify graph statistics after insertion
+    stats = await lightrag.get_stats()
+    assert stats["entity_count"] > 0, f"No entities extracted (got {stats['entity_count']})"
+    assert stats["relationship_count"] >= 0, "Relationship count should be non-negative"
 
     # Query with local search (entity-level)
     result = await lightrag.query_graph(
@@ -400,6 +411,7 @@ async def test_local_search_entity_level_e2e(neo4j_driver):
         f"Answer doesn't mention relevant entities: {result.answer}"
 
     print(f"[PASS] Test 5.4: Local search returned: {result.answer[:100]}")
+    print(f"[PASS] Test 5.4: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
 
 
 # ============================================================================
@@ -410,24 +422,28 @@ async def test_local_search_entity_level_e2e(neo4j_driver):
 @pytest.mark.asyncio
 @pytest.mark.integration
 @pytest.mark.sprint8
-@pytest.mark.skip(reason="LightRAG query requires model >3B (qwen3:0.6b produces malformed entity extraction, qwen3:4b needs 10GB RAM but only 7.7GB available). Infrastructure constraint: WSL2 Docker limited to 9GB total. See docs/LIGHTRAG_ROOT_CAUSE_ANALYSIS.md")
+@pytest.mark.slow
 async def test_global_search_topic_level_e2e(neo4j_driver):
     """E2E Test 5.5: LightRAG global search (topic-level retrieval).
 
+    Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
+    Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
     Priority: P1 (HIGH)
     Story Points: 1 SP
-    Services: Ollama, Neo4j, LightRAG
+    Services: Ollama (llama3.2:3b), Neo4j, LightRAG
 
     Critical Path:
     - Insert documents with topics
     - Query using global search mode (topic-level)
     - Verify topic summaries retrieved
+    - Verify graph statistics (entities/relationships)
 
     """
     from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 
     lightrag = LightRAGWrapper(
-        llm_model="qwen3:0.6b",
+        llm_model="llama3.2:3b",
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
         neo4j_password="aegis-rag-neo4j-password",
@@ -437,6 +453,11 @@ async def test_global_search_topic_level_e2e(neo4j_driver):
     await lightrag.insert_documents([
         {"text": "Machine learning is a field of AI. Deep learning uses neural networks."}
     ])
+
+    # Verify graph statistics after insertion
+    stats = await lightrag.get_stats()
+    assert stats["entity_count"] > 0, f"No entities extracted (got {stats['entity_count']})"
+    assert stats["relationship_count"] >= 0, "Relationship count should be non-negative"
 
     # Query with global search (topic-level)
     result = await lightrag.query_graph(
@@ -449,6 +470,7 @@ async def test_global_search_topic_level_e2e(neo4j_driver):
     assert len(result.answer) > 20, "Answer too short for global search"
 
     print(f"[PASS] Test 5.5: Global search returned: {result.answer[:100]}")
+    print(f"[PASS] Test 5.5: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
 
 
 # ============================================================================
@@ -459,24 +481,28 @@ async def test_global_search_topic_level_e2e(neo4j_driver):
 @pytest.mark.asyncio
 @pytest.mark.integration
 @pytest.mark.sprint8
-@pytest.mark.skip(reason="LightRAG query requires model >3B (qwen3:0.6b produces malformed entity extraction, qwen3:4b needs 10GB RAM but only 7.7GB available). Infrastructure constraint: WSL2 Docker limited to 9GB total. See docs/LIGHTRAG_ROOT_CAUSE_ANALYSIS.md")
+@pytest.mark.slow
 async def test_hybrid_search_local_global_e2e(neo4j_driver):
     """E2E Test 5.6: LightRAG hybrid search (local + global).
 
+    Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
+    Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
     Priority: P1 (HIGH)
     Story Points: 1 SP
-    Services: Ollama, Neo4j, LightRAG
+    Services: Ollama (llama3.2:3b), Neo4j, LightRAG
 
     Critical Path:
     - Insert documents
     - Query using hybrid mode (combines local + global)
     - Verify both entity-level and topic-level information
+    - Verify graph statistics (entities/relationships)
 
     """
     from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 
     lightrag = LightRAGWrapper(
-        llm_model="qwen3:0.6b",
+        llm_model="llama3.2:3b",
         neo4j_uri="bolt://localhost:7687",
         neo4j_user="neo4j",
         neo4j_password="aegis-rag-neo4j-password",
@@ -486,6 +512,11 @@ async def test_hybrid_search_local_global_e2e(neo4j_driver):
     await lightrag.insert_documents([
         {"text": "RAG combines retrieval with generation. It improves LLM accuracy."}
     ])
+
+    # Verify graph statistics after insertion
+    stats = await lightrag.get_stats()
+    assert stats["entity_count"] > 0, f"No entities extracted (got {stats['entity_count']})"
+    assert stats["relationship_count"] >= 0, "Relationship count should be non-negative"
 
     # Query with hybrid search
     result = await lightrag.query_graph(
@@ -498,6 +529,7 @@ async def test_hybrid_search_local_global_e2e(neo4j_driver):
     assert result.mode == "hybrid", f"Expected hybrid mode, got {result.mode}"
 
     print(f"[PASS] Test 5.6: Hybrid search returned: {result.answer[:100]}")
+    print(f"[PASS] Test 5.6: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
 
 
 # ============================================================================
