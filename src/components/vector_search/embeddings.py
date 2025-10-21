@@ -2,116 +2,25 @@
 
 This module provides embedding generation using Ollama's nomic-embed-text model
 with automatic batching, caching, and error handling.
+
+Sprint 11 Update: Now uses UnifiedEmbeddingService for shared cache across components.
 """
 
-import hashlib
-from collections import OrderedDict
 from typing import Any
 
 import structlog
-from llama_index.embeddings.ollama import OllamaEmbedding
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
-from src.core.config import settings
-from src.core.exceptions import LLMError
+from src.components.shared.embedding_service import get_embedding_service as get_unified_service
 
 logger = structlog.get_logger(__name__)
 
 
-class LRUCache:
-    """Least Recently Used (LRU) cache with size limit.
-
-    Prevents unbounded memory growth by evicting least recently used items
-    when cache reaches max_size.
-    """
-
-    def __init__(self, max_size: int = 10000):
-        """Initialize LRU cache.
-
-        Args:
-            max_size: Maximum number of items to cache (default: 10000)
-        """
-        self.cache: OrderedDict[str, list[float]] = OrderedDict()
-        self.max_size = max_size
-        self._hits = 0
-        self._misses = 0
-
-    def get(self, key: str) -> list[float] | None:
-        """Get item from cache.
-
-        Args:
-            key: Cache key
-
-        Returns:
-            Cached value or None if not found
-        """
-        if key in self.cache:
-            self._hits += 1
-            # Move to end (most recently used)
-            self.cache.move_to_end(key)
-            return self.cache[key]
-        self._misses += 1
-        return None
-
-    def set(self, key: str, value: list[float]) -> None:
-        """Add item to cache.
-
-        Args:
-            key: Cache key
-            value: Value to cache
-        """
-        if key in self.cache:
-            # Update existing item and move to end
-            self.cache.move_to_end(key)
-        self.cache[key] = value
-
-        # Evict least recently used item if cache is full
-        if len(self.cache) > self.max_size:
-            evicted_key, _ = self.cache.popitem(last=False)
-            logger.debug(
-                "Cache eviction",
-                evicted_key=evicted_key[:16],
-                cache_size=len(self.cache),
-                max_size=self.max_size,
-            )
-
-    def clear(self) -> None:
-        """Clear all cache entries."""
-        self.cache.clear()
-        self._hits = 0
-        self._misses = 0
-
-    def size(self) -> int:
-        """Get current cache size."""
-        return len(self.cache)
-
-    def __len__(self) -> int:
-        """Get current cache size (allows len(cache))."""
-        return len(self.cache)
-
-    def hit_rate(self) -> float:
-        """Calculate cache hit rate."""
-        total = self._hits + self._misses
-        return self._hits / total if total > 0 else 0.0
-
-    def stats(self) -> dict[str, Any]:
-        """Get cache statistics."""
-        return {
-            "size": len(self.cache),
-            "max_size": self.max_size,
-            "hits": self._hits,
-            "misses": self._misses,
-            "hit_rate": self.hit_rate(),
-        }
-
-
 class EmbeddingService:
-    """Production-ready embedding service with caching and batching."""
+    """Wrapper around UnifiedEmbeddingService for backward compatibility.
+
+    Sprint 11: This class now delegates to UnifiedEmbeddingService to enable
+    shared caching between Qdrant and LightRAG pipelines.
+    """
 
     def __init__(
         self,
@@ -127,50 +36,21 @@ class EmbeddingService:
             base_url: Ollama server URL (default: from settings)
             batch_size: Number of texts to embed in one batch (default: 32)
             enable_cache: Enable in-memory caching (default: True)
+
+        Note: model_name and base_url are ignored as UnifiedEmbeddingService
+        uses settings.ollama_base_url and "nomic-embed-text" by default.
         """
-        self.model_name = model_name or settings.ollama_model_embedding
-        self.base_url = base_url or settings.ollama_base_url
+        self.unified_service = get_unified_service()
         self.batch_size = batch_size
         self.enable_cache = enable_cache
 
-        # Initialize Ollama embedding model
-        self._embedding_model = OllamaEmbedding(
-            model_name=self.model_name,
-            base_url=self.base_url,
-            ollama_additional_kwargs={"temperature": 0},
-        )
-
-        # Cache for embeddings (LRU cache with bounded size)
-        self._cache = LRUCache(max_size=10000)
-
         logger.info(
-            "Embedding service initialized",
-            model=self.model_name,
-            base_url=self.base_url,
-            batch_size=self.batch_size,
-            cache_enabled=self.enable_cache,
-            cache_max_size=10000,
+            "embedding_service_initialized",
+            using_unified_service=True,
+            model=self.unified_service.model_name,
+            cache_enabled=enable_cache,
         )
 
-    def _get_cache_key(self, text: str) -> str:
-        """Generate cache key for text.
-
-        Uses SHA-256 for cache key generation (non-cryptographic use).
-        Previous MD5 usage flagged by Bandit security scan (B324).
-
-        Args:
-            text: Input text
-
-        Returns:
-            SHA-256 hash of text (hex digest)
-        """
-        return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
-    )
     async def embed_text(self, text: str) -> list[float]:
         """Generate embedding for a single text.
 
@@ -179,124 +59,19 @@ class EmbeddingService:
 
         Returns:
             Embedding vector (768-dim for nomic-embed-text)
-
-        Raises:
-            LLMError: If embedding generation fails
         """
-        # Check cache first
-        if self.enable_cache:
-            cache_key = self._get_cache_key(text)
-            cached = self._cache.get(cache_key)
-            if cached is not None:
-                logger.debug("Embedding cache hit", text_length=len(text))
-                return cached
+        return await self.unified_service.embed_single(text)
 
-        try:
-            # Generate embedding
-            embedding = await self._embedding_model.aget_text_embedding(text)
-
-            # Cache result
-            if self.enable_cache:
-                cache_key = self._get_cache_key(text)
-                self._cache.set(cache_key, embedding)
-
-            logger.debug(
-                "Embedding generated",
-                text_length=len(text),
-                embedding_dim=len(embedding),
-            )
-
-            return embedding
-
-        except Exception as e:
-            logger.error(
-                "Embedding generation failed",
-                text_length=len(text),
-                error=str(e),
-            )
-            raise LLMError(f"Failed to generate embedding: {e}") from e
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-    )
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for multiple texts in batches.
-
-        IMPORTANT: Maintains input order - embeddings[i] corresponds to texts[i].
 
         Args:
             texts: List of texts to embed
 
         Returns:
             List of embedding vectors in same order as input
-
-        Raises:
-            LLMError: If batch embedding fails
         """
-        if not texts:
-            return []
-
-        # Dictionary to store embeddings by index (preserves order)
-        embeddings_dict: dict[int, list[float]] = {}
-        cache_hits = 0
-        cache_misses = 0
-
-        # Separate cached and uncached texts
-        uncached_texts = []
-        uncached_indices = []
-
-        for idx, text in enumerate(texts):
-            if self.enable_cache:
-                cache_key = self._get_cache_key(text)
-                cached = self._cache.get(cache_key)
-                if cached is not None:
-                    embeddings_dict[idx] = cached
-                    cache_hits += 1
-                    continue
-
-            uncached_texts.append(text)
-            uncached_indices.append(idx)
-            cache_misses += 1
-
-        # Generate embeddings for uncached texts in batches
-        if uncached_texts:
-            try:
-                new_embeddings = []
-                # Process in batches
-                for i in range(0, len(uncached_texts), self.batch_size):
-                    batch = uncached_texts[i : i + self.batch_size]
-                    batch_embeddings = await self._embedding_model.aget_text_embedding_batch(batch)
-                    new_embeddings.extend(batch_embeddings)
-
-                # Map embeddings back to original indices and cache them
-                for uncached_idx, embedding in zip(uncached_indices, new_embeddings, strict=False):
-                    embeddings_dict[uncached_idx] = embedding
-
-                    # Cache result
-                    if self.enable_cache:
-                        text = texts[uncached_idx]
-                        cache_key = self._get_cache_key(text)
-                        self._cache.set(cache_key, embedding)
-
-                logger.info(
-                    "Batch embeddings generated",
-                    total_texts=len(texts),
-                    cache_hits=cache_hits,
-                    cache_misses=cache_misses,
-                    batches=(len(uncached_texts) + self.batch_size - 1) // self.batch_size,
-                )
-
-            except Exception as e:
-                logger.error(
-                    "Batch embedding failed",
-                    texts_count=len(uncached_texts),
-                    error=str(e),
-                )
-                raise LLMError(f"Failed to generate batch embeddings: {e}") from e
-
-        # Return embeddings in original order
-        return [embeddings_dict[i] for i in range(len(texts))]
+        return await self.unified_service.embed_batch(texts)
 
     def get_embedding_dimension(self) -> int:
         """Get embedding dimension for the model.
@@ -304,14 +79,15 @@ class EmbeddingService:
         Returns:
             Embedding dimension (768 for nomic-embed-text)
         """
-        # nomic-embed-text has 768 dimensions
-        return 768
+        return self.unified_service.embedding_dim
 
     def clear_cache(self):
         """Clear embedding cache."""
-        cache_size = self._cache.size()
-        self._cache.clear()
-        logger.info("Embedding cache cleared", cached_embeddings=cache_size)
+        # Note: This clears the shared cache used by all components
+        self.unified_service.cache.cache.clear()
+        self.unified_service.cache._hits = 0
+        self.unified_service.cache._misses = 0
+        logger.info("embedding_cache_cleared")
 
     def get_cache_size(self) -> int:
         """Get number of cached embeddings.
@@ -319,7 +95,7 @@ class EmbeddingService:
         Returns:
             Number of cached embeddings
         """
-        return self._cache.size()
+        return len(self.unified_service.cache.cache)
 
     def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics.
@@ -327,7 +103,7 @@ class EmbeddingService:
         Returns:
             Dictionary with cache stats (size, hits, misses, hit_rate)
         """
-        return self._cache.stats()
+        return self.unified_service.cache.stats()
 
     @property
     def model_info(self) -> dict[str, Any]:
@@ -337,8 +113,8 @@ class EmbeddingService:
             Dictionary with model metadata
         """
         return {
-            "model_name": self.model_name,
-            "base_url": self.base_url,
+            "model_name": self.unified_service.model_name,
+            "base_url": "unified_service",
             "embedding_dimension": self.get_embedding_dimension(),
             "batch_size": self.batch_size,
             "cache_enabled": self.enable_cache,

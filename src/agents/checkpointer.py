@@ -1,9 +1,10 @@
 """State Persistence with LangGraph Checkpointers.
 
 Provides checkpointing functionality for conversation state persistence.
-Supports in-memory (MemorySaver) and future Redis-based persistence.
+Supports in-memory (MemorySaver) and Redis-based persistence.
 
 Sprint 4 Feature 4.4: Coordinator Agent with State Persistence
+Sprint 11 Feature 11.5: Redis LangGraph Checkpointer
 """
 
 from typing import Any
@@ -11,7 +12,16 @@ from typing import Any
 import structlog
 from langgraph.checkpoint.memory import MemorySaver
 
+from src.core.config import settings
+
 logger = structlog.get_logger(__name__)
+
+# Import RedisSaver conditionally to avoid breaking tests
+try:
+    from langgraph.checkpoint.redis import RedisSaver
+except ImportError:
+    logger.warning("langgraph.checkpoint.redis not available - Redis checkpointer disabled")
+    RedisSaver = None  # type: ignore
 
 
 def create_checkpointer() -> MemorySaver:
@@ -143,24 +153,64 @@ def clear_conversation_history(
         return False
 
 
-# TODO Sprint 7: Redis Checkpointer
-# def create_redis_checkpointer() -> BaseCheckpointSaver:
-#     """Create Redis-based checkpointer for production.
-#
-#     Returns:
-#         Redis checkpointer instance
-#     """
-#     from langgraph.checkpoint.redis import RedisCheckpointSaver
-#     import redis
-#
-#     redis_client = redis.Redis(
-#         host=settings.redis_host,
-#         port=settings.redis_port,
-#         password=settings.redis_password.get_secret_value(),
-#         db=settings.redis_db,
-#     )
-#
-#     return RedisCheckpointSaver(redis_client)
+def get_redis_checkpointer():
+    """Get Redis-based LangGraph checkpointer.
+
+    Sprint 11 Feature 11.5: Implements Redis-based persistence for conversation state.
+    Replaces in-memory MemorySaver for production deployments.
+
+    Returns:
+        RedisSaver instance configured for Redis backend
+
+    Raises:
+        Exception: If Redis connection fails or RedisSaver not available
+
+    Example:
+        >>> checkpointer = get_redis_checkpointer()
+        >>> graph = create_graph(checkpointer=checkpointer)
+        >>> # Conversation state now persists in Redis
+    """
+    if RedisSaver is None:
+        raise ImportError(
+            "langgraph.checkpoint.redis not installed. "
+            "Install with: poetry add langgraph-checkpoint-redis"
+        )
+
+    # Create Redis URL for RedisSaver
+    redis_url = f"redis://{settings.redis_host}:{settings.redis_port}"
+    if settings.redis_password:
+        redis_url = f"redis://:{settings.redis_password.get_secret_value()}@{settings.redis_host}:{settings.redis_port}"
+
+    # RedisSaver expects a connection URL string, not a Redis client
+    checkpointer = RedisSaver(redis_url)
+
+    logger.info(
+        "redis_checkpointer_initialized",
+        redis_host=settings.redis_host,
+        redis_port=settings.redis_port,
+    )
+
+    return checkpointer
+
+
+def get_checkpointer():
+    """Get LangGraph checkpointer based on configuration.
+
+    Sprint 11 Feature 11.5: Now supports Redis checkpointer for persistence.
+
+    Returns:
+        Checkpointer instance (RedisSaver if configured, otherwise MemorySaver)
+
+    Example:
+        >>> checkpointer = get_checkpointer()
+        >>> # Returns RedisSaver if settings.use_redis_checkpointer=True
+    """
+    if settings.use_redis_checkpointer and settings.redis_host and RedisSaver is not None:
+        logger.info("using_redis_checkpointer")
+        return get_redis_checkpointer()
+
+    logger.warning("using_memory_checkpointer", reason="Redis not configured or RedisSaver not available")
+    return MemorySaver()
 
 
 # Export public API
@@ -169,4 +219,6 @@ __all__ = [
     "create_thread_config",
     "get_conversation_history",
     "clear_conversation_history",
+    "get_checkpointer",
+    "get_redis_checkpointer",
 ]

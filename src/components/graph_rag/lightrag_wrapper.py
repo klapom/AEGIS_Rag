@@ -153,46 +153,28 @@ class LightRAGWrapper:
 
                 return result
 
-            # Configure Ollama embedding function with embedding_dim attribute
-            class OllamaEmbeddingFunc:
-                """Wrapper for Ollama embedding function with embedding_dim attribute."""
+            # Configure Ollama embedding function with UnifiedEmbeddingService
+            # Sprint 11: Use shared embedding service for cache sharing
+            from src.components.shared.embedding_service import get_embedding_service
 
-                def __init__(self, model: str, embedding_dim: int = 768):
-                    self.model = model
+            class UnifiedEmbeddingFunc:
+                """Wrapper for UnifiedEmbeddingService compatible with LightRAG."""
+
+                def __init__(self, embedding_dim: int = 768):
                     self.embedding_dim = embedding_dim
+                    self.unified_service = get_embedding_service()
 
-                async def __call__(
-                    self,
-                    texts: list[str],
-                    **kwargs: Any,
-                ) -> list[list[float]]:
-                    """Ollama embedding function for LightRAG."""
-                    from ollama import AsyncClient
+                async def __call__(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+                    """Generate embeddings using shared service."""
+                    return await self.unified_service.embed_batch(texts)
 
-                    client = AsyncClient(host=settings.ollama_base_url)
-
-                    embeddings: list[list[float]] = []
-                    for text in texts:
-                        response = await client.embeddings(
-                            model=self.model,
-                            prompt=text,
-                        )
-                        embedding = response.get("embedding", [])
-                        embeddings.append(list(embedding))
-
-                    return embeddings
-
-                # LightRAG checks for async_func or func attributes to determine if function is async
                 @property
                 def async_func(self):
                     """Return self to indicate this is an async function."""
                     return self
 
             # Create embedding function instance
-            embedding_func = OllamaEmbeddingFunc(
-                model=self.embedding_model,
-                embedding_dim=768,  # nomic-embed-text uses 768 dimensions
-            )
+            embedding_func = UnifiedEmbeddingFunc(embedding_dim=768)
 
             # Initialize LightRAG with Neo4j backend (uses env vars)
             self.rag = LightRAG(
