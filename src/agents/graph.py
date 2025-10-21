@@ -54,11 +54,11 @@ async def router_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-async def simple_answer_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate a simple answer based on retrieved contexts.
+async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
+    """Generate LLM-based answer from retrieved contexts.
 
-    Sprint 10 Quick Fix: This is a placeholder answer generator.
-    TODO: Replace with proper LLM-based generation in future sprint.
+    Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
+    Uses AnswerGenerator to synthesize answers from retrieved contexts.
 
     Args:
         state: Current agent state with retrieved_contexts
@@ -66,16 +66,16 @@ async def simple_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     Returns:
         State with generated answer in messages
     """
+    from src.agents.answer_generator import get_answer_generator
+
     query = state.get("query", "")
     contexts = state.get("retrieved_contexts", [])
 
-    # Generate simple answer
-    if contexts:
-        # Concatenate context texts
-        context_text = "\n\n".join([ctx.get("text", "") for ctx in contexts[:3]])
-        answer = f"Based on the retrieved documents:\n\n{context_text}\n\nQuery: {query}"
-    else:
-        answer = f"I don't have enough information to answer '{query}'. Please make sure documents are indexed."
+    logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts))
+
+    # Generate answer using LLM
+    generator = get_answer_generator()
+    answer = await generator.generate_answer(query, contexts, mode="simple")
 
     # Add to messages (LangGraph format)
     if "messages" not in state:
@@ -89,7 +89,7 @@ async def simple_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     # Also add as direct field for easier access
     state["answer"] = answer
 
-    logger.info("simple_answer_generated", answer_length=len(answer), contexts_used=len(contexts))
+    logger.info("llm_answer_node_complete", answer_length=len(answer), contexts_used=len(contexts))
 
     return state
 
@@ -161,8 +161,8 @@ def create_base_graph() -> StateGraph:
     # Sprint 7: Add memory node
     graph.add_node("memory", memory_node)
 
-    # Sprint 10: Add simple answer generator node
-    graph.add_node("answer", simple_answer_node)
+    # Sprint 11: Add LLM-based answer generator node (replaces simple_answer_node)
+    graph.add_node("answer", llm_answer_node)
 
     # Add edge from START to router
     graph.add_edge(START, "router")
