@@ -34,7 +34,7 @@ llama-index-core = "^0.14.3"  # Upgraded for newer ollama packages
 llama-index-llms-ollama = "^0.8.0"  # Requires core >=0.14.3, ollama >=0.5.1
 llama-index-embeddings-ollama = "^0.8.3"  # Requires core >=0.13.0, ollama >=0.3.1 (no upper limit!)
 llama-index-readers-file = "^0.5.4"  # Latest version
-# Note: llama-index-vector-stores-qdrant removed - we use qdrant-client directly
+llama-index-vector-stores-qdrant = "^0.8.6"  # For index_documents.py script (requires core >=0.13.0)
 
 # Vector Database (Sprint 2: Qdrant)
 qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.0)
@@ -92,6 +92,7 @@ graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
 
 # UI Framework (Sprint 10: Gradio MVP)
 gradio = "^5.49.0"  # Gradio for rapid prototyping UI
+docx2txt = "^0.9"
 
 [tool.poetry.group.dev.dependencies]
 # Testing
