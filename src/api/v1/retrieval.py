@@ -432,9 +432,9 @@ async def upload_file(
 
             return IngestionResponse(
                 status="success",
-                message=f"File '{file.filename}' successfully indexed",
                 documents_loaded=stats["documents_loaded"],
                 chunks_created=stats["chunks_created"],
+                embeddings_generated=stats["embeddings_generated"],
                 points_indexed=stats["points_indexed"],
                 duration_seconds=stats["duration_seconds"],
                 collection_name=stats["collection_name"],
