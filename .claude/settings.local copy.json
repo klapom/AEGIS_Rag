@@ -113,7 +113,14 @@
       "Bash(python scripts/benchmark.py:*)",
       "Bash(ollama:*)",
       "Bash(pwsh:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(git rm:*)",
+      "Bash(rm:*)",
+      "Bash(poetry show gradio)",
+      "Bash(git add:*)"
     ],
     "deny": [
       "Bash(sudo:*)",
