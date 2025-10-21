@@ -2,8 +2,13 @@
 
 This module provides BM25 (Best Matching 25) keyword-based search
 as the keyword component of hybrid search.
+
+Sprint 10 Enhancement: Added disk persistence for BM25 index to avoid
+re-indexing on every backend restart.
 """
 
+import pickle
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -15,16 +20,25 @@ logger = structlog.get_logger(__name__)
 
 
 class BM25Search:
-    """BM25 keyword search for hybrid retrieval."""
+    """BM25 keyword search for hybrid retrieval with disk persistence."""
 
-    def __init__(self):
-        """Initialize BM25 search."""
+    def __init__(self, cache_dir: str = "data/cache"):
+        """Initialize BM25 search.
+
+        Args:
+            cache_dir: Directory to store BM25 index cache (default: data/cache)
+        """
         self._corpus: list[str] = []
         self._metadata: list[dict[str, Any]] = []
         self._bm25: BM25Okapi | None = None
         self._is_fitted = False
 
-        logger.info("BM25 search initialized")
+        # Setup cache directory
+        self._cache_dir = Path(cache_dir)
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_file = self._cache_dir / "bm25_index.pkl"
+
+        logger.info("BM25 search initialized", cache_file=str(self._cache_file))
 
     def _tokenize(self, text: str) -> list[str]:
         """Simple tokenization (split by whitespace and lowercase).
@@ -103,6 +117,9 @@ class BM25Search:
                 non_empty_docs=non_empty_docs,
             )
 
+            # Auto-save to disk after fitting
+            self.save_to_disk()
+
         except Exception as e:
             logger.error("Failed to fit BM25 model", error=str(e))
             raise VectorSearchError(f"Failed to fit BM25 model: {e}") from e
@@ -177,6 +194,79 @@ class BM25Search:
             True if model is fitted
         """
         return self._is_fitted
+
+    def save_to_disk(self) -> None:
+        """Save BM25 index to disk for persistence across restarts.
+
+        Sprint 10 Enhancement: Persists the fitted BM25 model to avoid
+        re-indexing on every backend restart.
+
+        Raises:
+            VectorSearchError: If save fails
+        """
+        if not self._is_fitted:
+            logger.warning("Cannot save unfitted BM25 model")
+            return
+
+        try:
+            # Save all necessary state
+            state = {
+                "corpus": self._corpus,
+                "metadata": self._metadata,
+                "bm25": self._bm25,
+                "is_fitted": self._is_fitted,
+            }
+
+            with open(self._cache_file, "wb") as f:
+                pickle.dump(state, f)
+
+            logger.info(
+                "BM25 index saved to disk",
+                cache_file=str(self._cache_file),
+                corpus_size=len(self._corpus),
+            )
+
+        except Exception as e:
+            logger.error("Failed to save BM25 index", error=str(e))
+            # Non-fatal: model still works in memory
+            # raise VectorSearchError(f"Failed to save BM25 index: {e}") from e
+
+    def load_from_disk(self) -> bool:
+        """Load BM25 index from disk if it exists.
+
+        Sprint 10 Enhancement: Loads the persisted BM25 model to avoid
+        re-indexing on backend restart.
+
+        Returns:
+            True if loaded successfully, False if no cache exists
+
+        Raises:
+            VectorSearchError: If load fails (but cache exists)
+        """
+        if not self._cache_file.exists():
+            logger.info("No BM25 cache found on disk", cache_file=str(self._cache_file))
+            return False
+
+        try:
+            with open(self._cache_file, "rb") as f:
+                state = pickle.load(f)
+
+            # Restore state
+            self._corpus = state["corpus"]
+            self._metadata = state["metadata"]
+            self._bm25 = state["bm25"]
+            self._is_fitted = state["is_fitted"]
+
+            logger.info(
+                "BM25 index loaded from disk",
+                cache_file=str(self._cache_file),
+                corpus_size=len(self._corpus),
+            )
+            return True
+
+        except Exception as e:
+            logger.error("Failed to load BM25 index from disk", error=str(e))
+            raise VectorSearchError(f"Failed to load BM25 index: {e}") from e
 
     def clear(self) -> None:
         """Clear corpus and reset model."""

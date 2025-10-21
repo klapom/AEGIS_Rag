@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 from src.agents.graph_query_agent import graph_query_node
 from src.agents.memory_agent import memory_node
 from src.agents.state import AgentState, create_initial_state
+from src.agents.vector_search_agent import vector_search_node
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -53,12 +54,53 @@ async def router_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "memory", "hybrid", "end"]:
+async def simple_answer_node(state: dict[str, Any]) -> dict[str, Any]:
+    """Generate a simple answer based on retrieved contexts.
+
+    Sprint 10 Quick Fix: This is a placeholder answer generator.
+    TODO: Replace with proper LLM-based generation in future sprint.
+
+    Args:
+        state: Current agent state with retrieved_contexts
+
+    Returns:
+        State with generated answer in messages
+    """
+    query = state.get("query", "")
+    contexts = state.get("retrieved_contexts", [])
+
+    # Generate simple answer
+    if contexts:
+        # Concatenate context texts
+        context_text = "\n\n".join([ctx.get("text", "") for ctx in contexts[:3]])
+        answer = f"Based on the retrieved documents:\n\n{context_text}\n\nQuery: {query}"
+    else:
+        answer = f"I don't have enough information to answer '{query}'. Please make sure documents are indexed."
+
+    # Add to messages (LangGraph format)
+    if "messages" not in state:
+        state["messages"] = []
+
+    state["messages"].append({
+        "role": "assistant",
+        "content": answer
+    })
+
+    # Also add as direct field for easier access
+    state["answer"] = answer
+
+    logger.info("simple_answer_generated", answer_length=len(answer), contexts_used=len(contexts))
+
+    return state
+
+
+def route_query(state: dict[str, Any]) -> Literal["vector_search", "graph", "memory", "end"]:
     """Determine the next node based on intent.
 
     This is a conditional edge function that determines routing.
     Routes GRAPH intent to graph_query node (Sprint 5 Feature 5.5).
     Routes MEMORY intent to memory node (Sprint 7 Feature 7.4).
+    Routes HYBRID/VECTOR intents to vector_search node (Sprint 10 Fix).
 
     Args:
         state: Current agent state
@@ -81,9 +123,9 @@ def route_query(state: dict[str, Any]) -> Literal["vector", "graph", "memory", "
         logger.info("routing_to_memory", intent=intent)
         return "memory"
 
-    # For now, other routes go to END (placeholder)
-    # Future sprints will add vector and hybrid nodes
-    return "end"
+    # Sprint 10 Fix: Route hybrid/vector to vector_search node
+    logger.info("routing_to_vector_search", intent=intent)
+    return "vector_search"
 
 
 def create_base_graph() -> StateGraph:
@@ -110,11 +152,17 @@ def create_base_graph() -> StateGraph:
     # Add router node
     graph.add_node("router", router_node)
 
+    # Sprint 4: Add vector search node
+    graph.add_node("vector_search", vector_search_node)
+
     # Sprint 5: Add graph query node
     graph.add_node("graph_query", graph_query_node)
 
     # Sprint 7: Add memory node
     graph.add_node("memory", memory_node)
+
+    # Sprint 10: Add simple answer generator node
+    graph.add_node("answer", simple_answer_node)
 
     # Add edge from START to router
     graph.add_edge(START, "router")
@@ -124,13 +172,15 @@ def create_base_graph() -> StateGraph:
         "router",
         route_query,
         {
-            "vector": END,  # Placeholder - will route to vector_search agent
+            "vector_search": "vector_search",  # Sprint 10: Route hybrid/vector to vector search
             "graph": "graph_query",  # Sprint 5: Route to graph query agent
             "memory": "memory",  # Sprint 7: Route to memory agent
-            "hybrid": END,  # Placeholder - will route to both agents
             "end": END,
         },
     )
+
+    # Sprint 10: Connect vector_search to answer generator
+    graph.add_edge("vector_search", "answer")
 
     # Sprint 5: Connect graph_query to END
     graph.add_edge("graph_query", END)
@@ -138,7 +188,10 @@ def create_base_graph() -> StateGraph:
     # Sprint 7: Connect memory to END
     graph.add_edge("memory", END)
 
-    logger.info("base_graph_created", nodes=["router", "graph_query", "memory"])
+    # Sprint 10: Connect answer to END
+    graph.add_edge("answer", END)
+
+    logger.info("base_graph_created", nodes=["router", "vector_search", "graph_query", "memory", "answer"])
 
     return graph
 

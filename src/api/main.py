@@ -13,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 from src.api import graph_analytics, graph_visualization
 from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
+from src.api.v1.chat import router as chat_router
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.memory import router as memory_router
 from src.api.v1.retrieval import router as retrieval_router
@@ -59,6 +60,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         enabled=tracing_enabled,
         project=settings.langsmith_project if tracing_enabled else None,
     )
+
+    # Sprint 10: Initialize BM25 model on startup
+    # The HybridSearch will automatically load BM25 from disk cache if available.
+    # If not, it will need to be trained via /api/v1/retrieval/prepare-bm25
+    try:
+        from src.api.v1.retrieval import get_hybrid_search
+
+        hybrid_search = get_hybrid_search()
+
+        # Check if BM25 is already loaded from cache
+        if not hybrid_search.bm25_search.is_fitted():
+            # No cache found, try to initialize from Qdrant
+            logger.info("No BM25 cache found, initializing from Qdrant...")
+            await hybrid_search.prepare_bm25_index()
+            logger.info("bm25_initialized_on_startup", status="success")
+        else:
+            logger.info("bm25_loaded_from_cache", status="success", corpus_size=hybrid_search.bm25_search.get_corpus_size())
+    except Exception as e:
+        # Non-fatal: BM25 can be initialized later via API
+        logger.warning("bm25_initialization_failed", error=str(e), note="Can be initialized via /api/v1/retrieval/prepare-bm25")
 
     # TODO: Initialize database connections, load models, etc.
 
@@ -191,6 +212,9 @@ async def track_requests(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(v1_health_router)
 app.include_router(retrieval_router)
+
+# Chat API router (Sprint 10: Feature 10.1)
+app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
 
 # Memory API router (Sprint 7: Feature 7.6)
 app.include_router(memory_router, prefix="/api/v1", tags=["memory"])

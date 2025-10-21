@@ -48,6 +48,14 @@ class HybridSearch:
         self.collection_name = collection_name or settings.qdrant_collection
         self.filter_engine = MetadataFilterEngine()
 
+        # Sprint 10: Try to load BM25 from disk on initialization
+        try:
+            loaded = self.bm25_search.load_from_disk()
+            if loaded:
+                logger.info("BM25 index loaded from cache on initialization")
+        except Exception as e:
+            logger.warning("Failed to load BM25 from cache", error=str(e))
+
         logger.info(
             "Hybrid search initialized",
             collection=self.collection_name,
