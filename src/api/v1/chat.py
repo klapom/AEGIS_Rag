@@ -381,18 +381,21 @@ def _extract_answer(result: dict[str, Any]) -> str:
         Answer string (or default message if not found)
     """
     # Try different possible locations for answer
-    # 1. Check messages (LangGraph format)
+    # 1. Check direct "answer" field first (most reliable)
+    if "answer" in result:
+        return result["answer"]
+
+    # 2. Check messages (LangGraph format)
     messages = result.get("messages", [])
     if messages:
         # Last message is typically the answer
         last_message = messages[-1]
         if isinstance(last_message, dict):
             return last_message.get("content", "No answer generated")
+        # Handle LangChain message objects
+        if hasattr(last_message, "content"):
+            return last_message.content
         return str(last_message)
-
-    # 2. Check direct "answer" field
-    if "answer" in result:
-        return result["answer"]
 
     # 3. Check "response" field (alternative naming)
     if "response" in result:
