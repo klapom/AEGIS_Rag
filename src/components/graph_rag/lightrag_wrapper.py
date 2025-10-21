@@ -482,6 +482,32 @@ class LightRAGWrapper:
             logger.error("lightrag_health_check_failed", error=str(e))
             return False
 
+    async def _clear_neo4j_database(self) -> None:
+        """Clear all data from Neo4j database (for test cleanup).
+
+        Sprint 11: Used by pytest fixtures to ensure test isolation.
+        Deletes all nodes and relationships from the knowledge graph.
+        """
+        await self._ensure_initialized()
+
+        if not self.rag or not self.rag.chunk_entity_relation_graph:
+            logger.warning("neo4j_clear_skipped", reason="graph_not_initialized")
+            return
+
+        try:
+            # Get Neo4j driver from LightRAG's graph instance
+            graph = self.rag.chunk_entity_relation_graph
+            if hasattr(graph, "_driver"):
+                async with graph._driver.session() as session:
+                    # Delete all nodes and relationships
+                    await session.run("MATCH (n) DETACH DELETE n")
+                    logger.info("neo4j_database_cleared")
+            else:
+                logger.warning("neo4j_clear_skipped", reason="no_driver_found")
+        except Exception as e:
+            logger.error("neo4j_clear_failed", error=str(e))
+            # Don't raise - cleanup is best-effort
+
 
 # Global instance (singleton pattern)
 _lightrag_wrapper: LightRAGWrapper | None = None

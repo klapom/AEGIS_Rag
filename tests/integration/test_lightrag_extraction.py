@@ -11,9 +11,12 @@ from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 
 
 @pytest.mark.asyncio
-async def test_lightrag_entity_extraction_with_llama32():
-    """Test that llama3.2:3b correctly extracts entities."""
-    lightrag = await get_lightrag_wrapper_async()
+async def test_lightrag_entity_extraction_with_llama32(lightrag_instance):
+    """Test that llama3.2:3b correctly extracts entities.
+
+    Sprint 11 Fix: Uses shared lightrag_instance fixture to avoid pickle bug.
+    """
+    lightrag = lightrag_instance
 
     # Insert test document
     result = await lightrag.insert_documents([
