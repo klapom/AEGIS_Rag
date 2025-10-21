@@ -70,13 +70,13 @@ class GradioApp:
     async def chat(
         self,
         message: str,
-        history: list[list[str]]
-    ) -> tuple[list[list[str]], str]:
+        history: list[dict]
+    ) -> tuple[list[dict], str]:
         """Process chat message.
 
         Args:
             message: User message
-            history: Chat history (list of [user_msg, bot_msg] pairs)
+            history: Chat history (list of message dicts with role and content)
 
         Returns:
             Tuple of (updated history, cleared input)
@@ -109,8 +109,9 @@ class GradioApp:
                     answer, sources, tool_calls
                 )
 
-                # Add to history
-                history.append([message, formatted_answer])
+                # Add to history (messages format for markdown rendering)
+                history.append({"role": "user", "content": message})
+                history.append({"role": "assistant", "content": formatted_answer})
 
                 logger.info(
                     "chat_response_success",
@@ -123,13 +124,15 @@ class GradioApp:
                 return history, ""
             else:
                 error_msg = f"Fehler {response.status_code}: {response.text}"
-                history.append([message, f"⚠️ {error_msg}"])
+                history.append({"role": "user", "content": message})
+                history.append({"role": "assistant", "content": f"⚠️ {error_msg}"})
                 logger.error("chat_api_error", status=response.status_code, error=response.text)
                 return history, ""
 
         except Exception as e:
             error_msg = f"Verbindungsfehler: {str(e)}"
-            history.append([message, f"❌ {error_msg}"])
+            history.append({"role": "user", "content": message})
+            history.append({"role": "assistant", "content": f"❌ {error_msg}"})
             logger.error("chat_exception", error=str(e), session_id=self.session_id)
             return history, ""
 
@@ -511,7 +514,8 @@ class GradioApp:
                         elem_id="chatbot",
                         label="Conversation History",
                         height=500,
-                        show_copy_button=True
+                        show_copy_button=True,
+                        type="messages"  # Enable markdown rendering
                     )
 
                     with gr.Row():
