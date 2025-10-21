@@ -247,7 +247,8 @@ class Settings(BaseSettings):
 
     # LightRAG LLM Configuration
     lightrag_llm_model: str = Field(
-        default="llama3.2:8b", description="Ollama model for entity/relationship extraction"
+        default="llama3.2:3b",
+        description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)"
     )
     lightrag_llm_temperature: float = Field(
         default=0.1,
@@ -338,6 +339,25 @@ class Settings(BaseSettings):
     )
     memory_consolidation_min_access_count: int = Field(
         default=3, description="Minimum access count for consolidation"
+    )
+
+    # Temporal Memory Retention Policy (Sprint 11: Feature 11.8)
+    # Configurable retention for Graphiti temporal memory versions
+    # Set temporal_retention_days=0 for infinite retention (no auto-purge)
+    temporal_retention_days: int = Field(
+        default=365,
+        ge=0,
+        description="Days to retain temporal versions (0 = infinite retention)"
+    )
+
+    temporal_auto_purge: bool = Field(
+        default=True,
+        description="Automatically purge old temporal versions on schedule"
+    )
+
+    temporal_purge_schedule: str = Field(
+        default="0 2 * * *",  # 2 AM daily
+        description="Cron schedule for temporal purge job"
     )
 
     @field_validator("log_level")
