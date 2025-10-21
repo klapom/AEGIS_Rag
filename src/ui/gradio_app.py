@@ -1,12 +1,14 @@
 """Gradio Chat Interface for AEGIS RAG.
 
-Sprint 10 Features 10.2-10.5: Gradio UI Implementation
+Sprint 10 Features 10.2-10.7: Gradio UI Implementation
 
 This module provides a complete Gradio-based chat interface including:
 - Chat interface with conversation history (Feature 10.2)
 - Document upload and indexing (Feature 10.3)
 - Conversation history persistence (Feature 10.4)
 - Health dashboard integration (Feature 10.5)
+- MCP Server Management (Feature 10.6)
+- Tool Call Visibility (Feature 10.7)
 
 Installation:
     pip install gradio>=4.0.0
@@ -26,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import pandas as pd
 import structlog
 
 try:
@@ -56,6 +59,7 @@ class GradioApp:
         self.session_id = str(uuid.uuid4())
         # Increased timeout for document upload (embedding generation can take 60+ seconds)
         self.client = httpx.AsyncClient(timeout=180.0)
+        self.mcp_client = None  # MCP Client instance (Feature 10.6)
 
         logger.info(
             "gradio_app_initialized",
@@ -274,6 +278,132 @@ class GradioApp:
             logger.error("health_check_failed", error=str(e))
             return {"error": str(e)}
 
+    async def connect_mcp_server(
+        self,
+        name: str,
+        transport: str,
+        endpoint: str
+    ) -> tuple[dict, pd.DataFrame]:
+        """Connect to MCP server and discover tools.
+
+        Feature 10.6: MCP Server Management
+
+        Args:
+            name: Server name
+            transport: Transport type (HTTP or STDIO)
+            endpoint: Server endpoint or command
+
+        Returns:
+            Tuple of (status dict, tools DataFrame)
+        """
+        try:
+            # Initialize MCP Client if needed
+            if self.mcp_client is None:
+                from src.components.mcp import MCPClient
+                self.mcp_client = MCPClient()
+
+            # Create server config
+            from src.components.mcp import MCPServer, TransportType
+            server = MCPServer(
+                name=name,
+                transport=TransportType.HTTP if transport == "HTTP" else TransportType.STDIO,
+                endpoint=endpoint,
+                description=f"User-connected {transport} server"
+            )
+
+            # Connect to server
+            logger.info("connecting_to_mcp_server", name=name, transport=transport)
+            success = await self.mcp_client.connect(server)
+
+            if not success:
+                return {"error": "Connection failed"}, pd.DataFrame()
+
+            # Get server status
+            stats = self.mcp_client.get_stats()
+            status = {
+                "status": "connected",
+                "server_name": name,
+                "transport": transport,
+                "connected_servers": stats.connected_servers,
+                "total_tools": stats.total_tools
+            }
+
+            # Get available tools
+            tools = await self.mcp_client.list_tools()
+            tools_df = pd.DataFrame([
+                {
+                    "Tool Name": tool.name,
+                    "Server": tool.server,
+                    "Description": tool.description[:100] + "..." if len(tool.description) > 100 else tool.description,
+                    "Parameters": str(len(tool.parameters.get("properties", {}))) + " params"
+                }
+                for tool in tools
+            ])
+
+            logger.info("mcp_server_connected", name=name, tools_count=len(tools))
+            return status, tools_df
+
+        except Exception as e:
+            logger.error("mcp_connection_failed", error=str(e), exc_info=True)
+            return {"error": str(e)}, pd.DataFrame()
+
+    async def disconnect_mcp_server(self, server_name: str) -> dict:
+        """Disconnect from MCP server.
+
+        Args:
+            server_name: Name of server to disconnect
+
+        Returns:
+            Status dictionary
+        """
+        try:
+            if self.mcp_client and server_name:
+                await self.mcp_client.disconnect(server_name)
+                logger.info("mcp_server_disconnected", name=server_name)
+                return {
+                    "status": "disconnected",
+                    "server_name": server_name
+                }
+            return {"error": "No MCP client or server name"}
+        except Exception as e:
+            logger.error("mcp_disconnect_failed", error=str(e))
+            return {"error": str(e)}
+
+    async def refresh_mcp_tools(self) -> tuple[dict, pd.DataFrame]:
+        """Refresh MCP tools list.
+
+        Returns:
+            Tuple of (status dict, tools DataFrame)
+        """
+        try:
+            if not self.mcp_client:
+                return {"error": "No MCP client initialized"}, pd.DataFrame()
+
+            stats = self.mcp_client.get_stats()
+            status = {
+                "connected_servers": stats.connected_servers,
+                "total_tools": stats.total_tools,
+                "total_calls": stats.total_calls,
+                "successful_calls": stats.successful_calls
+            }
+
+            tools = await self.mcp_client.list_tools()
+            tools_df = pd.DataFrame([
+                {
+                    "Tool Name": tool.name,
+                    "Server": tool.server,
+                    "Description": tool.description[:100] + "..." if len(tool.description) > 100 else tool.description,
+                    "Parameters": str(len(tool.parameters.get("properties", {}))) + " params"
+                }
+                for tool in tools
+            ])
+
+            return status, tools_df
+
+        except Exception as e:
+            logger.error("mcp_refresh_failed", error=str(e))
+            return {"error": str(e)}, pd.DataFrame()
+
     def build_interface(self) -> gr.Blocks:
         """Build Gradio interface.
 
@@ -283,11 +413,19 @@ class GradioApp:
         # Custom CSS
         custom_css = """
         #chatbot {
-            height: 600px;
+            height: 500px;
+        }
+        #user-input {
+            font-size: 1.1em;
         }
         .source-citation {
             font-size: 0.9em;
             color: #666;
+        }
+        .mcp-status {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
         }
         """
 
@@ -301,16 +439,9 @@ class GradioApp:
             gr.Markdown("Stellen Sie Fragen zu Ihren Dokumenten oder laden Sie neue Dokumente hoch.")
 
             with gr.Tabs() as tabs:
-                # Tab 1: Chat Interface (Feature 10.2)
+                # Tab 1: Chat Interface (Feature 10.2) - REORGANIZED: Input first, History below
                 with gr.Tab("💬 Chat"):
-                    chatbot = gr.Chatbot(
-                        value=[],
-                        elem_id="chatbot",
-                        label="Conversation",
-                        height=600,
-                        show_copy_button=True
-                    )
-
+                    # Input Section (moved to top)
                     with gr.Row():
                         msg = gr.Textbox(
                             placeholder="Ihre Frage...",
@@ -320,9 +451,6 @@ class GradioApp:
                             lines=2
                         )
                         submit = gr.Button("Senden", elem_id="submit-btn", scale=1, variant="primary")
-
-                    with gr.Row():
-                        clear = gr.Button("🗑️ Chat löschen", elem_id="clear-btn")
 
                     # Example queries
                     gr.Examples(
@@ -336,6 +464,18 @@ class GradioApp:
                         inputs=msg,
                         label="Beispiel-Fragen"
                     )
+
+                    # History Section (below input - more intuitive)
+                    chatbot = gr.Chatbot(
+                        value=[],
+                        elem_id="chatbot",
+                        label="Conversation History",
+                        height=500,
+                        show_copy_button=True
+                    )
+
+                    with gr.Row():
+                        clear = gr.Button("🗑️ Chat löschen", elem_id="clear-btn")
 
                     # Event handlers
                     submit.click(
@@ -382,7 +522,80 @@ class GradioApp:
                         outputs=upload_status
                     )
 
-                # Tab 3: System Health (Feature 10.5)
+                # Tab 3: MCP Tools (Feature 10.6)
+                with gr.Tab("🔧 MCP Tools"):
+                    gr.Markdown("### MCP Server Verwaltung")
+                    gr.Markdown("Verbinden Sie externe MCP-Server, um zusätzliche Tools zu nutzen.")
+
+                    # Server Connection Section
+                    with gr.Row():
+                        with gr.Column(scale=2):
+                            server_name = gr.Textbox(
+                                label="Server Name",
+                                placeholder="filesystem-server",
+                                value="filesystem"
+                            )
+                            server_type = gr.Radio(
+                                choices=["STDIO", "HTTP"],
+                                label="Transport Type",
+                                value="STDIO"
+                            )
+                            server_endpoint = gr.Textbox(
+                                label="Endpoint/Command",
+                                placeholder="npx @modelcontextprotocol/server-filesystem /tmp",
+                                lines=2
+                            )
+
+                        with gr.Column(scale=1):
+                            connect_btn = gr.Button("🔌 Verbinden", variant="primary")
+                            disconnect_btn = gr.Button("❌ Trennen", variant="secondary")
+
+                    # Server Status Display
+                    mcp_status = gr.JSON(label="Server Status", value={})
+
+                    # Available Tools Display
+                    gr.Markdown("### Verfügbare Tools")
+                    mcp_tools_table = gr.Dataframe(
+                        headers=["Tool Name", "Server", "Description", "Parameters"],
+                        label="Discovered MCP Tools",
+                        interactive=False
+                    )
+
+                    refresh_tools_btn = gr.Button("🔄 Tools neu laden")
+
+                    # Example MCP Servers
+                    gr.Markdown("### Beispiel-Server")
+                    gr.Markdown("""
+                    **Filesystem Server:**
+                    - Name: `filesystem`
+                    - Transport: `STDIO`
+                    - Command: `npx @modelcontextprotocol/server-filesystem /tmp`
+
+                    **HTTP Server (Beispiel):**
+                    - Name: `custom-http`
+                    - Transport: `HTTP`
+                    - Endpoint: `http://localhost:3000`
+                    """)
+
+                    # Event handlers
+                    connect_btn.click(
+                        self.connect_mcp_server,
+                        inputs=[server_name, server_type, server_endpoint],
+                        outputs=[mcp_status, mcp_tools_table]
+                    )
+
+                    disconnect_btn.click(
+                        self.disconnect_mcp_server,
+                        inputs=server_name,
+                        outputs=mcp_status
+                    )
+
+                    refresh_tools_btn.click(
+                        self.refresh_mcp_tools,
+                        outputs=[mcp_status, mcp_tools_table]
+                    )
+
+                # Tab 4: System Health (Feature 10.5)
                 with gr.Tab("📊 System Health"):
                     gr.Markdown("### System Status & Metrics")
 
@@ -401,7 +614,7 @@ class GradioApp:
                     # Auto-load on tab open
                     demo.load(self.get_health_stats, outputs=health_json)
 
-                # Tab 4: About
+                # Tab 5: About
                 with gr.Tab("ℹ️ Über AEGIS RAG"):
                     gr.Markdown("""
                     ## Über AEGIS RAG
@@ -414,7 +627,7 @@ class GradioApp:
                     - 🔍 Hybrid Search (Vector + Graph + Keyword)
                     - 💾 3-Layer Memory Architecture (Redis, Qdrant, Graphiti)
                     - 📊 Real-time Monitoring & Observability
-                    - 🔌 MCP Client Integration
+                    - 🔌 MCP Client Integration (externe Tools)
 
                     ### Technologie-Stack:
                     - **Backend:** FastAPI, LangGraph, LlamaIndex
@@ -423,11 +636,27 @@ class GradioApp:
                     - **Cache:** Redis
                     - **LLM:** Ollama (qwen2.5:7b)
                     - **Embeddings:** nomic-embed-text
+                    - **MCP:** Model Context Protocol Client
+
+                    ### Sprint 10 Features:
+                    - ✅ Chat Interface mit Session Memory
+                    - ✅ Dokument Upload mit Progress Tracking
+                    - ✅ BM25 Index Persistierung
+                    - ✅ MCP Server Management (Feature 10.6)
+                    - ✅ Hybrid Search (77 Dokumente indexiert)
 
                     ### Session Info:
                     """)
 
                     session_info = gr.Markdown(f"**Session ID:** `{self.session_id}`")
+
+                    gr.Markdown("""
+                    ### Nützliche Links:
+                    - [API Docs](http://localhost:8000/docs)
+                    - [Health Endpoint](http://localhost:8000/health)
+                    - [Prometheus Metrics](http://localhost:9090)
+                    - [Grafana Dashboard](http://localhost:3000)
+                    """)
 
             # Footer
             gr.Markdown("---")
