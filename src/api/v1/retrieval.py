@@ -14,6 +14,8 @@ from fastapi import (
     Depends,
     HTTPException,
     Request,
+    UploadFile,
+    File,
     status,
 )
 from pydantic import BaseModel, Field
@@ -363,6 +365,85 @@ async def ingest(
         raise HTTPException(
             status_code=500,
             detail="Document ingestion failed. Please check your input and try again.",
+        ) from None
+
+
+@router.post("/upload")
+@limiter.limit("10/hour")  # Rate limit: 10 file uploads per hour
+async def upload_file(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: str | None = Depends(get_current_user),
+) -> IngestionResponse:
+    """Upload and index a single document file.
+
+    Sprint 10 Feature 10.3: Document Upload Interface
+
+    Args:
+        request: FastAPI request (for rate limiting)
+        file: Uploaded file (PDF, TXT, MD, DOCX, CSV)
+        current_user: Authenticated user (optional)
+
+    Returns:
+        IngestionResponse with indexing statistics
+
+    Example:
+        ```bash
+        curl -X POST "http://localhost:8000/api/v1/retrieval/upload" \\
+             -F "file=@document.pdf"
+        ```
+    """
+    import tempfile
+    import shutil
+
+    # Validate file extension
+    allowed_extensions = {".pdf", ".txt", ".md", ".docx", ".csv"}
+    file_ext = Path(file.filename).suffix.lower()
+
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+        )
+
+    try:
+        # Save uploaded file to temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir) / file.filename
+
+            # Save file
+            with open(temp_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            logger.info("file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size)
+
+            # Ingest the temporary directory (contains single file)
+            pipeline = DocumentIngestionPipeline()
+            stats = await pipeline.index_documents(input_dir=temp_dir)
+
+            logger.info(
+                "file_ingestion_complete",
+                filename=file.filename,
+                documents=stats["documents_loaded"],
+                chunks=stats["chunks_created"],
+                points=stats["points_indexed"],
+            )
+
+            return IngestionResponse(
+                status="success",
+                message=f"File '{file.filename}' successfully indexed",
+                documents_loaded=stats["documents_loaded"],
+                chunks_created=stats["chunks_created"],
+                points_indexed=stats["points_indexed"],
+                duration_seconds=stats["duration_seconds"],
+                collection_name=stats["collection_name"],
+            )
+
+    except Exception as e:
+        logger.error("file_upload_failed", filename=file.filename, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process file: {str(e)}",
         ) from None
 
 

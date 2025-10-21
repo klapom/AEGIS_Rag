@@ -166,7 +166,7 @@ class GradioApp:
             files = {"file": (file.name, open(file.name, "rb"), "application/octet-stream")}
 
             response = await self.client.post(
-                f"{API_BASE_URL}/api/v1/documents/upload",
+                f"{API_BASE_URL}/api/v1/retrieval/upload",
                 files=files
             )
 
