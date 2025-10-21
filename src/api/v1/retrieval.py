@@ -146,6 +146,9 @@ class IngestionResponse(BaseModel):
     points_indexed: int
     duration_seconds: float
     collection_name: str
+    # Sprint 11: Unified Ingestion Pipeline fields
+    neo4j_entities: int = Field(default=0, description="Entities extracted to Neo4j")
+    neo4j_relationships: int = Field(default=0, description="Relationships extracted to Neo4j")
 
 
 # Global hybrid search instance
@@ -377,7 +380,9 @@ async def upload_file(
 ) -> IngestionResponse:
     """Upload and index a single document file.
 
-    Sprint 10 Feature 10.3: Document Upload Interface
+    Sprint 11 Feature 11.3: Unified Ingestion Pipeline
+    - Indexes to Qdrant + BM25 + Neo4j in parallel
+    - Returns statistics for all systems
 
     Args:
         request: FastAPI request (for rate limiting)
@@ -385,7 +390,7 @@ async def upload_file(
         current_user: Authenticated user (optional)
 
     Returns:
-        IngestionResponse with indexing statistics
+        IngestionResponse with indexing statistics for all systems
 
     Example:
         ```bash
@@ -395,6 +400,7 @@ async def upload_file(
     """
     import tempfile
     import shutil
+    from src.components.shared.unified_ingestion import get_unified_pipeline
 
     # Validate file extension
     allowed_extensions = {".pdf", ".txt", ".md", ".docx", ".csv"}
@@ -417,27 +423,33 @@ async def upload_file(
 
             logger.info("file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size)
 
-            # Ingest the temporary directory (contains single file)
-            # Set allowed_base_path to temp directory for security bypass during upload
-            pipeline = DocumentIngestionPipeline(allowed_base_path=temp_dir)
-            stats = await pipeline.index_documents(input_dir=temp_dir)
+            # Use unified pipeline (indexes to Qdrant + BM25 + Neo4j in parallel)
+            pipeline = get_unified_pipeline()
+            # Create new instance with temp_dir as allowed_base_path for security
+            from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
+            temp_pipeline = UnifiedIngestionPipeline(allowed_base_path=temp_dir)
+            result = await temp_pipeline.ingest_directory(input_dir=temp_dir)
 
             logger.info(
                 "file_ingestion_complete",
                 filename=file.filename,
-                documents=stats["documents_loaded"],
-                chunks=stats["chunks_created"],
-                points=stats["points_indexed"],
+                documents=result.total_documents,
+                qdrant_indexed=result.qdrant_indexed,
+                neo4j_entities=result.neo4j_entities,
+                neo4j_relationships=result.neo4j_relationships,
+                duration=result.duration_seconds,
             )
 
             return IngestionResponse(
                 status="success",
-                documents_loaded=stats["documents_loaded"],
-                chunks_created=stats["chunks_created"],
-                embeddings_generated=stats["embeddings_generated"],
-                points_indexed=stats["points_indexed"],
-                duration_seconds=stats["duration_seconds"],
-                collection_name=stats["collection_name"],
+                documents_loaded=result.total_documents,
+                chunks_created=result.qdrant_indexed,  # Approximate from indexed count
+                embeddings_generated=result.qdrant_indexed,  # Approximate from indexed count
+                points_indexed=result.qdrant_indexed,
+                duration_seconds=result.duration_seconds,
+                collection_name="aegis_rag_docs",  # Default collection name
+                neo4j_entities=result.neo4j_entities,
+                neo4j_relationships=result.neo4j_relationships,
             )
 
     except Exception as e:
