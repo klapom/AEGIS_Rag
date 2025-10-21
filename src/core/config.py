@@ -244,7 +244,8 @@ class Settings(BaseSettings):
 
     # LightRAG LLM Configuration
     lightrag_llm_model: str = Field(
-        default="llama3.2:8b", description="Ollama model for entity/relationship extraction"
+        default="llama3.2:3b",
+        description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)"
     )
     lightrag_llm_temperature: float = Field(
         default=0.1,
