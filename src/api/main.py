@@ -62,12 +62,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # Sprint 10: Initialize BM25 model on startup
+    # The HybridSearch will automatically load BM25 from disk cache if available.
+    # If not, it will need to be trained via /api/v1/retrieval/prepare-bm25
     try:
         from src.api.v1.retrieval import get_hybrid_search
 
         hybrid_search = get_hybrid_search()
-        await hybrid_search.prepare_bm25_index()
-        logger.info("bm25_initialized_on_startup", status="success")
+
+        # Check if BM25 is already loaded from cache
+        if not hybrid_search.bm25_search.is_fitted():
+            # No cache found, try to initialize from Qdrant
+            logger.info("No BM25 cache found, initializing from Qdrant...")
+            await hybrid_search.prepare_bm25_index()
+            logger.info("bm25_initialized_on_startup", status="success")
+        else:
+            logger.info("bm25_loaded_from_cache", status="success", corpus_size=hybrid_search.bm25_search.get_corpus_size())
     except Exception as e:
         # Non-fatal: BM25 can be initialized later via API
         logger.warning("bm25_initialization_failed", error=str(e), note="Can be initialized via /api/v1/retrieval/prepare-bm25")
