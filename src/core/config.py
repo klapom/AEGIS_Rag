@@ -218,6 +218,9 @@ class Settings(BaseSettings):
     redis_password: SecretStr | None = Field(default=None, description="Redis password")
     redis_db: int = Field(default=0, description="Redis database number")
     redis_ttl: int = Field(default=3600, description="Redis default TTL in seconds")
+    use_redis_checkpointer: bool = Field(
+        default=True, description="Use Redis for LangGraph checkpointing (Sprint 11 Feature 11.5)"
+    )
 
     # LangSmith Observability (Optional)
     langsmith_api_key: SecretStr | None = Field(default=None, description="LangSmith API key")
