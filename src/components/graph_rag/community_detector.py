@@ -5,6 +5,7 @@ This module provides community detection capabilities using both Neo4j GDS
 clusters of densely connected entities that share common characteristics.
 
 Sprint 6.3: Feature - Community Detection & Clustering
+Sprint 11.7: Performance Optimization - Caching & Async Execution
 
 Supports:
 - Leiden algorithm (primary)
@@ -12,11 +13,16 @@ Supports:
 - Auto-detection of GDS availability
 - NetworkX fallback for environments without GDS
 - Community storage in Neo4j (community_id property)
+- LRU caching for NetworkX operations (10 most recent graphs)
+- Async execution via thread pool for CPU-bound operations
 """
 
+import asyncio
+import hashlib
 import time
 import uuid
 from datetime import datetime
+from functools import lru_cache
 
 import networkx as nx
 import structlog
@@ -34,6 +40,86 @@ from src.core.exceptions import DatabaseConnectionError
 from src.core.models import Community
 
 logger = structlog.get_logger(__name__)
+
+
+def _hash_graph(graph: nx.Graph, algorithm: str, resolution: float) -> str:
+    """Generate a hash key for graph structure and parameters.
+
+    Creates a deterministic hash based on:
+    - Graph nodes and edges (structure)
+    - Algorithm name
+    - Resolution parameter
+
+    Args:
+        graph: NetworkX graph
+        algorithm: Detection algorithm name
+        resolution: Resolution parameter
+
+    Returns:
+        SHA256 hash string for cache key
+    """
+    # Sort nodes and edges for deterministic hashing
+    nodes = sorted(graph.nodes())
+    edges = sorted(graph.edges())
+
+    # Create hash input string
+    hash_input = f"{algorithm}:{resolution}:nodes={nodes}:edges={edges}"
+
+    # Generate SHA256 hash
+    return hashlib.sha256(hash_input.encode()).hexdigest()
+
+
+@lru_cache(maxsize=10)
+def _detect_communities_cached(
+    graph_hash: str,
+    nodes_tuple: tuple[str, ...],
+    edges_tuple: tuple[tuple[str, str], ...],
+    algorithm: str,
+    resolution: float,
+) -> tuple[tuple[str, ...], ...]:
+    """Cached community detection for NetworkX graphs.
+
+    This function is cached to avoid re-computing communities for
+    identical graphs. Returns communities as tuple of tuples for
+    hashability.
+
+    Args:
+        graph_hash: Hash of graph structure and parameters
+        nodes_tuple: Graph nodes as tuple
+        edges_tuple: Graph edges as tuple of tuples
+        algorithm: 'leiden' or 'louvain'
+        resolution: Resolution parameter
+
+    Returns:
+        Tuple of tuples, each inner tuple is a community (entity IDs)
+    """
+    # Rebuild graph from tuple representation
+    graph = nx.Graph()
+    graph.add_nodes_from(nodes_tuple)
+    graph.add_edges_from(edges_tuple)
+
+    logger.info(
+        "computing_communities_networkx",
+        algorithm=algorithm,
+        nodes=len(nodes_tuple),
+        edges=len(edges_tuple),
+        cache_key=graph_hash[:8],
+    )
+
+    # Run community detection
+    if algorithm.lower() == "leiden":
+        # NetworkX doesn't have Leiden, use Louvain instead
+        logger.warning("leiden_not_available_in_networkx", using="louvain")
+        communities_generator = nx.community.louvain_communities(graph, resolution=resolution, seed=42)
+    else:  # louvain
+        communities_generator = nx.community.louvain_communities(graph, resolution=resolution, seed=42)
+
+    # Convert to tuple of tuples (immutable for caching)
+    communities = tuple(tuple(sorted(community)) for community in communities_generator)
+
+    logger.info("communities_computed", count=len(communities), cache_key=graph_hash[:8])
+
+    return communities
 
 
 class CommunityDetector:
@@ -266,7 +352,11 @@ class CommunityDetector:
             return await self._detect_with_networkx(algorithm, resolution)
 
     async def _detect_with_networkx(self, algorithm: str, resolution: float) -> list[Community]:
-        """Run community detection using NetworkX.
+        """Run community detection using NetworkX with caching and async execution.
+
+        This method uses LRU caching to avoid re-computing communities for
+        identical graphs. CPU-bound community detection runs in a thread pool
+        to avoid blocking the event loop.
 
         Args:
             algorithm: 'leiden' or 'louvain'
@@ -301,21 +391,39 @@ class CommunityDetector:
                 "networkx_graph_built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges()
             )
 
-            # Run community detection
-            if algorithm.lower() == "leiden":
-                # NetworkX doesn't have Leiden, use Louvain instead
-                logger.warning("leiden_not_available_in_networkx", using="louvain")
-                communities_generator = nx.community.louvain_communities(
-                    graph, resolution=resolution, seed=42
-                )
-            else:  # louvain
-                communities_generator = nx.community.louvain_communities(
-                    graph, resolution=resolution, seed=42
-                )
+            # Generate cache key
+            graph_hash = _hash_graph(graph, algorithm, resolution)
+
+            # Convert graph to immutable types for caching
+            nodes_tuple = tuple(sorted(graph.nodes()))
+            edges_tuple = tuple(sorted(graph.edges()))
+
+            # Run cached community detection in thread pool (CPU-bound)
+            # This prevents blocking the event loop for large graphs
+            loop = asyncio.get_event_loop()
+            communities_tuple = await loop.run_in_executor(
+                None,  # Use default ThreadPoolExecutor
+                _detect_communities_cached,
+                graph_hash,
+                nodes_tuple,
+                edges_tuple,
+                algorithm,
+                resolution,
+            )
+
+            # Check cache status
+            cache_info = _detect_communities_cached.cache_info()
+            logger.info(
+                "cache_status",
+                hits=cache_info.hits,
+                misses=cache_info.misses,
+                size=cache_info.currsize,
+                maxsize=cache_info.maxsize,
+            )
 
             # Convert to Community objects
             communities = []
-            for idx, community_nodes in enumerate(communities_generator):
+            for idx, community_nodes in enumerate(communities_tuple):
                 entity_ids = list(community_nodes)
                 community = Community(
                     id=f"community_{idx}",
@@ -328,6 +436,8 @@ class CommunityDetector:
                         "algorithm": "louvain",  # NetworkX uses Louvain
                         "resolution": resolution,
                         "method": "networkx",
+                        "cached": cache_info.hits > 0,
+                        "cache_key": graph_hash[:8],
                     },
                 )
                 communities.append(community)
@@ -496,6 +606,34 @@ class CommunityDetector:
         except Exception as e:
             logger.error("list_communities_failed", error=str(e))
             return []
+
+    def get_cache_info(self) -> dict:
+        """Get cache statistics for community detection.
+
+        Returns:
+            Dictionary with cache hits, misses, size, and maxsize
+        """
+        cache_info = _detect_communities_cached.cache_info()
+        return {
+            "hits": cache_info.hits,
+            "misses": cache_info.misses,
+            "size": cache_info.currsize,
+            "maxsize": cache_info.maxsize,
+            "hit_rate": (
+                cache_info.hits / (cache_info.hits + cache_info.misses)
+                if (cache_info.hits + cache_info.misses) > 0
+                else 0.0
+            ),
+        }
+
+    def clear_cache(self) -> None:
+        """Clear the community detection cache.
+
+        Useful when graph structure has changed significantly or
+        to free memory.
+        """
+        _detect_communities_cached.cache_clear()
+        logger.info("community_detection_cache_cleared")
 
 
 # Singleton instance
