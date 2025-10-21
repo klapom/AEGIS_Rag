@@ -418,7 +418,8 @@ async def upload_file(
             logger.info("file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size)
 
             # Ingest the temporary directory (contains single file)
-            pipeline = DocumentIngestionPipeline()
+            # Set allowed_base_path to temp directory for security bypass during upload
+            pipeline = DocumentIngestionPipeline(allowed_base_path=temp_dir)
             stats = await pipeline.index_documents(input_dir=temp_dir)
 
             logger.info(
