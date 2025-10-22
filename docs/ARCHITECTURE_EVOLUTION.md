@@ -19,7 +19,7 @@
 ## 🎯 EXECUTIVE SUMMARY
 
 ### Project Vision
-**AEGIS RAG** ist ein Hybrid Retrieval-Augmented Generation System für die Bundeswehr mit 100% lokalem Betrieb, zero API costs, und production-grade multi-agent orchestration.
+**AEGIS RAG** ist ein Enterprise-grade Hybrid Retrieval-Augmented Generation System mit 100% lokalem Betrieb, zero API costs, und production-grade multi-agent orchestration.
 
 ### Architecture Principles
 1. **Local-First:** 100% Ollama, keine Cloud-Dependencies

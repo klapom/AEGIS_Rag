@@ -11,7 +11,7 @@ Das AEGIS RAG Projekt wurde von einer Azure OpenAI-primären Strategie zu einer 
 
 1. **Kosteneffizienz**: $0 Entwicklungskosten statt $300-500/Monat
 2. **Offline-Fähigkeit**: Entwicklung ohne Internetverbindung möglich
-3. **Bundeswehr-Compliance**: Vollständig air-gapped Deployment möglich
+3. **Enterprise-Compliance**: Vollständig air-gapped Deployment möglich
 4. **Kein Vendor Lock-in**: Flexible Wahl zwischen Ollama und Azure
 5. **Privacy by Design**: Daten bleiben lokal während der Entwicklung
 
@@ -177,10 +177,10 @@ llama-index-embeddings-openai = "^0.2.0"
 
 ## Compliance Benefits
 
-### Bundeswehr-Anforderungen
-- ✅ **VS-NfD**: Ollama läuft vollständig offline
-- ✅ **Geheim**: Keine Daten verlassen lokales Netzwerk
-- ✅ **Data Residency**: 100% lokal/Deutschland
+### Enterprise-Anforderungen
+- ✅ **Classified Data**: Ollama läuft vollständig offline
+- ✅ **Data Security**: Keine Daten verlassen lokales Netzwerk
+- ✅ **Data Residency**: 100% lokal/EU-compliant
 - ✅ **Air-gapped Deployment**: Möglich mit Ollama
 - ⚠️ **Azure OpenAI**: Nur für nicht-klassifizierte Daten (DSGVO-konform)
 

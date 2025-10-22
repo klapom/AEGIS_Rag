@@ -1,6 +1,6 @@
 # AEGIS RAG - AI-Enhanced Guardrail Integration System
 
-Retrieval-Augmented Generation System für die Bundeswehr mit integrierten Guardrails.
+Enterprise-grade Retrieval-Augmented Generation System mit integrierten Guardrails.
 
 ## 📁 Projektstruktur
 
@@ -142,7 +142,7 @@ Das Projekt ist vollständig auf Claude Code optimiert:
 
 ## 🔒 Sicherheit
 
-- Bundeswehr-Compliance
+- Enterprise-Compliance (Air-Gapped, DSGVO)
 - Multi-Layer Guardrails
 - Content Filtering
 - PII Detection

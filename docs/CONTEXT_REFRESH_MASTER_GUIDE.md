@@ -241,7 +241,7 @@ Gib mir einen Executive Summary (5-7 Bulletpoints):
 
 ### Project Overview
 **Name:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Purpose:** Hybrid Retrieval-Augmented Generation system for Bundeswehr
+**Purpose:** Enterprise-grade Hybrid Retrieval-Augmented Generation system
 **Status:** Production-ready (Sprint 12 complete)
 
 ### Architecture (4 Core Components)
@@ -433,7 +433,7 @@ After ANY refresh, Claude Code should be able to confirm:
 ### ✅ PROJECT CONTEXT
 ```
 - [ ] Projekt-Name: AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-- [ ] Purpose: Hybrid RAG for Bundeswehr
+- [ ] Purpose: Enterprise-grade Hybrid RAG with Air-Gapped deployment
 - [ ] 4 Core-Komponenten: Vector Search, Graph RAG, Temporal Memory, MCP Tools
 - [ ] Status: Production-ready (Sprint 12 complete)
 ```
@@ -757,7 +757,7 @@ Needs Improvement:
 Before continuing work, verify:
 
 ```
-✅ I know: AEGIS RAG = Hybrid RAG for Bundeswehr
+✅ I know: AEGIS RAG = Enterprise-grade Hybrid RAG with Air-Gapped deployment
 ✅ I know: 4 Core Components (Vector, Graph, Memory, MCP)
 ✅ I know: Sprint 12 COMPLETE (9/11, 31/32 SP)
 ✅ I know: Sprint 13 PLANNED (Test Infrastructure, 16 SP)
