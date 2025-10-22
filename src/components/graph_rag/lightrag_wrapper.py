@@ -135,7 +135,7 @@ class LightRAGWrapper:
                     options={
                         "temperature": settings.lightrag_llm_temperature,
                         "num_predict": settings.lightrag_llm_max_tokens,
-                        "num_ctx": 32768,  # LightRAG requires 32k context window
+                        "num_ctx": 8192,  # Sprint 13 TD-31 Fix: llama3.2:3b max context (was 32768 - too large!)
                     },
                 )
 
@@ -185,12 +185,22 @@ class LightRAGWrapper:
             embedding_func = UnifiedEmbeddingFunc(embedding_dim=768)
 
             # Initialize LightRAG with Neo4j backend (uses env vars)
+            # Sprint 13 TD-31 Fix: Optimize for llama3.2:3b (8k context, small model)
             self.rag = LightRAG(
                 working_dir=str(self.working_dir),
                 llm_model_func=ollama_llm_complete,
                 embedding_func=embedding_func,
                 graph_storage="Neo4JStorage",  # Storage type name as string
                 llm_model_max_async=2,  # Reduce from 4 to 2 workers (halves memory usage)
+                # Sprint 13 TD-31: Optimize for small model (8k context window)
+                chunk_token_size=600,  # Reduced from default 1200
+                chunk_overlap_token_size=100,  # Keep default
+                top_k=15,  # Reduce from default 60 (entities/relations per query)
+                chunk_top_k=10,  # Reduce from default 15 (max chunks in context)
+                max_entity_tokens=2500,  # Reduce from default 6000
+                max_relation_tokens=2500,  # Reduce from default 6000
+                max_total_tokens=7000,  # CRITICAL: Reduce from default 30000 (was 4x too large!)
+                cosine_threshold=0.05,  # Lower from default 0.2 (small model embeddings less precise)
             )
 
             # Initialize storages (required by lightrag-hku 1.4.9+)
