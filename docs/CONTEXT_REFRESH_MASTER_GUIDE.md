@@ -160,18 +160,23 @@ Neue Session / Major Context Loss. Vollständiger Sprint-Context benötigt:
 Lies in dieser Reihenfolge:
 1. README.md - Projekt-Überblick & Sprint 12 Highlights
 2. CLAUDE.md - Vollständiger Projekt-Context
-3. SPRINT_12_COMPLETION_REPORT.md - Sprint 12 Achievements (31/32 SP)
-4. SPRINT_13_PLAN.md - Test Infrastructure & Performance (16 SP, 1-2 Wochen)
-5. SPRINT_14_PLAN.md - React Migration Phase 1 (15 SP, 2 Wochen)
+3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-12 Journey & Learnings
+4. SPRINT_12_COMPLETION_REPORT.md - Sprint 12 Achievements (31/32 SP)
+5. SPRINT_13_PLAN.md - Test Infrastructure & Performance (16 SP, 1-2 Wochen)
+6. SPRINT_14_PLAN.md - React Migration Phase 1 (15 SP, 2 Wochen)
 
 👥 WORKFLOW & STANDARDS:
-6. SUBAGENTS.md - Delegation Strategy (5 Subagenten)
-7. NAMING_CONVENTIONS.md - Complete Code Standards
-8. TECHNICAL_DEBT_SUMMARY.md - 22 Items (Post-Sprint 12)
+7. SUBAGENTS.md - Delegation Strategy (5 Subagenten)
+8. NAMING_CONVENTIONS.md - Complete Code Standards
+9. docs/TESTING_STRATEGY.md - Test Pyramid, Fixtures, Sprint 13 Fixes
+10. TECHNICAL_DEBT_SUMMARY.md - 22 Items (Post-Sprint 12)
 
 🔧 TECHNICAL REFERENCE:
-9. docs/PRODUCTION_DEPLOYMENT_GUIDE.md - GPU Setup, Docker, K8s, Monitoring
-10. ADR-XXX (falls spezifisch relevant für Task)
+11. docs/COMPONENT_INTERACTION_MAP.md - Data Flows & API Contracts
+12. docs/DECISION_LOG.md - Chronological Decision History
+13. docs/DEPENDENCY_RATIONALE.md - Library Choice Justifications
+14. docs/PRODUCTION_DEPLOYMENT_GUIDE.md - GPU Setup, Docker, K8s, Monitoring
+15. docs/ADR_INDEX.md - 15 Architecture Decision Records
 
 📊 SPRINT STATUS:
 Sprint 12: ✅ COMPLETE (9/11 features, 31/32 SP)
@@ -376,8 +381,18 @@ b31d1e9 feat(sprint12): Complete Feature 12.10 and finalize Sprint 12 (31/32 SP)
 | **README.md** | Projekt-Überblick, Sprint 12 highlights, setup | Standard/Deep refresh |
 | **TECHNICAL_DEBT_SUMMARY.md** | 22 items, severity, resolution plans | Standard/Deep refresh |
 | **docs/PRODUCTION_DEPLOYMENT_GUIDE.md** | GPU setup, Docker, K8s, monitoring, security | Before deployment work |
-| **docs/ADR_INDEX.md** (if exists) | Architecture Decision Records | Before architectural changes |
-| **docs/TECH_STACK.md** (if exists) | Versions, dependencies, configs | When tech questions arise |
+| **docs/ADR_INDEX.md** | Architecture Decision Records (15 ADRs) | Before architectural changes |
+| **docs/TECH_STACK.md** | Versions, dependencies, configs | When tech questions arise |
+
+### Architecture & Deep Understanding (NEW - Sprint 12)
+
+| Document | What It Contains | Read When |
+|----------|------------------|-----------|
+| **docs/ARCHITECTURE_EVOLUTION.md** | Sprint 1-12 journey, architecture milestones, learnings | Deep refresh, new developers |
+| **docs/COMPONENT_INTERACTION_MAP.md** | Data flows, API contracts, request scenarios | Understanding system behavior |
+| **docs/TESTING_STRATEGY.md** | Test pyramid, fixtures, async patterns, Sprint 13 fixes | Before writing tests, Sprint 13 work |
+| **docs/DECISION_LOG.md** | Chronological decision history (Sprint 1-12) | Understanding "why" decisions |
+| **docs/DEPENDENCY_RATIONALE.md** | Library choice justifications (60+ dependencies) | Before changing dependencies |
 
 ### Helper Documentation
 
