@@ -841,13 +841,24 @@ async def lightrag_instance():
             await session.run("MATCH (n) DETACH DELETE n")
         await driver.close()
 
-        # 2. Clean LightRAG local cache files
+        # 2. Clean LightRAG local cache files (with retry for Windows permission issues)
         import shutil
+        import time
         from pathlib import Path
         lightrag_dir = Path(settings.lightrag_working_dir)
         if lightrag_dir.exists():
-            shutil.rmtree(lightrag_dir)
-            lightrag_dir.mkdir(parents=True, exist_ok=True)
+            # Try to remove directory, retry on Windows permission errors
+            for attempt in range(3):
+                try:
+                    shutil.rmtree(lightrag_dir)
+                    lightrag_dir.mkdir(parents=True, exist_ok=True)
+                    break
+                except PermissionError:
+                    if attempt < 2:
+                        time.sleep(0.5)  # Wait for file handles to close
+                    else:
+                        # Give up, directory will be reused
+                        pass
 
         # 3. Reset singleton instance so it re-initializes with clean state
         import src.components.graph_rag.lightrag_wrapper as lightrag_module

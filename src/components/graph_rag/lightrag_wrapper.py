@@ -153,28 +153,46 @@ class LightRAGWrapper:
 
                 return result
 
-            # Configure Ollama embedding function with UnifiedEmbeddingService
-            # Sprint 11: Use shared embedding service for cache sharing
-            from src.components.shared.embedding_service import get_embedding_service
+            # Configure Ollama embedding function with embedding_dim attribute
+            class OllamaEmbeddingFunc:
+                """Wrapper for Ollama embedding function with embedding_dim attribute."""
 
-            class UnifiedEmbeddingFunc:
-                """Wrapper for UnifiedEmbeddingService compatible with LightRAG."""
-
-                def __init__(self, embedding_dim: int = 768):
+                def __init__(self, model: str, embedding_dim: int = 768):
+                    self.model = model
                     self.embedding_dim = embedding_dim
-                    self.unified_service = get_embedding_service()
 
-                async def __call__(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
-                    """Generate embeddings using shared service."""
-                    return await self.unified_service.embed_batch(texts)
+                async def __call__(
+                    self,
+                    texts: list[str],
+                    **kwargs: Any,
+                ) -> list[list[float]]:
+                    """Ollama embedding function for LightRAG."""
+                    from ollama import AsyncClient
 
+                    client = AsyncClient(host=settings.ollama_base_url)
+
+                    embeddings: list[list[float]] = []
+                    for text in texts:
+                        response = await client.embeddings(
+                            model=self.model,
+                            prompt=text,
+                        )
+                        embedding = response.get("embedding", [])
+                        embeddings.append(list(embedding))
+
+                    return embeddings
+
+                # LightRAG checks for async_func or func attributes to determine if function is async
                 @property
                 def async_func(self):
                     """Return self to indicate this is an async function."""
                     return self
 
             # Create embedding function instance
-            embedding_func = UnifiedEmbeddingFunc(embedding_dim=768)
+            embedding_func = OllamaEmbeddingFunc(
+                model=self.embedding_model,
+                embedding_dim=768,  # nomic-embed-text uses 768 dimensions
+            )
 
             # Initialize LightRAG with Neo4j backend (uses env vars)
             self.rag = LightRAG(
@@ -463,6 +481,32 @@ class LightRAGWrapper:
         except Exception as e:
             logger.error("lightrag_health_check_failed", error=str(e))
             return False
+
+    async def _clear_neo4j_database(self) -> None:
+        """Clear all data from Neo4j database (for test cleanup).
+
+        Sprint 11: Used by pytest fixtures to ensure test isolation.
+        Deletes all nodes and relationships from the knowledge graph.
+        """
+        await self._ensure_initialized()
+
+        if not self.rag or not self.rag.chunk_entity_relation_graph:
+            logger.warning("neo4j_clear_skipped", reason="graph_not_initialized")
+            return
+
+        try:
+            # Get Neo4j driver from LightRAG's graph instance
+            graph = self.rag.chunk_entity_relation_graph
+            if hasattr(graph, "_driver"):
+                async with graph._driver.session() as session:
+                    # Delete all nodes and relationships
+                    await session.run("MATCH (n) DETACH DELETE n")
+                    logger.info("neo4j_database_cleared")
+            else:
+                logger.warning("neo4j_clear_skipped", reason="no_driver_found")
+        except Exception as e:
+            logger.error("neo4j_clear_failed", error=str(e))
+            # Don't raise - cleanup is best-effort
 
 
 # Global instance (singleton pattern)
