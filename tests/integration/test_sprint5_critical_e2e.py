@@ -65,10 +65,20 @@ async def neo4j_driver():
     # LightRAG caches entities, relationships, and LLM responses in JSON files
     # Without cleanup, sequential tests fail because LightRAG thinks documents
     # are already processed and skips extraction
+    # Windows-compatible: Delete files instead of directory to avoid PermissionError
     lightrag_dir = Path("data/lightrag")
     if lightrag_dir.exists():
-        shutil.rmtree(lightrag_dir)
-    lightrag_dir.mkdir(parents=True, exist_ok=True)
+        # Delete all FILES in directory (safer than rmtree on Windows)
+        for item in lightrag_dir.iterdir():
+            try:
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            except PermissionError:
+                pass  # Skip locked files (best-effort cleanup)
+    else:
+        lightrag_dir.mkdir(parents=True, exist_ok=True)
 
     yield driver
 
@@ -76,9 +86,16 @@ async def neo4j_driver():
     async with driver.session() as session:
         await session.run("MATCH (n) DETACH DELETE n")
 
-    # Clean LightRAG data after test
+    # Clean LightRAG data after test (Windows-compatible)
     if lightrag_dir.exists():
-        shutil.rmtree(lightrag_dir)
+        for item in lightrag_dir.iterdir():
+            try:
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            except PermissionError:
+                pass  # Skip locked files
 
     await driver.close()
 
