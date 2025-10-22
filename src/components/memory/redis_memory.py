@@ -396,7 +396,18 @@ class RedisMemoryManager:
             return False
 
     async def close(self) -> None:
-        """Close Redis connection."""
+        """Close Redis connection.
+
+        Deprecated: Use aclose() instead for proper async cleanup.
+        """
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Close Redis connection (async cleanup).
+
+        Sprint 13: Proper async cleanup to prevent event loop errors.
+        This method should be called in pytest fixture teardown.
+        """
         if self._client:
             await self._client.close()
             self._client = None

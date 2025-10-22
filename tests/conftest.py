@@ -666,16 +666,30 @@ async def redis_memory_manager(redis_client):
 
     Uses real Redis connection for testing Layer 1 short-term memory.
 
+    Sprint 13: Fixed async cleanup to prevent event loop errors.
+
     Returns:
         RedisMemoryManager instance
     """
     from src.components.memory import RedisMemoryManager
+    import structlog
+
+    logger = structlog.get_logger(__name__)
 
     manager = RedisMemoryManager()
     yield manager
 
-    # Cleanup: flush test keys
-    await redis_client.flushdb()
+    # Proper async cleanup BEFORE event loop closes
+    try:
+        # Cleanup: flush test keys
+        await redis_client.flushdb()
+
+        # Close manager connection
+        if hasattr(manager, 'aclose'):
+            await manager.aclose()
+            logger.debug("redis_memory_manager_cleaned_up")
+    except Exception as e:
+        logger.warning("redis_memory_manager_cleanup_error", error=str(e))
 
 
 @pytest.fixture
@@ -684,26 +698,36 @@ async def graphiti_wrapper(neo4j_driver, ollama_client_real):
 
     Uses real Neo4j + Ollama for testing Layer 3 episodic memory.
 
+    Sprint 13: Fixed async cleanup to prevent event loop errors.
+
     Returns:
         GraphitiWrapper instance
     """
     from src.components.memory import GraphitiWrapper
+    import structlog
+
+    logger = structlog.get_logger(__name__)
 
     try:
         wrapper = GraphitiWrapper()
         yield wrapper
 
-        # Cleanup: delete test episodes
+        # Cleanup: delete test episodes (sync Neo4j session - driver is sync)
+        logger.info("graphiti_wrapper_cleanup_start")
         with neo4j_driver.session() as session:
-            session.run(
+            result = session.run(
                 """
                 MATCH (e)
                 WHERE e.source = 'test' OR e.name STARTS WITH 'test_'
                 DETACH DELETE e
                 """
             )
+            logger.info("graphiti_wrapper_cleanup_neo4j_done", deleted=result.consume().counters.nodes_deleted)
 
-        await wrapper.close()
+        # Proper async cleanup BEFORE event loop closes
+        if hasattr(wrapper, 'aclose'):
+            await wrapper.aclose()
+            logger.debug("graphiti_wrapper_cleaned_up")
     except Exception as e:
         pytest.skip(f"Graphiti not available: {e}")
 

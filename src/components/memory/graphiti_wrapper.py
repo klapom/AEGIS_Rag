@@ -13,6 +13,10 @@ from typing import Any
 import structlog
 from graphiti_core import Graphiti
 from graphiti_core.llm_client import LLMClient
+from graphiti_core.llm_client.config import LLMConfig
+from graphiti_core.llm_client.openai_client import OpenAIClient
+from graphiti_core.embedder.openai import OpenAIEmbedder, OpenAIEmbedderConfig
+from graphiti_core.cross_encoder.openai_reranker_client import OpenAIRerankerClient
 from graphiti_core.search.search_config import SearchConfig
 from ollama import AsyncClient
 
@@ -178,16 +182,60 @@ class GraphitiWrapper:
         }
 
         try:
-            self.graphiti = Graphiti(
-                llm_client=self.llm_client,
-                neo4j_uri=neo4j_config["uri"],
-                neo4j_user=neo4j_config["user"],
-                neo4j_password=neo4j_config["password"],
+            # Sprint 13: Updated constructor signature for Graphiti 0.3.21+
+            # Changed from neo4j_uri/neo4j_user/neo4j_password to uri/user/password
+            # Added embedder and cross_encoder configuration for Ollama
+
+            logger.info("graphiti_wrapper_init_start",
+                       llm_model=self.llm_client.model,
+                       base_url=self.llm_client.base_url,
+                       neo4j_uri=neo4j_config["uri"])
+
+            # Configure LLM client for Graphiti (OpenAI-compatible interface)
+            llm_config = LLMConfig(
+                api_key="abc",  # Ollama doesn't require a real API key
+                model=self.llm_client.model,
+                base_url=self.llm_client.base_url,
+                temperature=self.llm_client.temperature,
             )
+            logger.debug("graphiti_wrapper_llm_config_created")
+            openai_client = OpenAIClient(config=llm_config)
+            logger.debug("graphiti_wrapper_openai_client_created")
+
+            # Configure embedder for Ollama
+            # Note: Graphiti 0.3.21+ requires embedding_dim=1024 (Pydantic Literal validation)
+            # Using bge-m3 which supports 1024 dimensions (nomic-embed-text only supports 768)
+            embedder = OpenAIEmbedder(
+                config=OpenAIEmbedderConfig(
+                    api_key="abc",  # Ollama doesn't require a real API key
+                    embedding_model="bge-m3",  # BGE-M3 supports 1024 dimensions
+                    embedding_dim=1024,  # Required by Graphiti 0.3.21+ validation
+                    base_url=self.llm_client.base_url,
+                )
+            )
+            logger.debug("graphiti_wrapper_embedder_created", model="bge-m3", dim=1024)
+
+            # Configure cross-encoder reranker
+            cross_encoder = OpenAIRerankerClient(
+                config=llm_config,
+            )
+            logger.debug("graphiti_wrapper_cross_encoder_created")
+
+            self.graphiti = Graphiti(
+                uri=neo4j_config["uri"],
+                user=neo4j_config["user"],
+                password=neo4j_config["password"],
+                llm_client=openai_client,
+                embedder=embedder,
+                cross_encoder=cross_encoder,
+            )
+            logger.debug("graphiti_wrapper_graphiti_client_created")
             logger.info(
-                "Initialized Graphiti wrapper",
+                "Initialized Graphiti wrapper with Ollama",
                 neo4j_uri=neo4j_config["uri"],
                 llm_model=self.llm_client.model,
+                embedding_model="bge-m3",  # Using BGE-M3 for 1024-dim embeddings
+                embedding_dim=1024,
             )
         except Exception as e:
             logger.error("Failed to initialize Graphiti", error=str(e))
@@ -423,10 +471,23 @@ class GraphitiWrapper:
             raise MemoryError(f"Failed to add edge: {e}") from e
 
     async def close(self) -> None:
-        """Close Graphiti and Neo4j connections."""
+        """Close Graphiti and Neo4j connections.
+
+        Deprecated: Use aclose() instead for proper async cleanup.
+        """
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Close Graphiti and Neo4j connections (async cleanup).
+
+        Sprint 13: Proper async cleanup to prevent event loop errors.
+        This method should be called in pytest fixture teardown.
+        """
         try:
             if hasattr(self.graphiti, "close"):
                 await self.graphiti.close()
+            if hasattr(self.neo4j_client, "close"):
+                await self.neo4j_client.close()
             logger.info("Closed Graphiti connections")
         except Exception as e:
             logger.warning("Error closing Graphiti", error=str(e))
