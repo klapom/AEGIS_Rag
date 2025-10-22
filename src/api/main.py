@@ -13,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 from src.api import graph_analytics, graph_visualization
 from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
+from src.api.routers import graph_viz
 from src.api.v1.chat import router as chat_router
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.memory import router as memory_router
@@ -222,6 +223,9 @@ app.include_router(memory_router, prefix="/api/v1", tags=["memory"])
 # Graph visualization and analytics routers (Sprint 6: Features 6.5 & 6.6)
 app.include_router(graph_visualization.router, prefix="/api/v1", tags=["visualization"])
 app.include_router(graph_analytics.router, prefix="/api/v1", tags=["analytics"])
+
+# Enhanced graph visualization router (Sprint 12: Feature 12.8)
+app.include_router(graph_viz.router)
 
 # Prometheus metrics endpoint
 metrics_app = make_asgi_app()

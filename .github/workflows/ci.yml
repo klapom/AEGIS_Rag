@@ -196,7 +196,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
+
+      # Sprint 12: Add Ollama service for LLM integration tests
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: >-
+          --health-cmd "curl -f http://localhost:11434/api/version || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -233,8 +244,20 @@ jobs:
           echo "Waiting for Redis..."
           timeout 60 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
           echo "✅ Redis ready"
-      
+
+          # Sprint 12: Wait for Ollama to be ready
+          echo "Waiting for Ollama..."
+          timeout 120 bash -c 'until curl -f http://localhost:11434/api/version 2>/dev/null; do sleep 2; done'
+          echo "✅ Ollama ready"
+
+          # Sprint 12: Pull required models
+          echo "Pulling Ollama models..."
+          docker exec ollama ollama pull nomic-embed-text
+          docker exec ollama ollama pull llama3.2:3b
+          echo "✅ Models ready"
+
       - name: Run Integration Tests
+        timeout-minutes: 20  # Increased from default 10 to 20
         env:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
@@ -243,12 +266,14 @@ jobs:
           NEO4J_PASSWORD: testpassword
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          OLLAMA_BASE_URL: http://localhost:11434  # Add Ollama config
         run: |
           echo "Running integration tests..."
           poetry run pytest tests/integration/ \
             --cov=src \
             --cov-report=xml \
             --cov-append \
+            --timeout=300 \
             -v
       
       - name: Upload Coverage Report
@@ -313,8 +338,8 @@ jobs:
           push: false
           load: true
           tags: aegis-rag-api:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=aegis-rag  # Add scope for better caching
+          cache-to: type=gha,mode=max,scope=aegis-rag
       
       - name: Test Docker Image
         run: |
