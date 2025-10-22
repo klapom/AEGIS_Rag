@@ -1,6 +1,19 @@
 # Sprint 13 - Remaining TODOs
 
-**Status**: Sprint 13 Features 13.1-13.5 abgeschlossen, aber Tests zeigen weitere Probleme
+**Status**: Sprint 13 Features 13.1-13.5 abgeschlossen, TD-30 & TD-34 fixed, NEW issue: TD-31/32/33 timeout
+
+## Latest Update (2025-10-22)
+
+**Commits**:
+- `29769e1` - TD-30: Enhanced entity extraction JSON parser + prompts ✅ FIXED
+- `1efb45f` - TD-34: Adjusted deduplication test expectations ✅ FIXED
+- `aa13bb4` - CI: Fixed all Ruff linter errors (11 total) ✅ FIXED
+
+**New Finding - TD-31/32/33**:
+- ⚠️ Tests are **timing out** (> 300s), NOT returning empty answers
+- Root cause: LightRAG E2E with llama3.2:3b is slow (multiple LLM calls)
+- TD-30 entity extraction IS WORKING, but full E2E test takes > 5 minutes
+- **Solution**: Increase timeout to 600-900s OR optimize performance
 
 ## Test-Ergebnisse (User's Manual Run)
 
@@ -81,51 +94,64 @@ These tests should now PASS since TD-30 is fixed and graph has entities:
 
 ---
 
-### TD-31: Fix test_local_search_entity_level_e2e
-**Error**: `No answer returned`
+### TD-31: Fix test_local_search_entity_level_e2e ⚠️ TIMEOUT
+**Error**: `Timeout after 300 seconds`
 
 **Location**: `tests/integration/test_sprint5_critical_e2e.py:411`
 
-**Root Cause**: Local search returns empty answer
-- Query: "Who created Python?"
-- GraphQueryResult.answer = ''
-- Depends on TD-30 (needs entities in graph)
+**Root Cause**: LightRAG E2E processing too slow with llama3.2:3b
+- Test inserts 1 simple document + runs local search query
+- LightRAG does multiple LLM calls: entity extraction, relationship extraction, query processing
+- llama3.2:3b is slower than expected (each LLM call takes time)
+- Test timeout at 300s, but test needs > 300s
+- TD-30 IS WORKING (entity extraction succeeds), but process is slow
 
-**Priority**: 🟠 MEDIUM - Depends on TD-30
+**Investigation Results**:
+1. ✅ TD-30 fix works - entity extraction no longer returns empty
+2. ❌ LightRAG insert_documents + query_graph takes > 5 minutes for single document
+3. ⚠️ Not a functional issue - performance/timeout issue
 
-**Estimated Effort**: 1 SP (after TD-30 fixed)
+**Solution Options**:
+1. **Increase timeout** for search tests to 600-900s (10-15 min)
+2. **Use faster LLM** (llama3.2:8b instead of 3b, but larger model)
+3. **Optimize LightRAG** (reduce LLM calls, batch processing)
+4. **Mark tests as @pytest.mark.very_slow** with longer timeout
+
+**Priority**: 🔴 HIGH - Blocks Sprint 13 completion
+
+**Estimated Effort**: 1 SP (increase timeout) OR 3 SP (performance optimization)
 
 ---
 
-### TD-32: Fix test_global_search_topic_level_e2e
-**Error**: `No answer returned`
+### TD-32: Fix test_global_search_topic_level_e2e ⚠️ TIMEOUT
+**Error**: `Timeout after 300 seconds` (expected)
 
 **Location**: `tests/integration/test_sprint5_critical_e2e.py:464`
 
-**Root Cause**: Global search returns empty answer
+**Root Cause**: Same as TD-31 - LightRAG E2E processing too slow
 - Query: "What is machine learning?"
-- GraphQueryResult.answer = ''
-- Depends on TD-30 (needs graph content)
+- Global search requires more LLM calls than local search (topic summaries)
+- Likely needs > 300s timeout
 
-**Priority**: 🟠 MEDIUM - Depends on TD-30
+**Priority**: 🔴 HIGH - Same issue as TD-31
 
-**Estimated Effort**: 1 SP (after TD-30 fixed)
+**Estimated Effort**: 1 SP (increase timeout)
 
 ---
 
-### TD-33: Fix test_hybrid_search_local_global_e2e
-**Error**: `No answer returned`
+### TD-33: Fix test_hybrid_search_local_global_e2e ⚠️ TIMEOUT
+**Error**: `Timeout after 300 seconds` (expected)
 
 **Location**: `tests/integration/test_sprint5_critical_e2e.py:516`
 
-**Root Cause**: Hybrid search returns empty answer
+**Root Cause**: Same as TD-31 - LightRAG E2E processing too slow
 - Query: "What is RAG?"
-- GraphQueryResult.answer = ''
-- Depends on TD-30 (needs graph content)
+- Hybrid search = local + global (most LLM calls)
+- Likely needs > 300s timeout
 
-**Priority**: 🟠 MEDIUM - Depends on TD-30
+**Priority**: 🔴 HIGH - Same issue as TD-31
 
-**Estimated Effort**: 1 SP (after TD-30 fixed)
+**Estimated Effort**: 1 SP (increase timeout)
 
 ---
 
