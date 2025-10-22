@@ -372,11 +372,16 @@ async def test_graph_construction_full_pipeline_e2e(lightrag_instance, neo4j_dri
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
+@pytest.mark.timeout(900)  # Sprint 13 TD-31: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.4: LightRAG local search (entity-level retrieval).
 
     Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
     Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
+    Sprint 13 TD-31 Fix: Extended timeout to 900s (15 min) for LightRAG E2E.
+    LightRAG with llama3.2:3b does multiple LLM calls (entity extraction,
+    relationship extraction, query processing) which can take > 5 minutes.
 
     Priority: P1 (HIGH)
     Story Points: 1 SP
@@ -425,11 +430,15 @@ async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
+@pytest.mark.timeout(900)  # Sprint 13 TD-32: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.5: LightRAG global search (topic-level retrieval).
 
     Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
     Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
+    Sprint 13 TD-32 Fix: Extended timeout to 900s (15 min) for LightRAG E2E.
+    Global search requires more LLM calls than local search (topic summaries).
 
     Priority: P1 (HIGH)
     Story Points: 1 SP
@@ -477,11 +486,15 @@ async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
+@pytest.mark.timeout(900)  # Sprint 13 TD-33: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_hybrid_search_local_global_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.6: LightRAG hybrid search (local + global).
 
     Sprint 11 Fix: Now uses llama3.2:3b for entity extraction (Feature 11.4).
     Previously skipped due to qwen3:0.6b producing malformed entity extraction.
+
+    Sprint 13 TD-33 Fix: Extended timeout to 900s (15 min) for LightRAG E2E.
+    Hybrid search = local + global (most LLM calls, longest runtime).
 
     Priority: P1 (HIGH)
     Story Points: 1 SP
