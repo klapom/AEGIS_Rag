@@ -78,9 +78,15 @@ class ExtractionService:
         )
 
     def _parse_json_response(self, response: str) -> list[dict[str, Any]]:
-        """Parse JSON from LLM response.
+        """Parse JSON from LLM response with multiple fallback strategies.
 
-        Handles various response formats and cleans up common issues.
+        Sprint 13 Enhancement: Robust parsing for llama3.2:3b output variations.
+
+        Handles various response formats:
+        - Markdown code fences: ```json [...] ```
+        - Plain JSON array: [...]
+        - Text before/after JSON: "Here are the entities: [...] Hope this helps!"
+        - Full response as JSON
 
         Args:
             response: Raw LLM response text
@@ -89,14 +95,41 @@ class ExtractionService:
             Parsed JSON as list of dicts
 
         Raises:
-            ValueError: If JSON parsing fails
+            ValueError: If JSON parsing fails after all strategies
         """
-        # Try to extract JSON from response
-        # Sometimes LLM adds extra text before/after JSON
+        # 🔍 ENHANCED LOGGING: Log full response for debugging
+        logger.info(
+            "parsing_llm_response",
+            response_length=len(response),
+            response_preview=response[:500],
+            response_full=response,  # Full response for debugging
+        )
 
-        # Look for JSON array pattern
-        json_match = re.search(r"\[.*\]", response, re.DOTALL)
-        json_str = json_match.group(0) if json_match else response
+        json_str = None
+        strategy_used = None
+
+        # Strategy 1: Extract from markdown code fence (```json [...] ``` or ``` [...] ```)
+        code_fence_match = re.search(
+            r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL
+        )
+        if code_fence_match:
+            json_str = code_fence_match.group(1)
+            strategy_used = "code_fence"
+            logger.info("json_extraction_strategy", strategy=strategy_used)
+
+        # Strategy 2: Extract JSON array pattern (current approach)
+        if not json_str:
+            json_match = re.search(r"\[.*\]", response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                strategy_used = "regex_array"
+                logger.info("json_extraction_strategy", strategy=strategy_used)
+
+        # Strategy 3: Try entire response as-is
+        if not json_str:
+            json_str = response.strip()
+            strategy_used = "full_response"
+            logger.info("json_extraction_strategy", strategy=strategy_used)
 
         # Clean up common JSON issues
         json_str = json_str.strip()
@@ -104,20 +137,76 @@ class ExtractionService:
 
         try:
             data = json.loads(json_str)
+
+            # Validate structure: must be list of dicts with required fields
             if isinstance(data, list):
-                return data
+                valid_entities = []
+                for i, item in enumerate(data):
+                    if isinstance(item, dict):
+                        # Check for required fields (name and type)
+                        if "name" in item and "type" in item:
+                            valid_entities.append(item)
+                        else:
+                            logger.warning(
+                                "invalid_entity_structure",
+                                index=i,
+                                item=item,
+                                missing_fields=[
+                                    f for f in ["name", "type", "description"]
+                                    if f not in item
+                                ],
+                            )
+                    else:
+                        logger.warning(
+                            "invalid_entity_type",
+                            index=i,
+                            item_type=type(item).__name__,
+                        )
+
+                logger.info(
+                    "json_parse_success",
+                    strategy=strategy_used,
+                    total_items=len(data),
+                    valid_entities=len(valid_entities),
+                    entity_names=[e.get("name", "UNKNOWN") for e in valid_entities],
+                )
+
+                return valid_entities
+
+            elif isinstance(data, dict):
+                # Single entity as dict (not array)
+                logger.warning(
+                    "json_not_array_single_entity",
+                    data_type=type(data).__name__,
+                )
+                # Wrap in list if it has required fields
+                if "name" in data and "type" in data:
+                    logger.info("wrapping_single_entity_in_array")
+                    return [data]
+                else:
+                    logger.error("single_entity_missing_fields", data=data)
+                    return []
+
             else:
-                logger.warning("json_not_array", data_type=type(data).__name__)
-                return [data] if data else []
+                logger.warning("json_unexpected_type", data_type=type(data).__name__)
+                return []
 
         except json.JSONDecodeError as e:
             logger.error(
                 "json_parse_failed",
                 response_preview=response[:500],
+                json_str_preview=json_str[:500] if json_str else "NONE",
+                strategy=strategy_used,
                 error=str(e),
+                error_position=e.pos if hasattr(e, "pos") else None,
             )
-            # Return empty list instead of raising (graceful degradation)
-            return []
+
+            # Sprint 13 CHANGE: Raise error instead of silent failure
+            # This triggers retry logic (3 attempts with exponential backoff)
+            # If all retries fail, test will show clear error message
+            raise ValueError(
+                f"Failed to parse JSON from LLM response after trying strategy '{strategy_used}': {str(e)}"
+            )
 
     @retry(
         stop=stop_after_attempt(3),
@@ -163,6 +252,16 @@ class ExtractionService:
             )
 
             llm_response = response.get("response", "")
+
+            # 🔍 ENHANCED LOGGING: Log LLM response before parsing
+            logger.info(
+                "llm_entity_extraction_response",
+                model=self.llm_model,
+                temperature=self.temperature,
+                response_length=len(llm_response),
+                response_preview=llm_response[:500],
+                response_full=llm_response,  # Full response for debugging
+            )
 
             # Parse JSON response
             entities_data = self._parse_json_response(llm_response)

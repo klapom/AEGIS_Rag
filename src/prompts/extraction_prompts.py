@@ -1,9 +1,11 @@
 """Prompts for entity and relationship extraction.
 
 Sprint 5: Feature 5.3 - Entity & Relationship Extraction
+Sprint 13: Enhanced prompts for llama3.2:3b compatibility (TD-30 fix)
 """
 
 # Entity Extraction Prompt with Few-Shot Examples
+# Sprint 13: Optimized for llama3.2:3b model to ensure reliable JSON output
 ENTITY_EXTRACTION_PROMPT = """Extract entities from the following text. For each entity, identify:
 1. Entity name (exact string from text)
 2. Entity type (PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT, or other)
@@ -29,25 +31,44 @@ Entities:
   {{"name": "1991", "type": "EVENT", "description": "Year Python was created"}}
 ]
 
+Example 3:
+Text: "Microsoft was founded by Bill Gates and Paul Allen in 1975 in Albuquerque."
+Entities:
+[
+  {{"name": "Microsoft", "type": "ORGANIZATION", "description": "Technology company founded in 1975"}},
+  {{"name": "Bill Gates", "type": "PERSON", "description": "Co-founder of Microsoft"}},
+  {{"name": "Paul Allen", "type": "PERSON", "description": "Co-founder of Microsoft"}},
+  {{"name": "1975", "type": "EVENT", "description": "Year Microsoft was founded"}},
+  {{"name": "Albuquerque", "type": "LOCATION", "description": "City where Microsoft was founded"}}
+]
+
 Now extract entities from this text:
 
 Text:
 {text}
 
-Return entities as a JSON array. Use this exact format:
+CRITICAL OUTPUT INSTRUCTIONS:
+- You MUST return ONLY a valid JSON array
+- Do NOT include any explanatory text before the JSON array
+- Do NOT include any explanatory text after the JSON array
+- Do NOT use markdown code fences (no ``` or ```json)
+- Do NOT say "Here are the entities" or similar phrases
+- Just output the raw JSON array starting with [ and ending with ]
+- Extract at least 3-5 entities if the text contains them
+
+Required JSON format (copy this structure exactly):
 [
   {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "One sentence description"}},
   ...
 ]
 
-Guidelines:
+Additional guidelines:
 - Extract ALL significant entities mentioned in the text
 - Use standard entity types: PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT
 - Be comprehensive but avoid duplicates
 - Keep descriptions concise (1 sentence)
-- Return only valid JSON (no additional text)
 
-Entities:
+Output (JSON array only):
 """
 
 # Relationship Extraction Prompt with Few-Shot Examples
