@@ -531,6 +531,28 @@ async def redis_client():
     await client.close()
 
 
+@pytest.fixture(scope="function")
+async def redis_checkpointer():
+    """Redis checkpointer with proper async cleanup.
+
+    Sprint 12: Ensures Redis connections closed before event loop shutdown.
+    """
+    import structlog
+    from src.agents.checkpointer import create_redis_checkpointer
+
+    logger = structlog.get_logger(__name__)
+
+    # Create checkpointer
+    checkpointer = create_redis_checkpointer()
+
+    yield checkpointer
+
+    # Proper async cleanup BEFORE event loop closes
+    if hasattr(checkpointer, 'aclose'):
+        await checkpointer.aclose()
+        logger.debug("redis_checkpointer_cleaned_up")
+
+
 @pytest.fixture(scope="session")
 def qdrant_client_real():
     """Real Qdrant client for Layer 2 long-term memory (E2E testing).

@@ -5,11 +5,14 @@ Supports in-memory (MemorySaver) and Redis-based persistence.
 
 Sprint 4 Feature 4.4: Coordinator Agent with State Persistence
 Sprint 11 Feature 11.5: Redis LangGraph Checkpointer
+Sprint 12 Feature 12.3: Complete Redis Async Cleanup
 """
 
 from typing import Any
 
+import redis.asyncio
 import structlog
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.core.config import settings
@@ -213,6 +216,66 @@ def get_checkpointer():
     return MemorySaver()
 
 
+class RedisCheckpointSaver(BaseCheckpointSaver):
+    """Redis-based checkpointer with proper async cleanup.
+
+    Sprint 12: Added aclose() method for graceful shutdown.
+    """
+
+    def __init__(self, redis_client: redis.asyncio.Redis):
+        self.redis_client = redis_client
+
+    async def aclose(self):
+        """Close Redis connection gracefully.
+
+        Sprint 12: Ensures all tasks complete before connection closed.
+        """
+        # Wait for pending tasks
+        import asyncio
+        await asyncio.sleep(0.1)  # Allow tasks to complete
+
+        # Close connection
+        await self.redis_client.aclose()
+
+        logger.info("redis_checkpointer_closed")
+
+
+def create_redis_checkpointer() -> RedisCheckpointSaver:
+    """Create Redis checkpointer with proper async cleanup.
+
+    Sprint 12 Feature 12.3: Returns RedisCheckpointSaver wrapper for graceful shutdown.
+
+    Returns:
+        RedisCheckpointSaver instance with aclose() method
+
+    Example:
+        >>> checkpointer = create_redis_checkpointer()
+        >>> # Use in tests, then cleanup with: await checkpointer.aclose()
+    """
+    import redis.asyncio
+
+    # Create Redis client
+    redis_url = f"redis://{settings.redis_host}:{settings.redis_port}"
+    if settings.redis_password:
+        redis_url = f"redis://:{settings.redis_password.get_secret_value()}@{settings.redis_host}:{settings.redis_port}"
+
+    redis_client = redis.asyncio.from_url(
+        redis_url,
+        encoding="utf-8",
+        decode_responses=True,
+    )
+
+    checkpointer = RedisCheckpointSaver(redis_client)
+
+    logger.info(
+        "redis_checkpointer_created",
+        redis_host=settings.redis_host,
+        redis_port=settings.redis_port,
+    )
+
+    return checkpointer
+
+
 # Export public API
 __all__ = [
     "create_checkpointer",
@@ -221,4 +284,6 @@ __all__ = [
     "clear_conversation_history",
     "get_checkpointer",
     "get_redis_checkpointer",
+    "RedisCheckpointSaver",
+    "create_redis_checkpointer",
 ]

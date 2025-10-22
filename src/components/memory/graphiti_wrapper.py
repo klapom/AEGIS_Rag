@@ -56,12 +56,15 @@ class OllamaLLMClient(LLMClient):
             temperature=self.temperature,
         )
 
-    async def generate_response(
+    async def _generate_response(
         self,
         messages: list[dict[str, str]],
         max_tokens: int = 4096,
     ) -> str:
         """Generate text response from Ollama.
+
+        Sprint 12: Renamed from generate_response() to _generate_response()
+        to match updated Graphiti LLMClient abstract method.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
