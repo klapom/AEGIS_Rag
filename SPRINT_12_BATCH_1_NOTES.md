@@ -151,6 +151,62 @@ Add to **Feature 12.5 (Implement Skeleton Tests)**:
 
 ---
 
+## 📝 Post-Batch 1 Update: Fixture Restoration
+
+**Date:** 2025-10-22 (After Batch 1 Commit)
+**Issue:** Feature 12.1 tests failing with "fixture 'lightrag_instance' not found"
+**Root Cause:** Fixture existed in Sprint 11 (commit 8d36754) but missing from current conftest.py
+
+### Investigation
+
+**User Feedback:**
+> "Schau mal bitte im letzten und vorletzten Sprint. Dort gab es ja bereits das LightRAG fixture. Eventuell muss bei der Ausführung der Tests einfach noch ein Delete des lokalen Caches erfolgen - so meine ich war das."
+
+**Found in commit 8d36754 (Sprint 11, branch sprint-10-dev):**
+- Complete `lightrag_instance` fixture implementation
+- Includes Neo4j cleanup, LightRAG cache deletion, singleton reset
+- Designed to prevent pickle errors by cleaning cache before each test
+
+### Solution
+
+**File Modified:** `tests/conftest.py` (lines 819-860)
+
+**Added Fixture:**
+```python
+@pytest.fixture
+async def lightrag_instance():
+    """LightRAG instance with Neo4j cleanup and cache deletion.
+
+    Sprint 11: Uses singleton LightRAG instance (avoids re-initialization)
+    but cleans Neo4j database AND local cache before each test for isolation.
+
+    Sprint 12: Workaround for pickle error in E2E tests.
+    """
+    # 1. Clean Neo4j database
+    # 2. Clean LightRAG local cache files (shutil.rmtree)
+    # 3. Reset singleton instance
+    # 4. Get fresh singleton instance
+    wrapper = await get_lightrag_wrapper_async()
+    yield wrapper
+```
+
+**Impact:**
+- ✅ Restores Sprint 11 LightRAG fixture
+- ✅ Includes cache cleanup as user suggested
+- ✅ Unblocks 5 Sprint 5 E2E tests (Feature 12.1)
+- ✅ Prevents pickle errors by cleaning cache before each test
+
+### Verification
+
+**Test Command:**
+```bash
+poetry run pytest tests/integration/test_sprint5_critical_e2e.py::test_graph_construction_full_pipeline_e2e -v --tb=short
+```
+
+**Expected Result:** Test should pass without "fixture not found" error
+
+---
+
 ## Next Steps
 
 **Batch 1 Completion:**
@@ -158,6 +214,8 @@ Add to **Feature 12.5 (Implement Skeleton Tests)**:
 2. ✅ Run affected tests (optional before commit)
 3. ✅ Git commit Batch 1
 4. ✅ Push to remote
+5. ✅ Restore lightrag_instance fixture (Post-Batch 1 fix)
+6. ⏳ Commit fixture restoration
 
 **Batch 2 (Week 2 Features):**
 - Feature 12.7: CI/CD Pipeline (5 SP)

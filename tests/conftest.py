@@ -814,3 +814,50 @@ async def test_client_async():
 
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
+
+
+@pytest.fixture
+async def lightrag_instance():
+    """LightRAG instance with Neo4j cleanup.
+
+    Sprint 11: Uses singleton LightRAG instance (avoids re-initialization)
+    but cleans Neo4j database before each test for isolation.
+
+    Returns:
+        LightRAGWrapper: Singleton instance with llama3.2:3b model
+    """
+    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+    from neo4j import AsyncGraphDatabase
+    from src.core.config import settings
+
+    # Clean Neo4j, LightRAG caches, AND reset singleton BEFORE test
+    try:
+        # 1. Clean Neo4j database
+        driver = AsyncGraphDatabase.driver(
+            settings.neo4j_uri,
+            auth=(settings.neo4j_user, settings.neo4j_password),
+        )
+        async with driver.session() as session:
+            await session.run("MATCH (n) DETACH DELETE n")
+        await driver.close()
+
+        # 2. Clean LightRAG local cache files
+        import shutil
+        from pathlib import Path
+        lightrag_dir = Path(settings.lightrag_working_dir)
+        if lightrag_dir.exists():
+            shutil.rmtree(lightrag_dir)
+            lightrag_dir.mkdir(parents=True, exist_ok=True)
+
+        # 3. Reset singleton instance so it re-initializes with clean state
+        import src.components.graph_rag.lightrag_wrapper as lightrag_module
+        lightrag_module._lightrag_wrapper = None
+    except Exception:
+        pass  # Best-effort cleanup
+
+    # Get fresh singleton instance (will re-initialize with clean caches)
+    wrapper = await get_lightrag_wrapper_async()
+
+    yield wrapper
+
+    # Note: No cleanup after test - cleanup happens before next test
