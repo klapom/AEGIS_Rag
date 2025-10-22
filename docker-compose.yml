@@ -11,6 +11,15 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+    # GPU Support for NVIDIA RTX 3060 (Sprint 11: 15-20x speedup vs CPU)
+    # Required for LightRAG entity extraction with llama3.2:3b (otherwise 360s timeout)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 30s
