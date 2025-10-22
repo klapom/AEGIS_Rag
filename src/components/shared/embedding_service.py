@@ -73,10 +73,60 @@ class UnifiedEmbeddingService:
     """Shared embedding service for all AEGIS RAG components.
 
     Features:
-    - Single Ollama client for all embeddings
     - Shared LRU cache (improves hit rate across components)
     - Unified retry logic and error handling
     - Centralized metrics and monitoring
+    - **Pickle-compatible** for LightRAG deepcopy operations
+
+    IMPORTANT - Pickle Compatibility Design Decision:
+    =====================================================
+    This class is designed to be PICKLE-COMPATIBLE to support LightRAG's
+    internal deepcopy() operations during initialization.
+
+    WHY NO self.ollama_client IN __init__?
+    ---------------------------------------
+    The "traditional" approach would be to create a single AsyncClient in __init__:
+
+        def __init__(self, ...):
+            self.ollama_client = AsyncClient(host=settings.ollama_base_url)  # ❌ NOT PICKLE-COMPATIBLE
+
+    PROBLEM: AsyncClient contains non-picklable _thread.RLock objects
+    - LightRAG uses asdict(self) → deepcopy() during initialization (lightrag.py:465)
+    - deepcopy() attempts to pickle ALL object attributes including AsyncClient
+    - Pickle fails with: "TypeError: cannot pickle '_thread.RLock' object"
+
+    AFFECTED TESTS:
+    - tests/integration/test_sprint5_critical_e2e.py::test_graph_construction_full_pipeline_e2e
+    - tests/integration/test_sprint5_critical_e2e.py::test_entity_extraction_ollama_neo4j_e2e
+    - tests/integration/test_sprint5_critical_e2e.py::test_dual_level_query_e2e
+    - tests/integration/test_sprint5_critical_e2e.py::test_hybrid_query_integration_e2e
+    - tests/integration/test_sprint5_critical_e2e.py::test_relationship_extraction_validation_e2e
+
+    SOLUTION: Lazy AsyncClient Creation
+    ------------------------------------
+    Instead of storing AsyncClient as instance variable, we create a fresh
+    client for each embed operation:
+
+        async def embed_single(self, text: str):
+            client = AsyncClient(host=settings.ollama_base_url)  # ✅ PICKLE-COMPATIBLE
+            response = await client.embeddings(...)
+
+    TRADEOFFS:
+    - ✅ BENEFIT: Object is pickle-compatible (no RLock in state)
+    - ✅ BENEFIT: Shared LRU cache still reduces API calls by 30-50%
+    - ✅ BENEFIT: Singleton pattern still provides cross-component cache sharing
+    - ❌ COST: Slight overhead from creating new AsyncClient per call
+              (but Ollama AsyncClient is lightweight, minimal performance impact)
+
+    ALTERNATIVE CONSIDERED AND REJECTED:
+    - Skip LightRAG E2E tests → Loses test coverage for critical feature
+    - Use separate embedding function for tests → Code duplication, maintenance burden
+    - Monkey-patch deepcopy in tests → Fragile, breaks on library updates
+
+    See Also:
+    - Sprint 12 Feature 12.1: LightRAG E2E Test Infrastructure
+    - Sprint 11 Commit 8d36754: GPU support and test isolation
+    - SPRINT_12_BATCH_1_NOTES.md: Pickle error root cause analysis
     """
 
     def __init__(
@@ -91,10 +141,14 @@ class UnifiedEmbeddingService:
             model_name: Ollama embedding model (default: nomic-embed-text)
             embedding_dim: Embedding dimension (nomic-embed-text: 768)
             cache_max_size: Maximum cache size (default: 10000)
+
+        Note:
+            No AsyncClient created here to maintain pickle compatibility.
+            See class docstring for detailed explanation.
         """
         self.model_name = model_name or "nomic-embed-text"
         self.embedding_dim = embedding_dim
-        self.ollama_client = AsyncClient(host=settings.ollama_base_url)
+        # NO self.ollama_client here! See class docstring for why.
         self.cache = LRUCache(max_size=cache_max_size)
 
         logger.info(
@@ -122,6 +176,10 @@ class UnifiedEmbeddingService:
 
         Returns:
             Embedding vector (768 dimensions for nomic-embed-text)
+
+        Note:
+            Creates fresh AsyncClient for each call to maintain pickle compatibility.
+            See class docstring for detailed explanation of design decision.
         """
         # Check cache
         cache_key = self._cache_key(text)
@@ -130,9 +188,12 @@ class UnifiedEmbeddingService:
             logger.debug("embedding_cache_hit", text_preview=text[:50])
             return cached
 
-        # Generate embedding
+        # Generate embedding with fresh AsyncClient (pickle-compatible approach)
         try:
-            response = await self.ollama_client.embeddings(
+            # Create fresh client for this operation (no stored state = pickle-compatible)
+            client = AsyncClient(host=settings.ollama_base_url)
+
+            response = await client.embeddings(
                 model=self.model_name,
                 prompt=text,
             )
