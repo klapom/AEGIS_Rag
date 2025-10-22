@@ -1,0 +1,16 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\Klaus Pommer\AppData\Local\pypoetry\Cache\virtualenvs\aegis-rag--u84tAYU-py3.12\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag
+configfile: pytest.ini
+plugins: anyio-4.11.0, langsmith-0.4.37, asyncio-0.23.8, cov-5.0.0, mock-3.15.1
+asyncio: mode=Mode.AUTO
+collecting ... collected 0 items / 1 error
+
+=================================== ERRORS ====================================
+_____________ ERROR collecting tests/e2e/test_sprint8_skeleton.py _____________
+'e2e' not found in `markers` configuration option
+=========================== short test summary info ===========================
+ERROR tests/e2e/test_sprint8_skeleton.py - Failed: 'e2e' not found in `markers` configuration option
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 0.73s ===============================
