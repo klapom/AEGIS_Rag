@@ -6,7 +6,6 @@ Uses keyword matching with extensibility for LLM-based selection.
 Sprint 9 Feature 9.8: Action Agent (LangGraph Integration)
 """
 
-from typing import Optional
 
 from src.components.mcp.client import MCPClient
 from src.components.mcp.models import MCPTool
@@ -43,8 +42,8 @@ class ToolSelector:
         }
 
     def select_tool(
-        self, action: str, server_name: Optional[str] = None
-    ) -> Optional[MCPTool]:
+        self, action: str, server_name: str | None = None
+    ) -> MCPTool | None:
         """Select best tool for action.
 
         Args:
@@ -95,7 +94,7 @@ class ToolSelector:
         )
         return available_tools[0] if available_tools else None
 
-    def _match_action_category(self, action_lower: str) -> Optional[str]:
+    def _match_action_category(self, action_lower: str) -> str | None:
         """Match action to a category.
 
         Args:
@@ -111,7 +110,7 @@ class ToolSelector:
 
     def _find_tool_by_category(
         self, category: str, tools: list[MCPTool]
-    ) -> Optional[MCPTool]:
+    ) -> MCPTool | None:
         """Find tool matching a category.
 
         Args:
@@ -143,7 +142,7 @@ class ToolSelector:
 
     def _find_tool_by_direct_match(
         self, action_lower: str, tools: list[MCPTool]
-    ) -> Optional[MCPTool]:
+    ) -> MCPTool | None:
         """Find tool by direct name match.
 
         Args:
@@ -216,9 +215,10 @@ class ToolSelector:
         score += len(common_words) * 2.0
 
         # Keyword matches
-        for category, keywords in self.action_patterns.items():
-            if any(kw in action_lower for kw in keywords):
-                if any(kw in tool_name_lower for kw in keywords):
-                    score += 5.0
+        for _category, keywords in self.action_patterns.items():
+            if any(kw in action_lower for kw in keywords) and any(
+                kw in tool_name_lower for kw in keywords
+            ):
+                score += 5.0
 
         return score

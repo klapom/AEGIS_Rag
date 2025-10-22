@@ -4,10 +4,11 @@ Sprint 11: Feature 11.1 - LLM-Based Answer Generation
 Replaces simple_answer_node placeholder with proper LLM generation.
 """
 
-import structlog
 from typing import Any
 
+import structlog
 from langchain_ollama import ChatOllama
+
 from src.core.config import settings
 from src.prompts.answer_prompts import (
     ANSWER_GENERATION_PROMPT,

@@ -8,13 +8,12 @@ from fastapi import APIRouter, status
 from qdrant_client import QdrantClient
 from redis import Redis
 
+# Import memory health router (Sprint 9 Feature 9.5)
+from src.api.health.memory_health import router as memory_health_router
 from src.components.graph_rag.neo4j_client import get_neo4j_client
 from src.core.config import get_settings
 from src.core.logging import get_logger
 from src.core.models import HealthResponse, HealthStatus, ServiceHealth
-
-# Import memory health router (Sprint 9 Feature 9.5)
-from src.api.health.memory_health import router as memory_health_router
 
 logger = get_logger(__name__)
 router = APIRouter(tags=["health"])
