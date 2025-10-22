@@ -1,20 +1,28 @@
-# Sprint 13 Plan: E2E Test Completion & React Migration Phase 1
+# Sprint 13 Plan: Test Infrastructure & Performance Optimization
 
-**Sprint Goal:** Achieve 70%+ E2E test pass rate and begin React Frontend Migration
-**Duration:** 2 Wochen
-**Story Points:** 44 SP (High Priority: 29 SP, Medium: 13 SP, Low: 7 SP)
+**Sprint Goal:** Achieve 70%+ E2E test pass rate and optimize backend performance
+**Duration:** 1-2 Wochen
+**Story Points:** 16 SP
 **Start Date:** TBD
 **Branch:** `sprint-13-dev`
+**Theme:** Backend Excellence - Testing & Performance
 
 ---
 
 ## Executive Summary
 
-Sprint 13 focuses on **test infrastructure completion** and **React Frontend Migration Phase 1**. With production deployment readiness achieved in Sprint 12, we now prioritize increasing test coverage from ~38% to 70%+ and replacing Gradio with a professional React frontend.
+Sprint 13 focuses **exclusively on test infrastructure completion and backend performance optimization**. With production deployment readiness achieved in Sprint 12, we now prioritize increasing test coverage from ~38% to 70%+ and implementing critical performance improvements.
 
-### Critical Priorities (Week 1)
+**Why This Focus?**
+- Test coverage is critical for production stability
+- All features are backend/testing related (no context switching)
+- Performance optimization naturally pairs with test improvements
+- Prepares system for real production deployments
+- React migration deferred to Sprint 14 (separate frontend focus)
 
-1. **Complete E2E Test Fixes (8 SP):** Fix remaining 27 failing tests from Sprint 12
+### Sprint 13 Priorities
+
+1. **E2E Test Fixes (8 SP):** Fix all 27 failing tests from Sprint 12
    - Memory agent event loop cleanup (4 errors)
    - Graphiti API compatibility (18 skipped tests)
    - LightRAG fixture connection stability (5 tests)
@@ -22,17 +30,7 @@ Sprint 13 focuses on **test infrastructure completion** and **React Frontend Mig
 
 2. **CI/CD Pipeline Finalization (3 SP):** Test timeout, parallel execution, coverage reporting
 
-### Strategic Priorities (Week 2)
-
-3. **React Frontend Migration - Phase 1 (13 SP):** Replace Gradio with React + Next.js
-   - Server-Sent Events for streaming responses
-   - Authentication with NextAuth.js
-   - Full UI customization with Tailwind CSS
-
-### Medium Priority (If Time Permits)
-
-4. **Performance Optimization (5 SP):** Community detection caching, LLM batching
-5. **Integration Test Completion (5 SP):** Implement 22 placeholder tests
+3. **Performance Optimization (5 SP):** Community detection caching, LLM batching, cache invalidation
 
 ---
 
@@ -40,33 +38,22 @@ Sprint 13 focuses on **test infrastructure completion** and **React Frontend Mig
 
 | ID | Feature | SP | Priority | Dependencies | Status |
 |----|---------|----|---------| -------------|--------|
-| **WEEK 1: TEST INFRASTRUCTURE** |
+| **CRITICAL TEST FIXES** |
 | 13.1 | Fix Memory Agent Event Loop Errors | 2 | 🔴 CRITICAL | None | 📋 TODO |
 | 13.2 | Fix Graphiti API Compatibility | 3 | 🔴 CRITICAL | None | 📋 TODO |
 | 13.3 | Fix LightRAG Fixture Connection | 2 | 🔴 CRITICAL | None | 📋 TODO |
+| **CI/CD ENHANCEMENTS** |
 | 13.4 | Add pytest-timeout Plugin | 1 | 🟠 HIGH | None | 📋 TODO |
 | 13.5 | CI/CD Pipeline Enhancements | 3 | 🟠 HIGH | 13.4 | 📋 TODO |
-| **WEEK 2: REACT MIGRATION** |
-| 13.6 | React Project Setup | 2 | 🟠 HIGH | None | 📋 TODO |
-| 13.7 | Basic Chat UI Component | 3 | 🟠 HIGH | 13.6 | 📋 TODO |
-| 13.8 | Server-Sent Events Streaming | 3 | 🟠 HIGH | 13.7 | 📋 TODO |
-| 13.9 | NextAuth.js Authentication | 3 | 🟠 HIGH | 13.6 | 📋 TODO |
-| 13.10 | Tailwind CSS Styling | 2 | 🟠 HIGH | 13.6, 13.7 | 📋 TODO |
-| **MEDIUM PRIORITY** |
-| 13.11 | Community Detection Caching | 2 | 🟡 MEDIUM | None | 📋 TODO |
-| 13.12 | LLM Labeling Batching | 2 | 🟡 MEDIUM | None | 📋 TODO |
-| 13.13 | Cache Invalidation Patterns | 1 | 🟡 MEDIUM | None | 📋 TODO |
-| 13.14 | Implement Placeholder Integration Tests | 5 | 🟡 MEDIUM | None | 📋 TODO |
-| 13.15 | Graph Viz Pagination | 3 | 🟡 MEDIUM | None | 📋 TODO |
-| **LOW PRIORITY** |
-| 13.16 | Export Functionality (CSV/JSON) | 2 | 🟢 LOW | None | 📋 TODO |
-| 13.17 | Documentation Updates | 2 | 🟢 LOW | None | 📋 TODO |
-| 13.18 | Security Enhancements | 3 | 🟢 LOW | 13.9 | 📋 TODO |
-| **TOTAL** | | **44** | | | |
+| **PERFORMANCE OPTIMIZATION** |
+| 13.6 | Community Detection Caching | 2 | 🟠 HIGH | None | 📋 TODO |
+| 13.7 | LLM Labeling Batching | 2 | 🟠 HIGH | None | 📋 TODO |
+| 13.8 | Cache Invalidation Patterns | 1 | 🟡 MEDIUM | None | 📋 TODO |
+| **TOTAL** | | **16** | | | |
 
 ---
 
-## Week 1: Critical Test Infrastructure Fixes
+## Critical Test Infrastructure Fixes (8 SP)
 
 ### Feature 13.1: Fix Memory Agent Event Loop Errors (2 SP)
 
@@ -364,6 +351,8 @@ poetry run pytest tests/integration/test_sprint5_critical_e2e.py::test_graph_con
 
 ---
 
+## CI/CD Pipeline Enhancements (4 SP)
+
 ### Feature 13.4: Add pytest-timeout Plugin (1 SP)
 
 **Priority:** 🟠 HIGH
@@ -516,613 +505,281 @@ poetry run pytest tests/unit/ -n auto -v
 
 ---
 
-## Week 2: React Frontend Migration - Phase 1
+## Performance Optimization (5 SP)
 
-### Feature 13.6: React Project Setup (2 SP)
-
-**Priority:** 🟠 HIGH
-**Category:** Frontend / Architecture
-**Technical Debt:** TD-03, TD-05, TD-06, TD-08 (Gradio limitations)
-
-#### Implementation
-
-**1. Create Next.js Project:**
-```bash
-# In project root
-npx create-next-app@latest frontend \
-  --typescript \
-  --tailwind \
-  --app \
-  --src-dir \
-  --import-alias "@/*"
-
-cd frontend
-npm install
-```
-
-**2. Project Structure:**
-```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx              # Home page
-│   │   ├── layout.tsx            # Root layout
-│   │   └── api/
-│   │       ├── auth/[...nextauth].ts
-│   │       └── chat/stream.ts    # SSE endpoint
-│   ├── components/
-│   │   ├── Chat/
-│   │   │   ├── ChatInterface.tsx
-│   │   │   ├── ChatMessage.tsx
-│   │   │   └── ChatInput.tsx
-│   │   └── Upload/
-│   │       └── DocumentUpload.tsx
-│   ├── lib/
-│   │   ├── api.ts                # API client
-│   │   └── auth.ts               # Auth helpers
-│   └── styles/
-│       └── globals.css
-├── public/
-├── package.json
-└── tsconfig.json
-```
-
-**3. Configure API Proxy:**
-```typescript
-// next.config.js
-module.exports = {
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8000/api/v1/:path*',
-      },
-    ];
-  },
-};
-```
-
-**4. Install Dependencies:**
-```json
-// package.json
-{
-  "dependencies": {
-    "next": "^14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "next-auth": "^4.24.0",
-    "tailwindcss": "^3.3.0",
-    "lucide-react": "^0.300.0",  // Icons
-    "react-markdown": "^9.0.0",   // Markdown rendering
-    "react-syntax-highlighter": "^15.5.0"  // Code highlighting
-  }
-}
-```
-
-#### Acceptance Criteria
-- [ ] Next.js 14+ project created
-- [ ] TypeScript configured
-- [ ] Tailwind CSS integrated
-- [ ] API proxy configured
-- [ ] Project builds without errors (`npm run build`)
-
----
-
-### Feature 13.7: Basic Chat UI Component (3 SP)
+### Feature 13.6: Community Detection Caching (2 SP)
 
 **Priority:** 🟠 HIGH
-**Category:** Frontend / UI
-**Dependencies:** Feature 13.6
-
-#### Implementation
-
-**1. Chat Interface Component:**
-```typescript
-// src/components/Chat/ChatInterface.tsx
-'use client';
-
-import { useState } from 'react';
-import { ChatMessage } from './ChatMessage';
-import { ChatInput } from './ChatInput';
-
-export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const sendMessage = async (query: string) => {
-    setIsLoading(true);
-
-    // Add user message
-    setMessages([...messages, { role: 'user', content: query }]);
-
-    try {
-      // Call API (to be implemented in Feature 13.8)
-      const response = await fetch('/api/v1/chat/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, strategy: 'simple' }),
-      });
-
-      const data = await response.json();
-
-      // Add assistant message
-      setMessages([...messages, {
-        role: 'assistant',
-        content: data.answer,
-        sources: data.sources
-      }]);
-    } catch (error) {
-      console.error('Chat error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, i) => (
-          <ChatMessage key={i} message={msg} />
-        ))}
-      </div>
-      <ChatInput onSend={sendMessage} isLoading={isLoading} />
-    </div>
-  );
-}
-```
-
-**2. Chat Message Component:**
-```typescript
-// src/components/Chat/ChatMessage.tsx
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-
-export function ChatMessage({ message }) {
-  return (
-    <div className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-2xl p-4 rounded-lg ${
-        message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-100'
-      }`}>
-        <ReactMarkdown
-          components={{
-            code({ node, inline, className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
-                <SyntaxHighlighter language={match[1]} {...props}>
-                  {String(children).replace(/\n$, '')}
-                </SyntaxHighlighter>
-              ) : (
-                <code className={className} {...props}>{children}</code>
-              );
-            },
-          }}
-        >
-          {message.content}
-        </ReactMarkdown>
-
-        {message.sources && (
-          <div className="mt-2 text-sm opacity-70">
-            Sources: {message.sources.length} documents
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-```
-
-**3. Chat Input Component:**
-```typescript
-// src/components/Chat/ChatInput.tsx
-'use client';
-
-import { useState } from 'react';
-import { Send } from 'lucide-react';
-
-export function ChatInput({ onSend, isLoading }) {
-  const [input, setInput] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (input.trim() && !isLoading) {
-      onSend(input);
-      setInput('');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="p-4 border-t">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question..."
-          className="flex-1 p-2 border rounded-lg"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:opacity-50"
-        >
-          <Send size={20} />
-        </button>
-      </div>
-    </form>
-  );
-}
-```
-
-#### Acceptance Criteria
-- [ ] Chat interface renders correctly
-- [ ] User can type and send messages
-- [ ] Messages display with proper styling
-- [ ] Markdown rendering works (bold, italic, code, lists)
-- [ ] Loading state shows during API calls
-- [ ] Sources are displayed below messages
-
----
-
-### Feature 13.8: Server-Sent Events Streaming (3 SP)
-
-**Priority:** 🟠 HIGH
-**Category:** Frontend / Backend
-**Dependencies:** Feature 13.7
-**Technical Debt:** TD-05 (No Real-Time Streaming)
-
-#### Implementation
-
-**1. Backend Streaming Endpoint:**
-```python
-# src/api/v1/chat.py
-from fastapi.responses import StreamingResponse
-
-@router.post("/chat/stream")
-async def chat_stream(query: QueryRequest) -> StreamingResponse:
-    """Stream chat response with Server-Sent Events."""
-
-    async def event_generator():
-        # Initialize answer generator
-        generator = AnswerGenerator()
-
-        # Stream tokens as they're generated
-        async for token in generator.stream_answer(
-            query=query.query,
-            contexts=retrieved_contexts,
-        ):
-            # SSE format: data: {json}\n\n
-            yield f"data: {json.dumps({'token': token})}\n\n"
-
-        # Send completion event
-        yield f"data: {json.dumps({'done': True})}\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-        },
-    )
-```
-
-**2. Frontend Streaming Consumer:**
-```typescript
-// src/lib/api.ts
-export async function streamChat(query: string, onToken: (token: string) => void) {
-  const response = await fetch('/api/v1/chat/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, strategy: 'simple' }),
-  });
-
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader!.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value);
-    const lines = chunk.split('\n\n');
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const data = JSON.parse(line.slice(6));
-        if (data.token) {
-          onToken(data.token);
-        }
-      }
-    }
-  }
-}
-```
-
-**3. Update Chat Interface:**
-```typescript
-// src/components/Chat/ChatInterface.tsx (updated)
-const sendMessage = async (query: string) => {
-  setIsLoading(true);
-  setMessages([...messages, { role: 'user', content: query }]);
-
-  let assistantMessage = '';
-
-  await streamChat(query, (token) => {
-    // Update assistant message as tokens arrive
-    assistantMessage += token;
-    setMessages([
-      ...messages,
-      { role: 'assistant', content: assistantMessage }
-    ]);
-  });
-
-  setIsLoading(false);
-};
-```
-
-#### Acceptance Criteria
-- [ ] Backend streams tokens via SSE
-- [ ] Frontend receives and displays tokens in real-time
-- [ ] User sees progressive response (not batch)
-- [ ] Connection properly closes after completion
-- [ ] Error handling for connection failures
-
----
-
-### Feature 13.9: NextAuth.js Authentication (3 SP)
-
-**Priority:** 🟠 HIGH
-**Category:** Security / Authentication
-**Dependencies:** Feature 13.6
-**Technical Debt:** TD-06 (Single User / No Authentication)
-
-#### Implementation
-
-**1. Install NextAuth.js:**
-```bash
-cd frontend
-npm install next-auth
-```
-
-**2. Configure Auth Provider:**
-```typescript
-// src/app/api/auth/[...nextauth]/route.ts
-import NextAuth from 'next-auth';
-import GithubProvider from 'next-auth/providers/github';
-import CredentialsProvider from 'next-auth/providers/credentials';
-
-const handler = NextAuth({
-  providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        // Validate credentials against backend
-        const res = await fetch('http://localhost:8000/api/v1/auth/login', {
-          method: 'POST',
-          body: JSON.stringify(credentials),
-          headers: { "Content-Type": "application/json" }
-        });
-
-        if (res.ok) {
-          return await res.json();
-        }
-        return null;
-      },
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-  },
-  pages: {
-    signIn: '/auth/signin',
-  },
-});
-
-export { handler as GET, handler as POST };
-```
-
-**3. Protect Routes:**
-```typescript
-// src/app/page.tsx
-'use client';
-
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
-
-export default function ChatPage() {
-  const { data: session, status } = useSession();
-
-  if (status === 'loading') {
-    return <div>Loading...</div>;
-  }
-
-  if (!session) {
-    redirect('/auth/signin');
-  }
-
-  return <ChatInterface user={session.user} />;
-}
-```
-
-**4. Backend Auth Middleware:**
-```python
-# src/api/dependencies.py
-from fastapi import Header, HTTPException
-import jwt
-
-async def get_current_user(authorization: str = Header(None)) -> str:
-    """Validate JWT token from NextAuth."""
-    if not authorization:
-        raise HTTPException(401, "Missing Authorization header")
-
-    try:
-        token = authorization.replace("Bearer ", "")
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
-        return payload["sub"]  # User ID
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(401, "Invalid token")
-```
-
-#### Acceptance Criteria
-- [ ] NextAuth.js configured with GitHub OAuth
-- [ ] Users can sign in via GitHub
-- [ ] Session persists across page reloads
-- [ ] Protected routes redirect to sign-in
-- [ ] Backend validates JWT tokens
-- [ ] User isolation works (each user has own session)
-
----
-
-### Feature 13.10: Tailwind CSS Styling (2 SP)
-
-**Priority:** 🟠 HIGH
-**Category:** UI / Design
-**Dependencies:** Features 13.6, 13.7
-**Technical Debt:** TD-08 (Limited UI Customization)
-
-#### Implementation
-
-**1. Tailwind Configuration:**
-```typescript
-// tailwind.config.ts
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {
-      colors: {
-        primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-        },
-        // Bundeswehr colors (if needed)
-        bundeswehr: {
-          green: '#4a5f3a',
-          gold: '#d4af37',
-        },
-      },
-    },
-  },
-  plugins: [
-    require('@tailwindcss/typography'),  // For markdown
-    require('@tailwindcss/forms'),        // For form inputs
-  ],
-};
-```
-
-**2. Global Styles:**
-```css
-/* src/styles/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer components {
-  .chat-container {
-    @apply flex flex-col h-screen max-w-7xl mx-auto;
-  }
-
-  .chat-message-user {
-    @apply bg-primary-500 text-white p-4 rounded-lg max-w-2xl ml-auto;
-  }
-
-  .chat-message-assistant {
-    @apply bg-gray-100 p-4 rounded-lg max-w-2xl;
-  }
-
-  .chat-input {
-    @apply w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500;
-  }
-}
-```
-
-**3. Dark Mode Support:**
-```typescript
-// src/app/layout.tsx
-export default function RootLayout({ children }) {
-  return (
-    <html lang="de" className="dark">
-      <body className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        {children}
-      </body>
-    </html>
-  );
-}
-```
-
-#### Acceptance Criteria
-- [ ] Tailwind CSS fully configured
-- [ ] Custom color palette applied
-- [ ] Typography plugin for markdown
-- [ ] Forms plugin for inputs
-- [ ] Dark mode support
-- [ ] Responsive design (mobile, tablet, desktop)
-
----
-
-## Medium Priority Features
-
-### Feature 13.11: Community Detection Caching (2 SP)
-
+**Category:** Performance
 **Technical Debt:** TD-09
-**Priority:** 🟡 MEDIUM
 
-**Implementation:** Add Redis cache for community detection results
+#### Current Issue
+
+Community detection is slower than target (30s vs 5s for 1000 nodes) due to NetworkX fallback.
+
+**Impact:**
+- ⏱️ Medium - acceptable for batch, not real-time
+- ✅ Auto-detects and uses GDS when available
+- ⚠️ Repeated calls re-compute from scratch
+
+#### Solution
+
+**1. Add Redis Cache Layer:**
+```python
+# src/components/graph_rag/community_detector.py
+from redis import Redis
+import hashlib
+import pickle
+
+class CommunityDetector:
+    def __init__(self, redis_client: Redis):
+        self.redis = redis_client
+        self.cache_ttl = 3600  # 1 hour
+
+    async def detect_communities(
+        self,
+        graph_id: str,
+        algorithm: str = "louvain"
+    ) -> list[dict]:
+        """Detect communities with Redis caching."""
+
+        # Generate cache key
+        cache_key = f"communities:{graph_id}:{algorithm}"
+
+        # Check cache
+        cached = await self.redis.get(cache_key)
+        if cached:
+            logger.info("community_detection_cache_hit", graph_id=graph_id)
+            return pickle.loads(cached)
+
+        # Cache miss - compute
+        logger.info("community_detection_cache_miss", graph_id=graph_id)
+        communities = await self._compute_communities(graph_id, algorithm)
+
+        # Store in cache
+        await self.redis.setex(
+            cache_key,
+            self.cache_ttl,
+            pickle.dumps(communities)
+        )
+
+        return communities
+```
+
+**2. Cache Invalidation on Graph Updates:**
+```python
+async def invalidate_community_cache(self, graph_id: str):
+    """Invalidate community detection cache when graph changes."""
+    pattern = f"communities:{graph_id}:*"
+    keys = await self.redis.keys(pattern)
+    if keys:
+        await self.redis.delete(*keys)
+        logger.info("community_cache_invalidated", graph_id=graph_id, keys=len(keys))
+```
+
+#### Acceptance Criteria
+- [ ] Community detection results cached in Redis
+- [ ] Cache hit reduces latency from 30s → <100ms
+- [ ] Cache invalidated on graph updates
+- [ ] TTL configured (1 hour default)
+- [ ] Cache hit/miss metrics logged
+
+#### Verification
+```bash
+# First call (cache miss)
+time poetry run python -c "from src.components.graph_rag.community_detector import detect_communities; detect_communities('test_graph')"
+# Expected: ~30s
+
+# Second call (cache hit)
+time poetry run python -c "from src.components.graph_rag.community_detector import detect_communities; detect_communities('test_graph')"
+# Expected: <1s
+```
 
 ---
 
-### Feature 13.12: LLM Labeling Batching (2 SP)
+### Feature 13.7: LLM Labeling Batching (2 SP)
 
+**Priority:** 🟠 HIGH
+**Category:** Performance
 **Technical Debt:** TD-15
-**Priority:** 🟡 MEDIUM
 
-**Implementation:** Batch multiple communities in single LLM prompt
+#### Current Issue
+
+LLM community labeling takes ~5s per community (sequential processing).
+
+**Impact:**
+- ⏱️ Medium for batch processing
+- ✅ Acceptable for current scale
+- ⚠️ Doesn't scale to 100+ communities
+
+#### Solution
+
+**1. Batch Multiple Communities in Single Prompt:**
+```python
+# src/components/graph_rag/community_labeler.py
+class CommunityLabeler:
+    def __init__(self, batch_size: int = 5):
+        self.batch_size = batch_size
+
+    async def label_communities_batch(
+        self,
+        communities: list[dict]
+    ) -> dict[int, str]:
+        """Label communities in batches using single LLM call."""
+
+        labels = {}
+
+        # Process in batches
+        for i in range(0, len(communities), self.batch_size):
+            batch = communities[i:i + self.batch_size]
+
+            # Create batch prompt
+            prompt = self._create_batch_prompt(batch)
+
+            # Single LLM call for entire batch
+            response = await self.llm.ainvoke(prompt)
+
+            # Parse batch response
+            batch_labels = self._parse_batch_response(response.content, batch)
+            labels.update(batch_labels)
+
+        return labels
+
+    def _create_batch_prompt(self, communities: list[dict]) -> str:
+        """Create prompt for batch labeling."""
+        return f"""
+Label the following {len(communities)} communities based on their entities and relationships.
+
+For each community, provide a concise 2-3 word label that describes the main theme.
+
+Communities:
+{self._format_communities(communities)}
+
+Respond in JSON format:
+{{
+  "community_1": "label",
+  "community_2": "label",
+  ...
+}}
+"""
+```
+
+**2. Parallel Batch Processing:**
+```python
+import asyncio
+
+async def label_communities_parallel(
+    self,
+    communities: list[dict],
+    max_concurrency: int = 3
+) -> dict[int, str]:
+    """Label communities with parallel batch processing."""
+
+    # Split into batches
+    batches = [communities[i:i + self.batch_size]
+               for i in range(0, len(communities), self.batch_size)]
+
+    # Process batches in parallel (with concurrency limit)
+    semaphore = asyncio.Semaphore(max_concurrency)
+
+    async def process_batch(batch):
+        async with semaphore:
+            return await self.label_communities_batch(batch)
+
+    # Execute parallel
+    results = await asyncio.gather(*[process_batch(b) for b in batches])
+
+    # Merge results
+    return {k: v for result in results for k, v in result.items()}
+```
+
+#### Acceptance Criteria
+- [ ] Batches 5 communities per LLM call (configurable)
+- [ ] Reduces total labeling time by 4-5x
+- [ ] Parallel batch processing with concurrency limit
+- [ ] JSON parsing handles batch responses
+- [ ] Falls back to sequential if batch fails
+
+#### Verification
+```bash
+# Test with 20 communities
+# Sequential: 20 communities × 5s = 100s
+# Batch (5 per call): 4 calls × 6s = 24s (4x faster)
+# Parallel batch (3 concurrent): 2 rounds × 6s = 12s (8x faster)
+```
 
 ---
 
-### Feature 13.13: Cache Invalidation Patterns (1 SP)
+### Feature 13.8: Cache Invalidation Patterns (1 SP)
 
+**Priority:** 🟡 MEDIUM
+**Category:** Performance
 **Technical Debt:** TD-11
-**Priority:** 🟡 MEDIUM
 
-**Implementation:** Upgrade to regex-based cache invalidation
+#### Current Issue
 
----
+Cache invalidation uses simple string matching, not regex patterns.
 
-### Feature 13.14: Implement Placeholder Integration Tests (5 SP)
+**Impact:**
+- ⚠️ Low - invalidation is conservative (invalidates all on writes)
+- ✅ Works correctly for current use cases
 
-**Technical Debt:** TD-19
-**Priority:** 🟡 MEDIUM
+#### Solution
 
-**Implementation:** Complete 22 placeholder integration tests from Sprint 9
+**Upgrade to Pattern-Based Invalidation:**
+```python
+# src/core/cache.py
+import re
 
----
+class CacheManager:
+    async def invalidate_pattern(self, pattern: str) -> int:
+        """Invalidate cache entries matching regex pattern.
 
-### Feature 13.15: Graph Visualization Pagination (3 SP)
+        Args:
+            pattern: Regex pattern (e.g., "query:.*:user_123")
 
-**Technical Debt:** TD-17
-**Priority:** 🟡 MEDIUM
+        Returns:
+            Number of keys invalidated
+        """
+        all_keys = await self.redis.keys("*")
+        matched_keys = [
+            key for key in all_keys
+            if re.match(pattern, key.decode())
+        ]
 
-**Implementation:** Add pagination, dynamic loading, WebGL renderer
+        if matched_keys:
+            await self.redis.delete(*matched_keys)
+            logger.info(
+                "cache_pattern_invalidated",
+                pattern=pattern,
+                keys_deleted=len(matched_keys)
+            )
+
+        return len(matched_keys)
+
+# Usage examples:
+await cache.invalidate_pattern(r"query:.*:user_123")  # All queries for user
+await cache.invalidate_pattern(r"communities:graph_\d+:.*")  # All community caches
+await cache.invalidate_pattern(r".*:2025-10-22.*")  # All caches from specific date
+```
+
+#### Acceptance Criteria
+- [ ] Regex pattern matching implemented
+- [ ] Can invalidate by user, date, graph, etc.
+- [ ] Number of keys deleted returned
+- [ ] Logging shows pattern and count
+- [ ] Backward compatible with simple string invalidation
+
+#### Verification
+```python
+# Test pattern invalidation
+await cache.set("query:simple:user_1", "...")
+await cache.set("query:complex:user_1", "...")
+await cache.set("query:simple:user_2", "...")
+
+count = await cache.invalidate_pattern(r"query:.*:user_1")
+assert count == 2  # Only user_1 queries invalidated
+```
 
 ---
 
@@ -1134,19 +791,18 @@ export default function RootLayout({ children }) {
 - [ ] All 18 Graphiti API compatibility tests passing
 - [ ] All 5 LightRAG fixture connection tests passing
 - [ ] pytest-timeout integrated
-- [ ] React project setup complete
-- [ ] Basic chat UI functional
+- [ ] CI/CD parallel test execution working
 
 ### Should Have (High Value)
-- [ ] Server-Sent Events streaming working
-- [ ] NextAuth.js authentication implemented
-- [ ] Tailwind CSS styling applied
-- [ ] CI/CD parallel test execution
+- [ ] Community detection caching operational
+- [ ] LLM labeling batching implemented
+- [ ] Cache invalidation patterns functional
+- [ ] Coverage reporting to Codecov
 
 ### Could Have (If Time Permits)
-- [ ] Community detection caching
-- [ ] LLM labeling batching
-- [ ] Integration test placeholders completed
+- [ ] Additional performance benchmarks
+- [ ] Test timeout fine-tuning per test type
+- [ ] Cache warming strategies
 
 ---
 
@@ -1156,50 +812,76 @@ export default function RootLayout({ children }) {
 **Risk:** Graphiti constructor signature unknown, may take time to investigate
 **Mitigation:** Allocate 3 SP (includes investigation), consider pinning version as fallback
 
-### Risk 2: React Learning Curve
-**Risk:** Team may be new to Next.js 14 App Router
-**Mitigation:** Start with simple components, use official documentation, allocate 13 SP for Phase 1
+### Risk 2: Event Loop Complexity
+**Risk:** Async fixture timing issues may be deeper than expected
+**Mitigation:** 2 SP allocated, can defer complex cases to Sprint 14 if needed
 
-### Risk 3: Test Fixing Complexity
-**Risk:** Event loop errors may be deeper than expected
-**Mitigation:** 2 SP allocated, can defer to Sprint 14 if needed (keep low priority)
+### Risk 3: Performance Gains Uncertain
+**Risk:** Caching may not provide expected speedup in all scenarios
+**Mitigation:** Implement with metrics, validate before/after benchmarks
 
 ---
 
 ## Sprint 13 Velocity Planning
 
-**Planned:** 44 SP total
-**Recommended Focus:** 29 SP (High Priority only)
-- Week 1: Test Infrastructure (11 SP)
-- Week 2: React Phase 1 (13 SP)
-- Buffer: 5 SP for unknowns
+**Planned:** 16 SP (focused sprint)
+**Breakdown:**
+- Critical Test Fixes: 8 SP (50%)
+- CI/CD Enhancements: 4 SP (25%)
+- Performance Optimization: 5 SP (31%) - rounded up from 4.96
 
-**Stretch Goals:** +13 SP (Medium Priority)
-**Nice to Have:** +7 SP (Low Priority)
+**Timeline:**
+- Week 1: Test Fixes + CI/CD (12 SP)
+- Week 2: Performance Optimization (4-5 SP, buffer time)
+
+**Buffer:** Built-in buffer with 1-2 week duration flexibility
 
 ---
 
-## Next Sprints Preview
+## Next Sprint Preview
 
-### Sprint 14: React Phase 2 + Multi-Tenancy
-- Document upload UI in React
-- MCP tool call visualization
-- Session history management
-- Multi-tenant architecture
-- Advanced authentication (RBAC)
+### Sprint 14: React Frontend Migration - Phase 1 (15 SP, 2 weeks)
+- React + Next.js project setup
+- Basic chat UI with streaming responses
+- NextAuth.js authentication
+- Tailwind CSS styling
+- Document upload UI
+- Feature parity with Gradio MVP
 
-### Sprint 15: Production Deployment & Monitoring
-- Production deployment to staging
-- Performance monitoring dashboards
-- Automated alerting
-- Load testing at scale
-- Security audit
+**Deferred from original Sprint 13:** All frontend features moved to dedicated Sprint 14
+
+---
+
+## Sprint Retrospective Template
+
+At end of Sprint 13, evaluate:
+
+1. **Test Coverage Achievement:**
+   - Did we reach 70%+ pass rate?
+   - Which test fixes were harder than expected?
+
+2. **Performance Improvements:**
+   - What speedup did caching provide?
+   - Is batching effective for LLM labeling?
+
+3. **CI/CD Enhancements:**
+   - Is parallel execution stable?
+   - Are test timeouts properly configured?
+
+4. **Technical Debt:**
+   - How many TD items resolved? (Target: 4)
+   - Any new TD introduced?
+
+5. **Lessons for Sprint 14:**
+   - What frontend preparation is needed?
+   - Team readiness for React migration?
 
 ---
 
 **Sprint 13 Start Date:** TBD
-**Sprint 13 End Date:** TBD (2 weeks from start)
+**Sprint 13 End Date:** TBD (1-2 weeks from start)
 **Previous Sprint:** Sprint 12 (COMPLETE - 31/32 SP, 97%)
+**Next Sprint:** Sprint 14 (React Frontend Migration Phase 1)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
