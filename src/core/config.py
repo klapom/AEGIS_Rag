@@ -123,6 +123,50 @@ class Settings(BaseSettings):
         default="./data/models", description="Directory for caching HuggingFace models"
     )
 
+    # Semantic Entity Deduplication (Sprint 13: ADR-017)
+    enable_semantic_dedup: bool = Field(
+        default=True,
+        description="Enable semantic entity deduplication using sentence-transformers"
+    )
+    semantic_dedup_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="Sentence transformer model for entity deduplication (90MB, 384-dim)"
+    )
+    semantic_dedup_threshold: float = Field(
+        default=0.93,
+        ge=0.0,
+        le=1.0,
+        description="Cosine similarity threshold for duplicate detection (0.90-0.95 recommended)"
+    )
+    semantic_dedup_device: str = Field(
+        default="auto",
+        description="Device for semantic dedup ('auto', 'cuda', 'cpu')"
+    )
+
+    # Gemma Relation Extraction (Sprint 13: ADR-018)
+    gemma_model: str = Field(
+        default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
+        description="Gemma model for relation extraction (Ollama)"
+    )
+    gemma_temperature: float = Field(
+        default=0.1,
+        ge=0.0,
+        le=2.0,
+        description="Temperature for Gemma relation extraction"
+    )
+    gemma_num_predict: int = Field(
+        default=2000,
+        ge=100,
+        le=4096,
+        description="Max tokens for Gemma relation extraction"
+    )
+    gemma_num_ctx: int = Field(
+        default=16384,
+        ge=2048,
+        le=32768,
+        description="Context window for Gemma model"
+    )
+
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")
@@ -247,7 +291,7 @@ class Settings(BaseSettings):
 
     # LightRAG LLM Configuration
     lightrag_llm_model: str = Field(
-        default="llama3.2:3b",
+        default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",
         description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)"
     )
     lightrag_llm_temperature: float = Field(

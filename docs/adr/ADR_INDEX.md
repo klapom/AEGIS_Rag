@@ -23,6 +23,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 014 | E2E Integration Testing Strategy | Accepted | 2025-10-17 |
 | 015 | Critical Path Testing Strategy | Accepted | 2025-10-17 |
 | 016 | BGE-M3 Embedding Model für Graphiti | Accepted | 2025-10-22 |
+| 017 | Semantic Entity Deduplication | Accepted | 2025-10-24 |
+| 018 | Model Selection for Entity/Relation Extraction | Accepted | 2025-10-24 |
 
 ---
 
