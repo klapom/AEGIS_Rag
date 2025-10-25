@@ -1,12 +1,16 @@
 """Pytest configuration and fixtures for Sprint 2 Tests."""
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+
+# Setup logger for fixture debugging
+logger = logging.getLogger(__name__)
 from fastapi.testclient import TestClient
 from qdrant_client.models import (
     CollectionDescription,
@@ -644,7 +648,7 @@ async def ollama_client_real():
         models_response = await client.list()
         available_models = [m.model for m in models_response.models]
 
-        required_models = ["llama3.2:3b", "nomic-embed-text"]
+        required_models = ["hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0", "nomic-embed-text"]
         # Check if models exist (with or without tag like :latest)
         missing_models = []
         for required in required_models:
@@ -847,54 +851,120 @@ async def lightrag_instance():
     Sprint 11: Uses singleton LightRAG instance (avoids re-initialization)
     but cleans Neo4j database before each test for isolation.
 
+    Sprint 13: Enhanced logging for debugging fixture connection issues.
+
     Returns:
         LightRAGWrapper: Singleton instance with llama3.2:3b model
     """
+    logger.info("=== LIGHTRAG FIXTURE START ===")
+
     from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
     from neo4j import AsyncGraphDatabase
     from src.core.config import settings
 
     # Clean Neo4j, LightRAG caches, AND reset singleton BEFORE test
     try:
+        logger.info("Step 1/3: Cleaning Neo4j database...")
         # 1. Clean Neo4j database
+        # Note: Pydantic SecretStr needs .get_secret_value() to extract actual string
+        neo4j_user = settings.neo4j_user
+        neo4j_password = settings.neo4j_password.get_secret_value() if hasattr(settings.neo4j_password, 'get_secret_value') else settings.neo4j_password
+
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
+            auth=(neo4j_user, neo4j_password),
         )
         async with driver.session() as session:
-            await session.run("MATCH (n) DETACH DELETE n")
+            result = await session.run("MATCH (n) DETACH DELETE n")
+            summary = await result.consume()
+            logger.info(f"Neo4j cleanup complete: deleted nodes/relationships")
         await driver.close()
+        logger.info("Neo4j driver closed")
 
+        logger.info("Step 2/3: Cleaning LightRAG local cache files...")
         # 2. Clean LightRAG local cache files (Windows-compatible approach)
         import shutil
         from pathlib import Path
         lightrag_dir = Path(settings.lightrag_working_dir)
 
         if lightrag_dir.exists():
+            file_count = 0
+            dir_count = 0
             # Delete all FILES in directory (safer than rmtree on Windows)
             # This avoids PermissionError when process has directory handle open
             for item in lightrag_dir.iterdir():
                 try:
                     if item.is_file():
                         item.unlink()
+                        file_count += 1
                     elif item.is_dir():
                         shutil.rmtree(item)
-                except PermissionError:
+                        dir_count += 1
+                except PermissionError as e:
                     # Skip files/dirs that are locked (best-effort cleanup)
+                    logger.warning(f"PermissionError cleaning {item.name}: {e}")
                     pass
+            logger.info(f"Cache cleanup complete: removed {file_count} files, {dir_count} directories")
         else:
             # Create directory if it doesn't exist
             lightrag_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created LightRAG working directory: {lightrag_dir}")
 
+        logger.info("Step 3/3: Resetting singleton instance...")
         # 3. Reset singleton instance so it re-initializes with clean state
         import src.components.graph_rag.lightrag_wrapper as lightrag_module
         lightrag_module._lightrag_wrapper = None
-    except Exception:
+        logger.info("Singleton reset complete")
+    except Exception as e:
+        logger.error(f"Cleanup error (best-effort): {type(e).__name__}: {e}")
         pass  # Best-effort cleanup
 
     # Get fresh singleton instance (will re-initialize with clean caches)
+    logger.info("Initializing LightRAG wrapper...")
     wrapper = await get_lightrag_wrapper_async()
+    logger.info(f"LightRAG wrapper initialized: {type(wrapper).__name__} at {id(wrapper)}")
+    logger.info("=== LIGHTRAG FIXTURE READY ===")
 
     yield wrapper
 
-    # Note: No cleanup after test - cleanup happens before next test
+    logger.info("=== LIGHTRAG FIXTURE TEARDOWN ===")
+    # Sprint 13 TD-26/27: Properly shutdown LightRAG workers to prevent event loop errors
+    try:
+        if hasattr(wrapper, 'rag') and wrapper.rag is not None:
+            import asyncio
+
+            # LightRAG uses async worker pools that need cleanup
+            logger.info("Shutting down LightRAG async workers...")
+
+            # Cancel all pending tasks in the current event loop
+            # This prevents workers from calling asyncio.get_event_loop().time() after teardown
+            try:
+                # Get all pending tasks except current task
+                current_task = asyncio.current_task()
+                pending_tasks = [
+                    task for task in asyncio.all_tasks()
+                    if task is not current_task and not task.done()
+                ]
+
+                if pending_tasks:
+                    logger.info(f"Cancelling {len(pending_tasks)} pending async tasks...")
+                    for task in pending_tasks:
+                        task.cancel()
+
+                    # Wait for tasks to finish cancellation (with timeout)
+                    await asyncio.wait(pending_tasks, timeout=2.0)
+                    logger.info("All pending tasks cancelled")
+                else:
+                    logger.info("No pending tasks to cancel")
+            except Exception as e:
+                logger.warning(f"Task cancellation warning: {e}")
+
+            # Give workers final grace period to shutdown
+            logger.info("Waiting for workers to finish...")
+            await asyncio.sleep(0.5)
+
+        logger.info("LightRAG teardown complete")
+    except Exception as e:
+        logger.warning(f"Teardown warning (non-critical): {e}")
+
+    # Note: No data cleanup after test - cleanup happens before next test

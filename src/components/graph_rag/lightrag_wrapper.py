@@ -135,7 +135,7 @@ class LightRAGWrapper:
                     options={
                         "temperature": settings.lightrag_llm_temperature,
                         "num_predict": settings.lightrag_llm_max_tokens,
-                        "num_ctx": 8192,  # Sprint 13 TD-31 Fix: llama3.2:3b max context (was 32768 - too large!)
+                        "num_ctx": 32768,  # Sprint 13 TD-31: llama3.2:3b supports 32k standard (128k via RoPE)
                     },
                 )
 

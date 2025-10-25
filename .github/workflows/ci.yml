@@ -142,16 +142,31 @@ jobs:
           poetry run pytest tests/unit/ tests/components/ tests/api/ \
             --cov=src \
             --cov-report=xml \
+            --cov-report=html \
             --cov-report=term-missing \
             --cov-fail-under=80 \
+            --junitxml=test-results/unit-results.xml \
+            --timeout=300 \
+            --timeout-method=thread \
             -v
-      
+
       - name: Upload Coverage Report
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.xml
           flags: unittests
           name: codecov-unit
+          fail_ci_if_error: true  # Sprint 13: Fail if coverage upload fails
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            test-results/
+            coverage.xml
+            htmlcov/
 
   # ============================================================
   # JOB 5: INTEGRATION TESTS (with Docker Services)
@@ -272,8 +287,11 @@ jobs:
           poetry run pytest tests/integration/ \
             --cov=src \
             --cov-report=xml \
+            --cov-report=html \
             --cov-append \
             --timeout=300 \
+            --timeout-method=thread \
+            --junitxml=test-results/integration-results.xml \
             -v
       
       - name: Upload Coverage Report
@@ -282,6 +300,17 @@ jobs:
           file: ./coverage.xml
           flags: integration
           name: codecov-integration
+          fail_ci_if_error: true  # Sprint 13: Fail if coverage upload fails
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: |
+            test-results/
+            coverage.xml
+            htmlcov/
 
   # ============================================================
   # JOB 6: SECURITY SCANNING (Dependencies)
