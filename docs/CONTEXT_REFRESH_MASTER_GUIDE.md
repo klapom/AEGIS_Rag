@@ -741,11 +741,9 @@ Needs Improvement:
 
 ### Related Documentation
 
-- **Full Refresh Details:** [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md)
-- **Quick Reference:** [docs/CONTEXT_REFRESH_CHEATSHEET.txt](docs/CONTEXT_REFRESH_CHEATSHEET.txt)
-- **Sprint 2 Example:** [docs/CONTEXT_REFRESH_SPRINT2_COMPLETE.md](docs/CONTEXT_REFRESH_SPRINT2_COMPLETE.md)
-- **Project Overview:** [README.md](README.md)
+- **Project Overview:** [README.md](../README.md)
 - **Main Context:** [CLAUDE.md](CLAUDE.md)
+- **Current Sprints:** [SPRINT_14_PLAN.md](../SPRINT_14_PLAN.md), [SPRINT_13_TODOS.md](../SPRINT_13_TODOS.md)
 
 ---
 
