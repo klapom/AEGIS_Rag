@@ -1,12 +1,12 @@
 /**
  * AppLayout Component
- * Sprint 15 Feature 15.2: Perplexity-style Layout (ADR-021)
+ * Sprint 15 Feature 15.5: Layout with Session History Sidebar
  *
- * Main application layout with sidebar and content area
+ * Main application layout with session history sidebar and content area
  */
 
 import { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
+import { SessionSidebar } from '../history';
 import { Header } from './Header';
 
 interface AppLayoutProps {
@@ -22,8 +22,8 @@ export function AppLayout({
 }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={onToggleSidebar} />
+      {/* Session History Sidebar */}
+      <SessionSidebar isOpen={sidebarOpen} onToggle={onToggleSidebar || (() => {})} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">

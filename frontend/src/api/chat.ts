@@ -159,3 +159,11 @@ export async function deleteConversationHistory(sessionId: string): Promise<void
     throw new Error(`HTTP ${response.status}: ${error}`);
   }
 }
+
+/**
+ * Delete a session (alias for deleteConversationHistory)
+ * Sprint 15 Feature 15.5
+ */
+export async function deleteSession(sessionId: string): Promise<void> {
+  return deleteConversationHistory(sessionId);
+}
