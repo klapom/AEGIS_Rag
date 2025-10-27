@@ -21,9 +21,7 @@ class TestDualLevelSearch:
     @pytest.fixture
     def mock_neo4j_client(self):
         """Mock Neo4j client."""
-        with patch(
-            "src.components.graph_rag.dual_level_search.Neo4jClient"
-        ) as mock_client_class:
+        with patch("src.components.graph_rag.dual_level_search.Neo4jClient") as mock_client_class:
             mock_instance = MagicMock()
             mock_instance.execute_read = AsyncMock(return_value=[])
             mock_client_class.return_value = mock_instance
@@ -59,23 +57,17 @@ class TestDualLevelSearch:
         assert dual_level_search.neo4j_uri == "bolt://localhost:7687"
 
     @pytest.mark.asyncio
-    async def test_local_search_empty_results(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_local_search_empty_results(self, dual_level_search, mock_neo4j_client):
         """Test local search with no matching entities."""
         mock_neo4j_client.execute_read = AsyncMock(return_value=[])
 
-        entities = await dual_level_search.local_search(
-            "What is machine learning?", top_k=5
-        )
+        entities = await dual_level_search.local_search("What is machine learning?", top_k=5)
 
         assert entities == []
         mock_neo4j_client.execute_read.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_local_search_with_results(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_local_search_with_results(self, dual_level_search, mock_neo4j_client):
         """Test local search with matching entities."""
         mock_results = [
             {
@@ -100,9 +92,7 @@ class TestDualLevelSearch:
 
         mock_neo4j_client.execute_read = AsyncMock(return_value=mock_results)
 
-        entities = await dual_level_search.local_search(
-            "machine learning with python", top_k=5
-        )
+        entities = await dual_level_search.local_search("machine learning with python", top_k=5)
 
         assert len(entities) == 2
         assert isinstance(entities[0], GraphEntity)
@@ -111,9 +101,7 @@ class TestDualLevelSearch:
         assert entities[1].name == "Python"
 
     @pytest.mark.asyncio
-    async def test_global_search_empty_results(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_global_search_empty_results(self, dual_level_search, mock_neo4j_client):
         """Test global search with no matching topics."""
         mock_neo4j_client.execute_read = AsyncMock(return_value=[])
 
@@ -122,9 +110,7 @@ class TestDualLevelSearch:
         assert topics == []
 
     @pytest.mark.asyncio
-    async def test_global_search_with_results(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_global_search_with_results(self, dual_level_search, mock_neo4j_client):
         """Test global search with matching topics."""
         mock_results = [
             {
@@ -152,9 +138,7 @@ class TestDualLevelSearch:
         assert "Python" in topics[0].keywords
 
     @pytest.mark.asyncio
-    async def test_get_entity_relationships_empty(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_get_entity_relationships_empty(self, dual_level_search, mock_neo4j_client):
         """Test getting relationships with no entities."""
         relationships = await dual_level_search._get_entity_relationships([])
         assert relationships == []
@@ -266,9 +250,7 @@ class TestDualLevelSearch:
         dual_level_search.ollama_client = mock_ollama_client
 
         context = "Entity: Python (TECHNOLOGY)\nRelationship: John-USES->Python"
-        answer = await dual_level_search._generate_answer(
-            "What does John use?", context
-        )
+        answer = await dual_level_search._generate_answer("What does John use?", context)
 
         assert answer == "Mock answer from graph context."
         mock_ollama_client.generate.assert_called_once()
@@ -320,9 +302,7 @@ class TestDualLevelSearch:
 
         # Mock answer generation
         mock_ollama = MagicMock()
-        mock_ollama.generate = AsyncMock(
-            return_value={"response": "Hybrid search answer."}
-        )
+        mock_ollama.generate = AsyncMock(return_value={"response": "Hybrid search answer."})
         dual_level_search.ollama_client = mock_ollama
 
         result = await dual_level_search.hybrid_search("python programming", top_k=10)
@@ -336,9 +316,7 @@ class TestDualLevelSearch:
         assert "execution_time_ms" in result.metadata
 
     @pytest.mark.asyncio
-    async def test_hybrid_search_split_top_k(
-        self, dual_level_search, mock_neo4j_client
-    ):
+    async def test_hybrid_search_split_top_k(self, dual_level_search, mock_neo4j_client):
         """Test hybrid search correctly splits top_k between local and global."""
         # Return empty results for local and global search
         # Note: relationship query won't be called if entities list is empty

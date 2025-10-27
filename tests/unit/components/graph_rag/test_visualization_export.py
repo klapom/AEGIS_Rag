@@ -75,7 +75,9 @@ class TestGraphVisualizationExporter:
         self, exporter, mock_neo4j_client, sample_nodes, sample_edges
     ):
         """Test export_subgraph with D3.js format."""
-        mock_neo4j_client.execute_query.return_value = [{"nodes": sample_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": sample_nodes, "edges": sample_edges}
+        ]
 
         result = await exporter.export_subgraph(["entity_1"], depth=1, format="d3")
 
@@ -92,7 +94,9 @@ class TestGraphVisualizationExporter:
         self, exporter, mock_neo4j_client, sample_nodes, sample_edges
     ):
         """Test export_subgraph with Cytoscape format."""
-        mock_neo4j_client.execute_query.return_value = [{"nodes": sample_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": sample_nodes, "edges": sample_edges}
+        ]
 
         result = await exporter.export_subgraph(["entity_1"], depth=1, format="cytoscape")
 
@@ -107,7 +111,9 @@ class TestGraphVisualizationExporter:
         self, exporter, mock_neo4j_client, sample_nodes, sample_edges
     ):
         """Test export_subgraph with vis.js format."""
-        mock_neo4j_client.execute_query.return_value = [{"nodes": sample_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": sample_nodes, "edges": sample_edges}
+        ]
 
         result = await exporter.export_subgraph(["entity_1"], depth=1, format="visjs")
 
@@ -125,9 +131,13 @@ class TestGraphVisualizationExporter:
             await exporter.export_subgraph(["entity_1"], format="invalid")
 
     @pytest.mark.asyncio
-    async def test_export_subgraph_depth_clamping(self, exporter, mock_neo4j_client, sample_nodes, sample_edges):
+    async def test_export_subgraph_depth_clamping(
+        self, exporter, mock_neo4j_client, sample_nodes, sample_edges
+    ):
         """Test depth parameter is clamped to valid range (1-5)."""
-        mock_neo4j_client.execute_query.return_value = [{"nodes": sample_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": sample_nodes, "edges": sample_edges}
+        ]
 
         # Test depth < 1
         result1 = await exporter.export_subgraph(["entity_1"], depth=0)
@@ -144,7 +154,9 @@ class TestGraphVisualizationExporter:
         """Test max_nodes limit is enforced."""
         # Create more nodes than limit
         many_nodes = sample_nodes * 60  # 120 nodes
-        mock_neo4j_client.execute_query.return_value = [{"nodes": many_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": many_nodes, "edges": sample_edges}
+        ]
 
         result = await exporter.export_subgraph(["entity_1"], max_nodes=100)
 
@@ -226,7 +238,9 @@ class TestGraphVisualizationExporter:
         self, exporter, mock_neo4j_client, sample_nodes, sample_edges
     ):
         """Test export_subgraph with multiple starting entity IDs."""
-        mock_neo4j_client.execute_query.return_value = [{"nodes": sample_nodes, "edges": sample_edges}]
+        mock_neo4j_client.execute_query.return_value = [
+            {"nodes": sample_nodes, "edges": sample_edges}
+        ]
 
         result = await exporter.export_subgraph(["entity_1", "entity_2"], depth=2)
 

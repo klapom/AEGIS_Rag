@@ -30,11 +30,13 @@ def engine(mock_neo4j_client):
 def sample_graph():
     """Create sample NetworkX graph."""
     G = nx.DiGraph()
-    G.add_edges_from([
-        ("entity_1", "entity_2"),
-        ("entity_2", "entity_3"),
-        ("entity_3", "entity_1"),
-    ])
+    G.add_edges_from(
+        [
+            ("entity_1", "entity_2"),
+            ("entity_2", "entity_3"),
+            ("entity_3", "entity_1"),
+        ]
+    )
     return G
 
 
@@ -175,7 +177,10 @@ class TestGraphAnalyticsEngine:
         """Test graph statistics calculation."""
         mock_neo4j_client.execute_query.side_effect = [
             [{"entities": 1000, "relationships": 2500}],  # Counts
-            [{"type": "PERSON", "count": 400}, {"type": "ORGANIZATION", "count": 600}],  # Entity types
+            [
+                {"type": "PERSON", "count": 400},
+                {"type": "ORGANIZATION", "count": 600},
+            ],  # Entity types
             [{"type": "WORKS_AT", "count": 1500}, {"type": "KNOWS", "count": 1000}],  # Rel types
             [{"communities": 50}],  # Communities
         ]
@@ -285,6 +290,7 @@ class TestGraphAnalyticsEngine:
     async def test_get_cached_with_expired_cache(self, engine):
         """Test cache retrieval with expired entry."""
         import time
+
         engine._cache["test_key"] = (time.time() - 1000, "old_value")
         engine.cache_ttl = 500
 

@@ -183,9 +183,7 @@ async def test_community_detection_leiden_e2e(neo4j_driver, ollama_client_real):
         assert community.size >= 5, f"Community {community.id} too small: {community.size}"
 
     # Verify: Density metrics computed
-    assert all(
-        0.0 <= c.density <= 1.0 for c in communities
-    ), "Invalid density values (must be 0-1)"
+    assert all(0.0 <= c.density <= 1.0 for c in communities), "Invalid density values (must be 0-1)"
 
     # Execute: Label communities with Ollama
     community_labeler = CommunityLabeler(
@@ -200,9 +198,7 @@ async def test_community_detection_leiden_e2e(neo4j_driver, ollama_client_real):
     labeling_time_ms = (time.time() - labeling_start) * 1000
 
     # Verify: All communities labeled
-    assert len(labeled_communities) == len(
-        communities
-    ), "Not all communities were labeled"
+    assert len(labeled_communities) == len(communities), "Not all communities were labeled"
 
     # Verify: Labels valid (2-5 words, not empty, not default)
     for community in labeled_communities:
@@ -234,14 +230,10 @@ async def test_community_detection_leiden_e2e(neo4j_driver, ollama_client_real):
 
     # Verify: Performance <30s total (detection + labeling)
     total_time_ms = (time.time() - test_start_time) * 1000
-    assert (
-        total_time_ms < 30000
-    ), f"Expected <30s total, got {total_time_ms/1000:.1f}s"
+    assert total_time_ms < 30000, f"Expected <30s total, got {total_time_ms/1000:.1f}s"
 
     # Performance breakdown logging
-    print(
-        f"\n✅ Test 6.1 PASSED: {len(labeled_communities)} communities detected and labeled"
-    )
+    print(f"\n✅ Test 6.1 PASSED: {len(labeled_communities)} communities detected and labeled")
     print(f"   Detection: {detection_time_ms/1000:.1f}s")
     print(f"   Labeling: {labeling_time_ms/1000:.1f}s")
     print(f"   Total: {total_time_ms/1000:.1f}s")
@@ -370,9 +362,7 @@ async def test_query_optimization_cache_e2e(neo4j_driver):
     # because cache overhead is significant for very fast queries
     # We'll verify cache works, but not enforce 40% improvement for fast queries
     if cold_latency_ms > 50:  # Only check improvement if query is slow enough
-        assert (
-            improvement_pct > 0.4
-        ), f"Expected 40%+ improvement, got {improvement_pct:.1%}"
+        assert improvement_pct > 0.4, f"Expected 40%+ improvement, got {improvement_pct:.1%}"
 
     # Test Query 2: Graph traversal query
     traversal_query = """
@@ -394,9 +384,7 @@ async def test_query_optimization_cache_e2e(neo4j_driver):
     assert len(result2) > 0, "Expected graph traversal results"
 
     # Verify: Traversal query <1000ms (relaxed for local Neo4j graph traversal with 9GB WSL limit)
-    assert (
-        traversal_latency_ms < 1000
-    ), f"Traversal query too slow: {traversal_latency_ms:.1f}ms"
+    assert traversal_latency_ms < 1000, f"Traversal query too slow: {traversal_latency_ms:.1f}ms"
 
     # Verify: Cache statistics
     stats = await cache.stats()
@@ -421,7 +409,9 @@ async def test_query_optimization_cache_e2e(neo4j_driver):
     print(f"   Cold query: {cold_latency_ms:.1f}ms")
     print(f"   Warm query: {warm_latency_ms:.1f}ms")
     print(f"   Improvement: {improvement_pct:.1%}")
-    print(f"   Cache stats: {stats['hits']} hits, {stats['misses']} misses, {hit_rate:.1f}% hit rate")
+    print(
+        f"   Cache stats: {stats['hits']} hits, {stats['misses']} misses, {hit_rate:.1f}% hit rate"
+    )
 
     # Cleanup
     with neo4j_driver.session() as session:
@@ -483,9 +473,7 @@ async def test_pagerank_analytics_e2e(neo4j_driver):
     # Create test graph (50 nodes with hub structure)
     with neo4j_driver.session() as session:
         # Create a central hub node
-        session.run(
-            "CREATE (hub:Entity {id: 'hub_node', name: 'Hub', source: 'test_pagerank'})"
-        )
+        session.run("CREATE (hub:Entity {id: 'hub_node', name: 'Hub', source: 'test_pagerank'})")
 
         # Create 49 other nodes, many pointing to the hub
         for i in range(49):
@@ -539,6 +527,7 @@ async def test_pagerank_analytics_e2e(neo4j_driver):
 
     # Build NetworkX graph
     import networkx as nx
+
     G = nx.DiGraph()
     G.add_edges_from(edges)
 
@@ -579,7 +568,9 @@ async def test_pagerank_analytics_e2e(neo4j_driver):
     assert execution_time < 10.0, f"PageRank too slow: {execution_time:.1f}s"
 
     print(f"[PASS] Test 6.4: PageRank computed for 50 nodes in {execution_time:.2f}s")
-    print(f"   Top 3 nodes: {sorted(pagerank_scores.items(), key=lambda x: x[1], reverse=True)[:3]}")
+    print(
+        f"   Top 3 nodes: {sorted(pagerank_scores.items(), key=lambda x: x[1], reverse=True)[:3]}"
+    )
 
     # Cleanup
     with neo4j_driver.session() as session:
@@ -724,6 +715,7 @@ async def test_betweenness_centrality_e2e(neo4j_driver):
 
     # Build NetworkX graph
     import networkx as nx
+
     G = nx.Graph()  # Undirected graph
     G.add_edges_from(edges)
 
@@ -737,15 +729,18 @@ async def test_betweenness_centrality_e2e(neo4j_driver):
 
     # Verify: Bridge node has highest centrality
     top_node = max(centrality_scores, key=centrality_scores.get)
-    assert top_node == "bridge_node", f"Expected bridge_node to have highest centrality, got {top_node}"
+    assert (
+        top_node == "bridge_node"
+    ), f"Expected bridge_node to have highest centrality, got {top_node}"
 
     # Verify: Bridge centrality is significantly higher than cluster nodes
     bridge_centrality = centrality_scores["bridge_node"]
-    avg_cluster_centrality = sum(
-        score for node, score in centrality_scores.items() if "cluster" in node
-    ) / 80
-    assert bridge_centrality > avg_cluster_centrality * 10, \
-        f"Bridge centrality {bridge_centrality:.4f} not >> avg cluster {avg_cluster_centrality:.4f}"
+    avg_cluster_centrality = (
+        sum(score for node, score in centrality_scores.items() if "cluster" in node) / 80
+    )
+    assert (
+        bridge_centrality > avg_cluster_centrality * 10
+    ), f"Bridge centrality {bridge_centrality:.4f} not >> avg cluster {avg_cluster_centrality:.4f}"
 
     # Verify: All scores in valid range [0, 1]
     for node, score in centrality_scores.items():
@@ -757,7 +752,9 @@ async def test_betweenness_centrality_e2e(neo4j_driver):
     print(f"[PASS] Test 6.5: Betweenness centrality computed for 81 nodes in {execution_time:.2f}s")
     print(f"   Bridge centrality: {bridge_centrality:.4f}")
     print(f"   Avg cluster centrality: {avg_cluster_centrality:.4f}")
-    print(f"   Top 3 nodes: {sorted(centrality_scores.items(), key=lambda x: x[1], reverse=True)[:3]}")
+    print(
+        f"   Top 3 nodes: {sorted(centrality_scores.items(), key=lambda x: x[1], reverse=True)[:3]}"
+    )
 
     # Cleanup
     with neo4j_driver.session() as session:

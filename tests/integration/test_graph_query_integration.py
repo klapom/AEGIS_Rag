@@ -117,9 +117,7 @@ class TestGraphQueryE2EFlow:
     async def test_graph_query_node_standalone(self, mock_dual_level_search):
         """Test graph_query_node function standalone."""
         # Create initial state with GRAPH intent
-        state = create_initial_state(
-            query="How are RAG and LLMs related?", intent="graph"
-        )
+        state = create_initial_state(query="How are RAG and LLMs related?", intent="graph")
 
         # Patch GraphQueryAgent to use mock
         with patch(
@@ -132,8 +130,7 @@ class TestGraphQueryE2EFlow:
         assert "graph_query_result" in updated_state
         assert updated_state["graph_query_result"]["query"] == "How are RAG and LLMs related?"
         assert (
-            "RAG (Retrieval-Augmented Generation)"
-            in updated_state["graph_query_result"]["answer"]
+            "RAG (Retrieval-Augmented Generation)" in updated_state["graph_query_result"]["answer"]
         )
         assert len(updated_state["graph_query_result"]["entities"]) == 2
 
@@ -445,9 +442,7 @@ class TestGraphQueryStateUpdates:
         return mock
 
     @pytest.mark.asyncio
-    async def test_state_includes_all_graph_components(
-        self, mock_search_with_full_results
-    ):
+    async def test_state_includes_all_graph_components(self, mock_search_with_full_results):
         """Test that state includes entities, relationships, topics."""
         agent = GraphQueryAgent(dual_level_search=mock_search_with_full_results)
 

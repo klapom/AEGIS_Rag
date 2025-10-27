@@ -74,7 +74,9 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(search.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            search.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Test answer"}
 
             result = await search.search_by_community(query="neural networks", top_k=5)
@@ -102,7 +104,9 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(search.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            search.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Test answer"}
 
             result = await search.search_by_community(
@@ -119,7 +123,9 @@ class TestSearchByCommunity:
         """Test search with no results."""
         mock_neo4j_client.execute_read.return_value = []
 
-        with patch.object(search.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            search.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "No results found"}
 
             result = await search.search_by_community(query="nonexistent", top_k=5)
@@ -155,7 +161,9 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(search.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            search.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Test answer"}
 
             result = await search.search_by_community(query="test", top_k=5)

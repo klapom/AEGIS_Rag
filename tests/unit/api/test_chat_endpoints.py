@@ -28,30 +28,30 @@ SAMPLE_COORDINATOR_RESULT = {
             "source": "docs/core/CLAUDE.md",
             "title": "CLAUDE.md",
             "score": 0.92,
-            "metadata": {"file_type": "markdown"}
+            "metadata": {"file_type": "markdown"},
         },
         {
             "text": "Das System nutzt LangGraph für Multi-Agent Orchestration.",
             "source": "docs/TECH_STACK.md",
             "title": "TECH_STACK.md",
             "score": 0.88,
-            "metadata": {}
-        }
+            "metadata": {},
+        },
     ],
     "messages": [
         {"role": "user", "content": SAMPLE_QUERY},
         {
             "role": "assistant",
             "content": "AEGIS RAG ist ein agentisches RAG-System (Agentic Enterprise Graph Intelligence System) "
-                      "für Enterprise-Anwendungen. Es kombiniert Vector Search, Graph-basierte Retrieval und "
-                      "Multi-Agent Orchestration mit LangGraph."
-        }
+            "für Enterprise-Anwendungen. Es kombiniert Vector Search, Graph-basierte Retrieval und "
+            "Multi-Agent Orchestration mit LangGraph.",
+        },
     ],
     "metadata": {
         "latency_seconds": 1.23,
         "agent_path": ["router", "vector_agent", "generator"],
-        "tokens_used": 250
-    }
+        "tokens_used": 250,
+    },
 }
 
 
@@ -69,8 +69,7 @@ class TestChatEndpoint:
 
             # Send request
             response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY, "session_id": SAMPLE_SESSION_ID}
+                "/api/v1/chat/", json={"query": SAMPLE_QUERY, "session_id": SAMPLE_SESSION_ID}
             )
 
             # Assertions
@@ -91,7 +90,9 @@ class TestChatEndpoint:
             assert "metadata" in data
             assert "latency_seconds" in data["metadata"]
 
-    async def test_chat_endpoint_generates_session_id_if_not_provided(self, async_client: AsyncClient):
+    async def test_chat_endpoint_generates_session_id_if_not_provided(
+        self, async_client: AsyncClient
+    ):
         """Test that session_id is auto-generated if not provided."""
         with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
             mock_coordinator = AsyncMock()
@@ -99,10 +100,7 @@ class TestChatEndpoint:
             mock_get_coordinator.return_value = mock_coordinator
 
             # Send request WITHOUT session_id
-            response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY}
-            )
+            response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
             assert response.status_code == 200
             data = response.json()
@@ -120,8 +118,7 @@ class TestChatEndpoint:
             mock_get_coordinator.return_value = mock_coordinator
 
             response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY, "include_sources": True}
+                "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": True}
             )
 
             assert response.status_code == 200
@@ -150,8 +147,7 @@ class TestChatEndpoint:
             mock_get_coordinator.return_value = mock_coordinator
 
             response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY, "include_sources": False}
+                "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": False}
             )
 
             assert response.status_code == 200
@@ -170,8 +166,7 @@ class TestChatEndpoint:
             mock_get_coordinator.return_value = mock_coordinator
 
             response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY, "intent": "graph"}
+                "/api/v1/chat/", json={"query": SAMPLE_QUERY, "intent": "graph"}
             )
 
             assert response.status_code == 200
@@ -186,10 +181,7 @@ class TestChatEndpoint:
 
     async def test_chat_endpoint_handles_empty_query(self, async_client: AsyncClient):
         """Test validation error for empty query."""
-        response = await async_client.post(
-            "/api/v1/chat/",
-            json={"query": ""}
-        )
+        response = await async_client.post("/api/v1/chat/", json={"query": ""})
 
         # Should return validation error
         assert response.status_code == 422
@@ -203,10 +195,7 @@ class TestChatEndpoint:
             mock_coordinator.process_query.side_effect = Exception("Coordinator failure")
             mock_get_coordinator.return_value = mock_coordinator
 
-            response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY}
-            )
+            response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
             assert response.status_code == 500
             data = response.json()
@@ -221,19 +210,16 @@ class TestChatEndpoint:
             result_with_messages = {
                 "messages": [
                     {"role": "user", "content": SAMPLE_QUERY},
-                    {"role": "assistant", "content": "This is the answer from messages"}
+                    {"role": "assistant", "content": "This is the answer from messages"},
                 ],
                 "intent": "vector",
                 "retrieved_contexts": [],
-                "metadata": {}
+                "metadata": {},
             }
             mock_coordinator.process_query.return_value = result_with_messages
             mock_get_coordinator.return_value = mock_coordinator
 
-            response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY}
-            )
+            response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
             assert response.status_code == 200
             data = response.json()
@@ -245,18 +231,11 @@ class TestChatEndpoint:
             mock_coordinator = AsyncMock()
 
             # Result with no answer
-            empty_result = {
-                "intent": "vector",
-                "retrieved_contexts": [],
-                "metadata": {}
-            }
+            empty_result = {"intent": "vector", "retrieved_contexts": [], "metadata": {}}
             mock_coordinator.process_query.return_value = empty_result
             mock_get_coordinator.return_value = mock_coordinator
 
-            response = await async_client.post(
-                "/api/v1/chat/",
-                json={"query": SAMPLE_QUERY}
-            )
+            response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
             assert response.status_code == 200
             data = response.json()
@@ -279,7 +258,7 @@ class TestConversationHistoryEndpoint:
                     {"role": "user", "content": "First question"},
                     {"role": "assistant", "content": "First answer"},
                     {"role": "user", "content": "Second question"},
-                    {"role": "assistant", "content": "Second answer"}
+                    {"role": "assistant", "content": "Second answer"},
                 ]
             }
             mock_get_memory.return_value = mock_memory
@@ -361,14 +340,12 @@ class TestDeleteConversationHistoryEndpoint:
 
 # Fixtures
 
+
 @pytest.fixture
 async def async_client():
     """Fixture for async HTTP client."""
     from src.api.main import app
     from httpx import ASGITransport
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client

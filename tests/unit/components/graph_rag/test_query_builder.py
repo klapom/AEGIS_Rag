@@ -27,7 +27,9 @@ class TestCypherQueryBuilder:
     def test_match_with_where(self):
         """Test MATCH with WHERE clause."""
         builder = CypherQueryBuilder()
-        result = builder.match("(n:Entity)").where("n.name = $name", name="John").return_("n").build()
+        result = (
+            builder.match("(n:Entity)").where("n.name = $name", name="John").return_("n").build()
+        )
 
         assert "MATCH (n:Entity)" in result["query"]
         assert "WHERE (n.name = $name)" in result["query"]
@@ -52,13 +54,7 @@ class TestCypherQueryBuilder:
     def test_order_by_limit(self):
         """Test ORDER BY and LIMIT clauses."""
         builder = CypherQueryBuilder()
-        result = (
-            builder.match("(n:Entity)")
-            .return_("n")
-            .order_by("n.name DESC")
-            .limit(10)
-            .build()
-        )
+        result = builder.match("(n:Entity)").return_("n").order_by("n.name DESC").limit(10).build()
 
         assert "ORDER BY n.name DESC" in result["query"]
         assert "LIMIT 10" in result["query"]
@@ -66,13 +62,7 @@ class TestCypherQueryBuilder:
     def test_skip_and_limit(self):
         """Test SKIP and LIMIT for pagination."""
         builder = CypherQueryBuilder()
-        result = (
-            builder.match("(n:Entity)")
-            .return_("n")
-            .skip(20)
-            .limit(10)
-            .build()
-        )
+        result = builder.match("(n:Entity)").return_("n").skip(20).limit(10).build()
 
         assert "SKIP 20" in result["query"]
         assert "LIMIT 10" in result["query"]
@@ -114,10 +104,7 @@ class TestCypherQueryBuilder:
         """Test CREATE clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.create("(n:Entity {name: $name})")
-            .param("name", "Test")
-            .return_("n")
-            .build()
+            builder.create("(n:Entity {name: $name})").param("name", "Test").return_("n").build()
         )
 
         assert "CREATE (n:Entity {name: $name})" in result["query"]
@@ -127,10 +114,7 @@ class TestCypherQueryBuilder:
         """Test MERGE clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.merge("(n:Entity {name: $name})")
-            .param("name", "Test")
-            .return_("n")
-            .build()
+            builder.merge("(n:Entity {name: $name})").param("name", "Test").return_("n").build()
         )
 
         assert "MERGE (n:Entity {name: $name})" in result["query"]

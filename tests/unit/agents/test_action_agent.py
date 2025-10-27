@@ -296,9 +296,7 @@ class TestStateManagement:
         assert any("success" in msg.lower() for msg in result["trace"])
 
     @pytest.mark.asyncio
-    async def test_state_error_propagation(
-        self, action_agent, mock_mcp_client, mock_tool_executor
-    ):
+    async def test_state_error_propagation(self, action_agent, mock_mcp_client, mock_tool_executor):
         """Test that errors propagate through state correctly."""
         # Setup - no tools available
         mock_mcp_client.list_tools.return_value = []
@@ -362,9 +360,7 @@ class TestErrorHandling:
 class TestUtilityMethods:
     """Test utility methods."""
 
-    def test_get_available_tools(
-        self, action_agent, mock_mcp_client, sample_tools
-    ):
+    def test_get_available_tools(self, action_agent, mock_mcp_client, sample_tools):
         """Test getting available tools list."""
         # Setup
         mock_mcp_client.list_tools.return_value = sample_tools
@@ -378,9 +374,7 @@ class TestUtilityMethods:
         assert "write_file" in tools
         assert "create_issue" in tools
 
-    def test_get_tool_info_exists(
-        self, action_agent, mock_mcp_client, sample_tools
-    ):
+    def test_get_tool_info_exists(self, action_agent, mock_mcp_client, sample_tools):
         """Test getting tool info for existing tool."""
         # Setup
         mock_mcp_client.get_tool.return_value = sample_tools[0]
@@ -394,9 +388,7 @@ class TestUtilityMethods:
         assert info["server"] == "filesystem"
         assert "parameters" in info
 
-    def test_get_tool_info_not_found(
-        self, action_agent, mock_mcp_client
-    ):
+    def test_get_tool_info_not_found(self, action_agent, mock_mcp_client):
         """Test getting tool info for non-existent tool."""
         # Setup
         mock_mcp_client.get_tool.return_value = None
@@ -407,9 +399,7 @@ class TestUtilityMethods:
         # Verify
         assert info is None
 
-    def test_get_available_tools_empty(
-        self, action_agent, mock_mcp_client
-    ):
+    def test_get_available_tools_empty(self, action_agent, mock_mcp_client):
         """Test getting available tools when none exist."""
         # Setup
         mock_mcp_client.list_tools.return_value = []

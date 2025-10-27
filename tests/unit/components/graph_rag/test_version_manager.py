@@ -223,9 +223,7 @@ class TestCompareVersions:
 
     async def test_compare_insufficient_versions(self, version_manager, mock_neo4j_client):
         """Test comparing when versions not found."""
-        mock_neo4j_client.execute_read.return_value = [
-            {"e": {"id": "test", "version_number": 1}}
-        ]
+        mock_neo4j_client.execute_read.return_value = [{"e": {"id": "test", "version_number": 1}}]
 
         result = await version_manager.compare_versions("test_entity", 1, 2)
 
@@ -354,7 +352,9 @@ async def test_no_retention_limit():
     manager = VersionManager(neo4j_client=client, retention_count=0)
 
     # Verify retention_count is 0
-    assert manager.retention_count == 0, f"Expected retention_count=0, got {manager.retention_count}"
+    assert (
+        manager.retention_count == 0
+    ), f"Expected retention_count=0, got {manager.retention_count}"
 
     # Call _enforce_retention - should return early with 0
     deleted = await manager._enforce_retention("test_entity")

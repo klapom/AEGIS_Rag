@@ -94,9 +94,7 @@ def mock_upload_response():
 @pytest.fixture
 def temp_test_file():
     """Create temporary test file for upload testing."""
-    with tempfile.NamedTemporaryFile(
-        mode="w", delete=False, suffix=".txt", encoding="utf-8"
-    ) as f:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt", encoding="utf-8") as f:
         f.write("Test document content for upload testing.\n")
         f.write("This is a sample document with multiple lines.\n")
         f.write("AEGIS RAG should index this content.\n")
@@ -280,9 +278,7 @@ async def test_chat_interface_api_error(gradio_app):
     # Should have error message
     assert len(updated_history) == 2
     assert updated_history[1]["role"] == "assistant"
-    assert "Fehler" in updated_history[1]["content"] or "500" in updated_history[1][
-        "content"
-    ]
+    assert "Fehler" in updated_history[1]["content"] or "500" in updated_history[1]["content"]
 
 
 # ============================================================================
@@ -475,9 +471,7 @@ async def test_chat_clear_functionality(gradio_app):
 # ============================================================================
 
 
-async def test_document_upload_single_file(
-    gradio_app, temp_test_file, mock_upload_response
-):
+async def test_document_upload_single_file(gradio_app, temp_test_file, mock_upload_response):
     """Test single document upload through Gradio UI.
 
     Sprint 12: Validates file upload integration.
@@ -538,9 +532,7 @@ async def test_document_upload_multiple_files(gradio_app, mock_upload_response):
     # Create temp files
     temp_files = []
     for i in range(3):
-        with tempfile.NamedTemporaryFile(
-            mode="w", delete=False, suffix=".txt"
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
             f.write(f"Test content {i}")
             temp_files.append(f.name)
 
@@ -797,9 +789,7 @@ async def test_mcp_server_connection_error(gradio_app):
     - Error details returned
     - Empty tools DataFrame on error
     """
-    with patch(
-        "src.ui.gradio_app.MCPClient", side_effect=Exception("MCP initialization failed")
-    ):
+    with patch("src.ui.gradio_app.MCPClient", side_effect=Exception("MCP initialization failed")):
         # Attempt connection
         status, tools_df = await gradio_app.connect_mcp_server(
             name="test", transport="HTTP", endpoint="http://localhost:3000"
@@ -919,9 +909,7 @@ async def test_answer_formatting_with_sources(gradio_app):
     ]
     tool_calls = []
 
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, sources, tool_calls
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, sources, tool_calls)
 
     # Verify answer included
     assert "LangGraph is a framework" in formatted
@@ -972,9 +960,7 @@ async def test_answer_formatting_with_tool_calls(gradio_app):
         },
     ]
 
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, sources, tool_calls
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, sources, tool_calls)
 
     # Verify tool calls section
     assert "Tool Calls" in formatted or "🔧" in formatted
@@ -1035,9 +1021,7 @@ async def test_concurrent_user_handling():
             return history
 
         # Run concurrently
-        results = await asyncio.gather(
-            *[user_operation(app, i) for i, app in enumerate(apps)]
-        )
+        results = await asyncio.gather(*[user_operation(app, i) for i, app in enumerate(apps)])
 
         # Verify all succeeded
         assert len(results) == 5
@@ -1124,16 +1108,12 @@ async def test_source_formatting_edge_cases(gradio_app):
 
     # Test with missing score
     sources_no_score = [{"title": "Doc1"}]
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, sources_no_score, []
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, sources_no_score, [])
     assert "Doc1" in formatted
 
     # Test with only 1 source (should show all, not just top 3)
     sources_single = [{"title": "Single Doc", "score": 0.9}]
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, sources_single, []
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, sources_single, [])
     assert "Single Doc" in formatted
 
 
@@ -1156,9 +1136,7 @@ async def test_tool_call_formatting_edge_cases(gradio_app):
 
     # Tool with minimal info
     tool_calls = [{"tool_name": "unknown_tool"}]
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, [], tool_calls
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, [], tool_calls)
     assert "unknown_tool" in formatted
 
     # Tool with very long result
@@ -1172,9 +1150,7 @@ async def test_tool_call_formatting_edge_cases(gradio_app):
             "result": long_result,
         }
     ]
-    formatted = gradio_app._format_answer_with_sources_and_tools(
-        answer, [], tool_calls_long
-    )
+    formatted = gradio_app._format_answer_with_sources_and_tools(answer, [], tool_calls_long)
     # Should be truncated
     assert len(formatted) < len(answer) + len(long_result)
     assert "..." in formatted
@@ -1233,9 +1209,7 @@ async def test_mcp_client_lazy_initialization(gradio_app):
     # Mock MCP Client
     mock_mcp_client = Mock()
     mock_mcp_client.connect = AsyncMock(return_value=True)
-    mock_mcp_client.get_stats.return_value = Mock(
-        connected_servers=1, total_tools=1
-    )
+    mock_mcp_client.get_stats.return_value = Mock(connected_servers=1, total_tools=1)
     mock_mcp_client.list_tools = AsyncMock(return_value=[])
 
     with patch("src.ui.gradio_app.MCPClient", return_value=mock_mcp_client):

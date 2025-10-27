@@ -227,12 +227,12 @@ async def test_time_range_query_multiple_versions_e2e(temporal_query, neo4j_driv
 
     # Create multiple versions (simulating entity updates)
     for i in range(3):
-        valid_from = datetime.utcnow() - timedelta(hours=3-i)
+        valid_from = datetime.utcnow() - timedelta(hours=3 - i)
         await create_temporal_entity(
             neo4j_driver,
             name=entity_name,
             valid_from=valid_from,
-            properties={"version": str(i+1)},
+            properties={"version": str(i + 1)},
         )
 
     # When: Query for range covering all versions

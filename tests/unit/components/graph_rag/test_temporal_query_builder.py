@@ -81,9 +81,7 @@ class TestCypherQueryBuilder:
     def test_reset(self):
         """Test resetting builder state."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").where("e.id = 'test'").return_clause("e").set_param(
-            "id", "123"
-        )
+        builder.match("(e:Entity)").where("e.id = 'test'").return_clause("e").set_param("id", "123")
         builder.reset()
 
         query, params = builder.build()

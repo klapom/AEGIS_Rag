@@ -387,9 +387,7 @@ class ExtractionService:
             llm_response = response.get("response", "")
 
             # Parse JSON response
-            relationships_data = self._parse_json_response(
-                llm_response, data_type="relationship"
-            )
+            relationships_data = self._parse_json_response(llm_response, data_type="relationship")
 
             # Limit relationships per document
             if len(relationships_data) > MAX_RELATIONSHIPS_PER_DOC:

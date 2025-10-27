@@ -67,12 +67,20 @@ class TestGraphVisualizationAPI:
             return_value={
                 "nodes": [],
                 "links": [],
-                "metadata": {"node_count": 0, "edge_count": 0, "truncated": False, "depth": 2, "format": "cytoscape"},
+                "metadata": {
+                    "node_count": 0,
+                    "edge_count": 0,
+                    "truncated": False,
+                    "depth": 2,
+                    "format": "cytoscape",
+                },
             }
         )
         mock_get_exporter.return_value = mock_exporter
 
-        response = client.get("/api/v1/graph/visualize/entity_1?depth=2&max_nodes=50&format=cytoscape")
+        response = client.get(
+            "/api/v1/graph/visualize/entity_1?depth=2&max_nodes=50&format=cytoscape"
+        )
 
         assert response.status_code == 200
 
@@ -118,7 +126,9 @@ class TestGraphVisualizationAPI:
         )
         mock_get_exporter.return_value = mock_exporter
 
-        response = client.get("/api/v1/graph/visualize/community/community_1?max_nodes=100&format=d3")
+        response = client.get(
+            "/api/v1/graph/visualize/community/community_1?max_nodes=100&format=d3"
+        )
 
         assert response.status_code == 200
         data = response.json()

@@ -133,9 +133,7 @@ class TestToolExecution:
         assert "Tool execution failed" in result.error
 
     @pytest.mark.asyncio
-    async def test_execute_with_server_name(
-        self, tool_executor, mock_mcp_client, sample_tool
-    ):
+    async def test_execute_with_server_name(self, tool_executor, mock_mcp_client, sample_tool):
         """Test execution with specific server name."""
         # Setup
         mock_mcp_client.get_tool.return_value = sample_tool
@@ -200,9 +198,7 @@ class TestRetryLogic:
         assert mock_mcp_client.execute_tool.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_no_retry_on_permanent_error(
-        self, tool_executor, mock_mcp_client, sample_tool
-    ):
+    async def test_no_retry_on_permanent_error(self, tool_executor, mock_mcp_client, sample_tool):
         """Test no retry on permanent errors."""
         # Setup
         mock_mcp_client.get_tool.return_value = sample_tool

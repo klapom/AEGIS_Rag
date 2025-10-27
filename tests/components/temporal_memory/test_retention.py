@@ -26,11 +26,13 @@ async def test_purge_skips_when_infinite_retention():
 
     try:
         # Mock settings to simulate infinite retention
-        with patch('src.components.temporal_memory.retention.settings') as mock_settings:
+        with patch("src.components.temporal_memory.retention.settings") as mock_settings:
             mock_settings.temporal_retention_days = 0
 
             # Mock the graphiti wrapper
-            with patch('src.components.temporal_memory.retention.get_graphiti_wrapper') as mock_graphiti:
+            with patch(
+                "src.components.temporal_memory.retention.get_graphiti_wrapper"
+            ) as mock_graphiti:
                 mock_graphiti.return_value = AsyncMock()
 
                 # Run purge
@@ -46,11 +48,13 @@ async def test_purge_skips_when_infinite_retention():
 @pytest.mark.asyncio
 async def test_purge_executes_when_retention_enabled():
     """Test that purge executes when retention is enabled."""
-    with patch('src.components.temporal_memory.retention.settings') as mock_settings:
+    with patch("src.components.temporal_memory.retention.settings") as mock_settings:
         mock_settings.temporal_retention_days = 365
 
         # Mock the graphiti wrapper - it's an async function, so return AsyncMock directly
-        with patch('src.components.temporal_memory.retention.get_graphiti_wrapper', new_callable=AsyncMock) as mock_graphiti:
+        with patch(
+            "src.components.temporal_memory.retention.get_graphiti_wrapper", new_callable=AsyncMock
+        ) as mock_graphiti:
             mock_wrapper = AsyncMock()
             mock_graphiti.return_value = mock_wrapper
 
@@ -64,11 +68,13 @@ async def test_purge_executes_when_retention_enabled():
 @pytest.mark.asyncio
 async def test_scheduler_skips_when_auto_purge_disabled():
     """Test that scheduler doesn't start when auto_purge is disabled."""
-    with patch('src.components.temporal_memory.retention.settings') as mock_settings:
+    with patch("src.components.temporal_memory.retention.settings") as mock_settings:
         mock_settings.temporal_auto_purge = False
 
         # Mock the purge function
-        with patch('src.components.temporal_memory.retention.purge_old_temporal_versions') as mock_purge:
+        with patch(
+            "src.components.temporal_memory.retention.purge_old_temporal_versions"
+        ) as mock_purge:
             # Start scheduler (it should return immediately)
             await start_retention_scheduler()
 
@@ -79,11 +85,13 @@ async def test_scheduler_skips_when_auto_purge_disabled():
 @pytest.mark.asyncio
 async def test_retention_cutoff_date_calculation():
     """Test that cutoff date is calculated correctly."""
-    with patch('src.components.temporal_memory.retention.settings') as mock_settings:
+    with patch("src.components.temporal_memory.retention.settings") as mock_settings:
         mock_settings.temporal_retention_days = 365
 
         # Mock the graphiti wrapper - it's an async function, so return AsyncMock directly
-        with patch('src.components.temporal_memory.retention.get_graphiti_wrapper', new_callable=AsyncMock) as mock_graphiti:
+        with patch(
+            "src.components.temporal_memory.retention.get_graphiti_wrapper", new_callable=AsyncMock
+        ) as mock_graphiti:
             mock_wrapper = AsyncMock()
             mock_graphiti.return_value = mock_wrapper
 

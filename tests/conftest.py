@@ -552,7 +552,7 @@ async def redis_checkpointer():
     yield checkpointer
 
     # Proper async cleanup BEFORE event loop closes
-    if hasattr(checkpointer, 'aclose'):
+    if hasattr(checkpointer, "aclose"):
         await checkpointer.aclose()
         logger.debug("redis_checkpointer_cleaned_up")
 
@@ -652,7 +652,9 @@ async def ollama_client_real():
         # Check if models exist (with or without tag like :latest)
         missing_models = []
         for required in required_models:
-            if not any(required in model or model.startswith(required + ":") for model in available_models):
+            if not any(
+                required in model or model.startswith(required + ":") for model in available_models
+            ):
                 missing_models.append(required)
 
         if missing_models:
@@ -689,7 +691,7 @@ async def redis_memory_manager(redis_client):
         await redis_client.flushdb()
 
         # Close manager connection
-        if hasattr(manager, 'aclose'):
+        if hasattr(manager, "aclose"):
             await manager.aclose()
             logger.debug("redis_memory_manager_cleaned_up")
     except Exception as e:
@@ -726,10 +728,13 @@ async def graphiti_wrapper(neo4j_driver, ollama_client_real):
                 DETACH DELETE e
                 """
             )
-            logger.info("graphiti_wrapper_cleanup_neo4j_done", deleted=result.consume().counters.nodes_deleted)
+            logger.info(
+                "graphiti_wrapper_cleanup_neo4j_done",
+                deleted=result.consume().counters.nodes_deleted,
+            )
 
         # Proper async cleanup BEFORE event loop closes
-        if hasattr(wrapper, 'aclose'):
+        if hasattr(wrapper, "aclose"):
             await wrapper.aclose()
             logger.debug("graphiti_wrapper_cleaned_up")
     except Exception as e:
@@ -868,7 +873,11 @@ async def lightrag_instance():
         # 1. Clean Neo4j database
         # Note: Pydantic SecretStr needs .get_secret_value() to extract actual string
         neo4j_user = settings.neo4j_user
-        neo4j_password = settings.neo4j_password.get_secret_value() if hasattr(settings.neo4j_password, 'get_secret_value') else settings.neo4j_password
+        neo4j_password = (
+            settings.neo4j_password.get_secret_value()
+            if hasattr(settings.neo4j_password, "get_secret_value")
+            else settings.neo4j_password
+        )
 
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
@@ -885,6 +894,7 @@ async def lightrag_instance():
         # 2. Clean LightRAG local cache files (Windows-compatible approach)
         import shutil
         from pathlib import Path
+
         lightrag_dir = Path(settings.lightrag_working_dir)
 
         if lightrag_dir.exists():
@@ -904,7 +914,9 @@ async def lightrag_instance():
                     # Skip files/dirs that are locked (best-effort cleanup)
                     logger.warning(f"PermissionError cleaning {item.name}: {e}")
                     pass
-            logger.info(f"Cache cleanup complete: removed {file_count} files, {dir_count} directories")
+            logger.info(
+                f"Cache cleanup complete: removed {file_count} files, {dir_count} directories"
+            )
         else:
             # Create directory if it doesn't exist
             lightrag_dir.mkdir(parents=True, exist_ok=True)
@@ -913,6 +925,7 @@ async def lightrag_instance():
         logger.info("Step 3/3: Resetting singleton instance...")
         # 3. Reset singleton instance so it re-initializes with clean state
         import src.components.graph_rag.lightrag_wrapper as lightrag_module
+
         lightrag_module._lightrag_wrapper = None
         logger.info("Singleton reset complete")
     except Exception as e:
@@ -930,7 +943,7 @@ async def lightrag_instance():
     logger.info("=== LIGHTRAG FIXTURE TEARDOWN ===")
     # Sprint 13 TD-26/27: Properly shutdown LightRAG workers to prevent event loop errors
     try:
-        if hasattr(wrapper, 'rag') and wrapper.rag is not None:
+        if hasattr(wrapper, "rag") and wrapper.rag is not None:
             import asyncio
 
             # LightRAG uses async worker pools that need cleanup
@@ -942,7 +955,8 @@ async def lightrag_instance():
                 # Get all pending tasks except current task
                 current_task = asyncio.current_task()
                 pending_tasks = [
-                    task for task in asyncio.all_tasks()
+                    task
+                    for task in asyncio.all_tasks()
                     if task is not current_task and not task.done()
                 ]
 

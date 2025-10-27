@@ -61,9 +61,7 @@ async def test_graphiti_add_episode_e2e(graphiti_wrapper, neo4j_driver):
 
     # Then: Verify episode is stored in Neo4j
     with neo4j_driver.session() as session:
-        query_result = session.run(
-            "MATCH (e) WHERE e.source = 'test' RETURN count(e) as count"
-        )
+        query_result = session.run("MATCH (e) WHERE e.source = 'test' RETURN count(e) as count")
         record = query_result.single()
         assert record["count"] > 0, "Episode not found in Neo4j"
 
@@ -393,9 +391,7 @@ async def test_ollama_llm_client_generate_response_e2e(graphiti_wrapper):
     llm_client = graphiti_wrapper.llm_client
 
     # When: Generate response
-    messages = [
-        {"role": "user", "content": "Say 'test successful' and nothing else."}
-    ]
+    messages = [{"role": "user", "content": "Say 'test successful' and nothing else."}]
     response = await llm_client.generate_response(messages, max_tokens=50)
 
     # Then: Response is generated

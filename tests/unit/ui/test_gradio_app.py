@@ -16,7 +16,7 @@ import httpx
 # Skip all tests if gradio is not installed
 pytestmark = pytest.mark.skipif(
     True,  # Always skip for now (Gradio not in dependencies)
-    reason="Gradio not installed - Sprint 10 MVP uses manual testing"
+    reason="Gradio not installed - Sprint 10 MVP uses manual testing",
 )
 
 
@@ -69,15 +69,13 @@ class TestGradioApp:
         app = GradioApp()
 
         # Mock HTTP client
-        with patch.object(app.client, 'post', new_callable=AsyncMock) as mock_post:
+        with patch.object(app.client, "post", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "answer": "Test answer",
-                "sources": [
-                    {"title": "test.md", "score": 0.9}
-                ],
-                "session_id": app.session_id
+                "sources": [{"title": "test.md", "score": 0.9}],
+                "session_id": app.session_id,
             }
             mock_post.return_value = mock_response
 
@@ -103,7 +101,7 @@ class TestGradioApp:
 
         app = GradioApp()
 
-        with patch.object(app.client, 'post', new_callable=AsyncMock) as mock_post:
+        with patch.object(app.client, "post", new_callable=AsyncMock) as mock_post:
             mock_response = MagicMock()
             mock_response.status_code = 500
             mock_response.text = "Internal Server Error"
@@ -142,7 +140,7 @@ class TestGradioApp:
         app = GradioApp()
         original_session_id = app.session_id
 
-        with patch.object(app.client, 'delete', new_callable=AsyncMock) as mock_delete:
+        with patch.object(app.client, "delete", new_callable=AsyncMock) as mock_delete:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_delete.return_value = mock_response
@@ -165,12 +163,12 @@ class TestGradioApp:
 
         app = GradioApp()
 
-        with patch.object(app.client, 'get', new_callable=AsyncMock) as mock_get:
+        with patch.object(app.client, "get", new_callable=AsyncMock) as mock_get:
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {
                 "redis": {"status": "healthy"},
-                "qdrant": {"status": "healthy"}
+                "qdrant": {"status": "healthy"},
             }
             mock_get.return_value = mock_response
 
@@ -187,7 +185,7 @@ class TestGradioApp:
 
         app = GradioApp()
 
-        with patch.object(app.client, 'get', new_callable=AsyncMock) as mock_get:
+        with patch.object(app.client, "get", new_callable=AsyncMock) as mock_get:
             mock_response = MagicMock()
             mock_response.status_code = 500
             mock_get.return_value = mock_response
@@ -219,7 +217,7 @@ class TestGradioIntegration:
         app = GradioApp()
         session_id1 = app.session_id
 
-        with patch.object(app.client, 'delete', new_callable=AsyncMock):
+        with patch.object(app.client, "delete", new_callable=AsyncMock):
             await app.clear_chat()
 
         session_id2 = app.session_id

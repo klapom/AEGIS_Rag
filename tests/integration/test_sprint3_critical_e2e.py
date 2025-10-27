@@ -164,16 +164,16 @@ async def test_cross_encoder_reranking_real_model_e2e():
     # Verify: Scores are valid (between 0 and 1)
     assert len(reranked) == 5, f"Expected 5 results, got {len(reranked)}"
     for result in reranked:
-        assert 0 <= result.final_score <= 1, (
-            f"Invalid score: {result.final_score} (should be in [0, 1])"
-        )
+        assert (
+            0 <= result.final_score <= 1
+        ), f"Invalid score: {result.final_score} (should be in [0, 1])"
         # Note: rerank_score can be negative (cross-encoder raw logits are unnormalized)
 
     # Verify: Reordering happened (most relevant should be top)
     # doc0 (ML definition) should rank higher than doc1 (Python)
-    assert reranked[0].doc_id == "doc0", (
-        f"Most relevant doc (doc0) should be top, got {reranked[0].doc_id}"
-    )
+    assert (
+        reranked[0].doc_id == "doc0"
+    ), f"Most relevant doc (doc0) should be top, got {reranked[0].doc_id}"
 
     # Verify: Python doc (less relevant) should rank lower after reranking
     reranked_ids = [r.doc_id for r in reranked]
@@ -198,9 +198,7 @@ async def test_cross_encoder_reranking_real_model_e2e():
 
     # Original precision @3
     original_top3_docs = sorted(candidates, key=lambda x: x["score"], reverse=True)[:3]
-    original_relevant_count = sum(
-        1 for doc in original_top3_docs if doc["id"] in relevant_docs
-    )
+    original_relevant_count = sum(1 for doc in original_top3_docs if doc["id"] in relevant_docs)
     original_precision = original_relevant_count / 3
 
     # Reranked precision @3
@@ -211,9 +209,9 @@ async def test_cross_encoder_reranking_real_model_e2e():
 
     # Assert improvement (may be 0 if original already good, but structure validated)
     # Relaxed assertion: verify reranking produces reasonable results
-    assert reranked_precision >= 0.66, (
-        f"Reranked precision@3 should be >66%, got {reranked_precision:.1%}"
-    )
+    assert (
+        reranked_precision >= 0.66
+    ), f"Reranked precision@3 should be >66%, got {reranked_precision:.1%}"
 
     print(
         f"[PASS] Test 3.1: Reranked {len(candidates)} -> {len(reranked)} in "
@@ -315,7 +313,9 @@ async def test_ragas_evaluation_ollama_e2e():
 
     # Execute: Evaluate with Custom Metrics (RAGAS library fallback)
     start_time = time.time()
-    result = await evaluator.evaluate_retrieval_custom(dataset=test_data, scenario="test-e2e-custom")
+    result = await evaluator.evaluate_retrieval_custom(
+        dataset=test_data, scenario="test-e2e-custom"
+    )
     duration_seconds = time.time() - start_time
 
     # Verify: Metrics computed
@@ -324,22 +324,22 @@ async def test_ragas_evaluation_ollama_e2e():
     assert result.faithfulness > 0.0, "Faithfulness should be computed"
 
     # Verify: Metrics in valid range (0-1)
-    assert 0 <= result.context_precision <= 1, (
-        f"Context precision out of range: {result.context_precision}"
-    )
+    assert (
+        0 <= result.context_precision <= 1
+    ), f"Context precision out of range: {result.context_precision}"
     assert 0 <= result.context_recall <= 1, f"Context recall out of range: {result.context_recall}"
     assert 0 <= result.faithfulness <= 1, f"Faithfulness out of range: {result.faithfulness}"
 
     # Verify: All questions evaluated
-    assert result.num_samples == len(test_data), (
-        f"Expected {len(test_data)} samples, got {result.num_samples}"
-    )
+    assert result.num_samples == len(
+        test_data
+    ), f"Expected {len(test_data)} samples, got {result.num_samples}"
 
     # Verify: Reasonable scores (relaxed for real LLM variance)
     # With well-formed test data, expect decent scores
-    assert result.context_precision > 0.5, (
-        f"Context precision too low: {result.context_precision:.3f}"
-    )
+    assert (
+        result.context_precision > 0.5
+    ), f"Context precision too low: {result.context_precision:.3f}"
     assert result.context_recall > 0.5, f"Context recall too low: {result.context_recall:.3f}"
     assert result.faithfulness > 0.5, f"Faithfulness too low: {result.faithfulness:.3f}"
 
@@ -382,9 +382,7 @@ async def test_query_decomposition_json_parsing_e2e():
     """
     from src.components.retrieval.query_decomposition import QueryDecomposer, QueryType
 
-    decomposer = QueryDecomposer(
-        ollama_base_url="http://localhost:11434", model_name="llama3.2"
-    )
+    decomposer = QueryDecomposer(ollama_base_url="http://localhost:11434", model_name="llama3.2")
 
     # Test 1: Simple query
     simple_query = "What is vector search?"
@@ -487,9 +485,7 @@ async def test_metadata_date_range_filtering_e2e():
         must=[
             FieldCondition(
                 key="created_at",
-                range=DatetimeRange(
-                    gte=now - timedelta(days=10), lt=now + timedelta(days=1)
-                ),
+                range=DatetimeRange(gte=now - timedelta(days=10), lt=now + timedelta(days=1)),
             )
         ]
     )
@@ -553,9 +549,7 @@ async def test_metadata_source_filtering_e2e():
             vector=[0.3] * 384,
             payload={"text": "Another Wikipedia article", "source": "wikipedia"},
         ),
-        PointStruct(
-            id=3, vector=[0.4] * 384, payload={"text": "Blog post", "source": "blog"}
-        ),
+        PointStruct(id=3, vector=[0.4] * 384, payload={"text": "Blog post", "source": "blog"}),
     ]
 
     qdrant_client.upsert(collection_name=collection_name, points=points)
@@ -767,9 +761,7 @@ async def test_adaptive_chunking_by_document_type_e2e():
 
     for case in test_cases:
         # Use SentenceSplitter with adaptive chunk size
-        splitter = SentenceSplitter(
-            chunk_size=case["expected_chunk_size"], chunk_overlap=50
-        )
+        splitter = SentenceSplitter(chunk_size=case["expected_chunk_size"], chunk_overlap=50)
 
         chunks = splitter.split_text(case["content"])
 
@@ -892,7 +884,10 @@ async def test_ragas_context_precision_e2e():
         EvaluationDataset(
             question="What is RAG?",
             ground_truth="RAG combines retrieval and generation.",
-            contexts=["RAG retrieves documents before generation.", "Vector search is used in RAG."],
+            contexts=[
+                "RAG retrieves documents before generation.",
+                "Vector search is used in RAG.",
+            ],
             answer="RAG combines retrieval with generation for better answers.",
         )
     ]

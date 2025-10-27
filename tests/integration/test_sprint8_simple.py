@@ -98,6 +98,8 @@ async def test_ollama_llm_generation():
     # Verify response
     generated_text = response["response"]
     assert len(generated_text) > 0, "Expected non-empty response"
-    assert "4" in generated_text or "four" in generated_text.lower(), f"Expected '4', got: {generated_text}"
+    assert (
+        "4" in generated_text or "four" in generated_text.lower()
+    ), f"Expected '4', got: {generated_text}"
 
     print(f"✅ Ollama LLM generated: {generated_text.strip()}")

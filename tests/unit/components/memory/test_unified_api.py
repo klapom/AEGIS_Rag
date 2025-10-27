@@ -50,9 +50,7 @@ def mock_memory_router():
             "long_term": [{"content": "qdrant result"}],
         }
     )
-    mock.store_conversation_turn = AsyncMock(
-        return_value={"short_term": True, "episodic": True}
-    )
+    mock.store_conversation_turn = AsyncMock(return_value={"short_term": True, "episodic": True})
     mock.get_session_summary = AsyncMock(
         return_value={
             "short_term": {"message_count": 5},
@@ -67,8 +65,12 @@ def unified_api(mock_redis_memory, mock_qdrant_client, mock_memory_router):
     """Create unified API with mocked dependencies."""
     with (
         patch("src.components.memory.unified_api.get_redis_memory", return_value=mock_redis_memory),
-        patch("src.components.memory.unified_api.get_qdrant_client", return_value=mock_qdrant_client),
-        patch("src.components.memory.unified_api.get_memory_router", return_value=mock_memory_router),
+        patch(
+            "src.components.memory.unified_api.get_qdrant_client", return_value=mock_qdrant_client
+        ),
+        patch(
+            "src.components.memory.unified_api.get_memory_router", return_value=mock_memory_router
+        ),
         patch("src.components.memory.unified_api.settings") as mock_settings,
     ):
         mock_settings.graphiti_enabled = False
@@ -160,9 +162,7 @@ class TestUnifiedMemoryAPI:
     async def test_retrieve_with_fallback(self, unified_api, mock_memory_router):
         """Test 4: Test graceful degradation on errors."""
         # Simulate router failure
-        mock_memory_router.search_memory = AsyncMock(
-            side_effect=Exception("Router failed")
-        )
+        mock_memory_router.search_memory = AsyncMock(side_effect=Exception("Router failed"))
 
         results = await unified_api.retrieve(query="test query")
 
@@ -368,9 +368,7 @@ class TestUnifiedMemoryAPI:
         mock_router = AsyncMock()
 
         # Always fail
-        mock_router.search_memory = AsyncMock(
-            side_effect=Exception("Persistent failure")
-        )
+        mock_router.search_memory = AsyncMock(side_effect=Exception("Persistent failure"))
 
         with (
             patch("src.components.memory.unified_api.get_redis_memory"),

@@ -101,10 +101,7 @@ async def test_context_limit():
     generator = AnswerGenerator()
 
     # Create 10 contexts
-    contexts = [
-        {"text": f"Context {i}", "source": f"doc{i}.txt"}
-        for i in range(10)
-    ]
+    contexts = [{"text": f"Context {i}", "source": f"doc{i}.txt"} for i in range(10)]
 
     formatted = generator._format_contexts(contexts)
 

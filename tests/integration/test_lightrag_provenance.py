@@ -44,7 +44,7 @@ class TestLightRAGProvenance:
             It combines vector search using Qdrant with graph reasoning via LightRAG and Neo4j.
             The system runs on Ollama with llama3.2 models for local, cost-free inference.
             Klaus Pommer designed the three-phase extraction pipeline for optimal performance.
-            """
+            """,
         }
 
         # Act
@@ -71,7 +71,7 @@ class TestLightRAGProvenance:
         # Arrange
         test_doc = {
             "id": "test_doc_002",
-            "text": "This is a short test document about AEGIS RAG and LightRAG integration."
+            "text": "This is a short test document about AEGIS RAG and LightRAG integration.",
         }
 
         # Act
@@ -80,7 +80,7 @@ class TestLightRAGProvenance:
         # Assert - Verify :chunk nodes exist in Neo4j
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
 
         async with driver.session() as session:
@@ -91,7 +91,7 @@ class TestLightRAGProvenance:
                        collect(c.chunk_index) as chunk_indices,
                        collect(c.tokens) as token_counts
                 """,
-                doc_id="test_doc_002"
+                doc_id="test_doc_002",
             )
             record = await result.single()
 
@@ -109,7 +109,7 @@ class TestLightRAGProvenance:
             "text": """
             Klaus Pommer is the developer of AEGIS RAG.
             AEGIS RAG uses Ollama for local LLM inference.
-            """
+            """,
         }
 
         # Act
@@ -118,7 +118,7 @@ class TestLightRAGProvenance:
         # Assert - Verify MENTIONED_IN relationships exist
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
 
         async with driver.session() as session:
@@ -129,7 +129,7 @@ class TestLightRAGProvenance:
                        collect(DISTINCT e.entity_id) as entities,
                        collect(DISTINCT c.chunk_id) as chunks
                 """,
-                doc_id="test_doc_003"
+                doc_id="test_doc_003",
             )
             record = await result.single()
 
@@ -148,7 +148,7 @@ class TestLightRAGProvenance:
             Ollama is a local LLM inference platform.
             Ollama supports models like llama3.2 and qwen2.5.
             The AEGIS RAG system uses Ollama for cost-free inference.
-            """
+            """,
         }
 
         await lightrag_wrapper.insert_documents_optimized([test_doc])
@@ -156,7 +156,7 @@ class TestLightRAGProvenance:
         # Act - Query: "Where is Ollama mentioned?"
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
 
         async with driver.session() as session:
@@ -168,7 +168,7 @@ class TestLightRAGProvenance:
                        c.document_id as document_id
                 ORDER BY c.chunk_index
                 """,
-                entity_id="Ollama"
+                entity_id="Ollama",
             )
 
             records = await result.fetch(10)
@@ -187,18 +187,9 @@ class TestLightRAGProvenance:
         """Test batch processing of multiple documents."""
         # Arrange
         test_docs = [
-            {
-                "id": "doc_batch_001",
-                "text": "Document 1 about AEGIS RAG and Klaus Pommer."
-            },
-            {
-                "id": "doc_batch_002",
-                "text": "Document 2 about LightRAG and Neo4j integration."
-            },
-            {
-                "id": "doc_batch_003",
-                "text": "Document 3 about Ollama and llama3.2 models."
-            }
+            {"id": "doc_batch_001", "text": "Document 1 about AEGIS RAG and Klaus Pommer."},
+            {"id": "doc_batch_002", "text": "Document 2 about LightRAG and Neo4j integration."},
+            {"id": "doc_batch_003", "text": "Document 3 about Ollama and llama3.2 models."},
         ]
 
         # Act
@@ -224,7 +215,7 @@ class TestLightRAGProvenance:
         # Arrange
         test_docs = [
             {"id": "empty_doc", "text": ""},
-            {"id": "valid_doc", "text": "This is valid content about AEGIS RAG."}
+            {"id": "valid_doc", "text": "This is valid content about AEGIS RAG."},
         ]
 
         # Act

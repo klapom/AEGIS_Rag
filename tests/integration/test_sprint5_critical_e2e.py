@@ -179,14 +179,22 @@ async def test_entity_extraction_ollama_neo4j_e2e(ollama_client_real, neo4j_driv
 
     # Verify: Key entities present (handle LLM variance in exact names)
     assert any("Microsoft" in name for name in entity_names), "Microsoft entity not found"
-    assert any("Gates" in name or "Bill Gates" in name for name in entity_names), "Bill Gates entity not found"
-    assert any("Allen" in name or "Paul Allen" in name for name in entity_names), "Paul Allen entity not found"
+    assert any(
+        "Gates" in name or "Bill Gates" in name for name in entity_names
+    ), "Bill Gates entity not found"
+    assert any(
+        "Allen" in name or "Paul Allen" in name for name in entity_names
+    ), "Paul Allen entity not found"
 
     # Verify: Entity types correct (allow variance in type naming)
     microsoft_entity = next((e for e in entities if "Microsoft" in e.name), None)
     assert microsoft_entity is not None, "Microsoft entity not extracted"
-    assert microsoft_entity.type in ["Organization", "Company", "ORGANIZATION", "COMPANY"], \
-        f"Microsoft type incorrect: {microsoft_entity.type}"
+    assert microsoft_entity.type in [
+        "Organization",
+        "Company",
+        "ORGANIZATION",
+        "COMPANY",
+    ], f"Microsoft type incorrect: {microsoft_entity.type}"
 
     # Execute: Store entities in Neo4j
     async with neo4j_driver.session() as session:
@@ -207,9 +215,7 @@ async def test_entity_extraction_ollama_neo4j_e2e(ollama_client_real, neo4j_driv
     # Verify: Entities stored in Neo4j
     async with neo4j_driver.session() as session:
         # Check Microsoft entity
-        result = await session.run(
-            "MATCH (e:Entity) WHERE e.name CONTAINS 'Microsoft' RETURN e"
-        )
+        result = await session.run("MATCH (e:Entity) WHERE e.name CONTAINS 'Microsoft' RETURN e")
         records = [record async for record in result]
         assert len(records) > 0, "Microsoft entity not found in Neo4j"
 
@@ -223,10 +229,13 @@ async def test_entity_extraction_ollama_neo4j_e2e(ollama_client_real, neo4j_driv
         assert count_record["count"] == len(entities), "Entity count mismatch in Neo4j"
 
     # Verify: Performance <100s for 200-word text (relaxed for local Ollama LLM calls)
-    assert extraction_time_ms < 120000, \
-        f"Extraction too slow: {extraction_time_ms/1000:.1f}s (expected <120s)"
+    assert (
+        extraction_time_ms < 120000
+    ), f"Extraction too slow: {extraction_time_ms/1000:.1f}s (expected <120s)"
 
-    print(f"[PASS] Test 5.1: {len(entities)} entities extracted and stored in {extraction_time_ms/1000:.1f}s")
+    print(
+        f"[PASS] Test 5.1: {len(entities)} entities extracted and stored in {extraction_time_ms/1000:.1f}s"
+    )
 
 
 # ============================================================================
@@ -346,7 +355,7 @@ async def test_graph_construction_full_pipeline_e2e(lightrag_instance, neo4j_dri
             Steve Jobs served as CEO and led product development. The company's headquarters
             is in Cupertino, California.
             """,
-            "metadata": {"source": "test_doc_003"}
+            "metadata": {"source": "test_doc_003"},
         }
     ]
 
@@ -358,9 +367,13 @@ async def test_graph_construction_full_pipeline_e2e(lightrag_instance, neo4j_dri
     # Verify: Entities and relationships in Neo4j
     stats = await lightrag.get_stats()
     assert stats["entity_count"] >= 3, f"Expected 3+ entities, got {stats['entity_count']}"
-    assert stats["relationship_count"] >= 1, f"Expected 1+ relationships, got {stats['relationship_count']}"
+    assert (
+        stats["relationship_count"] >= 1
+    ), f"Expected 1+ relationships, got {stats['relationship_count']}"
 
-    print(f"[PASS] Test 5.3: Graph constructed with {stats['entity_count']} entities, {stats['relationship_count']} relationships")
+    print(
+        f"[PASS] Test 5.3: Graph constructed with {stats['entity_count']} entities, {stats['relationship_count']} relationships"
+    )
 
 
 # ============================================================================
@@ -372,7 +385,9 @@ async def test_graph_construction_full_pipeline_e2e(lightrag_instance, neo4j_dri
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
-@pytest.mark.timeout(900)  # Sprint 13 TD-31: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
+@pytest.mark.timeout(
+    900
+)  # Sprint 13 TD-31: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.4: LightRAG local search (entity-level retrieval).
 
@@ -397,9 +412,9 @@ async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
     lightrag = lightrag_instance
 
     # Insert test data
-    await lightrag.insert_documents([
-        {"text": "Python is a programming language created by Guido van Rossum."}
-    ])
+    await lightrag.insert_documents(
+        [{"text": "Python is a programming language created by Guido van Rossum."}]
+    )
 
     # Verify graph statistics after insertion
     stats = await lightrag.get_stats()
@@ -414,11 +429,14 @@ async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
 
     # Verify: Answer contains relevant entity (Guido van Rossum)
     assert result.answer, "No answer returned"
-    assert "Guido" in result.answer or "van Rossum" in result.answer or "Python" in result.answer, \
-        f"Answer doesn't mention relevant entities: {result.answer}"
+    assert (
+        "Guido" in result.answer or "van Rossum" in result.answer or "Python" in result.answer
+    ), f"Answer doesn't mention relevant entities: {result.answer}"
 
     print(f"[PASS] Test 5.4: Local search returned: {result.answer[:100]}")
-    print(f"[PASS] Test 5.4: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
+    print(
+        f"[PASS] Test 5.4: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}"
+    )
 
 
 # ============================================================================
@@ -430,7 +448,9 @@ async def test_local_search_entity_level_e2e(lightrag_instance, neo4j_driver):
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
-@pytest.mark.timeout(900)  # Sprint 13 TD-32: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
+@pytest.mark.timeout(
+    900
+)  # Sprint 13 TD-32: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.5: LightRAG global search (topic-level retrieval).
 
@@ -454,9 +474,9 @@ async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
     lightrag = lightrag_instance
 
     # Insert test data
-    await lightrag.insert_documents([
-        {"text": "Machine learning is a field of AI. Deep learning uses neural networks."}
-    ])
+    await lightrag.insert_documents(
+        [{"text": "Machine learning is a field of AI. Deep learning uses neural networks."}]
+    )
 
     # Verify graph statistics after insertion
     stats = await lightrag.get_stats()
@@ -474,7 +494,9 @@ async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
     assert len(result.answer) > 20, "Answer too short for global search"
 
     print(f"[PASS] Test 5.5: Global search returned: {result.answer[:100]}")
-    print(f"[PASS] Test 5.5: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
+    print(
+        f"[PASS] Test 5.5: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}"
+    )
 
 
 # ============================================================================
@@ -486,7 +508,9 @@ async def test_global_search_topic_level_e2e(lightrag_instance, neo4j_driver):
 @pytest.mark.integration
 @pytest.mark.sprint8
 @pytest.mark.slow
-@pytest.mark.timeout(900)  # Sprint 13 TD-33: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
+@pytest.mark.timeout(
+    900
+)  # Sprint 13 TD-33: Extended timeout for LightRAG E2E (llama3.2:3b is slow)
 async def test_hybrid_search_local_global_e2e(lightrag_instance, neo4j_driver):
     """E2E Test 5.6: LightRAG hybrid search (local + global).
 
@@ -510,9 +534,9 @@ async def test_hybrid_search_local_global_e2e(lightrag_instance, neo4j_driver):
     lightrag = lightrag_instance
 
     # Insert test data
-    await lightrag.insert_documents([
-        {"text": "RAG combines retrieval with generation. It improves LLM accuracy."}
-    ])
+    await lightrag.insert_documents(
+        [{"text": "RAG combines retrieval with generation. It improves LLM accuracy."}]
+    )
 
     # Verify graph statistics after insertion
     stats = await lightrag.get_stats()
@@ -530,7 +554,9 @@ async def test_hybrid_search_local_global_e2e(lightrag_instance, neo4j_driver):
     assert result.mode == "hybrid", f"Expected hybrid mode, got {result.mode}"
 
     print(f"[PASS] Test 5.6: Hybrid search returned: {result.answer[:100]}")
-    print(f"[PASS] Test 5.6: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}")
+    print(
+        f"[PASS] Test 5.6: Graph stats - entities: {stats['entity_count']}, relationships: {stats['relationship_count']}"
+    )
 
 
 # ============================================================================
@@ -581,16 +607,12 @@ async def test_incremental_graph_updates_e2e(lightrag_instance, neo4j_driver):
     lightrag = lightrag_instance
 
     # Initial insertion
-    await lightrag.insert_documents([
-        {"text": "Microsoft was founded in 1975."}
-    ])
+    await lightrag.insert_documents([{"text": "Microsoft was founded in 1975."}])
 
     initial_stats = await lightrag.get_stats()
 
     # Incremental update (mention Microsoft again)
-    await lightrag.insert_documents([
-        {"text": "Microsoft acquired GitHub in 2018."}
-    ])
+    await lightrag.insert_documents([{"text": "Microsoft acquired GitHub in 2018."}])
 
     updated_stats = await lightrag.get_stats()
 
@@ -601,10 +623,13 @@ async def test_incremental_graph_updates_e2e(lightrag_instance, neo4j_driver):
     #   - Update: "Microsoft acquired GitHub in 2018" → +3 entities (GitHub + 2018 + acquisition event/concept)
     #   - Microsoft is correctly deduplicated (logs show "Merged: Microsoft | 1+1")
     # Test validates deduplication works (no duplicate Microsoft), but allows for extra entities
-    assert updated_stats["entity_count"] <= initial_stats["entity_count"] + 3, \
-        f"Entity deduplication failed - too many new entities (expected max {initial_stats['entity_count'] + 3}, got {updated_stats['entity_count']})"
+    assert (
+        updated_stats["entity_count"] <= initial_stats["entity_count"] + 3
+    ), f"Entity deduplication failed - too many new entities (expected max {initial_stats['entity_count'] + 3}, got {updated_stats['entity_count']})"
 
-    print(f"[PASS] Test 5.8: Incremental update - entities: {initial_stats['entity_count']} -> {updated_stats['entity_count']}")
+    print(
+        f"[PASS] Test 5.8: Incremental update - entities: {initial_stats['entity_count']} -> {updated_stats['entity_count']}"
+    )
 
 
 # ============================================================================
@@ -769,9 +794,7 @@ async def test_neo4j_schema_validation_e2e(neo4j_driver):
     """
     async with neo4j_driver.session() as session:
         # Verify Entity label exists
-        result = await session.run(
-            "CALL db.labels() YIELD label RETURN collect(label) AS labels"
-        )
+        result = await session.run("CALL db.labels() YIELD label RETURN collect(label) AS labels")
         record = await result.single()
         labels = record["labels"] if record else []
 

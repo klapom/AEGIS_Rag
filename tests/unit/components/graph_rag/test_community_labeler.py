@@ -149,7 +149,9 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_success(self, labeler, sample_entities):
         """Test successful label generation."""
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Machine Learning Research"}
 
             label = await labeler.generate_label(sample_entities)
@@ -160,7 +162,9 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_with_quotes(self, labeler, sample_entities):
         """Test label generation with quotes in response."""
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": '"Software Engineering"'}
 
             label = await labeler.generate_label(sample_entities)
@@ -170,7 +174,9 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_too_long(self, labeler, sample_entities):
         """Test label truncation when too long."""
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {
                 "response": "This Is A Very Long Label That Exceeds Five Words"
             }
@@ -183,7 +189,9 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_too_short(self, labeler, sample_entities):
         """Test label handling when too short."""
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "AI"}
 
             label = await labeler.generate_label(sample_entities)
@@ -210,7 +218,9 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_llm_error(self, labeler, sample_entities):
         """Test error handling during LLM call."""
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.side_effect = Exception("LLM error")
 
             label = await labeler.generate_label(sample_entities)
@@ -243,7 +253,9 @@ class TestLabelAllCommunities:
 
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 2}]
 
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Test Community"}
 
             labeled = await labeler.label_all_communities(communities)
@@ -271,13 +283,25 @@ class TestLabelAllCommunities:
 
         # First succeeds, second fails (returns empty list = no entities found)
         mock_neo4j_client.execute_read.side_effect = [
-            [{"id": "e1", "name": "E1", "type": "CONCEPT", "description": "", "properties": {}, "source_document": None, "confidence": 1.0}],
+            [
+                {
+                    "id": "e1",
+                    "name": "E1",
+                    "type": "CONCEPT",
+                    "description": "",
+                    "properties": {},
+                    "source_document": None,
+                    "confidence": 1.0,
+                }
+            ],
             [],  # No entities found triggers "Empty Community"
         ]
 
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 1}]
 
-        with patch.object(labeler.ollama_client, "generate", new_callable=AsyncMock) as mock_generate:
+        with patch.object(
+            labeler.ollama_client, "generate", new_callable=AsyncMock
+        ) as mock_generate:
             mock_generate.return_value = {"response": "Test Label"}
 
             labeled = await labeler.label_all_communities(communities)

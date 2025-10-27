@@ -140,9 +140,7 @@ class TestRelevanceScorer:
 
         # Total score should be weighted average
         expected_total = (
-            score.frequency_score * 0.3
-            + score.recency_score * 0.4
-            + score.user_feedback * 0.3
+            score.frequency_score * 0.3 + score.recency_score * 0.4 + score.user_feedback * 0.3
         )
         assert math.isclose(score.total_score, expected_total, abs_tol=0.001)
 
@@ -213,9 +211,7 @@ class TestRelevanceScorer:
             "stored_at": (now - timedelta(days=5)).isoformat(),
         }
 
-        score_no_rating = scorer.calculate_score_from_metadata(
-            metadata_no_rating, current_time=now
-        )
+        score_no_rating = scorer.calculate_score_from_metadata(metadata_no_rating, current_time=now)
         assert score_no_rating.user_feedback == 0.5
 
         # Test missing required fields

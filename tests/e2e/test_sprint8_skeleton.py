@@ -32,7 +32,9 @@ async def test_document_ingestion_pipeline_e2e(
     - Answer generation from retrieved context
     """
     # 1. Upload test document
-    test_content = b"LangGraph is a framework for multi-agent orchestration. It provides state management."
+    test_content = (
+        b"LangGraph is a framework for multi-agent orchestration. It provides state management."
+    )
 
     response = await api_client.post(
         "/api/v1/retrieval/upload",
@@ -49,6 +51,7 @@ async def test_document_ingestion_pipeline_e2e(
     # 2. Verify indexing in all systems
     # Check Qdrant
     from src.components.retrieval.qdrant_client import get_qdrant_client
+
     qdrant = get_qdrant_client()
     collection = await qdrant.client.get_collection("aegis_rag")
     assert collection.points_count > 0
@@ -191,7 +194,7 @@ async def test_answer_generation_quality_e2e(api_client, cleanup_databases):
 
     # Answer should be concise and relevant
     assert len(result["answer"]) < 500  # Not just dumping context
-    assert len(result["answer"]) > 20   # Not empty
+    assert len(result["answer"]) > 20  # Not empty
 
 
 # ============================================================================
@@ -278,6 +281,7 @@ async def test_concurrent_user_sessions_e2e(api_client, cleanup_databases):
     - No cross-session contamination
     - Concurrent query handling
     """
+
     # Create 3 concurrent sessions
     async def query_session(session_id: str, query: str):
         return await api_client.post(

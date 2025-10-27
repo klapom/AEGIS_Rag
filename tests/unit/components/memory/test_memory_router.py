@@ -330,7 +330,9 @@ class TestSearchMemory:
                     mock_redis.return_value = mock_redis_mgr
 
                     mock_graphiti_wrapper = MagicMock()
-                    mock_graphiti_wrapper.search = AsyncMock(side_effect=Exception("Graphiti error"))
+                    mock_graphiti_wrapper.search = AsyncMock(
+                        side_effect=Exception("Graphiti error")
+                    )
                     mock_graphiti.return_value = mock_graphiti_wrapper
 
                     router = EnhancedMemoryRouter(strategy=FallbackAllStrategy())

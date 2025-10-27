@@ -293,9 +293,7 @@ async def test_router_get_session_summary_e2e(memory_router, redis_memory_manage
 async def test_router_session_summary_nonexistent_e2e(memory_router):
     """Test session summary for nonexistent session."""
     # When: Get summary for nonexistent session
-    summary = await memory_router.get_session_summary(
-        session_id="nonexistent_session_123"
-    )
+    summary = await memory_router.get_session_summary(session_id="nonexistent_session_123")
 
     # Then: Summary shows session not found
     assert isinstance(summary, dict)
@@ -330,6 +328,7 @@ async def test_redis_memory_ttl_expiration_e2e(redis_memory_manager, redis_clien
 
     # When: Wait for TTL to expire
     import asyncio
+
     await asyncio.sleep(2)
 
     # When: Retrieve after expiration

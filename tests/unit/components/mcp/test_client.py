@@ -73,9 +73,7 @@ class TestMCPModels:
 
     def test_mcp_tool_call_valid(self):
         """Test valid MCPToolCall creation."""
-        call = MCPToolCall(
-            tool_name="read_file", arguments={"path": "/tmp/test.txt"}, timeout=30
-        )
+        call = MCPToolCall(tool_name="read_file", arguments={"path": "/tmp/test.txt"}, timeout=30)
         assert call.tool_name == "read_file"
         assert call.arguments == {"path": "/tmp/test.txt"}
 
@@ -286,9 +284,7 @@ class TestMCPClientToolDiscovery:
         tools_response = {
             "jsonrpc": "2.0",
             "result": {
-                "tools": [
-                    {"name": "query_db", "description": "Query database", "inputSchema": {}}
-                ]
+                "tools": [{"name": "query_db", "description": "Query database", "inputSchema": {}}]
             },
         }
         mock_process.stdout.readline.return_value = (json.dumps(tools_response) + "\n").encode()
@@ -395,7 +391,9 @@ class TestMCPClientToolExecution:
             name="test-server", transport=TransportType.HTTP, endpoint="http://localhost:8000"
         )
 
-        tool = MCPTool(name="slow_tool", description="Slow tool", parameters={}, server="test-server")
+        tool = MCPTool(
+            name="slow_tool", description="Slow tool", parameters={}, server="test-server"
+        )
         client.servers[server.name] = server
         client.tools[server.name] = [tool]
 
@@ -538,9 +536,7 @@ class TestMCPClientStats:
     async def test_stats_after_connection(self):
         """Test stats updated after connection."""
         client = MCPClient()
-        server = MCPServer(
-            name="test", transport=TransportType.HTTP, endpoint="http://localhost"
-        )
+        server = MCPServer(name="test", transport=TransportType.HTTP, endpoint="http://localhost")
 
         mock_response = Mock()
         mock_response.status_code = 200

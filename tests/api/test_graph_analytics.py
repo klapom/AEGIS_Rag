@@ -63,7 +63,9 @@ class TestGraphAnalyticsAPI:
     """Test graph analytics API endpoints."""
 
     @patch("src.api.graph_analytics.get_analytics_engine")
-    def test_get_entity_centrality_success(self, mock_get_engine, client, sample_centrality_metrics):
+    def test_get_entity_centrality_success(
+        self, mock_get_engine, client, sample_centrality_metrics
+    ):
         """Test successful centrality calculation."""
         mock_engine = AsyncMock()
         mock_engine.calculate_centrality = AsyncMock(return_value=sample_centrality_metrics)
@@ -132,7 +134,9 @@ class TestGraphAnalyticsAPI:
         assert "isolated_components" in data
 
     @patch("src.api.graph_analytics.get_recommendation_engine")
-    def test_get_entity_recommendations_success(self, mock_get_engine, client, sample_recommendations):
+    def test_get_entity_recommendations_success(
+        self, mock_get_engine, client, sample_recommendations
+    ):
         """Test successful entity recommendations."""
         mock_engine = AsyncMock()
         mock_engine.recommend_similar_entities = AsyncMock(return_value=sample_recommendations)

@@ -62,11 +62,12 @@ async def test_three_phase_extraction_fiction_text(ollama_client_real):
     assert total_time < 120, f"Extraction took {total_time:.1f}s (expected < 120s with cold start)"
 
     # Verify entity deduplication worked
-    entity_names = [e['name'] for e in entities]
-    assert len(entity_names) == len(set(entity_names)), \
-        f"Duplicate entities found: {entity_names}"
+    entity_names = [e["name"] for e in entities]
+    assert len(entity_names) == len(set(entity_names)), f"Duplicate entities found: {entity_names}"
 
-    print(f"[PASS] Fiction text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s")
+    print(
+        f"[PASS] Fiction text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s"
+    )
 
 
 @pytest.mark.asyncio
@@ -90,7 +91,9 @@ async def test_three_phase_extraction_financial_text(ollama_client_real):
     assert len(relations) >= 3, f"Expected >= 3 relations, got {len(relations)}"
     assert total_time < 120, f"Extraction took {total_time:.1f}s (expected < 120s)"
 
-    print(f"[PASS] Financial text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s")
+    print(
+        f"[PASS] Financial text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s"
+    )
 
 
 @pytest.mark.asyncio
@@ -114,7 +117,9 @@ async def test_three_phase_extraction_sports_text(ollama_client_real):
     assert len(relations) >= 6, f"Expected >= 6 relations, got {len(relations)}"
     assert total_time < 120, f"Extraction took {total_time:.1f}s (expected < 120s)"
 
-    print(f"[PASS] Sports text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s")
+    print(
+        f"[PASS] Sports text: {len(entities)} entities, {len(relations)} relations in {total_time:.1f}s"
+    )
 
 
 @pytest.mark.asyncio
@@ -131,7 +136,7 @@ async def test_three_phase_deduplication_works():
     extractor = ThreePhaseExtractor()
     entities, relations = await extractor.extract(text)
 
-    entity_names = [e['name'] for e in entities]
+    entity_names = [e["name"] for e in entities]
 
     # Should have deduplicated Alex and Jordan
     assert entity_names.count("Alex") <= 1, "Alex should be deduplicated"

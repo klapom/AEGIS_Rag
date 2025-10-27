@@ -163,9 +163,7 @@ class TestGraphQueryAgent:
     @pytest.fixture
     def agent(self, mock_dual_level_search):
         """GraphQueryAgent instance with mocked dependencies."""
-        return GraphQueryAgent(
-            name="test_graph_agent", dual_level_search=mock_dual_level_search
-        )
+        return GraphQueryAgent(name="test_graph_agent", dual_level_search=mock_dual_level_search)
 
     def test_agent_initialization(self, agent):
         """Test agent initializes correctly."""
@@ -254,9 +252,7 @@ class TestGraphQueryAgent:
         assert "test_graph_agent" in str(updated_state["metadata"]["agent_path"])
 
     @pytest.mark.asyncio
-    async def test_process_converts_entities_to_contexts(
-        self, agent, mock_dual_level_search
-    ):
+    async def test_process_converts_entities_to_contexts(self, agent, mock_dual_level_search):
         """Test that entities are converted to retrieved_contexts format."""
         state = {
             "query": "test query",
@@ -360,9 +356,7 @@ class TestGraphQueryNode:
             "metadata": {},
         }
 
-        with patch(
-            "src.agents.graph_query_agent.GraphQueryAgent", return_value=mock_agent
-        ):
+        with patch("src.agents.graph_query_agent.GraphQueryAgent", return_value=mock_agent):
             updated_state = await graph_query_node(state)
 
         # Verify agent was created and process was called
@@ -377,9 +371,7 @@ class TestGraphQueryNode:
         """Test node function with minimal state."""
         state = {}
 
-        with patch(
-            "src.agents.graph_query_agent.GraphQueryAgent", return_value=mock_agent
-        ):
+        with patch("src.agents.graph_query_agent.GraphQueryAgent", return_value=mock_agent):
             updated_state = await graph_query_node(state)
 
         # Should still process without error

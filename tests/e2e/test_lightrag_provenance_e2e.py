@@ -37,8 +37,7 @@ async def lightrag_wrapper():
 async def cleanup_databases():
     """Clean up Neo4j database before and after tests."""
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async def clean():
@@ -82,7 +81,7 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
         AEGIS RAG integrates Ollama for local LLM inference.
         The system uses LightRAG for graph-based knowledge representation.
         Neo4j stores the knowledge graph with entity relationships.
-        """
+        """,
     }
 
     # Act - Insert document
@@ -97,25 +96,23 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
 
     # Verify Neo4j schema
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
         # Check :chunk nodes
         chunk_result = await session.run(
-            "MATCH (c:chunk {document_id: $doc_id}) RETURN count(c) as count",
-            doc_id="e2e_test_001"
+            "MATCH (c:chunk {document_id: $doc_id}) RETURN count(c) as count", doc_id="e2e_test_001"
         )
         chunk_record = await chunk_result.single()
         assert chunk_record["count"] > 0, "Should have :chunk nodes"
 
         # Check :base entities
-        entity_result = await session.run(
-            "MATCH (e:base) RETURN count(e) as count"
-        )
+        entity_result = await session.run("MATCH (e:base) RETURN count(e) as count")
         entity_record = await entity_result.single()
-        assert entity_record["count"] >= 4, "Should have at least 4 entities (Klaus Pommer, AEGIS RAG, Ollama, LightRAG, Neo4j)"
+        assert (
+            entity_record["count"] >= 4
+        ), "Should have at least 4 entities (Klaus Pommer, AEGIS RAG, Ollama, LightRAG, Neo4j)"
 
         # Check MENTIONED_IN relationships
         mention_result = await session.run(
@@ -123,7 +120,7 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
             MATCH (e:base)-[r:MENTIONED_IN]->(c:chunk {document_id: $doc_id})
             RETURN count(r) as count
             """,
-            doc_id="e2e_test_001"
+            doc_id="e2e_test_001",
         )
         mention_record = await mention_result.single()
         assert mention_record["count"] > 0, "Should have MENTIONED_IN relationships"
@@ -138,7 +135,7 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
                    c.document_id as document_id
             ORDER BY c.chunk_index
             """,
-            entity_id="AEGIS RAG"
+            entity_id="AEGIS RAG",
         )
 
         provenance_records = await provenance_result.fetch(10)
@@ -146,8 +143,9 @@ async def test_full_pipeline_single_document_e2e(lightrag_wrapper, cleanup_datab
 
         # Verify chunk text contains the entity
         for record in provenance_records:
-            assert "AEGIS RAG" in record["chunk_text"] or "AEGIS" in record["chunk_text"], \
-                "Chunk text should contain 'AEGIS RAG'"
+            assert (
+                "AEGIS RAG" in record["chunk_text"] or "AEGIS" in record["chunk_text"]
+            ), "Chunk text should contain 'AEGIS RAG'"
 
     await driver.close()
 
@@ -168,18 +166,9 @@ async def test_batch_document_processing_e2e(lightrag_wrapper, cleanup_databases
     """
     # Arrange
     test_docs = [
-        {
-            "id": "batch_001",
-            "text": "Alice works at TechCorp. TechCorp develops AI systems."
-        },
-        {
-            "id": "batch_002",
-            "text": "Bob works at DataCo. DataCo specializes in data analytics."
-        },
-        {
-            "id": "batch_003",
-            "text": "Alice and Bob collaborate on AI analytics projects."
-        }
+        {"id": "batch_001", "text": "Alice works at TechCorp. TechCorp develops AI systems."},
+        {"id": "batch_002", "text": "Bob works at DataCo. DataCo specializes in data analytics."},
+        {"id": "batch_003", "text": "Alice and Bob collaborate on AI analytics projects."},
     ]
 
     # Act
@@ -192,8 +181,7 @@ async def test_batch_document_processing_e2e(lightrag_wrapper, cleanup_databases
 
     # Verify provenance for each document
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
@@ -204,7 +192,7 @@ async def test_batch_document_processing_e2e(lightrag_wrapper, cleanup_databases
             RETURN c.document_id as doc_id
             ORDER BY c.document_id
             """,
-            entity_id="Alice"
+            entity_id="Alice",
         )
         alice_records = await alice_result.fetch(10)
         alice_docs = [r["doc_id"] for r in alice_records]
@@ -220,7 +208,7 @@ async def test_batch_document_processing_e2e(lightrag_wrapper, cleanup_databases
             RETURN c.document_id as doc_id
             ORDER BY c.document_id
             """,
-            entity_id="Bob"
+            entity_id="Bob",
         )
         bob_records = await bob_result.fetch(10)
         bob_docs = [r["doc_id"] for r in bob_records]
@@ -248,13 +236,15 @@ async def test_chunking_and_provenance_accuracy_e2e(lightrag_wrapper, cleanup_da
     # Arrange - Long document with real entities that SpaCy will detect
     test_doc = {
         "id": "chunking_test",
-        "text": " ".join([
-            f"Apple Inc is a technology company founded by Steve Jobs in California. "
-            f"Microsoft Corporation was founded by Bill Gates in Washington. "
-            f"Amazon was started by Jeff Bezos in Seattle. "
-            f"Tesla Motors is led by Elon Musk and produces electric vehicles. "
-            for i in range(25)  # Repeat to create multiple chunks
-        ])
+        "text": " ".join(
+            [
+                f"Apple Inc is a technology company founded by Steve Jobs in California. "
+                f"Microsoft Corporation was founded by Bill Gates in Washington. "
+                f"Amazon was started by Jeff Bezos in Seattle. "
+                f"Tesla Motors is led by Elon Musk and produces electric vehicles. "
+                for i in range(25)  # Repeat to create multiple chunks
+            ]
+        ),
     }
 
     # Act
@@ -265,8 +255,7 @@ async def test_chunking_and_provenance_accuracy_e2e(lightrag_wrapper, cleanup_da
     assert result["stats"]["total_chunks"] > 1, "Long document should be split into multiple chunks"
 
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
@@ -288,9 +277,9 @@ async def test_chunking_and_provenance_accuracy_e2e(lightrag_wrapper, cleanup_da
 
             # Verify entity is actually in the chunk text
             # (Case-insensitive check for robustness)
-            assert entity_id.lower() in chunk_text.lower() or \
-                   any(word.lower() in chunk_text.lower() for word in entity_id.split()), \
-                   f"Entity '{entity_id}' should be mentioned in chunk: {chunk_text[:100]}"
+            assert entity_id.lower() in chunk_text.lower() or any(
+                word.lower() in chunk_text.lower() for word in entity_id.split()
+            ), f"Entity '{entity_id}' should be mentioned in chunk: {chunk_text[:100]}"
 
     await driver.close()
 
@@ -316,19 +305,20 @@ async def test_provenance_query_performance_e2e(lightrag_wrapper, cleanup_databa
         Artificial Intelligence enables computers to learn from data.
         Deep Learning is a type of Machine Learning using neural networks.
         Neural networks are inspired by biological neural networks.
-        """ * 10  # Repeat to create multiple chunks
+        """
+        * 10,  # Repeat to create multiple chunks
     }
 
     await lightrag_wrapper.insert_documents_optimized([test_doc])
 
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
         # Act - Measure query performance
         import time
+
         start = time.time()
 
         result = await session.run(
@@ -342,7 +332,7 @@ async def test_provenance_query_performance_e2e(lightrag_wrapper, cleanup_databa
                    c.end_token as end_token
             ORDER BY c.chunk_index, e.entity_id
             """,
-            doc_id="performance_test"
+            doc_id="performance_test",
         )
 
         records = await result.fetch(100)
@@ -387,26 +377,23 @@ async def test_integration_with_lightrag_query_e2e(lightrag_wrapper, cleanup_dat
         "text": """
         LangGraph is a framework for building stateful multi-agent systems.
         It provides tools for orchestrating complex agentic workflows.
-        """
+        """,
     }
 
     await lightrag_wrapper.insert_documents_optimized([test_doc])
 
     # Act - Regular LightRAG query
-    query_result = await lightrag_wrapper.query_graph(
-        query="What is LangGraph?",
-        mode="local"
-    )
+    query_result = await lightrag_wrapper.query_graph(query="What is LangGraph?", mode="local")
 
     # Assert
     assert query_result.answer is not None, "LightRAG query should return an answer"
-    assert "LangGraph" in query_result.answer or "langgraph" in query_result.answer.lower(), \
-        "Answer should mention LangGraph"
+    assert (
+        "LangGraph" in query_result.answer or "langgraph" in query_result.answer.lower()
+    ), "Answer should mention LangGraph"
 
     # Verify provenance still works
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
@@ -415,7 +402,7 @@ async def test_integration_with_lightrag_query_e2e(lightrag_wrapper, cleanup_dat
             MATCH (e:base {entity_id: $entity_id})-[:MENTIONED_IN]->(c:chunk)
             RETURN count(c) as count
             """,
-            entity_id="LangGraph"
+            entity_id="LangGraph",
         )
         record = await result.single()
         assert record["count"] > 0, "Provenance should still work after query"

@@ -73,7 +73,8 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     collection_name = "test_sprint8_ingestion"
 
     # Create test document (simulate 10-page PDF with ~200 words per page = 2000 words)
-    test_content = """
+    test_content = (
+        """
     Machine learning is a subset of artificial intelligence that focuses on the
     development of algorithms and statistical models that enable computers to
     improve their performance on a specific task through experience.
@@ -93,7 +94,9 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     Applications of machine learning are diverse and growing rapidly. They include
     recommendation systems, natural language processing, computer vision, fraud
     detection, and autonomous vehicles.
-    """ * 40  # Simulate 10 pages (~2000 words total)
+    """
+        * 40
+    )  # Simulate 10 pages (~2000 words total)
 
     test_file = tmp_path / "test_document.txt"
     test_file.write_text(test_content)
@@ -118,7 +121,9 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     if embeddings is not None:
         print(f"[DEBUG] Embeddings count: {len(embeddings)}")
         if len(embeddings) > 0:
-            print(f"[DEBUG] First embedding type: {type(embeddings[0])}, dim: {len(embeddings[0]) if embeddings[0] else 'None'}")
+            print(
+                f"[DEBUG] First embedding type: {type(embeddings[0])}, dim: {len(embeddings[0]) if embeddings[0] else 'None'}"
+            )
 
     # 4. Create Qdrant collection
     qdrant_client.recreate_collection(
@@ -168,16 +173,12 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     assert "text" in sample_point.payload, "text payload missing"
 
     # Verify: Performance <40s for 2000 words (relaxed for 9GB Docker memory constraint)
-    assert (
-        processing_time_ms < 40000
-    ), f"Expected <40s, got {processing_time_ms/1000:.1f}s"
+    assert processing_time_ms < 40000, f"Expected <40s, got {processing_time_ms/1000:.1f}s"
 
     # Cleanup
     qdrant_client.delete_collection(collection_name)
 
-    print(
-        f"[PASS] Test 2.1: {len(chunks)} chunks ingested in {processing_time_ms/1000:.1f}s"
-    )
+    print(f"[PASS] Test 2.1: {len(chunks)} chunks ingested in {processing_time_ms/1000:.1f}s")
 
 
 @pytest.mark.asyncio
@@ -308,9 +309,7 @@ async def test_hybrid_search_latency_validation_e2e():
 
     # Verify: Hybrid differs from vector-only (RRF combines both strategies)
     vector_only_ids = [r.id for r in vector_results[:5]]
-    assert (
-        hybrid_top_ids != vector_only_ids
-    ), "Hybrid should differ from vector-only (RRF fusion)"
+    assert hybrid_top_ids != vector_only_ids, "Hybrid should differ from vector-only (RRF fusion)"
 
     # Cleanup
     qdrant_client.delete_collection(collection_name)
@@ -369,9 +368,7 @@ async def test_embedding_service_batch_performance_e2e():
 
     # Verify: All embeddings generated
     assert len(embeddings_cold) == 50, f"Expected 50 embeddings, got {len(embeddings_cold)}"
-    assert all(
-        len(emb) == 768 for emb in embeddings_cold
-    ), "Expected 768-dim embeddings"
+    assert all(len(emb) == 768 for emb in embeddings_cold), "Expected 768-dim embeddings"
 
     # Second batch: Warm cache (should hit cache for duplicates)
     start_time = time.time()
@@ -387,14 +384,10 @@ async def test_embedding_service_batch_performance_e2e():
     if warm_time_ms > 0:  # Avoid division by zero
         speedup = (cold_time_ms - warm_time_ms) / cold_time_ms
         # Cache hit for 45/50 texts (90% hit rate) should give significant speedup
-        assert (
-            speedup > 0.7
-        ), f"Expected >70% speedup from cache, got {speedup:.1%}"
+        assert speedup > 0.7, f"Expected >70% speedup from cache, got {speedup:.1%}"
 
     # Verify: Performance - Cold batch <10s for 50 texts (5 unique)
-    assert (
-        cold_time_ms < 10000
-    ), f"Cold batch too slow: {cold_time_ms/1000:.1f}s"
+    assert cold_time_ms < 10000, f"Cold batch too slow: {cold_time_ms/1000:.1f}s"
 
     # Verify: Performance - Warm batch <2s (cache hits)
     assert (
@@ -466,24 +459,20 @@ async def test_qdrant_connection_pooling_e2e():
 
     # Verify: All points stored
     collection_info = qdrant_client.get_collection(collection_name)
-    assert collection_info.points_count == 10, f"Expected 10 points, got {collection_info.points_count}"
+    assert (
+        collection_info.points_count == 10
+    ), f"Expected 10 points, got {collection_info.points_count}"
 
     # Verify: Performance - Concurrent operations faster than sequential
     # (Connection pooling should enable parallelism)
-    assert (
-        concurrent_time_ms < 2000
-    ), f"Concurrent operations too slow: {concurrent_time_ms:.0f}ms"
+    assert concurrent_time_ms < 2000, f"Concurrent operations too slow: {concurrent_time_ms:.0f}ms"
 
     # Verify: Sample point retrievable
-    sample_point = qdrant_client.retrieve(
-        collection_name=collection_name, ids=[0]
-    )[0]
+    sample_point = qdrant_client.retrieve(collection_name=collection_name, ids=[0])[0]
     assert sample_point.id == 0, "Sample point not retrievable"
     assert sample_point.payload["text"] == "Document 0", "Sample payload incorrect"
 
     # Cleanup
     qdrant_client.delete_collection(collection_name)
 
-    print(
-        f"[PASS] Test 2.4: 10 concurrent upserts in {concurrent_time_ms:.0f}ms"
-    )
+    print(f"[PASS] Test 2.4: 10 concurrent upserts in {concurrent_time_ms:.0f}ms")

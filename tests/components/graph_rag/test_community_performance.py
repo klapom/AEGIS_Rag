@@ -256,9 +256,7 @@ class TestLargeGraphPerformance:
         cached_time_ms = (time.perf_counter() - start_time) * 1000
 
         # Cached query should be instant (< 10ms for computation, allow more for async overhead)
-        assert (
-            cached_time_ms < 100
-        ), f"Cached query took {cached_time_ms:.0f}ms, expected < 100ms"
+        assert cached_time_ms < 100, f"Cached query took {cached_time_ms:.0f}ms, expected < 100ms"
 
         # Verify cache was hit
         cache_info = detector.get_cache_info()
@@ -366,9 +364,7 @@ class TestPerformanceRegression:
         communities = await detector._detect_with_networkx(algorithm="louvain", resolution=1.0)
         execution_time = (time.perf_counter() - start_time) * 1000
 
-        assert (
-            execution_time < 100
-        ), f"Small graph took {execution_time:.0f}ms, expected < 100ms"
+        assert execution_time < 100, f"Small graph took {execution_time:.0f}ms, expected < 100ms"
         assert len(communities) > 0
 
         print(f"\n[PASS] Small graph (50 nodes): {execution_time:.0f}ms (target: < 100ms)")
@@ -393,9 +389,7 @@ class TestPerformanceRegression:
         communities = await detector._detect_with_networkx(algorithm="louvain", resolution=1.0)
         execution_time = (time.perf_counter() - start_time) * 1000
 
-        assert (
-            execution_time < 1000
-        ), f"Medium graph took {execution_time:.0f}ms, expected < 1000ms"
+        assert execution_time < 1000, f"Medium graph took {execution_time:.0f}ms, expected < 1000ms"
         assert len(communities) > 0
 
         print(f"\n[PASS] Medium graph (300 nodes): {execution_time:.0f}ms (target: < 1000ms)")

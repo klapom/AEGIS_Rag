@@ -50,15 +50,9 @@ async def test_time_based_policy_e2e():
     policy = TimeBasedPolicy(min_age_hours=1)
 
     # When: Check items of different ages
-    old_item = {
-        "stored_at": (datetime.utcnow() - timedelta(hours=2)).isoformat()
-    }
-    new_item = {
-        "stored_at": (datetime.utcnow() - timedelta(minutes=30)).isoformat()
-    }
-    exact_item = {
-        "stored_at": (datetime.utcnow() - timedelta(hours=1)).isoformat()
-    }
+    old_item = {"stored_at": (datetime.utcnow() - timedelta(hours=2)).isoformat()}
+    new_item = {"stored_at": (datetime.utcnow() - timedelta(minutes=30)).isoformat()}
+    exact_item = {"stored_at": (datetime.utcnow() - timedelta(hours=1)).isoformat()}
 
     # Then: Correct consolidation decisions
     assert policy.should_consolidate(old_item) is True
@@ -120,7 +114,9 @@ async def test_consolidation_no_items_to_consolidate_e2e(consolidation_pipeline)
     assert result["consolidated"] == 0
 
 
-async def test_consolidation_access_count_threshold_e2e(consolidation_pipeline, redis_memory_manager):
+async def test_consolidation_access_count_threshold_e2e(
+    consolidation_pipeline, redis_memory_manager
+):
     """Test that only items meeting access count threshold are consolidated."""
     # Given: Items with varying access counts
     await redis_memory_manager.store(key="low_access", value="data1", namespace="test")
@@ -295,7 +291,9 @@ async def test_consolidation_cycle_partial_operations_e2e(consolidation_pipeline
     assert result_conv_only["qdrant_consolidation"] is None
 
 
-async def test_consolidation_cycle_multiple_sessions_e2e(consolidation_pipeline, redis_memory_manager):
+async def test_consolidation_cycle_multiple_sessions_e2e(
+    consolidation_pipeline, redis_memory_manager
+):
     """Test consolidating multiple sessions in one cycle."""
     # Given: Multiple sessions
     sessions = ["session_1", "session_2", "session_3"]

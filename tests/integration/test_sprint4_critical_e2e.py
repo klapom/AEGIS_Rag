@@ -89,8 +89,12 @@ async def test_langgraph_state_persistence_with_memory_e2e():
     assert result1["intent"] == "memory", "Intent not stored"
     assert "metadata" in result1, "Metadata missing from state"
     assert "agent_path" in result1["metadata"], "agent_path missing"
-    assert any("router" in step for step in result1["metadata"]["agent_path"]), "router not in agent_path"
-    assert any("memory" in step for step in result1["metadata"]["agent_path"]), "memory not in agent_path"
+    assert any(
+        "router" in step for step in result1["metadata"]["agent_path"]
+    ), "router not in agent_path"
+    assert any(
+        "memory" in step for step in result1["metadata"]["agent_path"]
+    ), "memory not in agent_path"
 
     # Execute: Second invocation with same session_id (should restore state)
     query2 = "What programming language do I prefer?"
@@ -146,9 +150,7 @@ async def test_langgraph_state_persistence_with_memory_e2e():
 
     # Verify: Performance <2s per invocation
     assert first_invocation_ms < 2000, f"First invocation too slow: {first_invocation_ms:.0f}ms"
-    assert (
-        second_invocation_ms < 2000
-    ), f"Second invocation too slow: {second_invocation_ms:.0f}ms"
+    assert second_invocation_ms < 2000, f"Second invocation too slow: {second_invocation_ms:.0f}ms"
 
     print(
         f"[PASS] Test 4.1: State persisted across {2} invocations "
@@ -236,7 +238,9 @@ async def test_multi_turn_conversation_state_e2e():
     final_state = results[-1][0]
 
     # agent_path should have accumulated entries from all turns
-    assert any("router" in step for step in final_state["metadata"]["agent_path"]), "Router missing from final path"
+    assert any(
+        "router" in step for step in final_state["metadata"]["agent_path"]
+    ), "Router missing from final path"
 
     # Verify: Different intents routed correctly
     memory_turns = [r for r, _ in results if r["intent"] == "memory"]
@@ -249,22 +253,18 @@ async def test_multi_turn_conversation_state_e2e():
     for result, _ in results:
         if result["intent"] == "memory":
             # Memory node should populate memory_results
-            assert (
-                result["memory_results"] is not None
-            ), "Memory turn missing memory_results"
+            assert result["memory_results"] is not None, "Memory turn missing memory_results"
 
     # Verify: Graph turn has graph_query_result
     for result, _ in results:
         if result["intent"] == "graph":
             # Graph node should populate graph_query_result
-            assert (
-                result["graph_query_result"] is not None
-            ), "Graph turn missing graph_query_result"
+            assert result["graph_query_result"] is not None, "Graph turn missing graph_query_result"
 
     # Verify: Performance <10s for 5 turns
-    assert conversation_time_ms < 10000, (
-        f"5-turn conversation too slow: {conversation_time_ms/1000:.1f}s"
-    )
+    assert (
+        conversation_time_ms < 10000
+    ), f"5-turn conversation too slow: {conversation_time_ms/1000:.1f}s"
 
     print(
         f"[PASS] Test 4.2: 5-turn conversation in {conversation_time_ms/1000:.1f}s "
@@ -505,9 +505,7 @@ async def test_agent_state_management_e2e():
         "graph_query",
     ], "agent_path incomplete"
     assert state["metadata"]["graph_nodes_visited"] == 12, "graph_nodes_visited not stored"
-    assert (
-        state["metadata"]["graph_edges_traversed"] == 18
-    ), "graph_edges_traversed not stored"
+    assert state["metadata"]["graph_edges_traversed"] == 18, "graph_edges_traversed not stored"
 
     # Execute: Test state with graph_query_result
     state["graph_query_result"] = {
@@ -519,9 +517,7 @@ async def test_agent_state_management_e2e():
     # Verify: graph_query_result
     assert state["graph_query_result"] is not None, "graph_query_result not set"
     assert len(state["graph_query_result"]["entities"]) == 2, "Entities count wrong"
-    assert (
-        state["graph_query_result"]["query_time_ms"] == 45.2
-    ), "query_time_ms not stored"
+    assert state["graph_query_result"]["query_time_ms"] == 45.2, "query_time_ms not stored"
 
     # Execute: Test agent_path deduplication (same agent called twice)
     state_before_len = len(state["metadata"]["agent_path"])
@@ -529,9 +525,7 @@ async def test_agent_state_management_e2e():
 
     # Verify: Duplicate agent NOT added to path
     # (update_state_metadata only adds if agent is not already the last entry)
-    assert (
-        len(state["metadata"]["agent_path"]) == state_before_len
-    ), "Duplicate agent added to path"
+    assert len(state["metadata"]["agent_path"]) == state_before_len, "Duplicate agent added to path"
 
     # Execute: Test with new agent after duplicate
     state = update_state_metadata(state, agent_name="memory", memory_retrieved=3)

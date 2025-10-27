@@ -112,13 +112,10 @@ def test_memory_monitoring_import():
     """Test Memory Monitoring can be imported (without consolidation dependency)."""
     # Import monitoring directly without going through memory.__init__
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(
         "monitoring",
-        Path(__file__).parent.parent
-        / "src"
-        / "components"
-        / "memory"
-        / "monitoring.py",
+        Path(__file__).parent.parent / "src" / "components" / "memory" / "monitoring.py",
     )
     if spec and spec.loader:
         monitoring_module = importlib.util.module_from_spec(spec)
@@ -139,11 +136,7 @@ def test_monitoring_metrics():
 
     spec = importlib.util.spec_from_file_location(
         "monitoring",
-        Path(__file__).parent.parent
-        / "src"
-        / "components"
-        / "memory"
-        / "monitoring.py",
+        Path(__file__).parent.parent / "src" / "components" / "memory" / "monitoring.py",
     )
     if spec and spec.loader:
         monitoring_module = importlib.util.module_from_spec(spec)
@@ -171,11 +164,7 @@ async def test_memory_health_endpoints():
 
     spec = importlib.util.spec_from_file_location(
         "memory_health",
-        Path(__file__).parent.parent
-        / "src"
-        / "api"
-        / "health"
-        / "memory_health.py",
+        Path(__file__).parent.parent / "src" / "api" / "health" / "memory_health.py",
     )
     if spec and spec.loader:
         health_module = importlib.util.module_from_spec(spec)
@@ -197,10 +186,7 @@ async def test_memory_health_endpoints():
 def test_grafana_dashboard_exists():
     """Test Grafana dashboard JSON exists."""
     dashboard_path = (
-        Path(__file__).parent.parent
-        / "monitoring"
-        / "grafana"
-        / "memory_dashboard.json"
+        Path(__file__).parent.parent / "monitoring" / "grafana" / "memory_dashboard.json"
     )
     assert dashboard_path.exists()
 
@@ -217,9 +203,7 @@ def test_grafana_dashboard_exists():
 
 def test_prometheus_alerts_exist():
     """Test Prometheus alert rules exist."""
-    alerts_path = (
-        Path(__file__).parent.parent / "monitoring" / "prometheus" / "memory_alerts.yml"
-    )
+    alerts_path = Path(__file__).parent.parent / "monitoring" / "prometheus" / "memory_alerts.yml"
     assert alerts_path.exists()
 
     import yaml

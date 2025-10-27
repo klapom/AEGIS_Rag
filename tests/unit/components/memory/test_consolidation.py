@@ -46,8 +46,12 @@ def mock_graphiti_wrapper():
 def consolidation_pipeline(mock_redis_memory, mock_qdrant_client):
     """Create consolidation pipeline with mocked dependencies."""
     with (
-        patch("src.components.memory.consolidation.get_redis_memory", return_value=mock_redis_memory),
-        patch("src.components.memory.consolidation.get_qdrant_client", return_value=mock_qdrant_client),
+        patch(
+            "src.components.memory.consolidation.get_redis_memory", return_value=mock_redis_memory
+        ),
+        patch(
+            "src.components.memory.consolidation.get_qdrant_client", return_value=mock_qdrant_client
+        ),
         patch("src.components.memory.consolidation.settings") as mock_settings,
     ):
         mock_settings.graphiti_enabled = False
@@ -236,7 +240,10 @@ class TestConsolidationPipeline:
         mock_redis_memory.get_frequently_accessed = AsyncMock(return_value=mock_items)
 
         with (
-            patch("src.components.memory.consolidation.get_redis_memory", return_value=mock_redis_memory),
+            patch(
+                "src.components.memory.consolidation.get_redis_memory",
+                return_value=mock_redis_memory,
+            ),
             patch("src.components.memory.consolidation.get_qdrant_client"),
             patch("src.components.memory.consolidation.settings") as mock_settings,
         ):
@@ -272,7 +279,10 @@ class TestConsolidationPipeline:
         mock_redis_memory.get_frequently_accessed = AsyncMock(return_value=mock_items)
 
         with (
-            patch("src.components.memory.consolidation.get_redis_memory", return_value=mock_redis_memory),
+            patch(
+                "src.components.memory.consolidation.get_redis_memory",
+                return_value=mock_redis_memory,
+            ),
             patch("src.components.memory.consolidation.get_qdrant_client"),
             patch("src.components.memory.consolidation.settings") as mock_settings,
         ):
@@ -339,7 +349,10 @@ class TestConsolidationPipeline:
         mock_redis_memory.get_frequently_accessed = AsyncMock(return_value=[])
 
         with (
-            patch("src.components.memory.consolidation.get_redis_memory", return_value=mock_redis_memory),
+            patch(
+                "src.components.memory.consolidation.get_redis_memory",
+                return_value=mock_redis_memory,
+            ),
             patch("src.components.memory.consolidation.get_qdrant_client"),
             patch("src.components.memory.consolidation.settings") as mock_settings,
         ):

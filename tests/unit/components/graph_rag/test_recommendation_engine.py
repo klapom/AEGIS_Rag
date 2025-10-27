@@ -60,7 +60,9 @@ class TestRecommendationEngine:
         assert engine.default_method == "collaborative"
 
     @pytest.mark.asyncio
-    async def test_recommend_by_collaborative(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_by_collaborative(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test collaborative filtering recommendations."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
@@ -73,7 +75,9 @@ class TestRecommendationEngine:
         assert recommendations[0].reason == "similar_community"
 
     @pytest.mark.asyncio
-    async def test_recommend_by_community(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_by_community(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test community-based recommendations."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
@@ -115,7 +119,9 @@ class TestRecommendationEngine:
         assert "WORKS_AT" in recommendations[0].reason
 
     @pytest.mark.asyncio
-    async def test_recommend_by_attributes(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_by_attributes(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test attribute-based recommendations."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
@@ -125,17 +131,23 @@ class TestRecommendationEngine:
         assert recommendations[0].reason == "similar_attributes"
 
     @pytest.mark.asyncio
-    async def test_recommend_similar_entities_collaborative(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_similar_entities_collaborative(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test recommend_similar_entities with collaborative method."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
-        recommendations = await engine.recommend_similar_entities("entity_1", method="collaborative")
+        recommendations = await engine.recommend_similar_entities(
+            "entity_1", method="collaborative"
+        )
 
         assert len(recommendations) == 2
         mock_neo4j_client.execute_query.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_recommend_similar_entities_community(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_similar_entities_community(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test recommend_similar_entities with community method."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
@@ -159,12 +171,16 @@ class TestRecommendationEngine:
             }
         ]
 
-        recommendations = await engine.recommend_similar_entities("entity_1", method="relationships")
+        recommendations = await engine.recommend_similar_entities(
+            "entity_1", method="relationships"
+        )
 
         assert len(recommendations) == 1
 
     @pytest.mark.asyncio
-    async def test_recommend_similar_entities_attributes(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_similar_entities_attributes(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test recommend_similar_entities with attributes method."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
@@ -179,7 +195,9 @@ class TestRecommendationEngine:
             await engine.recommend_similar_entities("entity_1", method="invalid")
 
     @pytest.mark.asyncio
-    async def test_recommend_similar_entities_custom_top_k(self, engine, mock_neo4j_client, sample_recommendation_data):
+    async def test_recommend_similar_entities_custom_top_k(
+        self, engine, mock_neo4j_client, sample_recommendation_data
+    ):
         """Test recommend_similar_entities with custom top_k."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 

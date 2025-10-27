@@ -72,9 +72,7 @@ class TestExtractionService:
         assert parsed == []
 
     @pytest.mark.asyncio
-    async def test_extract_entities_success(
-        self, extraction_service, mock_ollama_response
-    ):
+    async def test_extract_entities_success(self, extraction_service, mock_ollama_response):
         """Test successful entity extraction."""
         mock_entities = [
             {
@@ -106,9 +104,7 @@ class TestExtractionService:
             assert entities[1].type == "ORGANIZATION"
 
     @pytest.mark.asyncio
-    async def test_extract_entities_empty_text(
-        self, extraction_service, mock_ollama_response
-    ):
+    async def test_extract_entities_empty_text(self, extraction_service, mock_ollama_response):
         """Test entity extraction with empty text."""
         with patch.object(
             extraction_service.client,
@@ -119,9 +115,7 @@ class TestExtractionService:
             assert entities == []
 
     @pytest.mark.asyncio
-    async def test_extract_entities_max_limit(
-        self, extraction_service, mock_ollama_response
-    ):
+    async def test_extract_entities_max_limit(self, extraction_service, mock_ollama_response):
         """Test entity extraction respects max entities limit."""
         # Generate more entities than MAX_ENTITIES_PER_DOC
         mock_entities = [
@@ -138,9 +132,7 @@ class TestExtractionService:
             assert len(entities) <= 50  # Should be capped at MAX_ENTITIES_PER_DOC
 
     @pytest.mark.asyncio
-    async def test_extract_relationships_success(
-        self, extraction_service, mock_ollama_response
-    ):
+    async def test_extract_relationships_success(self, extraction_service, mock_ollama_response):
         """Test successful relationship extraction."""
         entities = [
             GraphEntity(
@@ -172,9 +164,7 @@ class TestExtractionService:
             new=AsyncMock(return_value=mock_ollama_response(mock_relationships)),
         ):
             text = "John Smith works at Google."
-            relationships = await extraction_service.extract_relationships(
-                text, entities, "doc1"
-            )
+            relationships = await extraction_service.extract_relationships(text, entities, "doc1")
 
             assert len(relationships) == 1
             assert isinstance(relationships[0], GraphRelationship)
@@ -186,9 +176,7 @@ class TestExtractionService:
     @pytest.mark.asyncio
     async def test_extract_relationships_no_entities(self, extraction_service):
         """Test relationship extraction with no entities returns empty list."""
-        relationships = await extraction_service.extract_relationships(
-            "some text", [], "doc1"
-        )
+        relationships = await extraction_service.extract_relationships("some text", [], "doc1")
         assert relationships == []
 
     @pytest.mark.asyncio
@@ -236,9 +224,7 @@ class TestExtractionService:
             {"id": "doc2", "text": "Document 2 text"},
         ]
 
-        mock_entities = [
-            {"name": "Entity1", "type": "CONCEPT", "description": "Test entity"}
-        ]
+        mock_entities = [{"name": "Entity1", "type": "CONCEPT", "description": "Test entity"}]
         mock_relationships = []
 
         # Create a list of return values for the mock
@@ -263,18 +249,14 @@ class TestExtractionService:
             assert len(result["results"]) == 2
 
     @pytest.mark.asyncio
-    async def test_extract_batch_with_failures(
-        self, extraction_service, mock_ollama_response
-    ):
+    async def test_extract_batch_with_failures(self, extraction_service, mock_ollama_response):
         """Test batch extraction handles failures gracefully."""
         documents = [
             {"id": "doc1", "text": "Document 1 text"},
             {"id": "doc2", "text": "Document 2 text"},
         ]
 
-        mock_entities = [
-            {"name": "Entity1", "type": "CONCEPT", "description": "Test entity"}
-        ]
+        mock_entities = [{"name": "Entity1", "type": "CONCEPT", "description": "Test entity"}]
 
         # Create a list of return values - first doc succeeds, second fails
         mock_responses = [
