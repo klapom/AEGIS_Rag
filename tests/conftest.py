@@ -339,7 +339,7 @@ def mock_embedding_service(mock_ollama_embedding_model, sample_embedding):
     Returns:
         Mock embedding service with configured behavior
     """
-    from src.components.vector_search.embeddings import LRUCache
+    from src.components.shared.embedding_service import LRUCache
 
     service = MagicMock()
     service.model_name = "nomic-embed-text"
