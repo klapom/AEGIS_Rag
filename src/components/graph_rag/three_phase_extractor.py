@@ -175,10 +175,20 @@ class ThreePhaseExtractor:
         )
 
         # ====================================================================
-        # PHASE 1: SpaCy NER Entity Extraction
+        # PHASE 1: SpaCy NER Entity Extraction (with fallback)
+        # Sprint 14: Added graceful degradation
         # ====================================================================
         phase1_start = time.perf_counter()
-        raw_entities = self._extract_entities_spacy(text)
+        try:
+            raw_entities = self._extract_entities_spacy(text)
+        except Exception as e:
+            logger.warning(
+                "phase1_spacy_failed_using_fallback",
+                error=str(e),
+                note="Continuing with regex fallback"
+            )
+            raw_entities = self._extract_entities_regex_fallback(text)
+
         phase1_time = time.perf_counter() - phase1_start
 
         logger.info(
@@ -188,13 +198,24 @@ class ThreePhaseExtractor:
         )
 
         # ====================================================================
-        # PHASE 2: Semantic Deduplication
+        # PHASE 2: Semantic Deduplication (optional, with fallback)
+        # Sprint 14: Added graceful degradation
         # ====================================================================
         phase2_start = time.perf_counter()
-        if self.deduplicator and raw_entities:
-            deduplicated_entities = self.deduplicator.deduplicate(raw_entities)
-            dedup_reduction = 100 * (1 - len(deduplicated_entities) / len(raw_entities))
-        else:
+        try:
+            if self.deduplicator and raw_entities:
+                deduplicated_entities = self.deduplicator.deduplicate(raw_entities)
+                dedup_reduction = 100 * (1 - len(deduplicated_entities) / len(raw_entities))
+            else:
+                deduplicated_entities = raw_entities
+                dedup_reduction = 0
+        except Exception as e:
+            # Deduplication failed - skip and continue with raw entities
+            logger.warning(
+                "phase2_dedup_failed_skipping",
+                error=str(e),
+                note="Continuing without deduplication"
+            )
             deduplicated_entities = raw_entities
             dedup_reduction = 0
 
@@ -208,10 +229,21 @@ class ThreePhaseExtractor:
         )
 
         # ====================================================================
-        # PHASE 3: Gemma Relation Extraction
+        # PHASE 3: Gemma Relation Extraction (with retry + fallback)
+        # Sprint 14: Retry logic built into relation_extractor
         # ====================================================================
         phase3_start = time.perf_counter()
-        relations = await self.relation_extractor.extract(text, deduplicated_entities)
+        try:
+            relations = await self.relation_extractor.extract(text, deduplicated_entities)
+        except Exception as e:
+            # Relation extraction failed after all retries
+            logger.error(
+                "phase3_relation_extraction_failed",
+                error=str(e),
+                note="Continuing with empty relations (graceful degradation)"
+            )
+            relations = []
+
         phase3_time = time.perf_counter() - phase3_start
 
         logger.info(
@@ -263,6 +295,42 @@ class ThreePhaseExtractor:
                 "description": f"{ent.text} is a {ent.label_} entity.",
                 "source": "spacy"
             })
+
+        return entities
+
+    def _extract_entities_regex_fallback(self, text: str) -> List[Dict[str, Any]]:
+        """Fallback entity extraction using simple regex patterns.
+
+        Sprint 14 Feature 14.5: Graceful degradation when SpaCy fails.
+
+        Args:
+            text: Input text
+
+        Returns:
+            List of entity dicts (basic extraction)
+        """
+        import re
+
+        entities = []
+
+        # Simple capitalized word patterns (likely proper nouns/entities)
+        # Pattern: consecutive capitalized words
+        pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+        matches = re.findall(pattern, text)
+
+        for match in set(matches):  # Deduplicate
+            entities.append({
+                "name": match,
+                "type": "ENTITY",  # Generic type
+                "description": f"{match} is an entity (regex fallback).",
+                "source": "regex_fallback"
+            })
+
+        logger.info(
+            "regex_fallback_extraction",
+            entities_found=len(entities),
+            note="Using simple regex patterns due to SpaCy failure"
+        )
 
         return entities
 

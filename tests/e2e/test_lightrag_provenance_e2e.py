@@ -245,17 +245,23 @@ async def test_chunking_and_provenance_accuracy_e2e(lightrag_wrapper, cleanup_da
     - Entities linked to correct chunk (not adjacent chunks)
     - Chunk text contains entities it claims to mention
     """
-    # Arrange - Long document that will be split into multiple chunks
+    # Arrange - Long document with real entities that SpaCy will detect
     test_doc = {
         "id": "chunking_test",
-        "text": " ".join([f"Sentence {i} mentions Entity{i % 3}." for i in range(100)])
+        "text": " ".join([
+            f"Apple Inc is a technology company founded by Steve Jobs in California. "
+            f"Microsoft Corporation was founded by Bill Gates in Washington. "
+            f"Amazon was started by Jeff Bezos in Seattle. "
+            f"Tesla Motors is led by Elon Musk and produces electric vehicles. "
+            for i in range(25)  # Repeat to create multiple chunks
+        ])
     }
 
     # Act
     result = await lightrag_wrapper.insert_documents_optimized([test_doc])
 
     # Assert
-    assert result["success"] == 1
+    assert result["success"] == 1, f"Document insertion should succeed, but got result: {result}"
     assert result["stats"]["total_chunks"] > 1, "Long document should be split into multiple chunks"
 
     driver = AsyncGraphDatabase.driver(

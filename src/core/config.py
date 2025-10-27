@@ -167,6 +167,52 @@ class Settings(BaseSettings):
         description="Context window for Gemma model"
     )
 
+    # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2)
+    extraction_pipeline: Literal["lightrag_default", "three_phase"] = Field(
+        default="three_phase",
+        description="Entity/relation extraction pipeline to use (three_phase recommended)"
+    )
+    enable_legacy_extraction: bool = Field(
+        default=False,
+        description="Enable legacy LightRAG extraction for A/B comparison"
+    )
+    extraction_batch_size: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Batch size for extraction operations"
+    )
+    extraction_max_workers: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Max worker threads for parallel extraction"
+    )
+
+    # Error Handling & Retry Logic (Sprint 14: Feature 14.5)
+    extraction_max_retries: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Max retry attempts for transient extraction failures"
+    )
+    extraction_retry_min_wait: float = Field(
+        default=2.0,
+        ge=0.1,
+        le=10.0,
+        description="Minimum wait time between retries (seconds)"
+    )
+    extraction_retry_max_wait: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=60.0,
+        description="Maximum wait time between retries (seconds)"
+    )
+    extraction_enable_graceful_degradation: bool = Field(
+        default=True,
+        description="Continue with degraded features on non-critical failures"
+    )
+
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")

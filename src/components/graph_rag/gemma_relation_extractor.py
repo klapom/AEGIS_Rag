@@ -4,8 +4,10 @@ Sprint 13 Feature 13.9: ADR-018
 Uses Gemma 3 4B Q4_K_M (via Ollama) for high-quality relation extraction
 between entities. This is Phase 3 of the 3-phase extraction pipeline.
 
+Sprint 14 Feature 14.5: Added retry logic and error handling.
+
 Author: Claude Code
-Date: 2025-10-24
+Date: 2025-10-24, Updated: 2025-10-27
 """
 
 from typing import List, Dict, Any
@@ -13,6 +15,13 @@ import structlog
 import json
 import re
 from ollama import Client
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -100,7 +109,10 @@ class GemmaRelationExtractor:
         ollama_client: Client = None,
         temperature: float = 0.1,
         num_predict: int = 2000,
-        num_ctx: int = 16384
+        num_ctx: int = 16384,
+        max_retries: int = 3,
+        retry_min_wait: float = 2.0,
+        retry_max_wait: float = 10.0,
     ):
         """Initialize Gemma relation extractor.
 
@@ -111,19 +123,27 @@ class GemmaRelationExtractor:
             temperature: LLM temperature (0.0-1.0, lower = more deterministic)
             num_predict: Max tokens to generate
             num_ctx: Context window size
+            max_retries: Max retry attempts for transient failures (Sprint 14)
+            retry_min_wait: Min wait time between retries in seconds (Sprint 14)
+            retry_max_wait: Max wait time between retries in seconds (Sprint 14)
         """
         self.model = model
         self.client = ollama_client or Client()
         self.temperature = temperature
         self.num_predict = num_predict
         self.num_ctx = num_ctx
+        self.max_retries = max_retries
+        self.retry_min_wait = retry_min_wait
+        self.retry_max_wait = retry_max_wait
 
         logger.info(
             "gemma_relation_extractor_initialized",
             model=model,
             temperature=temperature,
             num_predict=num_predict,
-            num_ctx=num_ctx
+            num_ctx=num_ctx,
+            max_retries=max_retries,
+            retry_config=f"{retry_min_wait}-{retry_max_wait}s",
         )
 
     async def extract(
@@ -132,6 +152,8 @@ class GemmaRelationExtractor:
         entities: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Extract relations between entities from text.
+
+        Sprint 14: Added automatic retry logic for transient failures.
 
         Args:
             text: Source text containing entities
@@ -167,8 +189,70 @@ class GemmaRelationExtractor:
             text=text
         )
 
-        # Call LLM
+        # Call LLM with retry logic (Sprint 14)
         try:
+            relations = await self._extract_with_retry(user_prompt, text, entities)
+
+            logger.info(
+                "relation_extraction_complete",
+                text_length=len(text),
+                entity_count=len(entities),
+                relations_found=len(relations)
+            )
+
+            return relations
+
+        except Exception as e:
+            # All retries exhausted - graceful degradation
+            logger.error(
+                "relation_extraction_failed_all_retries",
+                error=str(e),
+                text_length=len(text),
+                entity_count=len(entities),
+                max_retries=self.max_retries,
+                note="Returning empty relations list (graceful degradation)"
+            )
+            return []
+
+    async def _extract_with_retry(
+        self,
+        user_prompt: str,
+        text: str,
+        entities: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Call Gemma LLM with automatic retry on transient failures.
+
+        Sprint 14 Feature 14.5: Retry Logic
+
+        Retries on:
+        - ConnectionError (Ollama server unreachable)
+        - TimeoutError (Request timeout)
+        - General exceptions (with backoff)
+
+        Args:
+            user_prompt: Formatted prompt for LLM
+            text: Source text
+            entities: Entity list
+
+        Returns:
+            List of extracted relations
+
+        Raises:
+            Exception: If all retries exhausted
+        """
+        @retry(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(
+                multiplier=1,
+                min=self.retry_min_wait,
+                max=self.retry_max_wait
+            ),
+            retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
+            before_sleep=before_sleep_log(logger, "WARNING"),
+            reraise=True
+        )
+        async def _call_llm():
+            """Inner function with retry decorator."""
             response = self.client.chat(
                 model=self.model,
                 messages=[
@@ -186,25 +270,9 @@ class GemmaRelationExtractor:
             # Parse JSON response
             content = response["message"]["content"]
             relation_data = self._parse_json_response(content)
-            relations = relation_data.get('relations', [])
+            return relation_data.get('relations', [])
 
-            logger.info(
-                "relation_extraction_complete",
-                text_length=len(text),
-                entity_count=len(entities),
-                relations_found=len(relations)
-            )
-
-            return relations
-
-        except Exception as e:
-            logger.error(
-                "relation_extraction_failed",
-                error=str(e),
-                text_length=len(text),
-                entity_count=len(entities)
-            )
-            return []
+        return await _call_llm()
 
     def _parse_json_response(self, response: str) -> dict:
         """Parse JSON response from LLM, handling markdown and errors.
@@ -252,9 +320,12 @@ def create_relation_extractor_from_config(config) -> GemmaRelationExtractor:
                - GEMMA_NUM_PREDICT (int): Max tokens
                - GEMMA_NUM_CTX (int): Context window
                - OLLAMA_BASE_URL (str): Ollama server URL
+               - EXTRACTION_MAX_RETRIES (int): Max retries (Sprint 14)
+               - EXTRACTION_RETRY_MIN_WAIT (float): Min retry wait (Sprint 14)
+               - EXTRACTION_RETRY_MAX_WAIT (float): Max retry wait (Sprint 14)
 
     Returns:
-        GemmaRelationExtractor instance
+        GemmaRelationExtractor instance with retry logic (Sprint 14)
 
     Example:
         >>> from src.core.config import get_settings
@@ -275,5 +346,9 @@ def create_relation_extractor_from_config(config) -> GemmaRelationExtractor:
         ollama_client=ollama_client,
         temperature=getattr(config, 'gemma_temperature', 0.1),
         num_predict=getattr(config, 'gemma_num_predict', 2000),
-        num_ctx=getattr(config, 'gemma_num_ctx', 16384)
+        num_ctx=getattr(config, 'gemma_num_ctx', 16384),
+        # Sprint 14: Retry configuration
+        max_retries=getattr(config, 'extraction_max_retries', 3),
+        retry_min_wait=getattr(config, 'extraction_retry_min_wait', 2.0),
+        retry_max_wait=getattr(config, 'extraction_retry_max_wait', 10.0),
     )
