@@ -89,6 +89,19 @@ class EmbeddingService:
         """Get underlying cache for backward compatibility with tests."""
         return self.unified_service.cache.cache
 
+    @property
+    def _embedding_model(self):
+        """Get underlying embedding model for backward compatibility with tests."""
+        # Check if unified_service has _model attribute (lazy initialization)
+        if not hasattr(self.unified_service, '_model'):
+            return None
+        return self.unified_service._model
+
+    @_embedding_model.setter
+    def _embedding_model(self, value):
+        """Set underlying embedding model for test mocking."""
+        self.unified_service._model = value
+
     def clear_cache(self):
         """Clear embedding cache."""
         # Note: This clears the shared cache used by all components

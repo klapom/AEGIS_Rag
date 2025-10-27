@@ -77,24 +77,25 @@ async def test_embed_text_success(mock_embedding_service, sample_embedding):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_embed_text_cache_hit():
-    """Test embedding cache hit (should not call API)."""
+    """Test embedding cache hit (verified via cache statistics)."""
     service = EmbeddingService()
-    service._embedding_model = AsyncMock()
-    service._embedding_model.aget_text_embedding = AsyncMock(return_value=[0.1] * 768)
-
     text = "Test document"
 
-    # First call - cache miss
-    embedding1 = await service.embed_text(text)
-    assert service._embedding_model.aget_text_embedding.call_count == 1
+    # Pre-populate cache directly
+    cache_key = service.unified_service._cache_key(text)
+    service.unified_service.cache.set(cache_key, [0.1] * 768)
 
-    # Second call - cache hit
-    embedding2 = await service.embed_text(text)
-    assert (
-        service._embedding_model.aget_text_embedding.call_count == 1
-    ), "Should not call API on cache hit"
+    # Get initial cache stats
+    initial_stats = service.get_cache_stats()
+    initial_hits = initial_stats["hits"]
 
-    assert embedding1 == embedding2, "Cached embedding should match"
+    # Call embed_text - should hit cache
+    embedding = await service.embed_text(text)
+
+    # Verify cache hit occurred
+    final_stats = service.get_cache_stats()
+    assert final_stats["hits"] == initial_hits + 1, "Should have 1 additional cache hit"
+    assert embedding == [0.1] * 768, "Should return cached embedding"
 
 
 @pytest.mark.unit

@@ -9,9 +9,12 @@ from src.agents.checkpointer import get_checkpointer, create_thread_config
 from src.core.config import settings
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_redis_checkpointer_persistence():
     """Test that conversation state persists in Redis.
+
+    Requires: Redis running on localhost:6379
 
     Verifies that:
     1. Checkpointer can be created
@@ -34,9 +37,12 @@ async def test_redis_checkpointer_persistence():
     assert config["configurable"]["thread_id"] == "test-redis-123"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_redis_checkpointer_thread_history():
     """Test that thread history is retrievable from Redis.
+
+    Requires: Redis running on localhost:6379
 
     Note: This test requires a full LangGraph graph to test state persistence.
     For now, we just verify the checkpointer is created correctly.
