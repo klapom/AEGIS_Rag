@@ -93,7 +93,7 @@ class EmbeddingService:
     def _embedding_model(self):
         """Get underlying embedding model for backward compatibility with tests."""
         # Check if unified_service has _model attribute (lazy initialization)
-        if not hasattr(self.unified_service, '_model'):
+        if not hasattr(self.unified_service, "_model"):
             return None
         return self.unified_service._model
 

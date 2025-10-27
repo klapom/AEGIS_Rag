@@ -100,7 +100,7 @@ Details siehe [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [
 - ✅ **CI/CD**: pytest-timeout plugin, --timeout=300s, artifact uploads configured
 
 **Test Results**: 6/6 E2E tests passing in 128.68s total
-**Documentation**: [SPRINT_13_TODOS.md](SPRINT_13_TODOS.md), [ADR-017](docs/adr/ADR-017-semantic-entity-deduplication.md), [ADR-018](docs/adr/ADR-018-model-selection-entity-relation-extraction.md)
+**Documentation**: [SPRINT_13_TODOS.md](docs/archive/sprints/SPRINT_13_TODOS.md), [ADR-017](docs/adr/ADR-017-semantic-entity-deduplication.md), [ADR-018](docs/adr/ADR-018-model-selection-entity-relation-extraction.md)
 
 ### Sprint 12 (COMPLETE - 9/11 features, 28/32 SP)
 - ✅ **Test Infrastructure Fixes**: LightRAG fixture (5 tests), Graphiti API (14 tests), Redis cleanup (0 warnings)
