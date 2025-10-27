@@ -77,7 +77,9 @@ class ExtractionService:
             max_tokens=self.max_tokens,
         )
 
-    def _parse_json_response(self, response: str) -> list[dict[str, Any]]:
+    def _parse_json_response(
+        self, response: str, data_type: str = "entity"
+    ) -> list[dict[str, Any]]:
         """Parse JSON from LLM response with multiple fallback strategies.
 
         Sprint 13 Enhancement: Robust parsing for llama3.2:3b output variations.
@@ -90,6 +92,7 @@ class ExtractionService:
 
         Args:
             response: Raw LLM response text
+            data_type: Type of data being parsed ("entity" or "relationship")
 
         Returns:
             Parsed JSON as list of dicts
@@ -138,24 +141,33 @@ class ExtractionService:
 
             # Validate structure: must be list of dicts with required fields
             if isinstance(data, list):
-                valid_entities = []
+                valid_items = []
                 for i, item in enumerate(data):
                     if isinstance(item, dict):
-                        # Check for required fields (name and type)
-                        if "name" in item and "type" in item:
-                            valid_entities.append(item)
+                        # Check for required fields based on data type
+                        if data_type == "entity":
+                            required_fields = ["name", "type"]
+                            is_valid = all(field in item for field in required_fields)
+                        elif data_type == "relationship":
+                            required_fields = ["source", "target", "type"]
+                            is_valid = all(field in item for field in required_fields)
+                        else:
+                            # Unknown data type - accept all dicts
+                            is_valid = True
+                            required_fields = []
+
+                        if is_valid:
+                            valid_items.append(item)
                         else:
                             logger.warning(
-                                "invalid_entity_structure",
+                                f"invalid_{data_type}_structure",
                                 index=i,
                                 item=item,
-                                missing_fields=[
-                                    f for f in ["name", "type", "description"] if f not in item
-                                ],
+                                missing_fields=[f for f in required_fields if f not in item],
                             )
                     else:
                         logger.warning(
-                            "invalid_entity_type",
+                            f"invalid_{data_type}_type",
                             index=i,
                             item_type=type(item).__name__,
                         )
@@ -163,25 +175,32 @@ class ExtractionService:
                 logger.info(
                     "json_parse_success",
                     strategy=strategy_used,
+                    data_type=data_type,
                     total_items=len(data),
-                    valid_entities=len(valid_entities),
-                    entity_names=[e.get("name", "UNKNOWN") for e in valid_entities],
+                    valid_items=len(valid_items),
                 )
 
-                return valid_entities
+                return valid_items
 
             elif isinstance(data, dict):
-                # Single entity as dict (not array)
+                # Single item as dict (not array)
                 logger.warning(
-                    "json_not_array_single_entity",
+                    f"json_not_array_single_{data_type}",
                     data_type=type(data).__name__,
                 )
                 # Wrap in list if it has required fields
-                if "name" in data and "type" in data:
-                    logger.info("wrapping_single_entity_in_array")
+                if data_type == "entity":
+                    required_fields = ["name", "type"]
+                elif data_type == "relationship":
+                    required_fields = ["source", "target", "type"]
+                else:
+                    required_fields = []
+
+                if all(field in data for field in required_fields):
+                    logger.info(f"wrapping_single_{data_type}_in_array")
                     return [data]
                 else:
-                    logger.error("single_entity_missing_fields", data=data)
+                    logger.error(f"single_{data_type}_missing_fields", data=data)
                     return []
 
             else:
@@ -368,7 +387,9 @@ class ExtractionService:
             llm_response = response.get("response", "")
 
             # Parse JSON response
-            relationships_data = self._parse_json_response(llm_response)
+            relationships_data = self._parse_json_response(
+                llm_response, data_type="relationship"
+            )
 
             # Limit relationships per document
             if len(relationships_data) > MAX_RELATIONSHIPS_PER_DOC:
