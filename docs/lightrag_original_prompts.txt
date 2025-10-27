@@ -1,0 +1,205 @@
+================================================================================
+LightRAG ORIGINAL ENTITY & RELATION EXTRACTION PROMPTS
+================================================================================
+
+Source: site-packages/lightrag/prompt.py
+Date Extracted: 2025-10-24
+
+================================================================================
+DELIMITERS
+================================================================================
+
+TUPLE_DELIMITER = "<|#|>"
+COMPLETION_DELIMITER = "<|COMPLETE|>"
+
+================================================================================
+SYSTEM PROMPT - Entity Extraction
+================================================================================
+
+---Role---
+You are a Knowledge Graph Specialist responsible for extracting entities and relationships from the input text.
+
+---Instructions---
+1.  **Entity Extraction & Output:**
+    *   **Identification:** Identify clearly defined and meaningful entities in the input text.
+    *   **Entity Details:** For each identified entity, extract the following information:
+        *   `entity_name`: The name of the entity.
+        *   `entity_type`: Categorize the entity (PERSON, ORGANIZATION, LOCATION, TECHNOLOGY, CONCEPT, EVENT, OTHER).
+        *   `entity_description`: Provide a concise yet comprehensive description of the entity.
+    *   **Output Format - Entities:** Output a total of 4 fields for each entity, delimited by `<|#|>`, on a single line. The first field *must* be the literal string `entity`.
+        *   Format: `entity<|#|>entity_name<|#|>entity_type<|#|>entity_description`
+
+2.  **Relationship Extraction & Output:**
+    *   **Identification:** Identify direct, clearly stated, and meaningful relationships between previously extracted entities.
+    *   **Relationship Details:** For each binary relationship, extract the following fields:
+        *   `source_entity`: The name of the source entity.
+        *   `target_entity`: The name of the target entity.
+        *   `relationship_keywords`: One or more high-level keywords summarizing the relationship (comma-separated).
+        *   `relationship_description`: A concise explanation of the nature of the relationship.
+    *   **Output Format - Relationships:** Output a total of 5 fields for each relationship, delimited by `<|#|>`, on a single line. The first field *must* be the literal string `relation`.
+        *   Format: `relation<|#|>source_entity<|#|>target_entity<|#|>relationship_keywords<|#|>relationship_description`
+
+---Output Requirements---
+1. Output ONLY entities and relations in the specified format
+2. End with `<|COMPLETE|>` on the final line
+3. No markdown, no explanations, no additional text
+
+================================================================================
+USER PROMPT TEMPLATE
+================================================================================
+
+---Task---
+Extract entities and relationships from the input text.
+
+---Input Text---
+{text}
+
+---Output Format---
+entity<|#|>entity_name<|#|>entity_type<|#|>entity_description
+relation<|#|>source_entity<|#|>target_entity<|#|>relationship_keywords<|#|>relationship_description
+<|COMPLETE|>
+
+================================================================================
+EXAMPLE 1: FICTION NARRATIVE
+================================================================================
+
+Input Text:
+-----------
+Alex is a powerful person, but Jordan is smarter and more talented. They worked at TechCorp together. Jordan left to found DevStart, a startup focused on AI research. Alex later joined DevStart as Chief Technology Officer. The company is developing a new framework called NeuralGraph, which they plan to present at the AI Summit in San Francisco. Taylor is working with Jordan on this project, while Cruz is managing partnerships with OpenResearch. The Device they're building uses quantum computing.
+
+Expected Output:
+----------------
+entity<|#|>Alex<|#|>PERSON<|#|>A powerful person who later joined DevStart as Chief Technology Officer
+entity<|#|>Jordan<|#|>PERSON<|#|>A smart and talented person who founded DevStart, working on AI research
+entity<|#|>TechCorp<|#|>ORGANIZATION<|#|>A company where Alex and Jordan previously worked together
+entity<|#|>DevStart<|#|>ORGANIZATION<|#|>A startup focused on AI research, founded by Jordan
+entity<|#|>NeuralGraph<|#|>TECHNOLOGY<|#|>A new framework being developed by DevStart
+entity<|#|>AI Summit<|#|>EVENT<|#|>A conference where NeuralGraph will be presented
+entity<|#|>San Francisco<|#|>LOCATION<|#|>The city where the AI Summit will take place
+entity<|#|>Taylor<|#|>PERSON<|#|>A person working with Jordan on the NeuralGraph project
+entity<|#|>Cruz<|#|>PERSON<|#|>A person managing partnerships with OpenResearch
+entity<|#|>OpenResearch<|#|>ORGANIZATION<|#|>An organization partnering with DevStart
+entity<|#|>The Device<|#|>TECHNOLOGY<|#|>A device being built using quantum computing
+relation<|#|>Alex<|#|>TechCorp<|#|>worked at<|#|>Alex previously worked at TechCorp
+relation<|#|>Jordan<|#|>TechCorp<|#|>worked at<|#|>Jordan previously worked at TechCorp
+relation<|#|>Jordan<|#|>DevStart<|#|>founded<|#|>Jordan founded the startup DevStart
+relation<|#|>Alex<|#|>DevStart<|#|>joined as CTO<|#|>Alex joined DevStart as Chief Technology Officer
+relation<|#|>DevStart<|#|>NeuralGraph<|#|>developing<|#|>DevStart is developing the NeuralGraph framework
+relation<|#|>NeuralGraph<|#|>AI Summit<|#|>to be presented at<|#|>NeuralGraph will be presented at the AI Summit
+relation<|#|>AI Summit<|#|>San Francisco<|#|>located in<|#|>The AI Summit will take place in San Francisco
+relation<|#|>Taylor<|#|>Jordan<|#|>working with<|#|>Taylor is working with Jordan on the NeuralGraph project
+relation<|#|>Taylor<|#|>NeuralGraph<|#|>working on<|#|>Taylor is working on the NeuralGraph project
+relation<|#|>Cruz<|#|>OpenResearch<|#|>managing partnerships<|#|>Cruz is managing partnerships with OpenResearch
+relation<|#|>The Device<|#|>quantum computing<|#|>uses<|#|>The Device uses quantum computing technology
+<|COMPLETE|>
+
+================================================================================
+EXAMPLE 2: FINANCIAL NEWS
+================================================================================
+
+Input Text:
+-----------
+Stock markets faced a sharp downturn today as tech giants saw significant declines. The Global Tech Index fell 3.4%, with Nexon Technologies dropping 7.8% after disappointing quarterly results. Analysts at MarketWatch attribute the selloff to concerns over rising interest rates and slowing consumer demand. Meanwhile, energy stocks showed resilience, with GreenPower Corp gaining 2.1% on strong earnings.
+
+Expected Output:
+----------------
+entity<|#|>Global Tech Index<|#|>CONCEPT<|#|>A stock market index tracking technology companies
+entity<|#|>Nexon Technologies<|#|>ORGANIZATION<|#|>A technology company that experienced significant stock decline
+entity<|#|>MarketWatch<|#|>ORGANIZATION<|#|>A financial analysis organization providing market insights
+entity<|#|>GreenPower Corp<|#|>ORGANIZATION<|#|>An energy company showing stock market resilience
+relation<|#|>Global Tech Index<|#|>Nexon Technologies<|#|>declined, impacted by<|#|>The Global Tech Index fell 3.4%, with Nexon Technologies contributing to this decline with a 7.8% drop
+relation<|#|>Nexon Technologies<|#|>quarterly results<|#|>reported disappointing<|#|>Nexon Technologies' stock decline followed disappointing quarterly results
+relation<|#|>MarketWatch<|#|>market selloff<|#|>analyzed, attributed to<|#|>MarketWatch analysts attributed the selloff to rising interest rates and slowing consumer demand
+relation<|#|>GreenPower Corp<|#|>energy stocks<|#|>part of resilient sector<|#|>GreenPower Corp showed resilience typical of energy stocks, gaining 2.1%
+<|COMPLETE|>
+
+================================================================================
+EXAMPLE 3: SPORTS NEWS
+================================================================================
+
+Input Text:
+-----------
+At the World Athletics Championship in Tokyo, Noah Carter broke the 100-meter sprint record with a time of 9.58 seconds. The 24-year-old American athlete, training under Coach Maria Santos at the Elite Performance Center in California, attributed his success to innovative training methods and cutting-edge carbon-fiber spikes developed by SpeedTech. Carter's achievement surpassed the previous record held by Marcus Johnson since 2015.
+
+Expected Output:
+----------------
+entity<|#|>World Athletics Championship<|#|>EVENT<|#|>A major international athletics competition
+entity<|#|>Tokyo<|#|>LOCATION<|#|>The city hosting the World Athletics Championship
+entity<|#|>Noah Carter<|#|>PERSON<|#|>A 24-year-old American athlete who broke the 100-meter sprint record
+entity<|#|>100-meter sprint<|#|>EVENT<|#|>A track and field athletic event
+entity<|#|>Coach Maria Santos<|#|>PERSON<|#|>Noah Carter's coach at the Elite Performance Center
+entity<|#|>Elite Performance Center<|#|>ORGANIZATION<|#|>A training facility located in California
+entity<|#|>California<|#|>LOCATION<|#|>The state where the Elite Performance Center is located
+entity<|#|>SpeedTech<|#|>ORGANIZATION<|#|>A company that developed carbon-fiber spikes
+entity<|#|>carbon-fiber spikes<|#|>TECHNOLOGY<|#|>Cutting-edge athletic footwear technology developed by SpeedTech
+entity<|#|>Marcus Johnson<|#|>PERSON<|#|>The previous holder of the 100-meter sprint record since 2015
+relation<|#|>World Athletics Championship<|#|>Tokyo<|#|>held in<|#|>The World Athletics Championship was held in Tokyo
+relation<|#|>Noah Carter<|#|>100-meter sprint<|#|>broke record in<|#|>Noah Carter broke the 100-meter sprint record with a time of 9.58 seconds
+relation<|#|>Noah Carter<|#|>Coach Maria Santos<|#|>trained by<|#|>Noah Carter trains under Coach Maria Santos
+relation<|#|>Coach Maria Santos<|#|>Elite Performance Center<|#|>works at<|#|>Coach Maria Santos works at the Elite Performance Center
+relation<|#|>Elite Performance Center<|#|>California<|#|>located in<|#|>The Elite Performance Center is located in California
+relation<|#|>Noah Carter<|#|>carbon-fiber spikes<|#|>used technology<|#|>Noah Carter used carbon-fiber spikes developed by SpeedTech
+relation<|#|>SpeedTech<|#|>carbon-fiber spikes<|#|>developed<|#|>SpeedTech developed the cutting-edge carbon-fiber spikes
+relation<|#|>Noah Carter<|#|>Marcus Johnson<|#|>surpassed record of<|#|>Noah Carter's achievement surpassed the previous record held by Marcus Johnson since 2015
+<|COMPLETE|>
+
+================================================================================
+KEY FORMAT RULES
+================================================================================
+
+1. **Line Structure:**
+   - Each entity: EXACTLY 4 fields separated by "<|#|>"
+   - Each relation: EXACTLY 5 fields separated by "<|#|>"
+   - One entity or relation per line
+
+2. **First Field Literal:**
+   - Must be exactly "entity" or "relation" (lowercase)
+   - No prefixes, no variations
+
+3. **Entity Types (Fixed Set):**
+   - PERSON
+   - ORGANIZATION
+   - LOCATION
+   - TECHNOLOGY
+   - CONCEPT
+   - EVENT
+   - OTHER
+
+4. **Completion Marker:**
+   - Last line MUST be: <|COMPLETE|>
+   - No text before or after it
+
+5. **Prohibited Output:**
+   - NO JSON format
+   - NO markdown (no ```json, no backticks)
+   - NO explanations or commentary
+   - NO extra whitespace or formatting
+
+6. **Entity Names in Relations:**
+   - Must EXACTLY match entity_name from entity lines
+   - Case-sensitive
+   - Must refer to previously extracted entities
+
+================================================================================
+CRITICAL NOTES
+================================================================================
+
+1. **Model Compatibility:**
+   - Testing shows ONLY Gemma-3-4b-it (Q8_0 and Q4_K_M) can reliably
+     produce this format
+   - llama3.2:3b produces 0 entities/relations (wrong format)
+   - qwen3:4b produces 0 entities/relations (extremely slow, wrong format)
+
+2. **Performance:**
+   - Gemma-3-4b-it Q4_K_M: 3-19s per extraction (FAST)
+   - Gemma-3-4b-it Q8_0: 11-80s per extraction (slower but higher quality)
+   - With think=False: 92% speed improvement for Gemma models
+
+3. **Use in LightRAG:**
+   - This format is parsed by LightRAG's entity/relation extraction pipeline
+   - Incorrect format → 0 entities/relations → empty knowledge graph →
+     empty query results (TD-31/32/33 bug)
+
+================================================================================
+END OF DOCUMENT
+================================================================================

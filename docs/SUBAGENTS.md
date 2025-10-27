@@ -469,6 +469,7 @@ All agents have access to:
 - `/home/claude/CLAUDE.md` (Project context)
 - `/home/claude/SPRINT_PLAN.md` (Current sprint goals)
 - `/home/claude/ADR_INDEX.md` (Architecture decisions)
+- `/home/claude/ADR*.md` (Architecture decisions)
 - `/home/claude/NAMING_CONVENTIONS.md` (Code standards)
 
 ### Agent Handoff Protocol
