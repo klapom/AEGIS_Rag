@@ -21,11 +21,10 @@ from prometheus_client import Counter, Histogram
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.components.memory.graphiti_wrapper import get_graphiti_wrapper
-from src.components.memory.memory_router import MemoryRouter, get_memory_router
+from src.components.memory.memory_router import get_memory_router
 from src.components.memory.redis_memory import get_redis_memory
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
-from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 

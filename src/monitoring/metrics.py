@@ -10,8 +10,8 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from prometheus_client import Counter, Histogram, Gauge, Info
 import structlog
+from prometheus_client import Counter, Gauge, Histogram, Info
 
 logger = structlog.get_logger(__name__)
 

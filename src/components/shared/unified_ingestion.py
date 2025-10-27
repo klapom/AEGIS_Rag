@@ -13,9 +13,8 @@ from typing import Any
 import structlog
 from pydantic import BaseModel, Field
 
-from src.components.vector_search.ingestion import DocumentIngestionPipeline
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
-from src.components.shared.embedding_service import get_embedding_service
+from src.components.vector_search.ingestion import DocumentIngestionPipeline
 
 logger = structlog.get_logger(__name__)
 
@@ -220,7 +219,7 @@ class UnifiedIngestionPipeline:
         ]
 
         # Insert into LightRAG (builds graph)
-        insert_result = await lightrag.insert_documents(lightrag_docs)
+        await lightrag.insert_documents(lightrag_docs)
 
         # Get graph statistics
         stats = await lightrag.get_stats()

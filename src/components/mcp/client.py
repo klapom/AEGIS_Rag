@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -54,13 +54,13 @@ class MCPClient:
 
     def __init__(self):
         """Initialize the MCP client."""
-        self.servers: Dict[str, MCPServer] = {}
-        self.connections: Dict[str, MCPServerConnection] = {}
-        self.tools: Dict[str, List[MCPTool]] = {}
-        self._processes: Dict[str, asyncio.subprocess.Process] = {}
-        self._http_clients: Dict[str, httpx.AsyncClient] = {}
+        self.servers: dict[str, MCPServer] = {}
+        self.connections: dict[str, MCPServerConnection] = {}
+        self.tools: dict[str, list[MCPTool]] = {}
+        self._processes: dict[str, asyncio.subprocess.Process] = {}
+        self._http_clients: dict[str, httpx.AsyncClient] = {}
         self._stats = MCPClientStats()
-        self._tool_call_times: List[float] = []
+        self._tool_call_times: list[float] = []
 
     async def connect(self, server: MCPServer) -> bool:
         """Connect to an MCP server.
@@ -185,7 +185,7 @@ class MCPClient:
         except httpx.HTTPError as e:
             raise MCPConnectionError(f"HTTP connection failed: {e}")
 
-    async def discover_tools(self, server_name: str) -> List[MCPTool]:
+    async def discover_tools(self, server_name: str) -> list[MCPTool]:
         """Discover available tools from a server.
 
         Args:
@@ -223,7 +223,7 @@ class MCPClient:
         except Exception as e:
             raise MCPToolError(f"Tool discovery failed for {server_name}: {e}")
 
-    async def _discover_tools_stdio(self, server_name: str) -> List[MCPTool]:
+    async def _discover_tools_stdio(self, server_name: str) -> list[MCPTool]:
         """Discover tools via stdio transport.
 
         Args:
@@ -256,7 +256,7 @@ class MCPClient:
 
         return tools
 
-    async def _discover_tools_http(self, server_name: str) -> List[MCPTool]:
+    async def _discover_tools_http(self, server_name: str) -> list[MCPTool]:
         """Discover tools via HTTP transport.
 
         Args:
@@ -286,7 +286,7 @@ class MCPClient:
 
         return tools
 
-    def list_tools(self, server_name: Optional[str] = None) -> List[MCPTool]:
+    def list_tools(self, server_name: str | None = None) -> list[MCPTool]:
         """List all discovered tools (optionally filtered by server).
 
         Args:
@@ -304,7 +304,7 @@ class MCPClient:
                 all_tools.extend(tools)
             return all_tools
 
-    def get_tool(self, tool_name: str, server_name: Optional[str] = None) -> Optional[MCPTool]:
+    def get_tool(self, tool_name: str, server_name: str | None = None) -> MCPTool | None:
         """Get a specific tool by name.
 
         Args:
@@ -409,7 +409,7 @@ class MCPClient:
             response = await asyncio.wait_for(
                 self._read_stdio_response(tool.server), timeout=tool_call.timeout
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return MCPToolResult(
                 tool_name=tool.name, success=False, error=f"Timeout after {tool_call.timeout}s"
             )
@@ -497,7 +497,7 @@ class MCPClient:
         """
         return self._stats
 
-    def get_connections(self) -> Dict[str, MCPServerConnection]:
+    def get_connections(self) -> dict[str, MCPServerConnection]:
         """Get all server connections.
 
         Returns:
@@ -505,7 +505,7 @@ class MCPClient:
         """
         return self.connections.copy()
 
-    async def _send_stdio_request(self, server_name: str, request: Dict[str, Any]) -> None:
+    async def _send_stdio_request(self, server_name: str, request: dict[str, Any]) -> None:
         """Send JSON-RPC request via stdio.
 
         Args:
@@ -517,7 +517,7 @@ class MCPClient:
         process.stdin.write(request_json.encode())
         await process.stdin.drain()
 
-    async def _read_stdio_response(self, server_name: str) -> Dict[str, Any]:
+    async def _read_stdio_response(self, server_name: str) -> dict[str, Any]:
         """Read JSON-RPC response via stdio.
 
         Args:

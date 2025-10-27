@@ -6,7 +6,7 @@ MCP client from Subagent 3 is not yet available.
 Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from src.components.mcp.types import MCPServer, MCPTool
 
@@ -57,7 +57,7 @@ class MCPClientStub:
 
         return True
 
-    def list_tools(self, server_name: Optional[str] = None) -> list[MCPTool]:
+    def list_tools(self, server_name: str | None = None) -> list[MCPTool]:
         """List available tools (stub).
 
         Args:
@@ -70,7 +70,7 @@ class MCPClientStub:
             return [t for t in self._tools if t.server == server_name]
         return self._tools
 
-    def get_tool(self, tool_name: str, server_name: Optional[str] = None) -> Optional[MCPTool]:
+    def get_tool(self, tool_name: str, server_name: str | None = None) -> MCPTool | None:
         """Get a specific tool by name (stub).
 
         Args:

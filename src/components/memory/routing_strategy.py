@@ -229,10 +229,7 @@ class QueryTypeStrategy(RoutingStrategy):
         Returns:
             True if any pattern matches
         """
-        for pattern in patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-        return False
+        return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
 
 class HybridStrategy(RoutingStrategy):

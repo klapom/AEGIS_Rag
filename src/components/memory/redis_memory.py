@@ -8,7 +8,7 @@ This module provides Redis-based working memory for:
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import structlog

@@ -15,9 +15,10 @@ Author: Claude Code
 Date: 2025-10-24
 """
 
-from typing import List, Dict, Any, Tuple
-import structlog
 import time
+from typing import Any
+
+import structlog
 
 logger = structlog.get_logger(__name__)
 
@@ -29,13 +30,11 @@ except ImportError:
     SPACY_AVAILABLE = False
     logger.warning("spacy not available")
 
-from src.components.graph_rag.semantic_deduplicator import (
-    SemanticDeduplicator,
-    create_deduplicator_from_config,
-)
 from src.components.graph_rag.gemma_relation_extractor import (
-    GemmaRelationExtractor,
     create_relation_extractor_from_config,
+)
+from src.components.graph_rag.semantic_deduplicator import (
+    create_deduplicator_from_config,
 )
 from src.core.config import get_settings
 
@@ -148,7 +147,7 @@ class ThreePhaseExtractor:
         self,
         text: str,
         document_id: str = None
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Extract entities and relations from text using 3-phase pipeline.
 
         Args:
@@ -273,7 +272,7 @@ class ThreePhaseExtractor:
 
         return deduplicated_entities, relations
 
-    def _extract_entities_spacy(self, text: str) -> List[Dict[str, Any]]:
+    def _extract_entities_spacy(self, text: str) -> list[dict[str, Any]]:
         """Extract entities using SpaCy NER.
 
         Args:
@@ -298,7 +297,7 @@ class ThreePhaseExtractor:
 
         return entities
 
-    def _extract_entities_regex_fallback(self, text: str) -> List[Dict[str, Any]]:
+    def _extract_entities_regex_fallback(self, text: str) -> list[dict[str, Any]]:
         """Fallback entity extraction using simple regex patterns.
 
         Sprint 14 Feature 14.5: Graceful degradation when SpaCy fails.
@@ -339,7 +338,7 @@ async def extract_with_three_phase(
     text: str,
     config=None,
     document_id: str = None
-) -> Tuple[List[Dict], List[Dict]]:
+) -> tuple[list[dict], list[dict]]:
     """Convenience function for three-phase extraction.
 
     Args:

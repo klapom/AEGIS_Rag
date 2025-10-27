@@ -7,7 +7,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -26,7 +26,7 @@ class MCPTool:
     description: str
     server: str
     parameters: dict[str, Any]
-    metadata: Optional[dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Initialize default values."""
@@ -41,7 +41,7 @@ class MCPTool:
         """
         return self.parameters.get("required", [])
 
-    def validate_parameters(self, params: dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def validate_parameters(self, params: dict[str, Any]) -> tuple[bool, str | None]:
         """Validate parameters against tool schema.
 
         Args:
@@ -74,10 +74,10 @@ class MCPServer:
 
     name: str
     transport: str
-    command: Optional[str] = None
-    url: Optional[str] = None
-    env: Optional[dict[str, str]] = None
-    tools: Optional[list[MCPTool]] = None
+    command: str | None = None
+    url: str | None = None
+    env: dict[str, str] | None = None
+    tools: list[MCPTool] | None = None
 
     def __post_init__(self):
         """Initialize default values."""
@@ -104,8 +104,8 @@ class ToolExecutionResult:
     result: dict[str, Any]
     tool_name: str
     execution_time_ms: float
-    error: Optional[str] = None
-    metadata: Optional[dict[str, Any]] = None
+    error: str | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self):
         """Initialize default values."""

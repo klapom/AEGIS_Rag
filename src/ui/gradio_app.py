@@ -21,9 +21,7 @@ Usage:
 """
 
 import asyncio
-import json
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +35,8 @@ except ImportError:
     raise ImportError(
         "Gradio is not installed. Please install it with: pip install gradio>=4.0.0"
     )
+
+import contextlib
 
 from src.core.config import settings
 
@@ -228,7 +228,7 @@ class GradioApp:
         try:
             # Process each file
             for idx, file in enumerate(files, 1):
-                file_progress = idx / len(files)
+                idx / len(files)
 
                 # Progress: Start upload for this file
                 progress(
@@ -273,10 +273,8 @@ class GradioApp:
                 except Exception as e:
                     # Cancel progress simulation
                     progress_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await progress_task
-                    except asyncio.CancelledError:
-                        pass
 
                     logger.error("document_upload_failed", filename=file.name, error=str(e))
                     results.append(f"❌ {Path(file.name).name}: {str(e)}")
@@ -286,10 +284,8 @@ class GradioApp:
                 finally:
                     # Cancel progress simulation
                     progress_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await progress_task
-                    except asyncio.CancelledError:
-                        pass
 
                 if response.status_code == 200:
                     data = response.json()
@@ -538,7 +534,7 @@ class GradioApp:
             gr.Markdown("**Agentic Enterprise Graph Intelligence System**")
             gr.Markdown("Stellen Sie Fragen zu Ihren Dokumenten oder laden Sie neue Dokumente hoch.")
 
-            with gr.Tabs() as tabs:
+            with gr.Tabs():
                 # Tab 1: Chat Interface (Feature 10.2) - REORGANIZED: Input first, History below
                 with gr.Tab("💬 Chat"):
                     # Input Section (moved to top)
@@ -751,7 +747,7 @@ class GradioApp:
                     ### Session Info:
                     """)
 
-                    session_info = gr.Markdown(f"**Session ID:** `{self.session_id}`")
+                    gr.Markdown(f"**Session ID:** `{self.session_id}`")
 
                     gr.Markdown("""
                     ### Nützliche Links:

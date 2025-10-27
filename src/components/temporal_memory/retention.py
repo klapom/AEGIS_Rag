@@ -4,8 +4,9 @@ import asyncio
 from datetime import datetime, timedelta
 
 import structlog
-from src.core.config import settings
+
 from src.components.memory.graphiti_wrapper import get_graphiti_wrapper
+from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -24,15 +25,9 @@ async def purge_old_temporal_versions():
         retention_days=settings.temporal_retention_days,
     )
 
-    graphiti = await get_graphiti_wrapper()
+    await get_graphiti_wrapper()
 
     # Query for old versions (Cypher query)
-    purge_query = """
-    MATCH (n)
-    WHERE n.valid_until < $cutoff_timestamp
-    DELETE n
-    RETURN count(n) as deleted_count
-    """
 
     # Execute purge
     # ... implementation ...

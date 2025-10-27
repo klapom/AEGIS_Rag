@@ -7,11 +7,10 @@ This module provides Redis-based working memory with:
 - Memory Capacity Monitoring
 """
 
-import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 from redis.asyncio import Redis
@@ -184,7 +183,7 @@ class RedisMemoryManager:
 
     async def retrieve(
         self, key: str, namespace: str = "memory", track_access: bool = True
-    ) -> Optional[MemoryEntry]:
+    ) -> MemoryEntry | None:
         """Retrieve memory entry.
 
         Args:
@@ -514,7 +513,7 @@ class RedisMemoryManager:
             logger.warning("Failed to index tags", key=entry.key, error=str(e))
 
     # Helper methods for E2E tests
-    async def get(self, key: str, namespace: str = "memory") -> Optional[MemoryEntry]:
+    async def get(self, key: str, namespace: str = "memory") -> MemoryEntry | None:
         """Alias for retrieve() method for backward compatibility."""
         return await self.retrieve(key, namespace, track_access=True)
 

@@ -10,17 +10,18 @@ Author: Claude Code
 Date: 2025-10-24, Updated: 2025-10-27
 """
 
-from typing import List, Dict, Any
-import structlog
 import json
 import re
+from typing import Any
+
+import structlog
 from ollama import Client
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
 logger = structlog.get_logger(__name__)
@@ -149,8 +150,8 @@ class GemmaRelationExtractor:
     async def extract(
         self,
         text: str,
-        entities: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        entities: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Extract relations between entities from text.
 
         Sprint 14: Added automatic retry logic for transient failures.
@@ -218,8 +219,8 @@ class GemmaRelationExtractor:
         self,
         user_prompt: str,
         text: str,
-        entities: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        entities: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Call Gemma LLM with automatic retry on transient failures.
 
         Sprint 14 Feature 14.5: Retry Logic

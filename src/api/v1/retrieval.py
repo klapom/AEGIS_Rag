@@ -12,10 +12,10 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    File,
     HTTPException,
     Request,
     UploadFile,
-    File,
     status,
 )
 from pydantic import BaseModel, Field
@@ -398,9 +398,8 @@ async def upload_file(
              -F "file=@document.pdf"
         ```
     """
-    import tempfile
     import shutil
-    from src.components.shared.unified_ingestion import get_unified_pipeline
+    import tempfile
 
     # Validate file extension
     allowed_extensions = {".pdf", ".txt", ".md", ".docx", ".csv"}
@@ -424,7 +423,6 @@ async def upload_file(
             logger.info("file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size)
 
             # Use unified pipeline (indexes to Qdrant + BM25 + Neo4j in parallel)
-            pipeline = get_unified_pipeline()
             # Create new instance with temp_dir as allowed_base_path for security
             from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
             temp_pipeline = UnifiedIngestionPipeline(allowed_base_path=temp_dir)

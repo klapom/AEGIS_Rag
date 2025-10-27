@@ -6,7 +6,6 @@ connections, automatic reconnection, and connection pooling.
 
 import asyncio
 import logging
-from typing import Dict, List, Optional
 
 from .client import MCPClient, MCPConnectionError
 from .models import MCPServer, MCPServerConnection, MCPTool, ServerStatus
@@ -41,10 +40,10 @@ class ConnectionManager:
         self.auto_reconnect = auto_reconnect
         self.reconnect_interval = reconnect_interval
         self.max_reconnect_attempts = max_reconnect_attempts
-        self._reconnect_tasks: Dict[str, asyncio.Task] = {}
+        self._reconnect_tasks: dict[str, asyncio.Task] = {}
         self._shutdown = False
 
-    async def connect_all(self, servers: List[MCPServer]) -> Dict[str, bool]:
+    async def connect_all(self, servers: list[MCPServer]) -> dict[str, bool]:
         """Connect to multiple servers in parallel.
 
         Args:
@@ -67,7 +66,7 @@ class ConnectionManager:
 
         # Build result dictionary
         connection_results = {}
-        for server_name, result in zip(server_names, results):
+        for server_name, result in zip(server_names, results, strict=False):
             if isinstance(result, Exception):
                 logger.error(f"Failed to connect to {server_name}: {result}")
                 connection_results[server_name] = False
@@ -169,7 +168,7 @@ class ConnectionManager:
         # Disconnect all servers
         await self.client.disconnect_all()
 
-    def get_connection_status(self) -> Dict[str, ServerStatus]:
+    def get_connection_status(self) -> dict[str, ServerStatus]:
         """Get connection status for all servers.
 
         Returns:
@@ -179,7 +178,7 @@ class ConnectionManager:
             name: conn.status for name, conn in self.client.connections.items()
         }
 
-    def get_healthy_servers(self) -> List[str]:
+    def get_healthy_servers(self) -> list[str]:
         """Get list of currently healthy (connected) servers.
 
         Returns:
@@ -191,7 +190,7 @@ class ConnectionManager:
             if conn.status == ServerStatus.CONNECTED
         ]
 
-    def get_all_tools(self) -> List[MCPTool]:
+    def get_all_tools(self) -> list[MCPTool]:
         """Get all tools from all connected servers.
 
         Returns:
@@ -199,7 +198,7 @@ class ConnectionManager:
         """
         return self.client.list_tools()
 
-    def get_tools_by_server(self, server_name: str) -> List[MCPTool]:
+    def get_tools_by_server(self, server_name: str) -> list[MCPTool]:
         """Get tools from a specific server.
 
         Args:
@@ -210,7 +209,7 @@ class ConnectionManager:
         """
         return self.client.list_tools(server_name=server_name)
 
-    async def refresh_tools(self, server_name: Optional[str] = None) -> int:
+    async def refresh_tools(self, server_name: str | None = None) -> int:
         """Refresh tool discovery for one or all servers.
 
         Args:
@@ -219,10 +218,7 @@ class ConnectionManager:
         Returns:
             Total number of tools discovered
         """
-        if server_name:
-            servers = [server_name]
-        else:
-            servers = self.get_healthy_servers()
+        servers = [server_name] if server_name else self.get_healthy_servers()
 
         total_tools = 0
         for srv in servers:
@@ -235,7 +231,7 @@ class ConnectionManager:
 
         return total_tools
 
-    def get_connection_details(self) -> List[MCPServerConnection]:
+    def get_connection_details(self) -> list[MCPServerConnection]:
         """Get detailed connection information for all servers.
 
         Returns:
@@ -243,7 +239,7 @@ class ConnectionManager:
         """
         return list(self.client.connections.values())
 
-    async def health_check(self) -> Dict[str, any]:
+    async def health_check(self) -> dict[str, any]:
         """Perform health check on all connections.
 
         Returns:

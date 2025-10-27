@@ -6,7 +6,7 @@ Follows MCP Spec 2025-06-18.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class TransportType(Enum):
@@ -45,7 +45,7 @@ class MCPServer:
     description: str = ""
     timeout: int = 30
     retry_attempts: int = 3
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate server configuration."""
@@ -74,10 +74,10 @@ class MCPTool:
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     server: str
     version: str = "1.0.0"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate tool definition."""
@@ -99,9 +99,9 @@ class MCPToolCall:
     """
 
     tool_name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     timeout: int = 60
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate tool call."""
@@ -126,10 +126,10 @@ class MCPToolResult:
 
     tool_name: str
     success: bool
-    result: Optional[Any] = None
-    error: Optional[str] = None
+    result: Any | None = None
+    error: str | None = None
     execution_time: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         """Validate tool result."""
@@ -157,10 +157,10 @@ class MCPServerConnection:
 
     server: MCPServer
     status: ServerStatus
-    connection_time: Optional[str] = None
-    tools: List[MCPTool] = field(default_factory=list)
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    connection_time: str | None = None
+    tools: list[MCPTool] = field(default_factory=list)
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -181,7 +181,7 @@ class MCPClientStats:
     total_servers: int = 0
     connected_servers: int = 0
     total_tools: int = 0
-    tools_by_server: Dict[str, int] = field(default_factory=dict)
+    tools_by_server: dict[str, int] = field(default_factory=dict)
     total_calls: int = 0
     successful_calls: int = 0
     failed_calls: int = 0

@@ -7,7 +7,6 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
 from enum import Enum
-from typing import Optional
 
 
 class ErrorType(Enum):
@@ -31,7 +30,7 @@ class MCPError(Exception):
         self,
         message: str,
         error_type: ErrorType,
-        original_error: Optional[Exception] = None,
+        original_error: Exception | None = None,
     ):
         """Initialize MCP error.
 

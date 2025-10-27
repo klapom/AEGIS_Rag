@@ -14,7 +14,7 @@ Features:
 
 import asyncio
 import time
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 
@@ -44,8 +44,8 @@ class EnhancedMemoryRouter:
 
     def __init__(
         self,
-        strategy: Optional[RoutingStrategy] = None,
-        session_id: Optional[str] = None,
+        strategy: RoutingStrategy | None = None,
+        session_id: str | None = None,
         enable_graphiti: bool = True,
     ):
         """Initialize enhanced memory router.
@@ -82,7 +82,7 @@ class EnhancedMemoryRouter:
     async def route_query(
         self,
         query: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> list[MemoryLayer]:
         """Determine which memory layers to query (routing decision).
 
@@ -128,7 +128,7 @@ class EnhancedMemoryRouter:
     async def search_memory(
         self,
         query: str,
-        metadata: Optional[dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
         limit_per_layer: int = 10,
     ) -> dict[str, list[MemorySearchResult]]:
         """Search across multiple memory layers in parallel.
@@ -173,7 +173,7 @@ class EnhancedMemoryRouter:
 
         # Merge results
         results = {}
-        for layer_name, layer_results in zip(layer_names, results_list):
+        for layer_name, layer_results in zip(layer_names, results_list, strict=False):
             if isinstance(layer_results, Exception):
                 logger.error(
                     "Layer search failed",
@@ -266,7 +266,7 @@ class EnhancedMemoryRouter:
         Returns:
             List of search results from Qdrant
         """
-        start_time = time.time()
+        time.time()
 
         try:
             # NOTE: This is a placeholder implementation
@@ -405,7 +405,7 @@ class EnhancedMemoryRouter:
     async def store_memory(
         self,
         entry: MemoryEntry,
-        target_layers: Optional[list[MemoryLayer]] = None,
+        target_layers: list[MemoryLayer] | None = None,
     ) -> dict[str, bool]:
         """Store memory entry in specified layers.
 
@@ -492,12 +492,12 @@ class EnhancedMemoryRouter:
 
 
 # Global instance (singleton pattern)
-_enhanced_router: Optional[EnhancedMemoryRouter] = None
+_enhanced_router: EnhancedMemoryRouter | None = None
 
 
 def get_enhanced_router(
-    strategy: Optional[RoutingStrategy] = None,
-    session_id: Optional[str] = None,
+    strategy: RoutingStrategy | None = None,
+    session_id: str | None = None,
 ) -> EnhancedMemoryRouter:
     """Get enhanced memory router instance.
 

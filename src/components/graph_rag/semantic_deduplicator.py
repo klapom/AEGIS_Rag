@@ -8,17 +8,17 @@ Author: Claude Code
 Date: 2025-10-24
 """
 
-from typing import List, Dict, Any
+from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
 
 # Conditional imports
 try:
-    from sentence_transformers import SentenceTransformer
     import torch
+    from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
-    import numpy as np
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
@@ -101,7 +101,7 @@ class SemanticDeduplicator:
                 vram_gb=f"{vram_gb:.1f}"
             )
 
-    def deduplicate(self, entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Deduplicate entities using semantic similarity.
 
         Strategy:
@@ -174,9 +174,9 @@ class SemanticDeduplicator:
 
     def _deduplicate_group(
         self,
-        entities: List[Dict[str, Any]],
+        entities: list[dict[str, Any]],
         entity_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Deduplicate entities of the same type.
 
         Args:

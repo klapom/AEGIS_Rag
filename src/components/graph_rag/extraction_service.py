@@ -206,7 +206,7 @@ class ExtractionService:
             # If all retries fail, test will show clear error message
             raise ValueError(
                 f"Failed to parse JSON from LLM response after trying strategy '{strategy_used}': {str(e)}"
-            )
+            ) from e
 
     @retry(
         stop=stop_after_attempt(3),

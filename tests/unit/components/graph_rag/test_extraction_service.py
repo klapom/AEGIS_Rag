@@ -60,10 +60,10 @@ class TestExtractionService:
         assert parsed[0]["name"] == "John"
 
     def test_parse_json_response_invalid(self, extraction_service):
-        """Test JSON parsing with invalid JSON returns empty list."""
+        """Test JSON parsing with invalid JSON raises ValueError."""
         response = "This is not JSON at all"
-        parsed = extraction_service._parse_json_response(response)
-        assert parsed == []
+        with pytest.raises(ValueError, match="Failed to parse JSON"):
+            extraction_service._parse_json_response(response)
 
     def test_parse_json_response_empty(self, extraction_service):
         """Test JSON parsing with empty array."""

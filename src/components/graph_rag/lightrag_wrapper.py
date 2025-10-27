@@ -10,10 +10,10 @@ Sprint 5: Feature 5.1 - LightRAG Core Integration
 Sprint 14: Feature 14.1 - Three-Phase Pipeline Integration with Graph-based Provenance
 """
 
-from pathlib import Path
-from typing import Any
 import hashlib
 import time
+from pathlib import Path
+from typing import Any
 
 import structlog
 import tiktoken
@@ -24,9 +24,9 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 from src.core.config import settings
 from src.core.models import GraphQueryResult
-from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
 logger = structlog.get_logger(__name__)
 
@@ -91,6 +91,7 @@ class LightRAGWrapper:
         try:
             # Import LightRAG components (optional dependency)
             import os
+
             from lightrag import LightRAG
 
             # Set Neo4j environment variables (required by Neo4JStorage)

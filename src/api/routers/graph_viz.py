@@ -5,12 +5,12 @@ Provides export, filtering, and community highlighting capabilities.
 """
 
 from typing import Any, Literal
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+
 import structlog
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from src.components.graph_rag.neo4j_client import get_neo4j_client
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -123,7 +123,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
 
     except Exception as e:
         logger.error("graph_export_failed", error=str(e), format=request.format)
-        raise HTTPException(status_code=500, detail=f"Export failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {e}") from e
 
 
 @router.get("/export/formats")
@@ -190,7 +190,7 @@ async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
 
     except Exception as e:
         logger.error("graph_filter_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Filter failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Filter failed: {e}") from e
 
 
 # ============================================================================
@@ -246,7 +246,7 @@ async def highlight_communities(
 
     except Exception as e:
         logger.error("community_highlight_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Highlight failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Highlight failed: {e}") from e
 
 
 # ============================================================================

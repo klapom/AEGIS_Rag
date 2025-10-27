@@ -8,18 +8,11 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 
 import asyncio
 import time
-from typing import Any, Optional
-
-from tenacity import (
-    retry,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
+from typing import Any
 
 from src.components.mcp.client import MCPClient
-from src.components.mcp.error_handler import ErrorHandler, ErrorType, MCPError
-from src.components.mcp.models import MCPTool, MCPToolCall, MCPToolResult
+from src.components.mcp.error_handler import ErrorHandler
+from src.components.mcp.models import MCPToolCall, MCPToolResult
 from src.components.mcp.result_parser import ResultParser
 from src.core.logging import get_logger
 
@@ -54,7 +47,7 @@ class ToolExecutor:
         self,
         tool_name: str,
         parameters: dict[str, Any],
-        server_name: Optional[str] = None,
+        server_name: str | None = None,
         expected_format: str = "json",
     ) -> MCPToolResult:
         """Execute a tool call with retry logic.

@@ -299,7 +299,7 @@ class MemoryConsolidationPipeline:
         unique_embeddings = []
         duplicates_removed = 0
 
-        for i, (item, embedding) in enumerate(zip(items, embeddings)):
+        for _i, (item, embedding) in enumerate(zip(items, embeddings, strict=False)):
             is_duplicate = False
 
             # Check against all previously added unique items

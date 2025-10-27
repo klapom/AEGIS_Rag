@@ -19,12 +19,12 @@ from pathlib import Path
 from typing import Any, Literal
 
 import structlog
-from datasets import Dataset
 from pydantic import BaseModel, Field
+from ragas import EvaluationDataset as RagasDataset
+
 # RAGAS 0.3.x imports (API changed from 0.2.x)
-from ragas import evaluate, EvaluationDataset as RagasDataset, SingleTurnSample
+from ragas import SingleTurnSample, evaluate
 from ragas.llms import LangchainLLMWrapper
-from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.metrics import ContextPrecision, ContextRecall, Faithfulness
 
 from src.core.config import settings

@@ -9,10 +9,10 @@ This module provides:
 
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import structlog
-from prometheus_client import Counter, Gauge, Histogram, Summary
+from prometheus_client import Counter, Gauge, Histogram
 
 logger = structlog.get_logger(__name__)
 
@@ -143,7 +143,7 @@ class MemoryMonitoring:
 
     # ============= Redis Metrics Collection =============
 
-    async def collect_redis_metrics(self, redis_manager) -> Dict[str, Any]:
+    async def collect_redis_metrics(self, redis_manager) -> dict[str, Any]:
         """Collect metrics from Redis layer.
 
         Args:
@@ -191,7 +191,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "redis", "error": str(e)}
 
-    async def collect_qdrant_metrics(self, qdrant_client) -> Dict[str, Any]:
+    async def collect_qdrant_metrics(self, qdrant_client) -> dict[str, Any]:
         """Collect metrics from Qdrant layer.
 
         Args:
@@ -239,7 +239,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "qdrant", "error": str(e)}
 
-    async def collect_graphiti_metrics(self, graphiti_client) -> Dict[str, Any]:
+    async def collect_graphiti_metrics(self, graphiti_client) -> dict[str, Any]:
         """Collect metrics from Graphiti layer.
 
         Args:
@@ -292,7 +292,7 @@ class MemoryMonitoring:
         redis_manager=None,
         qdrant_client=None,
         graphiti_client=None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Collect metrics from all memory layers.
 
         Args:
@@ -415,7 +415,7 @@ class MemoryMonitoring:
 
 
 # Global singleton instance
-_monitoring: Optional[MemoryMonitoring] = None
+_monitoring: MemoryMonitoring | None = None
 
 
 def get_monitoring() -> MemoryMonitoring:
