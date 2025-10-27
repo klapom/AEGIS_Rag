@@ -467,6 +467,62 @@ Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed loc
 
 ---
 
+## Sprint 14: Backend Performance & Testing
+**Ziel:** Comprehensive Testing Infrastructure & Monitoring for Sprint 13 Pipeline
+**Status:** ✅ COMPLETE (2025-10-24 → 2025-10-27)
+
+### Context
+Sprint 13 delivered the Three-Phase Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B) with 10x performance improvement (>300s → <30s). Sprint 14 focuses on testing infrastructure, monitoring, and production readiness.
+
+### Deliverables
+- ✅ **Feature 14.2**: Extraction Pipeline Factory (configuration-driven selection)
+- ✅ **Feature 14.3**: Production Benchmarking Suite (memory profiling, performance tracking)
+- ✅ **Feature 14.5**: Retry Logic & Error Handling (tenacity-based resilience)
+- ✅ **Feature 14.6**: Prometheus Metrics & Monitoring (comprehensive observability)
+
+### Test Coverage
+- ✅ **Unit Tests**: 112/112 passing (9.12s execution)
+  - test_extraction_factory.py: 25 tests
+  - test_gemma_retry_logic.py: 18 tests (fixed 5 flaky tests)
+  - test_benchmark_production_pipeline.py: 15 tests
+  - test_metrics.py: 54 tests
+
+- ✅ **Integration Tests**: 20/20 passing (5m 37s with real Docker services)
+  - test_extraction_factory_integration.py: 9 tests
+  - test_gemma_retry_integration.py: 11 tests
+
+- ✅ **Stress Tests**: 5 tests created (not yet executed)
+  - test_sprint14_stress_performance.py: 100-doc batch, memory leak detection, connection pool
+
+### Key Decisions
+- ✅ **ADR-019**: Use integration tests with real services as E2E tests (eliminates redundant test layer)
+
+### Technical Tasks
+- ✅ ExtractionPipelineFactory with create() method
+- ✅ BenchmarkRunner with tracemalloc memory profiling
+- ✅ Retry logic using tenacity (exponential backoff)
+- ✅ 12 Prometheus metrics for extraction pipeline
+- ✅ Fixed 5 flaky retry logic tests
+- ✅ Comprehensive test suite (132 tests total)
+
+### Success Criteria
+- ✅ Factory creates working Three-Phase pipeline from config
+- ✅ Benchmarking tracks memory usage and performance
+- ✅ Retry logic handles transient failures gracefully
+- ✅ Prometheus metrics provide comprehensive observability
+- ✅ 100% test success rate (132/132 passing)
+- ✅ Integration tests use real Docker services (Ollama, Neo4j, Redis, Qdrant)
+
+### Story Points: 45 SP (Delivered) / 40 SP (Planned)
+**Velocity:** 11.25 SP/day (12.5% overdelivery)
+
+### References
+- [SPRINT_14_COMPLETION_REPORT.md](../sprints/SPRINT_14_COMPLETION_REPORT.md) - Detailed completion report
+- [ADR-019](../adr/ADR-019-integration-tests-as-e2e.md) - Integration Tests as E2E Tests
+- Branch: `sprint-14-backend-performance`
+
+---
+
 ## Sprint 9: 3-Layer Memory Architecture + MCP Client Integration
 **Ziel:** Vollständige Memory-Architektur mit MCP Client für externe Tool-Nutzung
 
