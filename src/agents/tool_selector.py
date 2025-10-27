@@ -6,7 +6,6 @@ Uses keyword matching with extensibility for LLM-based selection.
 Sprint 9 Feature 9.8: Action Agent (LangGraph Integration)
 """
 
-
 from src.components.mcp.client import MCPClient
 from src.components.mcp.models import MCPTool
 from src.core.logging import get_logger
@@ -41,9 +40,7 @@ class ToolSelector:
             "execute": ["run", "execute", "exec", "command"],
         }
 
-    def select_tool(
-        self, action: str, server_name: str | None = None
-    ) -> MCPTool | None:
+    def select_tool(self, action: str, server_name: str | None = None) -> MCPTool | None:
         """Select best tool for action.
 
         Args:
@@ -108,9 +105,7 @@ class ToolSelector:
                 return category
         return None
 
-    def _find_tool_by_category(
-        self, category: str, tools: list[MCPTool]
-    ) -> MCPTool | None:
+    def _find_tool_by_category(self, category: str, tools: list[MCPTool]) -> MCPTool | None:
         """Find tool matching a category.
 
         Args:
@@ -140,9 +135,7 @@ class ToolSelector:
 
         return None
 
-    def _find_tool_by_direct_match(
-        self, action_lower: str, tools: list[MCPTool]
-    ) -> MCPTool | None:
+    def _find_tool_by_direct_match(self, action_lower: str, tools: list[MCPTool]) -> MCPTool | None:
         """Find tool by direct name match.
 
         Args:

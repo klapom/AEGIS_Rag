@@ -77,10 +77,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await hybrid_search.prepare_bm25_index()
             logger.info("bm25_initialized_on_startup", status="success")
         else:
-            logger.info("bm25_loaded_from_cache", status="success", corpus_size=hybrid_search.bm25_search.get_corpus_size())
+            logger.info(
+                "bm25_loaded_from_cache",
+                status="success",
+                corpus_size=hybrid_search.bm25_search.get_corpus_size(),
+            )
     except Exception as e:
         # Non-fatal: BM25 can be initialized later via API
-        logger.warning("bm25_initialization_failed", error=str(e), note="Can be initialized via /api/v1/retrieval/prepare-bm25")
+        logger.warning(
+            "bm25_initialization_failed",
+            error=str(e),
+            note="Can be initialized via /api/v1/retrieval/prepare-bm25",
+        )
 
     # TODO: Initialize database connections, load models, etc.
 

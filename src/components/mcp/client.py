@@ -383,9 +383,7 @@ class MCPClient:
                 execution_time=execution_time,
             )
 
-    async def _execute_tool_stdio(
-        self, tool: MCPTool, tool_call: MCPToolCall
-    ) -> MCPToolResult:
+    async def _execute_tool_stdio(self, tool: MCPTool, tool_call: MCPToolCall) -> MCPToolResult:
         """Execute tool via stdio transport.
 
         Args:
@@ -415,9 +413,7 @@ class MCPClient:
             )
 
         if "error" in response:
-            return MCPToolResult(
-                tool_name=tool.name, success=False, error=str(response["error"])
-            )
+            return MCPToolResult(tool_name=tool.name, success=False, error=str(response["error"]))
 
         return MCPToolResult(tool_name=tool.name, success=True, result=response.get("result"))
 

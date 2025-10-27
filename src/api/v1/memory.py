@@ -133,9 +133,7 @@ class PointInTimeQueryResponse(BaseModel):
 
     query: str
     timestamp: datetime
-    results: list[dict[str, Any]] = Field(
-        description="Entity states at the specified time"
-    )
+    results: list[dict[str, Any]] = Field(description="Entity states at the specified time")
     total_results: int
 
 
@@ -143,9 +141,7 @@ class SessionContextResponse(BaseModel):
     """Response model for session context retrieval."""
 
     session_id: str
-    messages: list[dict[str, str]] = Field(
-        description="Conversation messages in the session"
-    )
+    messages: list[dict[str, str]] = Field(description="Conversation messages in the session")
     message_count: int
     summary: dict[str, Any] = Field(
         default_factory=dict, description="Session summary across layers"
@@ -192,18 +188,10 @@ class ConsolidationResponse(BaseModel):
 class MemoryStatsResponse(BaseModel):
     """Response model for memory system statistics."""
 
-    short_term: dict[str, Any] = Field(
-        description="Redis working memory statistics"
-    )
-    long_term: dict[str, Any] = Field(
-        description="Qdrant vector store statistics"
-    )
-    episodic: dict[str, Any] = Field(
-        description="Graphiti episodic memory statistics"
-    )
-    consolidation: dict[str, Any] = Field(
-        description="Memory consolidation statistics"
-    )
+    short_term: dict[str, Any] = Field(description="Redis working memory statistics")
+    long_term: dict[str, Any] = Field(description="Qdrant vector store statistics")
+    episodic: dict[str, Any] = Field(description="Graphiti episodic memory statistics")
+    consolidation: dict[str, Any] = Field(description="Memory consolidation statistics")
 
 
 class SessionDeleteResponse(BaseModel):

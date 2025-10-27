@@ -178,7 +178,7 @@ class ToolExecutor:
 
                 # Wait before retry with exponential backoff
                 if attempt < max_attempts - 1:
-                    wait_time = min(2 ** attempt, 10)  # Max 10 seconds
+                    wait_time = min(2**attempt, 10)  # Max 10 seconds
                     await asyncio.sleep(wait_time)
 
             except Exception as e:
@@ -199,7 +199,7 @@ class ToolExecutor:
                     )
 
                 # Wait before retry
-                await asyncio.sleep(min(2 ** attempt, 10))
+                await asyncio.sleep(min(2**attempt, 10))
 
         # All retries exhausted - return last result
         return last_result or MCPToolResult(

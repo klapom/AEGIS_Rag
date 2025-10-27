@@ -125,92 +125,64 @@ class Settings(BaseSettings):
 
     # Semantic Entity Deduplication (Sprint 13: ADR-017)
     enable_semantic_dedup: bool = Field(
-        default=True,
-        description="Enable semantic entity deduplication using sentence-transformers"
+        default=True, description="Enable semantic entity deduplication using sentence-transformers"
     )
     semantic_dedup_model: str = Field(
         default="sentence-transformers/all-MiniLM-L6-v2",
-        description="Sentence transformer model for entity deduplication (90MB, 384-dim)"
+        description="Sentence transformer model for entity deduplication (90MB, 384-dim)",
     )
     semantic_dedup_threshold: float = Field(
         default=0.93,
         ge=0.0,
         le=1.0,
-        description="Cosine similarity threshold for duplicate detection (0.90-0.95 recommended)"
+        description="Cosine similarity threshold for duplicate detection (0.90-0.95 recommended)",
     )
     semantic_dedup_device: str = Field(
-        default="auto",
-        description="Device for semantic dedup ('auto', 'cuda', 'cpu')"
+        default="auto", description="Device for semantic dedup ('auto', 'cuda', 'cpu')"
     )
 
     # Gemma Relation Extraction (Sprint 13: ADR-018)
     gemma_model: str = Field(
         default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
-        description="Gemma model for relation extraction (Ollama)"
+        description="Gemma model for relation extraction (Ollama)",
     )
     gemma_temperature: float = Field(
-        default=0.1,
-        ge=0.0,
-        le=2.0,
-        description="Temperature for Gemma relation extraction"
+        default=0.1, ge=0.0, le=2.0, description="Temperature for Gemma relation extraction"
     )
     gemma_num_predict: int = Field(
-        default=2000,
-        ge=100,
-        le=4096,
-        description="Max tokens for Gemma relation extraction"
+        default=2000, ge=100, le=4096, description="Max tokens for Gemma relation extraction"
     )
     gemma_num_ctx: int = Field(
-        default=16384,
-        ge=2048,
-        le=32768,
-        description="Context window for Gemma model"
+        default=16384, ge=2048, le=32768, description="Context window for Gemma model"
     )
 
     # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2)
     extraction_pipeline: Literal["lightrag_default", "three_phase"] = Field(
         default="three_phase",
-        description="Entity/relation extraction pipeline to use (three_phase recommended)"
+        description="Entity/relation extraction pipeline to use (three_phase recommended)",
     )
     enable_legacy_extraction: bool = Field(
-        default=False,
-        description="Enable legacy LightRAG extraction for A/B comparison"
+        default=False, description="Enable legacy LightRAG extraction for A/B comparison"
     )
     extraction_batch_size: int = Field(
-        default=10,
-        ge=1,
-        le=100,
-        description="Batch size for extraction operations"
+        default=10, ge=1, le=100, description="Batch size for extraction operations"
     )
     extraction_max_workers: int = Field(
-        default=4,
-        ge=1,
-        le=16,
-        description="Max worker threads for parallel extraction"
+        default=4, ge=1, le=16, description="Max worker threads for parallel extraction"
     )
 
     # Error Handling & Retry Logic (Sprint 14: Feature 14.5)
     extraction_max_retries: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Max retry attempts for transient extraction failures"
+        default=3, ge=1, le=10, description="Max retry attempts for transient extraction failures"
     )
     extraction_retry_min_wait: float = Field(
-        default=2.0,
-        ge=0.1,
-        le=10.0,
-        description="Minimum wait time between retries (seconds)"
+        default=2.0, ge=0.1, le=10.0, description="Minimum wait time between retries (seconds)"
     )
     extraction_retry_max_wait: float = Field(
-        default=10.0,
-        ge=1.0,
-        le=60.0,
-        description="Maximum wait time between retries (seconds)"
+        default=10.0, ge=1.0, le=60.0, description="Maximum wait time between retries (seconds)"
     )
     extraction_enable_graceful_degradation: bool = Field(
-        default=True,
-        description="Continue with degraded features on non-critical failures"
+        default=True, description="Continue with degraded features on non-critical failures"
     )
 
     # Neo4j Graph Database
@@ -338,7 +310,7 @@ class Settings(BaseSettings):
     # LightRAG LLM Configuration
     lightrag_llm_model: str = Field(
         default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",
-        description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)"
+        description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)",
     )
     lightrag_llm_temperature: float = Field(
         default=0.1,
@@ -410,9 +382,7 @@ class Settings(BaseSettings):
     )
 
     # Memory Router Configuration (Sprint 7: 3-Layer Memory)
-    memory_router_enabled: bool = Field(
-        default=True, description="Enable 3-layer memory routing"
-    )
+    memory_router_enabled: bool = Field(default=True, description="Enable 3-layer memory routing")
     redis_memory_url: str = Field(
         default="redis://localhost:6379/0", description="Redis URL for working memory"
     )
@@ -435,19 +405,15 @@ class Settings(BaseSettings):
     # Configurable retention for Graphiti temporal memory versions
     # Set temporal_retention_days=0 for infinite retention (no auto-purge)
     temporal_retention_days: int = Field(
-        default=365,
-        ge=0,
-        description="Days to retain temporal versions (0 = infinite retention)"
+        default=365, ge=0, description="Days to retain temporal versions (0 = infinite retention)"
     )
 
     temporal_auto_purge: bool = Field(
-        default=True,
-        description="Automatically purge old temporal versions on schedule"
+        default=True, description="Automatically purge old temporal versions on schedule"
     )
 
     temporal_purge_schedule: str = Field(
-        default="0 2 * * *",  # 2 AM daily
-        description="Cron schedule for temporal purge job"
+        default="0 2 * * *", description="Cron schedule for temporal purge job"  # 2 AM daily
     )
 
     @field_validator("log_level")

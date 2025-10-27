@@ -250,9 +250,7 @@ class HybridStrategy(RoutingStrategy):
             recent_threshold_hours: Threshold for "recent" queries
             medium_threshold_hours: Threshold for "medium" queries
         """
-        self.recency_strategy = RecencyBasedStrategy(
-            recent_threshold_hours, medium_threshold_hours
-        )
+        self.recency_strategy = RecencyBasedStrategy(recent_threshold_hours, medium_threshold_hours)
         self.query_type_strategy = QueryTypeStrategy()
 
         logger.info("Initialized HybridStrategy")

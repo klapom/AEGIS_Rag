@@ -36,25 +36,21 @@ def get_coordinator() -> CoordinatorAgent:
 
 # Request/Response Models
 
+
 class ChatRequest(BaseModel):
     """Chat request model."""
 
     query: str = Field(..., min_length=1, max_length=5000, description="User query")
     session_id: str | None = Field(
         default=None,
-        description="Session ID for conversation history. Auto-generated if not provided."
+        description="Session ID for conversation history. Auto-generated if not provided.",
     )
     intent: str | None = Field(
-        default=None,
-        description="Optional intent override (graph, vector, hybrid)"
+        default=None, description="Optional intent override (graph, vector, hybrid)"
     )
-    include_sources: bool = Field(
-        default=True,
-        description="Include source documents in response"
-    )
+    include_sources: bool = Field(default=True, description="Include source documents in response")
     include_tool_calls: bool = Field(
-        default=False,
-        description="Include MCP tool call information in response"
+        default=False, description="Include MCP tool call information in response"
     )
 
     class Config:
@@ -63,7 +59,7 @@ class ChatRequest(BaseModel):
                 "query": "Was ist AEGIS RAG?",
                 "session_id": "user-123-session",
                 "include_sources": True,
-                "include_tool_calls": False
+                "include_tool_calls": False,
             }
         }
 
@@ -98,16 +94,13 @@ class ChatResponse(BaseModel):
     session_id: str = Field(..., description="Session ID for this conversation")
     intent: str | None = Field(default=None, description="Detected query intent")
     sources: list[SourceDocument] = Field(
-        default_factory=list,
-        description="Source documents used for answer generation"
+        default_factory=list, description="Source documents used for answer generation"
     )
     tool_calls: list[ToolCallInfo] = Field(
-        default_factory=list,
-        description="MCP tool calls made during query processing"
+        default_factory=list, description="MCP tool calls made during query processing"
     )
     metadata: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Execution metadata (latency, agent_path, etc.)"
+        default_factory=dict, description="Execution metadata (latency, agent_path, etc.)"
     )
 
     class Config:
@@ -122,7 +115,7 @@ class ChatResponse(BaseModel):
                         "text": "AEGIS RAG steht für...",
                         "title": "CLAUDE.md",
                         "source": "docs/core/CLAUDE.md",
-                        "score": 0.92
+                        "score": 0.92,
                     }
                 ],
                 "tool_calls": [
@@ -133,13 +126,13 @@ class ChatResponse(BaseModel):
                         "result": {"content": "# CLAUDE.md - AegisRAG..."},
                         "duration_ms": 45.2,
                         "success": True,
-                        "error": None
+                        "error": None,
                     }
                 ],
                 "metadata": {
                     "latency_seconds": 1.23,
-                    "agent_path": ["router", "vector_agent", "generator"]
-                }
+                    "agent_path": ["router", "vector_agent", "generator"],
+                },
             }
         }
 
@@ -161,6 +154,7 @@ class SessionDeleteResponse(BaseModel):
 
 
 # API Endpoints
+
 
 @router.post("/", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def chat(request: ChatRequest) -> ChatResponse:
@@ -189,7 +183,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
         "chat_request_received",
         query=request.query[:100],  # Log first 100 chars
         session_id=session_id,
-        intent_override=request.intent
+        intent_override=request.intent,
     )
 
     try:
@@ -198,9 +192,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Process query through multi-agent system
         result = await coordinator.process_query(
-            query=request.query,
-            session_id=session_id,
-            intent=request.intent
+            query=request.query, session_id=session_id, intent=request.intent
         )
 
         # Extract answer from result
@@ -227,7 +219,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             intent=result.get("intent"),
             sources=sources,
             tool_calls=tool_calls,
-            metadata=metadata
+            metadata=metadata,
         )
 
         logger.info(
@@ -235,7 +227,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             session_id=session_id,
             answer_length=len(answer),
             sources_count=len(sources),
-            latency=metadata.get("latency_seconds")
+            latency=metadata.get("latency_seconds"),
         )
 
         return response
@@ -245,22 +237,18 @@ async def chat(request: ChatRequest) -> ChatResponse:
             "chat_request_failed_aegis_exception",
             session_id=session_id,
             error=str(e),
-            details=e.details
+            details=e.details,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"RAG system error: {e.message}"
+            detail=f"RAG system error: {e.message}",
         ) from e
 
     except Exception as e:
-        logger.error(
-            "chat_request_failed_unexpected",
-            session_id=session_id,
-            error=str(e)
-        )
+        logger.error("chat_request_failed_unexpected", session_id=session_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unexpected error processing query: {str(e)}"
+            detail=f"Unexpected error processing query: {str(e)}",
         ) from e
 
 
@@ -288,36 +276,25 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
         history_key = f"conversation:{session_id}"
 
         # Try to retrieve from Redis (recent conversations)
-        history_data = await memory_api.retrieve(
-            key=history_key,
-            namespace="memory"
-        )
+        history_data = await memory_api.retrieve(key=history_key, namespace="memory")
 
         messages = []
         if history_data:
             messages = history_data.get("messages", [])
 
         logger.info(
-            "conversation_history_retrieved",
-            session_id=session_id,
-            message_count=len(messages)
+            "conversation_history_retrieved", session_id=session_id, message_count=len(messages)
         )
 
         return ConversationHistoryResponse(
-            session_id=session_id,
-            messages=messages,
-            message_count=len(messages)
+            session_id=session_id, messages=messages, message_count=len(messages)
         )
 
     except Exception as e:
-        logger.error(
-            "conversation_history_retrieval_failed",
-            session_id=session_id,
-            error=str(e)
-        )
+        logger.error("conversation_history_retrieval_failed", session_id=session_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve conversation history: {str(e)}"
+            detail=f"Failed to retrieve conversation history: {str(e)}",
         ) from e
 
 
@@ -344,32 +321,26 @@ async def delete_conversation_history(session_id: str) -> SessionDeleteResponse:
         history_key = f"conversation:{session_id}"
 
         # Delete from Redis
-        await memory_api.delete(
-            key=history_key,
-            namespace="memory"
-        )
+        await memory_api.delete(key=history_key, namespace="memory")
 
         logger.info("conversation_history_deleted", session_id=session_id)
 
         return SessionDeleteResponse(
             session_id=session_id,
             status="success",
-            message=f"Conversation history for session '{session_id}' deleted successfully"
+            message=f"Conversation history for session '{session_id}' deleted successfully",
         )
 
     except Exception as e:
-        logger.error(
-            "conversation_history_deletion_failed",
-            session_id=session_id,
-            error=str(e)
-        )
+        logger.error("conversation_history_deletion_failed", session_id=session_id, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete conversation history: {str(e)}"
+            detail=f"Failed to delete conversation history: {str(e)}",
         ) from e
 
 
 # Helper functions
+
 
 def _extract_answer(result: dict[str, Any]) -> str:
     """Extract answer from coordinator result.
@@ -427,7 +398,7 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
                 title=ctx.get("title", ctx.get("source", "Unknown")),
                 source=ctx.get("source", ctx.get("file_path", "Unknown")),
                 score=ctx.get("score", ctx.get("relevance", None)),
-                metadata=ctx.get("metadata", {})
+                metadata=ctx.get("metadata", {}),
             )
             sources.append(source)
 
@@ -459,7 +430,7 @@ def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
                 result=call.get("result"),
                 duration_ms=call.get("duration_ms", 0.0),
                 success=call.get("success", True),
-                error=call.get("error")
+                error=call.get("error"),
             )
             tool_calls.append(tool_info)
 

@@ -147,11 +147,7 @@ class GemmaRelationExtractor:
             retry_config=f"{retry_min_wait}-{retry_max_wait}s",
         )
 
-    async def extract(
-        self,
-        text: str,
-        entities: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    async def extract(self, text: str, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Extract relations between entities from text.
 
         Sprint 14: Added automatic retry logic for transient failures.
@@ -181,14 +177,11 @@ class GemmaRelationExtractor:
             return []
 
         # Format entity list for prompt
-        entity_names = [e['name'] for e in entities]
+        entity_names = [e["name"] for e in entities]
         entity_list_str = ", ".join(entity_names)
 
         # Build prompt
-        user_prompt = USER_PROMPT_TEMPLATE_RELATION.format(
-            entity_list=entity_list_str,
-            text=text
-        )
+        user_prompt = USER_PROMPT_TEMPLATE_RELATION.format(entity_list=entity_list_str, text=text)
 
         # Call LLM with retry logic (Sprint 14)
         try:
@@ -198,7 +191,7 @@ class GemmaRelationExtractor:
                 "relation_extraction_complete",
                 text_length=len(text),
                 entity_count=len(entities),
-                relations_found=len(relations)
+                relations_found=len(relations),
             )
 
             return relations
@@ -211,15 +204,12 @@ class GemmaRelationExtractor:
                 text_length=len(text),
                 entity_count=len(entities),
                 max_retries=self.max_retries,
-                note="Returning empty relations list (graceful degradation)"
+                note="Returning empty relations list (graceful degradation)",
             )
             return []
 
     async def _extract_with_retry(
-        self,
-        user_prompt: str,
-        text: str,
-        entities: list[dict[str, Any]]
+        self, user_prompt: str, text: str, entities: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """Call Gemma LLM with automatic retry on transient failures.
 
@@ -241,16 +231,13 @@ class GemmaRelationExtractor:
         Raises:
             Exception: If all retries exhausted
         """
+
         @retry(
             stop=stop_after_attempt(self.max_retries),
-            wait=wait_exponential(
-                multiplier=1,
-                min=self.retry_min_wait,
-                max=self.retry_max_wait
-            ),
+            wait=wait_exponential(multiplier=1, min=self.retry_min_wait, max=self.retry_max_wait),
             retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
             before_sleep=before_sleep_log(logger, "WARNING"),
-            reraise=True
+            reraise=True,
         )
         async def _call_llm():
             """Inner function with retry decorator."""
@@ -258,20 +245,20 @@ class GemmaRelationExtractor:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT_RELATION},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_prompt},
                 ],
                 options={
                     "temperature": self.temperature,
                     "num_predict": self.num_predict,
-                    "num_ctx": self.num_ctx
+                    "num_ctx": self.num_ctx,
                 },
-                format="json"
+                format="json",
             )
 
             # Parse JSON response
             content = response["message"]["content"]
             relation_data = self._parse_json_response(content)
-            return relation_data.get('relations', [])
+            return relation_data.get("relations", [])
 
         return await _call_llm()
 
@@ -287,27 +274,24 @@ class GemmaRelationExtractor:
         cleaned = response.strip()
 
         # Remove markdown code blocks
-        if cleaned.startswith('```'):
-            lines = cleaned.split('\n')
-            cleaned = '\n'.join(lines[1:-1]) if len(lines) > 2 else cleaned
-            cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            cleaned = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
         # Try direct parsing
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
             # Try to extract JSON from text (regex fallback)
-            json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+            json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
             if json_match:
                 try:
                     return json.loads(json_match.group(0))
                 except json.JSONDecodeError:
                     pass
 
-            logger.warning(
-                "relation_json_parse_failed",
-                response_preview=cleaned[:200]
-            )
+            logger.warning("relation_json_parse_failed", response_preview=cleaned[:200])
             return {"relations": []}
 
 
@@ -335,21 +319,18 @@ def create_relation_extractor_from_config(config) -> GemmaRelationExtractor:
     """
     # Create Ollama client with configured base URL
     from ollama import Client
-    ollama_base_url = getattr(config, 'ollama_base_url', 'http://localhost:11434')
+
+    ollama_base_url = getattr(config, "ollama_base_url", "http://localhost:11434")
     ollama_client = Client(host=ollama_base_url)
 
     return GemmaRelationExtractor(
-        model=getattr(
-            config,
-            'gemma_model',
-            'hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M'
-        ),
+        model=getattr(config, "gemma_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"),
         ollama_client=ollama_client,
-        temperature=getattr(config, 'gemma_temperature', 0.1),
-        num_predict=getattr(config, 'gemma_num_predict', 2000),
-        num_ctx=getattr(config, 'gemma_num_ctx', 16384),
+        temperature=getattr(config, "gemma_temperature", 0.1),
+        num_predict=getattr(config, "gemma_num_predict", 2000),
+        num_ctx=getattr(config, "gemma_num_ctx", 16384),
         # Sprint 14: Retry configuration
-        max_retries=getattr(config, 'extraction_max_retries', 3),
-        retry_min_wait=getattr(config, 'extraction_retry_min_wait', 2.0),
-        retry_max_wait=getattr(config, 'extraction_retry_max_wait', 10.0),
+        max_retries=getattr(config, "extraction_max_retries", 3),
+        retry_min_wait=getattr(config, "extraction_retry_min_wait", 2.0),
+        retry_max_wait=getattr(config, "extraction_retry_max_wait", 10.0),
     )

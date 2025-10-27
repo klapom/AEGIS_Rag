@@ -212,7 +212,9 @@ def get_checkpointer():
         logger.info("using_redis_checkpointer")
         return get_redis_checkpointer()
 
-    logger.warning("using_memory_checkpointer", reason="Redis not configured or RedisSaver not available")
+    logger.warning(
+        "using_memory_checkpointer", reason="Redis not configured or RedisSaver not available"
+    )
     return MemorySaver()
 
 
@@ -232,6 +234,7 @@ class RedisCheckpointSaver(BaseCheckpointSaver):
         """
         # Wait for pending tasks
         import asyncio
+
         await asyncio.sleep(0.1)  # Allow tasks to complete
 
         # Close connection

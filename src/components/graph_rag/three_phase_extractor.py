@@ -33,6 +33,7 @@ logger = structlog.get_logger(__name__)
 # Conditional imports
 try:
     import spacy
+
     SPACY_AVAILABLE = True
 except ImportError:
     SPACY_AVAILABLE = False
@@ -118,13 +119,13 @@ class ThreePhaseExtractor:
                 "spacy_model_not_found",
                 model=spacy_model,
                 error=str(e),
-                hint="Run: python -m spacy download en_core_web_trf"
+                hint="Run: python -m spacy download en_core_web_trf",
             )
             raise
 
         # Phase 2: Initialize deduplicator (optional)
         if enable_dedup is None:
-            enable_dedup = getattr(self.config, 'enable_semantic_dedup', True)
+            enable_dedup = getattr(self.config, "enable_semantic_dedup", True)
 
         self.deduplicator = None
         if enable_dedup:
@@ -135,7 +136,7 @@ class ThreePhaseExtractor:
                 logger.warning(
                     "semantic_deduplicator_init_failed",
                     error=str(e),
-                    fallback="continuing_without_dedup"
+                    fallback="continuing_without_dedup",
                 )
         else:
             logger.info("semantic_deduplicator_disabled")
@@ -144,9 +145,7 @@ class ThreePhaseExtractor:
         self.relation_extractor = create_relation_extractor_from_config(self.config)
 
     async def extract(
-        self,
-        text: str,
-        document_id: str = None
+        self, text: str, document_id: str = None
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Extract entities and relations from text using 3-phase pipeline.
 
@@ -167,11 +166,7 @@ class ThreePhaseExtractor:
         """
         total_start = time.perf_counter()
 
-        logger.info(
-            "three_phase_extraction_start",
-            text_length=len(text),
-            document_id=document_id
-        )
+        logger.info("three_phase_extraction_start", text_length=len(text), document_id=document_id)
 
         # ====================================================================
         # PHASE 1: SpaCy NER Entity Extraction (with fallback)
@@ -184,16 +179,14 @@ class ThreePhaseExtractor:
             logger.warning(
                 "phase1_spacy_failed_using_fallback",
                 error=str(e),
-                note="Continuing with regex fallback"
+                note="Continuing with regex fallback",
             )
             raw_entities = self._extract_entities_regex_fallback(text)
 
         phase1_time = time.perf_counter() - phase1_start
 
         logger.info(
-            "phase1_complete",
-            raw_entities=len(raw_entities),
-            time_ms=int(phase1_time * 1000)
+            "phase1_complete", raw_entities=len(raw_entities), time_ms=int(phase1_time * 1000)
         )
 
         # ====================================================================
@@ -213,7 +206,7 @@ class ThreePhaseExtractor:
             logger.warning(
                 "phase2_dedup_failed_skipping",
                 error=str(e),
-                note="Continuing without deduplication"
+                note="Continuing without deduplication",
             )
             deduplicated_entities = raw_entities
             dedup_reduction = 0
@@ -224,7 +217,7 @@ class ThreePhaseExtractor:
             "phase2_complete",
             deduplicated_entities=len(deduplicated_entities),
             dedup_reduction_pct=f"{dedup_reduction:.1f}",
-            time_ms=int(phase2_time * 1000)
+            time_ms=int(phase2_time * 1000),
         )
 
         # ====================================================================
@@ -239,16 +232,14 @@ class ThreePhaseExtractor:
             logger.error(
                 "phase3_relation_extraction_failed",
                 error=str(e),
-                note="Continuing with empty relations (graceful degradation)"
+                note="Continuing with empty relations (graceful degradation)",
             )
             relations = []
 
         phase3_time = time.perf_counter() - phase3_start
 
         logger.info(
-            "phase3_complete",
-            relations_found=len(relations),
-            time_ms=int(phase3_time * 1000)
+            "phase3_complete", relations_found=len(relations), time_ms=int(phase3_time * 1000)
         )
 
         # ====================================================================
@@ -288,12 +279,14 @@ class ThreePhaseExtractor:
             # Map SpaCy type to LightRAG type
             lightrag_type = SPACY_TO_LIGHTRAG_TYPE.get(ent.label_, "OTHER")
 
-            entities.append({
-                "name": ent.text,
-                "type": lightrag_type,
-                "description": f"{ent.text} is a {ent.label_} entity.",
-                "source": "spacy"
-            })
+            entities.append(
+                {
+                    "name": ent.text,
+                    "type": lightrag_type,
+                    "description": f"{ent.text} is a {ent.label_} entity.",
+                    "source": "spacy",
+                }
+            )
 
         return entities
 
@@ -314,30 +307,30 @@ class ThreePhaseExtractor:
 
         # Simple capitalized word patterns (likely proper nouns/entities)
         # Pattern: consecutive capitalized words
-        pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+        pattern = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
         matches = re.findall(pattern, text)
 
         for match in set(matches):  # Deduplicate
-            entities.append({
-                "name": match,
-                "type": "ENTITY",  # Generic type
-                "description": f"{match} is an entity (regex fallback).",
-                "source": "regex_fallback"
-            })
+            entities.append(
+                {
+                    "name": match,
+                    "type": "ENTITY",  # Generic type
+                    "description": f"{match} is an entity (regex fallback).",
+                    "source": "regex_fallback",
+                }
+            )
 
         logger.info(
             "regex_fallback_extraction",
             entities_found=len(entities),
-            note="Using simple regex patterns due to SpaCy failure"
+            note="Using simple regex patterns due to SpaCy failure",
         )
 
         return entities
 
 
 async def extract_with_three_phase(
-    text: str,
-    config=None,
-    document_id: str = None
+    text: str, config=None, document_id: str = None
 ) -> tuple[list[dict], list[dict]]:
     """Convenience function for three-phase extraction.
 

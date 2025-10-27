@@ -178,9 +178,7 @@ class RelevanceScorer:
         days_old = age_delta.total_seconds() / 86400.0  # 86400 seconds in a day
 
         if days_old < 0:
-            raise ValueError(
-                f"stored_at is in the future: {stored_time} > {now}"
-            )
+            raise ValueError(f"stored_at is in the future: {stored_time} > {now}")
 
         # Calculate individual scores
         frequency_score = self.calculate_frequency_score(access_count)

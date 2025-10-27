@@ -61,17 +61,9 @@ class GradioApp:
         self.client = httpx.AsyncClient(timeout=180.0)
         self.mcp_client = None  # MCP Client instance (Feature 10.6)
 
-        logger.info(
-            "gradio_app_initialized",
-            session_id=self.session_id,
-            api_base_url=API_BASE_URL
-        )
+        logger.info("gradio_app_initialized", session_id=self.session_id, api_base_url=API_BASE_URL)
 
-    async def chat(
-        self,
-        message: str,
-        history: list[dict]
-    ) -> tuple[list[dict], str]:
+    async def chat(self, message: str, history: list[dict]) -> tuple[list[dict], str]:
         """Process chat message.
 
         Args:
@@ -94,8 +86,8 @@ class GradioApp:
                     "query": message,
                     "session_id": self.session_id,
                     "include_sources": True,
-                    "include_tool_calls": True  # Feature 10.7
-                }
+                    "include_tool_calls": True,  # Feature 10.7
+                },
             )
 
             if response.status_code == 200:
@@ -118,7 +110,7 @@ class GradioApp:
                     answer_length=len(answer),
                     sources_count=len(sources),
                     tool_calls_count=len(tool_calls),  # Feature 10.7
-                    session_id=self.session_id
+                    session_id=self.session_id,
                 )
 
                 return history, ""
@@ -137,10 +129,7 @@ class GradioApp:
             return history, ""
 
     def _format_answer_with_sources_and_tools(
-        self,
-        answer: str,
-        sources: list[dict],
-        tool_calls: list[dict]
+        self, answer: str, sources: list[dict], tool_calls: list[dict]
     ) -> str:
         """Format answer with source citations and MCP tool call information (Feature 10.7).
 
@@ -233,7 +222,7 @@ class GradioApp:
                 # Progress: Start upload for this file
                 progress(
                     (idx - 1) / len(files),
-                    desc=f"📤 Datei {idx}/{len(files)}: {Path(file.name).name}..."
+                    desc=f"📤 Datei {idx}/{len(files)}: {Path(file.name).name}...",
                 )
 
                 # Start async task for progress simulation within this file's progress range
@@ -246,7 +235,7 @@ class GradioApp:
                         (0.3, "📄 Dokument wird geladen..."),
                         (0.5, "🧠 Embeddings werden generiert..."),
                         (0.7, "🔍 Chunks werden indexiert..."),
-                        (0.9, "✅ Finalisierung...")
+                        (0.9, "✅ Finalisierung..."),
                     ]
                     for prog, desc in steps:
                         await asyncio.sleep(10)  # Update every 10 seconds
@@ -265,8 +254,7 @@ class GradioApp:
                     with open(file.name, "rb") as f:
                         file_data = {"file": (file.name, f, "application/octet-stream")}
                         response = await client_with_timeout.post(
-                            f"{API_BASE_URL}/api/v1/retrieval/upload",
-                            files=file_data
+                            f"{API_BASE_URL}/api/v1/retrieval/upload", files=file_data
                         )
                     await client_with_timeout.aclose()
 
@@ -301,7 +289,9 @@ class GradioApp:
                     logger.info("document_upload_success", filename=file.name, chunks=chunks)
                     results.append(f"✅ {Path(file.name).name}: {chunks} Chunks, {duration:.1f}s")
                 else:
-                    logger.error("document_upload_failed", filename=file.name, status=response.status_code)
+                    logger.error(
+                        "document_upload_failed", filename=file.name, status=response.status_code
+                    )
                     results.append(f"❌ {Path(file.name).name}: Fehler {response.status_code}")
                     failed += 1
 
@@ -323,7 +313,9 @@ class GradioApp:
 
         except asyncio.CancelledError:
             logger.warning("document_upload_cancelled", file_count=len(files))
-            return f"⚠️ Upload wurde abgebrochen. ({successful} von {len(files)} Dateien erfolgreich)"
+            return (
+                f"⚠️ Upload wurde abgebrochen. ({successful} von {len(files)} Dateien erfolgreich)"
+            )
         except Exception as e:
             logger.error("document_upload_exception", error=str(e))
             return f"❌ Unerwarteter Fehler beim Hochladen: {str(e)}"
@@ -375,10 +367,7 @@ class GradioApp:
             return {"error": str(e)}
 
     async def connect_mcp_server(
-        self,
-        name: str,
-        transport: str,
-        endpoint: str
+        self, name: str, transport: str, endpoint: str
     ) -> tuple[dict, pd.DataFrame]:
         """Connect to MCP server and discover tools.
 
@@ -396,15 +385,17 @@ class GradioApp:
             # Initialize MCP Client if needed
             if self.mcp_client is None:
                 from src.components.mcp import MCPClient
+
                 self.mcp_client = MCPClient()
 
             # Create server config
             from src.components.mcp import MCPServer, TransportType
+
             server = MCPServer(
                 name=name,
                 transport=TransportType.HTTP if transport == "HTTP" else TransportType.STDIO,
                 endpoint=endpoint,
-                description=f"User-connected {transport} server"
+                description=f"User-connected {transport} server",
             )
 
             # Connect to server
@@ -421,20 +412,26 @@ class GradioApp:
                 "server_name": name,
                 "transport": transport,
                 "connected_servers": stats.connected_servers,
-                "total_tools": stats.total_tools
+                "total_tools": stats.total_tools,
             }
 
             # Get available tools
             tools = await self.mcp_client.list_tools()
-            tools_df = pd.DataFrame([
-                {
-                    "Tool Name": tool.name,
-                    "Server": tool.server,
-                    "Description": tool.description[:100] + "..." if len(tool.description) > 100 else tool.description,
-                    "Parameters": str(len(tool.parameters.get("properties", {}))) + " params"
-                }
-                for tool in tools
-            ])
+            tools_df = pd.DataFrame(
+                [
+                    {
+                        "Tool Name": tool.name,
+                        "Server": tool.server,
+                        "Description": (
+                            tool.description[:100] + "..."
+                            if len(tool.description) > 100
+                            else tool.description
+                        ),
+                        "Parameters": str(len(tool.parameters.get("properties", {}))) + " params",
+                    }
+                    for tool in tools
+                ]
+            )
 
             logger.info("mcp_server_connected", name=name, tools_count=len(tools))
             return status, tools_df
@@ -456,10 +453,7 @@ class GradioApp:
             if self.mcp_client and server_name:
                 await self.mcp_client.disconnect(server_name)
                 logger.info("mcp_server_disconnected", name=server_name)
-                return {
-                    "status": "disconnected",
-                    "server_name": server_name
-                }
+                return {"status": "disconnected", "server_name": server_name}
             return {"error": "No MCP client or server name"}
         except Exception as e:
             logger.error("mcp_disconnect_failed", error=str(e))
@@ -480,19 +474,25 @@ class GradioApp:
                 "connected_servers": stats.connected_servers,
                 "total_tools": stats.total_tools,
                 "total_calls": stats.total_calls,
-                "successful_calls": stats.successful_calls
+                "successful_calls": stats.successful_calls,
             }
 
             tools = await self.mcp_client.list_tools()
-            tools_df = pd.DataFrame([
-                {
-                    "Tool Name": tool.name,
-                    "Server": tool.server,
-                    "Description": tool.description[:100] + "..." if len(tool.description) > 100 else tool.description,
-                    "Parameters": str(len(tool.parameters.get("properties", {}))) + " params"
-                }
-                for tool in tools
-            ])
+            tools_df = pd.DataFrame(
+                [
+                    {
+                        "Tool Name": tool.name,
+                        "Server": tool.server,
+                        "Description": (
+                            tool.description[:100] + "..."
+                            if len(tool.description) > 100
+                            else tool.description
+                        ),
+                        "Parameters": str(len(tool.parameters.get("properties", {}))) + " params",
+                    }
+                    for tool in tools
+                ]
+            )
 
             return status, tools_df
 
@@ -525,14 +525,12 @@ class GradioApp:
         }
         """
 
-        with gr.Blocks(
-            title="AEGIS RAG",
-            theme=gr.themes.Soft(),
-            css=custom_css
-        ) as demo:
+        with gr.Blocks(title="AEGIS RAG", theme=gr.themes.Soft(), css=custom_css) as demo:
             gr.Markdown("# 🛡️ AEGIS RAG")
             gr.Markdown("**Agentic Enterprise Graph Intelligence System**")
-            gr.Markdown("Stellen Sie Fragen zu Ihren Dokumenten oder laden Sie neue Dokumente hoch.")
+            gr.Markdown(
+                "Stellen Sie Fragen zu Ihren Dokumenten oder laden Sie neue Dokumente hoch."
+            )
 
             with gr.Tabs():
                 # Tab 1: Chat Interface (Feature 10.2) - REORGANIZED: Input first, History below
@@ -544,9 +542,11 @@ class GradioApp:
                             show_label=False,
                             elem_id="user-input",
                             scale=9,
-                            lines=2
+                            lines=2,
                         )
-                        submit = gr.Button("Senden", elem_id="submit-btn", scale=1, variant="primary")
+                        submit = gr.Button(
+                            "Senden", elem_id="submit-btn", scale=1, variant="primary"
+                        )
 
                     # Example queries
                     gr.Examples(
@@ -558,7 +558,7 @@ class GradioApp:
                             "Wie funktioniert der CoordinatorAgent?",
                         ],
                         inputs=msg,
-                        label="Beispiel-Fragen"
+                        label="Beispiel-Fragen",
                     )
 
                     # History Section (below input - more intuitive)
@@ -568,27 +568,16 @@ class GradioApp:
                         label="Conversation History",
                         height=500,
                         show_copy_button=True,
-                        type="messages"  # Enable markdown rendering
+                        type="messages",  # Enable markdown rendering
                     )
 
                     with gr.Row():
                         clear = gr.Button("🗑️ Chat löschen", elem_id="clear-btn")
 
                     # Event handlers
-                    submit.click(
-                        self.chat,
-                        inputs=[msg, chatbot],
-                        outputs=[chatbot, msg]
-                    )
-                    msg.submit(
-                        self.chat,
-                        inputs=[msg, chatbot],
-                        outputs=[chatbot, msg]
-                    )
-                    clear.click(
-                        self.clear_chat,
-                        outputs=chatbot
-                    )
+                    submit.click(self.chat, inputs=[msg, chatbot], outputs=[chatbot, msg])
+                    msg.submit(self.chat, inputs=[msg, chatbot], outputs=[chatbot, msg])
+                    clear.click(self.clear_chat, outputs=chatbot)
 
                 # Tab 2: Document Upload (Feature 10.3)
                 with gr.Tab("📄 Dokumente hochladen"):
@@ -600,25 +589,18 @@ class GradioApp:
                         label="Datei(en) auswählen",
                         file_types=[".pdf", ".txt", ".md", ".docx", ".csv"],
                         file_count="multiple",  # Enable multi-file upload
-                        elem_id="file-upload"
+                        elem_id="file-upload",
                     )
 
                     upload_btn = gr.Button(
-                        "Hochladen & Indexieren",
-                        elem_id="upload-btn",
-                        variant="primary"
+                        "Hochladen & Indexieren", elem_id="upload-btn", variant="primary"
                     )
                     upload_status = gr.Textbox(
-                        label="Status",
-                        elem_id="upload-status",
-                        interactive=False,
-                        lines=3
+                        label="Status", elem_id="upload-status", interactive=False, lines=3
                     )
 
                     upload_btn.click(
-                        self.upload_document,
-                        inputs=file_upload,
-                        outputs=upload_status
+                        self.upload_document, inputs=file_upload, outputs=upload_status
                     )
 
                 # Tab 3: MCP Tools (Feature 10.6)
@@ -632,17 +614,15 @@ class GradioApp:
                             server_name = gr.Textbox(
                                 label="Server Name",
                                 placeholder="filesystem-server",
-                                value="filesystem"
+                                value="filesystem",
                             )
                             server_type = gr.Radio(
-                                choices=["STDIO", "HTTP"],
-                                label="Transport Type",
-                                value="STDIO"
+                                choices=["STDIO", "HTTP"], label="Transport Type", value="STDIO"
                             )
                             server_endpoint = gr.Textbox(
                                 label="Endpoint/Command",
                                 placeholder="npx @modelcontextprotocol/server-filesystem /tmp",
-                                lines=2
+                                lines=2,
                             )
 
                         with gr.Column(scale=1):
@@ -657,14 +637,15 @@ class GradioApp:
                     mcp_tools_table = gr.Dataframe(
                         headers=["Tool Name", "Server", "Description", "Parameters"],
                         label="Discovered MCP Tools",
-                        interactive=False
+                        interactive=False,
                     )
 
                     refresh_tools_btn = gr.Button("🔄 Tools neu laden")
 
                     # Example MCP Servers
                     gr.Markdown("### Beispiel-Server")
-                    gr.Markdown("""
+                    gr.Markdown(
+                        """
                     **Filesystem Server:**
                     - Name: `filesystem`
                     - Transport: `STDIO`
@@ -674,24 +655,22 @@ class GradioApp:
                     - Name: `custom-http`
                     - Transport: `HTTP`
                     - Endpoint: `http://localhost:3000`
-                    """)
+                    """
+                    )
 
                     # Event handlers
                     connect_btn.click(
                         self.connect_mcp_server,
                         inputs=[server_name, server_type, server_endpoint],
-                        outputs=[mcp_status, mcp_tools_table]
+                        outputs=[mcp_status, mcp_tools_table],
                     )
 
                     disconnect_btn.click(
-                        self.disconnect_mcp_server,
-                        inputs=server_name,
-                        outputs=mcp_status
+                        self.disconnect_mcp_server, inputs=server_name, outputs=mcp_status
                     )
 
                     refresh_tools_btn.click(
-                        self.refresh_mcp_tools,
-                        outputs=[mcp_status, mcp_tools_table]
+                        self.refresh_mcp_tools, outputs=[mcp_status, mcp_tools_table]
                     )
 
                 # Tab 4: System Health (Feature 10.5)
@@ -700,22 +679,17 @@ class GradioApp:
 
                     refresh_btn = gr.Button("🔄 Refresh", elem_id="refresh-health")
 
-                    health_json = gr.JSON(
-                        label="Health Metrics",
-                        elem_id="health-json"
-                    )
+                    health_json = gr.JSON(label="Health Metrics", elem_id="health-json")
 
-                    refresh_btn.click(
-                        self.get_health_stats,
-                        outputs=health_json
-                    )
+                    refresh_btn.click(self.get_health_stats, outputs=health_json)
 
                     # Auto-load on tab open
                     demo.load(self.get_health_stats, outputs=health_json)
 
                 # Tab 5: About
                 with gr.Tab("ℹ️ Über AEGIS RAG"):
-                    gr.Markdown("""
+                    gr.Markdown(
+                        """
                     ## Über AEGIS RAG
 
                     **AEGIS RAG** (Agentic Enterprise Graph Intelligence System) ist ein
@@ -745,17 +719,20 @@ class GradioApp:
                     - ✅ Hybrid Search (77 Dokumente indexiert)
 
                     ### Session Info:
-                    """)
+                    """
+                    )
 
                     gr.Markdown(f"**Session ID:** `{self.session_id}`")
 
-                    gr.Markdown("""
+                    gr.Markdown(
+                        """
                     ### Nützliche Links:
                     - [API Docs](http://localhost:8000/docs)
                     - [Health Endpoint](http://localhost:8000/health)
                     - [Prometheus Metrics](http://localhost:9090)
                     - [Grafana Dashboard](http://localhost:3000)
-                    """)
+                    """
+                    )
 
             # Footer
             gr.Markdown("---")
@@ -767,12 +744,7 @@ class GradioApp:
 
         return demo
 
-    def launch(
-        self,
-        server_name: str = "0.0.0.0",
-        server_port: int = 7860,
-        share: bool = False
-    ):
+    def launch(self, server_name: str = "0.0.0.0", server_port: int = 7860, share: bool = False):
         """Launch Gradio app.
 
         Args:
@@ -783,17 +755,10 @@ class GradioApp:
         demo = self.build_interface()
 
         logger.info(
-            "launching_gradio_app",
-            server_name=server_name,
-            server_port=server_port,
-            share=share
+            "launching_gradio_app", server_name=server_name, server_port=server_port, share=share
         )
 
-        demo.launch(
-            server_name=server_name,
-            server_port=server_port,
-            share=share
-        )
+        demo.launch(server_name=server_name, server_port=server_port, share=share)
 
 
 def main():

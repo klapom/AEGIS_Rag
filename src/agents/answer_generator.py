@@ -73,9 +73,7 @@ class AnswerGenerator:
 
         # Select prompt based on mode
         if mode == "multi_hop":
-            prompt = MULTI_HOP_REASONING_PROMPT.format(
-                contexts=context_text, query=query
-            )
+            prompt = MULTI_HOP_REASONING_PROMPT.format(contexts=context_text, query=query)
         else:
             prompt = ANSWER_GENERATION_PROMPT.format(context=context_text, query=query)
 

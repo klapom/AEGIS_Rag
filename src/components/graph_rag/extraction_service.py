@@ -109,9 +109,7 @@ class ExtractionService:
         strategy_used = None
 
         # Strategy 1: Extract from markdown code fence (```json [...] ``` or ``` [...] ```)
-        code_fence_match = re.search(
-            r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL
-        )
+        code_fence_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", response, re.DOTALL)
         if code_fence_match:
             json_str = code_fence_match.group(1)
             strategy_used = "code_fence"
@@ -152,8 +150,7 @@ class ExtractionService:
                                 index=i,
                                 item=item,
                                 missing_fields=[
-                                    f for f in ["name", "type", "description"]
-                                    if f not in item
+                                    f for f in ["name", "type", "description"] if f not in item
                                 ],
                             )
                     else:

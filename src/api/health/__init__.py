@@ -13,6 +13,7 @@ health_module_path = parent_dir / "health.py"
 
 if health_module_path.exists():
     import importlib.util
+
     spec = importlib.util.spec_from_file_location("health_module", health_module_path)
     if spec and spec.loader:
         health_module = importlib.util.module_from_spec(spec)

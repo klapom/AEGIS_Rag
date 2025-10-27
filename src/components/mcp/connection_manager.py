@@ -148,9 +148,7 @@ class ConnectionManager:
                     logger.error(f"Reconnection error for {server.name}: {e}")
 
         if attempt >= self.max_reconnect_attempts:
-            logger.error(
-                f"Max reconnection attempts reached for {server.name}, giving up"
-            )
+            logger.error(f"Max reconnection attempts reached for {server.name}, giving up")
 
     async def disconnect_all(self) -> None:
         """Disconnect from all servers gracefully."""
@@ -174,9 +172,7 @@ class ConnectionManager:
         Returns:
             Dictionary mapping server name to connection status
         """
-        return {
-            name: conn.status for name, conn in self.client.connections.items()
-        }
+        return {name: conn.status for name, conn in self.client.connections.items()}
 
     def get_healthy_servers(self) -> list[str]:
         """Get list of currently healthy (connected) servers.
@@ -257,8 +253,6 @@ class ConnectionManager:
             "total_servers": stats.total_servers,
             "connected_servers": stats.connected_servers,
             "total_tools": stats.total_tools,
-            "connections": {
-                name: status.value for name, status in connections.items()
-            },
+            "connections": {name: status.value for name, status in connections.items()},
             "auto_reconnect": self.auto_reconnect,
         }

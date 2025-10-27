@@ -201,9 +201,7 @@ class EnhancedMemoryRouter:
 
         return results
 
-    async def _search_redis(
-        self, query: str, limit: int
-    ) -> list[MemorySearchResult]:
+    async def _search_redis(self, query: str, limit: int) -> list[MemorySearchResult]:
         """Search Redis short-term memory.
 
         Args:
@@ -254,9 +252,7 @@ class EnhancedMemoryRouter:
             logger.error("Redis search failed", error=str(e))
             return []
 
-    async def _search_qdrant(
-        self, query: str, limit: int
-    ) -> list[MemorySearchResult]:
+    async def _search_qdrant(self, query: str, limit: int) -> list[MemorySearchResult]:
         """Search Qdrant long-term semantic memory.
 
         Args:
@@ -284,9 +280,7 @@ class EnhancedMemoryRouter:
             logger.error("Qdrant search failed", error=str(e))
             return []
 
-    async def _search_graphiti(
-        self, query: str, limit: int
-    ) -> list[MemorySearchResult]:
+    async def _search_graphiti(self, query: str, limit: int) -> list[MemorySearchResult]:
         """Search Graphiti episodic temporal memory.
 
         Args:

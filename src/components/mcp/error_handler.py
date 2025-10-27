@@ -108,10 +108,7 @@ class ErrorHandler:
                 f"The operation will be retried automatically."
             )
         elif error_type == ErrorType.PERMANENT:
-            return (
-                f"Invalid request: {str(error)}. "
-                f"Please check your parameters and try again."
-            )
+            return f"Invalid request: {str(error)}. " f"Please check your parameters and try again."
         else:
             return (
                 f"Tool execution failed: {str(error)}. "

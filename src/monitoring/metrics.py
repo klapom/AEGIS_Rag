@@ -20,46 +20,40 @@ logger = structlog.get_logger(__name__)
 # ============================================================================
 
 extraction_duration = Histogram(
-    'aegis_extraction_duration_seconds',
-    'Time spent in extraction pipeline',
-    ['phase', 'pipeline_type'],
-    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 60.0, 120.0]
+    "aegis_extraction_duration_seconds",
+    "Time spent in extraction pipeline",
+    ["phase", "pipeline_type"],
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 60.0, 120.0],
 )
 
 extraction_entities_total = Counter(
-    'aegis_extraction_entities_total',
-    'Total entities extracted',
-    ['entity_type', 'pipeline_type']
+    "aegis_extraction_entities_total", "Total entities extracted", ["entity_type", "pipeline_type"]
 )
 
 extraction_relations_total = Counter(
-    'aegis_extraction_relations_total',
-    'Total relations extracted',
-    ['pipeline_type']
+    "aegis_extraction_relations_total", "Total relations extracted", ["pipeline_type"]
 )
 
 extraction_documents_total = Counter(
-    'aegis_extraction_documents_total',
-    'Total documents processed',
-    ['pipeline_type', 'status']  # status: success, failed, skipped
+    "aegis_extraction_documents_total",
+    "Total documents processed",
+    ["pipeline_type", "status"],  # status: success, failed, skipped
 )
 
 extraction_errors_total = Counter(
-    'aegis_extraction_errors_total',
-    'Total extraction errors',
-    ['phase', 'error_type']
+    "aegis_extraction_errors_total", "Total extraction errors", ["phase", "error_type"]
 )
 
 extraction_retries_total = Counter(
-    'aegis_extraction_retries_total',
-    'Total retry attempts',
-    ['phase', 'success']  # success: true, false
+    "aegis_extraction_retries_total",
+    "Total retry attempts",
+    ["phase", "success"],  # success: true, false
 )
 
 deduplication_reduction_ratio = Histogram(
-    'aegis_deduplication_reduction_ratio',
-    'Deduplication reduction percentage',
-    buckets=[0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50]
+    "aegis_deduplication_reduction_ratio",
+    "Deduplication reduction percentage",
+    buckets=[0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50],
 )
 
 # ============================================================================
@@ -67,21 +61,15 @@ deduplication_reduction_ratio = Histogram(
 # ============================================================================
 
 gpu_memory_usage_bytes = Gauge(
-    'aegis_gpu_memory_usage_bytes',
-    'Current GPU memory usage',
-    ['gpu_id']
+    "aegis_gpu_memory_usage_bytes", "Current GPU memory usage", ["gpu_id"]
 )
 
 gpu_memory_allocated_bytes = Gauge(
-    'aegis_gpu_memory_allocated_bytes',
-    'GPU memory allocated by PyTorch/TensorFlow',
-    ['gpu_id']
+    "aegis_gpu_memory_allocated_bytes", "GPU memory allocated by PyTorch/TensorFlow", ["gpu_id"]
 )
 
 gpu_utilization_percent = Gauge(
-    'aegis_gpu_utilization_percent',
-    'GPU utilization percentage',
-    ['gpu_id']
+    "aegis_gpu_utilization_percent", "GPU utilization percentage", ["gpu_id"]
 )
 
 # ============================================================================
@@ -89,37 +77,35 @@ gpu_utilization_percent = Gauge(
 # ============================================================================
 
 query_duration = Histogram(
-    'aegis_query_duration_seconds',
-    'Query processing time',
-    ['query_type', 'mode'],  # query_type: vector, graph, hybrid; mode: local, global
-    buckets=[0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]
+    "aegis_query_duration_seconds",
+    "Query processing time",
+    ["query_type", "mode"],  # query_type: vector, graph, hybrid; mode: local, global
+    buckets=[0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0],
 )
 
 query_results_count = Histogram(
-    'aegis_query_results_count',
-    'Number of results returned per query',
-    ['query_type'],
-    buckets=[1, 5, 10, 20, 50, 100]
+    "aegis_query_results_count",
+    "Number of results returned per query",
+    ["query_type"],
+    buckets=[1, 5, 10, 20, 50, 100],
 )
 
 # ============================================================================
 # System Metrics
 # ============================================================================
 
-system_info = Info(
-    'aegis_system_info',
-    'System information'
-)
+system_info = Info("aegis_system_info", "System information")
 
 active_connections = Gauge(
-    'aegis_active_connections',
-    'Number of active connections',
-    ['connection_type']  # connection_type: neo4j, qdrant, redis, ollama
+    "aegis_active_connections",
+    "Number of active connections",
+    ["connection_type"],  # connection_type: neo4j, qdrant, redis, ollama
 )
 
 # ============================================================================
 # Helper Functions
 # ============================================================================
+
 
 def record_extraction_duration(phase: str, pipeline_type: str, duration: float):
     """Record extraction phase duration."""
@@ -128,10 +114,9 @@ def record_extraction_duration(phase: str, pipeline_type: str, duration: float):
 
 def record_extraction_entities(entity_type: str, pipeline_type: str, count: int):
     """Record extracted entities."""
-    extraction_entities_total.labels(
-        entity_type=entity_type,
-        pipeline_type=pipeline_type
-    ).inc(count)
+    extraction_entities_total.labels(entity_type=entity_type, pipeline_type=pipeline_type).inc(
+        count
+    )
 
 
 def record_extraction_relations(pipeline_type: str, count: int):
@@ -146,10 +131,7 @@ def record_extraction_document(pipeline_type: str, status: str):
         pipeline_type: three_phase, lightrag_default
         status: success, failed, skipped
     """
-    extraction_documents_total.labels(
-        pipeline_type=pipeline_type,
-        status=status
-    ).inc()
+    extraction_documents_total.labels(pipeline_type=pipeline_type, status=status).inc()
 
 
 def record_extraction_error(phase: str, error_type: str):
@@ -169,10 +151,7 @@ def record_extraction_retry(phase: str, success: bool):
         phase: phase3_gemma (primary phase with retries)
         success: True if retry succeeded, False if failed
     """
-    extraction_retries_total.labels(
-        phase=phase,
-        success=str(success).lower()
-    ).inc()
+    extraction_retries_total.labels(phase=phase, success=str(success).lower()).inc()
 
 
 def record_deduplication_reduction(reduction_ratio: float):
@@ -225,10 +204,14 @@ def initialize_system_info(config):
     Args:
         config: Application configuration
     """
-    system_info.info({
-        'version': getattr(config, 'app_version', '0.1.0'),
-        'environment': getattr(config, 'environment', 'development'),
-        'extraction_pipeline': getattr(config, 'extraction_pipeline', 'three_phase'),
-        'enable_dedup': str(getattr(config, 'enable_semantic_dedup', True)),
-    })
-    logger.info("prometheus_metrics_initialized", app_version=getattr(config, 'app_version', '0.1.0'))
+    system_info.info(
+        {
+            "version": getattr(config, "app_version", "0.1.0"),
+            "environment": getattr(config, "environment", "development"),
+            "extraction_pipeline": getattr(config, "extraction_pipeline", "three_phase"),
+            "enable_dedup": str(getattr(config, "enable_semantic_dedup", True)),
+        }
+    )
+    logger.info(
+        "prometheus_metrics_initialized", app_version=getattr(config, "app_version", "0.1.0")
+    )

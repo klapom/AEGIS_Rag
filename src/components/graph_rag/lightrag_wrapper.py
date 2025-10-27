@@ -327,7 +327,9 @@ class LightRAGWrapper:
                 logger.info("🔍 [GRAPH STATS]", **stats)
 
                 if stats.get("entity_count", 0) == 0:
-                    logger.warning("⚠️ [NO ENTITIES] Graph is empty! Query will likely return empty answer.")
+                    logger.warning(
+                        "⚠️ [NO ENTITIES] Graph is empty! Query will likely return empty answer."
+                    )
             except Exception as e:
                 logger.warning("🔍 [STATS CHECK FAILED]", error=str(e))
 
@@ -345,8 +347,14 @@ class LightRAGWrapper:
                 "🔍 [CALLING AQUERY] About to call self.rag.aquery()",
                 rag_instance=str(type(self.rag).__name__),
                 rag_working_dir=str(self.working_dir),
-                rag_llm_func=str(self.rag.llm_model_func if hasattr(self.rag, 'llm_model_func') else 'NOT SET'),
-                rag_embedding_func=str(type(self.rag.embedding_func).__name__ if hasattr(self.rag, 'embedding_func') else 'NOT SET'),
+                rag_llm_func=str(
+                    self.rag.llm_model_func if hasattr(self.rag, "llm_model_func") else "NOT SET"
+                ),
+                rag_embedding_func=str(
+                    type(self.rag.embedding_func).__name__
+                    if hasattr(self.rag, "embedding_func")
+                    else "NOT SET"
+                ),
             )
 
             # Query LightRAG
@@ -409,7 +417,7 @@ class LightRAGWrapper:
                 mode=mode,
                 error=str(e),
                 error_type=type(e).__name__,
-                traceback=str(e.__traceback__) if hasattr(e, '__traceback__') else None,
+                traceback=str(e.__traceback__) if hasattr(e, "__traceback__") else None,
             )
             raise
 
@@ -540,7 +548,11 @@ class LightRAGWrapper:
         logger.debug(
             "text_encoded",
             total_tokens=total_tokens,
-            estimated_chunks=max(1, (total_tokens - chunk_overlap_token_size) // (chunk_token_size - chunk_overlap_token_size)),
+            estimated_chunks=max(
+                1,
+                (total_tokens - chunk_overlap_token_size)
+                // (chunk_token_size - chunk_overlap_token_size),
+            ),
         )
 
         chunks = []
@@ -654,7 +666,7 @@ class LightRAGWrapper:
             logger.error(
                 "three_phase_extractor_unavailable",
                 error=str(e),
-                hint="Install: pip install spacy && python -m spacy download en_core_web_trf"
+                hint="Install: pip install spacy && python -m spacy download en_core_web_trf",
             )
             raise
 
@@ -678,8 +690,7 @@ class LightRAGWrapper:
             try:
                 # Run Three-Phase Pipeline
                 entities, relations = await extractor.extract(
-                    text=chunk_text,
-                    document_id=f"{document_id}#{chunk_index}"
+                    text=chunk_text, document_id=f"{document_id}#{chunk_index}"
                 )
 
                 # Annotate entities with chunk_id and chunk metadata
@@ -779,10 +790,7 @@ class LightRAGWrapper:
         Returns:
             List of entities in LightRAG format
         """
-        logger.info(
-            "converting_entities_to_lightrag",
-            count=len(entities)
-        )
+        logger.info("converting_entities_to_lightrag", count=len(entities))
 
         lightrag_entities = []
 
@@ -806,7 +814,7 @@ class LightRAGWrapper:
         logger.info(
             "entities_converted",
             original_count=len(entities),
-            converted_count=len(lightrag_entities)
+            converted_count=len(lightrag_entities),
         )
 
         return lightrag_entities
@@ -850,10 +858,7 @@ class LightRAGWrapper:
         Returns:
             List of relations in LightRAG format
         """
-        logger.info(
-            "converting_relations_to_lightrag",
-            count=len(relations)
-        )
+        logger.info("converting_relations_to_lightrag", count=len(relations))
 
         lightrag_relations = []
 
@@ -879,7 +884,7 @@ class LightRAGWrapper:
         logger.info(
             "relations_converted",
             original_count=len(relations),
-            converted_count=len(lightrag_relations)
+            converted_count=len(lightrag_relations),
         )
 
         return lightrag_relations
@@ -904,10 +909,7 @@ class LightRAGWrapper:
         await self._ensure_initialized()
 
         if not self.rag or not self.rag.chunk_entity_relation_graph:
-            logger.error(
-                "neo4j_storage_not_initialized",
-                hint="Call _ensure_initialized() first"
-            )
+            logger.error("neo4j_storage_not_initialized", hint="Call _ensure_initialized() first")
             raise RuntimeError("Neo4j storage not initialized")
 
         logger.info(
@@ -951,10 +953,7 @@ class LightRAGWrapper:
                         end_token=chunk["end_token"],
                     )
 
-                logger.info(
-                    "chunk_nodes_created",
-                    count=len(chunks)
-                )
+                logger.info("chunk_nodes_created", count=len(chunks))
 
                 # Step 2: Create MENTIONED_IN relationships
                 # Group entities by chunk_id for efficient batch creation
@@ -983,10 +982,7 @@ class LightRAGWrapper:
                     )
                     mentioned_in_count += len(entity_ids)
 
-                logger.info(
-                    "mentioned_in_relationships_created",
-                    count=mentioned_in_count
-                )
+                logger.info("mentioned_in_relationships_created", count=mentioned_in_count)
 
             logger.info(
                 "chunks_and_provenance_stored_successfully",
@@ -1048,10 +1044,7 @@ class LightRAGWrapper:
         """
         await self._ensure_initialized()
 
-        logger.info(
-            "insert_documents_optimized_start",
-            count=len(documents)
-        )
+        logger.info("insert_documents_optimized_start", count=len(documents))
 
         total_start = time.time()
         results = []
@@ -1072,12 +1065,9 @@ class LightRAGWrapper:
 
                 if not text:
                     logger.warning("empty_document", index=i, doc_id=doc_id)
-                    results.append({
-                        "index": i,
-                        "doc_id": doc_id,
-                        "status": "skipped",
-                        "reason": "empty_text"
-                    })
+                    results.append(
+                        {"index": i, "doc_id": doc_id, "status": "skipped", "reason": "empty_text"}
+                    )
                     continue
 
                 logger.info(
@@ -1103,13 +1093,10 @@ class LightRAGWrapper:
 
                 # PHASE 6: Insert into LightRAG (embeddings + storage)
                 # Use ainsert_custom_kg to insert pre-extracted entities/relations
-                if hasattr(self.rag, 'ainsert_custom_kg'):
+                if hasattr(self.rag, "ainsert_custom_kg"):
                     await self.rag.ainsert_custom_kg(
-                        custom_kg={
-                            "entities": lightrag_entities,
-                            "relations": lightrag_relations
-                        },
-                        full_doc_id=doc_id
+                        custom_kg={"entities": lightrag_entities, "relations": lightrag_relations},
+                        full_doc_id=doc_id,
                     )
                     logger.info(
                         "lightrag_custom_kg_inserted",
@@ -1119,8 +1106,7 @@ class LightRAGWrapper:
                 else:
                     # Fallback: Use regular ainsert (less optimal)
                     logger.warning(
-                        "ainsert_custom_kg_unavailable",
-                        fallback="using_regular_ainsert"
+                        "ainsert_custom_kg_unavailable", fallback="using_regular_ainsert"
                     )
                     await self.rag.ainsert(text)
 
@@ -1164,12 +1150,14 @@ class LightRAGWrapper:
                     error=str(e),
                     error_type=type(e).__name__,
                 )
-                results.append({
-                    "index": i,
-                    "doc_id": doc.get("id", f"doc_{i}"),
-                    "status": "error",
-                    "error": str(e)
-                })
+                results.append(
+                    {
+                        "index": i,
+                        "doc_id": doc.get("id", f"doc_{i}"),
+                        "status": "error",
+                        "error": str(e),
+                    }
+                )
 
         # Calculate final statistics
         total_time = time.time() - total_start

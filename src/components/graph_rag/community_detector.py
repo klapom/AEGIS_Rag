@@ -110,9 +110,13 @@ def _detect_communities_cached(
     if algorithm.lower() == "leiden":
         # NetworkX doesn't have Leiden, use Louvain instead
         logger.warning("leiden_not_available_in_networkx", using="louvain")
-        communities_generator = nx.community.louvain_communities(graph, resolution=resolution, seed=42)
+        communities_generator = nx.community.louvain_communities(
+            graph, resolution=resolution, seed=42
+        )
     else:  # louvain
-        communities_generator = nx.community.louvain_communities(graph, resolution=resolution, seed=42)
+        communities_generator = nx.community.louvain_communities(
+            graph, resolution=resolution, seed=42
+        )
 
     # Convert to tuple of tuples (immutable for caching)
     communities = tuple(tuple(sorted(community)) for community in communities_generator)
@@ -490,7 +494,9 @@ class CommunityDetector:
                     },
                 )
 
-                updated_count = result[0].get("updated_count", 0) if result and len(result) > 0 else 0
+                updated_count = (
+                    result[0].get("updated_count", 0) if result and len(result) > 0 else 0
+                )
                 logger.debug(
                     "community_stored",
                     community_id=community.id,

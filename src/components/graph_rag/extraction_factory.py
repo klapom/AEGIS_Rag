@@ -126,9 +126,7 @@ class ExtractionPipelineFactory:
             def __init__(self, config):
                 self.wrapper = LightRAGWrapper(
                     llm_model=getattr(config, "lightrag_llm_model", "llama3.2:3b"),
-                    embedding_model=getattr(
-                        config, "lightrag_embedding_model", "nomic-embed-text"
-                    ),
+                    embedding_model=getattr(config, "lightrag_embedding_model", "nomic-embed-text"),
                     working_dir=str(getattr(config, "lightrag_working_dir", "./data/lightrag")),
                     neo4j_uri=getattr(config, "neo4j_uri", "bolt://localhost:7687"),
                     neo4j_user=getattr(config, "neo4j_user", "neo4j"),

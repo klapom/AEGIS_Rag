@@ -275,11 +275,13 @@ def _export_json(records: list[dict], include_communities: bool = True) -> dict[
         # Add relationship
         if "r" in record and record["r"]:
             rel = record["r"]
-            edges.append({
-                "source": rel.start_node.element_id,
-                "target": rel.end_node.element_id,
-                "type": rel.type,
-            })
+            edges.append(
+                {
+                    "source": rel.start_node.element_id,
+                    "target": rel.end_node.element_id,
+                    "type": rel.type,
+                }
+            )
 
     return {
         "nodes": list(nodes.values()),
@@ -294,7 +296,7 @@ def _export_graphml(records: list[dict]) -> dict[str, str]:
     # Simplified GraphML export
     graphml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     graphml += '<graphml xmlns="http://graphml.graphdrawing.org/xmlns">\n'
-    graphml += "  <graph edgedefault=\"directed\">\n"
+    graphml += '  <graph edgedefault="directed">\n'
 
     # Add nodes and edges (basic implementation)
     for record in records:
@@ -317,23 +319,27 @@ def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
         if "n" in record and record["n"]:
             node = record["n"]
             node_id = node.get("id") or node.element_id
-            elements.append({
-                "data": {
-                    "id": node_id,
-                    "label": node.get("name", "Unknown"),
-                    "type": node.get("entity_type", "Entity"),
+            elements.append(
+                {
+                    "data": {
+                        "id": node_id,
+                        "label": node.get("name", "Unknown"),
+                        "type": node.get("entity_type", "Entity"),
+                    }
                 }
-            })
+            )
 
         # Add edge
         if "r" in record and record["r"]:
             rel = record["r"]
-            elements.append({
-                "data": {
-                    "source": rel.start_node.element_id,
-                    "target": rel.end_node.element_id,
-                    "label": rel.type,
+            elements.append(
+                {
+                    "data": {
+                        "source": rel.start_node.element_id,
+                        "target": rel.end_node.element_id,
+                        "label": rel.type,
+                    }
                 }
-            })
+            )
 
     return {"format": "cytoscape", "elements": elements}

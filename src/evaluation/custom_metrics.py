@@ -392,9 +392,7 @@ Answer ONLY with "YES" or "NO"."""
         )
 
         # Run all evaluations in parallel
-        precision_task = self.evaluate_context_precision(
-            query, retrieved_contexts, ground_truth
-        )
+        precision_task = self.evaluate_context_precision(query, retrieved_contexts, ground_truth)
         recall_task = self.evaluate_context_recall(ground_truth, retrieved_contexts)
         faithfulness_task = self.evaluate_faithfulness(response, retrieved_contexts)
 

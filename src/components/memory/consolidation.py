@@ -131,9 +131,7 @@ class MemoryConsolidationPipeline:
                 logger.warning("Graphiti not available for consolidation", error=str(e))
 
         # Consolidation policies
-        access_threshold = (
-            access_count_threshold or settings.memory_consolidation_min_access_count
-        )
+        access_threshold = access_count_threshold or settings.memory_consolidation_min_access_count
         self.policies = [
             AccessCountPolicy(min_access_count=access_threshold),
             TimeBasedPolicy(min_age_hours=time_threshold_hours),
@@ -326,9 +324,7 @@ class MemoryConsolidationPipeline:
             original_count=len(items),
             unique_count=len(unique_items),
             duplicates_removed=duplicates_removed,
-            deduplication_rate=round(duplicates_removed / len(items), 3)
-            if len(items) > 0
-            else 0,
+            deduplication_rate=round(duplicates_removed / len(items), 3) if len(items) > 0 else 0,
         )
 
         return unique_items, duplicates_removed
@@ -438,12 +434,14 @@ class MemoryConsolidationPipeline:
                 "top_selected": top_count,
                 "deduplicated": duplicates_removed,
                 "consolidated": consolidated_count,
-                "avg_relevance_score": round(
-                    sum(item["relevance_score"] for item in unique_items) / len(unique_items),
-                    3,
-                )
-                if unique_items
-                else 0,
+                "avg_relevance_score": (
+                    round(
+                        sum(item["relevance_score"] for item in unique_items) / len(unique_items),
+                        3,
+                    )
+                    if unique_items
+                    else 0
+                ),
             }
 
         except Exception as e:
@@ -499,9 +497,7 @@ class MemoryConsolidationPipeline:
         """Sync wrapper for async consolidation (used by APScheduler)."""
         try:
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(
-                self.consolidate_with_relevance_scoring()
-            )
+            loop.run_until_complete(self.consolidate_with_relevance_scoring())
         except Exception as e:
             logger.error("Scheduled consolidation failed", error=str(e))
 
@@ -581,9 +577,7 @@ class MemoryConsolidationPipeline:
                 session_id=session_id,
                 error=str(e),
             )
-            raise MemoryError(
-                f"Conversation → Graphiti consolidation failed: {e}"
-            ) from e
+            raise MemoryError(f"Conversation → Graphiti consolidation failed: {e}") from e
 
     async def run_consolidation_cycle(
         self,

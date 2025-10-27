@@ -84,6 +84,7 @@ class UnifiedIngestionPipeline:
             IngestionResult with statistics
         """
         import time
+
         start_time = time.time()
 
         logger.info("unified_ingestion_start", input_dir=input_dir)

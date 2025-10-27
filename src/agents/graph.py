@@ -81,10 +81,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     if "messages" not in state:
         state["messages"] = []
 
-    state["messages"].append({
-        "role": "assistant",
-        "content": answer
-    })
+    state["messages"].append({"role": "assistant", "content": answer})
 
     # Also add as direct field for easier access
     state["answer"] = answer
@@ -191,7 +188,9 @@ def create_base_graph() -> StateGraph:
     # Sprint 10: Connect answer to END
     graph.add_edge("answer", END)
 
-    logger.info("base_graph_created", nodes=["router", "vector_search", "graph_query", "memory", "answer"])
+    logger.info(
+        "base_graph_created", nodes=["router", "vector_search", "graph_query", "memory", "answer"]
+    )
 
     return graph
 

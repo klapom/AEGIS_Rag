@@ -186,10 +186,12 @@ class GraphitiWrapper:
             # Changed from neo4j_uri/neo4j_user/neo4j_password to uri/user/password
             # Added embedder and cross_encoder configuration for Ollama
 
-            logger.info("graphiti_wrapper_init_start",
-                       llm_model=self.llm_client.model,
-                       base_url=self.llm_client.base_url,
-                       neo4j_uri=neo4j_config["uri"])
+            logger.info(
+                "graphiti_wrapper_init_start",
+                llm_model=self.llm_client.model,
+                base_url=self.llm_client.base_url,
+                neo4j_uri=neo4j_config["uri"],
+            )
 
             # Configure LLM client for Graphiti (OpenAI-compatible interface)
             llm_config = LLMConfig(

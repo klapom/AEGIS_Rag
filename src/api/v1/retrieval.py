@@ -420,11 +420,14 @@ async def upload_file(
             with open(temp_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
 
-            logger.info("file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size)
+            logger.info(
+                "file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size
+            )
 
             # Use unified pipeline (indexes to Qdrant + BM25 + Neo4j in parallel)
             # Create new instance with temp_dir as allowed_base_path for security
             from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
+
             temp_pipeline = UnifiedIngestionPipeline(allowed_base_path=temp_dir)
             result = await temp_pipeline.ingest_directory(input_dir=temp_dir)
 

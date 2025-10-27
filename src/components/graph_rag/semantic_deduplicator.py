@@ -19,6 +19,7 @@ try:
     import torch
     from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
+
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
     DEPENDENCIES_AVAILABLE = False
@@ -55,7 +56,7 @@ class SemanticDeduplicator:
         self,
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         threshold: float = 0.93,
-        device: str = None
+        device: str = None,
     ):
         """Initialize semantic deduplicator.
 
@@ -79,7 +80,7 @@ class SemanticDeduplicator:
 
         # Auto-detect device
         if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            device = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.model = SentenceTransformer(model_name, device=device)
         self.threshold = threshold
@@ -89,17 +90,13 @@ class SemanticDeduplicator:
             "semantic_deduplicator_initialized",
             model=model_name,
             threshold=threshold,
-            device=device
+            device=device,
         )
 
-        if device == 'cuda':
+        if device == "cuda":
             gpu_name = torch.cuda.get_device_name(0)
             vram_gb = torch.cuda.get_device_properties(0).total_memory / 1e9
-            logger.info(
-                "gpu_detected",
-                gpu=gpu_name,
-                vram_gb=f"{vram_gb:.1f}"
-            )
+            logger.info("gpu_detected", gpu=gpu_name, vram_gb=f"{vram_gb:.1f}")
 
     def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Deduplicate entities using semantic similarity.
@@ -131,7 +128,7 @@ class SemanticDeduplicator:
         # Group by type (only compare same types to avoid false positives)
         type_groups = {}
         for entity in entities:
-            etype = entity.get('type', 'OTHER')
+            etype = entity.get("type", "OTHER")
             if etype not in type_groups:
                 type_groups[etype] = []
             type_groups[etype].append(entity)
@@ -141,7 +138,7 @@ class SemanticDeduplicator:
             "total": len(entities),
             "removed": 0,
             "kept": 0,
-            "groups_processed": len(type_groups)
+            "groups_processed": len(type_groups),
         }
 
         # Deduplicate within each type
@@ -167,15 +164,13 @@ class SemanticDeduplicator:
             kept=stats["kept"],
             removed=stats["removed"],
             reduction_pct=f"{reduction_pct:.1f}",
-            groups=stats["groups_processed"]
+            groups=stats["groups_processed"],
         )
 
         return deduplicated
 
     def _deduplicate_group(
-        self,
-        entities: list[dict[str, Any]],
-        entity_type: str
+        self, entities: list[dict[str, Any]], entity_type: str
     ) -> list[dict[str, Any]]:
         """Deduplicate entities of the same type.
 
@@ -187,14 +182,11 @@ class SemanticDeduplicator:
             Deduplicated entities
         """
         # Extract names
-        names = [e['name'] for e in entities]
+        names = [e["name"] for e in entities]
 
         # Compute embeddings (batched for efficiency)
         embeddings = self.model.encode(
-            names,
-            batch_size=64,
-            convert_to_tensor=True,
-            show_progress_bar=False
+            names, batch_size=64, convert_to_tensor=True, show_progress_bar=False
         )
 
         # Convert to numpy for sklearn
@@ -223,18 +215,17 @@ class SemanticDeduplicator:
 
             if len(similar) > 1:
                 # Merge descriptions from duplicates
-                duplicate_names = [entities[idx]['name'] for idx in similar]
-                representative['description'] = (
-                    f"{entities[i]['description']} "
-                    f"[Deduplicated from {len(similar)} mentions]"
+                duplicate_names = [entities[idx]["name"] for idx in similar]
+                representative["description"] = (
+                    f"{entities[i]['description']} " f"[Deduplicated from {len(similar)} mentions]"
                 )
 
                 logger.debug(
                     "entities_merged",
                     type=entity_type,
-                    representative=entities[i]['name'],
+                    representative=entities[i]["name"],
                     duplicates=duplicate_names,
-                    count=len(similar)
+                    count=len(similar),
                 )
 
             deduplicated.append(representative)
@@ -260,21 +251,19 @@ def create_deduplicator_from_config(config) -> SemanticDeduplicator:
         >>> settings = get_settings()
         >>> dedup = create_deduplicator_from_config(settings)
     """
-    if not getattr(config, 'enable_semantic_dedup', True):
+    if not getattr(config, "enable_semantic_dedup", True):
         logger.info("semantic_deduplication_disabled")
         return None
 
     # Get device setting (convert "auto" to None for auto-detection)
-    device = getattr(config, 'semantic_dedup_device', 'auto')
-    if device == 'auto':
+    device = getattr(config, "semantic_dedup_device", "auto")
+    if device == "auto":
         device = None  # SentenceTransformer will auto-detect cuda/cpu
 
     return SemanticDeduplicator(
         model_name=getattr(
-            config,
-            'semantic_dedup_model',
-            'sentence-transformers/all-MiniLM-L6-v2'
+            config, "semantic_dedup_model", "sentence-transformers/all-MiniLM-L6-v2"
         ),
-        threshold=getattr(config, 'semantic_dedup_threshold', 0.93),
-        device=device
+        threshold=getattr(config, "semantic_dedup_threshold", 0.93),
+        device=device,
     )
