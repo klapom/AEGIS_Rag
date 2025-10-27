@@ -1,16 +1,20 @@
 """Chat API Endpoints for AEGIS RAG.
 
 Sprint 10 Feature 10.1: FastAPI Chat Endpoints
+Sprint 15 Feature 15.1: SSE Streaming Endpoint
 
-This module provides RESTful chat endpoints for the Gradio UI and future React frontend.
+This module provides RESTful chat endpoints for the Gradio UI and React frontend.
 It integrates the CoordinatorAgent for query processing and UnifiedMemoryAPI for session management.
+Includes Server-Sent Events (SSE) streaming for real-time token-by-token responses.
 """
 
+import json
 import uuid
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.agents.coordinator import CoordinatorAgent
@@ -153,6 +157,22 @@ class SessionDeleteResponse(BaseModel):
     message: str
 
 
+class SessionInfo(BaseModel):
+    """Session information."""
+
+    session_id: str
+    message_count: int
+    last_activity: str | None = None
+    created_at: str | None = None
+
+
+class SessionListResponse(BaseModel):
+    """List of sessions response."""
+
+    sessions: list[SessionInfo]
+    total_count: int
+
+
 # API Endpoints
 
 
@@ -249,6 +269,173 @@ async def chat(request: ChatRequest) -> ChatResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected error processing query: {str(e)}",
+        ) from e
+
+
+@router.post("/stream", status_code=status.HTTP_200_OK)
+async def chat_stream(request: ChatRequest) -> StreamingResponse:
+    """Stream chat response using Server-Sent Events (SSE).
+
+    Sprint 15 Feature 15.1: SSE Streaming Endpoint (ADR-020)
+
+    This endpoint:
+    1. Validates the query
+    2. Generates/validates session_id
+    3. Streams tokens and metadata from CoordinatorAgent in real-time
+    4. Sends sources as they become available
+    5. Returns SSE-formatted stream
+
+    Args:
+        request: ChatRequest with query and optional session_id
+
+    Returns:
+        StreamingResponse with text/event-stream media type
+
+    SSE Message Format:
+        data: {"type": "metadata", "session_id": "...", "timestamp": "..."}
+        data: {"type": "token", "content": "Hello"}
+        data: {"type": "source", "source": {...}}
+        data: [DONE]
+    """
+    # Generate session_id if not provided
+    session_id = request.session_id or str(uuid.uuid4())
+
+    logger.info(
+        "chat_stream_request_received",
+        query=request.query[:100],
+        session_id=session_id,
+        intent_override=request.intent,
+    )
+
+    async def generate_stream() -> AsyncGenerator[str, None]:
+        """Generate SSE-formatted stream of chat response."""
+        try:
+            # Send initial metadata
+            yield _format_sse_message({
+                "type": "metadata",
+                "session_id": session_id,
+                "timestamp": _get_iso_timestamp(),
+            })
+
+            # Get coordinator
+            coordinator = get_coordinator()
+
+            # Check if coordinator has streaming method
+            if hasattr(coordinator, 'process_query_stream'):
+                # Stream from CoordinatorAgent
+                async for chunk in coordinator.process_query_stream(
+                    query=request.query,
+                    session_id=session_id,
+                    intent=request.intent
+                ):
+                    yield _format_sse_message(chunk)
+            else:
+                # Fallback: Non-streaming mode (for backward compatibility)
+                logger.warning(
+                    "coordinator_streaming_not_available",
+                    message="process_query_stream not implemented, falling back to non-streaming"
+                )
+
+                # Process query normally
+                result = await coordinator.process_query(
+                    query=request.query,
+                    session_id=session_id,
+                    intent=request.intent
+                )
+
+                # Extract answer
+                answer = _extract_answer(result)
+
+                # Send answer as tokens (simulate streaming)
+                for token in answer.split():
+                    yield _format_sse_message({
+                        "type": "token",
+                        "content": token + " "
+                    })
+
+                # Send sources if available
+                if request.include_sources:
+                    sources = _extract_sources(result)
+                    for source in sources:
+                        yield _format_sse_message({
+                            "type": "source",
+                            "source": source.model_dump()
+                        })
+
+            # Signal completion
+            yield "data: [DONE]\n\n"
+
+            logger.info("chat_stream_completed", session_id=session_id)
+
+        except AegisRAGException as e:
+            logger.error(
+                "chat_stream_failed_aegis_exception",
+                session_id=session_id,
+                error=str(e),
+                details=e.details,
+            )
+            yield _format_sse_message({
+                "type": "error",
+                "error": f"RAG system error: {e.message}",
+                "code": "AEGIS_ERROR"
+            })
+
+        except Exception as e:
+            logger.error("chat_stream_failed_unexpected", session_id=session_id, error=str(e))
+            yield _format_sse_message({
+                "type": "error",
+                "error": f"Unexpected error: {str(e)}",
+                "code": "INTERNAL_ERROR"
+            })
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",  # CORS for SSE
+        }
+    )
+
+
+@router.get("/sessions", response_model=SessionListResponse)
+async def list_sessions() -> SessionListResponse:
+    """List all active conversation sessions.
+
+    Sprint 15 Feature 15.5: Session Management for History Sidebar
+
+    Returns:
+        SessionListResponse with list of session information
+
+    Raises:
+        HTTPException: If listing fails
+    """
+    logger.info("session_list_requested")
+
+    try:
+        # Get unified memory API
+        memory_api = get_unified_memory_api()
+
+        # TODO: Implement proper session listing in UnifiedMemoryAPI
+        # For now, return empty list as placeholder
+        # In future: Scan Redis keys matching "conversation:*" pattern
+
+        sessions: list[SessionInfo] = []
+
+        logger.info("session_list_retrieved", count=len(sessions))
+
+        return SessionListResponse(
+            sessions=sessions,
+            total_count=len(sessions)
+        )
+
+    except Exception as e:
+        logger.error("session_list_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list sessions: {str(e)}",
         ) from e
 
 
@@ -436,3 +623,28 @@ def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
 
     logger.debug("tool_calls_extracted", count=len(tool_calls))
     return tool_calls
+
+
+def _format_sse_message(data: dict[str, Any]) -> str:
+    """Format data as Server-Sent Events (SSE) message.
+
+    SSE Format:
+        data: {json}\n\n
+
+    Args:
+        data: Dictionary to send as SSE message
+
+    Returns:
+        SSE-formatted string
+    """
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _get_iso_timestamp() -> str:
+    """Get current timestamp in ISO 8601 format.
+
+    Returns:
+        ISO 8601 timestamp string
+    """
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()

@@ -1,9 +1,9 @@
-# Sprint 15 Plan: React Frontend Interface
+# Sprint 15 Plan: React Frontend with Perplexity-Style UI
 
-**Sprint Goal:** Build production-ready React frontend for AegisRAG with modern UX/UI
+**Sprint Goal:** Build production-ready React frontend with Perplexity-inspired UX and SSE streaming
 
 **Status:** 🔵 PLANNED
-**Duration:** 7-10 days (depending on design phase)
+**Duration:** 7-10 days
 **Branch:** `sprint-15-react-frontend`
 **Prerequisites:** Sprint 14 complete (Backend + Testing Infrastructure)
 
@@ -11,76 +11,66 @@
 
 ## Executive Summary
 
-Sprint 15 delivers the user-facing React frontend for AegisRAG, enabling users to:
-- Submit queries via intuitive search interface
-- Select retrieval modes (Vector, Graph, Hybrid, Memory)
-- View contextual search results with provenance
-- Manage conversation history
-- Monitor system health and performance
+Sprint 15 delivers a **Perplexity-inspired React frontend** for AegisRAG with:
+- **Streaming chat interface** (token-by-token like Perplexity)
+- **Clean, minimalist UI** (based on Perplexity design system)
+- **Server-Sent Events (SSE)** for real-time updates
+- **Source provenance cards** with AegisRAG-specific metadata
+- **Session management** with conversation history
 
-**Key Decision:** Design-First Approach with Figma (optional, see workflow below)
+**Key Architecture Decisions:**
+- SSE (Server-Sent Events) for streaming instead of WebSocket (ADR-020)
+- Perplexity-inspired component design (ADR-021)
+- React 18 + Vite + TypeScript + Tailwind CSS
 
 ---
 
-## Design Strategy
+## Design Philosophy: Why Perplexity?
 
-### Option A: Design-First (Recommended)
+**Perplexity AI** hat eine der besten RAG-Interfaces auf dem Markt:
+- ✅ Klare, fokussierte UX ohne Ablenkung
+- ✅ Streaming-Antworten fühlen sich schneller an
+- ✅ Source Cards zeigen Provenance inline
+- ✅ Minimalistisches Design (Sidebar + Main Content)
+- ✅ Responsive und zugänglich
 
-**Phase 1: Design Week (2-3 days)**
-1. Create Figma mockups for all features
-2. Define component library (Design System)
-3. Export design tokens (colors, spacing, typography)
-4. Review and align on UX flows
-
-**Phase 2: Implementation Week (5-7 days)**
-1. Setup React project with Vite + TypeScript
-2. Implement component library
-3. Build features based on Figma specs
-4. Integration testing with FastAPI backend
-
-**Deliverables from Design Phase:**
-- High-fidelity Figma mockups
-- Component structure definition
-- Design tokens (CSS variables)
-- User flow diagrams
-
-### Option B: Code-First (Fallback)
-
-1. Use Material-UI or Shadcn/UI as base
-2. Implement standard RAG interface patterns
-3. Iterate based on user feedback
+**AegisRAG-Erweiterungen:**
+- 🔀 Mode Selector (Vector, Graph, Hybrid, Memory)
+- 📊 Advanced Filters (Entity Types, Top-K, Reranking)
+- 🏷️ Entity Highlighting in Results
+- 📈 Real-time System Health Dashboard
 
 ---
 
 ## Feature Breakdown
 
-### Feature 15.1: Project Setup & Infrastructure
+### Feature 15.1: Project Setup & SSE Streaming Backend
 
-**Goal:** Setup modern React development environment
+**Goal:** Setup React project + implement streaming chat endpoint
+
+#### Part A: React Project Setup
 
 **Deliverables:**
 - ✅ React 18 + Vite + TypeScript project
-- ✅ Tailwind CSS (or MUI based on design choice)
-- ✅ React Router v6 for navigation
-- ✅ Axios for API calls
-- ✅ React Query (TanStack Query) for data fetching
-- ✅ Zustand or Redux Toolkit for state management
-- ✅ Vitest + React Testing Library for tests
-- ✅ ESLint + Prettier configuration
-- ✅ Docker setup for frontend
+- ✅ Tailwind CSS 3 configuration
+- ✅ React Router v6
+- ✅ Zustand for state management
+- ✅ Axios for HTTP + SSE client
+- ✅ ESLint + Prettier
+- ✅ Vitest + React Testing Library
+- ✅ Docker setup
 
-**Technical Stack:**
+**Tech Stack:**
 ```json
 {
-  "framework": "React 18",
+  "framework": "React 18.2",
   "bundler": "Vite 5",
   "language": "TypeScript 5",
-  "styling": "Tailwind CSS 3 (or MUI)",
+  "styling": "Tailwind CSS 3",
   "routing": "React Router 6",
-  "state": "Zustand / Redux Toolkit",
-  "data-fetching": "TanStack Query (React Query)",
-  "testing": "Vitest + React Testing Library",
-  "ui-components": "Shadcn/UI or MUI"
+  "state": "Zustand",
+  "http": "Axios + EventSource (SSE)",
+  "testing": "Vitest + React Testing Library"
 }
 ```
 
@@ -88,16 +78,17 @@ Sprint 15 delivers the user-facing React frontend for AegisRAG, enabling users t
 ```
 frontend/
 ├── src/
-│   ├── components/       # Reusable UI components
+│   ├── components/       # UI components
 │   │   ├── ui/           # Base UI (Button, Input, Card)
-│   │   ├── layout/       # Layout components (Header, Sidebar)
-│   │   └── features/     # Feature-specific components
+│   │   ├── layout/       # Layout (Sidebar, Header)
+│   │   ├── chat/         # Chat components
+│   │   └── search/       # Search components
 │   ├── pages/            # Route pages
+│   ├── services/         # API services (SSE)
+│   ├── stores/           # Zustand stores
 │   ├── hooks/            # Custom React hooks
-│   ├── services/         # API services
-│   ├── stores/           # State management
-│   ├── utils/            # Helper functions
 │   ├── types/            # TypeScript types
+│   ├── utils/            # Helper functions
 │   └── App.tsx
 ├── public/
 ├── tests/
@@ -107,232 +98,204 @@ frontend/
 └── package.json
 ```
 
-**Story Points:** 8 SP
-**Duration:** 1 day
-
----
-
-### Feature 15.2: Query Interface
-
-**Goal:** Intuitive search interface with mode selection
+#### Part B: SSE Streaming Backend
 
 **Deliverables:**
-- ✅ Search bar with auto-complete
-- ✅ Mode selector (Vector, Graph, Hybrid, Memory)
-- ✅ Advanced filters (date range, entity types)
-- ✅ Query history dropdown
-- ✅ Real-time validation
-- ✅ Loading states and error handling
+- ✅ `POST /api/v1/chat/stream` - SSE streaming endpoint
+- ✅ Modify `CoordinatorAgent` for streaming
+- ✅ `GET /api/v1/chat/sessions` - List sessions
+- ✅ Unit + Integration tests
 
-**UI Components:**
-1. **SearchBar Component**
-   - Large input field with search icon
-   - Auto-complete suggestions (based on query history)
-   - Clear button
-   - Keyboard shortcuts (Cmd/Ctrl + K to focus)
+**Backend Implementation:**
 
-2. **ModeSelector Component**
-   - Radio buttons or tabs: Vector | Graph | Hybrid | Memory
-   - Tooltips explaining each mode
-   - Default: Hybrid
+```python
+# src/api/v1/chat.py - NEW ENDPOINT
 
-3. **AdvancedFilters Component**
-   - Collapsible panel
-   - Date range picker
-   - Entity type multi-select (Person, Organization, Location)
-   - Top-K slider (1-20 results)
-   - Rerank toggle
+from fastapi.responses import StreamingResponse
+import json
 
-4. **QueryHistory Component**
-   - Dropdown with last 10 queries
-   - Click to re-run query
-   - Clear history button
+@router.post("/stream")
+async def chat_stream(request: ChatRequest) -> StreamingResponse:
+    """Stream chat response with Server-Sent Events (Perplexity-style).
 
-**API Integration:**
-```typescript
-// services/query.service.ts
-interface QueryRequest {
-  query: string;
-  mode: 'vector' | 'graph' | 'hybrid' | 'memory';
-  filters?: {
-    dateRange?: [Date, Date];
-    entityTypes?: string[];
-    topK?: number;
-    rerank?: boolean;
-  };
-}
+    Streams:
+    - Metadata (session_id, intent)
+    - Source cards (as retrieved)
+    - Answer tokens (word-by-word or sentence-by-sentence)
+    - Final metadata (latency, agent_path)
 
-interface QueryResponse {
-  query: string;
-  mode: string;
-  results: SearchResult[];
-  metadata: {
-    total_results: number;
-    processing_time_ms: number;
-    agent_path: string[];
-  };
-}
+    Returns:
+        StreamingResponse with text/event-stream
+    """
+    async def generate_stream():
+        session_id = request.session_id or str(uuid.uuid4())
 
-export async function submitQuery(request: QueryRequest): Promise<QueryResponse> {
-  const response = await axios.post('/api/v1/query', request);
-  return response.data;
-}
+        # 1. Send initial metadata
+        yield f"data: {json.dumps({
+            'type': 'metadata',
+            'session_id': session_id,
+            'query': request.query
+        })}\n\n"
+
+        try:
+            coordinator = get_coordinator()
+
+            # 2. Stream query processing
+            async for chunk in coordinator.process_query_stream(
+                query=request.query,
+                session_id=session_id,
+                intent=request.intent
+            ):
+                if chunk["type"] == "intent":
+                    yield f"data: {json.dumps({
+                        'type': 'intent',
+                        'intent': chunk['intent']
+                    })}\n\n"
+
+                elif chunk["type"] == "source":
+                    yield f"data: {json.dumps({
+                        'type': 'source',
+                        'source': chunk['data']
+                    })}\n\n"
+
+                elif chunk["type"] == "token":
+                    yield f"data: {json.dumps({
+                        'type': 'token',
+                        'content': chunk['content']
+                    })}\n\n"
+
+                elif chunk["type"] == "done":
+                    yield f"data: {json.dumps({
+                        'type': 'done',
+                        'metadata': chunk['metadata']
+                    })}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            logger.error("Streaming error", error=str(e))
+            yield f"data: {json.dumps({
+                'type': 'error',
+                'error': str(e)
+            })}\n\n"
+
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )
+
+
+@router.get("/sessions")
+async def list_sessions() -> dict:
+    """List all active conversation sessions.
+
+    Returns:
+        List of session objects with metadata
+    """
+    try:
+        memory_api = get_unified_memory_api()
+
+        # Get all conversation keys from Redis
+        sessions = await memory_api.list_keys(namespace="conversation")
+
+        session_list = []
+        for session_key in sessions:
+            # Extract session_id from key
+            session_id = session_key.replace("conversation:", "")
+
+            # Get session metadata
+            session_data = await memory_api.retrieve(
+                key=session_key,
+                namespace="memory"
+            )
+
+            if session_data:
+                messages = session_data.get("messages", [])
+                last_message = messages[-1] if messages else None
+
+                session_list.append({
+                    "session_id": session_id,
+                    "message_count": len(messages),
+                    "last_message": last_message.get("content", "")[:100] if last_message else "",
+                    "created_at": session_data.get("created_at"),
+                    "updated_at": session_data.get("updated_at")
+                })
+
+        return {
+            "sessions": session_list,
+            "total": len(session_list)
+        }
+
+    except Exception as e:
+        logger.error("Failed to list sessions", error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list sessions: {str(e)}"
+        )
 ```
 
-**User Flows (to be designed in Figma):**
-1. User types query → Auto-complete suggestions → Select/Hit Enter
-2. User selects mode → Advanced filters open → Apply filters → Submit
-3. User clicks query history → Previous query loads → Edit → Re-submit
+**Frontend SSE Client:**
 
-**Story Points:** 13 SP
-**Duration:** 2-3 days
-
----
-
-### Feature 15.3: Results Display
-
-**Goal:** Rich, contextual display of search results with provenance
-
-**Deliverables:**
-- ✅ Result cards with metadata
-- ✅ Provenance information (source documents, chunks)
-- ✅ Relevance scores visualization
-- ✅ Entity highlighting in context
-- ✅ Expandable details view
-- ✅ Export results (JSON, CSV)
-
-**UI Components:**
-
-1. **ResultsList Component**
-   - Virtualized list for performance (react-window)
-   - Grid or list view toggle
-   - Sort options (relevance, date, entity count)
-
-2. **ResultCard Component**
-   ```
-   ┌─────────────────────────────────────────┐
-   │ [Score: 0.85] [Vector] [Graph]          │
-   │ Entity: Alice (PERSON)                  │
-   │ Context: "Alice works at TechCorp..."   │
-   │                                          │
-   │ Source: document_123.pdf (chunk 5/10)   │
-   │ Entities: [Alice] [TechCorp] [SF]       │
-   │                                          │
-   │ [Expand Details] [View Graph] [Export]  │
-   └─────────────────────────────────────────┘
-   ```
-
-3. **ProvenancePanel Component**
-   - Document metadata (title, author, date)
-   - Chunk information (chunk index, text preview)
-   - LightRAG provenance (original text location)
-   - Relationship graph visualization (if graph result)
-
-4. **EntityHighlight Component**
-   - Highlighted entities in context text
-   - Color-coded by type (Person, Org, Location)
-   - Hover to see entity details
-
-5. **GraphVisualization Component** (if applicable)
-   - Interactive graph using D3.js or vis.js
-   - Show entities and relationships
-   - Click to explore neighbors
-
-**Example Result Data:**
 ```typescript
-interface SearchResult {
-  id: string;
-  score: number;
-  retrieval_modes: ('vector' | 'graph' | 'memory')[];
-  entity: {
-    name: string;
-    type: string;
-    description?: string;
-  };
-  context: string;
-  source: {
-    document_id: string;
-    document_title: string;
-    chunk_index: number;
-    total_chunks: number;
-  };
-  entities: Array<{
-    text: string;
-    type: string;
-    start_pos: number;
-    end_pos: number;
-  }>;
-  relationships?: Array<{
-    source: string;
-    relation: string;
-    target: string;
-  }>;
-}
-```
+// src/services/chat.service.ts
 
-**Story Points:** 21 SP
-**Duration:** 3-4 days
-
----
-
-### Feature 15.4: Conversation History & Memory
-
-**Goal:** Multi-turn conversation support with persistent memory
-
-**Deliverables:**
-- ✅ Conversation thread view (chat-like interface)
-- ✅ Session management (create, list, delete)
-- ✅ Memory state visualization
-- ✅ Context window indicator
-
-**UI Components:**
-
-1. **ConversationThread Component**
-   - Chat-like interface
-   - User queries on right, system responses on left
-   - Timestamp for each message
-   - "Continue this conversation" button
-
-2. **SessionSidebar Component**
-   - List of past sessions
-   - Create new session button
-   - Delete/Archive session
-   - Session metadata (date, query count)
-
-3. **MemoryStatePanel Component**
-   - Current memory entries (short-term, semantic, episodic)
-   - Memory size indicator
-   - Clear memory button
-
-**API Integration:**
-```typescript
-interface ConversationSession {
-  session_id: string;
-  created_at: string;
-  last_updated: string;
-  query_count: number;
-  messages: ConversationMessage[];
+export interface ChatChunk {
+  type: 'metadata' | 'intent' | 'source' | 'token' | 'done' | 'error';
+  [key: string]: any;
 }
 
-interface ConversationMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  metadata?: {
-    results_count?: number;
-    processing_time_ms?: number;
-  };
-}
+export async function* streamChat(request: ChatRequest): AsyncGenerator<ChatChunk> {
+  const response = await fetch('/api/v1/chat/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
 
-export async function createSession(): Promise<ConversationSession> {
-  const response = await axios.post('/api/v1/sessions');
-  return response.data;
-}
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
 
-export async function getSessionHistory(sessionId: string): Promise<ConversationMessage[]> {
-  const response = await axios.get(`/api/v1/sessions/${sessionId}/history`);
-  return response.data;
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+
+      // Keep last incomplete line in buffer
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+
+          if (data === '[DONE]') {
+            return;
+          }
+
+          try {
+            const chunk = JSON.parse(data);
+            yield chunk;
+          } catch (e) {
+            console.warn('Failed to parse SSE chunk:', data);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 ```
 
@@ -341,113 +304,590 @@ export async function getSessionHistory(sessionId: string): Promise<Conversation
 
 ---
 
-### Feature 15.5: System Monitoring Dashboard
+### Feature 15.2: Perplexity-Style Layout & Navigation
 
-**Goal:** Real-time system health and performance monitoring
+**Goal:** Implement minimalist sidebar + main content layout
 
 **Deliverables:**
-- ✅ Health status indicators (Qdrant, Neo4j, Ollama, Redis)
-- ✅ Query performance metrics (latency, throughput)
-- ✅ API endpoint health checks
-- ✅ Error log viewer
+- ✅ Sidebar navigation (Perplexity-style)
+- ✅ Logo + New Chat button
+- ✅ Navigation items (Startseite, History, Settings)
+- ✅ Responsive layout (hide sidebar on mobile)
+- ✅ Dark mode toggle
 
-**UI Components:**
+**Components:**
 
-1. **HealthDashboard Component**
-   ```
-   ┌──────────────────────────────────────────┐
-   │ System Status: ● Healthy                 │
-   ├──────────────────────────────────────────┤
-   │ ✅ Qdrant Vector DB       (latency: 20ms)│
-   │ ✅ Neo4j Graph DB         (latency: 35ms)│
-   │ ✅ Ollama LLM Service     (latency: 150ms)│
-   │ ✅ Redis Memory Cache     (latency: 5ms) │
-   ├──────────────────────────────────────────┤
-   │ Query Metrics (Last Hour):               │
-   │ - Total Queries: 127                     │
-   │ - Avg Latency: 450ms (p95: 800ms)        │
-   │ - Error Rate: 0.8%                       │
-   └──────────────────────────────────────────┘
-   ```
+```tsx
+// src/components/layout/Sidebar.tsx
 
-2. **DependencyHealthCard Component**
-   - Service name
-   - Status indicator (green/yellow/red)
-   - Latency metric
-   - Last checked timestamp
+export function Sidebar() {
+  return (
+    <aside className="w-24 bg-gray-50 flex flex-col items-center py-6 space-y-8">
+      {/* Logo */}
+      <div className="text-teal-600 text-3xl font-bold">
+        Aegis
+      </div>
 
-3. **PerformanceChart Component**
-   - Real-time line chart (Recharts or Chart.js)
-   - Latency over time (last 1h/24h/7d)
-   - Throughput (queries per minute)
+      {/* New Chat Button */}
+      <button className="p-3 hover:bg-gray-200 rounded-lg transition">
+        <PlusIcon className="w-6 h-6 text-gray-700" />
+      </button>
 
-4. **ErrorLogViewer Component**
-   - Table of recent errors
-   - Filter by severity (Error, Warning, Info)
-   - Expandable stack traces
+      {/* Navigation */}
+      <nav className="flex-1 flex flex-col space-y-4">
+        <NavItem icon={<SearchIcon />} label="Suche" active />
+        <NavItem icon={<HistoryIcon />} label="History" />
+        <NavItem icon={<SettingsIcon />} label="Settings" />
+      </nav>
 
-**API Integration:**
-```typescript
-interface HealthStatus {
-  status: 'healthy' | 'degraded' | 'unhealthy';
-  version: string;
-  environment: string;
-  dependencies: {
-    qdrant: DependencyHealth;
-    neo4j: DependencyHealth;
-    ollama: DependencyHealth;
-    redis: DependencyHealth;
+      {/* User/Login */}
+      <button className="p-3 bg-teal-600 text-white rounded-full">
+        <UserIcon className="w-6 h-6" />
+      </button>
+    </aside>
+  );
+}
+
+// src/components/layout/MainLayout.tsx
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-screen bg-white">
+      <Sidebar />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {children}
+      </main>
+    </div>
+  );
+}
+```
+
+**Design System (Tailwind Config):**
+
+```javascript
+// tailwind.config.js
+
+export default {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: '#20808D', // Teal
+          hover: '#1A6B76',
+        },
+        gray: {
+          50: '#F5F5F5',
+          100: '#E8E8E8',
+          700: '#6B6B6B',
+          900: '#1A1A1A',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+};
+```
+
+**Story Points:** 8 SP
+**Duration:** 1 day
+
+---
+
+### Feature 15.3: Search Input with Mode Selector
+
+**Goal:** Large search input (Perplexity-style) with AegisRAG mode chips
+
+**Deliverables:**
+- ✅ Large centered search input
+- ✅ Mode selector chips (Hybrid, Vector, Graph, Memory)
+- ✅ Input icons (Search, Focus, Voice, Submit)
+- ✅ Auto-focus on load
+- ✅ Keyboard shortcuts (Cmd/Ctrl+K)
+
+**Components:**
+
+```tsx
+// src/components/search/SearchInput.tsx
+
+export function SearchInput({ onSubmit }: { onSubmit: (query: string, mode: string) => void }) {
+  const [query, setQuery] = useState('');
+  const [mode, setMode] = useState<'hybrid' | 'vector' | 'graph' | 'memory'>('hybrid');
+
+  const handleSubmit = () => {
+    if (query.trim()) {
+      onSubmit(query, mode);
+    }
   };
+
+  return (
+    <div className="max-w-3xl mx-auto w-full space-y-6">
+      {/* Search Input */}
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          placeholder="Fragen Sie alles. Tippen Sie @ für Erwähnungen."
+          className="w-full h-28 px-6 pr-48 text-lg border-2 border-gray-200 rounded-3xl
+                     focus:border-primary focus:outline-none placeholder-gray-400"
+        />
+
+        {/* Input Icons */}
+        <div className="absolute right-4 bottom-4 flex items-center space-x-2">
+          <IconButton icon={<SearchIcon />} />
+          <IconButton icon={<FocusIcon />} />
+          <IconButton icon={<MicIcon />} />
+          <IconButton
+            icon={<ArrowUpIcon />}
+            primary
+            onClick={handleSubmit}
+            disabled={!query.trim()}
+          />
+        </div>
+      </div>
+
+      {/* Mode Selector Chips */}
+      <div className="flex justify-center space-x-3">
+        <ModeChip
+          active={mode === 'hybrid'}
+          onClick={() => setMode('hybrid')}
+          icon="🔀"
+        >
+          Hybrid
+        </ModeChip>
+        <ModeChip
+          active={mode === 'vector'}
+          onClick={() => setMode('vector')}
+          icon="🔍"
+        >
+          Vector
+        </ModeChip>
+        <ModeChip
+          active={mode === 'graph'}
+          onClick={() => setMode('graph')}
+          icon="🕸️"
+        >
+          Graph
+        </ModeChip>
+        <ModeChip
+          active={mode === 'memory'}
+          onClick={() => setMode('memory')}
+          icon="💭"
+        >
+          Memory
+        </ModeChip>
+      </div>
+    </div>
+  );
 }
 
-interface DependencyHealth {
-  name: string;
-  status: 'up' | 'down' | 'degraded';
-  latency_ms: number;
-  details?: Record<string, any>;
+// src/components/search/ModeChip.tsx
+
+export function ModeChip({
+  active,
+  onClick,
+  icon,
+  children
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        px-6 py-3 rounded-full border-2 flex items-center space-x-2 transition
+        ${active
+          ? 'bg-primary text-white border-primary'
+          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+        }
+      `}
+    >
+      <span className="text-xl">{icon}</span>
+      <span className="font-medium">{children}</span>
+    </button>
+  );
+}
+```
+
+**Story Points:** 10 SP
+**Duration:** 1.5 days
+
+---
+
+### Feature 15.4: Streaming Answer Display
+
+**Goal:** Display streaming answer with source cards (Perplexity-style)
+
+**Deliverables:**
+- ✅ Answer streaming component (token-by-token)
+- ✅ Source cards (horizontal scroll)
+- ✅ Inline citations
+- ✅ Markdown rendering
+- ✅ Loading states
+
+**Components:**
+
+```tsx
+// src/components/chat/StreamingAnswer.tsx
+
+export function StreamingAnswer({ query, mode }: { query: string; mode: string }) {
+  const [answer, setAnswer] = useState('');
+  const [sources, setSources] = useState<Source[]>([]);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [isStreaming, setIsStreaming] = useState(true);
+
+  useEffect(() => {
+    const stream = streamChat({ query, mode });
+
+    (async () => {
+      try {
+        for await (const chunk of stream) {
+          switch (chunk.type) {
+            case 'source':
+              setSources((prev) => [...prev, chunk.source]);
+              break;
+
+            case 'token':
+              setAnswer((prev) => prev + chunk.content);
+              break;
+
+            case 'done':
+              setMetadata(chunk.metadata);
+              setIsStreaming(false);
+              break;
+          }
+        }
+      } catch (error) {
+        console.error('Stream error:', error);
+        setIsStreaming(false);
+      }
+    })();
+  }, [query, mode]);
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Query Title */}
+      <h1 className="text-3xl font-bold text-gray-900">{query}</h1>
+
+      {/* Tabs */}
+      <div className="flex space-x-6 border-b border-gray-200">
+        <Tab active>🤖 Antwort</Tab>
+        <Tab>🖼️ Bilder</Tab>
+        <Tab>🌐 Quellen {sources.length}</Tab>
+      </div>
+
+      {/* Source Cards */}
+      {sources.length > 0 && (
+        <SourceCardsScroll sources={sources} />
+      )}
+
+      {/* Answer Content */}
+      <div className="prose prose-lg max-w-none">
+        <ReactMarkdown>{answer}</ReactMarkdown>
+        {isStreaming && <span className="animate-pulse">▊</span>}
+      </div>
+
+      {/* Metadata */}
+      {metadata && (
+        <div className="text-sm text-gray-500 flex items-center space-x-4">
+          <span>⚡ {metadata.latency_seconds}s</span>
+          <span>📊 {metadata.agent_path.join(' → ')}</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
-export async function getSystemHealth(): Promise<HealthStatus> {
-  const response = await axios.get('/api/v1/health/detailed');
-  return response.data;
+// src/components/chat/SourceCardsScroll.tsx
+
+export function SourceCardsScroll({ sources }: { sources: Source[] }) {
+  return (
+    <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+      {sources.map((source, index) => (
+        <SourceCard key={index} source={source} />
+      ))}
+    </div>
+  );
+}
+
+// src/components/chat/SourceCard.tsx
+
+export function SourceCard({ source }: { source: Source }) {
+  return (
+    <div className="flex-shrink-0 w-64 p-4 bg-gray-50 rounded-xl border border-gray-200
+                    hover:shadow-md transition cursor-pointer">
+      {/* Source Header */}
+      <div className="flex items-center space-x-2 mb-2">
+        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+          <span className="text-white text-sm">📄</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-gray-900 truncate">
+            {source.document_id}
+          </div>
+          <div className="text-xs text-gray-500">
+            Chunk {source.chunk_index}/{source.total_chunks}
+          </div>
+        </div>
+      </div>
+
+      {/* Metadata */}
+      <div className="space-y-1 mb-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-500">Score:</span>
+          <span className="font-medium">{source.score.toFixed(3)}</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          {source.retrieval_modes.includes('vector') && (
+            <Badge>🔍 Vector</Badge>
+          )}
+          {source.retrieval_modes.includes('graph') && (
+            <Badge>🕸️ Graph</Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Preview */}
+      <p className="text-sm text-gray-700 line-clamp-3">
+        {source.context}
+      </p>
+
+      {/* Entity Tags */}
+      {source.entities && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {source.entities.slice(0, 3).map((entity, i) => (
+            <EntityTag key={i} entity={entity} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+**Story Points:** 21 SP
+**Duration:** 3 days
+
+---
+
+### Feature 15.5: Conversation History Sidebar
+
+**Goal:** Session management with conversation list
+
+**Deliverables:**
+- ✅ Session list in sidebar (collapsible)
+- ✅ Load session on click
+- ✅ Delete session button
+- ✅ Search within sessions
+- ✅ Session grouping (Today, Yesterday, Last 7 days)
+
+**Components:**
+
+```tsx
+// src/components/history/SessionSidebar.tsx
+
+export function SessionSidebar() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [expanded, setExpanded] = useState(true);
+
+  useEffect(() => {
+    // Load sessions from API
+    fetchSessions().then(setSessions);
+  }, []);
+
+  const groupedSessions = groupSessionsByDate(sessions);
+
+  return (
+    <div className={`
+      transition-all duration-300
+      ${expanded ? 'w-80' : 'w-0'}
+      bg-gray-50 border-r border-gray-200 overflow-hidden
+    `}>
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">History</h2>
+          <button onClick={() => setExpanded(!expanded)}>
+            <ChevronIcon />
+          </button>
+        </div>
+
+        {/* Search */}
+        <input
+          type="text"
+          placeholder="Suchen..."
+          className="w-full px-4 py-2 border border-gray-200 rounded-lg"
+        />
+
+        {/* Session Groups */}
+        <div className="space-y-6">
+          {Object.entries(groupedSessions).map(([group, sessions]) => (
+            <SessionGroup key={group} title={group} sessions={sessions} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// src/components/history/SessionGroup.tsx
+
+export function SessionGroup({ title, sessions }: { title: string; sessions: Session[] }) {
+  return (
+    <div>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+        {title}
+      </h3>
+      <div className="space-y-1">
+        {sessions.map((session) => (
+          <SessionItem key={session.session_id} session={session} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// src/components/history/SessionItem.tsx
+
+export function SessionItem({ session }: { session: Session }) {
+  const navigate = useNavigate();
+  const [showDelete, setShowDelete] = useState(false);
+
+  return (
+    <div
+      className="group relative p-3 hover:bg-white rounded-lg cursor-pointer transition"
+      onClick={() => navigate(`/chat/${session.session_id}`)}
+      onMouseEnter={() => setShowDelete(true)}
+      onMouseLeave={() => setShowDelete(false)}
+    >
+      <div className="text-sm font-medium text-gray-900 line-clamp-1">
+        {session.last_message}
+      </div>
+      <div className="text-xs text-gray-500 mt-1">
+        {session.message_count} messages • {formatDate(session.updated_at)}
+      </div>
+
+      {/* Delete Button */}
+      {showDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteSession(session.session_id);
+          }}
+          className="absolute right-3 top-3 p-1 bg-red-500 text-white rounded-md
+                     opacity-0 group-hover:opacity-100 transition"
+        >
+          <TrashIcon className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Story Points:** 13 SP
+**Duration:** 2 days
+
+---
+
+### Feature 15.6: System Health Dashboard
+
+**Goal:** Real-time system monitoring (admin view)
+
+**Deliverables:**
+- ✅ Health status dashboard
+- ✅ Dependency health cards (Qdrant, Ollama, Neo4j, Redis)
+- ✅ Performance metrics chart
+- ✅ Auto-refresh every 30s
+
+**Components:**
+
+```tsx
+// src/pages/HealthDashboard.tsx
+
+export function HealthDashboard() {
+  const [health, setHealth] = useState<DetailedHealthResponse | null>(null);
+
+  useEffect(() => {
+    const fetchHealth = async () => {
+      const data = await getSystemHealth();
+      setHealth(data);
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 30000); // 30s refresh
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!health) return <Loading />;
+
+  return (
+    <div className="p-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">System Health</h1>
+        <StatusBadge status={health.status} />
+      </div>
+
+      {/* Dependencies Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        {Object.entries(health.dependencies).map(([key, dep]) => (
+          <DependencyCard key={key} dependency={dep} />
+        ))}
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold mb-4">Query Performance (Last Hour)</h2>
+        <PerformanceChart />
+      </div>
+    </div>
+  );
+}
+
+// src/components/health/DependencyCard.tsx
+
+export function DependencyCard({ dependency }: { dependency: DependencyHealth }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">{dependency.name}</h3>
+        <StatusDot status={dependency.status} />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500">Status:</span>
+          <span className={`font-medium ${
+            dependency.status === 'up' ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {dependency.status.toUpperCase()}
+          </span>
+        </div>
+
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500">Latency:</span>
+          <span className="font-medium">{dependency.latency_ms}ms</span>
+        </div>
+
+        {Object.entries(dependency.details).map(([key, value]) => (
+          <div key={key} className="flex justify-between text-xs text-gray-600">
+            <span>{key}:</span>
+            <span>{String(value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 ```
 
 **Story Points:** 8 SP
-**Duration:** 1-2 days
-
----
-
-### Feature 15.6: Configuration & Settings
-
-**Goal:** User-configurable settings and preferences
-
-**Deliverables:**
-- ✅ Theme toggle (Light/Dark mode)
-- ✅ Default retrieval mode setting
-- ✅ Result display preferences (grid/list, results per page)
-- ✅ API endpoint configuration (for self-hosted deployments)
-
-**UI Components:**
-
-1. **SettingsPanel Component**
-   - Tabbed interface (Appearance, Query Defaults, Advanced)
-   - Save/Reset buttons
-
-2. **ThemeToggle Component**
-   - Light/Dark mode switch
-   - System preference detection
-
-3. **DefaultsConfiguration Component**
-   - Default retrieval mode selector
-   - Default top-K value
-   - Auto-rerank toggle
-
-**Storage:**
-- Use localStorage for user preferences
-- Persist theme, default mode, display preferences
-
-**Story Points:** 5 SP
 **Duration:** 1 day
 
 ---
@@ -456,157 +896,71 @@ export async function getSystemHealth(): Promise<HealthStatus> {
 
 ### Unit Tests (Vitest + React Testing Library)
 
-**Target:** >80% coverage for components
+**Coverage Target:** >80%
 
-**Test Cases:**
-- Component rendering with various props
-- User interactions (click, input, select)
-- State management (Zustand store mutations)
-- API service mocks
-
-**Example Test:**
+**Component Tests:**
 ```typescript
-// SearchBar.test.tsx
-describe('SearchBar Component', () => {
-  it('should call onSubmit when Enter key pressed', () => {
+// tests/components/SearchInput.test.tsx
+describe('SearchInput', () => {
+  it('should call onSubmit when Enter pressed', () => {
     const mockOnSubmit = vi.fn();
-    render(<SearchBar onSubmit={mockOnSubmit} />);
+    render(<SearchInput onSubmit={mockOnSubmit} />);
 
-    const input = screen.getByRole('textbox');
+    const input = screen.getByPlaceholderText(/Fragen Sie alles/);
     fireEvent.change(input, { target: { value: 'test query' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid');
+  });
+
+  it('should change mode when chip clicked', () => {
+    render(<SearchInput onSubmit={vi.fn()} />);
+
+    const vectorChip = screen.getByText('Vector');
+    fireEvent.click(vectorChip);
+
+    expect(vectorChip).toHaveClass('bg-primary');
+  });
+});
+```
+
+**SSE Service Tests:**
+```typescript
+// tests/services/chat.service.test.ts
+describe('streamChat', () => {
+  it('should parse SSE chunks correctly', async () => {
+    const mockResponse = new Response(
+      'data: {"type":"token","content":"Hello"}\n\ndata: [DONE]\n\n'
+    );
+
+    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+    const chunks: ChatChunk[] = [];
+    for await (const chunk of streamChat({ query: 'test' })) {
+      chunks.push(chunk);
+    }
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe('token');
+    expect(chunks[0].content).toBe('Hello');
   });
 });
 ```
 
 ### Integration Tests
 
-**Test Scenarios:**
-1. Submit query → Display results → Select result → View details
-2. Create session → Submit multiple queries → View history
-3. Change mode → Submit query → Verify correct API call
-4. View health dashboard → Check all services healthy
+**E2E User Flows (Playwright):**
+1. User submits query → sees streaming answer → clicks source
+2. User creates session → submits multiple queries → reviews history
+3. User changes mode → submits query → verifies correct API call
 
-### E2E Tests (Playwright or Cypress)
+### Performance Tests
 
-**Critical User Flows:**
-1. First-time user submits query and gets results
-2. User creates conversation, submits multiple queries, reviews history
-3. User changes settings, verifies persistence across sessions
-
----
-
-## Architecture & Technical Decisions
-
-### State Management Strategy
-
-**Zustand (Recommended):**
-```typescript
-// stores/queryStore.ts
-interface QueryState {
-  currentQuery: string;
-  selectedMode: RetrievalMode;
-  filters: QueryFilters;
-  results: SearchResult[];
-  isLoading: boolean;
-  error: string | null;
-
-  setQuery: (query: string) => void;
-  setMode: (mode: RetrievalMode) => void;
-  submitQuery: () => Promise<void>;
-}
-
-export const useQueryStore = create<QueryState>((set, get) => ({
-  currentQuery: '',
-  selectedMode: 'hybrid',
-  filters: {},
-  results: [],
-  isLoading: false,
-  error: null,
-
-  setQuery: (query) => set({ currentQuery: query }),
-  setMode: (mode) => set({ selectedMode: mode }),
-
-  submitQuery: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const results = await queryService.submitQuery({
-        query: get().currentQuery,
-        mode: get().selectedMode,
-        filters: get().filters,
-      });
-      set({ results, isLoading: false });
-    } catch (error) {
-      set({ error: error.message, isLoading: false });
-    }
-  },
-}));
-```
-
-### API Client Setup
-
-**Axios with Interceptors:**
-```typescript
-// services/apiClient.ts
-import axios from 'axios';
-
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
-  timeout: 30000,
-});
-
-// Request interceptor (add auth token if needed)
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor (handle errors globally)
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Redirect to login
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default apiClient;
-```
-
-### Routing Structure
-
-```typescript
-// App.tsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<QueryPage />} />
-          <Route path="history" element={<HistoryPage />} />
-          <Route path="sessions/:sessionId" element={<SessionPage />} />
-          <Route path="monitoring" element={<MonitoringPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
-}
-```
+**Metrics:**
+- First Contentful Paint: <1.5s
+- Time to Interactive: <3s
+- SSE latency: <500ms for first token
+- Component render time: <100ms
 
 ---
 
@@ -615,21 +969,28 @@ function App() {
 ### Frontend Dockerfile
 
 ```dockerfile
+# frontend/Dockerfile
+
 # Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies
 COPY package*.json ./
 RUN npm ci
 
+# Build app
 COPY . .
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
+# Copy built app
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
@@ -640,7 +1001,8 @@ CMD ["nginx", "-g", "daemon off;"]
 ### Nginx Configuration
 
 ```nginx
-# nginx.conf
+# frontend/nginx.conf
+
 server {
   listen 80;
   server_name localhost;
@@ -653,11 +1015,21 @@ server {
     try_files $uri $uri/ /index.html;
   }
 
-  # API proxy (optional, for CORS)
+  # API proxy (for SSE)
   location /api {
     proxy_pass http://backend:8000;
+    proxy_http_version 1.1;
+
+    # SSE-specific headers
+    proxy_set_header Connection '';
+    proxy_set_header Cache-Control 'no-cache';
+    proxy_buffering off;
+    proxy_read_timeout 86400;
+
+    # Standard headers
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   }
 
   # Health check
@@ -691,158 +1063,121 @@ services:
 
 ---
 
-## Performance Optimizations
+## Architecture Decisions
 
-### Code Splitting
+### ADR-020: Server-Sent Events for Chat Streaming
 
-```typescript
-// Lazy load heavy components
-const GraphVisualization = lazy(() => import('./components/GraphVisualization'));
-const MonitoringDashboard = lazy(() => import('./pages/MonitoringPage'));
+**Context:** Need real-time streaming for chat responses
 
-// Use Suspense for loading states
-<Suspense fallback={<Spinner />}>
-  <GraphVisualization data={graphData} />
-</Suspense>
-```
+**Decision:** Use SSE instead of WebSocket
 
-### Virtualization for Long Lists
+**Rationale:**
+- Simpler than WebSocket (unidirectional)
+- Native browser support (EventSource API)
+- Works with HTTP/2 multiplexing
+- Easier to implement with FastAPI
+- Automatic reconnection handling
 
-```typescript
-import { FixedSizeList } from 'react-window';
+**Alternatives Considered:**
+- WebSocket: Overkill for unidirectional streaming
+- Long-polling: Higher latency and overhead
 
-function ResultsList({ results }: { results: SearchResult[] }) {
-  return (
-    <FixedSizeList
-      height={600}
-      itemCount={results.length}
-      itemSize={150}
-      width="100%"
-    >
-      {({ index, style }) => (
-        <div style={style}>
-          <ResultCard result={results[index]} />
-        </div>
-      )}
-    </FixedSizeList>
-  );
-}
-```
+**See:** `docs/adr/ADR-020-sse-streaming-for-chat.md`
 
-### React Query Caching
+### ADR-021: Perplexity-Inspired UI Design
 
-```typescript
-// Cache query results for 5 minutes
-const { data: results, isLoading } = useQuery({
-  queryKey: ['search', query, mode],
-  queryFn: () => queryService.submitQuery({ query, mode }),
-  staleTime: 5 * 60 * 1000, // 5 minutes
-  cacheTime: 10 * 60 * 1000, // 10 minutes
-});
-```
+**Context:** Need proven UX pattern for RAG interface
+
+**Decision:** Adopt Perplexity's minimalist design patterns
+
+**Rationale:**
+- Proven UX in production RAG systems
+- Focuses user attention on content
+- Clean, accessible, responsive
+- Easy to extend with AegisRAG-specific features
+
+**See:** `docs/adr/ADR-021-perplexity-inspired-ui.md`
 
 ---
 
-## Accessibility (A11y)
-
-**WCAG 2.1 Level AA Compliance:**
-- ✅ Semantic HTML (proper heading hierarchy)
-- ✅ ARIA labels for screen readers
-- ✅ Keyboard navigation (Tab, Enter, Escape)
-- ✅ Focus indicators
-- ✅ Color contrast ratio >4.5:1
-- ✅ Skip-to-content links
-
-**Testing:**
-- Lighthouse accessibility audit (score >90)
-- axe DevTools for accessibility issues
-- Keyboard-only navigation testing
-
----
-
-## Sprint Execution Timeline
+## Sprint Timeline
 
 ### Week 1 (Days 1-5)
 
-**Day 1: Setup & Infrastructure (Feature 15.1)**
-- Initialize React project with Vite + TypeScript
-- Setup Tailwind CSS, React Router, Zustand
-- Configure ESLint, Prettier, Vitest
-- Create basic layout (Header, Sidebar, Footer)
+**Day 1: Setup + Backend Streaming**
+- React project setup (Vite, TypeScript, Tailwind)
+- Backend SSE endpoint (`POST /api/v1/chat/stream`)
+- Sessions list endpoint (`GET /api/v1/chat/sessions`)
 
-**Day 2-3: Query Interface (Feature 15.2)**
-- Implement SearchBar component
-- Build ModeSelector component
-- Create AdvancedFilters component
-- Integrate with backend API
+**Day 2: Layout + Navigation**
+- Sidebar component (Perplexity-style)
+- MainLayout component
+- Routing setup
+- Dark mode toggle
 
-**Day 4-5: Results Display (Feature 15.3 - Part 1)**
-- Build ResultsList component
-- Create ResultCard component
-- Implement basic provenance display
+**Day 3: Search Input**
+- Large search input component
+- Mode selector chips
+- Input validation
+- Keyboard shortcuts
+
+**Day 4-5: Streaming Answer Display**
+- SSE client service
+- Streaming answer component
+- Source cards (horizontal scroll)
+- Markdown rendering
 
 ### Week 2 (Days 6-10)
 
-**Day 6-7: Results Display (Feature 15.3 - Part 2)**
-- Add EntityHighlight component
-- Build GraphVisualization component (if needed)
-- Implement export functionality
+**Day 6-7: Conversation History**
+- Session sidebar
+- Session list with grouping
+- Load/delete sessions
+- Search within sessions
 
-**Day 8: Conversation History (Feature 15.4)**
-- Create ConversationThread component
-- Build SessionSidebar component
-- Integrate session management API
+**Day 8: Health Dashboard**
+- Health status page
+- Dependency cards
+- Performance charts
+- Auto-refresh
 
-**Day 9: System Monitoring (Feature 15.5)**
-- Build HealthDashboard component
-- Create PerformanceChart component
-- Implement real-time updates (polling or WebSocket)
+**Day 9: Testing & Polish**
+- Unit tests (>80% coverage)
+- E2E tests (critical flows)
+- Accessibility improvements
+- Performance optimization
 
-**Day 10: Configuration & Polish (Feature 15.6)**
-- Add SettingsPanel component
-- Implement theme toggle (Light/Dark)
-- Final bug fixes and UI polish
-
----
-
-## Sprint Metrics
-
-**Story Points:** 68 SP total
-
-| Feature | Story Points | Duration |
-|---------|--------------|----------|
-| 15.1 Project Setup | 8 SP | 1 day |
-| 15.2 Query Interface | 13 SP | 2-3 days |
-| 15.3 Results Display | 21 SP | 3-4 days |
-| 15.4 Conversation History | 13 SP | 2 days |
-| 15.5 System Monitoring | 8 SP | 1-2 days |
-| 15.6 Configuration | 5 SP | 1 day |
-
-**Velocity Target:** 7-8 SP/day (realistic for frontend work)
+**Day 10: Documentation & Deployment**
+- Component documentation
+- User guide
+- Docker deployment
+- Sprint 15 completion report
 
 ---
 
 ## Deliverables Checklist
 
-### Code Deliverables
-- [ ] React frontend application (src/)
-- [ ] Component library (reusable UI components)
-- [ ] API service layer (services/)
-- [ ] State management (stores/)
+### Code
+- [ ] React frontend (src/)
+- [ ] SSE streaming backend endpoint
+- [ ] Sessions list endpoint
+- [ ] Component library
+- [ ] API service layer
+- [ ] State management (Zustand)
 - [ ] Unit tests (>80% coverage)
-- [ ] Integration tests
-- [ ] E2E tests (critical flows)
+- [ ] E2E tests (Playwright)
 
 ### Docker & Deployment
-- [ ] Dockerfile for frontend
+- [ ] Frontend Dockerfile
 - [ ] Nginx configuration
 - [ ] Updated docker-compose.yml
-- [ ] Environment variable configuration
+- [ ] Environment configuration
 
 ### Documentation
-- [ ] Component documentation (Storybook optional)
-- [ ] API integration guide
-- [ ] User guide (README in frontend/)
+- [ ] ADR-020: SSE Streaming
+- [ ] ADR-021: Perplexity UI
+- [ ] Component documentation
+- [ ] User guide
 - [ ] Developer setup guide
 - [ ] Sprint 15 completion report
 
@@ -850,50 +1185,51 @@ const { data: results, isLoading } = useQuery({
 
 ## Risks & Mitigation
 
-### Risk: Design complexity slows implementation
-**Mitigation:** Use component library (Shadcn/UI or MUI) for base components, focus on UX flows
+### Risk: SSE browser compatibility issues
+**Mitigation:** Use `EventSource` polyfill for older browsers, test on Safari/Firefox/Chrome
 
-### Risk: Graph visualization performance issues
-**Mitigation:** Use D3.js or vis.js with virtualization, limit initial graph size
+### Risk: Streaming latency on slow connections
+**Mitigation:** Implement progressive loading, show skeleton states, buffer small chunks
 
-### Risk: Backend API changes break frontend
-**Mitigation:** Use OpenAPI spec, generate TypeScript types, maintain API versioning
+### Risk: Session management scale issues
+**Mitigation:** Paginate session list, implement search, Redis TTL for cleanup
 
-### Risk: Responsive design edge cases
-**Mitigation:** Mobile-first approach, test on multiple devices/browsers
-
----
-
-## Next Steps After Sprint 15
-
-**Sprint 16 (Potential):**
-- Advanced features: Saved queries, query templates
-- Collaborative features: Share results, annotations
-- Admin panel: User management, analytics dashboard
-- Performance monitoring: APM integration (Sentry, DataDog)
+### Risk: Mobile responsiveness challenges
+**Mitigation:** Mobile-first CSS, test on real devices, collapsible sidebar
 
 ---
 
-## Decision: Design-First or Code-First?
+## Success Metrics
 
-**Please decide before starting Sprint 15:**
+**User Experience:**
+- First token latency: <500ms
+- Time to Interactive: <3s
+- Mobile usability score: >90
 
-**Option A: Design-First with Figma**
-- You create Figma mockups (2-3 days)
-- I implement based on designs
-- More time upfront, better UX/UI outcome
+**Technical:**
+- Test coverage: >80%
+- Lighthouse score: >90
+- Zero critical accessibility issues
+- SSE reconnection success rate: >95%
 
-**Option B: Code-First with Standard UI**
-- I use Shadcn/UI or Material-UI
-- Implement standard RAG interface patterns
-- Faster start, iterate based on feedback
+**Business:**
+- User can complete query in <10s
+- Session management works for 100+ sessions
+- System health visible in <2s
 
-**Option C: Hybrid**
-- You create basic wireframes (Excalidraw/Figma)
-- I implement with component library
-- Refine UI iteratively
+---
 
-**Lass mich wissen, welche Option du bevorzugst!**
+## Post-Sprint 15 Improvements (Sprint 16)
+
+**Potential Features:**
+1. Advanced filters UI (entity types, date range, top-k)
+2. Graph visualization tab (D3.js/vis.js)
+3. Export functionality (JSON, CSV, Markdown)
+4. Saved queries / templates
+5. User authentication (OAuth)
+6. Admin panel (ingestion, stats)
+7. Collaborative features (share results, annotations)
+8. Performance monitoring (APM integration)
 
 ---
 

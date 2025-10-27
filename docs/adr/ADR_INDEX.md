@@ -26,6 +26,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 017 | Semantic Entity Deduplication | Accepted | 2025-10-24 |
 | 018 | Model Selection for Entity/Relation Extraction | Accepted | 2025-10-24 |
 | 019 | Integration Tests as E2E Tests | Accepted | 2025-10-27 |
+| 020 | Server-Sent Events (SSE) Streaming for Chat | Accepted | 2025-10-27 |
+| 021 | Perplexity-Inspired UI Design for Frontend | Accepted | 2025-10-27 |
 
 ---
 

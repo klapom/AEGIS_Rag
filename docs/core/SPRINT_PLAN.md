@@ -523,6 +523,112 @@ Sprint 13 delivered the Three-Phase Extraction Pipeline (SpaCy + Semantic Dedup 
 
 ---
 
+## Sprint 15: Frontend Interface with Perplexity-Inspired UI
+**Ziel:** Production-ready web interface with SSE streaming and RAG-optimized UX
+**Status:** 📋 PLANNED (2025-10-27)
+
+### Context
+After Sprint 14's backend completion, AegisRAG needs a user-facing frontend. User decision: "Warum das Rad neu erfinden. Lass uns an der Oberfläche von Perplexity orientieren" → Adopt proven Perplexity.ai design patterns for RAG-first UX.
+
+**Key Design Decisions:**
+- ✅ Perplexity-inspired minimalist UI (sidebar + main content)
+- ✅ Server-Sent Events (SSE) for streaming (not WebSocket)
+- ✅ React 18 + Vite + TypeScript + Tailwind CSS
+- ✅ Multi-mode search selector (Hybrid, Vector, Graph, Memory)
+- ✅ Source cards with LightRAG provenance
+- ✅ German localization
+
+### Deliverables
+- [ ] **Feature 15.1**: React + Vite setup + SSE backend endpoint (13 SP, 2 days)
+- [ ] **Feature 15.2**: Perplexity-style layout (sidebar + header + main) (8 SP, 1 day)
+- [ ] **Feature 15.3**: Search input with mode selector (10 SP, 1.5 days)
+- [ ] **Feature 15.4**: Streaming answer display with source cards (21 SP, 3 days)
+- [ ] **Feature 15.5**: Conversation history sidebar (13 SP, 2 days)
+- [ ] **Feature 15.6**: System health dashboard (8 SP, 1 day)
+
+### Technical Tasks
+
+**Backend Changes:**
+- [ ] New SSE endpoint: `POST /api/v1/chat/stream` (StreamingResponse)
+- [ ] CoordinatorAgent streaming method: `process_query_stream()`
+- [ ] Sessions API: `GET /api/v1/chat/sessions` (list all sessions)
+- [ ] Update CORS for frontend (http://localhost:5173)
+
+**Frontend Stack:**
+- [ ] React 18.2 + Vite 5 + TypeScript 5
+- [ ] Tailwind CSS 3 (Perplexity design system)
+- [ ] Zustand (state management)
+- [ ] React Router 6 (routing)
+- [ ] Vitest + React Testing Library
+
+**Key Components:**
+```
+frontend/src/
+├── components/
+│   ├── layout/         # AppLayout, Sidebar, Header
+│   ├── search/         # SearchInput, ModeSelector
+│   ├── results/        # StreamingAnswer, SourceCard
+│   ├── history/        # SessionList, SessionItem
+│   └── health/         # HealthDashboard, ServiceStatus
+├── hooks/
+│   ├── useStreamChat.ts    # SSE client hook
+│   ├── useSessions.ts      # Session management
+│   └── useHealthCheck.ts   # Health monitoring
+├── stores/
+│   ├── chatStore.ts        # Zustand chat state
+│   └── sessionStore.ts     # Zustand session state
+├── api/
+│   ├── chat.ts             # Chat API client
+│   ├── sessions.ts         # Session API client
+│   └── health.ts           # Health API client
+└── pages/
+    ├── HomePage.tsx        # Landing page with search
+    ├── ResultsPage.tsx     # Search results with streaming
+    └── HealthPage.tsx      # System health dashboard
+```
+
+**Design System (Perplexity-inspired):**
+- **Primary Color**: #20808D (Teal)
+- **Font**: Inter sans-serif
+- **Border Radius**: 12-24px (rounded)
+- **Spacing**: 24-32px (generous padding)
+- **Responsive**: Mobile-first approach
+
+### Success Criteria
+- [ ] User can search with 4 modes (Hybrid, Vector, Graph, Memory)
+- [ ] Streaming answer displays token-by-token (<100ms to first token)
+- [ ] Source cards show LightRAG provenance (chunk ID, confidence)
+- [ ] Session history persists across browser refreshes
+- [ ] Health dashboard shows Qdrant, Neo4j, Redis, Ollama status
+- [ ] Responsive design works on mobile + desktop
+- [ ] German localization for all UI strings
+- [ ] E2E tests with Playwright (5+ user flows)
+
+### Story Points: 73 SP
+**Breakdown:**
+- Feature 15.1: React + SSE Backend (13 SP)
+- Feature 15.2: Layout (8 SP)
+- Feature 15.3: Search Input (10 SP)
+- Feature 15.4: Streaming Answer (21 SP)
+- Feature 15.5: History Sidebar (13 SP)
+- Feature 15.6: Health Dashboard (8 SP)
+
+**Timeline:**
+- Sequential: 7-10 days (1 developer, ~8-10 SP/day)
+- Parallel: 3-4 days (3 subagents: Backend, Frontend, Testing)
+
+### Architecture Decisions
+- [ADR-020](../adr/ADR-020-sse-streaming-for-chat.md) - SSE Streaming for Chat
+- [ADR-021](../adr/ADR-021-perplexity-inspired-ui-design.md) - Perplexity-Inspired UI Design
+
+### References
+- [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md) - Detailed implementation plan (1240 lines)
+- [ADR-020](../adr/ADR-020-sse-streaming-for-chat.md) - SSE vs WebSocket decision
+- [ADR-021](../adr/ADR-021-perplexity-inspired-ui-design.md) - Perplexity UI adoption rationale
+- Branch: TBD (will be `sprint-15-frontend` or similar)
+
+---
+
 ## Sprint 9: 3-Layer Memory Architecture + MCP Client Integration
 **Ziel:** Vollständige Memory-Architektur mit MCP Client für externe Tool-Nutzung
 

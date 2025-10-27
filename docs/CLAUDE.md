@@ -19,7 +19,7 @@
 
 ---
 
-## 📍 Current Project State (Sprint 14)
+## 📍 Current Project State (Sprint 15)
 
 **Sprint 13 Status**: ✅ COMPLETE (merged to main: `a9f5733`, `c8030a2`)
 - ✅ Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
@@ -27,22 +27,35 @@
 - ✅ All Technical Debt (TD-26 to TD-34) resolved
 - ✅ ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
 
-**Sprint 14 Status**: 🟡 IN PROGRESS (branch: `sprint-14-backend-performance`)
-- **Current Feature**: 14.1 - LightRAG Integration with Three-Phase Pipeline
-- **Strategy**: Option B (Wrapper um LightRAG) - FULLY DESIGNED ✅
-- **Implementation**: Per-chunk extraction, provenance tracking, new method `insert_documents_optimized()`
-- **Ready to Code**: All design decisions made, 9 phases documented in SPRINT_14_PLAN.md
+**Sprint 14 Status**: ✅ COMPLETE (2025-10-24 → 2025-10-27, branch: `sprint-14-backend-performance`)
+- ✅ Extraction Pipeline Factory (configuration-driven)
+- ✅ Production Benchmarking Suite (memory profiling)
+- ✅ Retry Logic & Error Handling (tenacity)
+- ✅ Prometheus Metrics & Monitoring (12 metrics)
+- ✅ Comprehensive Test Suite (132 tests: 112 unit, 20 integration)
+- ✅ ADR-019 (Integration Tests as E2E Tests)
 
-**Key Design Decisions (Feature 14.1)**:
-- ✅ Per-chunk extraction for precise provenance
-- ✅ LightRAG embeddings for query compatibility
-- ✅ tiktoken chunking (600 tokens, 100 overlap)
-- ✅ Neo4j schema: :base entities, :chunk nodes, MENTIONED_IN relationships
-- ✅ Backward compatible: New method alongside existing functionality
+**Sprint 15 Status**: 📋 PLANNED (2025-10-27, planning complete)
+- **Objective**: Production-ready web interface with Perplexity-inspired UI
+- **Key Decisions**:
+  - ✅ Perplexity.ai design patterns (sidebar + main content)
+  - ✅ Server-Sent Events (SSE) for streaming (ADR-020)
+  - ✅ React 18 + Vite + TypeScript + Tailwind CSS
+  - ✅ Multi-mode search: Hybrid, Vector, Graph, Memory
+  - ✅ German localization
+- **Features Planned**:
+  - 15.1: React + Vite + SSE Backend (13 SP)
+  - 15.2: Perplexity Layout (8 SP)
+  - 15.3: Search Input + Mode Selector (10 SP)
+  - 15.4: Streaming Answer + Source Cards (21 SP)
+  - 15.5: Conversation History (13 SP)
+  - 15.6: Health Dashboard (8 SP)
+- **Total**: 73 Story Points, 7-10 days estimated
+- **Architecture**: ADR-020 (SSE Streaming), ADR-021 (Perplexity UI Design)
 
-**Next Steps**: Implement Phase 1 (Chunking) of Feature 14.1
+**Next Steps**: Begin Sprint 15 implementation with Feature 15.1 (React setup + SSE backend)
 
-For full details, see [SPRINT_14_PLAN.md](../SPRINT_14_PLAN.md) and [SPRINT_14_TODOS.md](../SPRINT_14_TODOS.md)
+For full details, see [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md), [SPRINT_PLAN.md](core/SPRINT_PLAN.md)
 
 ---
 
