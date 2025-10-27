@@ -744,7 +744,9 @@ class GradioApp:
 
         return demo
 
-    def launch(self, server_name: str = "0.0.0.0", server_port: int = 7860, share: bool = False):  # nosec B104
+    def launch(
+        self, server_name: str = "0.0.0.0", server_port: int = 7860, share: bool = False
+    ):  # nosec B104
         """Launch Gradio app.
 
         Args:
