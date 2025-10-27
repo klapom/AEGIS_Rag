@@ -43,6 +43,9 @@ class EmbeddingService:
         self.unified_service = get_unified_service()
         self.batch_size = batch_size
         self.enable_cache = enable_cache
+        # Store parameters for backward compatibility with tests
+        self.model_name = model_name or self.unified_service.model_name
+        self.base_url = base_url or "unified_service"
 
         logger.info(
             "embedding_service_initialized",
@@ -80,6 +83,11 @@ class EmbeddingService:
             Embedding dimension (768 for nomic-embed-text)
         """
         return self.unified_service.embedding_dim
+
+    @property
+    def _cache(self):
+        """Get underlying cache for backward compatibility with tests."""
+        return self.unified_service.cache.cache
 
     def clear_cache(self):
         """Clear embedding cache."""

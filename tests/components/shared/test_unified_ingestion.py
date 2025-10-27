@@ -5,12 +5,14 @@ from pathlib import Path
 from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_unified_ingestion_e2e(tmp_path):
     """Test end-to-end unified ingestion.
 
     Note: Tests Qdrant/BM25 indexing. Neo4j indexing is optional due to
     LightRAG threading limitations in test environment.
+    Requires: Qdrant and Ollama services running.
     """
     # Create test documents
     doc_dir = tmp_path / "docs"
@@ -37,11 +39,13 @@ async def test_unified_ingestion_e2e(tmp_path):
     assert result.neo4j_relationships == 0
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_parallel_indexing_performance(tmp_path):
     """Test that parallel indexing completes successfully.
 
     Note: Tests Qdrant/BM25 indexing. Neo4j disabled due to threading issues.
+    Requires: Qdrant and Ollama services running.
     """
     import time
 
