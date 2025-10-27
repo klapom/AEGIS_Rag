@@ -85,6 +85,29 @@ Details siehe [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md)
 
 ## ✨ Latest Features
 
+### Sprint 14 (IN PROGRESS - Backend Performance & Production Readiness)
+- 🟡 **Feature 14.1**: LightRAG Integration with Three-Phase Pipeline (Option B - Wrapper approach)
+- 🔵 **Feature 14.2**: Configuration & Toggle System (Planned)
+- 🔵 **Feature 14.3**: Performance Benchmarking Suite (Planned)
+- 🔵 **Feature 14.4**: GPU Memory Optimization (Planned)
+- 🔵 **Feature 14.5**: Error Handling & Retry Logic (Planned)
+- 🔵 **Feature 14.6**: Monitoring & Metrics (Planned)
+- 🔵 **Feature 14.7**: CI/CD Pipeline Stability (Planned)
+
+**Goal**: Integrate 3-Phase Pipeline into production, optimize performance, stabilize CI/CD
+**Status**: Planning complete, implementation starting
+**Documentation**: [SPRINT_14_PLAN.md](SPRINT_14_PLAN.md), [SPRINT_14_TODOS.md](SPRINT_14_TODOS.md)
+
+### Sprint 13 (COMPLETE - Test Infrastructure & Three-Phase Extraction)
+- ✅ **Feature 13.9**: Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
+- ✅ **Performance**: Entity extraction improved from >300s timeout → <30s (10x faster)
+- ✅ **Quality**: 28.6% deduplication rate, 144% entity accuracy, 123% relation accuracy
+- ✅ **Technical Debt**: All TD-26 to TD-34 resolved (Memory Agent, Graphiti API, LightRAG fixtures)
+- ✅ **CI/CD**: pytest-timeout plugin, --timeout=300s, artifact uploads configured
+
+**Test Results**: 6/6 E2E tests passing in 128.68s total
+**Documentation**: [SPRINT_13_TODOS.md](SPRINT_13_TODOS.md), [ADR-017](docs/adr/ADR-017-semantic-entity-deduplication.md), [ADR-018](docs/adr/ADR-018-model-selection-entity-relation-extraction.md)
+
 ### Sprint 12 (COMPLETE - 9/11 features, 28/32 SP)
 - ✅ **Test Infrastructure Fixes**: LightRAG fixture (5 tests), Graphiti API (14 tests), Redis cleanup (0 warnings)
 - ✅ **Production Deployment Guide**: GPU setup, Docker/K8s, monitoring, security, backup/DR

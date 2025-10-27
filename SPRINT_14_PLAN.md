@@ -124,10 +124,456 @@ Replace LightRAG's default entity/relation extraction with the ThreePhaseExtract
 - ✅ Neo4j schema compatibility maintained
 - ✅ No breaking changes to public API
 
+#### Implementation Strategy: Option B - Wrapper um LightRAG
+
+**Approach**: Integrate ThreePhaseExtractor into LightRAG workflow while maintaining compatibility with existing Neo4j schema and query functionality.
+
+**Key Design Decisions** (from Sprint 14 planning session):
+- ✅ **Extraction Mode**: Per-Chunk (not global) for precise provenance tracking
+- ✅ **Embeddings**: Use LightRAG's `embedding_func` for query compatibility
+- ✅ **Chunking**: Use LightRAG's chunking strategy (tiktoken, 600 tokens, 100 overlap)
+- ✅ **Query**: Leave `query_graph()` unchanged - works automatically if inserts correct
+- ✅ **Compatibility**: New method `insert_documents_optimized()` for backward compatibility
+
+##### Phase 1: Chunking Strategy
+
+```python
+# Add to lightrag_wrapper.py
+async def _chunk_text_lightrag_style(self, text: str) -> list[dict]:
+    """
+    Chunk text using LightRAG's chunking strategy for compatibility.
+
+    Uses tiktoken (cl100k_base) with 600-token chunks and 100-token overlap.
+    This matches LightRAG's internal chunking for seamless integration.
+    """
+    import tiktoken
+
+    encoding = tiktoken.get_encoding("cl100k_base")
+    tokens = encoding.encode(text)
+
+    chunks = []
+    chunk_size = 600  # LightRAG default
+    overlap = 100     # LightRAG default
+    start = 0
+
+    while start < len(tokens):
+        end = start + chunk_size
+        chunk_tokens = tokens[start:end]
+        chunk_text = encoding.decode(chunk_tokens)
+
+        chunks.append({
+            "text": chunk_text,
+            "tokens": len(chunk_tokens),
+            "start_token": start,
+            "end_token": end,
+            "chunk_id": f"chunk_{start}"
+        })
+
+        start += (chunk_size - overlap)
+
+    return chunks
+```
+
+##### Phase 2: Per-Chunk Extraction
+
+```python
+async def _extract_per_chunk(
+    self,
+    chunks: list[dict],
+    document_id: str
+) -> tuple[list[dict], list[dict]]:
+    """
+    Extract entities and relations from each chunk separately.
+
+    Benefits:
+    - Precise provenance tracking (know which chunk contains each entity)
+    - Better localization for document references
+    - Enables chunk-level scoring in retrieval
+
+    Returns:
+        Tuple of (all_entities, all_relations) with chunk references
+    """
+    all_entities = []
+    all_relations = []
+
+    for i, chunk in enumerate(chunks):
+        chunk_id = f"{document_id}_chunk_{i}"
+
+        # Extract from this chunk using ThreePhaseExtractor
+        result = await self.three_phase_extractor.extract(
+            text=chunk["text"],
+            doc_id=chunk_id
+        )
+
+        # Add chunk metadata to each entity
+        for entity in result["entities"]:
+            entity["source_chunk_id"] = chunk_id
+            entity["chunk_index"] = i
+            entity["document_id"] = document_id
+            all_entities.append(entity)
+
+        # Add chunk metadata to each relation
+        for relation in result["relations"]:
+            relation["source_chunk_id"] = chunk_id
+            relation["chunk_index"] = i
+            relation["document_id"] = document_id
+            all_relations.append(relation)
+
+    return all_entities, all_relations
+```
+
+##### Phase 3: Entity Format Conversion with Provenance
+
+```python
+def _convert_entities_to_lightrag_format(
+    self,
+    entities: list[dict],
+    chunks: list[dict],
+    document_id: str
+) -> list[dict]:
+    """
+    Convert ThreePhaseExtractor entities to LightRAG format with full provenance.
+
+    Adds:
+    - Chunk references (which chunks mention this entity)
+    - Document provenance (document_id)
+    - Mention frequency tracking
+    - First seen location
+
+    This enables:
+    - Document-level traceability
+    - Chunk-level retrieval
+    - Citation generation
+    """
+    lightrag_entities = []
+
+    # Group entities by name for deduplication across chunks
+    entity_mentions = defaultdict(list)
+    for entity in entities:
+        entity_mentions[entity["name"]].append(entity)
+
+    for entity_name, mentions in entity_mentions.items():
+        # Collect all chunks that mention this entity
+        mention_chunks = []
+        for mention in mentions:
+            mention_chunks.append({
+                "chunk_id": mention["source_chunk_id"],
+                "chunk_index": mention["chunk_index"],
+                "document_id": mention["document_id"]
+            })
+
+        # Take first mention for entity details
+        first_mention = mentions[0]
+
+        lightrag_entity = {
+            # Core entity data
+            "entity_name": entity_name,
+            "entity_type": first_mention.get("type", "ENTITY"),
+            "description": first_mention.get("description", ""),
+
+            # Provenance tracking (NEW - enables document traceability)
+            "document_id": document_id,
+            "source_chunks": mention_chunks,
+            "first_seen_chunk": mention_chunks[0]["chunk_id"],
+            "mention_count": len(mention_chunks),
+
+            # Original ThreePhase data
+            "extraction_method": "three_phase",
+            "confidence": first_mention.get("confidence", 0.0)
+        }
+
+        lightrag_entities.append(lightrag_entity)
+
+    return lightrag_entities
+```
+
+##### Phase 4: Relation Format Conversion
+
+```python
+def _convert_relations_to_lightrag_format(
+    self,
+    relations: list[dict],
+    document_id: str
+) -> list[dict]:
+    """
+    Convert ThreePhaseExtractor relations to LightRAG format.
+
+    Maps:
+    - src_id → source_entity
+    - tgt_id → target_entity
+    - Adds document/chunk provenance
+    """
+    lightrag_relations = []
+
+    for relation in relations:
+        lightrag_relation = {
+            # LightRAG relation schema
+            "source_entity": relation["src_id"],
+            "target_entity": relation["tgt_id"],
+            "relation_type": relation.get("type", "RELATED_TO"),
+            "description": relation.get("description", ""),
+
+            # Provenance tracking
+            "document_id": document_id,
+            "source_chunk_id": relation.get("source_chunk_id"),
+            "chunk_index": relation.get("chunk_index"),
+
+            # Metadata
+            "extraction_method": "three_phase",
+            "confidence": relation.get("weight", 1.0)
+        }
+
+        lightrag_relations.append(lightrag_relation)
+
+    return lightrag_relations
+```
+
+##### Phase 5: Neo4j Integration with MENTIONED_IN Relationships
+
+```python
+async def _write_to_neo4j_with_provenance(
+    self,
+    entities: list[dict],
+    relations: list[dict],
+    chunks: list[dict],
+    document_id: str
+):
+    """
+    Write entities and relations to Neo4j with full provenance tracking.
+
+    Creates:
+    - Entity nodes (:base label, like LightRAG)
+    - Chunk nodes (:chunk label)
+    - MENTIONED_IN relationships (entity → chunk → document)
+    - Standard relation edges between entities
+
+    Schema:
+        (Entity:base)-[:MENTIONED_IN]->(Chunk:chunk {chunk_id, text})
+        (Entity:base)-[:RELATION_TYPE]->(Entity:base)
+    """
+    # 1. Create chunk nodes first
+    for i, chunk in enumerate(chunks):
+        chunk_id = f"{document_id}_chunk_{i}"
+        await self.neo4j_client.execute(f"""
+            MERGE (c:chunk {{chunk_id: $chunk_id}})
+            SET c.text = $text,
+                c.document_id = $document_id,
+                c.chunk_index = $chunk_index,
+                c.tokens = $tokens,
+                c.start_token = $start_token,
+                c.end_token = $end_token
+        """, {
+            "chunk_id": chunk_id,
+            "text": chunk["text"],
+            "document_id": document_id,
+            "chunk_index": i,
+            "tokens": chunk["tokens"],
+            "start_token": chunk["start_token"],
+            "end_token": chunk["end_token"]
+        })
+
+    # 2. Create entity nodes (with :base label like LightRAG)
+    for entity in entities:
+        await self.neo4j_client.execute(f"""
+            MERGE (e:base {{entity_name: $entity_name}})
+            SET e.entity_type = $entity_type,
+                e.description = $description,
+                e.document_id = $document_id,
+                e.mention_count = $mention_count,
+                e.extraction_method = 'three_phase'
+        """, {
+            "entity_name": entity["entity_name"],
+            "entity_type": entity["entity_type"],
+            "description": entity["description"],
+            "document_id": entity["document_id"],
+            "mention_count": entity["mention_count"]
+        })
+
+        # 3. Create MENTIONED_IN relationships for each chunk
+        for chunk_ref in entity["source_chunks"]:
+            await self.neo4j_client.execute(f"""
+                MATCH (e:base {{entity_name: $entity_name}})
+                MATCH (c:chunk {{chunk_id: $chunk_id}})
+                MERGE (e)-[:MENTIONED_IN]->(c)
+            """, {
+                "entity_name": entity["entity_name"],
+                "chunk_id": chunk_ref["chunk_id"]
+            })
+
+    # 4. Create relation edges
+    for relation in relations:
+        await self.neo4j_client.execute(f"""
+            MATCH (src:base {{entity_name: $source_entity}})
+            MATCH (tgt:base {{entity_name: $target_entity}})
+            MERGE (src)-[r:{relation["relation_type"]}]->(tgt)
+            SET r.description = $description,
+                r.document_id = $document_id,
+                r.source_chunk_id = $source_chunk_id,
+                r.confidence = $confidence
+        """, {
+            "source_entity": relation["source_entity"],
+            "target_entity": relation["target_entity"],
+            "description": relation["description"],
+            "document_id": relation["document_id"],
+            "source_chunk_id": relation.get("source_chunk_id"),
+            "confidence": relation["confidence"]
+        })
+```
+
+##### Phase 6: Embeddings Integration
+
+```python
+async def _generate_embeddings_lightrag_style(
+    self,
+    entities: list[dict]
+) -> dict[str, list[float]]:
+    """
+    Generate embeddings using LightRAG's embedding function.
+
+    This ensures query compatibility - queries will use the same
+    embedding model as the indexed entities.
+    """
+    embeddings = {}
+
+    for entity in entities:
+        # Use LightRAG's embedding_func for consistency
+        entity_text = f"{entity['entity_name']}: {entity['description']}"
+
+        # LightRAG's embedding_func is already configured
+        embedding = await self.rag.embedding_func([entity_text])
+        embeddings[entity["entity_name"]] = embedding[0]
+
+    return embeddings
+```
+
+##### Phase 7: Main Integration Method
+
+```python
+async def insert_documents_optimized(
+    self,
+    text: str,
+    document_id: str,
+    metadata: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Insert documents using ThreePhaseExtractor instead of LightRAG default.
+
+    NEW METHOD - Backward compatible with existing insert_documents().
+
+    Workflow:
+    1. Chunk text (LightRAG style)
+    2. Extract entities/relations per chunk (ThreePhase)
+    3. Convert to LightRAG format with provenance
+    4. Write to Neo4j with MENTIONED_IN relationships
+    5. Generate embeddings (LightRAG's embedding_func)
+
+    Returns:
+        Statistics about the extraction (entities, relations, chunks)
+    """
+    logger.info("insert_optimized_start", document_id=document_id, text_length=len(text))
+
+    # Phase 1: Chunk text
+    chunks = await self._chunk_text_lightrag_style(text)
+    logger.info("chunking_complete", document_id=document_id, num_chunks=len(chunks))
+
+    # Phase 2: Extract per chunk
+    entities, relations = await self._extract_per_chunk(chunks, document_id)
+    logger.info("extraction_complete",
+                document_id=document_id,
+                num_entities=len(entities),
+                num_relations=len(relations))
+
+    # Phase 3: Convert to LightRAG format
+    lightrag_entities = self._convert_entities_to_lightrag_format(
+        entities, chunks, document_id
+    )
+    lightrag_relations = self._convert_relations_to_lightrag_format(
+        relations, document_id
+    )
+
+    # Phase 4: Write to Neo4j with provenance
+    await self._write_to_neo4j_with_provenance(
+        lightrag_entities, lightrag_relations, chunks, document_id
+    )
+    logger.info("neo4j_write_complete", document_id=document_id)
+
+    # Phase 5: Generate embeddings
+    embeddings = await self._generate_embeddings_lightrag_style(lightrag_entities)
+    logger.info("embeddings_complete", document_id=document_id, num_embeddings=len(embeddings))
+
+    return {
+        "document_id": document_id,
+        "num_chunks": len(chunks),
+        "num_entities": len(lightrag_entities),
+        "num_relations": len(lightrag_relations),
+        "extraction_method": "three_phase",
+        "status": "success"
+    }
+```
+
+##### Phase 8: Testing Strategy
+
+```python
+# tests/integration/test_lightrag_three_phase_integration.py
+
+async def test_insert_documents_optimized_with_provenance():
+    """Test that insert_documents_optimized creates proper provenance."""
+    wrapper = LightRAGWrapper(config)
+
+    text = "Microsoft was founded by Bill Gates and Paul Allen in 1975."
+    result = await wrapper.insert_documents_optimized(
+        text=text,
+        document_id="test_doc_1"
+    )
+
+    # Verify extraction statistics
+    assert result["num_entities"] >= 3  # Microsoft, Bill Gates, Paul Allen
+    assert result["num_relations"] >= 2  # founder relationships
+    assert result["num_chunks"] >= 1
+
+    # Verify Neo4j schema
+    entities = await wrapper.neo4j_client.execute("""
+        MATCH (e:base)
+        WHERE e.document_id = 'test_doc_1'
+        RETURN e.entity_name, e.mention_count
+    """)
+    assert len(entities) >= 3
+
+    # Verify MENTIONED_IN relationships exist
+    mentions = await wrapper.neo4j_client.execute("""
+        MATCH (e:base)-[:MENTIONED_IN]->(c:chunk)
+        WHERE c.document_id = 'test_doc_1'
+        RETURN count(*) as mention_count
+    """)
+    assert mentions[0]["mention_count"] >= 3
+
+    # Verify query still works (unchanged query_graph)
+    query_result = await wrapper.query_graph(
+        query="Who founded Microsoft?",
+        mode="hybrid"
+    )
+    assert "Bill Gates" in query_result["answer"]
+```
+
+##### Implementation Timeline (2 days / 3 SP)
+
+**Day 1 (4-5 hours):**
+1. ✅ Chunking (30 min)
+2. ✅ Per-chunk extraction (1h)
+3. ✅ Format conversion (1h)
+4. ✅ Neo4j write (1h)
+5. ✅ Embeddings (30 min)
+
+**Day 2 (3-4 hours):**
+6. ✅ Testing (2h)
+7. ✅ Documentation (30 min)
+8. ✅ Integration with existing tests (1h)
+
 #### Files to Modify
 
-- `src/components/graph_rag/lightrag_wrapper.py`
-- `tests/integration/test_sprint5_critical_e2e.py`
+- `src/components/graph_rag/lightrag_wrapper.py` (add new methods)
+- `tests/integration/test_sprint5_critical_e2e.py` (update to use `insert_documents_optimized`)
+- `tests/integration/test_lightrag_three_phase_integration.py` (NEW - provenance tests)
 - `src/core/config.py` (if config changes needed)
 
 ---

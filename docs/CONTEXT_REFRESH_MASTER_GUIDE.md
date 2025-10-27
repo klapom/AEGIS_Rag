@@ -89,7 +89,7 @@ Team-Übergabe:                        → Deep Refresh
 
 **Copy-Paste Prompt:**
 ```
-Context Refresh: Lies CLAUDE.md, SPRINT_13_PLAN.md, SUBAGENTS.md,
+Context Refresh: Lies CLAUDE.md, SPRINT_14_PLAN.md, SUBAGENTS.md,
 NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 ```
 
@@ -115,19 +115,19 @@ NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 Bitte reaktiviere vollständigen Projekt-Context:
 
 📖 CORE:
-1. CLAUDE.md - Projekt & Architektur
-2. SPRINT_12_COMPLETION_REPORT.md - Sprint 12 Achievements
-3. SPRINT_13_PLAN.md - Aktueller Sprint (Test Infrastructure, 16 SP)
+1. CLAUDE.md - Projekt & Architektur (inkl. Sprint 14 State)
+2. SPRINT_13_TODOS.md - Sprint 13 COMPLETE (Three-Phase Pipeline, all TD resolved)
+3. SPRINT_14_PLAN.md - Aktueller Sprint (Backend Performance, 15 SP, IN PROGRESS)
 4. SUBAGENTS.md - 5 Subagenten & File Ownership
 5. NAMING_CONVENTIONS.md - Code Standards
 
 📚 DECISIONS:
-6. TECHNICAL_DEBT_SUMMARY.md - 22 Items (0 Critical, 9 Medium, 13 Low)
-7. README.md - Sprint 12 Highlights
+6. TECHNICAL_DEBT_SUMMARY.md - Status post-Sprint 13
+7. README.md - Sprint 13/14 Status
 
 Bestätige mit Zusammenfassung (5 Bulletpoints):
 - Projekt-Ziel
-- Sprint-Status (12 Complete, 13 Planned)
+- Sprint-Status (13 Complete, 14 In Progress - Feature 14.1 LightRAG Integration)
 - Tech Stack (FastAPI, LangGraph, Ollama, Qdrant, Neo4j, Redis)
 - GPU Status (RTX 3060: 105 tokens/s)
 - Top 3 Priorities
@@ -158,12 +158,12 @@ Neue Session / Major Context Loss. Vollständiger Sprint-Context benötigt:
 
 📋 PROJECT FOUNDATION:
 Lies in dieser Reihenfolge:
-1. README.md - Projekt-Überblick & Sprint 12 Highlights
-2. CLAUDE.md - Vollständiger Projekt-Context
-3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-12 Journey & Learnings
-4. SPRINT_12_COMPLETION_REPORT.md - Sprint 12 Achievements (31/32 SP)
-5. SPRINT_13_PLAN.md - Test Infrastructure & Performance (16 SP, 1-2 Wochen)
-6. SPRINT_14_PLAN.md - React Migration Phase 1 (15 SP, 2 Wochen)
+1. README.md - Projekt-Überblick & Sprint 13/14 Status
+2. CLAUDE.md - Vollständiger Projekt-Context (inkl. Sprint 14 State)
+3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-13 Journey & Learnings
+4. SPRINT_13_TODOS.md - Sprint 13 COMPLETE (Three-Phase Pipeline, TD-26 to TD-34 resolved)
+5. SPRINT_14_PLAN.md - Backend Performance & Production Readiness (15 SP, 2 Wochen, IN PROGRESS)
+6. SPRINT_14_TODOS.md - Feature 14.1 Task Breakdown (Option B Integration)
 
 👥 WORKFLOW & STANDARDS:
 7. SUBAGENTS.md - Delegation Strategy (5 Subagenten)
@@ -179,35 +179,34 @@ Lies in dieser Reihenfolge:
 15. docs/ADR_INDEX.md - 15 Architecture Decision Records
 
 📊 SPRINT STATUS:
-Sprint 12: ✅ COMPLETE (9/11 features, 31/32 SP)
-- Feature 12.10: Production Deployment Guide ✅
-- E2E Test Pass Rate: 17.9% → ~50% (2.8x improvement)
-- 40 neue Tests (10 E2E + 30 Gradio UI)
-- TD-23, TD-24, TD-25 resolved
+Sprint 13: ✅ COMPLETE (merged to main: a9f5733, c8030a2)
+- Feature 13.9: Three-Phase Entity/Relation Extraction Pipeline ✅
+- Performance: >300s → <30s (10x improvement)
+- Quality: 28.6% deduplication, 144% entity accuracy, 123% relation accuracy
+- All TD-26 to TD-34 resolved (Memory Agent, Graphiti API, LightRAG fixtures)
+- ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
+- 6/6 E2E tests passing in 128.68s total
 
-Sprint 13: 🔵 PLANNED (Test Infrastructure & Performance, 16 SP)
-- Features 13.1-13.3: Critical test fixes (7 SP)
-- Features 13.4-13.5: CI/CD enhancements (4 SP)
-- Features 13.6-13.8: Performance optimization (5 SP)
-- Goal: 70%+ E2E test pass rate
-
-Sprint 14: 🔵 PLANNED (React Migration Phase 1, 15 SP)
-- Next.js 14 + TypeScript setup
-- Chat UI + SSE streaming
-- NextAuth.js authentication
-- Tailwind CSS + dark mode
+Sprint 14: 🟡 IN PROGRESS (Backend Performance & Production Readiness, 15 SP)
+- Branch: sprint-14-backend-performance
+- Feature 14.1: LightRAG Integration with Three-Phase Pipeline (PLANNING COMPLETE ✅)
+- Strategy: Option B (Wrapper um LightRAG) - fully designed
+- Implementation: Per-chunk extraction, provenance tracking, insert_documents_optimized()
+- Features 14.2-14.7: Configuration, Benchmarking, GPU Optimization, Error Handling, Monitoring, CI/CD
+- Goal: <60s document processing, production-grade error handling, stable CI/CD
 
 🎯 TECHNICAL STATE:
-- Main Branch: sprint-10-dev archived, all features in main
+- Main Branch: Sprint 13 merged, Sprint 14 in progress
 - GPU: RTX 3060 verified (105 tokens/s, 52.7% VRAM)
 - Backend: FastAPI + LangGraph + Ollama (100% local)
 - RAG: Hybrid (Vector + Graph + BM25 with RRF)
 - Memory: 3-Layer (Redis → Qdrant → Graphiti)
+- Extraction: Three-Phase Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B Q4_K_M)
 
 🎯 NÄCHSTE PRIORITÄTEN:
-1. Sprint 13.1: Fix Memory Agent Event Loop Errors (TD-26)
-2. Sprint 13.2: Fix Graphiti API Compatibility (TD-27)
-3. Sprint 13.3: Fix LightRAG Fixture Connection (TD-28)
+1. Feature 14.1 Phase 1: Chunking Strategy (tiktoken, 600 tokens, 100 overlap)
+2. Feature 14.1 Phase 2: Per-Chunk Extraction (ThreePhaseExtractor)
+3. Feature 14.1 Phase 3-6: Format Conversion, Neo4j, Embeddings (see SPRINT_14_PLAN.md)
 
 Gib mir einen Executive Summary (5-7 Bulletpoints):
 - Projekt-Ziel & Architektur (4 Core-Komponenten)
@@ -277,53 +276,51 @@ Infrastructure:
 
 ### Sprint Status
 
-**Sprint 12: ✅ COMPLETE (2025-10-22)**
-- **Delivered:** 9/11 features, 31/32 SP (97% complete)
+**Sprint 13: ✅ COMPLETE (2025-10-25, merged: a9f5733, c8030a2)**
+- **Delivered:** Features 13.1-13.9 complete
 - **Highlights:**
-  - Production Deployment Guide (800+ lines)
-  - E2E test pass rate: 17.9% → ~50% (2.8x improvement)
-  - 40 neue Tests (10 E2E + 30 Gradio UI)
-  - 3 Technical Debt items resolved (TD-23, TD-24, TD-25)
-  - GPU benchmarking (RTX 3060: 105 tokens/s verified)
-  - Graph visualization API (4 endpoints)
-- **New Technical Debt:** TD-26 (Memory Agent), TD-27 (Graphiti API), TD-28 (LightRAG), TD-29 (pytest-timeout)
+  - Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
+  - Performance: >300s → <30s (10x improvement)
+  - Quality: 28.6% deduplication rate, 144% entity accuracy, 123% relation accuracy
+  - All Technical Debt resolved (TD-26 to TD-34)
+  - ADR-017: Semantic Entity Deduplication
+  - ADR-018: Model Selection (SpaCy Transformer + Gemma 3 4B Q4_K_M)
+  - 6/6 E2E tests passing in 128.68s total
+  - pytest-timeout plugin, CI/CD enhancements
 
-**Sprint 13: 🔵 PLANNED (Test Infrastructure & Performance Optimization)**
-- **Duration:** 1-2 weeks
-- **Story Points:** 16 SP
-- **Theme:** Backend Excellence - Testing & Performance
-- **Features:**
-  - 13.1: Fix Memory Agent Event Loop Errors (2 SP) - TD-26
-  - 13.2: Fix Graphiti API Compatibility (3 SP) - TD-27
-  - 13.3: Fix LightRAG Fixture Connection (2 SP) - TD-28
-  - 13.4: Add pytest-timeout Plugin (1 SP) - TD-29
-  - 13.5: CI/CD Pipeline Enhancements (3 SP)
-  - 13.6: Community Detection Caching (2 SP)
-  - 13.7: LLM Labeling Batching (2 SP)
-  - 13.8: Cache Invalidation Patterns (1 SP)
-- **Goal:** 70%+ E2E test pass rate
-
-**Sprint 14: 🔵 PLANNED (React Frontend Migration Phase 1)**
+**Sprint 14: 🟡 IN PROGRESS (Backend Performance & Production Readiness)**
 - **Duration:** 2 weeks
 - **Story Points:** 15 SP
-- **Theme:** Frontend Excellence - Modern React Architecture
+- **Branch:** sprint-14-backend-performance
+- **Theme:** Backend Excellence - Performance, Stability & CI/CD
 - **Features:**
-  - 14.1: React Project Setup (Next.js 14) - 2 SP
-  - 14.2: Basic Chat UI Component - 3 SP
-  - 14.3: Server-Sent Events Streaming - 3 SP
-  - 14.4: NextAuth.js Authentication - 3 SP
-  - 14.5: Tailwind CSS Styling System - 2 SP
-  - 14.6: Document Upload UI - 2 SP
-- **Goal:** Production-ready React frontend replacing Gradio
+  - 14.1: Integrate 3-Phase Pipeline into LightRAG (3 SP) - 🟡 PLANNING COMPLETE
+    - Strategy: Option B (Wrapper um LightRAG)
+    - Per-chunk extraction with provenance tracking
+    - New method: insert_documents_optimized()
+    - 9 phases fully documented
+  - 14.2: Configuration & Toggle System (2 SP) - 🔵 Planned
+  - 14.3: Performance Benchmarking Suite (2 SP) - 🔵 Planned
+  - 14.4: GPU Memory Optimization (2 SP) - 🔵 Planned
+  - 14.5: Error Handling & Retry Logic (2 SP) - 🔵 Planned
+  - 14.6: Monitoring & Metrics (2 SP) - 🔵 Planned
+  - 14.7: CI/CD Pipeline Stability (2 SP) - 🔵 Planned
+- **Goal:** <60s document processing, production error handling, stable CI/CD
+- **React Migration:** Deferred to Sprint 15
 
-### Technical Debt Summary (Post-Sprint 12)
-**Total Items:** 22 (0 Critical, 0 High, 9 Medium, 13 Low)
+### Technical Debt Summary (Post-Sprint 13)
+**Status:** All Sprint 13 Technical Debt RESOLVED ✅
 
-**New in Sprint 12:**
-- **TD-26** (Medium): Memory Agent Event Loop Errors (4 tests)
-- **TD-27** (Critical → to be reclassified): Graphiti API Compatibility (18 tests)
-- **TD-28** (Critical → to be reclassified): LightRAG Fixture Connection (5 tests)
-- **TD-29** (Low): pytest-timeout not installed
+**Resolved in Sprint 13:**
+- **TD-26** ✅ RESOLVED: Memory Agent Event Loop Errors (Feature 13.1)
+- **TD-27** ✅ RESOLVED: Graphiti API Compatibility (Feature 13.2)
+- **TD-28** ✅ RESOLVED: LightRAG Fixture Connection (Feature 13.3)
+- **TD-29** ✅ RESOLVED: pytest-timeout Plugin (Feature 13.4)
+- **TD-30** ✅ RESOLVED: Entity Extraction Ollama Neo4j
+- **TD-31** ✅ RESOLVED: Three-Phase Fiction Text Extraction
+- **TD-32** ✅ RESOLVED: Three-Phase Financial Text Extraction
+- **TD-33** ✅ RESOLVED: Three-Phase Sports Text Extraction
+- **TD-34** ✅ RESOLVED: Incremental Graph Updates
 
 **Resolved in Sprint 12:**
 - ✅ TD-23: LightRAG E2E tests (5 tests fixed)
@@ -795,13 +792,14 @@ Before continuing work, verify:
 **Document Version:** 2.0 (Master Consolidation)
 **Created:** 2025-10-22
 **Project:** AEGIS RAG
-**Current Sprint:** Sprint 13 (Planned)
-**Last Updated:** Post-Sprint 12 Completion
+**Current Sprint:** Sprint 14 (Backend Performance & Production Readiness - IN PROGRESS)
+**Last Updated:** 2025-10-25 (Post-Sprint 13 Completion)
 
 **Quick Access Commands:**
-- Full Project Context: Read CLAUDE.md
-- Current Sprint: Read SPRINT_13_PLAN.md
-- Sprint Status: Read SPRINT_12_COMPLETION_REPORT.md
-- Technical Debt: Read TECHNICAL_DEBT_SUMMARY.md
+- Full Project Context: Read CLAUDE.md (includes Sprint 14 State)
+- Current Sprint: Read SPRINT_14_PLAN.md (15 SP, Feature 14.1 planning complete)
+- Sprint Status: Read SPRINT_14_TODOS.md (detailed task breakdown)
+- Previous Sprint: Read SPRINT_13_TODOS.md (all features complete, TD resolved)
+- Technical Debt: All Sprint 13 TD resolved (TD-26 to TD-34)
 - Quick Refresh: Use Strategy 1 prompt above
 - Deep Refresh: Use Strategy 3 prompt above

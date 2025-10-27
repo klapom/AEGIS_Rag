@@ -45,38 +45,110 @@
 **Assignee**: Claude Code
 **Target**: Days 1-2
 
-### Task Checklist
+### Task Checklist - Option B Implementation (7 Phases)
 
-#### Analysis & Planning
-- [ ] Review current `lightrag_wrapper.py` implementation
-- [ ] Map ThreePhaseExtractor output format to LightRAG format
-- [ ] Identify all integration points
-- [ ] Design backward compatibility strategy
+**Implementation Strategy**: Wrapper um LightRAG with per-chunk extraction and full provenance tracking
 
-#### Implementation
-- [ ] Replace entity extraction with `ThreePhaseExtractor`
-- [ ] Update `insert_documents()` workflow
-- [ ] Add format mapping functions
-- [ ] Update config integration
-- [ ] Maintain backward compatibility hooks
+#### Phase 1: Chunking Strategy (30 min)
+- [ ] Add `tiktoken` import and initialization
+- [ ] Implement `_chunk_text_lightrag_style()` method
+- [ ] Use cl100k_base encoding (LightRAG compatible)
+- [ ] Configure 600-token chunks with 100-token overlap
+- [ ] Return chunk metadata (text, tokens, start/end positions, chunk_id)
+- [ ] Unit test chunking with various document sizes
 
-#### Testing
-- [ ] Update `test_sprint5_critical_e2e.py`
-- [ ] Verify all LightRAG E2E tests pass
-- [ ] Test performance (<60s document insertion)
+#### Phase 2: Per-Chunk Extraction (1 hour)
+- [ ] Implement `_extract_per_chunk()` method
+- [ ] Initialize ThreePhaseExtractor instance
+- [ ] Loop through chunks and extract entities/relations
+- [ ] Add chunk metadata to each entity (source_chunk_id, chunk_index, document_id)
+- [ ] Add chunk metadata to each relation
+- [ ] Aggregate all entities and relations across chunks
+- [ ] Test extraction with multi-chunk documents
+
+#### Phase 3: Entity Format Conversion with Provenance (1 hour)
+- [ ] Implement `_convert_entities_to_lightrag_format()` method
+- [ ] Group entities by name for cross-chunk deduplication
+- [ ] Track all chunk mentions for each entity
+- [ ] Map to LightRAG format (entity_name, entity_type, description)
+- [ ] Add provenance fields (document_id, source_chunks, first_seen_chunk, mention_count)
+- [ ] Test format conversion with duplicate entities across chunks
+
+#### Phase 4: Relation Format Conversion (30 min)
+- [ ] Implement `_convert_relations_to_lightrag_format()` method
+- [ ] Map ThreePhase format (src_id, tgt_id) → LightRAG format (source_entity, target_entity)
+- [ ] Add relation_type and description fields
+- [ ] Add provenance (document_id, source_chunk_id, chunk_index)
+- [ ] Add confidence score mapping
+- [ ] Test relation format conversion
+
+#### Phase 5: Neo4j Integration with MENTIONED_IN (1 hour)
+- [ ] Implement `_write_to_neo4j_with_provenance()` method
+- [ ] Create chunk nodes with :chunk label
+- [ ] Create entity nodes with :base label (LightRAG compatible)
+- [ ] Create MENTIONED_IN relationships (entity → chunk)
+- [ ] Create relation edges between entities
 - [ ] Test Neo4j schema compatibility
-- [ ] Add integration comparison tests
+- [ ] Verify query_graph() still works with new schema
 
-#### Documentation
+#### Phase 6: Embeddings Integration (30 min)
+- [ ] Implement `_generate_embeddings_lightrag_style()` method
+- [ ] Use LightRAG's `embedding_func` for consistency
+- [ ] Format entity text as "entity_name: description"
+- [ ] Generate embeddings for all entities
+- [ ] Return entity_name → embedding mapping
+- [ ] Test embedding generation
+
+#### Phase 7: Main Integration Method (1 hour)
+- [ ] Implement `insert_documents_optimized()` method
+- [ ] Orchestrate all 6 phases in sequence
+- [ ] Add comprehensive structured logging at each phase
+- [ ] Add timing measurements per phase
+- [ ] Return extraction statistics (entities, relations, chunks, method)
+- [ ] Add error handling for each phase
+- [ ] Test end-to-end workflow
+
+#### Phase 8: Testing & Validation (2 hours)
+- [ ] Create `test_lightrag_three_phase_integration.py`
+- [ ] Test provenance tracking (MENTIONED_IN relationships)
+- [ ] Test entity deduplication across chunks
+- [ ] Test backward compatibility (query_graph unchanged)
+- [ ] Update `test_sprint5_critical_e2e.py` to use new method
+- [ ] Verify all E2E tests pass
+- [ ] Test performance (<60s per document)
+- [ ] Verify Neo4j schema matches LightRAG expectations
+
+#### Phase 9: Documentation (30 min)
 - [ ] Update `lightrag_wrapper.py` docstrings
-- [ ] Document format mapping
+- [ ] Document Option B design rationale in code comments
+- [ ] Document chunk reference structure
+- [ ] Document Neo4j schema (entities, chunks, MENTIONED_IN)
+- [ ] Update SPRINT_14_PLAN.md with results
 - [ ] Update README if needed
 
+### Time Estimates
+
+**Day 1 (4-5 hours):**
+- ✅ Phase 1: Chunking (30 min)
+- ✅ Phase 2: Per-Chunk Extraction (1h)
+- ✅ Phase 3: Entity Format Conversion (1h)
+- ✅ Phase 4: Relation Format Conversion (30 min)
+- ✅ Phase 5: Neo4j Integration (1h)
+- ✅ Phase 6: Embeddings (30 min)
+
+**Day 2 (3-4 hours):**
+- ✅ Phase 7: Main Integration Method (1h)
+- ✅ Phase 8: Testing & Validation (2h)
+- ✅ Phase 9: Documentation (30 min)
+
 ### Acceptance Criteria
-- [ ] All LightRAG E2E tests pass
-- [ ] Document insertion <60s (vs >300s)
+- [ ] All LightRAG E2E tests pass with new pipeline
+- [ ] Document insertion <60s (vs >300s with LightRAG default)
+- [ ] Neo4j schema includes :base entities, :chunk nodes, MENTIONED_IN relationships
+- [ ] Provenance tracking: Each entity linked to source chunks
+- [ ] Query functionality unchanged (query_graph works automatically)
 - [ ] No breaking API changes
-- [ ] Neo4j schema compatible
+- [ ] Backward compatible (new method `insert_documents_optimized()`)
 
 ---
 
@@ -310,11 +382,24 @@
 ## 🎯 Daily Progress Log
 
 ### Day 1 (2025-10-25)
-- **Focus**: Feature 14.1 - LightRAG Integration (Start)
+- **Focus**: Feature 14.1 - LightRAG Integration (Planning & Design)
 - **Completed**:
-  - [ ] TBD
+  - [x] Sprint 14 branch created (`sprint-14-backend-performance`)
+  - [x] Analyzed `lightrag_wrapper.py` current implementation
+  - [x] Designed Option B integration strategy (Wrapper um LightRAG)
+  - [x] Made key design decisions:
+    - Per-chunk extraction for precise provenance
+    - LightRAG embeddings for compatibility
+    - New method `insert_documents_optimized()` for backward compatibility
+    - Chunk references with MENTIONED_IN relationships
+  - [x] Updated SPRINT_14_PLAN.md with complete Option B implementation (8 phases)
+  - [x] Updated SPRINT_14_TODOS.md with detailed task breakdown
+  - [x] Context refresh documentation prepared for new sessions
 - **Blockers**: None
-- **Notes**: Sprint started, branch created
+- **Notes**:
+  - Option B strategy fully documented with code snippets
+  - Ready to start implementation in next session
+  - All design questions answered (extraction mode, embeddings, chunking, query)
 
 ### Day 2
 - **Focus**: Feature 14.1 - LightRAG Integration (Complete)
