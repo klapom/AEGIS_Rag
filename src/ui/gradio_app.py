@@ -31,10 +31,10 @@ import structlog
 
 try:
     import gradio as gr
-except ImportError:
+except ImportError as e:
     raise ImportError(
         "Gradio is not installed. Please install it with: pip install gradio>=4.0.0"
-    )
+    ) from e
 
 import contextlib
 
@@ -236,9 +236,6 @@ class GradioApp:
                     desc=f"📤 Datei {idx}/{len(files)}: {Path(file.name).name}..."
                 )
 
-                # Call ingestion API
-                file_data = {"file": (file.name, open(file.name, "rb"), "application/octet-stream")}
-
                 # Start async task for progress simulation within this file's progress range
                 async def simulate_progress(file_idx: int):
                     """Simulate progress for long-running embedding generation."""
@@ -264,10 +261,13 @@ class GradioApp:
                     timeout = 180.0 + (len(files) * 60.0)
                     client_with_timeout = httpx.AsyncClient(timeout=timeout)
 
-                    response = await client_with_timeout.post(
-                        f"{API_BASE_URL}/api/v1/retrieval/upload",
-                        files=file_data
-                    )
+                    # Call ingestion API with proper file handling
+                    with open(file.name, "rb") as f:
+                        file_data = {"file": (file.name, f, "application/octet-stream")}
+                        response = await client_with_timeout.post(
+                            f"{API_BASE_URL}/api/v1/retrieval/upload",
+                            files=file_data
+                        )
                     await client_with_timeout.aclose()
 
                 except Exception as e:

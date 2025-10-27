@@ -112,7 +112,7 @@ class MCPClient:
                     raise MCPConnectionError(
                         f"Failed to connect to {server.name} after "
                         f"{server.retry_attempts} attempts: {e}"
-                    )
+                    ) from e
                 await asyncio.sleep(1)  # Wait before retry
 
         return False
@@ -157,7 +157,7 @@ class MCPClient:
             logger.debug(f"STDIO connection established to {server.name}")
 
         except Exception as e:
-            raise MCPConnectionError(f"Failed to create stdio process: {e}")
+            raise MCPConnectionError(f"Failed to create stdio process: {e}") from e
 
     async def _connect_http(self, server: MCPServer) -> None:
         """Connect to HTTP-based MCP server.
@@ -183,7 +183,7 @@ class MCPClient:
             logger.debug(f"HTTP connection established to {server.name}")
 
         except httpx.HTTPError as e:
-            raise MCPConnectionError(f"HTTP connection failed: {e}")
+            raise MCPConnectionError(f"HTTP connection failed: {e}") from e
 
     async def discover_tools(self, server_name: str) -> list[MCPTool]:
         """Discover available tools from a server.
@@ -221,7 +221,7 @@ class MCPClient:
             return tools
 
         except Exception as e:
-            raise MCPToolError(f"Tool discovery failed for {server_name}: {e}")
+            raise MCPToolError(f"Tool discovery failed for {server_name}: {e}") from e
 
     async def _discover_tools_stdio(self, server_name: str) -> list[MCPTool]:
         """Discover tools via stdio transport.

@@ -20,6 +20,14 @@ from typing import Any
 
 import structlog
 
+from src.components.graph_rag.gemma_relation_extractor import (
+    create_relation_extractor_from_config,
+)
+from src.components.graph_rag.semantic_deduplicator import (
+    create_deduplicator_from_config,
+)
+from src.core.config import get_settings
+
 logger = structlog.get_logger(__name__)
 
 # Conditional imports
@@ -29,14 +37,6 @@ try:
 except ImportError:
     SPACY_AVAILABLE = False
     logger.warning("spacy not available")
-
-from src.components.graph_rag.gemma_relation_extractor import (
-    create_relation_extractor_from_config,
-)
-from src.components.graph_rag.semantic_deduplicator import (
-    create_deduplicator_from_config,
-)
-from src.core.config import get_settings
 
 # SpaCy type mapping to LightRAG types
 SPACY_TO_LIGHTRAG_TYPE = {

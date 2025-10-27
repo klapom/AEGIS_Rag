@@ -290,9 +290,9 @@ class HybridStrategy(RoutingStrategy):
         logger.debug(
             "Hybrid strategy selected layers",
             query=query[:50],
-            recency_layers=[l.value for l in recency_layers],
-            query_type_layers=[l.value for l in query_type_layers],
-            final_layers=[l.value for l in merged_layers],
+            recency_layers=[layer.value for layer in recency_layers],
+            query_type_layers=[layer.value for layer in query_type_layers],
+            final_layers=[layer.value for layer in merged_layers],
         )
 
         return merged_layers
