@@ -38,27 +38,21 @@ AEGIS_RAG/
 
 1. **Dokumentation lesen**: Beginne mit [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md)
 2. **Setup durchführen**: Folge [docs/core/QUICK_START.md](docs/core/QUICK_START.md)
-3. **Claude Code nutzen**: Siehe [docs/core/CLAUDE.md](docs/core/CLAUDE.md) für Kontext
+3. **Claude Code nutzen**: Siehe [docs/core/PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) für Templates
 
 ## 📚 Wichtige Dokumente
 
 ### Core Dokumentation
 - [PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Gesamtübersicht
 - [SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - 12-Sprint Roadmap
-- [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) - ✅ Sprint 3 Complete (335 tests, 99.1%)
-- [CLAUDE.md](docs/core/CLAUDE.md) - Claude Code Hauptkontext
-- [NAMING_CONVENTIONS.md](docs/core/NAMING_CONVENTIONS.md) - Code Standards
-- [SUBAGENTS.md](docs/core/SUBAGENTS.md) - 5 Subagenten-Definitionen
-- [TECH_STACK.md](docs/core/TECH_STACK.md) - Complete Technology Stack
-- [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 9 Architecture Decisions
+- [QUICK_START.md](docs/core/QUICK_START.md) - Day-1 Setup Guide
+- [PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) - Claude Code Templates
+- [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 18+ Architecture Decisions
 
 ### Examples & Tutorials
 - [Sprint 3 Usage Examples](docs/examples/sprint3_examples.md) - Reranking, Query Decomposition, Filters
 
-### Setup & Enforcement (9 Dateien)
-- [QUICK_START.md](docs/core/QUICK_START.md) - Tag-1-Setup
-- [PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) - 8 Claude Code Templates
-- [ENFORCEMENT_GUIDE.md](docs/core/ENFORCEMENT_GUIDE.md) - Quality Gates
+### Setup & Enforcement
 - [.pre-commit-config.yaml](.pre-commit-config.yaml) - 14 Hooks
 - [ci.yml](.github/workflows/ci.yml) - 10-Job Pipeline
 - [pull_request_template.md](.github/pull_request_template.md) - PR Checklist
@@ -81,7 +75,7 @@ AEGIS_RAG/
 - **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
 - **DevOps**: Docker, GitHub Actions
 
-Details siehe [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md)
+Details siehe [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
 
 ## ✨ Latest Features
 
@@ -140,7 +134,7 @@ Details siehe [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md)
 - ✅ **Security Fix**: MD5 → SHA-256 for document IDs (CVE-2010-4651)
 
 **Test Coverage**: 335/338 passing (99.1%)
-See [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) for details
+See [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) for project details
 
 ### LLM-Strategie (ADR-002)
 - **Development & Production**: 100% Ollama (kostenfrei, offline-fähig)
@@ -158,9 +152,8 @@ See [SPRINT_3_SUMMARY.md](SPRINT_3_SUMMARY.md) for details
 ## 🤖 Claude Code Integration
 
 Das Projekt ist vollständig auf Claude Code optimiert:
-- Hauptkontext in [docs/core/CLAUDE.md](docs/core/CLAUDE.md)
-- 5 spezialisierte Subagenten definiert
-- 8 Prompt-Templates vorbereitet
+- Hauptkontext in [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md)
+- Prompt-Templates in [docs/core/PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md)
 - Naming Conventions integriert
 
 ## 🔒 Sicherheit
@@ -171,7 +164,7 @@ Das Projekt ist vollständig auf Claude Code optimiert:
 - PII Detection
 - Access Control
 
-Details in [docs/core/TECH_STACK.md](docs/core/TECH_STACK.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
+Details in [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
 
 ## 📅 Sprint Plan
 
