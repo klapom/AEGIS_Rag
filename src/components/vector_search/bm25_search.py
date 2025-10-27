@@ -249,7 +249,7 @@ class BM25Search:
 
         try:
             with open(self._cache_file, "rb") as f:
-                state = pickle.load(f)
+                state = pickle.load(f)  # nosec B301 - We control this file
 
             # Restore state
             self._corpus = state["corpus"]

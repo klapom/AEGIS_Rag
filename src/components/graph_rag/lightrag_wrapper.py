@@ -570,8 +570,8 @@ class LightRAGWrapper:
             # Decode back to text
             chunk_text = encoder.decode(chunk_tokens)
 
-            # Generate chunk_id (MD5 hash for reproducibility)
-            chunk_id = hashlib.md5(chunk_text.encode("utf-8")).hexdigest()
+            # Generate chunk_id (MD5 hash for reproducibility, not security)
+            chunk_id = hashlib.md5(chunk_text.encode("utf-8"), usedforsecurity=False).hexdigest()
 
             # Create chunk metadata
             chunk = {

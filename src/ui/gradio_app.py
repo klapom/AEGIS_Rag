@@ -744,11 +744,11 @@ class GradioApp:
 
         return demo
 
-    def launch(self, server_name: str = "0.0.0.0", server_port: int = 7860, share: bool = False):
+    def launch(self, server_name: str = "0.0.0.0", server_port: int = 7860, share: bool = False):  # nosec B104
         """Launch Gradio app.
 
         Args:
-            server_name: Server host (default: 0.0.0.0)
+            server_name: Server host (default: 0.0.0.0 - intentional for web UI)
             server_port: Server port (default: 7860)
             share: Create public URL (default: False)
         """
