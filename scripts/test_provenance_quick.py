@@ -162,7 +162,7 @@ async def test_provenance_query():
     async with driver.session() as session:
         # Find an entity
         entity_result = await session.run(
-            "MATCH (e:base) RETURN e.entity_name as name LIMIT 1"
+            "MATCH (e:base) RETURN e.entity_id as name LIMIT 1"
         )
         entity_record = await entity_result.single()
 
@@ -171,24 +171,24 @@ async def test_provenance_query():
             await driver.close()
             return
 
-        entity_name = entity_record["name"]
-        print(f"✓ Testing provenance for entity: {entity_name}")
+        entity_id = entity_record["name"]
+        print(f"✓ Testing provenance for entity: {entity_id}")
 
         # Query provenance
         provenance_result = await session.run(
             """
-            MATCH (e:base {entity_name: $entity_name})-[:MENTIONED_IN]->(c:chunk)
+            MATCH (e:base {entity_id: $entity_id})-[:MENTIONED_IN]->(c:chunk)
             RETURN c.text as chunk_text,
                    c.chunk_index as chunk_index,
                    c.tokens as tokens,
                    c.document_id as document_id
             """,
-            entity_name=entity_name
+            entity_id=entity_id
         )
 
         records = await provenance_result.fetch(10)
 
-        print(f"\n✓ Found {len(records)} chunk(s) mentioning '{entity_name}':")
+        print(f"\n✓ Found {len(records)} chunk(s) mentioning '{entity_id}':")
         for i, record in enumerate(records):
             print(f"\n  Chunk {i+1}:")
             print(f"    - Document: {record['document_id']}")
@@ -197,8 +197,8 @@ async def test_provenance_query():
             print(f"    - Text Preview: {record['chunk_text'][:100]}...")
 
             # Verify entity is actually in the text
-            assert entity_name in record["chunk_text"], \
-                f"Entity '{entity_name}' should be in chunk text"
+            assert entity_id in record["chunk_text"], \
+                f"Entity '{entity_id}' should be in chunk text"
 
     await driver.close()
 
