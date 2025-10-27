@@ -478,7 +478,7 @@
 ## 🔗 Related Documents
 
 - [SPRINT_14_PLAN.md](./SPRINT_14_PLAN.md) - Full sprint plan
-- [SPRINT_13_TODOS.md](./SPRINT_13_TODOS.md) - Previous sprint
+- [SPRINT_13_TODOS.md](./docs/archive/sprints/SPRINT_13_TODOS.md) - Previous sprint
 - [docs/adr/ADR-017-semantic-entity-deduplication.md](./docs/adr/ADR-017-semantic-entity-deduplication.md)
 - [docs/adr/ADR-018-model-selection-entity-relation-extraction.md](./docs/adr/ADR-018-model-selection-entity-relation-extraction.md)
 
