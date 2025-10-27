@@ -14,9 +14,7 @@ export function HomePage() {
 
   const handleSearch = (query: string, mode: SearchMode) => {
     // Navigate to search results page (Feature 15.4)
-    console.log('Search submitted:', { query, mode });
-    // TODO: Navigate to /search?q={query}&mode={mode}
-    // navigate(`/search?q=${encodeURIComponent(query)}&mode=${mode}`);
+    navigate(`/search?q=${encodeURIComponent(query)}&mode=${mode}`);
   };
 
   const handleQuickPrompt = (prompt: string) => {
