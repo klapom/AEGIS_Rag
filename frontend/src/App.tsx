@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
+import { HealthDashboard } from './pages/HealthDashboard';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -25,8 +26,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchResultsPage />} />
-          {/* Feature 15.6: Health Dashboard */}
-          {/* <Route path="/health" element={<HealthDashboard />} /> */}
+          <Route path="/health" element={<HealthDashboard />} />
         </Routes>
       </AppLayout>
     </BrowserRouter>
