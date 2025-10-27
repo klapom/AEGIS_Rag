@@ -743,7 +743,7 @@ Needs Improvement:
 
 - **Project Overview:** [README.md](../README.md)
 - **Main Context:** [CLAUDE.md](CLAUDE.md)
-- **Current Sprints:** [SPRINT_14_PLAN.md](../SPRINT_14_PLAN.md), [SPRINT_13_TODOS.md](../SPRINT_13_TODOS.md)
+- **Current Sprints:** [SPRINT_14_PLAN.md](../SPRINT_14_PLAN.md), [SPRINT_13_TODOS.md](../docs/archive/sprints/SPRINT_13_TODOS.md)
 
 ---
 
