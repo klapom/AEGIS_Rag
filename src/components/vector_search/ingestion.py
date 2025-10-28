@@ -148,7 +148,8 @@ class DocumentIngestionPipeline:
             ValueError: If path validation fails (path traversal)
         """
         if required_exts is None:
-            required_exts = [".pdf", ".txt", ".md", ".docx", ".csv"]
+            # Sprint 16 Feature 16.5: Added .pptx support
+            required_exts = [".pdf", ".txt", ".md", ".docx", ".csv", ".pptx"]
 
         try:
             # Security: Validate path to prevent directory traversal

@@ -199,7 +199,8 @@ class UnifiedIngestionPipeline:
         reader = SimpleDirectoryReader(
             input_dir=input_dir,
             recursive=True,
-            required_exts=[".txt", ".md", ".pdf", ".docx"],
+            # Sprint 16 Feature 16.5: Added .pptx support
+            required_exts=[".txt", ".md", ".pdf", ".docx", ".pptx"],
         )
         documents = reader.load_data()
 
@@ -211,16 +212,19 @@ class UnifiedIngestionPipeline:
         lightrag = await get_lightrag_wrapper_async()
 
         # Convert to LightRAG format
+        # Sprint 16 Feature 16.6: Add document ID for provenance tracking
         lightrag_docs = [
             {
                 "text": doc.text,
                 "metadata": doc.metadata,
+                "id": doc.doc_id if hasattr(doc, "doc_id") else f"doc_{i}",
             }
-            for doc in documents
+            for i, doc in enumerate(documents)
         ]
 
         # Insert into LightRAG (builds graph)
-        await lightrag.insert_documents(lightrag_docs)
+        # Sprint 16 Feature 16.6: Use optimized method with ChunkingService + Three-Phase Pipeline
+        await lightrag.insert_documents_optimized(lightrag_docs)
 
         # Get graph statistics
         stats = await lightrag.get_stats()

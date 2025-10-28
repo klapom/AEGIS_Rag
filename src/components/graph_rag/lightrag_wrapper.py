@@ -188,19 +188,23 @@ class LightRAGWrapper:
                     return self
 
             # Create embedding function instance
-            embedding_func = UnifiedEmbeddingFunc(embedding_dim=768)
+            # Sprint 16 Feature 16.2: BGE-M3 system-wide standardization (1024 dimensions)
+            embedding_func = UnifiedEmbeddingFunc(embedding_dim=1024)
 
             # Initialize LightRAG with Neo4j backend (uses env vars)
             # Sprint 13 TD-31 Fix: Optimize for llama3.2:3b (8k context, small model)
+            # Sprint 16 Feature 16.6: Disable internal chunking (use ChunkingService instead)
             self.rag = LightRAG(
                 working_dir=str(self.working_dir),
                 llm_model_func=ollama_llm_complete,
                 embedding_func=embedding_func,
                 graph_storage="Neo4JStorage",  # Storage type name as string
                 llm_model_max_async=2,  # Reduce from 4 to 2 workers (halves memory usage)
-                # Sprint 13 TD-31: Optimize for small model (8k context window)
-                chunk_token_size=600,  # Reduced from default 1200
-                chunk_overlap_token_size=100,  # Keep default
+                # Sprint 16 Feature 16.6: CHUNKING DISABLED - we use ChunkingService
+                # Internal chunking is bypassed by using insert_documents_optimized()
+                # which calls _chunk_text_with_metadata() -> ChunkingService
+                chunk_token_size=99999,  # Effectively disable (will never chunk internally)
+                chunk_overlap_token_size=0,  # No overlap for internal chunking
                 top_k=15,  # Reduce from default 60 (entities/relations per query)
                 chunk_top_k=10,  # Reduce from default 15 (max chunks in context)
                 max_entity_tokens=2500,  # Reduce from default 6000
