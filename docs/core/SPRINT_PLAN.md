@@ -525,7 +525,7 @@ Sprint 13 delivered the Three-Phase Extraction Pipeline (SpaCy + Semantic Dedup 
 
 ## Sprint 15: Frontend Interface with Perplexity-Inspired UI
 **Ziel:** Production-ready web interface with SSE streaming and RAG-optimized UX
-**Status:** 📋 PLANNED (2025-10-27)
+**Status:** ✅ COMPLETE (2025-10-27 → 2025-10-28)
 
 ### Context
 After Sprint 14's backend completion, AegisRAG needs a user-facing frontend. User decision: "Warum das Rad neu erfinden. Lass uns an der Oberfläche von Perplexity orientieren" → Adopt proven Perplexity.ai design patterns for RAG-first UX.
@@ -539,12 +539,12 @@ After Sprint 14's backend completion, AegisRAG needs a user-facing frontend. Use
 - ✅ German localization
 
 ### Deliverables
-- [ ] **Feature 15.1**: React + Vite setup + SSE backend endpoint (13 SP, 2 days)
-- [ ] **Feature 15.2**: Perplexity-style layout (sidebar + header + main) (8 SP, 1 day)
-- [ ] **Feature 15.3**: Search input with mode selector (10 SP, 1.5 days)
-- [ ] **Feature 15.4**: Streaming answer display with source cards (21 SP, 3 days)
-- [ ] **Feature 15.5**: Conversation history sidebar (13 SP, 2 days)
-- [ ] **Feature 15.6**: System health dashboard (8 SP, 1 day)
+- [x] **Feature 15.1**: React + Vite setup + SSE backend endpoint (13 SP, 2 days)
+- [x] **Feature 15.2**: Perplexity-style layout (sidebar + header + main) (8 SP, 1 day)
+- [x] **Feature 15.3**: Search input with mode selector (10 SP, 1.5 days)
+- [x] **Feature 15.4**: Streaming answer display with source cards (21 SP, 3 days)
+- [x] **Feature 15.5**: Conversation history sidebar (13 SP, 2 days)
+- [x] **Feature 15.6**: System health dashboard (8 SP, 1 day)
 
 ### Technical Tasks
 
@@ -595,14 +595,14 @@ frontend/src/
 - **Responsive**: Mobile-first approach
 
 ### Success Criteria
-- [ ] User can search with 4 modes (Hybrid, Vector, Graph, Memory)
-- [ ] Streaming answer displays token-by-token (<100ms to first token)
-- [ ] Source cards show LightRAG provenance (chunk ID, confidence)
-- [ ] Session history persists across browser refreshes
-- [ ] Health dashboard shows Qdrant, Neo4j, Redis, Ollama status
-- [ ] Responsive design works on mobile + desktop
-- [ ] German localization for all UI strings
-- [ ] E2E tests with Playwright (5+ user flows)
+- [x] User can search with 4 modes (Hybrid, Vector, Graph, Memory)
+- [x] Streaming answer displays token-by-token (<100ms to first token)
+- [x] Source cards show LightRAG provenance (chunk ID, confidence)
+- [x] Session history persists across browser refreshes
+- [x] Health dashboard shows Qdrant, Neo4j, Redis, Ollama status
+- [x] Responsive design works on mobile + desktop
+- [x] German localization for all UI strings
+- [ ] E2E tests with Playwright (5+ user flows) → TD-35 (Sprint 16)
 
 ### Story Points: 73 SP
 **Breakdown:**
@@ -623,9 +623,118 @@ frontend/src/
 
 ### References
 - [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md) - Detailed implementation plan (1240 lines)
-- [ADR-020](../adr/ADR-020-sse-streaming-for-chat.md) - SSE vs WebSocket decision
-- [ADR-021](../adr/ADR-021-perplexity-inspired-ui-design.md) - Perplexity UI adoption rationale
-- Branch: TBD (will be `sprint-15-frontend` or similar)
+- [SPRINT_15_COMPLETION_REPORT.md](../sprints/SPRINT_15_COMPLETION_REPORT.md) - Full completion report
+- [ADR-020](../decisions/ADR-020-sse-streaming.md) - SSE vs WebSocket decision
+- [ADR-021](../decisions/ADR-021-perplexity-ui-design.md) - Perplexity UI adoption rationale
+- Branch: `sprint-15-frontend` (merged to main: 2025-10-28)
+- Release: v0.15.0
+
+---
+
+## Sprint 16: Document Ingestion & Graph Updates
+**Ziel:** PPTX support, automated re-indexing, and graph extraction pipeline
+**Status:** 📋 PLANNED (2025-10-28)
+
+### Context
+After Sprint 15's frontend completion, users need improved document ingestion capabilities:
+- OMNITRACKER ITSM documentation (64 files, many PDFs with some duplicate DOCX)
+- Need for PPTX support (PowerPoint presentations)
+- Automated re-indexing workflow
+- Graph extraction pipeline integration
+
+**Key Requirements:**
+- ✅ PPTX format support (python-pptx backend)
+- ✅ Automated index reset and rebuild
+- ✅ BM25 cache synchronization with Qdrant
+- ✅ Neo4j graph extraction integration
+- ✅ PDF preference over DOCX for duplicates
+
+### Deliverables
+- [ ] **Feature 16.1**: PPTX document support (8 SP)
+- [ ] **Feature 16.2**: Index reset automation (5 SP)
+- [ ] **Feature 16.3**: BM25 index synchronization (8 SP)
+- [ ] **Feature 16.4**: Neo4j graph extraction pipeline (13 SP)
+- [ ] **Feature 16.5**: Duplicate file detection and cleanup (5 SP)
+- [ ] **Feature 16.6**: Frontend E2E tests with Playwright (13 SP)
+
+### Technical Tasks
+
+**Feature 16.1: PPTX Support**
+- [ ] Add `python-pptx` dependency (pyproject.toml)
+- [ ] Update `required_exts` list to include `.pptx`
+- [ ] Test PPTX text extraction with LlamaIndex
+- [ ] Handle embedded images/tables in slides
+- [ ] Add PPTX test fixtures
+
+**Feature 16.2: Index Reset Automation**
+- [ ] Script: `scripts/reset_indices.py`
+- [ ] Delete Qdrant collection
+- [ ] Clear BM25 cache file
+- [ ] Clear Neo4j database (optional)
+- [ ] Safety confirmation prompts
+
+**Feature 16.3: BM25 Synchronization**
+- [ ] Auto-rebuild BM25 from Qdrant after indexing
+- [ ] Add hook in `DocumentIngestionPipeline.index_documents()`
+- [ ] Validate BM25 corpus size matches Qdrant points
+- [ ] Add BM25 cache timestamp tracking
+
+**Feature 16.4: Graph Extraction Pipeline**
+- [ ] Integrate LightRAG extraction after Qdrant indexing
+- [ ] Batch processing for entity extraction
+- [ ] Neo4j transaction batching for performance
+- [ ] Entity deduplication with semantic similarity
+- [ ] Relation extraction with Gemma 3 4B
+
+**Feature 16.5: Duplicate Detection**
+- [ ] Script to find duplicate basenames (PDF + DOCX)
+- [ ] Preference logic: Keep PDF, delete DOCX
+- [ ] Interactive confirmation mode
+- [ ] Dry-run mode for safety
+
+**Feature 16.6: Frontend E2E Tests** (TD-35)
+- [ ] Playwright setup with TypeScript
+- [ ] Test: Homepage load and search
+- [ ] Test: Streaming results display
+- [ ] Test: Session history persistence
+- [ ] Test: Health dashboard refresh
+- [ ] CI integration (GitHub Actions)
+
+### Success Criteria
+- [ ] PPTX files index successfully with text extraction
+- [ ] Index reset completes in <30s for 100 documents
+- [ ] BM25 corpus size matches Qdrant points count
+- [ ] Graph extraction runs without memory issues
+- [ ] Duplicate PDFs preferred over DOCX
+- [ ] E2E tests cover 5+ critical user flows
+- [ ] All tests pass in CI pipeline
+
+### Story Points: 52 SP
+**Breakdown:**
+- Feature 16.1: PPTX Support (8 SP)
+- Feature 16.2: Index Reset (5 SP)
+- Feature 16.3: BM25 Sync (8 SP)
+- Feature 16.4: Graph Pipeline (13 SP)
+- Feature 16.5: Duplicate Cleanup (5 SP)
+- Feature 16.6: E2E Tests (13 SP)
+
+**Timeline:**
+- Sequential: 5-7 days (1 developer, ~8-10 SP/day)
+- Parallel: 2-3 days (3 subagents: Backend, Infrastructure, Testing)
+
+### Architecture Decisions
+- [ADR-022](../decisions/ADR-022-pptx-support.md) - PPTX Document Support (TBD)
+- [ADR-023](../decisions/ADR-023-automated-reindexing.md) - Automated Re-indexing Workflow (TBD)
+
+### Technical Debt Addressed
+- **TD-35**: Frontend E2E Tests (from Sprint 15)
+- **TD-36**: Accessibility improvements (defer to Sprint 17)
+- **TD-37**: Error boundary implementation (defer to Sprint 17)
+
+### References
+- Branch: TBD (will be `sprint-16-ingestion-improvements`)
+- Dependencies: Sprint 15 complete
+- Blocked by: None
 
 ---
 

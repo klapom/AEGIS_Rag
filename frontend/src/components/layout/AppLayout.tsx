@@ -5,7 +5,7 @@
  * Main application layout with session history sidebar and content area
  */
 
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { SessionSidebar } from '../history';
 import { Header } from './Header';
 

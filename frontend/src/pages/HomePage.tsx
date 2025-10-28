@@ -5,9 +5,8 @@
  * Perplexity-inspired homepage with centered search input
  */
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SearchInput, SearchMode } from '../components/search';
+import { SearchInput, type SearchMode } from '../components/search';
 
 export function HomePage() {
   const navigate = useNavigate();

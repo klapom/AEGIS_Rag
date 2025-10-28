@@ -7,7 +7,7 @@
 
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { StreamingAnswer } from '../components/chat';
-import { SearchInput, SearchMode } from '../components/search';
+import { SearchInput, type SearchMode } from '../components/search';
 
 export function SearchResultsPage() {
   const [searchParams] = useSearchParams();

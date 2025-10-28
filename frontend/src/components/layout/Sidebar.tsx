@@ -10,7 +10,7 @@ interface SidebarProps {
   onToggle?: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ isOpen }: SidebarProps) {
   return (
     <aside
       className={`

@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { getSystemHealth, getDetailedHealth } from '../api/health';
+import { getDetailedHealth } from '../api/health';
 import type { DetailedHealthResponse, DependencyHealth } from '../types/health';
 
 export function HealthDashboard() {

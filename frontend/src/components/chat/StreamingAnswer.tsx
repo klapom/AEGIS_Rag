@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { streamChat, ChatChunk } from '../../api/chat';
+import { streamChat, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
 import { SourceCardsScroll } from './SourceCardsScroll';
 
@@ -61,28 +61,31 @@ export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps
   const handleChunk = (chunk: ChatChunk) => {
     switch (chunk.type) {
       case 'metadata':
-        setMetadata(chunk);
-        break;
-
-      case 'intent':
-        setIntent(chunk.intent);
+        setMetadata(chunk.data || chunk);
+        if (chunk.data?.intent) {
+          setIntent(chunk.data.intent);
+        }
         break;
 
       case 'source':
-        setSources((prev) => [...prev, chunk.source]);
+        if (chunk.source) {
+          setSources((prev) => [...prev, chunk.source!]);
+        }
         break;
 
       case 'token':
-        setAnswer((prev) => prev + chunk.content);
+        if (chunk.content) {
+          setAnswer((prev) => prev + chunk.content);
+        }
         break;
 
-      case 'done':
-        setMetadata(chunk.metadata);
+      case 'complete':
+        setMetadata(chunk.data);
         setIsStreaming(false);
         break;
 
       case 'error':
-        setError(chunk.error);
+        setError(chunk.error || 'Unknown error');
         setIsStreaming(false);
         break;
     }

@@ -22,6 +22,12 @@ export interface Source {
   // AegisRAG-specific fields
   chunk_id?: string;
   confidence?: number;
+  document_id?: string;
+  chunk_index?: number;
+  total_chunks?: number;
+  retrieval_modes?: string[];
+  context?: string;
+  entities?: Array<{ name: string; type?: string }>;
 }
 
 export interface ToolCallInfo {
@@ -64,6 +70,8 @@ export interface SessionInfo {
   message_count: number;
   last_activity?: string;
   created_at?: string;
+  updated_at?: string;
+  last_message?: string;
 }
 
 export interface SessionListResponse {

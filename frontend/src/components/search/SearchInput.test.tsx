@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SearchInput, SearchMode } from './SearchInput';
+import { SearchInput } from './SearchInput';
 
 describe('SearchInput', () => {
   it('should render input field with placeholder', () => {

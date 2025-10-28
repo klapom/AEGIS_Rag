@@ -5,6 +5,9 @@
 
 import type { ChatRequest, ChatChunk, ChatResponse, SessionListResponse, ConversationHistoryResponse } from '../types/chat';
 
+// Re-export types for easier imports
+export type { ChatChunk, ChatRequest, ChatResponse, SessionListResponse, ConversationHistoryResponse };
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
