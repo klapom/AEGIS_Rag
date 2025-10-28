@@ -631,103 +631,229 @@ frontend/src/
 
 ---
 
-## Sprint 16: Document Ingestion & Graph Updates
-**Ziel:** PPTX support, automated re-indexing, and graph extraction pipeline
+## Sprint 16: Unified Ingestion Architecture & Advanced Features
+**Ziel:** Architectural unification, PPTX support, unified re-indexing, and BGE-M3 evaluation
 **Status:** 📋 PLANNED (2025-10-28)
 
 ### Context
-After Sprint 15's frontend completion, users need improved document ingestion capabilities:
-- OMNITRACKER ITSM documentation (64 files, many PDFs with some duplicate DOCX)
-- Need for PPTX support (PowerPoint presentations)
-- Automated re-indexing workflow
-- Graph extraction pipeline integration
+After Sprint 15's frontend completion and comprehensive architecture review, critical duplications and synchronization issues were identified:
 
-**Key Requirements:**
+**Architectural Issues Found:**
+- ❌ **Chunking duplication**: Logic scattered across 3 components (Qdrant, BM25, LightRAG)
+- ❌ **No unified re-indexing**: Qdrant, BM25, Neo4j can become out-of-sync
+- ❌ **Two embedding models**: nomic-embed-text (768-dim) + BGE-M3 (1024-dim) incompatible
+- ❌ **No cross-layer similarity**: Can't compare Qdrant (Layer 2) with Graphiti (Layer 3)
+
+**New Requirements:**
+- ✅ Unified chunking service (single source of truth)
+- ✅ Atomic re-indexing across all 3 indexes
+- ✅ BGE-M3 evaluation and standardization strategy
 - ✅ PPTX format support (python-pptx backend)
-- ✅ Automated index reset and rebuild
-- ✅ BM25 cache synchronization with Qdrant
-- ✅ Neo4j graph extraction integration
-- ✅ PDF preference over DOCX for duplicates
+- ✅ Graph extraction using unified chunks
 
 ### Deliverables
-- [ ] **Feature 16.1**: PPTX document support (8 SP)
-- [ ] **Feature 16.2**: Index reset automation (5 SP)
-- [ ] **Feature 16.3**: BM25 index synchronization (8 SP)
-- [ ] **Feature 16.4**: Neo4j graph extraction pipeline (13 SP)
-- [ ] **Feature 16.5**: Duplicate file detection and cleanup (5 SP)
-- [ ] **Feature 16.6**: Frontend E2E tests with Playwright (13 SP)
+- [ ] **Feature 16.1**: Unified Chunking Service (8 SP) 🆕
+- [ ] **Feature 16.2**: Unified Re-Indexing Pipeline (13 SP) 🆕
+- [ ] **Feature 16.3**: PPTX Document Support (8 SP)
+- [ ] **Feature 16.4**: BGE-M3 Evaluation & Standardization (8 SP) 🆕
+- [ ] **Feature 16.5**: Graph Extraction with Unified Chunks (13 SP)
+- [ ] **Feature 16.6**: Frontend E2E Tests with Playwright (13 SP)
 
 ### Technical Tasks
 
-**Feature 16.1: PPTX Support**
+**Feature 16.1: Unified Chunking Service** 🆕
+**Problem:** Chunking logic scattered across Qdrant, BM25, and LightRAG components
+**Solution:** Create centralized `ChunkingService` as single source of truth
+
+Tasks:
+- [ ] Create `src/core/chunking_service.py` with unified chunking logic
+- [ ] Support multiple strategies: adaptive, sentence-based, fixed-size
+- [ ] Configuration via `ChunkingConfig` Pydantic model
+- [ ] Migrate Qdrant ingestion to use `ChunkingService`
+- [ ] Migrate BM25 indexing to use same chunks
+- [ ] Migrate LightRAG extraction to use same chunks
+- [ ] Add comprehensive tests (10+ test cases)
+- [ ] Document chunk format and metadata
+
+**Deliverables:**
+```python
+class ChunkingService:
+    async def chunk_document(
+        text: str,
+        strategy: ChunkStrategy = "adaptive",
+        chunk_size: int = 512,
+        overlap: int = 128
+    ) -> List[Chunk]:
+        """Unified chunking for all consumers"""
+```
+
+**Benefits:**
+- Guaranteed consistency across all 3 indexes
+- Single place to change chunking strategy
+- Easier testing and validation
+
+---
+
+**Feature 16.2: Unified Re-Indexing Pipeline** 🆕
+**Problem:** No atomic re-indexing; Qdrant, BM25, Neo4j can become out-of-sync
+**Solution:** Create unified re-indexing endpoint with transactional semantics
+
+Tasks:
+- [ ] Create `POST /api/v1/admin/reindex` endpoint
+- [ ] Atomic deletion: Qdrant + BM25 + Neo4j (all-or-nothing)
+- [ ] Progress tracking via SSE (same as chat streaming)
+- [ ] Safety checks: confirmation parameter, dry-run mode
+- [ ] Re-index all documents using unified chunking service
+- [ ] Validate index consistency after completion
+- [ ] Add admin authentication/authorization
+- [ ] Comprehensive error handling and rollback
+
+**Deliverables:**
+```python
+@router.post("/api/v1/admin/reindex")
+async def reindex_all_documents(
+    dry_run: bool = False,
+    confirm: bool = False
+) -> StreamingResponse:
+    """Atomically rebuild all indexes"""
+```
+
+**Benefits:**
+- Guaranteed synchronization across indexes
+- Single operation for re-indexing
+- Progress visibility via UI
+
+---
+
+**Feature 16.3: PPTX Document Support**
+**Problem:** PowerPoint presentations not supported
+**Solution:** Add python-pptx backend via LlamaIndex
+
+Tasks:
 - [ ] Add `python-pptx` dependency (pyproject.toml)
 - [ ] Update `required_exts` list to include `.pptx`
 - [ ] Test PPTX text extraction with LlamaIndex
 - [ ] Handle embedded images/tables in slides
-- [ ] Add PPTX test fixtures
+- [ ] Add PPTX test fixtures (OMNITRACKER presentations)
+- [ ] Update documentation with supported formats
 
-**Feature 16.2: Index Reset Automation**
-- [ ] Script: `scripts/reset_indices.py`
-- [ ] Delete Qdrant collection
-- [ ] Clear BM25 cache file
-- [ ] Clear Neo4j database (optional)
-- [ ] Safety confirmation prompts
+**Benefits:**
+- Support for OMNITRACKER ITSM training materials (many PPTX files)
 
-**Feature 16.3: BM25 Synchronization**
-- [ ] Auto-rebuild BM25 from Qdrant after indexing
-- [ ] Add hook in `DocumentIngestionPipeline.index_documents()`
-- [ ] Validate BM25 corpus size matches Qdrant points
-- [ ] Add BM25 cache timestamp tracking
+---
 
-**Feature 16.4: Graph Extraction Pipeline**
-- [ ] Integrate LightRAG extraction after Qdrant indexing
-- [ ] Batch processing for entity extraction
-- [ ] Neo4j transaction batching for performance
-- [ ] Entity deduplication with semantic similarity
-- [ ] Relation extraction with Gemma 3 4B
+**Feature 16.4: BGE-M3 Evaluation & Standardization** 🆕
+**Problem:** Two embedding models (nomic + BGE-M3) create incompatible vector spaces
+**Solution:** Benchmark and decide on standardization strategy
 
-**Feature 16.5: Duplicate Detection**
-- [ ] Script to find duplicate basenames (PDF + DOCX)
-- [ ] Preference logic: Keep PDF, delete DOCX
-- [ ] Interactive confirmation mode
-- [ ] Dry-run mode for safety
+Tasks:
+- [ ] Benchmark: nomic-embed-text vs. BGE-M3 on Qdrant
+- [ ] Metrics: Retrieval quality (NDCG@10), latency, GPU memory
+- [ ] Test cross-layer similarity (768-dim vs. 1024-dim)
+- [ ] Decision: Standardize on BGE-M3 OR keep separate with factory pattern
+- [ ] If standardize: Re-embed all Qdrant documents (933+ docs)
+- [ ] If factory: Create `EmbeddingServiceFactory` with layer selection
+- [ ] Document decision in ADR-024
+
+**Options:**
+- **Option A:** Keep separate (low effort, no cross-layer similarity)
+- **Option B:** Standardize on BGE-M3 (high effort, full compatibility)
+- **Option C:** Factory pattern with dimension projection (medium effort)
+
+**Benefits:**
+- Clear strategy for embedding model usage
+- Potential cross-layer semantic search
+- Performance optimization
+
+---
+
+**Feature 16.5: Graph Extraction with Unified Chunks**
+**Problem:** LightRAG may re-chunk documents differently than Qdrant
+**Solution:** Use unified chunks from `ChunkingService` for entity extraction
+
+Tasks:
+- [ ] Refactor `LightRAGWrapper.insert_documents()` to accept chunks
+- [ ] Entity extraction per chunk (using unified chunks)
+- [ ] Provenance tracking: Link entities to Qdrant chunk IDs
+- [ ] Neo4j schema: Add `chunk_id` property to `:MENTIONED_IN` relationship
+- [ ] Batch processing for entity extraction (improve performance)
+- [ ] Neo4j transaction batching (reduce memory pressure)
+- [ ] Validate chunk alignment between Qdrant and Neo4j
+
+**Deliverables:**
+```python
+async def insert_documents_with_chunks(
+    chunks: List[Chunk],  # From ChunkingService
+    batch_size: int = 10
+) -> Dict[str, Any]:
+    """Extract entities from unified chunks"""
+```
+
+**Benefits:**
+- Perfect chunk alignment between Qdrant and Neo4j
+- Can link vector results to graph entities
+- Easier debugging and provenance
+
+---
 
 **Feature 16.6: Frontend E2E Tests** (TD-35)
+**Solution:** Add Playwright tests for critical user flows
+
+Tasks:
 - [ ] Playwright setup with TypeScript
 - [ ] Test: Homepage load and search
 - [ ] Test: Streaming results display
 - [ ] Test: Session history persistence
 - [ ] Test: Health dashboard refresh
+- [ ] Test: Mode selector (Hybrid, Vector, Graph, Memory)
 - [ ] CI integration (GitHub Actions)
+- [ ] Screenshot comparison for visual regression
+
+**Benefits:**
+- Catch UI regressions early
+- Validate SSE streaming in browser
+- Production confidence
 
 ### Success Criteria
-- [ ] PPTX files index successfully with text extraction
-- [ ] Index reset completes in <30s for 100 documents
-- [ ] BM25 corpus size matches Qdrant points count
-- [ ] Graph extraction runs without memory issues
-- [ ] Duplicate PDFs preferred over DOCX
-- [ ] E2E tests cover 5+ critical user flows
-- [ ] All tests pass in CI pipeline
+- [ ] **Unified Chunking**: All 3 indexes (Qdrant, BM25, Neo4j) use same chunks
+- [ ] **Atomic Re-Indexing**: `POST /admin/reindex` endpoint works end-to-end
+- [ ] **PPTX Support**: PowerPoint files index successfully with text extraction
+- [ ] **BGE-M3 Decision**: Benchmarking complete, strategy documented in ADR-024
+- [ ] **Graph Alignment**: Neo4j entities linked to Qdrant chunk IDs
+- [ ] **Index Consistency**: BM25 corpus size == Qdrant points count == Neo4j chunk count
+- [ ] **E2E Tests**: 5+ critical user flows pass in CI
+- [ ] **Performance**: Re-indexing 100 documents completes in <2 minutes
 
-### Story Points: 52 SP
+### Story Points: 63 SP (+11 SP for architecture improvements)
 **Breakdown:**
-- Feature 16.1: PPTX Support (8 SP)
-- Feature 16.2: Index Reset (5 SP)
-- Feature 16.3: BM25 Sync (8 SP)
-- Feature 16.4: Graph Pipeline (13 SP)
-- Feature 16.5: Duplicate Cleanup (5 SP)
-- Feature 16.6: E2E Tests (13 SP)
+- Feature 16.1: Unified Chunking Service (8 SP) 🆕
+- Feature 16.2: Unified Re-Indexing Pipeline (13 SP) 🆕
+- Feature 16.3: PPTX Document Support (8 SP)
+- Feature 16.4: BGE-M3 Evaluation & Standardization (8 SP) 🆕
+- Feature 16.5: Graph Extraction with Unified Chunks (13 SP)
+- Feature 16.6: Frontend E2E Tests (13 SP)
 
 **Timeline:**
-- Sequential: 5-7 days (1 developer, ~8-10 SP/day)
-- Parallel: 2-3 days (3 subagents: Backend, Infrastructure, Testing)
+- Sequential: 6-8 days (1 developer, ~8-10 SP/day)
+- Parallel: 3-4 days (3 subagents: Backend, Architecture, Testing)
+
+**Justification for +11 SP:**
+- Unified Chunking is architectural refactoring (medium complexity)
+- Unified Re-Indexing requires transactional logic (high complexity)
+- BGE-M3 evaluation needs benchmarking infrastructure
 
 ### Architecture Decisions
-- [ADR-022](../decisions/ADR-022-pptx-support.md) - PPTX Document Support (TBD)
-- [ADR-023](../decisions/ADR-023-automated-reindexing.md) - Automated Re-indexing Workflow (TBD)
+- [ADR-022](../decisions/ADR-022-unified-chunking-service.md) - Unified Chunking Service 🆕
+- [ADR-023](../decisions/ADR-023-unified-reindexing-pipeline.md) - Unified Re-Indexing Pipeline 🆕
+- [ADR-024](../decisions/ADR-024-bge-m3-standardization.md) - BGE-M3 Standardization Strategy 🆕
 
 ### Technical Debt Addressed
-- **TD-35**: Frontend E2E Tests (from Sprint 15)
+- **TD-35**: Frontend E2E Tests (from Sprint 15) ✅
+- **TD-38**: Chunking duplication (NEW - critical architectural issue) ✅
+- **TD-39**: Index synchronization issues (NEW - medium severity) ✅
+- **TD-40**: Embedding model fragmentation (NEW - medium severity) ✅
+
+### Technical Debt Deferred
 - **TD-36**: Accessibility improvements (defer to Sprint 17)
 - **TD-37**: Error boundary implementation (defer to Sprint 17)
 

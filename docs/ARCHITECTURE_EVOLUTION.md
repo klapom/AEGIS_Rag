@@ -1,7 +1,7 @@
-# ARCHITECTURE EVOLUTION - Sprint 1-12 Journey
+# ARCHITECTURE EVOLUTION - Sprint 1-15 Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete architectural history from foundation to production-ready system
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
+**Last Updated:** 2025-10-28 (Post-Sprint 15)
 
 ---
 
@@ -44,6 +44,9 @@
 | 10 | UI | Gradio interface | ✅ COMPLETE |
 | 11 | Optimization | GPU support, unified pipeline | ✅ COMPLETE |
 | 12 | Production | Deployment guide, CI/CD, monitoring | ✅ COMPLETE |
+| 13 | Entity Pipeline | 3-phase extraction, semantic dedup | ✅ COMPLETE |
+| 14 | Backend Performance | Benchmarking, monitoring, retry logic | ✅ COMPLETE |
+| 15 | React Frontend | SSE streaming, Perplexity UI | ✅ COMPLETE |
 
 ---
 
@@ -965,6 +968,325 @@
 - E2E tests still fragile (event loop issues)
 - Graphiti API breaking changes (18 tests skipped)
 - LightRAG fixture connection issues (5 tests)
+
+---
+
+### Sprint 13: Entity/Relation Extraction Pipeline
+**Duration:** 1 week
+**Goal:** Optimize entity extraction with 3-phase pipeline (SpaCy → Dedup → Gemma 3)
+**Status:** ✅ COMPLETE (2025-10-21 → 2025-10-24)
+
+#### Architecture Decision
+- **ADR-017:** Semantic Deduplication for Entity Extraction
+  - *Rationale:* Sentence-Transformers + FAISS for 95% dedup accuracy
+  - *Alternatives:* String matching (90% accuracy), Levenshtein only (85% accuracy)
+
+- **ADR-018:** Model Selection for Relation Extraction
+  - *Rationale:* Gemma 3 4B (Ollama) for lightweight, structured output
+  - *Alternatives:* llama3.2:8b (too slow), qwen3:0.6b (poor quality), GPT-4 (too expensive)
+
+#### Architecture Added: 3-Phase Extraction Pipeline
+```
+┌──────────────────────────────────────────────────────────────┐
+│ AEGIS RAG - Sprint 13 Entity/Relation Extraction             │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Document                                                    │
+│      │                                                       │
+│      ▼                                                       │
+│  ┌───────────────────────┐                                  │
+│  │  Phase 1: SpaCy NER   │  (Fast entity extraction)        │
+│  │  (en_core_web_lg)     │  ~50ms per document              │
+│  └──────────┬────────────┘                                  │
+│             │                                               │
+│             ▼                                               │
+│  ┌───────────────────────┐                                  │
+│  │  Phase 2: Semantic    │  (Deduplication)                 │
+│  │  Deduplication        │  • Levenshtein distance          │
+│  │  (all-MiniLM-L6-v2)   │  • FAISS vector similarity       │
+│  │                       │  • Token normalization           │
+│  └──────────┬────────────┘  95% accuracy                    │
+│             │                                               │
+│             ▼                                               │
+│  ┌───────────────────────┐                                  │
+│  │  Phase 3: LLM         │  (Relation extraction)           │
+│  │  Relation Extraction  │  Gemma 3 4B (Ollama)             │
+│  │  (gemma2:4b)          │  Structured JSON output          │
+│  └──────────┬────────────┘                                  │
+│             │                                               │
+│             ▼                                               │
+│  ┌───────────────────────┐                                  │
+│  │  Neo4j Graph Storage  │                                  │
+│  │  (Entities + Rels)    │                                  │
+│  └───────────────────────┘                                  │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Components Implemented
+1. **SpaCy NER Pipeline** - en_core_web_lg for fast entity extraction (PERSON, ORG, LOC, DATE, etc.)
+2. **Semantic Deduplication** - Sentence-Transformers (all-MiniLM-L6-v2) + FAISS for vector similarity
+3. **Advanced Dedup Logic:**
+   - Levenshtein distance (fuzzy matching)
+   - Token normalization (lowercase, punctuation removal)
+   - FAISS IndexFlatL2 (384-dim embeddings)
+4. **Gemma 3 4B Integration** - Ollama model for relation extraction with structured output
+5. **Extraction Pipeline Factory** - Configuration-driven pipeline construction
+
+#### Performance Metrics (Sprint 13)
+- **Phase 1 (SpaCy):** ~50ms per document
+- **Phase 2 (Dedup):** ~100ms per batch (100 entities)
+- **Phase 3 (Gemma 3):** ~2s per document (relation extraction)
+- **Total Pipeline:** >300s → **<30s** (10x improvement)
+- **Entity Deduplication:** 95% accuracy
+- **Test Coverage:** Added 30 extraction-specific tests
+
+#### Key Achievements
+- ✅ 10x performance improvement (>300s → <30s)
+- ✅ 95% entity deduplication accuracy
+- ✅ Structured relation extraction (JSON schema)
+- ✅ ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
+- ✅ All technical debt (TD-26 to TD-34) resolved
+
+#### Key Learnings
+✅ **What Worked:**
+- SpaCy NER extremely fast and accurate for common entity types
+- Sentence-Transformers + FAISS excellent for semantic similarity
+- Gemma 3 4B perfect balance of speed/quality for relation extraction
+- 3-phase pipeline allows independent optimization of each stage
+
+⚠️ **Challenges:**
+- Gemma 3 still slower than ideal (2s per document)
+- Semantic deduplication requires careful threshold tuning (0.85 optimal)
+- Entity normalization critical (lowercase, punctuation) for matching
+
+---
+
+### Sprint 14: Production Benchmarking & Monitoring
+**Duration:** 1 week
+**Goal:** Production-grade benchmarking, Prometheus metrics, comprehensive testing
+**Status:** ✅ COMPLETE (2025-10-24 → 2025-10-27)
+
+#### Architecture Decision
+- **ADR-019:** Integration Tests as E2E Tests
+  - *Rationale:* NO MOCKS for extraction pipeline integration tests
+  - *Benefits:* Catch real issues with SpaCy, FAISS, Ollama interaction
+  - *Trade-off:* Slower tests (~5-10s each), but production confidence
+
+#### Architecture Added: Production Monitoring
+```
+┌──────────────────────────────────────────────────────────────┐
+│ AEGIS RAG - Sprint 14 Production Monitoring                  │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         Extraction Pipeline                        │     │
+│  │  (Phase 1 → Phase 2 → Phase 3)                     │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│                   ▼                                         │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         Prometheus Metrics                         │     │
+│  │  • entity_extraction_duration_seconds (Histogram)  │     │
+│  │  • relation_extraction_duration_seconds (Hist.)    │     │
+│  │  • entities_extracted_total (Counter)              │     │
+│  │  • relations_extracted_total (Counter)             │     │
+│  │  • deduplication_accuracy_ratio (Gauge)            │     │
+│  │  • extraction_errors_total (Counter)               │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│                   ▼                                         │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         Memory Profiler                            │     │
+│  │  • tracemalloc (peak usage)                        │     │
+│  │  • Per-phase memory tracking                       │     │
+│  └────────────────────────────────────────────────────┘     │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Components Implemented
+1. **Prometheus Metrics Integration** - 12 custom metrics for extraction pipeline
+2. **Memory Profiler** - tracemalloc-based peak memory usage tracking
+3. **Extraction Pipeline Factory** - Configuration-driven pipeline with retry logic
+4. **Benchmarking Suite:**
+   - Single document performance
+   - Batch processing (10/100/1000 documents)
+   - Memory profiling
+   - pytest-benchmark integration
+5. **Retry Logic** - tenacity for transient Ollama failures (exponential backoff)
+
+#### Performance Metrics (Sprint 14)
+- **Memory Usage (Peak):** 1.2GB for 100 documents
+- **Extraction Throughput:** ~30 documents/minute
+- **Retry Success Rate:** 95% (transient Ollama errors recovered)
+- **Prometheus Overhead:** <5ms per metric
+- **Test Coverage:** 132 tests total (112 unit, 20 integration)
+
+#### Key Achievements
+- ✅ Production-grade benchmarking suite
+- ✅ 12 Prometheus metrics for extraction pipeline
+- ✅ Memory profiling and optimization
+- ✅ 132 comprehensive tests (112 unit, 20 integration)
+- ✅ Retry logic with exponential backoff (tenacity)
+- ✅ ADR-019 (Integration Tests as E2E Tests)
+
+#### Key Learnings
+✅ **What Worked:**
+- Prometheus metrics provide excellent observability
+- Memory profiling caught memory leaks early
+- pytest-benchmark excellent for regression detection
+- Integration tests without mocks caught real issues
+
+⚠️ **Challenges:**
+- Memory usage high for large batches (1.2GB/100 docs)
+- Ollama transient failures require retry logic (now resolved)
+- Integration tests slow (~5-10s each)
+
+---
+
+### Sprint 15: React Frontend & SSE Streaming
+**Duration:** 2 days
+**Goal:** Production-ready React frontend with Perplexity.ai-inspired design and real-time streaming
+**Status:** ✅ COMPLETE (2025-10-27 → 2025-10-28)
+
+#### Architecture Decisions
+- **ADR-020:** Server-Sent Events (SSE) for Streaming
+  - *Rationale:* HTTP/1.1 native, simple client code, one-way communication sufficient
+  - *Alternatives:* WebSockets (overkill, bidirectional), Polling (inefficient), GraphQL subscriptions (complex)
+
+- **ADR-021:** Perplexity.ai-Inspired UI Design
+  - *Rationale:* Proven pattern for RAG systems, user-friendly, source attribution built-in
+  - *Features:* Sidebar navigation, streaming answer display, horizontal source cards, health dashboard
+
+#### Architecture Added: Full-Stack React UI
+```
+┌──────────────────────────────────────────────────────────────┐
+│ AEGIS RAG - Sprint 15 React Frontend                         │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         React Frontend (Vite)                      │     │
+│  │  • TypeScript 5.9                                  │     │
+│  │  • React 18.2 (hooks)                              │     │
+│  │  • Tailwind CSS v4.1                               │     │
+│  │  • React Router v7.9                               │     │
+│  │  • Zustand 5.0 (state)                             │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│                   │ (SSE Connection)                        │
+│                   ▼                                         │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         FastAPI Backend                            │     │
+│  │  POST /api/v1/chat/stream (SSE endpoint)           │     │
+│  └────────────────┬───────────────────────────────────┘     │
+│                   │                                         │
+│                   ▼                                         │
+│  ┌────────────────────────────────────────────────────┐     │
+│  │         Event Stream Generator                     │     │
+│  │  • event: metadata (intent, session_id)            │     │
+│  │  • event: source (document chunks)                 │     │
+│  │  • event: token (LLM output, token-by-token)       │     │
+│  │  • event: complete (final metadata)                │     │
+│  │  • event: error (error messages)                   │     │
+│  └────────────────────────────────────────────────────┘     │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Components Implemented
+
+**Frontend (React):**
+1. **App Layout** - Sidebar + main content (Perplexity-inspired)
+2. **Search Input** - Mode selector (Hybrid/Vector/Graph/Memory) + query input
+3. **Streaming Answer** - Token-by-token display with React Markdown
+4. **Source Cards** - Horizontal scrollable source display
+5. **Health Dashboard** - Real-time system status (Qdrant, Ollama, Neo4j, Redis)
+6. **Conversation History** - Past sessions with last message preview
+
+**Backend (FastAPI):**
+1. **SSE Chat Endpoint** - POST /api/v1/chat/stream with StreamingResponse
+2. **Event Generator** - Yields metadata, sources, tokens, completion events
+3. **Health Endpoints:**
+   - GET /api/v1/health (basic status)
+   - GET /api/v1/health/detailed (dependency health + metrics)
+4. **Session Management** - Conversation history with session IDs
+
+**Frontend Stack:**
+- **React 18.2:** Modern hooks (useState, useEffect, useCallback)
+- **TypeScript 5.9:** Full type safety with strict mode
+- **Vite 7.1:** Fast HMR, production builds (<400ms)
+- **Tailwind CSS v4.1:** Utility-first styling (new `@import` syntax)
+- **React Router v7.9:** Client-side routing (/, /search, /health)
+- **Zustand 5.0:** Lightweight state management
+- **React Markdown:** Markdown rendering for LLM answers
+- **Vitest 4.0 + React Testing Library:** 15 component tests
+
+#### Performance Metrics (Sprint 15)
+- **Frontend Build Time:** 8s (dev), 219 modules transformed (prod)
+- **Bundle Size:** 376 KB (118 KB gzipped)
+- **SSE Latency:** <50ms per token
+- **Page Load:** <1s (optimized assets)
+- **Test Coverage:** 15/15 frontend tests passing, 10/10 backend SSE tests passing
+
+#### Key Achievements
+- ✅ Production-ready React frontend (73/73 SP)
+- ✅ Real-time SSE streaming (token-by-token display)
+- ✅ Perplexity.ai-inspired UI design
+- ✅ German localization
+- ✅ Multi-mode search (Hybrid, Vector, Graph, Memory)
+- ✅ Health dashboard with real-time metrics
+- ✅ 25 comprehensive tests (15 frontend + 10 backend), all passing
+- ✅ ADR-020 (SSE Streaming), ADR-021 (Perplexity UI Design)
+- ✅ Merged to main (v0.15.0 release)
+
+#### Frontend Features
+
+**1. Search Experience:**
+- Mode selector (4 modes: Hybrid, Vector, Graph, Memory)
+- Real-time query input with validation
+- Quick suggestions (not implemented yet, placeholder)
+
+**2. Streaming Answer Display:**
+- Token-by-token streaming (smooth UX)
+- Markdown rendering (headers, lists, code blocks)
+- Loading states (skeleton lines, pulsing cursor)
+- Error handling (retry button)
+
+**3. Source Attribution:**
+- Horizontal scrollable source cards
+- Title, snippet, score display
+- Click to expand (not implemented yet, placeholder)
+
+**4. Health Dashboard:**
+- Overall system status badge
+- Dependency health cards (Qdrant, Ollama, Neo4j, Redis)
+- Uptime and performance metrics
+- Auto-refresh every 30s
+
+**5. Conversation History:**
+- Session list with timestamps
+- Last message preview
+- Click to load past conversation (not implemented yet, placeholder)
+
+#### Key Learnings
+✅ **What Worked:**
+- Vite HMR excellent developer experience
+- Tailwind CSS v4 fast styling (once syntax updated)
+- SSE perfect for one-way LLM streaming
+- TypeScript caught many bugs before runtime
+- React Testing Library great for component testing
+
+⚠️ **Challenges:**
+- Tailwind CSS v4 breaking changes from v3 (`@tailwind` → `@import`)
+- TypeScript 5.9+ strict mode requires `type` imports
+- SSE browser compatibility (EventSource API needs polyfill for IE11, but IE11 not supported)
+- Frontend state management (Zustand) learning curve
+
+#### Migration from Gradio (Sprint 10)
+- **Reason:** Gradio limited customization, no SSE streaming, poor styling
+- **Benefits:** Professional UI, full control, real-time streaming, responsive design
+- **Trade-off:** More code (~2000 lines), but production-ready
 
 ---
 

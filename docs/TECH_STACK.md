@@ -29,6 +29,172 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 
 ---
 
+## Sprint Progress (Sprints 12-15)
+
+### Sprint 12: Advanced Features
+**Status:** ✅ COMPLETE (2025-10-18 → 2025-10-21)
+
+**Technologies Added:**
+- **LightRAG**: Graph-based RAG with dual-level retrieval (entities + topics)
+- **Advanced Chunking**: Adaptive chunking with LlamaIndex (512 tokens, 128 overlap)
+- **Multi-Hop Graph Queries**: Neo4j Cypher for relationship traversal
+
+**Achievements:**
+- Graph-enhanced retrieval with entity linking
+- Adaptive chunking for better context boundaries
+- Multi-hop reasoning over knowledge graphs
+
+### Sprint 13: Entity/Relation Extraction Pipeline
+**Status:** ✅ COMPLETE (2025-10-21 → 2025-10-24)
+
+**Technologies Added:**
+- **spaCy (en_core_web_lg)**: Fast entity extraction (NER)
+- **Sentence-Transformers (all-MiniLM-L6-v2)**: Semantic deduplication embeddings
+- **Gemma 3 4B (Ollama)**: Lightweight relation extraction model
+- **Advanced Deduplication**: Levenshtein + FAISS + token normalization
+
+**Achievements:**
+- Three-phase pipeline: SpaCy → Semantic Dedup → Gemma 3
+- Performance: >300s → <30s (10x improvement)
+- Entity deduplication: 95% accuracy
+- ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
+
+**Technical Stack:**
+```python
+# Entity Extraction
+spacy.load("en_core_web_lg")  # NER
+sentence_transformers.SentenceTransformer("all-MiniLM-L6-v2")  # Embeddings
+faiss.IndexFlatL2(384)  # Vector similarity
+
+# Relation Extraction
+OllamaLLM(model="gemma2:4b")  # Lightweight, structured output
+```
+
+### Sprint 14: Production Benchmarking & Monitoring
+**Status:** ✅ COMPLETE (2025-10-24 → 2025-10-27)
+
+**Technologies Added:**
+- **Prometheus Client**: Custom metrics (12 metrics total)
+- **Memory Profiler**: Peak memory usage tracking
+- **pytest-benchmark**: Performance regression testing
+- **Tenacity**: Retry logic with exponential backoff
+
+**Achievements:**
+- Production-grade benchmarking suite
+- 132 tests total (112 unit, 20 integration)
+- Prometheus metrics for extraction pipeline
+- Memory profiling and optimization
+- ADR-019 (Integration Tests as E2E Tests)
+
+**Monitoring Stack:**
+```python
+from prometheus_client import Counter, Histogram, Gauge
+
+# Custom Metrics
+entity_extraction_duration = Histogram("entity_extraction_duration_seconds", ...)
+relation_extraction_duration = Histogram("relation_extraction_duration_seconds", ...)
+entities_extracted_total = Counter("entities_extracted_total", ...)
+relations_extracted_total = Counter("relations_extracted_total", ...)
+```
+
+### Sprint 15: React Frontend & SSE Streaming
+**Status:** ✅ COMPLETE (2025-10-27 → 2025-10-28)
+
+**Technologies Added:**
+- **React 18.2**: Modern React with hooks
+- **TypeScript 5.9**: Type-safe frontend development
+- **Vite 7.1**: Fast build tool with HMR
+- **Tailwind CSS v4.1**: Utility-first CSS framework (new `@import` syntax)
+- **React Router v7.9**: Client-side routing
+- **Zustand 5.0**: Lightweight state management
+- **Server-Sent Events (SSE)**: Real-time streaming from backend
+- **React Markdown**: Markdown rendering for answers
+- **Vitest 4.0**: Unit testing framework
+- **React Testing Library**: Component testing
+
+**Achievements:**
+- Production-ready React frontend (Perplexity.ai-inspired design)
+- Real-time streaming with SSE (token-by-token display)
+- German localization
+- Multi-mode search (Hybrid, Vector, Graph, Memory)
+- Health dashboard with system metrics
+- 15 frontend tests, all passing
+- ADR-020 (SSE Streaming), ADR-021 (Perplexity UI Design)
+
+**Frontend Stack:**
+```json
+{
+  "react": "^18.2.0",
+  "typescript": "~5.9.0",
+  "vite": "^7.1.0",
+  "tailwindcss": "^4.1.0",
+  "@tailwindcss/postcss": "^4.1.0",
+  "react-router": "^7.9.2",
+  "zustand": "^5.0.3",
+  "react-markdown": "^9.0.2",
+  "vitest": "^4.0.0",
+  "@testing-library/react": "^16.1.0"
+}
+```
+
+**Backend SSE Integration:**
+```python
+from fastapi.responses import StreamingResponse
+
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    async def event_generator():
+        yield f"event: metadata\ndata: {json.dumps(metadata)}\n\n"
+        yield f"event: source\ndata: {json.dumps(source)}\n\n"
+        for token in tokens:
+            yield f"event: token\ndata: {json.dumps({'content': token})}\n\n"
+        yield f"event: complete\ndata: {json.dumps(final_data)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+```
+
+### Cumulative Technology Additions (Sprints 12-15)
+
+| Sprint | Category | Technology | Version | Purpose |
+|--------|----------|------------|---------|---------|
+| 12 | GraphRAG | LightRAG | Latest | Dual-level graph retrieval |
+| 13 | NLP | spaCy | 3.8+ | Fast entity extraction |
+| 13 | Embeddings | all-MiniLM-L6-v2 | Latest | Deduplication embeddings |
+| 13 | LLM | Gemma 3 4B (Ollama) | Latest | Relation extraction |
+| 13 | Vector Search | FAISS | Latest | Semantic similarity |
+| 14 | Monitoring | Prometheus Client | Latest | Custom metrics |
+| 14 | Testing | pytest-benchmark | Latest | Performance tests |
+| 14 | Reliability | Tenacity | ^9.0.0 | Retry logic |
+| 15 | Frontend | React | 18.2.0 | UI framework |
+| 15 | Frontend | TypeScript | 5.9.0 | Type safety |
+| 15 | Frontend | Vite | 7.1.0 | Build tool |
+| 15 | Frontend | Tailwind CSS | 4.1.0 | Styling |
+| 15 | Frontend | React Router | 7.9.2 | Routing |
+| 15 | Frontend | Zustand | 5.0.3 | State management |
+| 15 | Streaming | SSE | Native | Real-time updates |
+| 15 | Testing | Vitest | 4.0.0 | Frontend tests |
+
+### Embedding Model Evolution
+
+**Layer 2 (Qdrant):**
+- Model: `nomic-embed-text` (Ollama)
+- Dimensions: 768
+- Purpose: Semantic document search
+- Status: ✅ Production-ready
+
+**Layer 3 (Graphiti):**
+- Model: `BGE-M3` (1024-dim)
+- Purpose: Episodic memory and temporal reasoning
+- Status: ✅ Active (Sprint 10 implementation)
+- Note: Incompatible embedding space with Layer 2
+
+**Issue Identified (Sprint 16):**
+- Two separate embedding models create incompatible vector spaces
+- Cannot compute cross-layer similarity between Qdrant and Graphiti
+- Sprint 16 Feature 16.4 will evaluate BGE-M3 standardization
+
+---
+
 ## Detailed Component Analysis
 
 ### 1. Backend Framework: FastAPI
