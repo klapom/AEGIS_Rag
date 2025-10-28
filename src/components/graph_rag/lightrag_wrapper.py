@@ -880,6 +880,12 @@ class LightRAGWrapper:
                 for chunk in chunks:
                     chunk_id = chunk["chunk_id"]
 
+                    # Extract token positions (Sprint 16: handle both old and new Chunk formats)
+                    # Old format has start_token/end_token, new format has token_count
+                    tokens = chunk.get("tokens", chunk.get("token_count", 0))
+                    start_token = chunk.get("start_token", 0)  # Default to 0 if not present
+                    end_token = chunk.get("end_token", tokens)  # Default to token count
+
                     # Create chunk node
                     await session.run(
                         """
@@ -893,12 +899,12 @@ class LightRAGWrapper:
                             c.created_at = datetime()
                         """,
                         chunk_id=chunk_id,
-                        text=chunk["text"],
+                        text=chunk.get("text", chunk.get("content", "")),  # Handle both formats
                         document_id=chunk["document_id"],
                         chunk_index=chunk["chunk_index"],
-                        tokens=chunk["tokens"],
-                        start_token=chunk["start_token"],
-                        end_token=chunk["end_token"],
+                        tokens=tokens,
+                        start_token=start_token,
+                        end_token=end_token,
                     )
 
                 logger.info("chunk_nodes_created", count=len(chunks))
