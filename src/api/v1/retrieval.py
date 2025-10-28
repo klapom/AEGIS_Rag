@@ -18,7 +18,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.api.auth.jwt import get_current_user
 from src.api.middleware import limiter
@@ -79,11 +79,12 @@ class SearchRequest(BaseModel):
         ],
     )
 
-    class Config:
+    model_config = ConfigDict(
         # P1: Validate assignment to prevent invalid data
-        validate_assignment = True
+        validate_assignment=True,
         # P1: Strict validation
-        str_strip_whitespace = True
+        str_strip_whitespace=True
+    )
 
 
 class SearchResult(BaseModel):
@@ -131,9 +132,10 @@ class IngestionRequest(BaseModel):
         max_length=20,  # P1: Prevent DoS with excessive extensions
     )
 
-    class Config:
-        validate_assignment = True
-        str_strip_whitespace = True
+    model_config = ConfigDict(
+        validate_assignment=True,
+        str_strip_whitespace=True
+    )
 
 
 class IngestionResponse(BaseModel):

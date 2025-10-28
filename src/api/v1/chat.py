@@ -15,7 +15,7 @@ from typing import Any, AsyncGenerator
 import structlog
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents.coordinator import CoordinatorAgent
 from src.components.memory import get_unified_memory_api
@@ -57,15 +57,14 @@ class ChatRequest(BaseModel):
         default=False, description="Include MCP tool call information in response"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "query": "Was ist AEGIS RAG?",
-                "session_id": "user-123-session",
-                "include_sources": True,
-                "include_tool_calls": False,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "query": "Was ist AEGIS RAG?",
+            "session_id": "user-123-session",
+            "include_sources": True,
+            "include_tool_calls": False,
         }
+    })
 
 
 class SourceDocument(BaseModel):
@@ -107,38 +106,37 @@ class ChatResponse(BaseModel):
         default_factory=dict, description="Execution metadata (latency, agent_path, etc.)"
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "answer": "AEGIS RAG ist ein agentisches RAG-System...",
-                "query": "Was ist AEGIS RAG?",
-                "session_id": "user-123-session",
-                "intent": "vector",
-                "sources": [
-                    {
-                        "text": "AEGIS RAG steht für...",
-                        "title": "CLAUDE.md",
-                        "source": "docs/core/CLAUDE.md",
-                        "score": 0.92,
-                    }
-                ],
-                "tool_calls": [
-                    {
-                        "tool_name": "read_file",
-                        "server": "filesystem-server",
-                        "arguments": {"path": "/docs/CLAUDE.md"},
-                        "result": {"content": "# CLAUDE.md - AegisRAG..."},
-                        "duration_ms": 45.2,
-                        "success": True,
-                        "error": None,
-                    }
-                ],
-                "metadata": {
-                    "latency_seconds": 1.23,
-                    "agent_path": ["router", "vector_agent", "generator"],
-                },
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "answer": "AEGIS RAG ist ein agentisches RAG-System...",
+            "query": "Was ist AEGIS RAG?",
+            "session_id": "user-123-session",
+            "intent": "vector",
+            "sources": [
+                {
+                    "text": "AEGIS RAG steht für...",
+                    "title": "CLAUDE.md",
+                    "source": "docs/core/CLAUDE.md",
+                    "score": 0.92,
+                }
+            ],
+            "tool_calls": [
+                {
+                    "tool_name": "read_file",
+                    "server": "filesystem-server",
+                    "arguments": {"path": "/docs/CLAUDE.md"},
+                    "result": {"content": "# CLAUDE.md - AegisRAG..."},
+                    "duration_ms": 45.2,
+                    "success": True,
+                    "error": None,
+                }
+            ],
+            "metadata": {
+                "latency_seconds": 1.23,
+                "agent_path": ["router", "vector_agent", "generator"],
+            },
         }
+    })
 
 
 class ConversationHistoryResponse(BaseModel):

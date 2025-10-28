@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class QueryIntent(str, Enum):
@@ -28,22 +28,19 @@ class QueryMode(str, Enum):
 class DocumentChunk(BaseModel):
     """Document chunk with metadata."""
 
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "doc1_chunk1",
+            "content": "This is a sample document chunk.",
+            "metadata": {"source": "doc1.pdf", "page": 1},
+            "score": 0.95,
+        }
+    })
+
     id: str = Field(..., description="Unique chunk ID")
     content: str = Field(..., description="Chunk text content")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
     score: float | None = Field(None, description="Relevance score", ge=0.0, le=1.0)
-
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "id": "doc1_chunk1",
-                "content": "This is a sample document chunk.",
-                "metadata": {"source": "doc1.pdf", "page": 1},
-                "score": 0.95,
-            }
-        }
 
 
 class QueryRequest(BaseModel):
@@ -58,6 +55,17 @@ class QueryRequest(BaseModel):
     use_memory: bool = Field(default=True, description="Include memory in context")
     conversation_id: str | None = Field(None, description="Conversation ID for memory")
 
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "query": "What are the main components of AEGIS RAG?",
+            "mode": "hybrid",
+            "top_k": 5,
+            "score_threshold": 0.7,
+            "use_memory": True,
+            "conversation_id": "conv-123",
+        }
+    })
+
     @field_validator("query")
     @classmethod
     def validate_query(cls, v: str) -> str:
@@ -67,23 +75,27 @@ class QueryRequest(BaseModel):
             raise ValueError("Query cannot be empty")
         return v
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "query": "What are the main components of AEGIS RAG?",
-                "mode": "hybrid",
-                "top_k": 5,
-                "score_threshold": 0.7,
-                "use_memory": True,
-                "conversation_id": "conv-123",
-            }
-        }
-
 
 class QueryResponse(BaseModel):
     """Response model for RAG query."""
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "answer": "AEGIS RAG consists of four main components...",
+            "sources": [
+                {
+                    "id": "doc1_chunk1",
+                    "content": "Component 1: Vector Search...",
+                    "metadata": {"source": "architecture.md"},
+                    "score": 0.95,
+                }
+            ],
+            "query_intent": "hybrid",
+            "processing_time_ms": 450.5,
+            "conversation_id": "conv-123",
+            "metadata": {"agent_steps": 3},
+        }
+    })
 
     answer: str = Field(..., description="Generated answer")
     sources: list[DocumentChunk] = Field(default_factory=list, description="Source documents used")
@@ -91,27 +103,6 @@ class QueryResponse(BaseModel):
     processing_time_ms: float = Field(..., description="Query processing time in milliseconds")
     conversation_id: str | None = Field(None, description="Conversation ID")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "answer": "AEGIS RAG consists of four main components...",
-                "sources": [
-                    {
-                        "id": "doc1_chunk1",
-                        "content": "Component 1: Vector Search...",
-                        "metadata": {"source": "architecture.md"},
-                        "score": 0.95,
-                    }
-                ],
-                "query_intent": "hybrid",
-                "processing_time_ms": 450.5,
-                "conversation_id": "conv-123",
-                "metadata": {"agent_steps": 3},
-            }
-        }
 
 
 class HealthStatus(str, Enum):
@@ -133,6 +124,20 @@ class ServiceHealth(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response."""
 
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "status": "healthy",
+            "version": "0.1.0",
+            "timestamp": "2025-01-15T10:00:00Z",
+            "services": {
+                "qdrant": {"status": "healthy", "latency_ms": 5.2, "error": None},
+                "neo4j": {"status": "healthy", "latency_ms": 12.8, "error": None},
+                "redis": {"status": "healthy", "latency_ms": 1.5, "error": None},
+                "ollama": {"status": "healthy", "latency_ms": 50.0, "error": None},
+            },
+        }
+    })
+
     status: HealthStatus = Field(..., description="Overall system health")
     version: str = Field(..., description="Application version")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Check timestamp")
@@ -140,43 +145,23 @@ class HealthResponse(BaseModel):
         default_factory=dict, description="Individual service health"
     )
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "status": "healthy",
-                "version": "0.1.0",
-                "timestamp": "2025-01-15T10:00:00Z",
-                "services": {
-                    "qdrant": {"status": "healthy", "latency_ms": 5.2, "error": None},
-                    "neo4j": {"status": "healthy", "latency_ms": 12.8, "error": None},
-                    "redis": {"status": "healthy", "latency_ms": 1.5, "error": None},
-                    "ollama": {"status": "healthy", "latency_ms": 50.0, "error": None},
-                },
-            }
-        }
-
 
 class ErrorResponse(BaseModel):
     """Error response model."""
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "error": "ValidationError",
+            "message": "Query cannot be empty",
+            "details": {"field": "query"},
+            "timestamp": "2025-01-15T10:00:00Z",
+        }
+    })
 
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
     details: dict[str, Any] | None = Field(None, description="Additional error details")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
-
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "error": "ValidationError",
-                "message": "Query cannot be empty",
-                "details": {"field": "query"},
-                "timestamp": "2025-01-15T10:00:00Z",
-            }
-        }
 
 
 # ============================================================================
@@ -210,20 +195,17 @@ class GraphEntity(BaseModel):
     changed_by: str = Field(default="system", description="User/system that made the change")
     change_reason: str = Field(default="", description="Reason for the change")
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "id": "entity_1",
-                "name": "John Smith",
-                "type": "PERSON",
-                "description": "Software engineer at Google",
-                "properties": {"aliases": ["J. Smith", "Johnny"]},
-                "source_document": "doc_123",
-                "confidence": 0.95,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "entity_1",
+            "name": "John Smith",
+            "type": "PERSON",
+            "description": "Software engineer at Google",
+            "properties": {"aliases": ["J. Smith", "Johnny"]},
+            "source_document": "doc_123",
+            "confidence": 0.95,
         }
+    })
 
 
 class GraphRelationship(BaseModel):
@@ -242,21 +224,18 @@ class GraphRelationship(BaseModel):
         default=1.0, description="Extraction confidence score", ge=0.0, le=1.0
     )
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "id": "rel_1",
-                "source": "John Smith",
-                "target": "Google",
-                "type": "WORKS_AT",
-                "description": "John Smith works at Google",
-                "properties": {"since": "2020-01-01"},
-                "source_document": "doc_123",
-                "confidence": 0.92,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "rel_1",
+            "source": "John Smith",
+            "target": "Google",
+            "type": "WORKS_AT",
+            "description": "John Smith works at Google",
+            "properties": {"since": "2020-01-01"},
+            "source_document": "doc_123",
+            "confidence": 0.92,
         }
+    })
 
 
 class Topic(BaseModel):
@@ -269,19 +248,16 @@ class Topic(BaseModel):
     keywords: list[str] = Field(default_factory=list, description="Topic keywords")
     score: float = Field(default=0.0, description="Topic relevance score", ge=0.0, le=1.0)
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "id": "topic_1",
-                "name": "Machine Learning at Tech Companies",
-                "summary": "Discussion of machine learning applications in major tech companies",
-                "entities": ["entity_1", "entity_2", "entity_3"],
-                "keywords": ["machine learning", "AI", "Google", "technology"],
-                "score": 0.88,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "topic_1",
+            "name": "Machine Learning at Tech Companies",
+            "summary": "Discussion of machine learning applications in major tech companies",
+            "entities": ["entity_1", "entity_2", "entity_3"],
+            "keywords": ["machine learning", "AI", "Google", "technology"],
+            "score": 0.88,
         }
+    })
 
 
 class GraphQueryResult(BaseModel):
@@ -300,42 +276,39 @@ class GraphQueryResult(BaseModel):
     mode: str = Field(default="local", description="Search mode (local/global/hybrid)")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Query metadata")
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "query": "What companies has John Smith worked for?",
-                "answer": "John Smith has worked for Google (2020-present) and Microsoft (2015-2020).",
-                "entities": [
-                    {
-                        "id": "e1",
-                        "name": "John Smith",
-                        "type": "PERSON",
-                        "description": "Software engineer",
-                        "properties": {},
-                        "source_document": "doc_1",
-                        "confidence": 0.95,
-                    }
-                ],
-                "relationships": [
-                    {
-                        "id": "r1",
-                        "source": "John Smith",
-                        "target": "Google",
-                        "type": "WORKS_AT",
-                        "description": "Employment relationship",
-                        "properties": {},
-                        "source_document": "doc_1",
-                        "confidence": 0.92,
-                    }
-                ],
-                "topics": [],
-                "context": "John Smith-WORKS_AT->Google...",
-                "mode": "local",
-                "metadata": {"execution_time_ms": 250, "entities_found": 2},
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "query": "What companies has John Smith worked for?",
+            "answer": "John Smith has worked for Google (2020-present) and Microsoft (2015-2020).",
+            "entities": [
+                {
+                    "id": "e1",
+                    "name": "John Smith",
+                    "type": "PERSON",
+                    "description": "Software engineer",
+                    "properties": {},
+                    "source_document": "doc_1",
+                    "confidence": 0.95,
+                }
+            ],
+            "relationships": [
+                {
+                    "id": "r1",
+                    "source": "John Smith",
+                    "target": "Google",
+                    "type": "WORKS_AT",
+                    "description": "Employment relationship",
+                    "properties": {},
+                    "source_document": "doc_1",
+                    "confidence": 0.92,
+                }
+            ],
+            "topics": [],
+            "context": "John Smith-WORKS_AT->Google...",
+            "mode": "local",
+            "metadata": {"execution_time_ms": 250, "entities_found": 2},
         }
+    })
 
 
 # ============================================================================
@@ -358,20 +331,17 @@ class Community(BaseModel):
         default_factory=dict, description="Additional community metadata"
     )
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "id": "community_1",
-                "label": "Machine Learning Research",
-                "entity_ids": ["entity_1", "entity_2", "entity_3"],
-                "size": 3,
-                "density": 0.85,
-                "created_at": "2025-01-15T10:00:00Z",
-                "metadata": {"algorithm": "leiden", "resolution": 1.0},
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "id": "community_1",
+            "label": "Machine Learning Research",
+            "entity_ids": ["entity_1", "entity_2", "entity_3"],
+            "size": 3,
+            "density": 0.85,
+            "created_at": "2025-01-15T10:00:00Z",
+            "metadata": {"algorithm": "leiden", "resolution": 1.0},
         }
+    })
 
 
 class CommunitySearchResult(BaseModel):
@@ -385,38 +355,35 @@ class CommunitySearchResult(BaseModel):
     answer: str = Field(default="", description="LLM-generated answer")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "query": "What are the main research areas?",
-                "communities": [
-                    {
-                        "id": "community_1",
-                        "label": "Machine Learning Research",
-                        "entity_ids": ["e1", "e2"],
-                        "size": 2,
-                        "density": 0.85,
-                        "created_at": "2025-01-15T10:00:00Z",
-                        "metadata": {},
-                    }
-                ],
-                "entities": [
-                    {
-                        "id": "e1",
-                        "name": "Neural Networks",
-                        "type": "CONCEPT",
-                        "description": "Deep learning architecture",
-                        "properties": {},
-                        "source_document": "doc_1",
-                        "confidence": 0.95,
-                    }
-                ],
-                "answer": "The main research areas include Machine Learning Research...",
-                "metadata": {"execution_time_ms": 150, "communities_found": 1},
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "query": "What are the main research areas?",
+            "communities": [
+                {
+                    "id": "community_1",
+                    "label": "Machine Learning Research",
+                    "entity_ids": ["e1", "e2"],
+                    "size": 2,
+                    "density": 0.85,
+                    "created_at": "2025-01-15T10:00:00Z",
+                    "metadata": {},
+                }
+            ],
+            "entities": [
+                {
+                    "id": "e1",
+                    "name": "Neural Networks",
+                    "type": "CONCEPT",
+                    "description": "Deep learning architecture",
+                    "properties": {},
+                    "source_document": "doc_1",
+                    "confidence": 0.95,
+                }
+            ],
+            "answer": "The main research areas include Machine Learning Research...",
+            "metadata": {"execution_time_ms": 150, "communities_found": 1},
         }
+    })
 
 
 # ============================================================================
@@ -434,19 +401,16 @@ class CentralityMetrics(BaseModel):
     eigenvector: float = Field(default=0.0, description="Eigenvector centrality", ge=0.0, le=1.0)
     pagerank: float = Field(default=0.0, description="PageRank score", ge=0.0, le=1.0)
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "entity_id": "entity_1",
-                "degree": 15.0,
-                "betweenness": 0.35,
-                "closeness": 0.68,
-                "eigenvector": 0.42,
-                "pagerank": 0.08,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "entity_id": "entity_1",
+            "degree": 15.0,
+            "betweenness": 0.35,
+            "closeness": 0.68,
+            "eigenvector": 0.42,
+            "pagerank": 0.08,
         }
+    })
 
 
 class GraphStatistics(BaseModel):
@@ -464,20 +428,17 @@ class GraphStatistics(BaseModel):
     density: float = Field(..., description="Graph density", ge=0.0, le=1.0)
     communities: int = Field(default=0, description="Number of detected communities", ge=0)
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "total_entities": 1500,
-                "total_relationships": 3200,
-                "entity_types": {"PERSON": 500, "ORGANIZATION": 300, "CONCEPT": 700},
-                "relationship_types": {"WORKS_AT": 450, "KNOWS": 1200, "RELATED_TO": 1550},
-                "avg_degree": 4.27,
-                "density": 0.0014,
-                "communities": 45,
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "total_entities": 1500,
+            "total_relationships": 3200,
+            "entity_types": {"PERSON": 500, "ORGANIZATION": 300, "CONCEPT": 700},
+            "relationship_types": {"WORKS_AT": 450, "KNOWS": 1200, "RELATED_TO": 1550},
+            "avg_degree": 4.27,
+            "density": 0.0014,
+            "communities": 45,
         }
+    })
 
 
 class Recommendation(BaseModel):
@@ -490,21 +451,18 @@ class Recommendation(BaseModel):
         description="Recommendation reason (similar_community, connected, similar_attributes)",
     )
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
-            "example": {
-                "entity": {
-                    "id": "entity_2",
-                    "name": "Jane Doe",
-                    "type": "PERSON",
-                    "description": "Data scientist at Google",
-                    "properties": {},
-                    "source_document": "doc_2",
-                    "confidence": 0.92,
-                },
-                "score": 0.85,
-                "reason": "similar_community",
-            }
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "entity": {
+                "id": "entity_2",
+                "name": "Jane Doe",
+                "type": "PERSON",
+                "description": "Data scientist at Google",
+                "properties": {},
+                "source_document": "doc_2",
+                "confidence": 0.92,
+            },
+            "score": 0.85,
+            "reason": "similar_community",
         }
+    })

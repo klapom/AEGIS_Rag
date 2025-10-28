@@ -18,7 +18,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.api.middleware import limiter
 from src.components.memory import (
@@ -73,9 +73,10 @@ class MemorySearchRequest(BaseModel):
         description="Limit temporal search to recent N hours",
     )
 
-    class Config:
-        validate_assignment = True
-        str_strip_whitespace = True
+    model_config = ConfigDict(
+        validate_assignment=True,
+        str_strip_whitespace=True
+    )
 
 
 class MemorySearchResult(BaseModel):
@@ -123,9 +124,10 @@ class PointInTimeQueryRequest(BaseModel):
         description="Maximum results to return",
     )
 
-    class Config:
-        validate_assignment = True
-        str_strip_whitespace = True
+    model_config = ConfigDict(
+        validate_assignment=True,
+        str_strip_whitespace=True
+    )
 
 
 class PointInTimeQueryResponse(BaseModel):
@@ -165,8 +167,9 @@ class ConsolidationRequest(BaseModel):
         examples=[["session_123", "session_456"]],
     )
 
-    class Config:
-        validate_assignment = True
+    model_config = ConfigDict(
+        validate_assignment=True
+    )
 
 
 class ConsolidationResponse(BaseModel):
