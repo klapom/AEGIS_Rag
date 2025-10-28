@@ -194,7 +194,7 @@ class TestChunk:
 
         payload = chunk.to_qdrant_payload()
 
-        assert payload["chunk_id"] == "abc123def456"
+        assert payload["chunk_id"] == "abc123def4567890"
         assert payload["document_id"] == "doc_001"
         assert payload["chunk_index"] == 2
         assert payload["text"] == "Sample chunk content"
@@ -221,7 +221,7 @@ class TestChunk:
         bm25_doc = chunk.to_bm25_document()
 
         assert bm25_doc["text"] == "Sample chunk for BM25"
-        assert bm25_doc["chunk_id"] == "abc123def456"
+        assert bm25_doc["chunk_id"] == "abc123def4567890"
         assert bm25_doc["document_id"] == "doc_001"
         assert bm25_doc["chunk_index"] == 1
         assert bm25_doc["token_count"] == 5
@@ -243,7 +243,7 @@ class TestChunk:
 
         lightrag_chunk = chunk.to_lightrag_format()
 
-        assert lightrag_chunk["chunk_id"] == "abc123def456"
+        assert lightrag_chunk["chunk_id"] == "abc123def4567890"
         assert lightrag_chunk["text"] == "Sample chunk for LightRAG"
         assert lightrag_chunk["document_id"] == "doc_001"
         assert lightrag_chunk["chunk_index"] == 3
@@ -280,13 +280,13 @@ class TestChunk:
 
         # Should not raise
         json_str = chunk.model_dump_json()
-        assert "abc123def456" in json_str
+        assert "abc123def4567890" in json_str
         assert "doc_001" in json_str
 
     def test_chunk_from_dict(self):
         """Test chunk can be created from dictionary."""
         chunk_dict = {
-            "chunk_id": "abc123def456",
+            "chunk_id": "abc123def4567890",
             "document_id": "doc_001",
             "chunk_index": 0,
             "content": "Sample",
@@ -298,5 +298,5 @@ class TestChunk:
         }
 
         chunk = Chunk(**chunk_dict)
-        assert chunk.chunk_id == "abc123def456"
+        assert chunk.chunk_id == "abc123def4567890"
         assert chunk.document_id == "doc_001"

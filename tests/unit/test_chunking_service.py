@@ -56,7 +56,7 @@ class TestChunkingServiceFixed:
     def test_fixed_strategy_simple_text(self):
         """Test fixed chunking with simple text."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=50)
         )
 
         text = "This is a sample document. " * 20  # ~140 words
@@ -70,7 +70,7 @@ class TestChunkingServiceFixed:
     def test_fixed_strategy_chunk_ids_unique(self):
         """Test fixed strategy generates unique chunk_ids."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=50)
         )
 
         text = "Sample text. " * 50
@@ -82,7 +82,7 @@ class TestChunkingServiceFixed:
     def test_fixed_strategy_chunk_ids_deterministic(self):
         """Test fixed strategy generates same chunk_ids for same input."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=50)
         )
 
         text = "Deterministic test text. " * 20
@@ -98,7 +98,7 @@ class TestChunkingServiceFixed:
     def test_fixed_strategy_respects_chunk_size(self):
         """Test fixed strategy respects token chunk_size limit."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=100, overlap=20)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=40)
         )
 
         text = "Word " * 500  # Lots of tokens
@@ -106,12 +106,12 @@ class TestChunkingServiceFixed:
 
         # All chunks should be <= chunk_size tokens (except possibly last)
         for chunk in chunks[:-1]:  # All but last
-            assert chunk.token_count <= 100
+            assert chunk.token_count <= 200
 
     def test_fixed_strategy_with_metadata(self):
         """Test fixed strategy preserves metadata."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=50)
         )
 
         text = "Sample text with metadata. " * 10
@@ -141,7 +141,7 @@ class TestChunkingServiceAdaptive:
     def test_adaptive_strategy_respects_sentence_boundaries(self):
         """Test adaptive strategy respects sentence boundaries."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="adaptive", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="adaptive", chunk_size=200, overlap=50)
         )
 
         # Short sentences, should not split mid-sentence
@@ -156,7 +156,7 @@ class TestChunkingServiceAdaptive:
     def test_adaptive_strategy_with_long_sentence(self):
         """Test adaptive strategy handles very long sentences."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="adaptive", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="adaptive", chunk_size=200, overlap=50)
         )
 
         # One very long sentence
@@ -204,7 +204,7 @@ class TestChunkingServiceSentence:
     def test_sentence_strategy_simple_text(self):
         """Test sentence chunking with simple text."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="sentence", chunk_size=50, overlap=10)
+            strategy=ChunkStrategy(method="sentence", chunk_size=200, overlap=50)
         )
 
         text = "First sentence. Second sentence. Third sentence. Fourth sentence."
@@ -216,7 +216,7 @@ class TestChunkingServiceSentence:
     def test_sentence_strategy_respects_sentence_boundaries(self):
         """Test sentence strategy respects sentence endings."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="sentence", chunk_size=100, overlap=20)
+            strategy=ChunkStrategy(method="sentence", chunk_size=200, overlap=40)
         )
 
         text = "Question one? Statement two. Exclamation three!"
@@ -368,7 +368,7 @@ class TestChunkingServiceConversions:
     def test_chunks_convert_to_lightrag_format(self):
         """Test chunks can be converted to LightRAG format."""
         service = ChunkingService(
-            strategy=ChunkStrategy(method="fixed", chunk_size=100, overlap=20)
+            strategy=ChunkStrategy(method="fixed", chunk_size=200, overlap=40)
         )
 
         text = "Sample text for LightRAG conversion."
