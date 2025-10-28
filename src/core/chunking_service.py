@@ -15,6 +15,7 @@ Benefits:
 """
 
 import re
+import time
 from typing import Literal
 
 import structlog
@@ -22,10 +23,37 @@ import tiktoken
 from llama_index.core import Document
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import TextNode
+from prometheus_client import Counter, Gauge, Histogram
 
-from src.core.models.chunk import Chunk, ChunkStrategy
+from src.core.chunk import Chunk, ChunkStrategy
 
 logger = structlog.get_logger(__name__)
+
+# Prometheus Metrics
+chunking_duration_seconds = Histogram(
+    "chunking_duration_seconds",
+    "Time spent chunking documents",
+    labelnames=["strategy"],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0],
+)
+
+chunks_created_total = Counter(
+    "chunks_created_total",
+    "Total number of chunks created",
+    labelnames=["strategy"],
+)
+
+avg_chunk_size_tokens = Gauge(
+    "avg_chunk_size_tokens",
+    "Average chunk size in tokens",
+    labelnames=["strategy"],
+)
+
+documents_chunked_total = Counter(
+    "documents_chunked_total",
+    "Total number of documents chunked",
+    labelnames=["strategy"],
+)
 
 
 class ChunkingService:
@@ -123,6 +151,9 @@ class ChunkingService:
             method=self.strategy.method,
         )
 
+        # Measure chunking duration
+        start_time = time.time()
+
         # Route to appropriate chunking method
         if self.strategy.method == "fixed":
             chunks = self._chunk_fixed(document_id, content, metadata)
@@ -135,11 +166,24 @@ class ChunkingService:
         else:
             raise ValueError(f"Unknown chunking method: {self.strategy.method}")
 
+        # Record metrics
+        duration = time.time() - start_time
+        strategy_label = self.strategy.method
+
+        chunking_duration_seconds.labels(strategy=strategy_label).observe(duration)
+        chunks_created_total.labels(strategy=strategy_label).inc(len(chunks))
+        documents_chunked_total.labels(strategy=strategy_label).inc()
+
+        if chunks:
+            avg_tokens = sum(c.token_count for c in chunks) / len(chunks)
+            avg_chunk_size_tokens.labels(strategy=strategy_label).set(avg_tokens)
+
         logger.info(
             "chunking_document_complete",
             document_id=document_id,
             chunks_created=len(chunks),
             avg_tokens_per_chunk=sum(c.token_count for c in chunks) / len(chunks) if chunks else 0,
+            duration_seconds=duration,
         )
 
         return chunks

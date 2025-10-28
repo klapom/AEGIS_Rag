@@ -17,10 +17,10 @@ from qdrant_client.models import PointStruct
 
 from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
+from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
-from src.core.models.chunk import ChunkStrategy
 
 logger = structlog.get_logger(__name__)
 

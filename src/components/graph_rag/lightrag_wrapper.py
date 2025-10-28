@@ -23,10 +23,10 @@ from tenacity import (
 )
 
 from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.models import GraphQueryResult
-from src.core.models.chunk import ChunkStrategy
 
 logger = structlog.get_logger(__name__)
 
