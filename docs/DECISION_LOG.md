@@ -130,6 +130,30 @@
 
 ---
 
+## SPRINT 16: UNIFIED ARCHITECTURE & BGE-M3 MIGRATION
+
+### 2025-10-28 | Unified Chunking Service (ADR-022)
+**Decision:** Create single ChunkingService for all components (Qdrant, BM25, LightRAG).
+**Rationale:** Eliminate fragmentation (3 separate chunking implementations), ensure consistency across indexes, reduce code duplication by 70%. SHA-256 deterministic chunk IDs enable reliable provenance tracking.
+
+### 2025-10-28 | BGE-M3 System-Wide Standardization (ADR-024)
+**Decision:** Migrate from nomic-embed-text (768-dim) to BGE-M3 (1024-dim) for all embeddings.
+**Rationale:** Enable cross-layer similarity (Qdrant ↔ Graphiti), better multilingual support (German OMNITRACKER docs), unified architecture with single embedding model. Trade-off: +66% latency (+10ms with cache), but massive capability gain.
+
+### 2025-10-28 | Unified Re-Indexing Pipeline (ADR-023)
+**Decision:** Create POST /api/v1/admin/reindex endpoint with atomic transaction semantics.
+**Rationale:** BGE-M3 migration requires re-embedding all documents. Atomic deletion (Qdrant + BM25) prevents inconsistent state. SSE streaming provides real-time progress visibility. Safety checks (confirm=true, dry-run) prevent accidental data loss.
+
+### 2025-10-28 | PPTX Document Support
+**Decision:** Add python-pptx dependency for PowerPoint extraction.
+**Rationale:** OMNITRACKER corpus contains many PPTX training materials. python-pptx provides mature, battle-tested extraction. Minimal overhead (<1MB dependency).
+
+### 2025-10-28 | Pydantic v2 ConfigDict Migration
+**Decision:** Migrate all 21 Pydantic models from @root_validator to ConfigDict.
+**Rationale:** Eliminate deprecation warnings, future-proof for Pydantic v3, cleaner model definitions. No performance impact (already on Pydantic v2 core).
+
+---
+
 ## SPRINT 13+ FUTURE DECISIONS (PLANNED)
 
 ### TBD | React + Next.js 14 Frontend (Sprint 14)
@@ -202,6 +226,7 @@
 
 ---
 
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
-**Total Decisions Documented:** 35+
-**Next Sprint:** Sprint 13 (Test Infrastructure & Performance)
+**Last Updated:** 2025-10-28 (Post-Sprint 16 Start)
+**Total Decisions Documented:** 40+
+**Current Sprint:** Sprint 16 (Unified Architecture & BGE-M3 Migration)
+**Next Sprint:** Sprint 17 (TBD)

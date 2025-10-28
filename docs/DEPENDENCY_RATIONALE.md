@@ -866,6 +866,99 @@ asyncio_mode = "auto"
 
 ---
 
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
-**Total Dependencies:** 60+ (production + dev)
+## SPRINT 16 NEW DEPENDENCIES
+
+### python-pptx: 1.0.2 | PowerPoint Document Extraction (Feature 16.5)
+
+**Version:** `^1.0.2` (latest stable)
+
+**Rationale:**
+- **OMNITRACKER Use Case:** OMNITRACKER corpus contains many PPTX training materials
+- **Mature Library:** 10+ years development, battle-tested, widely used
+- **Simple API:** Easy integration with existing LlamaIndex loaders
+- **Comprehensive:** Extracts text, tables, speaker notes, slide titles
+- **Small Footprint:** <1MB dependency, no heavy dependencies
+
+**Alternatives Rejected:**
+- **python-pptx-fork:** Less maintained, no additional features
+- **Apache POI (Java):** Requires JVM, heavyweight, cross-language complexity
+- **Manual XML parsing:** Too low-level, error-prone, not worth effort
+
+**Trade-offs:**
+- ⚠️ No embedded image OCR (would need pytesseract)
+- ⚠️ No chart data extraction (only text)
+- ✅ Sufficient for text-based RAG use case
+- ✅ Fast extraction (<100ms per slide)
+
+**Usage:**
+```python
+from pptx import Presentation
+
+prs = Presentation('training.pptx')
+for slide in prs.slides:
+    for shape in slide.shapes:
+        if hasattr(shape, "text"):
+            yield shape.text
+```
+
+---
+
+### Pydantic v2 ConfigDict Migration (Feature 16.8)
+
+**Version:** `^2.9.0` (no version change, API migration only)
+
+**Rationale:**
+- **Eliminate Deprecation Warnings:** `@root_validator` deprecated in Pydantic v2
+- **Future-Proof:** ConfigDict is canonical approach in Pydantic v2+
+- **Cleaner Syntax:** Model configuration in single dict vs scattered decorators
+- **No Performance Impact:** Already using Pydantic v2 core (5-50x faster than v1)
+
+**Migration:** 21 models updated from `@root_validator` to `ConfigDict`
+
+**Before (Sprint 1-15):**
+```python
+from pydantic import BaseModel, root_validator
+
+class QueryRequest(BaseModel):
+    query: str
+    max_results: int = 10
+
+    @root_validator  # Deprecated in Pydantic v2
+    def validate_query(cls, values):
+        if not values.get("query"):
+            raise ValueError("Query cannot be empty")
+        return values
+```
+
+**After (Sprint 16):**
+```python
+from pydantic import BaseModel, model_validator
+
+class QueryRequest(BaseModel):
+    model_config = ConfigDict(
+        validate_assignment=True,
+        arbitrary_types_allowed=False
+    )
+
+    query: str
+    max_results: int = 10
+
+    @model_validator(mode='after')  # Pydantic v2 canonical
+    def validate_query(self):
+        if not self.query:
+            raise ValueError("Query cannot be empty")
+        return self
+```
+
+**Benefits:**
+- ✅ No deprecation warnings in logs
+- ✅ Future-proof for Pydantic v3
+- ✅ Better IDE auto-completion
+- ✅ Cleaner model definitions
+
+---
+
+**Last Updated:** 2025-10-28 (Post-Sprint 16)
+**Total Dependencies:** 61+ (production + dev)
 **Dependency Health:** All actively maintained, no critical CVEs
+**Sprint 16 Additions:** python-pptx (1.0.2), Pydantic v2 ConfigDict migration

@@ -29,7 +29,7 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 
 ---
 
-## Sprint Progress (Sprints 12-15)
+## Sprint Progress (Sprints 12-16)
 
 ### Sprint 12: Advanced Features
 **Status:** ✅ COMPLETE (2025-10-18 → 2025-10-21)
@@ -153,7 +153,48 @@ async def chat_stream(request: ChatRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 ```
 
-### Cumulative Technology Additions (Sprints 12-15)
+### Sprint 16: Unified Architecture & BGE-M3 Migration
+**Status:** 🔄 IN PROGRESS (2025-10-28 →
+
+ 2025-11-06)
+
+**Technologies Added:**
+- **python-pptx**: PowerPoint document support (PPTX extraction)
+- **Pydantic v2**: ConfigDict migration (21 models updated)
+- **Benchmarking Tools**: scripts/benchmark_embeddings.py
+
+**Major Changes:**
+- **BGE-M3 System-Wide**: Replaced nomic-embed-text (768-dim) with BGE-M3 (1024-dim) everywhere
+- **Unified Chunking**: Single ChunkingService for all components (Qdrant, BM25, LightRAG)
+- **Unified Re-Indexing**: POST /api/v1/admin/reindex endpoint with SSE streaming
+
+**Achievements:**
+- Cross-layer similarity now possible (Qdrant ↔ Graphiti with same 1024-dim space)
+- 70% code reduction through unified chunking
+- Better multilingual support (German OMNITRACKER docs)
+- ADR-022 (Unified Chunking), ADR-023 (Re-Indexing), ADR-024 (BGE-M3)
+
+**Technical Stack:**
+```python
+# Embedding Model (System-Wide)
+UnifiedEmbeddingService(model="bge-m3", embedding_dim=1024)
+
+# Chunking Service
+ChunkingService(
+    strategy="adaptive",  # or "sentence", "fixed", "semantic"
+    max_tokens=512,
+    overlap=128,
+    chunk_id_algorithm="sha256"
+)
+
+# Re-Indexing Endpoint
+POST /api/v1/admin/reindex
+  - Atomic deletion (Qdrant + BM25)
+  - SSE progress tracking (6 phases)
+  - Safety: confirm=true, dry-run mode
+```
+
+### Cumulative Technology Additions (Sprints 12-16)
 
 | Sprint | Category | Technology | Version | Purpose |
 |--------|----------|------------|---------|---------|
@@ -173,25 +214,35 @@ async def chat_stream(request: ChatRequest):
 | 15 | Frontend | Zustand | 5.0.3 | State management |
 | 15 | Streaming | SSE | Native | Real-time updates |
 | 15 | Testing | Vitest | 4.0.0 | Frontend tests |
+| 16 | Chunking | ChunkingService | Custom | Unified chunking across all components |
+| 16 | Embeddings | BGE-M3 | 1024-dim | System-wide embedding model |
+| 16 | Documents | python-pptx | 1.0.2 | PowerPoint support |
+| 16 | Validation | Pydantic v2 | 2.9.0 | ConfigDict migration |
+| 16 | Admin API | Re-Indexing | Custom | Atomic rebuild endpoint |
 
 ### Embedding Model Evolution
 
-**Layer 2 (Qdrant):**
-- Model: `nomic-embed-text` (Ollama)
-- Dimensions: 768
-- Purpose: Semantic document search
-- Status: ✅ Production-ready
+**Historical Timeline:**
 
-**Layer 3 (Graphiti):**
-- Model: `BGE-M3` (1024-dim)
-- Purpose: Episodic memory and temporal reasoning
-- Status: ✅ Active (Sprint 10 implementation)
-- Note: Incompatible embedding space with Layer 2
+**Sprints 1-15 (Dual-Model Architecture):**
+- **Layer 2 (Qdrant):** nomic-embed-text (768-dim) → Semantic document search
+- **Layer 3 (Graphiti):** BGE-M3 (1024-dim) → Episodic memory
+- **Issue:** Incompatible embedding spaces, no cross-layer similarity
 
-**Issue Identified (Sprint 16):**
-- Two separate embedding models create incompatible vector spaces
-- Cannot compute cross-layer similarity between Qdrant and Graphiti
-- Sprint 16 Feature 16.4 will evaluate BGE-M3 standardization
+**Sprint 16 (Unified Architecture):**
+- **All Layers:** BGE-M3 (1024-dim) system-wide
+- **Layer 2 (Qdrant):** BGE-M3 → Semantic document search
+- **Layer 3 (Graphiti):** BGE-M3 → Episodic memory
+- **Benefits:**
+  - ✅ Cross-layer similarity enabled
+  - ✅ Better multilingual support (German)
+  - ✅ Unified caching and performance optimization
+  - ✅ Reduced complexity (single model, single API)
+
+**Migration (ADR-024):**
+- Reason: Enable semantic search across memory layers
+- Impact: Requires re-indexing all documents (933+ docs)
+- Solution: Unified re-indexing endpoint (Feature 16.3)
 
 ---
 

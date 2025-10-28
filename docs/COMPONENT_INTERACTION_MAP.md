@@ -740,6 +740,182 @@ Speedup: 2.25x
 
 ---
 
+### Scenario 5: Unified Re-Indexing with BGE-M3 (Sprint 16)
+
+**Admin Action:** Trigger full re-indexing after BGE-M3 migration
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Flow: Unified Re-Indexing (Admin Endpoint)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Admin Request                                                   │
+│     └─> POST /api/v1/admin/reindex?confirm=true                   │
+│         Headers: Accept: text/event-stream                          │
+│                                                                     │
+│  2. Phase 1: Initialization (SSE Event)                             │
+│     └─> Validate parameters, load document list                    │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "initialization",                                │
+│           "documents_total": 933                                    │
+│         }                                                          │
+│                                                                     │
+│  3. Phase 2: Atomic Deletion (SSE Event)                            │
+│     └─> Delete all indexes (all-or-nothing):                      │
+│         A. Qdrant: DELETE collection "aegis-rag-documents"         │
+│         B. BM25: DELETE cache "bm25_index.pkl"                     │
+│         C. (Neo4j graph deletion pending Feature 16.6)             │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "deletion",                                      │
+│           "message": "Deleted Qdrant + BM25 indexes"               │
+│         }                                                          │
+│                                                                     │
+│  4. Phase 3: Unified Chunking (SSE Events)                          │
+│     └─> For each document (parallel batches of 10):               │
+│                                                                     │
+│         ChunkingService.chunk(                                      │
+│           text=document.text,                                       │
+│           strategy="adaptive",  # Document-aware                   │
+│           max_tokens=512,                                          │
+│           overlap=128                                              │
+│         )                                                          │
+│           ↓                                                        │
+│         Chunks with SHA-256 IDs:                                   │
+│         [                                                          │
+│           Chunk(                                                   │
+│             chunk_id="a3f2e1d9c8b7",  # Deterministic SHA-256     │
+│             text="Abstract: The dominant...",                      │
+│             source="transformer_paper.pdf",                        │
+│             position=0,                                            │
+│             tokens=487                                             │
+│           ),                                                       │
+│           ...                                                      │
+│         ]                                                          │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "chunking",                                      │
+│           "documents_processed": 450,                               │
+│           "documents_total": 933,                                   │
+│           "progress_percent": 48.2,                                 │
+│           "eta_seconds": 1200,                                      │
+│           "current_document": "transformer_paper.pdf"               │
+│         }                                                          │
+│                                                                     │
+│  5. Phase 4: BGE-M3 Embedding Generation (SSE Events)               │
+│     └─> For each chunk (batch of 32):                             │
+│                                                                     │
+│         UnifiedEmbeddingService.embed_batch([                       │
+│           "Abstract: The dominant...",                              │
+│           "Introduction: Recurrent...",                             │
+│           ...  # 32 chunks                                         │
+│         ])                                                         │
+│           ↓                                                        │
+│         Ollama API Call:                                           │
+│         POST http://localhost:11434/api/embed                      │
+│         Body: {                                                    │
+│           "model": "bge-m3",  # 1024-dim                           │
+│           "inputs": [...]                                          │
+│         }                                                          │
+│           ↓                                                        │
+│         Response: [                                                │
+│           [0.123, -0.456, ..., 0.789],  # 1024-dim                 │
+│           [0.234, -0.567, ..., 0.890],                             │
+│           ...                                                      │
+│         ]                                                          │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "embedding",                                     │
+│           "chunks_processed": 2800,                                 │
+│           "chunks_total": 10000,                                    │
+│           "progress_percent": 28.0,                                 │
+│           "eta_seconds": 2400                                       │
+│         }                                                          │
+│                                                                     │
+│  6. Phase 5: Multi-Index Insertion (SSE Events)                     │
+│     └─> Insert into all indexes (parallel):                       │
+│                                                                     │
+│         A. Qdrant Insertion                                         │
+│            └─> QdrantClient.upsert(                               │
+│                  collection="aegis-rag-documents",                  │
+│                  points=[                                          │
+│                    {                                               │
+│                      "id": "a3f2e1d9c8b7",  # SHA-256             │
+│                      "vector": [0.123, ..., 0.789],  # 1024-dim    │
+│                      "payload": {                                  │
+│                        "text": "Abstract: The...",                 │
+│                        "source": "transformer_paper.pdf",          │
+│                        "chunk_id": "a3f2e1d9c8b7"                  │
+│                      }                                             │
+│                    },                                              │
+│                    ...                                             │
+│                  ]                                                 │
+│                )                                                   │
+│                                                                     │
+│         B. BM25 Indexing (Automatic via Qdrant sync)                │
+│            └─> BM25 automatically synchronized                    │
+│                No separate indexing needed                         │
+│                                                                     │
+│         C. LightRAG (Feature 16.6 - uses unified chunks)            │
+│            └─> Entity extraction per chunk                        │
+│                Neo4j stores chunk_id in :MENTIONED_IN              │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "indexing",                                      │
+│           "indexes": {                                             │
+│             "qdrant": "complete",                                  │
+│             "bm25": "complete",                                    │
+│             "neo4j": "pending"                                     │
+│           }                                                        │
+│         }                                                          │
+│                                                                     │
+│  7. Phase 6: Validation (SSE Event)                                 │
+│     └─> Verify index consistency:                                 │
+│         - Qdrant point count == chunk count                        │
+│         - BM25 document count == document count                    │
+│         - Neo4j entity count > 0                                   │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "complete",                                     │
+│           "phase": "validation",                                    │
+│           "summary": {                                             │
+│             "documents_processed": 933,                             │
+│             "chunks_created": 10234,                                │
+│             "qdrant_points": 10234,                                 │
+│             "bm25_docs": 933,                                       │
+│             "neo4j_entities": 1587,                                 │
+│             "total_time_seconds": 8940,                             │
+│             "embedding_model": "bge-m3",                            │
+│             "embedding_dim": 1024                                   │
+│           }                                                        │
+│         }                                                          │
+│                                                                     │
+│  8. Admin Dashboard Update                                          │
+│     └─> Display completion summary                                │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Total Latency: ~2.5 hours (9,000 seconds)
+- Deletion: ~30s (atomic)
+- Chunking: ~1,500s (933 docs → 10K chunks)
+- Embedding: ~6,000s (10K chunks × 25ms/chunk BGE-M3)
+- Indexing: ~1,400s (parallel: Qdrant + BM25)
+- Validation: ~10s
+
+Key Improvements (Sprint 16):
+- Unified chunks (ChunkingService) → consistent provenance
+- BGE-M3 embeddings (1024-dim) → cross-layer similarity
+- SSE progress → real-time visibility
+- Atomic deletion → no inconsistent state
+- Safety checks → confirm=true required
+```
+
+---
+
 ## 🔧 COMPONENT DETAILS
 
 ### FastAPI Endpoints
@@ -988,6 +1164,7 @@ vector_size = 768
 
 ---
 
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
-**Status:** Production-Ready
-**Next:** Sprint 13 (Performance optimization - community detection caching, LLM batching)
+**Last Updated:** 2025-10-28 (Sprint 16)
+**Status:** Active Development
+**Sprint 16 Changes:** Unified chunking, BGE-M3 standardization, admin re-indexing
+**Next:** Sprint 17 (TBD)

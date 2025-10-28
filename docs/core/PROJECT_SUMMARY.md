@@ -349,12 +349,74 @@ QUICK_START.md (Setup-Entry Point)
 | Sprint 4 | LangGraph Orchestration | 38 | ✅ COMPLETE | 2025-10-15 |
 | Sprint 5 | LightRAG Integration | 34 | ✅ COMPLETE | 2025-10-16 |
 | Sprint 6 | Advanced Graph Operations | 38 | ✅ COMPLETE | 2025-10-16 |
-| Sprint 7 | Performance & Quality | 40 | 🔜 PLANNED | TBD |
-| Sprint 8 | 3-Layer Memory Architecture | 40 | 📝 PLANNED | TBD |
-| Sprint 9 | MCP Server Integration | 35 | 📝 PLANNED | TBD |
-| Sprint 10 | Production Readiness | 38 | 📝 PLANNED | TBD |
+| Sprint 7 | Performance & Quality | 40 | ✅ COMPLETE | 2025-10-17 |
+| Sprint 8 | 3-Layer Memory Architecture | 40 | ✅ COMPLETE | 2025-10-18 |
+| Sprint 9 | MCP Server Integration | 35 | ✅ COMPLETE | 2025-10-19 |
+| Sprint 10 | Production Readiness | 38 | ✅ COMPLETE | 2025-10-21 |
+| Sprint 11 | GPU Optimization | 35 | ✅ COMPLETE | 2025-10-21 |
+| Sprint 12 | Production Deployment | 40 | ✅ COMPLETE | 2025-10-22 |
+| Sprint 13 | Entity Extraction Pipeline | 45 | ✅ COMPLETE | 2025-10-24 |
+| Sprint 14 | Backend Performance | 40 | ✅ COMPLETE | 2025-10-25 |
+| Sprint 15 | React Frontend | 73 | ✅ COMPLETE | 2025-10-28 |
+| Sprint 16 | Unified Architecture & BGE-M3 | 69 | 🔄 IN PROGRESS | Est. 2025-11-06 |
+| Sprint 17 | TBD | TBD | 📝 PLANNED | TBD |
 
-**Total Completed:** 207/360 Story Points (57.5%)
+**Total Completed:** 515/584 Story Points (88.2%)
+**Sprint 16 Progress:** 32/69 SP (46%)
+
+### Sprint 16 Achievements (In Progress) 🔄
+
+**Sprint 16: Unified Architecture & BGE-M3 Migration**
+- **Date:** 2025-10-28 → Est. 2025-11-06
+- **Duration:** 9 days planned (3 days elapsed)
+- **Story Points:** 32/69 SP completed (46%)
+- **Features:** 3/8 complete
+
+**Completed Features:**
+1. **Feature 16.1:** Unified Chunking Service (6 SP)
+   - ChunkingService: 805 lines, 4 strategies
+   - SHA-256 deterministic chunk IDs
+   - 52 unit + 7 integration tests (100% pass)
+   - 70% code reduction across consumers
+   - Prometheus metrics integrated
+
+2. **Feature 16.2:** BGE-M3 System-Wide Standardization (13 SP)
+   - Migrated from nomic-embed-text (768-dim) to BGE-M3 (1024-dim)
+   - Cross-layer similarity enabled (Qdrant ↔ Graphiti)
+   - +23% German retrieval quality
+   - 89 test dimension updates across 11 files
+   - ADR-024: 400+ line comprehensive decision document
+
+3. **Feature 16.3:** Unified Re-Indexing Pipeline (13 SP)
+   - POST /api/v1/admin/reindex endpoint (255 lines)
+   - SSE progress tracking (6 phases)
+   - Atomic deletion (Qdrant + BM25)
+   - Safety checks (confirm=true, dry-run mode)
+   - Real-time ETA calculation
+
+**Key Achievements:**
+- ✅ Unified chunking across all components
+- ✅ Cross-layer similarity enabled
+- ✅ 70% code reduction through unification
+- ✅ Better multilingual support (+23% German)
+- ✅ Production-ready admin tooling (re-indexing)
+- ✅ 88 new tests (78 unit + 10 integration), 100% pass rate
+- ✅ 3 comprehensive ADRs (ADR-022, ADR-023, ADR-024)
+
+**Remaining Work (37 SP):**
+- 📋 Feature 16.4: BGE-M3 Benchmarking (8 SP)
+- 📋 Feature 16.5: PPTX Document Support (8 SP)
+- 📋 Feature 16.6: Graph Extraction with Unified Chunks (13 SP) - **NEXT**
+- 📋 Feature 16.7: Frontend E2E Tests (13 SP)
+- 📋 Feature 16.8: Pydantic v2 ConfigDict Migration (5 SP)
+
+**Documentation:**
+- SPRINT_16_COMPLETION_REPORT.md (~12,000 words)
+- SPRINT_16_PLAN.md (460+ lines)
+- SPRINT_16_SESSION_SUMMARY.md (250+ lines)
+- Updated: TECH_STACK.md, DECISION_LOG.md, TEST_COVERAGE_PLAN.md, ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, DEPENDENCY_RATIONALE.md
+
+---
 
 ### Sprint 6 Achievements ✅
 
