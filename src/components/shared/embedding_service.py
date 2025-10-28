@@ -132,21 +132,24 @@ class UnifiedEmbeddingService:
     def __init__(
         self,
         model_name: str | None = None,
-        embedding_dim: int = 768,
+        embedding_dim: int = 1024,
         cache_max_size: int = 10000,
     ):
         """Initialize unified embedding service.
 
         Args:
-            model_name: Ollama embedding model (default: nomic-embed-text)
-            embedding_dim: Embedding dimension (nomic-embed-text: 768)
+            model_name: Ollama embedding model (default: bge-m3)
+            embedding_dim: Embedding dimension (bge-m3: 1024, Sprint 16 migration)
             cache_max_size: Maximum cache size (default: 10000)
 
         Note:
             No AsyncClient created here to maintain pickle compatibility.
             See class docstring for detailed explanation.
+
+            Sprint 16 Feature 16.2: Migrated from nomic-embed-text (768-dim) to
+            bge-m3 (1024-dim) for unified embedding space across all components.
         """
-        self.model_name = model_name or "nomic-embed-text"
+        self.model_name = model_name or "bge-m3"
         self.embedding_dim = embedding_dim
         # NO self.ollama_client here! See class docstring for why.
         self.cache = LRUCache(max_size=cache_max_size)
@@ -175,7 +178,7 @@ class UnifiedEmbeddingService:
             text: Text to embed
 
         Returns:
-            Embedding vector (768 dimensions for nomic-embed-text)
+            Embedding vector (1024 dimensions for bge-m3, Sprint 16 migration)
 
         Note:
             Creates fresh AsyncClient for each call to maintain pickle compatibility.

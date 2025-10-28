@@ -14,6 +14,7 @@ from src.api import graph_analytics, graph_visualization
 from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
 from src.api.routers import graph_viz
+from src.api.v1.admin import router as admin_router
 from src.api.v1.chat import router as chat_router
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.memory import router as memory_router
@@ -221,6 +222,7 @@ async def track_requests(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(v1_health_router)
 app.include_router(retrieval_router)
+app.include_router(admin_router)  # Sprint 16 Feature 16.3: Admin re-indexing
 
 # Chat API router (Sprint 10: Feature 10.1)
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"])

@@ -154,7 +154,7 @@ async def test_create_collection_success(mock_qdrant_client, test_collection_nam
     """Test successful collection creation."""
     result = await mock_qdrant_client.create_collection(
         collection_name=test_collection_name,
-        vector_size=768,
+        vector_size=1024,
         distance=Distance.COSINE,
     )
 
@@ -181,7 +181,7 @@ async def test_create_collection_already_exists():
 
     result = await wrapper.create_collection(
         collection_name="existing_collection",
-        vector_size=768,
+        vector_size=1024,
     )
 
     assert result is True, "Should return True for existing collection"
@@ -205,7 +205,7 @@ async def test_create_collection_failure():
     with pytest.raises(RetryError):
         await wrapper.create_collection(
             collection_name="test_collection",
-            vector_size=768,
+            vector_size=1024,
         )
 
 
@@ -223,7 +223,7 @@ async def test_create_collection_different_distances(distance):
 
     result = await wrapper.create_collection(
         collection_name="test_collection",
-        vector_size=768,
+        vector_size=1024,
         distance=distance,
     )
 
@@ -293,12 +293,12 @@ async def test_upsert_points_success(mock_qdrant_client, test_collection_name):
     points = [
         PointStruct(
             id="point1",
-            vector=[0.1] * 768,
+            vector=[0.1] * 1024,
             payload={"text": "Test document 1"},
         ),
         PointStruct(
             id="point2",
-            vector=[0.2] * 768,
+            vector=[0.2] * 1024,
             payload={"text": "Test document 2"},
         ),
     ]
@@ -324,7 +324,7 @@ async def test_upsert_points_batching():
     wrapper._async_client = client
 
     # Create 250 points (should be split into 3 batches of 100)
-    points = [PointStruct(id=f"point{i}", vector=[0.1] * 768, payload={}) for i in range(250)]
+    points = [PointStruct(id=f"point{i}", vector=[0.1] * 1024, payload={}) for i in range(250)]
 
     result = await wrapper.upsert_points(
         collection_name="test_collection",
@@ -347,7 +347,7 @@ async def test_upsert_points_failure():
     wrapper._async_client = client
 
     points = [
-        PointStruct(id="point1", vector=[0.1] * 768, payload={}),
+        PointStruct(id="point1", vector=[0.1] * 1024, payload={}),
     ]
 
     with pytest.raises(VectorSearchError) as exc_info:
@@ -386,7 +386,7 @@ async def test_upsert_empty_points_list():
 @pytest.mark.asyncio
 async def test_search_success(mock_qdrant_client, test_collection_name):
     """Test successful vector search."""
-    query_vector = [0.1] * 768
+    query_vector = [0.1] * 1024
 
     results = await mock_qdrant_client.search(
         collection_name=test_collection_name,
@@ -419,7 +419,7 @@ async def test_search_with_score_threshold():
 
     results = await wrapper.search(
         collection_name="test_collection",
-        query_vector=[0.1] * 768,
+        query_vector=[0.1] * 1024,
         limit=10,
         score_threshold=0.8,
     )
@@ -451,7 +451,7 @@ async def test_search_with_filter():
 
     await wrapper.search(
         collection_name="test_collection",
-        query_vector=[0.1] * 768,
+        query_vector=[0.1] * 1024,
         query_filter=query_filter,
     )
 
@@ -473,7 +473,7 @@ async def test_search_failure():
     with pytest.raises(VectorSearchError) as exc_info:
         await wrapper.search(
             collection_name="test_collection",
-            query_vector=[0.1] * 768,
+            query_vector=[0.1] * 1024,
         )
 
     assert "Vector search failed" in str(exc_info.value)
@@ -491,7 +491,7 @@ async def test_search_empty_results():
 
     results = await wrapper.search(
         collection_name="test_collection",
-        query_vector=[0.1] * 768,
+        query_vector=[0.1] * 1024,
     )
 
     assert results == [], "Empty search should return empty list"
@@ -513,7 +513,7 @@ async def test_search_different_limits(limit):
 
     results = await wrapper.search(
         collection_name="test_collection",
-        query_vector=[0.1] * 768,
+        query_vector=[0.1] * 1024,
         limit=limit,
     )
 
@@ -613,7 +613,7 @@ async def test_retry_on_unexpected_response():
 
     result = await wrapper.create_collection(
         collection_name="test_collection",
-        vector_size=768,
+        vector_size=1024,
     )
 
     assert result is True, "Should succeed after retries"

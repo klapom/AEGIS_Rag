@@ -62,13 +62,13 @@ async def test_embed_text_delegates_to_unified_service():
     with patch("src.components.vector_search.embeddings.get_unified_service") as mock_get:
         mock_unified = MagicMock()
         mock_unified.model_name = "nomic-embed-text"
-        mock_unified.embed_single = AsyncMock(return_value=[0.1] * 768)
+        mock_unified.embed_single = AsyncMock(return_value=[0.1] * 1024)
         mock_get.return_value = mock_unified
 
         service = EmbeddingService()
         embedding = await service.embed_text("test text")
 
-        assert len(embedding) == 768
+        assert len(embedding) == 1024
         assert embedding[0] == 0.1
         mock_unified.embed_single.assert_called_once_with("test text")
 
@@ -81,7 +81,7 @@ async def test_embed_batch_delegates_to_unified_service():
         mock_unified = MagicMock()
         mock_unified.model_name = "nomic-embed-text"
         mock_unified.embed_batch = AsyncMock(
-            return_value=[[0.1] * 768, [0.2] * 768, [0.3] * 768]
+            return_value=[[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
         )
         mock_get.return_value = mock_unified
 
@@ -89,7 +89,7 @@ async def test_embed_batch_delegates_to_unified_service():
         embeddings = await service.embed_batch(["text1", "text2", "text3"])
 
         assert len(embeddings) == 3
-        assert len(embeddings[0]) == 768
+        assert len(embeddings[0]) == 1024
         assert embeddings[0][0] == 0.1
         assert embeddings[1][0] == 0.2
         mock_unified.embed_batch.assert_called_once_with(["text1", "text2", "text3"])
@@ -101,13 +101,13 @@ def test_get_embedding_dimension():
     with patch("src.components.vector_search.embeddings.get_unified_service") as mock_get:
         mock_unified = MagicMock()
         mock_unified.model_name = "nomic-embed-text"
-        mock_unified.embedding_dim = 768
+        mock_unified.embedding_dim = 1024
         mock_get.return_value = mock_unified
 
         service = EmbeddingService()
         dimension = service.get_embedding_dimension()
 
-        assert dimension == 768
+        assert dimension == 1024
 
 
 @pytest.mark.unit
@@ -186,7 +186,7 @@ def test_model_info():
 
         mock_unified = MagicMock()
         mock_unified.model_name = "nomic-embed-text"
-        mock_unified.embedding_dim = 768
+        mock_unified.embedding_dim = 1024
         mock_unified.cache = mock_cache
         mock_get.return_value = mock_unified
 
@@ -195,7 +195,7 @@ def test_model_info():
 
         assert info["model_name"] == "nomic-embed-text"
         assert info["base_url"] == "unified_service"
-        assert info["embedding_dimension"] == 768
+        assert info["embedding_dimension"] == 1024
         assert info["batch_size"] == 64
         assert info["cache_enabled"] is True
         assert info["cached_embeddings"] == 1

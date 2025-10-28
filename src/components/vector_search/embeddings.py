@@ -61,7 +61,7 @@ class EmbeddingService:
             text: Input text to embed
 
         Returns:
-            Embedding vector (768-dim for nomic-embed-text)
+            Embedding vector (1024-dim for bge-m3, Sprint 16 migration)
         """
         return await self.unified_service.embed_single(text)
 
@@ -80,7 +80,7 @@ class EmbeddingService:
         """Get embedding dimension for the model.
 
         Returns:
-            Embedding dimension (768 for nomic-embed-text)
+            Embedding dimension (1024 for bge-m3, Sprint 16 migration)
         """
         return self.unified_service.embedding_dim
 

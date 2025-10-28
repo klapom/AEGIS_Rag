@@ -418,7 +418,7 @@ async def test_hybrid_search_only_vector_results(mock_embedding_service):
     mock_bm25 = MagicMock()
     mock_bm25.search = MagicMock(return_value=[])
 
-    mock_embedding_service.embed_text = AsyncMock(return_value=[0.1] * 768)
+    mock_embedding_service.embed_text = AsyncMock(return_value=[0.1] * 1024)
 
     search = HybridSearch(
         qdrant_client=mock_client,

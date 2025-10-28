@@ -69,7 +69,7 @@ async def test_ollama_embedding():
 
     # Verify embedding
     embedding = response["embedding"]
-    assert len(embedding) == 768, f"Expected 768-dim embedding, got {len(embedding)}"
+    assert len(embedding) == 1024, f"Expected 1024-dim embedding, got {len(embedding)}"
     assert all(isinstance(v, float) for v in embedding), "Embedding values must be floats"
 
     print(f"✅ Ollama embedding: {len(embedding)}-dim vector generated")

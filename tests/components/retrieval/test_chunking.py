@@ -27,7 +27,7 @@ def adaptive_chunker():
     return AdaptiveChunker(
         pdf_chunk_size=1024,
         code_chunk_size=512,
-        markdown_chunk_size=768,
+        markdown_chunk_size=1024,
         text_chunk_size=512,
         chunk_overlap=50,
     )
@@ -405,7 +405,7 @@ def test_chunk_by_heading_basic(adaptive_chunker, sample_markdown_content):
         doc_id="test_doc",
     )
 
-    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=768)
+    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=1024)
 
     # Should have multiple chunks based on headings
     assert len(nodes) >= 1
@@ -418,7 +418,7 @@ def test_chunk_by_heading_preserves_headers(adaptive_chunker):
     content = "# Title\nContent under title.\n\n## Section\nSection content."
     doc = Document(text=content, doc_id="test")
 
-    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=768)
+    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=1024)
 
     # Headers should be in the chunks
     assert any("# Title" in node.text for node in nodes)
@@ -443,7 +443,7 @@ def test_chunk_by_heading_multiple_levels(adaptive_chunker):
     content = "# H1\nContent.\n## H2\nMore.\n### H3\nEven more."
     doc = Document(text=content, doc_id="test")
 
-    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=768)
+    nodes = adaptive_chunker.chunk_by_heading(doc, chunk_size=1024)
 
     # Should create chunks for different sections
     assert len(nodes) >= 1
@@ -687,14 +687,14 @@ def test_chunker_initialization_custom_sizes():
         pdf_chunk_size=2048,
         code_chunk_size=256,
         markdown_chunk_size=1024,
-        text_chunk_size=768,
+        text_chunk_size=1024,
         chunk_overlap=100,
     )
 
     assert chunker.pdf_chunk_size == 2048
     assert chunker.code_chunk_size == 256
     assert chunker.markdown_chunk_size == 1024
-    assert chunker.text_chunk_size == 768
+    assert chunker.text_chunk_size == 1024
     assert chunker.chunk_overlap == 100
 
 
@@ -718,7 +718,7 @@ def test_get_chunker_info(adaptive_chunker):
 
     assert info["pdf_chunk_size"] == 1024
     assert info["code_chunk_size"] == 512
-    assert info["markdown_chunk_size"] == 768
+    assert info["markdown_chunk_size"] == 1024
     assert info["text_chunk_size"] == 512
     assert info["chunk_overlap"] == 50
 

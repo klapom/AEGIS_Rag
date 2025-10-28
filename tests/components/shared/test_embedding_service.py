@@ -10,7 +10,7 @@ async def test_embed_single():
     service = UnifiedEmbeddingService()
     embedding = await service.embed_single("AEGIS RAG")
 
-    assert len(embedding) == 768  # nomic-embed-text dimension
+    assert len(embedding) == 1024  # bge-m3 dimension
     assert all(isinstance(x, float) for x in embedding)
 
 
@@ -23,7 +23,7 @@ async def test_embed_batch():
     embeddings = await service.embed_batch(texts)
 
     assert len(embeddings) == 3
-    assert all(len(emb) == 768 for emb in embeddings)
+    assert all(len(emb) == 1024 for emb in embeddings)
 
 
 @pytest.mark.asyncio

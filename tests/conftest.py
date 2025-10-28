@@ -173,12 +173,12 @@ def sample_texts() -> list[str]:
 
 @pytest.fixture
 def sample_embedding() -> list[float]:
-    """Sample embedding vector (768-dim for nomic-embed-text).
+    """Sample embedding vector (1024-dim for bge-m3).
 
     Returns:
         Mock embedding vector
     """
-    return [0.1] * 768
+    return [0.1] * 1024
 
 
 @pytest.fixture
@@ -188,7 +188,7 @@ def sample_embeddings(sample_texts: list[str]) -> list[list[float]]:
     Returns:
         List of mock embedding vectors
     """
-    return [[0.1 + i * 0.01] * 768 for i in range(len(sample_texts))]
+    return [[0.1 + i * 0.01] * 1024 for i in range(len(sample_texts))]
 
 
 @pytest.fixture
@@ -325,9 +325,9 @@ def mock_qdrant_client(mock_qdrant_collections, mock_scored_points):
 def mock_ollama_embedding_model():
     """Mock OllamaEmbedding model."""
     model = AsyncMock()
-    model.aget_text_embedding = AsyncMock(return_value=[0.1] * 768)
+    model.aget_text_embedding = AsyncMock(return_value=[0.1] * 1024)
     model.aget_text_embedding_batch = AsyncMock(
-        return_value=[[0.1 + i * 0.01] * 768 for i in range(5)]
+        return_value=[[0.1 + i * 0.01] * 1024 for i in range(5)]
     )
     return model
 
@@ -351,8 +351,8 @@ def mock_embedding_service(mock_ollama_embedding_model, sample_embedding):
 
     # Configure methods
     service.embed_text = AsyncMock(return_value=sample_embedding)
-    service.embed_batch = AsyncMock(return_value=[[0.1 + i * 0.01] * 768 for i in range(5)])
-    service.get_embedding_dimension = MagicMock(return_value=768)
+    service.embed_batch = AsyncMock(return_value=[[0.1 + i * 0.01] * 1024 for i in range(5)])
+    service.get_embedding_dimension = MagicMock(return_value=1024)
     service.clear_cache = MagicMock()
     service.get_cache_size = MagicMock(return_value=0)
     service._get_cache_key = MagicMock(return_value="test_hash")
@@ -820,7 +820,7 @@ def ollama_embedding_service():
         test_embedding = loop.run_until_complete(service.embed_text("test"))
         loop.close()
 
-        if len(test_embedding) != 768:
+        if len(test_embedding) != 1024:
             pytest.skip("Ollama embedding dimension incorrect")
     except Exception as e:
         pytest.skip(f"Ollama embedding service not available: {e}")

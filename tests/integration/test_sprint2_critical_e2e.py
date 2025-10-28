@@ -49,7 +49,7 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
 
     Success Criteria:
     - All chunks created and stored
-    - Embeddings are valid 768-dim vectors
+    - Embeddings are valid 1024-dim vectors
     - Metadata preserved (source, chunk_index)
     - Performance: <30s for 10-page document equivalent
 
@@ -128,7 +128,7 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     # 4. Create Qdrant collection
     qdrant_client.recreate_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
     )
 
     # 5. Store in Qdrant
@@ -154,7 +154,7 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
 
     # Verify: All chunks have embeddings
     assert len(embeddings) == len(chunks), "Embedding count mismatch"
-    assert all(len(emb) == 768 for emb in embeddings), "Expected 768-dim embeddings"
+    assert all(len(emb) == 1024 for emb in embeddings), "Expected 1024-dim embeddings"
 
     # Verify: All chunks stored in Qdrant
     collection_info = qdrant_client.get_collection(collection_name)
@@ -167,7 +167,7 @@ async def test_full_document_ingestion_pipeline_e2e(tmp_path):
     sample_point = sample_points[0]
 
     assert sample_point.vector is not None, "Sample vector is None - check Qdrant storage"
-    assert len(sample_point.vector) == 768, "Sample vector wrong dimension"
+    assert len(sample_point.vector) == 1024, "Sample vector wrong dimension"
     assert sample_point.payload["source"] == str(test_file), "Source metadata missing"
     assert "chunk_index" in sample_point.payload, "chunk_index metadata missing"
     assert "text" in sample_point.payload, "text payload missing"
@@ -239,7 +239,7 @@ async def test_hybrid_search_latency_validation_e2e():
     # Create Qdrant collection
     qdrant_client.recreate_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
     )
 
     # Generate embeddings and upload
@@ -368,7 +368,7 @@ async def test_embedding_service_batch_performance_e2e():
 
     # Verify: All embeddings generated
     assert len(embeddings_cold) == 50, f"Expected 50 embeddings, got {len(embeddings_cold)}"
-    assert all(len(emb) == 768 for emb in embeddings_cold), "Expected 768-dim embeddings"
+    assert all(len(emb) == 1024 for emb in embeddings_cold), "Expected 1024-dim embeddings"
 
     # Second batch: Warm cache (should hit cache for duplicates)
     start_time = time.time()
@@ -433,7 +433,7 @@ async def test_qdrant_connection_pooling_e2e():
     # Create test collection
     qdrant_client.recreate_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
     )
 
     # Test: 10 concurrent upsert operations
@@ -441,7 +441,7 @@ async def test_qdrant_connection_pooling_e2e():
         """Upsert a single point (simulates concurrent writes)."""
         point = PointStruct(
             id=i,
-            vector=[0.1] * 768,  # Dummy vector
+            vector=[0.1] * 1024,  # Dummy vector
             payload={"text": f"Document {i}"},
         )
         qdrant_client.upsert(collection_name=collection_name, points=[point])

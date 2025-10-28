@@ -64,7 +64,7 @@ class Settings(BaseSettings):
         default="llama3.2:3b", description="Ollama model for query understanding"
     )
     ollama_model_embedding: str = Field(
-        default="nomic-embed-text", description="Ollama embedding model"
+        default="bge-m3", description="Ollama embedding model (Sprint 16: migrated to bge-m3 1024-dim)"
     )
     ollama_model_router: str = Field(
         default="llama3.2:3b",

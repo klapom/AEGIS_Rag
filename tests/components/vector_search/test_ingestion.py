@@ -410,7 +410,7 @@ async def test_index_documents_large_batch(mock_qdrant_client, mock_embedding_se
 
     # Override mock to return correct number of embeddings
     mock_embedding_service.embed_batch = AsyncMock(
-        return_value=[[0.1 + i * 0.01] * 768 for i in range(large_doc_count)]
+        return_value=[[0.1 + i * 0.01] * 1024 for i in range(large_doc_count)]
     )
 
     with (

@@ -144,7 +144,7 @@ class QdrantClientWrapper:
 
         Args:
             collection_name: Name of the collection
-            vector_size: Dimension of vectors (768 for nomic-embed-text)
+            vector_size: Dimension of vectors (1024 for bge-m3, Sprint 16 migration)
             distance: Distance metric (COSINE, EUCLIDEAN, DOT)
             on_disk_payload: Store payload on disk to save RAM
 

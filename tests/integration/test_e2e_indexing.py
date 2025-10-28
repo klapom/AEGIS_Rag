@@ -195,7 +195,7 @@ async def test_e2e_batch_embedding(integration_embedding_service):
     embeddings = await integration_embedding_service.embed_batch(texts)
 
     assert len(embeddings) == len(texts), "Should return embedding for each text"
-    assert all(len(emb) == 768 for emb in embeddings), "All embeddings should be 768-dimensional"
+    assert all(len(emb) == 1024 for emb in embeddings), "All embeddings should be 1024-dimensional"
     assert all(isinstance(emb[0], float) for emb in embeddings), "Embeddings should be floats"
 
     # Verify embeddings are different
@@ -230,7 +230,7 @@ async def test_e2e_collection_lifecycle(integration_qdrant_client, integration_c
     # Create collection
     created = await integration_qdrant_client.create_collection(
         collection_name=integration_collection_name,
-        vector_size=768,
+        vector_size=1024,
     )
     assert created is True, "Collection should be created"
 
