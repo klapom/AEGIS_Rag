@@ -1,7 +1,7 @@
 # CONTEXT REFRESH MASTER GUIDE
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete guide for achieving FULL context refresh in any session
-**Version:** 3.0 (Updated for Sprint 16, Architecture-Focused)
+**Version:** 4.0 (Sprint 16 COMPLETE, Documentation Consolidated)
 **Last Updated:** 2025-10-28
 
 ---
@@ -23,7 +23,7 @@
 ### Copy-Paste This Prompt (Recommended for Most Cases)
 
 ```
-🔄 CONTEXT REFRESH - AEGIS RAG (Sprint 16)
+🔄 CONTEXT REFRESH - AEGIS RAG (Sprint 17 Ready)
 
 Bitte mach dich mit dem Projekt vertraut. Lies folgende Dateien:
 
@@ -31,21 +31,24 @@ Bitte mach dich mit dem Projekt vertraut. Lies folgende Dateien:
 1. docs/CLAUDE.md - Projekt-Übersicht & Architektur
 2. docs/SUBAGENTS.md - Delegation Strategy & File Ownership
 3. docs/NAMING_CONVENTIONS.md - Code Standards
+4. docs/core/PROJECT_SUMMARY.md - Projekt-Status (515/584 SP, 88.2%)
 
 📊 CURRENT STATE:
-4. docs/core/SPRINT_PLAN.md - Aktueller Sprint (Sprint 16, 69 SP, Unified Architecture)
-5. docs/TECH_STACK.md - Vollständiger Tech Stack (Sprints 12-15 Updates)
+5. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht (1-17)
+6. docs/sprints/SPRINT_16_COMPLETION_REPORT.md - Sprint 16: 100% COMPLETE
+7. docs/sprints/SPRINT_17_PLAN.md - Sprint 17: Admin UI (39 SP, BEREIT)
 
-📚 DECISIONS & STANDARDS:
-6. docs/TECHNICAL_DEBT_SUMMARY.md - Bekannte Issues
-7. README.md - Projekt-Überblick
+📚 UPDATED DOCUMENTATION:
+8. docs/TECH_STACK.md - Tech Stack inkl. Sprint 16 Updates
+9. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-16 Journey
+10. docs/COMPONENT_INTERACTION_MAP.md - Unified Re-Indexing Flow
 
 Gib mir einen Executive Summary mit 5 Bulletpoints:
-- Projekt-Ziel & Architektur
-- Sprint 16 Status & Features
-- Tech Stack (React 18.2, FastAPI, LangGraph, Ollama)
-- Nächste Prioritäten (Feature 16.1: Unified Chunking)
-- Wichtigste ADRs (ADR-022, ADR-023)
+- Projekt-Ziel & 3-Layer Architektur
+- Sprint 16 COMPLETE (69/69 SP): Unified Chunking, BGE-M3, Re-Indexing
+- Sprint 17 READY: Admin UI für Directory Indexing (13 SP Priorität)
+- Tech Stack (React 18.2, FastAPI, LangGraph, BGE-M3 1024-dim)
+- Wichtigste ADRs (ADR-022: Chunking, ADR-023: Re-Indexing, ADR-024: BGE-M3)
 ```
 
 **Expected Reading Time:** 3-5 minutes
