@@ -308,3 +308,218 @@ class TestLightRAGWrapperEdgeCases:
 
             assert stats["entity_count"] == 0
             assert stats["relationship_count"] == 0
+
+
+class TestLightRAGWrapperSprint16:
+    """Test Sprint 16 Feature 16.6 - Graph Extraction with Unified Chunks."""
+
+    @pytest.fixture
+    def mock_lightrag_instance(self):
+        """Mock LightRAG instance for Sprint 16 tests."""
+        mock_instance = MagicMock()
+        mock_instance.ainsert = AsyncMock(return_value={"status": "success"})
+        mock_instance.aquery = AsyncMock(return_value="Mock answer")
+        mock_instance.chunk_entity_relation_graph = MagicMock()
+        return mock_instance
+
+    @pytest.mark.asyncio
+    async def test_bge_m3_embedding_dimension(self, mock_lightrag_instance):
+        """Test that embedding function uses BGE-M3 (1024 dimensions).
+
+        Sprint 16 Feature 16.2: BGE-M3 system-wide standardization.
+        Verifies that UnifiedEmbeddingFunc is initialized with embedding_dim=1024
+        instead of the old nomic-embed-text (768 dimensions).
+        """
+        wrapper = LightRAGWrapper()
+
+        # Mock the lightrag module import (lazy import in _ensure_initialized)
+        with patch("builtins.__import__") as mock_import:
+            # Create mock lightrag module
+            mock_lightrag_module = MagicMock()
+            mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
+            mock_lightrag_module.LightRAG = mock_lightrag_class
+            mock_lightrag_module.QueryParam = MagicMock()
+
+            def import_side_effect(name, *args, **kwargs):
+                if name == "lightrag":
+                    return mock_lightrag_module
+                elif name == "lightrag.kg.shared_storage":
+                    mock_storage = MagicMock()
+                    mock_storage.initialize_pipeline_status = AsyncMock()
+                    return mock_storage
+                else:
+                    # Use real import for other modules
+                    return __import__(name, *args, **kwargs)
+
+            mock_import.side_effect = import_side_effect
+
+            # Mock UnifiedEmbeddingFunc
+            with patch(
+                "src.components.graph_rag.lightrag_wrapper.get_embedding_service"
+            ) as mock_get_service:
+                mock_embedding_service = MagicMock()
+                mock_get_service.return_value = mock_embedding_service
+
+                # Initialize wrapper (triggers _ensure_initialized)
+                await wrapper._ensure_initialized()
+
+                # Verify LightRAG was called
+                mock_lightrag_class.assert_called_once()
+                call_kwargs = mock_lightrag_class.call_args[1]
+
+                # Verify embedding_func has embedding_dim=1024 (BGE-M3)
+                embedding_func = call_kwargs["embedding_func"]
+                assert hasattr(embedding_func, "embedding_dim")
+                assert embedding_func.embedding_dim == 1024
+
+    @pytest.mark.asyncio
+    async def test_internal_chunking_disabled(self, mock_lightrag_instance):
+        """Test that internal LightRAG chunking is disabled.
+
+        Sprint 16 Feature 16.6: We use ChunkingService instead of LightRAG's
+        internal chunking. Verifies that chunk_token_size is set to 99999
+        (effectively infinite) to disable internal chunking.
+        """
+        wrapper = LightRAGWrapper()
+
+        with patch("builtins.__import__") as mock_import:
+            mock_lightrag_module = MagicMock()
+            mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
+            mock_lightrag_module.LightRAG = mock_lightrag_class
+            mock_lightrag_module.QueryParam = MagicMock()
+
+            def import_side_effect(name, *args, **kwargs):
+                if name == "lightrag":
+                    return mock_lightrag_module
+                elif name == "lightrag.kg.shared_storage":
+                    mock_storage = MagicMock()
+                    mock_storage.initialize_pipeline_status = AsyncMock()
+                    return mock_storage
+                else:
+                    return __import__(name, *args, **kwargs)
+
+            mock_import.side_effect = import_side_effect
+
+            await wrapper._ensure_initialized()
+
+            # Verify LightRAG was initialized with chunking disabled
+            mock_lightrag_class.assert_called_once()
+            call_kwargs = mock_lightrag_class.call_args[1]
+
+            # Sprint 16: chunk_token_size should be 99999 (disabled)
+            assert call_kwargs["chunk_token_size"] == 99999
+            assert call_kwargs["chunk_overlap_token_size"] == 0
+
+    def test_chunk_text_with_unified_service(self):
+        """Test that _chunk_text_with_metadata uses ChunkingService.
+
+        Sprint 16 Feature 16.1: Unified chunking across all pipelines.
+        Verifies that LightRAG now uses ChunkingService instead of
+        internal tiktoken-based chunking.
+        """
+        wrapper = LightRAGWrapper()
+
+        # Mock ChunkingService
+        with patch(
+            "src.components.graph_rag.lightrag_wrapper.get_chunking_service"
+        ) as mock_get_service:
+            mock_chunking_service = MagicMock()
+            mock_chunk = MagicMock()
+            mock_chunk.to_lightrag_format.return_value = {
+                "chunk_id": "abc123",
+                "text": "Sample chunk text",
+                "document_id": "doc_001",
+                "chunk_index": 0,
+                "tokens": 50,
+                "start_token": 0,
+                "end_token": 50,
+            }
+            mock_chunking_service.chunk_document.return_value = [mock_chunk]
+            mock_get_service.return_value = mock_chunking_service
+
+            # Call _chunk_text_with_metadata
+            chunks = wrapper._chunk_text_with_metadata(
+                text="This is a test document for chunking.",
+                document_id="doc_001",
+                chunk_token_size=600,
+                chunk_overlap_token_size=100,
+            )
+
+            # Verify ChunkingService was used
+            mock_get_service.assert_called_once()
+            mock_chunking_service.chunk_document.assert_called_once_with(
+                document_id="doc_001",
+                content="This is a test document for chunking.",
+                metadata={},
+            )
+
+            # Verify chunks were converted to LightRAG format
+            assert len(chunks) == 1
+            assert chunks[0]["chunk_id"] == "abc123"
+            assert chunks[0]["text"] == "Sample chunk text"
+
+    @pytest.mark.asyncio
+    async def test_chunk_id_provenance_tracking(self, mock_lightrag_instance):
+        """Test that chunk_id provenance is stored in Neo4j.
+
+        Sprint 14 Feature 14.1 + Sprint 16 Feature 16.6: Graph-based provenance.
+        Verifies that:
+        1. :chunk nodes are created with chunk_id
+        2. MENTIONED_IN relationships link entities to chunks
+        """
+        wrapper = LightRAGWrapper()
+        wrapper.rag = mock_lightrag_instance
+        wrapper._initialized = True
+
+        # Mock Neo4j driver
+        mock_driver = MagicMock()
+        mock_session = MagicMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock()
+        mock_session.run = AsyncMock()
+        mock_driver.session = MagicMock(return_value=mock_session)
+
+        # Mock graph storage with driver
+        mock_graph = MagicMock()
+        mock_graph._driver = mock_driver
+        mock_lightrag_instance.chunk_entity_relation_graph = mock_graph
+
+        # Sample chunks and entities
+        chunks = [
+            {
+                "chunk_id": "abc123",
+                "text": "Klaus Pommer works at Pommer IT.",
+                "document_id": "doc_001",
+                "chunk_index": 0,
+                "tokens": 50,
+                "start_token": 0,
+                "end_token": 50,
+            }
+        ]
+
+        entities = [
+            {
+                "entity_id": "Klaus Pommer",
+                "entity_name": "Klaus Pommer",
+                "entity_type": "PERSON",
+                "source_id": "abc123",  # Links to chunk_id
+                "file_path": "doc_001",
+            }
+        ]
+
+        # Call provenance storage
+        await wrapper._store_chunks_and_provenance_in_neo4j(chunks, entities)
+
+        # Verify Neo4j operations
+        assert mock_session.run.call_count >= 2  # At least 2 calls (chunk + relationship)
+
+        # Verify chunk node creation (first call)
+        first_call_query = mock_session.run.call_args_list[0][0][0]
+        assert "MERGE (c:chunk {chunk_id: $chunk_id})" in first_call_query
+        assert "c.text = $text" in first_call_query
+
+        # Verify MENTIONED_IN relationship creation (second call)
+        second_call_query = mock_session.run.call_args_list[1][0][0]
+        assert "MATCH (e:base {entity_id: entity_id})" in second_call_query
+        assert "MATCH (c:chunk {chunk_id: $chunk_id})" in second_call_query
+        assert "MERGE (e)-[r:MENTIONED_IN]->(c)" in second_call_query
