@@ -652,12 +652,13 @@ After Sprint 15's frontend completion and comprehensive architecture review, cri
 - ✅ Graph extraction using unified chunks
 
 ### Deliverables
-- [ ] **Feature 16.1**: Unified Chunking Service (8 SP) 🆕
+- [ ] **Feature 16.1**: Unified Chunking Service (6 SP) 🆕 **(revised from 8 SP)**
 - [ ] **Feature 16.2**: Unified Re-Indexing Pipeline (13 SP) 🆕
 - [ ] **Feature 16.3**: PPTX Document Support (8 SP)
 - [ ] **Feature 16.4**: BGE-M3 Evaluation & Standardization (8 SP) 🆕
 - [ ] **Feature 16.5**: Graph Extraction with Unified Chunks (13 SP)
 - [ ] **Feature 16.6**: Frontend E2E Tests with Playwright (13 SP)
+- [ ] **Feature 16.7**: Graphiti Performance Evaluation & Optimization (8 SP) 🆕
 
 ### Technical Tasks
 
@@ -814,24 +815,88 @@ Tasks:
 - Validate SSE streaming in browser
 - Production confidence
 
+---
+
+**Feature 16.7: Graphiti Performance Evaluation & Optimization** 🆕
+**Problem:** Graphiti uses internal LLM calls for entity extraction (blackbox, unknown performance)
+**Context:** LightRAG optimized with SpaCy + quantized Gemma 2 4B (10x speedup). Graphiti performance unknown.
+
+Tasks:
+- [ ] **Benchmark Graphiti Ingestion**
+  - Measure `add_episode()` duration for 100 OMNITRACKER documents
+  - Profile LLM call count and token usage
+  - Compare with LightRAG performance baseline (~2.5s per document)
+  - Memory profiling (peak usage during ingestion)
+
+- [ ] **Entity Extraction Quality Comparison**
+  - Compare Graphiti entities vs LightRAG entities (precision/recall)
+  - Evaluate deduplication accuracy
+  - Test on same OMNITRACKER corpus
+
+- [ ] **Graphiti Internal Analysis**
+  - Research what LLM Graphiti uses internally (BGE-M3 for embeddings, what for extraction?)
+  - Count LLM calls per episode (how many?)
+  - Identify optimization opportunities
+
+- [ ] **Custom Entity Extractor Evaluation**
+  - Research Graphiti 0.3.21+ custom entity type API
+  - Can we inject SpaCy pre-filtering?
+  - Can we use our optimized Gemma 2 4B pipeline?
+  - Feasibility assessment
+
+- [ ] **Document Decision**
+  - If Graphiti <5s per episode (acceptable): Keep as-is
+  - If Graphiti 5-30s per episode (slow): Evaluate optimization (custom extractors)
+  - If Graphiti >30s per episode (too slow): Consider alternatives
+  - Create ADR-024 with decision and rationale
+
+**Deliverables:**
+```markdown
+docs/benchmarks/GRAPHITI_PERFORMANCE_BENCHMARK.md
+- Ingestion duration comparison (Graphiti vs LightRAG)
+- Entity extraction quality metrics
+- Memory profiling results
+- LLM call analysis
+- Optimization recommendations
+
+docs/adr/ADR-024-graphiti-optimization-strategy.md (if needed)
+- Decision: Keep / Optimize / Replace
+- Rationale and trade-offs
+- Implementation plan (if optimize)
+```
+
+**Benefits:**
+- Understand Graphiti performance characteristics
+- Identify optimization opportunities
+- Apply LightRAG learnings to Graphiti if possible
+- Make informed decision on Graphiti future
+
+**Reference:**
+- [LIGHTRAG_VS_GRAPHITI.md](../architecture/LIGHTRAG_VS_GRAPHITI.md) - LightRAG vs Graphiti comparison
+
+---
+
 ### Success Criteria
-- [ ] **Unified Chunking**: All 3 indexes (Qdrant, BM25, Neo4j) use same chunks
-- [ ] **Atomic Re-Indexing**: `POST /admin/reindex` endpoint works end-to-end
+- [ ] **Unified Chunking**: All 3 indexes (Qdrant, BM25, LightRAG) use same chunks from ChunkingService
+- [ ] **Atomic Re-Indexing**: `POST /admin/reindex` endpoint works end-to-end with SSE progress
 - [ ] **PPTX Support**: PowerPoint files index successfully with text extraction
 - [ ] **BGE-M3 Decision**: Benchmarking complete, strategy documented in ADR-024
-- [ ] **Graph Alignment**: Neo4j entities linked to Qdrant chunk IDs
-- [ ] **Index Consistency**: BM25 corpus size == Qdrant points count == Neo4j chunk count
-- [ ] **E2E Tests**: 5+ critical user flows pass in CI
+- [ ] **Graph Alignment**: Neo4j LightRAG entities linked to Qdrant chunk IDs via source_chunk_id
+- [ ] **Index Consistency**: BM25 corpus size == Qdrant points count == LightRAG chunk count
+- [ ] **E2E Tests**: 5+ critical user flows pass in CI with Playwright
 - [ ] **Performance**: Re-indexing 100 documents completes in <2 minutes
+- [ ] **Graphiti Performance**: Benchmarking complete, decision documented (Keep/Optimize/Replace)
+- [ ] **Layer Clarity**: LightRAG (Layer 2 chunk-based) vs Graphiti (Layer 3 episode-based) documented
 
-### Story Points: 63 SP (+11 SP for architecture improvements)
+### Story Points: 69 SP (+17 SP for architecture improvements)
 **Breakdown:**
-- Feature 16.1: Unified Chunking Service (8 SP) 🆕
+- Feature 16.1: Unified Chunking Service (6 SP) 🆕 **(revised: -2 SP, no A/B testing needed)**
 - Feature 16.2: Unified Re-Indexing Pipeline (13 SP) 🆕
 - Feature 16.3: PPTX Document Support (8 SP)
 - Feature 16.4: BGE-M3 Evaluation & Standardization (8 SP) 🆕
 - Feature 16.5: Graph Extraction with Unified Chunks (13 SP)
 - Feature 16.6: Frontend E2E Tests (13 SP)
+- Feature 16.7: Graphiti Performance Evaluation (8 SP) 🆕
 
 **Timeline:**
 - Sequential: 6-8 days (1 developer, ~8-10 SP/day)
