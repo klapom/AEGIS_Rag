@@ -15,11 +15,12 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import TextNode
 from qdrant_client.models import PointStruct
 
-from src.components.retrieval.chunking import AdaptiveChunker
 from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
+from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
+from src.core.models.chunk import ChunkStrategy
 
 logger = structlog.get_logger(__name__)
 
@@ -61,18 +62,13 @@ class DocumentIngestionPipeline:
         else:
             self.allowed_base_path = Path(settings.documents_base_path).resolve()
 
-        # Initialize chunking strategy
-        if self.use_adaptive_chunking:
-            self.adaptive_chunker = AdaptiveChunker(
-                chunk_overlap=self.chunk_overlap,
-            )
-            self.text_splitter = None
-        else:
-            self.text_splitter = SentenceSplitter(
-                chunk_size=self.chunk_size,
-                chunk_overlap=self.chunk_overlap,
-            )
-            self.adaptive_chunker: AdaptiveChunker | None = None
+        # Sprint 16: Use unified ChunkingService
+        chunk_strategy = ChunkStrategy(
+            method="adaptive",  # Use adaptive by default (sentence-aware)
+            chunk_size=self.chunk_size,
+            overlap=self.chunk_overlap,
+        )
+        self.chunking_service = get_chunking_service(strategy=chunk_strategy)
 
         logger.info(
             "Document ingestion pipeline initialized",
@@ -190,37 +186,47 @@ class DocumentIngestionPipeline:
     async def chunk_documents(
         self,
         documents: list[Document],
-    ) -> list[TextNode]:
-        """Split documents into chunks using configured chunking strategy.
+    ) -> list[dict]:
+        """Split documents into chunks using unified ChunkingService.
+
+        Sprint 16: Now uses ChunkingService for consistent chunking across all pipelines.
 
         Args:
             documents: List of LlamaIndex documents
 
         Returns:
-            List of text nodes (chunks)
+            List of Chunk objects from ChunkingService
 
         Raises:
             VectorSearchError: If chunking fails
         """
         try:
-            if self.use_adaptive_chunking and self.adaptive_chunker:
-                # Use adaptive chunking strategy
-                nodes = self.adaptive_chunker.chunk_documents(documents)
-            elif self.text_splitter:
-                # Use traditional sentence-based splitting
-                nodes = self.text_splitter.get_nodes_from_documents(documents)
-            else:
-                raise ValueError("No chunking method available")
+            all_chunks = []
+
+            for doc in documents:
+                # Extract document metadata
+                doc_id = doc.doc_id or doc.metadata.get("file_name", "unknown")
+                content = doc.get_content()
+                metadata = doc.metadata
+
+                # Use ChunkingService for unified chunking
+                chunks = self.chunking_service.chunk_document(
+                    document_id=doc_id,
+                    content=content,
+                    metadata=metadata,
+                )
+
+                all_chunks.extend(chunks)
 
             logger.info(
                 "Documents chunked",
                 documents_count=len(documents),
-                chunks_count=len(nodes),
-                avg_chunks_per_doc=len(nodes) / len(documents) if documents else 0,
-                strategy="adaptive" if self.use_adaptive_chunking else "sentence",
+                chunks_count=len(all_chunks),
+                avg_chunks_per_doc=len(all_chunks) / len(documents) if documents else 0,
+                strategy=self.chunking_service.strategy.method,
             )
 
-            return nodes
+            return all_chunks
 
         except Exception as e:
             logger.error("Failed to chunk documents", error=str(e))
@@ -228,12 +234,14 @@ class DocumentIngestionPipeline:
 
     async def generate_embeddings(
         self,
-        nodes: list[TextNode],
+        chunks: list,
     ) -> list[list[float]]:
-        """Generate embeddings for text nodes.
+        """Generate embeddings for chunks.
+
+        Sprint 16: Now works with Chunk objects from ChunkingService.
 
         Args:
-            nodes: List of text nodes
+            chunks: List of Chunk objects
 
         Returns:
             List of embedding vectors
@@ -242,15 +250,15 @@ class DocumentIngestionPipeline:
             VectorSearchError: If embedding generation fails
         """
         try:
-            # Extract text from nodes
-            texts = [node.get_content() for node in nodes]
+            # Extract text from chunks
+            texts = [chunk.content for chunk in chunks]
 
             # Generate embeddings in batch
             embeddings = await self.embedding_service.embed_batch(texts)
 
             logger.info(
                 "Embeddings generated",
-                nodes_count=len(nodes),
+                chunks_count=len(chunks),
                 embedding_dim=len(embeddings[0]) if embeddings else 0,
             )
 
@@ -307,28 +315,20 @@ class DocumentIngestionPipeline:
 
             # Step 3: Chunk documents
             logger.info("Step 2/4: Chunking documents")
-            nodes = await self.chunk_documents(documents)
+            chunks = await self.chunk_documents(documents)
 
             # Step 4: Generate embeddings
             logger.info("Step 3/4: Generating embeddings")
-            embeddings = await self.generate_embeddings(nodes)
+            embeddings = await self.generate_embeddings(chunks)
 
-            # Step 5: Create Qdrant points
+            # Step 5: Create Qdrant points using Chunk.to_qdrant_payload()
             logger.info("Step 4/4: Indexing to Qdrant")
             points = []
-            for node, embedding in zip(nodes, embeddings, strict=False):
-                point_id = str(uuid4())
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
                 point = PointStruct(
-                    id=point_id,
+                    id=chunk.chunk_id,  # Use chunk_id as Qdrant point ID
                     vector=embedding,
-                    payload={
-                        "text": node.get_content(),
-                        "document_id": node.ref_doc_id or "unknown",
-                        "chunk_index": node.metadata.get("chunk_index", 0),
-                        "source": node.metadata.get("file_name", "unknown"),
-                        "file_path": node.metadata.get("file_path", ""),
-                        "file_type": node.metadata.get("file_type", ""),
-                    },
+                    payload=chunk.to_qdrant_payload(),
                 )
                 points.append(point)
 
@@ -344,11 +344,11 @@ class DocumentIngestionPipeline:
 
             stats = {
                 "documents_loaded": len(documents),
-                "chunks_created": len(nodes),
+                "chunks_created": len(chunks),
                 "embeddings_generated": len(embeddings),
                 "points_indexed": len(points),
                 "duration_seconds": round(duration, 2),
-                "chunks_per_document": round(len(nodes) / len(documents), 2),
+                "chunks_per_document": round(len(chunks) / len(documents), 2),
                 "collection_name": self.collection_name,
             }
 

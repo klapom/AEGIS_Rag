@@ -10,13 +10,11 @@ Sprint 5: Feature 5.1 - LightRAG Core Integration
 Sprint 14: Feature 14.1 - Three-Phase Pipeline Integration with Graph-based Provenance
 """
 
-import hashlib
 import time
 from pathlib import Path
 from typing import Any
 
 import structlog
-import tiktoken
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -25,8 +23,10 @@ from tenacity import (
 )
 
 from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.models import GraphQueryResult
+from src.core.models.chunk import ChunkStrategy
 
 logger = structlog.get_logger(__name__)
 
@@ -503,12 +503,10 @@ class LightRAGWrapper:
         chunk_token_size: int = 600,
         chunk_overlap_token_size: int = 100,
     ) -> list[dict[str, Any]]:
-        """Chunk text using tiktoken with provenance metadata.
+        """Chunk text using unified ChunkingService.
 
-        Sprint 14 Feature 14.1 - Phase 1: Chunking Strategy
-
-        Uses same chunking strategy as LightRAG (tiktoken cl100k_base encoding)
-        to ensure compatibility with LightRAG embeddings.
+        Sprint 16 Feature 16.1: Now uses unified ChunkingService with "fixed" strategy (tiktoken-based)
+        to ensure compatibility with LightRAG embeddings and consistent chunking across all pipelines.
 
         Args:
             text: Document text to chunk
@@ -517,97 +515,42 @@ class LightRAGWrapper:
             chunk_overlap_token_size: Overlap between chunks (default: 100)
 
         Returns:
-            List of chunk dictionaries with:
-            - chunk_id: Unique identifier (MD5 hash of content)
-            - text: Chunk text content
-            - document_id: Source document ID
-            - chunk_index: Sequential index (0, 1, 2, ...)
-            - tokens: Number of tokens in chunk
-            - start_token: Starting token offset in document
-            - end_token: Ending token offset in document
+            List of chunk dictionaries compatible with LightRAG format
         """
         logger.info(
-            "chunking_text",
+            "chunking_text_with_unified_service",
             document_id=document_id,
             text_length=len(text),
             chunk_token_size=chunk_token_size,
             chunk_overlap=chunk_overlap_token_size,
         )
 
-        # Initialize tiktoken encoder (cl100k_base - same as LightRAG)
-        try:
-            encoder = tiktoken.get_encoding("cl100k_base")
-        except Exception as e:
-            logger.error("tiktoken_encoding_failed", error=str(e))
-            raise
-
-        # Encode full text to tokens
-        tokens = encoder.encode(text)
-        total_tokens = len(tokens)
-
-        logger.debug(
-            "text_encoded",
-            total_tokens=total_tokens,
-            estimated_chunks=max(
-                1,
-                (total_tokens - chunk_overlap_token_size)
-                // (chunk_token_size - chunk_overlap_token_size),
-            ),
+        # Sprint 16: Use unified ChunkingService with fixed strategy (tiktoken-based)
+        chunking_service = get_chunking_service(
+            strategy=ChunkStrategy(
+                method="fixed",  # Use fixed (tiktoken) for LightRAG compatibility
+                chunk_size=chunk_token_size,
+                overlap=chunk_overlap_token_size,
+            )
         )
 
+        # Get chunks from ChunkingService
+        chunks_obj = chunking_service.chunk_document(
+            document_id=document_id,
+            content=text,
+            metadata={},
+        )
+
+        # Convert Chunk objects to LightRAG format
         chunks = []
-        chunk_index = 0
-        start_token = 0
-
-        # Slide window over tokens
-        while start_token < total_tokens:
-            # Calculate end token for this chunk
-            end_token = min(start_token + chunk_token_size, total_tokens)
-
-            # Extract chunk tokens
-            chunk_tokens = tokens[start_token:end_token]
-
-            # Decode back to text
-            chunk_text = encoder.decode(chunk_tokens)
-
-            # Generate chunk_id (MD5 hash for reproducibility, not security)
-            chunk_id = hashlib.md5(chunk_text.encode("utf-8"), usedforsecurity=False).hexdigest()
-
-            # Create chunk metadata
-            chunk = {
-                "chunk_id": chunk_id,
-                "text": chunk_text,
-                "document_id": document_id,
-                "chunk_index": chunk_index,
-                "tokens": len(chunk_tokens),
-                "start_token": start_token,
-                "end_token": end_token,
-            }
-
+        for chunk_obj in chunks_obj:
+            chunk = chunk_obj.to_lightrag_format()
             chunks.append(chunk)
 
-            logger.debug(
-                "chunk_created",
-                chunk_id=chunk_id[:8],
-                chunk_index=chunk_index,
-                tokens=len(chunk_tokens),
-                start_token=start_token,
-                end_token=end_token,
-            )
-
-            # Move to next chunk with overlap
-            chunk_index += 1
-            start_token = end_token - chunk_overlap_token_size
-
-            # Prevent infinite loop on last small chunk
-            if start_token >= total_tokens - chunk_overlap_token_size:
-                break
-
         logger.info(
-            "chunking_complete",
+            "chunking_complete_unified_service",
             document_id=document_id,
             total_chunks=len(chunks),
-            total_tokens=total_tokens,
         )
 
         return chunks
