@@ -1,8 +1,8 @@
 # CONTEXT REFRESH MASTER GUIDE
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete guide for achieving FULL context refresh in any session
-**Version:** 2.0 (Consolidated from all context refresh documentation)
-**Last Updated:** 2025-10-22
+**Version:** 3.0 (Updated for Sprint 16, Architecture-Focused)
+**Last Updated:** 2025-10-28
 
 ---
 
@@ -14,8 +14,7 @@
 4. [Current Project State](#current-project-state) - Where we are NOW
 5. [Core Documentation Map](#core-documentation-map) - What to read
 6. [Verification Checklist](#verification-checklist) - Confirm understanding
-7. [Troubleshooting](#troubleshooting) - When refresh doesn't work
-8. [Best Practices](#best-practices) - Optimize your workflow
+7. [Best Practices](#best-practices) - Optimize your workflow
 
 ---
 
@@ -24,30 +23,29 @@
 ### Copy-Paste This Prompt (Recommended for Most Cases)
 
 ```
-🔄 CONTEXT REFRESH - AEGIS RAG
+🔄 CONTEXT REFRESH - AEGIS RAG (Sprint 16)
 
 Bitte mach dich mit dem Projekt vertraut. Lies folgende Dateien:
 
 📖 CORE CONTEXT:
-1. CLAUDE.md - Projekt-Übersicht & Architektur
-2. SUBAGENTS.md - Delegation Strategy & File Ownership
-3. NAMING_CONVENTIONS.md - Code Standards
+1. docs/CLAUDE.md - Projekt-Übersicht & Architektur
+2. docs/SUBAGENTS.md - Delegation Strategy & File Ownership
+3. docs/NAMING_CONVENTIONS.md - Code Standards
 
 📊 CURRENT STATE:
-4. SPRINT_12_COMPLETION_REPORT.md - Aktueller Stand (Sprint 12 abgeschlossen)
-5. SPRINT_13_PLAN.md - Nächster Sprint (Test Infrastructure, 16 SP)
-6. SPRINT_14_PLAN.md - Folgender Sprint (React Migration, 15 SP)
+4. docs/core/SPRINT_PLAN.md - Aktueller Sprint (Sprint 16, 69 SP, Unified Architecture)
+5. docs/TECH_STACK.md - Vollständiger Tech Stack (Sprints 12-15 Updates)
 
 📚 DECISIONS & STANDARDS:
-7. TECHNICAL_DEBT_SUMMARY.md - Bekannte Issues
-8. README.md - Projekt-Überblick
+6. docs/TECHNICAL_DEBT_SUMMARY.md - Bekannte Issues
+7. README.md - Projekt-Überblick
 
 Gib mir einen Executive Summary mit 5 Bulletpoints:
 - Projekt-Ziel & Architektur
-- Aktueller Sprint-Status
-- Tech Stack & GPU Setup
-- Nächste Prioritäten
-- Wichtigste ADRs/Decisions
+- Sprint 16 Status & Features
+- Tech Stack (React 18.2, FastAPI, LangGraph, Ollama)
+- Nächste Prioritäten (Feature 16.1: Unified Chunking)
+- Wichtigste ADRs (ADR-022, ADR-023)
 ```
 
 **Expected Reading Time:** 3-5 minutes
@@ -89,8 +87,8 @@ Team-Übergabe:                        → Deep Refresh
 
 **Copy-Paste Prompt:**
 ```
-Context Refresh: Lies CLAUDE.md, SPRINT_14_PLAN.md, SUBAGENTS.md,
-NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
+Context Refresh: Lies docs/CLAUDE.md, docs/core/SPRINT_PLAN.md (Sprint 16),
+docs/SUBAGENTS.md, docs/NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 ```
 
 **What Gets Refreshed:**
@@ -110,122 +108,130 @@ NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 
 **Copy-Paste Prompt:**
 ```
-🔄 STANDARD CONTEXT REFRESH
+🔄 STANDARD CONTEXT REFRESH (Sprint 16)
 
 Bitte reaktiviere vollständigen Projekt-Context:
 
 📖 CORE:
-1. CLAUDE.md - Projekt & Architektur (inkl. Sprint 14 State)
-2. SPRINT_13_TODOS.md - Sprint 13 COMPLETE (Three-Phase Pipeline, all TD resolved)
-3. SPRINT_14_PLAN.md - Aktueller Sprint (Backend Performance, 15 SP, IN PROGRESS)
-4. SUBAGENTS.md - 5 Subagenten & File Ownership
-5. NAMING_CONVENTIONS.md - Code Standards
+1. docs/CLAUDE.md - Projekt & Architektur
+2. docs/core/SPRINT_PLAN.md - Sprint 16 (Unified Architecture, 69 SP)
+3. docs/SUBAGENTS.md - 5 Subagenten & File Ownership
+4. docs/NAMING_CONVENTIONS.md - Code Standards
 
-📚 DECISIONS:
-6. TECHNICAL_DEBT_SUMMARY.md - Status post-Sprint 13
-7. README.md - Sprint 13/14 Status
+📚 TECH & DECISIONS:
+5. docs/TECH_STACK.md - React 18.2, FastAPI, LangGraph, Sprint 12-15 additions
+6. docs/TECHNICAL_DEBT_SUMMARY.md - Current status
+7. README.md - Project overview
 
 Bestätige mit Zusammenfassung (5 Bulletpoints):
-- Projekt-Ziel
-- Sprint-Status (13 Complete, 14 In Progress - Feature 14.1 LightRAG Integration)
-- Tech Stack (FastAPI, LangGraph, Ollama, Qdrant, Neo4j, Redis)
-- GPU Status (RTX 3060: 105 tokens/s)
-- Top 3 Priorities
+- Projekt-Ziel & 3-Layer Architecture
+- Sprint 16 Focus (Unified Chunking, Re-Indexing, Graphiti Evaluation)
+- Tech Stack Updates (React frontend added Sprint 15)
+- Next Priority (Feature 16.1)
+- Key ADRs (ADR-022: Chunking, ADR-023: Re-Indexing)
 ```
 
 **What Gets Refreshed:**
 - ✅ Vollständiger Projekt-Context
 - ✅ Aktueller Sprint-Plan & Status
-- ✅ Alle ADRs & Decisions
-- ✅ Technical Debt Awareness
-- ✅ Tech Stack & Versionen
+- ✅ Tech Stack & Recent Updates
+- ✅ Subagent Workflow
 
 **When to Use:**
 - Nach größerer Kompaktierung
 - Vor kritischen Tasks
-- ADRs/Tech Stack unklar
 - Session nach >1 Tag Pause
 
 ---
 
-### Strategy 3: Deep Refresh (5 Minuten)
+### Strategy 3: Deep Refresh (5-7 Minuten)
 
 **Copy-Paste Prompt:**
 ```
-🔄 DEEP CONTEXT REFRESH - VOLLSTÄNDIG
+🔄 DEEP CONTEXT REFRESH - Sprint 16 (VOLLSTÄNDIG)
 
-Neue Session / Major Context Loss. Vollständiger Sprint-Context benötigt:
+Neue Session / Major Context Loss. Vollständiger Architektur-Context benötigt:
 
 📋 PROJECT FOUNDATION:
-Lies in dieser Reihenfolge:
-1. README.md - Projekt-Überblick & Sprint 13/14 Status
-2. CLAUDE.md - Vollständiger Projekt-Context (inkl. Sprint 14 State)
-3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-13 Journey & Learnings
-4. SPRINT_13_TODOS.md - Sprint 13 COMPLETE (Three-Phase Pipeline, TD-26 to TD-34 resolved)
-5. SPRINT_14_PLAN.md - Backend Performance & Production Readiness (15 SP, 2 Wochen, IN PROGRESS)
-6. SPRINT_14_TODOS.md - Feature 14.1 Task Breakdown (Option B Integration)
+1. README.md - Projekt-Überblick & Sprint Status
+2. docs/CLAUDE.md - Vollständiger Projekt-Context
+3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-15 Journey & Learnings
+4. docs/core/SPRINT_PLAN.md - Sprint 16 Plan (Unified Architecture, 69 SP)
+
+🏗️ ARCHITECTURE & TECH STACK:
+5. docs/TECH_STACK.md - Complete stack with Sprint 12-15 additions
+6. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts
+7. docs/DEPENDENCY_RATIONALE.md - Library choice justifications
+8. docs/architecture/LIGHTRAG_VS_GRAPHITI.md - Layer 2 vs Layer 3 comparison
 
 👥 WORKFLOW & STANDARDS:
-7. SUBAGENTS.md - Delegation Strategy (5 Subagenten)
-8. NAMING_CONVENTIONS.md - Complete Code Standards
-9. docs/TESTING_STRATEGY.md - Test Pyramid, Fixtures, Sprint 13 Fixes
-10. TECHNICAL_DEBT_SUMMARY.md - 22 Items (Post-Sprint 12)
+9. docs/SUBAGENTS.md - Delegation Strategy
+10. docs/NAMING_CONVENTIONS.md - Code Standards
+11. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status
 
-🔧 TECHNICAL REFERENCE:
-11. docs/COMPONENT_INTERACTION_MAP.md - Data Flows & API Contracts
-12. docs/DECISION_LOG.md - Chronological Decision History
-13. docs/DEPENDENCY_RATIONALE.md - Library Choice Justifications
-14. docs/PRODUCTION_DEPLOYMENT_GUIDE.md - GPU Setup, Docker, K8s, Monitoring
-15. docs/ADR_INDEX.md - 15 Architecture Decision Records
+🎯 ADRs (Architecture Decisions):
+12. docs/adr/ADR-020-sse-streaming-for-chat.md - SSE Streaming
+13. docs/adr/ADR-021-perplexity-inspired-ui-design.md - UI Design
+14. docs/adr/ADR-022-unified-chunking-service.md - Unified Chunking
+15. docs/adr/ADR-023-unified-reindexing-pipeline.md - Unified Re-Indexing
 
 📊 SPRINT STATUS:
-Sprint 13: ✅ COMPLETE (merged to main: a9f5733, c8030a2)
-- Feature 13.9: Three-Phase Entity/Relation Extraction Pipeline ✅
-- Performance: >300s → <30s (10x improvement)
-- Quality: 28.6% deduplication, 144% entity accuracy, 123% relation accuracy
-- All TD-26 to TD-34 resolved (Memory Agent, Graphiti API, LightRAG fixtures)
-- ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
-- 6/6 E2E tests passing in 128.68s total
+Sprint 15: ✅ COMPLETE (2025-10-27 → 2025-10-28, merged to main: v0.15.0)
+- React 18.2 + TypeScript 5.9 + Vite 7.1 + Tailwind CSS v4.1
+- SSE streaming (token-by-token display)
+- Perplexity.ai-inspired UI design
+- Health dashboard + conversation history
+- 25 tests passing (15 frontend + 10 backend)
+- ADR-020 (SSE Streaming), ADR-021 (Perplexity UI)
 
-Sprint 14: 🟡 IN PROGRESS (Backend Performance & Production Readiness, 15 SP)
-- Branch: sprint-14-backend-performance
-- Feature 14.1: LightRAG Integration with Three-Phase Pipeline (PLANNING COMPLETE ✅)
-- Strategy: Option B (Wrapper um LightRAG) - fully designed
-- Implementation: Per-chunk extraction, provenance tracking, insert_documents_optimized()
-- Features 14.2-14.7: Configuration, Benchmarking, GPU Optimization, Error Handling, Monitoring, CI/CD
-- Goal: <60s document processing, production-grade error handling, stable CI/CD
+Sprint 16: 📋 PLANNED (2025-10-28, 69 SP, Unified Architecture Focus)
+- Branch: Will be sprint-16-unified-architecture
+- **Architecture Issues Identified:**
+  - Chunking duplication (Qdrant, BM25, LightRAG)
+  - No unified re-indexing (indexes out of sync: 381 vs 5)
+  - Two incompatible embedding models (nomic vs BGE-M3)
+  - Graphiti performance unknown (blackbox LLM calls)
+- **Features:**
+  - 16.1: Unified Chunking Service (6 SP) - NEXT
+  - 16.2: Unified Re-Indexing Pipeline (13 SP)
+  - 16.3: PPTX Document Support (8 SP)
+  - 16.4: BGE-M3 Evaluation (8 SP)
+  - 16.5: Graph Extraction with Unified Chunks (13 SP)
+  - 16.6: Frontend E2E Tests (13 SP)
+  - 16.7: Graphiti Performance Evaluation (8 SP)
 
-🎯 TECHNICAL STATE:
-- Main Branch: Sprint 13 merged, Sprint 14 in progress
-- GPU: RTX 3060 verified (105 tokens/s, 52.7% VRAM)
+🎯 TECHNICAL STATE (Post-Sprint 15):
+- Main Branch: Sprint 15 merged (v0.15.0)
+- GPU: RTX 3060 verified (105 tokens/s)
 - Backend: FastAPI + LangGraph + Ollama (100% local)
+- Frontend: React 18.2 + Vite 7.1 + Tailwind CSS v4.1
 - RAG: Hybrid (Vector + Graph + BM25 with RRF)
 - Memory: 3-Layer (Redis → Qdrant → Graphiti)
-- Extraction: Three-Phase Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B Q4_K_M)
+- Extraction: Three-Phase Pipeline (SpaCy + Semantic Dedup + Gemma 2 4B)
 
 🎯 NÄCHSTE PRIORITÄTEN:
-1. Feature 14.1 Phase 1: Chunking Strategy (tiktoken, 600 tokens, 100 overlap)
-2. Feature 14.1 Phase 2: Per-Chunk Extraction (ThreePhaseExtractor)
-3. Feature 14.1 Phase 3-6: Format Conversion, Neo4j, Embeddings (see SPRINT_14_PLAN.md)
+1. Feature 16.1: Unified Chunking Service implementation
+2. Qdrant, BM25, LightRAG migration to use ChunkingService
+3. Graphiti remains unchanged (episode-based, not chunk-based)
 
-Gib mir einen Executive Summary (5-7 Bulletpoints):
-- Projekt-Ziel & Architektur (4 Core-Komponenten)
-- Sprint 12 Achievements
-- Sprint 13 Focus & Story Points
-- Sprint 14 Preview
-- Tech Stack (Python 3.11+, FastAPI, LangGraph, Ollama, etc.)
-- GPU Performance (RTX 3060)
+Gib mir einen Executive Summary (7 Bulletpoints):
+- Projekt-Ziel & Architektur (3-Layer Memory)
+- Sprint 15 Achievements (React frontend)
+- Sprint 16 Focus (Unified Architecture)
+- Key Architectural Issues (Chunking, Re-Indexing, Graphiti)
+- Tech Stack (Full-stack: React + FastAPI + LangGraph + Ollama)
+- LightRAG vs Graphiti (Layer 2 vs Layer 3)
 - Top 3 Immediate Priorities
 ```
 
 **What Gets Refreshed:**
-- ✅ COMPLETE Project Context (all 4 core components)
-- ✅ Full Sprint History (10-12 complete, 13-14 planned)
-- ✅ All Architecture Decisions
+- ✅ COMPLETE Project Context
+- ✅ Full Sprint History (12-16)
+- ✅ All Architecture Decisions (ADRs)
 - ✅ Complete Tech Stack & Dependencies
+- ✅ Architecture Evolution & Learnings
+- ✅ Component Interactions & Data Flows
 - ✅ Technical Debt Status
-- ✅ GPU & Performance Metrics
-- ✅ Production Deployment Knowledge
 
 **When to Use:**
 - Montag-Morgen / Wochenstart
@@ -236,118 +242,94 @@ Gib mir einen Executive Summary (5-7 Bulletpoints):
 
 ---
 
-## 📊 CURRENT PROJECT STATE (As of 2025-10-22)
+## 📊 CURRENT PROJECT STATE (As of 2025-10-28)
 
 ### Project Overview
 **Name:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Enterprise-grade Hybrid Retrieval-Augmented Generation system
-**Status:** Production-ready (Sprint 12 complete)
+**Status:** Production-ready frontend + backend (Sprint 15 complete)
 
-### Architecture (4 Core Components)
-1. **Vector Search** - Qdrant + Ollama embeddings (nomic-embed-text)
-2. **Graph RAG** - LightRAG + Graphiti (bi-temporal memory)
-3. **Temporal Memory** - 3-Layer (Redis → Qdrant → Graphiti)
-4. **Tool Integration** - MCP protocol for external services
+### Architecture (3-Layer Memory)
+1. **Layer 1 (Redis):** Short-term memory (conversation context)
+2. **Layer 2 (Qdrant + BM25 + LightRAG):** Semantic search + keyword search + graph retrieval
+3. **Layer 3 (Graphiti):** Episodic memory (temporal queries, communities)
 
-### Tech Stack
+### Tech Stack (Post-Sprint 15)
 ```yaml
+Frontend (NEW - Sprint 15):
+  - React: 18.2.0
+  - TypeScript: 5.9.0
+  - Vite: 7.1.0
+  - Tailwind CSS: 4.1.0 (v4 syntax: @import)
+  - React Router: 7.9.2
+  - Zustand: 5.0.3 (state management)
+  - SSE: Native EventSource API
+
 Backend:
-  - Python: 3.11+
+  - Python: 3.12+
   - Framework: FastAPI 0.115.6
   - Orchestration: LangGraph 0.2.53
-  - LLM: Ollama (llama3.2:3b/8b, qwen2.5:7b)
-  - Embeddings: nomic-embed-text (768d)
+  - LLM: Ollama (llama3.2:3b/8b, qwen2.5:7b, gemma2:4b)
+  - Embeddings: nomic-embed-text (768d) + BGE-M3 (1024d for Graphiti)
 
 Databases:
   - Vector: Qdrant 1.12.1
   - Graph: Neo4j 5.24-community
   - Memory: Redis 7.4-alpine
 
-RAG Frameworks:
-  - LightRAG: EMNLP 2025 graph RAG
-  - Graphiti: Bi-temporal episodic memory
-  - BM25: Keyword search with RRF fusion
+Extraction (Sprint 13):
+  - SpaCy: en_core_web_lg (NER)
+  - Sentence-Transformers: all-MiniLM-L6-v2 (dedup)
+  - Gemma 2 4B: Quantized (Q4_K_M) relation extraction
+  - FAISS: IndexFlatL2 (384-dim)
 
 Infrastructure:
   - Docker: docker-compose.yml
-  - CI/CD: GitHub Actions (10 parallel jobs)
+  - CI/CD: GitHub Actions
   - GPU: NVIDIA RTX 3060 (105 tokens/s)
 ```
 
 ### Sprint Status
 
-**Sprint 13: ✅ COMPLETE (2025-10-25, merged: a9f5733, c8030a2)**
-- **Delivered:** Features 13.1-13.9 complete
+**Sprint 15: ✅ COMPLETE (2025-10-27 → 2025-10-28, merged to main: v0.15.0)**
+- **Delivered:** 6 features (73/73 SP, 100%)
 - **Highlights:**
-  - Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
-  - Performance: >300s → <30s (10x improvement)
-  - Quality: 28.6% deduplication rate, 144% entity accuracy, 123% relation accuracy
-  - All Technical Debt resolved (TD-26 to TD-34)
-  - ADR-017: Semantic Entity Deduplication
-  - ADR-018: Model Selection (SpaCy Transformer + Gemma 3 4B Q4_K_M)
-  - 6/6 E2E tests passing in 128.68s total
-  - pytest-timeout plugin, CI/CD enhancements
+  - Production-ready React frontend (Perplexity.ai-inspired)
+  - Real-time SSE streaming (token-by-token display)
+  - German localization
+  - Multi-mode search (Hybrid, Vector, Graph, Memory)
+  - Health dashboard (Qdrant, Ollama, Neo4j, Redis status)
+  - Conversation history with session management
+  - 25 tests passing (15 frontend + 10 backend)
+  - ADR-020 (SSE Streaming), ADR-021 (Perplexity UI)
 
-**Sprint 14: 🟡 IN PROGRESS (Backend Performance & Production Readiness)**
-- **Duration:** 2 weeks
-- **Story Points:** 15 SP
-- **Branch:** sprint-14-backend-performance
-- **Theme:** Backend Excellence - Performance, Stability & CI/CD
+**Sprint 16: 📋 PLANNED (2025-10-28, 69 SP, Unified Architecture Focus)**
+- **Theme:** Architectural Unification & Performance Evaluation
+- **Key Issues Identified:**
+  - ❌ Chunking duplication (Qdrant, BM25, LightRAG all have separate logic)
+  - ❌ No unified re-indexing (indexes out of sync: Qdrant 381 chunks, BM25 5 docs)
+  - ❌ Two embedding models (nomic-embed-text 768d vs BGE-M3 1024d - incompatible)
+  - ❌ Graphiti performance unknown (internal LLM calls, blackbox)
 - **Features:**
-  - 14.1: Integrate 3-Phase Pipeline into LightRAG (3 SP) - 🟡 PLANNING COMPLETE
-    - Strategy: Option B (Wrapper um LightRAG)
-    - Per-chunk extraction with provenance tracking
-    - New method: insert_documents_optimized()
-    - 9 phases fully documented
-  - 14.2: Configuration & Toggle System (2 SP) - 🔵 Planned
-  - 14.3: Performance Benchmarking Suite (2 SP) - 🔵 Planned
-  - 14.4: GPU Memory Optimization (2 SP) - 🔵 Planned
-  - 14.5: Error Handling & Retry Logic (2 SP) - 🔵 Planned
-  - 14.6: Monitoring & Metrics (2 SP) - 🔵 Planned
-  - 14.7: CI/CD Pipeline Stability (2 SP) - 🔵 Planned
-- **Goal:** <60s document processing, production error handling, stable CI/CD
-- **React Migration:** Deferred to Sprint 15
+  - 16.1: Unified Chunking Service (6 SP) - Create single source of truth
+  - 16.2: Unified Re-Indexing Pipeline (13 SP) - Atomic re-indexing with SSE progress
+  - 16.3: PPTX Document Support (8 SP) - python-pptx integration
+  - 16.4: BGE-M3 Evaluation (8 SP) - Benchmark and decide on standardization
+  - 16.5: Graph Extraction with Unified Chunks (13 SP) - LightRAG uses ChunkingService
+  - 16.6: Frontend E2E Tests (13 SP) - Playwright integration
+  - 16.7: Graphiti Performance Evaluation (8 SP) - Benchmark vs LightRAG, decide Keep/Optimize/Replace
 
-### Technical Debt Summary (Post-Sprint 13)
-**Status:** All Sprint 13 Technical Debt RESOLVED ✅
+**Key Architectural Documentation Added (Sprint 16 Planning):**
+- docs/architecture/LIGHTRAG_VS_GRAPHITI.md - Layer 2 vs Layer 3 comparison
+- docs/adr/ADR-022-unified-chunking-service.md - Unified chunking decision
+- docs/adr/ADR-023-unified-reindexing-pipeline.md - Unified re-indexing decision
 
-**Resolved in Sprint 13:**
-- **TD-26** ✅ RESOLVED: Memory Agent Event Loop Errors (Feature 13.1)
-- **TD-27** ✅ RESOLVED: Graphiti API Compatibility (Feature 13.2)
-- **TD-28** ✅ RESOLVED: LightRAG Fixture Connection (Feature 13.3)
-- **TD-29** ✅ RESOLVED: pytest-timeout Plugin (Feature 13.4)
-- **TD-30** ✅ RESOLVED: Entity Extraction Ollama Neo4j
-- **TD-31** ✅ RESOLVED: Three-Phase Fiction Text Extraction
-- **TD-32** ✅ RESOLVED: Three-Phase Financial Text Extraction
-- **TD-33** ✅ RESOLVED: Three-Phase Sports Text Extraction
-- **TD-34** ✅ RESOLVED: Incremental Graph Updates
-
-**Resolved in Sprint 12:**
-- ✅ TD-23: LightRAG E2E tests (5 tests fixed)
-- ✅ TD-24: Graphiti method renamed (14 tests unblocked)
-- ✅ TD-25: Redis async cleanup (0 warnings)
-
-### GPU Performance (Verified)
-```
-Device: NVIDIA RTX 3060
-VRAM: 12GB (52.7% utilized @ peak)
-Speed: 105 tokens/s (llama3.2:3b)
-Speedup: 15-20x vs CPU
-Status: ✅ Production-ready
-```
-
-### Recent Commits (Last 4)
+### Recent Commits (Last 3)
 ```bash
-63283f3 docs: Reorganize documentation and add Sprint 11/12 completion reports
-6f7fb9e docs(sprints): Split Sprint 13 into two focused sprints
-fd5a6d4 docs(sprint12): Add Sprint 12 Completion Report and Sprint 13 Plan
-b31d1e9 feat(sprint12): Complete Feature 12.10 and finalize Sprint 12 (31/32 SP)
+19a6569 docs: add LightRAG vs Graphiti comparison + Feature 16.7
+63cf002 docs: create ADR-022 and ADR-023 for Sprint 16 unified architecture
+c0329bc docs: update Sprint 13-15 achievements in core documentation
 ```
-
-### Branch Status
-- **Current Branch:** main
-- **Archived Branches:** sprint-10-dev (tag: archive/sprint-10-dev)
-- **Status:** Clean (all sprint-10-dev features already in main)
 
 ---
 
@@ -357,68 +339,61 @@ b31d1e9 feat(sprint12): Complete Feature 12.10 and finalize Sprint 12 (31/32 SP)
 
 | Document | What It Contains | Read When |
 |----------|------------------|-----------|
-| **CLAUDE.md** | Complete project context, architecture, workflows | Every refresh |
-| **SUBAGENTS.md** | 5 subagents, file ownership, delegation rules | Every refresh |
-| **NAMING_CONVENTIONS.md** | snake_case, PascalCase, SCREAMING_SNAKE rules | Every refresh |
+| **docs/CLAUDE.md** | Complete project context, architecture, workflows | Every refresh |
+| **docs/SUBAGENTS.md** | 5 subagents, file ownership, delegation rules | Every refresh |
+| **docs/NAMING_CONVENTIONS.md** | snake_case, PascalCase, SCREAMING_SNAKE rules | Every refresh |
 
 ### Sprint Planning & Status
 
 | Document | What It Contains | Read When |
 |----------|------------------|-----------|
-| **SPRINT_12_COMPLETION_REPORT.md** | Sprint 12 achievements, metrics, lessons learned | Standard/Deep refresh |
-| **SPRINT_13_PLAN.md** | Test Infrastructure plan (16 SP, 1-2 weeks) | Standard/Deep refresh |
-| **SPRINT_14_PLAN.md** | React Migration plan (15 SP, 2 weeks) | Deep refresh |
-| **SPRINT_10_PLAN.md** | Historical reference (Sprint 10) | Reference only |
-| **SPRINT_11_COMPLETION_REPORT.md** | Historical reference (Sprint 11) | Reference only |
+| **docs/core/SPRINT_PLAN.md** | Master sprint plan (Sprints 1-16), current Sprint 16 | Standard/Deep refresh |
+| **docs/sprints/SPRINT_15_COMPLETION_REPORT.md** | Sprint 15 achievements (React frontend) | Reference |
+| **docs/sprints/SPRINT_14_COMPLETION_REPORT.md** | Sprint 14 achievements (Backend performance) | Reference |
+
+### Architecture & Deep Understanding (MUST READ for Deep Refresh)
+
+| Document | What It Contains | Read When |
+|----------|------------------|-----------|
+| **docs/ARCHITECTURE_EVOLUTION.md** | Sprint 1-15 journey, learnings, architectural decisions | Deep refresh |
+| **docs/TECH_STACK.md** | Complete tech stack with Sprint 12-15 additions | Standard/Deep refresh |
+| **docs/architecture/COMPONENT_INTERACTION_MAP.md** | Data flows, API contracts, request scenarios | Deep refresh |
+| **docs/DEPENDENCY_RATIONALE.md** | Library choice justifications (70+ dependencies) | Deep refresh |
+| **docs/architecture/LIGHTRAG_VS_GRAPHITI.md** | Layer 2 vs Layer 3 comparison (NEW - Sprint 16) | Deep refresh |
 
 ### Technical Reference
 
 | Document | What It Contains | Read When |
 |----------|------------------|-----------|
-| **README.md** | Projekt-Überblick, Sprint 12 highlights, setup | Standard/Deep refresh |
-| **TECHNICAL_DEBT_SUMMARY.md** | 22 items, severity, resolution plans | Standard/Deep refresh |
-| **docs/PRODUCTION_DEPLOYMENT_GUIDE.md** | GPU setup, Docker, K8s, monitoring, security | Before deployment work |
-| **docs/ADR_INDEX.md** | Architecture Decision Records (15 ADRs) | Before architectural changes |
-| **docs/TECH_STACK.md** | Versions, dependencies, configs | When tech questions arise |
-
-### Architecture & Deep Understanding (NEW - Sprint 12)
-
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/ARCHITECTURE_EVOLUTION.md** | Sprint 1-12 journey, architecture milestones, learnings | Deep refresh, new developers |
-| **docs/COMPONENT_INTERACTION_MAP.md** | Data flows, API contracts, request scenarios | Understanding system behavior |
-| **docs/TESTING_STRATEGY.md** | Test pyramid, fixtures, async patterns, Sprint 13 fixes | Before writing tests, Sprint 13 work |
-| **docs/DECISION_LOG.md** | Chronological decision history (Sprint 1-12) | Understanding "why" decisions |
-| **docs/DEPENDENCY_RATIONALE.md** | Library choice justifications (60+ dependencies) | Before changing dependencies |
-
-### Helper Documentation
-
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/CONTEXT_REFRESH.md** | Detailed refresh strategies | Troubleshooting refresh |
-| **docs/CONTEXT_REFRESH_CHEATSHEET.txt** | Quick reference ASCII art | Quick lookup |
-| **docs/CONTEXT_REFRESH_SPRINT2_COMPLETE.md** | Historical Sprint 2 example | Reference only |
-| **docs/GIT_COMMIT_COMMANDS.md** | Git workflow commands | Before commits |
-| **docs/CHANGELOG_OLLAMA_MIGRATION.md** | Ollama migration history | Historical reference |
+| **README.md** | Projekt-Überblick, quick start, setup | Standard/Deep refresh |
+| **docs/TECHNICAL_DEBT_SUMMARY.md** | Current TD status | Standard/Deep refresh |
+| **docs/adr/** | Architecture Decision Records (23 ADRs) | Task-specific |
+| **docs/ADR_INDEX.md** | ADR index and quick reference | Before architectural changes |
 
 ### File Reading Order (Deep Refresh)
 
 ```
 Priority 1 (MUST READ):
 1. README.md
-2. CLAUDE.md
-3. SPRINT_12_COMPLETION_REPORT.md
-4. SPRINT_13_PLAN.md
+2. docs/CLAUDE.md
+3. docs/core/SPRINT_PLAN.md (Sprint 16)
+4. docs/TECH_STACK.md
 
-Priority 2 (SHOULD READ):
-5. SUBAGENTS.md
-6. NAMING_CONVENTIONS.md
-7. TECHNICAL_DEBT_SUMMARY.md
-8. SPRINT_14_PLAN.md
+Priority 2 (SHOULD READ - Architecture):
+5. docs/ARCHITECTURE_EVOLUTION.md
+6. docs/architecture/COMPONENT_INTERACTION_MAP.md
+7. docs/DEPENDENCY_RATIONALE.md
+8. docs/architecture/LIGHTRAG_VS_GRAPHITI.md
 
-Priority 3 (OPTIONAL):
-9. docs/PRODUCTION_DEPLOYMENT_GUIDE.md
-10. ADR documents (if task-specific)
+Priority 3 (SHOULD READ - Workflow):
+9. docs/SUBAGENTS.md
+10. docs/NAMING_CONVENTIONS.md
+11. docs/TECHNICAL_DEBT_SUMMARY.md
+
+Priority 4 (OPTIONAL - Task-Specific):
+12. docs/adr/ADR-022-unified-chunking-service.md
+13. docs/adr/ADR-023-unified-reindexing-pipeline.md
+14. Specific ADRs based on task
 ```
 
 ---
@@ -430,132 +405,59 @@ After ANY refresh, Claude Code should be able to confirm:
 ### ✅ PROJECT CONTEXT
 ```
 - [ ] Projekt-Name: AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-- [ ] Purpose: Enterprise-grade Hybrid RAG with Air-Gapped deployment
-- [ ] 4 Core-Komponenten: Vector Search, Graph RAG, Temporal Memory, MCP Tools
-- [ ] Status: Production-ready (Sprint 12 complete)
+- [ ] Purpose: Enterprise-grade Hybrid RAG
+- [ ] 3-Layer Memory: Redis → Qdrant/BM25/LightRAG → Graphiti
+- [ ] Status: Sprint 15 complete (React frontend), Sprint 16 planned
 ```
 
 ### ✅ ARCHITECTURE
 ```
-- [ ] Hybrid Retrieval: Vector (Qdrant) + Graph (LightRAG/Graphiti) + BM25
-- [ ] 3-Layer Memory: Redis (short-term) → Qdrant (semantic) → Graphiti (episodic)
+- [ ] Layer 1: Redis (short-term memory)
+- [ ] Layer 2: Qdrant (vector) + BM25 (keyword) + LightRAG (graph) - CHUNK-BASED
+- [ ] Layer 3: Graphiti (episodic memory) - EPISODE-BASED (different data model!)
 - [ ] Orchestration: LangGraph with multi-agent state management
 - [ ] LLM Strategy: 100% local (Ollama), zero API costs
-- [ ] Fusion: Reciprocal Rank Fusion (RRF) for result merging
 ```
 
 ### ✅ TECH STACK
 ```
-- [ ] Backend: Python 3.11+, FastAPI 0.115.6
+- [ ] Frontend: React 18.2, TypeScript 5.9, Vite 7.1, Tailwind CSS v4.1
+- [ ] Backend: Python 3.12+, FastAPI 0.115.6
 - [ ] Orchestration: LangGraph 0.2.53
-- [ ] LLMs: Ollama (llama3.2:3b/8b, qwen2.5:7b)
-- [ ] Embeddings: nomic-embed-text (768d)
-- [ ] Vector DB: Qdrant 1.12.1
-- [ ] Graph DB: Neo4j 5.24-community
+- [ ] LLMs: Ollama (llama3.2:3b/8b, qwen2.5:7b, gemma2:4b)
+- [ ] Embeddings: nomic-embed-text (768d) + BGE-M3 (1024d for Graphiti)
+- [ ] Vector: Qdrant 1.12.1
+- [ ] Graph: Neo4j 5.24-community
 - [ ] Memory: Redis 7.4-alpine
-- [ ] GPU: NVIDIA RTX 3060 (105 tokens/s verified)
 ```
 
 ### ✅ SPRINT STATUS
 ```
-- [ ] Sprint 12: ✅ COMPLETE (9/11 features, 31/32 SP, 97%)
-- [ ] Sprint 13: 🔵 PLANNED (Test Infrastructure, 16 SP, 1-2 weeks)
-- [ ] Sprint 14: 🔵 PLANNED (React Migration, 15 SP, 2 weeks)
+- [ ] Sprint 15: ✅ COMPLETE (React frontend, SSE streaming, health dashboard)
+- [ ] Sprint 16: 📋 PLANNED (Unified Architecture, 69 SP, 7 features)
+- [ ] Next Priority: Feature 16.1 (Unified Chunking Service, 6 SP)
 - [ ] Current Branch: main
-- [ ] sprint-10-dev: archived (all features already in main)
 ```
 
 ### ✅ WORKFLOW & STANDARDS
 ```
 - [ ] 5 Subagenten: test-engineer, langgraph-specialist, graphiti-specialist,
                    lightrag-specialist, general-backend-dev
-- [ ] File Ownership: Subagenten mapped to file patterns
 - [ ] Naming Conventions:
       - Functions/variables: snake_case
       - Classes: PascalCase
       - Constants: SCREAMING_SNAKE_CASE
-      - Test files: test_*.py
-      - Fixtures: conftest.py
 - [ ] 1 Feature = 1 Commit workflow
 ```
 
-### ✅ TECHNICAL DEBT
+### ✅ SPRINT 16 KEY ISSUES
 ```
-- [ ] Total Items: 22 (0 Critical, 0 High, 9 Medium, 13 Low)
-- [ ] Sprint 13 Targets: TD-26, TD-27, TD-28, TD-29
-- [ ] Sprint 12 Resolved: TD-23, TD-24, TD-25
+- [ ] Chunking duplication across Qdrant, BM25, LightRAG
+- [ ] No unified re-indexing (381 vs 5 docs out of sync)
+- [ ] Two incompatible embedding models (nomic vs BGE-M3)
+- [ ] Graphiti performance unknown (needs benchmarking)
+- [ ] LightRAG = Layer 2 (chunk-based), Graphiti = Layer 3 (episode-based)
 ```
-
-### ✅ PRIORITIES (Next Steps)
-```
-- [ ] Immediate: Sprint 13 Feature 13.1 (Memory Agent Event Loop)
-- [ ] Next: Sprint 13 Feature 13.2 (Graphiti API Compatibility)
-- [ ] Then: Sprint 13 Feature 13.3 (LightRAG Fixture Connection)
-```
-
----
-
-## 🆘 TROUBLESHOOTING
-
-### Problem: Refresh doesn't help
-
-**Symptoms:** Claude still doesn't understand project after refresh
-
-**Solutions:**
-1. Check if all docs are up-to-date: `git pull origin main`
-2. Verify you're reading correct sprint plan (Sprint 13, not older)
-3. Use Deep Refresh (Strategy 3) instead of Quick/Standard
-4. Check if CLAUDE.md was recently updated
-5. Ask user to verify which files are most critical
-
----
-
-### Problem: Sprint-Nummer unclear
-
-**Symptoms:** "Sprint {N}" not replaced correctly
-
-**Solutions:**
-1. Replace `{N}` manually with **13** in all prompts
-2. Be explicit: "Sprint 13" not "Sprint {N}"
-3. Read SPRINT_13_PLAN.md (current), not SPRINT_12_PLAN.md (historical)
-4. Verify sprint status in SPRINT_12_COMPLETION_REPORT.md
-
----
-
-### Problem: Too many refreshes needed
-
-**Symptoms:** >5 refreshes per Sprint, context loss <15 messages
-
-**Solutions:**
-1. **Short-term:** Increase refresh frequency (every 15 messages)
-2. **Medium-term:** Update CLAUDE.md with frequently forgotten info
-3. **Long-term:** Keep sessions shorter (<100 messages)
-4. **Best Practice:** Proactive Quick Checks every 20-30 messages
-
----
-
-### Problem: Specific detail always forgotten
-
-**Symptoms:** Same info (e.g., GPU specs, tech versions) forgotten repeatedly
-
-**Solutions:**
-1. Add to CLAUDE.md at the very top
-2. Create dedicated section in CLAUDE.md for this info
-3. Include in Quick Refresh prompt explicitly
-4. Add to Verification Checklist
-
----
-
-### Problem: Doesn't know which docs exist
-
-**Symptoms:** "I don't see file X" but file exists
-
-**Solutions:**
-1. Use this guide's [Core Documentation Map](#core-documentation-map)
-2. Run `ls -la` to see all files in root
-3. Run `ls -la docs/` to see all docs
-4. Check git status: `git status`
-5. Read README.md first (has file overview)
 
 ---
 
@@ -565,13 +467,14 @@ After ANY refresh, Claude Code should be able to confirm:
 
 ```
 ✅ Context Refresh bei JEDEM Zeichen von Context Loss
-✅ Quick Check alle 20-30 Nachrichten in langen Sessions
-✅ Standard Refresh am Session-Start (nach >1 Tag Pause)
 ✅ Deep Refresh am Montag / Sprint-Start
-✅ Dokumentiere was vergessen wurde → Update CLAUDE.md
+✅ Standard Refresh am Session-Start (nach >1 Tag)
+✅ Quick Check alle 20-30 Nachrichten
+✅ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context
+✅ Lies TECH_STACK.md für Sprint 12-15 Updates
+✅ Lies LIGHTRAG_VS_GRAPHITI.md für Layer-Verständnis
 ✅ Nutze die Copy-Paste Prompts aus diesem Guide
 ✅ Bestätige Verständnis mit Verification Checklist
-✅ Lies Docs in der empfohlenen Reihenfolge (Priority 1 → 2 → 3)
 ```
 
 ### DON'T ❌
@@ -579,11 +482,10 @@ After ANY refresh, Claude Code should be able to confirm:
 ```
 ❌ Weitermachen wenn Naming Conventions ignoriert werden
 ❌ Hoffen dass Context "von selbst zurückkommt"
-❌ Zu viele Details in Refresh (ineffizient, Overload)
 ❌ Quick Refresh bei Major Context Loss (nutze Deep Refresh!)
-❌ Alte Sprint Plans lesen (z.B. Sprint 10 statt Sprint 13)
-❌ Vergessen Sprint-Nummer zu ersetzen ({N} → 13)
 ❌ CLAUDE.md skippen (immer lesen!)
+❌ ARCHITECTURE_EVOLUTION.md ignorieren (kritisch für Deep Refresh!)
+❌ Alte Dateien lesen (CONTEXT_REFRESH.md, CONTEXT_REFRESH_CHEATSHEET.txt - VERALTET)
 ```
 
 ### Timing Guidelines
@@ -597,65 +499,21 @@ Session Duration    | Recommended Refreshes
 >100 messages       | Consider new session + Deep Refresh
 ```
 
-### Quality Metrics (Good Session)
-
-```
-✅ <3 Context Refreshes pro Sprint
-✅ Keine Naming Violations nach Refresh
-✅ Subagenten konsequent genutzt
-✅ ADRs werden referenziert
-✅ Tech Stack korrekt (Python 3.11+, FastAPI, etc.)
-✅ Sprint-Ziele klar
-```
-
-### Quality Metrics (Needs Improvement)
-
-```
-⚠️ >5 Refreshes pro Sprint
-⚠️ Violations trotz Refresh
-⚠️ Context Loss innerhalb 15 Messages
-⚠️ Sprint-Nummer falsch
-⚠️ GPU specs vergessen (RTX 3060: 105 tokens/s)
-```
-
----
-
-## 🔄 QUICK DECISION TREE
-
-```
-┌─────────────────────────────────────────────┐
-│ Habe ich Context Loss?                      │
-└─────────────────────────────────────────────┘
-           │
-           ├─ JA → Was fehlt?
-           │        │
-           │        ├─ Naming/Subagenten              → Quick Refresh (1 Min)
-           │        ├─ ADRs/Tech Stack                → Standard Refresh (2 Min)
-           │        ├─ Sprint-Ziel/Kompletter Context → Deep Refresh (5 Min)
-           │        └─ Unsicher                       → Standard Refresh
-           │
-           └─ NEIN → Weiter arbeiten
-                     │
-                     └─ Alle 20-30 Messages: Quick Check
-                        "Sprint 13 klar? Subagenten OK? Naming OK?"
-```
-
 ---
 
 ## 🔔 PROACTIVE CHECKS (Checklist)
 
-Copy-paste these into chat at appropriate times:
-
 ### Every 20-30 Messages (Long Sessions)
 ```
-Quick Check: Sprint 13 noch klar? Subagenten-Delegation OK?
-Naming Conventions (snake_case) befolgt? Falls unsicher → Quick Refresh.
+Quick Check: Sprint 16 noch klar? Feature 16.1 (Unified Chunking) next?
+Subagenten-Delegation OK? Naming Conventions (snake_case) befolgt?
+Falls unsicher → Quick Refresh.
 ```
 
 ### Before Critical Tasks
 ```
-Context Check: Lies nochmal CLAUDE.md Section "Architecture"
-und SPRINT_13_PLAN.md Feature 13.X für diese Task.
+Context Check: Lies docs/CLAUDE.md + docs/core/SPRINT_PLAN.md Feature 16.X
+für diese Task. Architektur klar? (Layer 2 vs Layer 3?)
 ```
 
 ### After Kompaktierung (Always)
@@ -667,106 +525,9 @@ Falls Major Kompaktierung: Standard Refresh (Strategy 2)
 ### Monday / Sprint-Start
 ```
 Deep Refresh (Strategy 3) durchführen.
-Verify: Sprint 12 complete, Sprint 13 planned.
+Verify: Sprint 15 complete, Sprint 16 planned.
+Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ```
-
-### Team-Übergabe
-```
-Developer B nutzt Deep Refresh (Strategy 3).
-Liest zusätzlich: Letzter PR, aktuelle Branch, Sprint Status.
-Developer A gibt Verbal Briefing.
-```
-
----
-
-## 📊 CONTEXT QUALITY TRACKING
-
-### Metrics to Self-Monitor
-
-```yaml
-Session Quality Indicators:
-  context_refreshes_per_session: <count>      # Target: <3
-  naming_violations_after_refresh: <count>     # Target: 0
-  subagent_delegation_accuracy: <percentage>   # Target: >90%
-  time_to_first_context_loss: <minutes>       # Target: >30
-
-Good Session:
-  - 0-2 refreshes
-  - 0 violations post-refresh
-  - Consistent subagent use
-  - ADRs referenced
-
-Needs Improvement:
-  - >5 refreshes
-  - Violations persist
-  - Context loss <15 messages
-```
-
----
-
-## 🎓 LESSONS LEARNED (From Past Sprints)
-
-### What Works Well
-1. **Feature-Based Development:** 1 Feature = 1 Commit (excellent tracking)
-2. **Proactive Refreshes:** Every 20-30 messages prevents major loss
-3. **Deep Refresh on Mondays:** Starts week with full context
-4. **Copy-Paste Prompts:** Saves time, ensures consistency
-5. **Verification Checklist:** Confirms understanding objectively
-
-### Common Pitfalls
-1. **Skipping CLAUDE.md:** Always leads to confusion later
-2. **Reading Old Sprint Plans:** Sprint 10 vs Sprint 13 confusion
-3. **Not Replacing {N}:** Template placeholders cause errors
-4. **Too Brief Refresh:** Quick Refresh insufficient for Major Loss
-5. **Ignoring Early Signals:** Naming violations = immediate refresh needed
-
-### Key Insights
-1. **Context Refresh is Normal:** Not a bug, it's how the system works
-2. **2 Minutes >> 30 Minutes:** Refreshing faster than debugging wrong context
-3. **Proactive > Reactive:** Quick Checks prevent major loss
-4. **Documentation Quality Matters:** Good CLAUDE.md = fewer refreshes needed
-5. **Sprint Plans Change:** Always read LATEST sprint plan, not historical
-
----
-
-## 📞 HELP & RESOURCES
-
-### If This Guide Doesn't Help
-
-1. **Check Git Status:** `git status` - Are you on main branch?
-2. **Pull Latest:** `git pull origin main` - Docs up-to-date?
-3. **List Files:** `ls -la` - Which files actually exist?
-4. **Ask User:** "Which specific context am I missing?"
-5. **Read This Guide Again:** Section-by-section, verify each checklist
-
-### Related Documentation
-
-- **Project Overview:** [README.md](../README.md)
-- **Main Context:** [CLAUDE.md](CLAUDE.md)
-- **Current Sprints:** [SPRINT_14_PLAN.md](../SPRINT_14_PLAN.md), [SPRINT_13_TODOS.md](../docs/archive/sprints/SPRINT_13_TODOS.md)
-
----
-
-## 🎯 FINAL CHECKLIST (Post-Refresh)
-
-Before continuing work, verify:
-
-```
-✅ I know: AEGIS RAG = Enterprise-grade Hybrid RAG with Air-Gapped deployment
-✅ I know: 4 Core Components (Vector, Graph, Memory, MCP)
-✅ I know: Sprint 12 COMPLETE (9/11, 31/32 SP)
-✅ I know: Sprint 13 PLANNED (Test Infrastructure, 16 SP)
-✅ I know: Sprint 14 PLANNED (React Migration, 15 SP)
-✅ I know: Tech Stack (FastAPI, LangGraph, Ollama, Qdrant, Neo4j, Redis)
-✅ I know: GPU Verified (RTX 3060: 105 tokens/s)
-✅ I know: 5 Subagenten & their file ownership
-✅ I know: Naming conventions (snake_case, PascalCase, SCREAMING_SNAKE)
-✅ I know: Technical Debt (22 items, 4 in Sprint 13)
-✅ I know: Next Priority (Sprint 13.1: Memory Agent Event Loop)
-✅ I know: Main branch clean, sprint-10-dev archived
-```
-
-**If ANY checkbox unchecked → Perform Standard or Deep Refresh!**
 
 ---
 
@@ -777,8 +538,10 @@ Before continuing work, verify:
 ║                                                                ║
 ║  Context Refresh ist NORMAL und WICHTIG!                       ║
 ║                                                                ║
-║  Besser 2-5 Minuten für vollständigen Context investieren      ║
+║  Besser 2-7 Minuten für vollständigen Context investieren      ║
 ║  als 30-60 Minuten mit suboptimalem/falschem Context arbeiten. ║
+║                                                                ║
+║  Deep Refresh = ARCHITECTURE_EVOLUTION.md + TECH_STACK.md!     ║
 ║                                                                ║
 ║                    Happy Coding! 🚀                            ║
 ║                                                                ║
@@ -787,17 +550,17 @@ Before continuing work, verify:
 
 ---
 
-**Document Version:** 2.0 (Master Consolidation)
+**Document Version:** 3.0 (Sprint 16 Architecture-Focused Update)
 **Created:** 2025-10-22
 **Project:** AEGIS RAG
-**Current Sprint:** Sprint 14 (Backend Performance & Production Readiness - IN PROGRESS)
-**Last Updated:** 2025-10-25 (Post-Sprint 13 Completion)
+**Current Sprint:** Sprint 16 (Unified Ingestion Architecture - PLANNED)
+**Last Updated:** 2025-10-28
 
 **Quick Access Commands:**
-- Full Project Context: Read CLAUDE.md (includes Sprint 14 State)
-- Current Sprint: Read SPRINT_14_PLAN.md (15 SP, Feature 14.1 planning complete)
-- Sprint Status: Read SPRINT_14_TODOS.md (detailed task breakdown)
-- Previous Sprint: Read SPRINT_13_TODOS.md (all features complete, TD resolved)
-- Technical Debt: All Sprint 13 TD resolved (TD-26 to TD-34)
+- Full Project Context: Read docs/CLAUDE.md
+- Current Sprint: Read docs/core/SPRINT_PLAN.md (Sprint 16, 69 SP)
+- Architecture History: Read docs/ARCHITECTURE_EVOLUTION.md (Sprint 1-15 journey)
+- Tech Stack Updates: Read docs/TECH_STACK.md (Sprint 12-15 additions)
+- Layer Comparison: Read docs/architecture/LIGHTRAG_VS_GRAPHITI.md
 - Quick Refresh: Use Strategy 1 prompt above
 - Deep Refresh: Use Strategy 3 prompt above
