@@ -125,7 +125,7 @@ class Chunk(BaseModel):
 
     @staticmethod
     def generate_chunk_id(document_id: str, chunk_index: int, content: str) -> str:
-        """Generate deterministic chunk_id using SHA-256 hash.
+        """Generate deterministic chunk_id using SHA-256 hash in UUID4 format.
 
         Args:
             document_id: Source document identifier
@@ -133,14 +133,16 @@ class Chunk(BaseModel):
             content: Text content of the chunk
 
         Returns:
-            16-character SHA-256 hash prefix
+            UUID4-formatted string (32 hex chars with dashes: 8-4-4-4-12)
 
         Example:
             >>> Chunk.generate_chunk_id("doc_001", 0, "Sample text")
-            'a1b2c3d4e5f6g7h8'
+            'a1b2c3d4-e5f6-g7h8-i9j0-k1l2m3n4o5p6'
         """
         input_str = f"{document_id}:{chunk_index}:{content}"
-        return hashlib.sha256(input_str.encode("utf-8")).hexdigest()[:16]
+        hash_hex = hashlib.sha256(input_str.encode("utf-8")).hexdigest()[:32]
+        # Format as UUID4: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        return f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"
 
     def to_qdrant_payload(self) -> dict[str, Any]:
         """Convert chunk to Qdrant point payload.

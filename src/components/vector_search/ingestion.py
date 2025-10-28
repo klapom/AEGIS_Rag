@@ -62,11 +62,12 @@ class DocumentIngestionPipeline:
         else:
             self.allowed_base_path = Path(settings.documents_base_path).resolve()
 
-        # Sprint 16: Use unified ChunkingService
+        # Sprint 16.7: Unified chunking strategy (600 tokens, adaptive, 150 overlap)
+        # Aligned with Neo4j/LightRAG for maximum synergie
         chunk_strategy = ChunkStrategy(
-            method="adaptive",  # Use adaptive by default (sentence-aware)
-            chunk_size=self.chunk_size,
-            overlap=self.chunk_overlap,
+            method="adaptive",  # Sentence-aware chunking
+            chunk_size=600,     # Optimized for entity extraction (was: 512)
+            overlap=150,        # 25% overlap for context bridges (was: 128)
         )
         self.chunking_service = get_chunking_service(strategy=chunk_strategy)
 
@@ -184,6 +185,88 @@ class DocumentIngestionPipeline:
             )
             raise VectorSearchError(f"Failed to load documents: {e}") from e
 
+    def _clean_metadata(self, metadata: dict) -> dict:
+        """Clean metadata to reduce size, especially for PPTX files.
+
+        Removes large formatting fields that are not useful for RAG:
+        - text_sections (contains detailed formatting structure)
+        - extraction_errors, extraction_warnings (debugging info)
+
+        Simplifies paths to relative format from project root.
+
+        Args:
+            metadata: Original metadata dict from document loader
+
+        Returns:
+            Cleaned metadata dict with reduced size
+        """
+        cleaned = {}
+
+        # Fields to keep (essential for RAG)
+        keep_fields = {
+            "file_name",
+            "page_label",
+            "title",
+            "file_type",
+            "file_size",
+            "creation_date",
+            "last_modified_date",
+            "tables",
+            "charts",
+            "images",
+            "notes",
+        }
+
+        # Fields to remove (too large or not useful)
+        remove_fields = {
+            "text_sections",  # Contains detailed formatting (can be 1-7 KB)
+            "extraction_errors",  # Debugging info
+            "extraction_warnings",  # Debugging info
+        }
+
+        for key, value in metadata.items():
+            if key in remove_fields:
+                continue
+
+            if key == "file_path" and isinstance(value, str):
+                # Shorten file_path to relative path from project root
+                # From: C:\Users\...\AEGIS_Rag\data\sample_documents\...
+                # To: data/sample_documents/...
+                if "data" in value:
+                    parts = value.split("data")
+                    if len(parts) > 1:
+                        cleaned[key] = "data" + parts[-1].replace("\\", "/")
+                    else:
+                        cleaned[key] = value
+                else:
+                    cleaned[key] = value
+            elif key == "file_type" and isinstance(value, str):
+                # Simplify MIME types
+                # From: application/vnd.openxmlformats-officedocument.presentationml.presentation
+                # To: pptx
+                if "presentationml" in value:
+                    cleaned[key] = "pptx"
+                elif "wordprocessingml" in value:
+                    cleaned[key] = "docx"
+                elif "spreadsheetml" in value:
+                    cleaned[key] = "xlsx"
+                elif "pdf" in value:
+                    cleaned[key] = "pdf"
+                else:
+                    cleaned[key] = value
+            elif key in ["tables", "charts", "images"] and isinstance(value, list):
+                # Simplify content arrays - only keep count, not full content
+                # Full table/chart data should be in the chunk content, not metadata
+                if value:
+                    # Just keep a count and type indicator
+                    cleaned[key] = len(value)  # e.g., tables: 1 instead of full table data
+                else:
+                    cleaned[key] = 0
+            elif key in keep_fields:
+                cleaned[key] = value
+
+        return cleaned
+
     async def chunk_documents(
         self,
         documents: list[Document],
@@ -203,6 +286,7 @@ class DocumentIngestionPipeline:
         """
         try:
             all_chunks = []
+            skipped_empty = 0
 
             for doc in documents:
                 # Extract document metadata
@@ -210,11 +294,20 @@ class DocumentIngestionPipeline:
                 content = doc.get_content()
                 metadata = doc.metadata
 
+                # Skip documents with empty content
+                if not content or not content.strip():
+                    logger.debug("Skipping document with empty content", document_id=doc_id)
+                    skipped_empty += 1
+                    continue
+
+                # Clean metadata to reduce size (especially for PPTX files)
+                cleaned_metadata = self._clean_metadata(metadata)
+
                 # Use ChunkingService for unified chunking
                 chunks = self.chunking_service.chunk_document(
                     document_id=doc_id,
                     content=content,
-                    metadata=metadata,
+                    metadata=cleaned_metadata,
                 )
 
                 all_chunks.extend(chunks)
@@ -222,6 +315,7 @@ class DocumentIngestionPipeline:
             logger.info(
                 "Documents chunked",
                 documents_count=len(documents),
+                skipped_empty=skipped_empty,
                 chunks_count=len(all_chunks),
                 avg_chunks_per_doc=len(all_chunks) / len(documents) if documents else 0,
                 strategy=self.chunking_service.strategy.method,

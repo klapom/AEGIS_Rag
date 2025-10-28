@@ -529,10 +529,11 @@ class LightRAGWrapper:
             chunk_overlap=chunk_overlap_token_size,
         )
 
-        # Sprint 16: Use unified ChunkingService with fixed strategy (tiktoken-based)
+        # Sprint 16.7: Use unified ChunkingService with adaptive strategy
+        # ALIGNED with Qdrant pipeline for maximum synergie (same chunk_ids!)
         chunking_service = get_chunking_service(
             strategy=ChunkStrategy(
-                method="fixed",  # Use fixed (tiktoken) for LightRAG compatibility
+                method="adaptive",  # Changed from "fixed" to "adaptive" for better entity extraction
                 chunk_size=chunk_token_size,
                 overlap=chunk_overlap_token_size,
             )
@@ -592,12 +593,12 @@ class LightRAGWrapper:
             text_length=len(document_text),
         )
 
-        # Step 1: Chunk the document
+        # Step 1: Chunk the document (Sprint 16.7: aligned with Qdrant)
         chunks = self._chunk_text_with_metadata(
             text=document_text,
             document_id=document_id,
-            chunk_token_size=600,
-            chunk_overlap_token_size=100,
+            chunk_token_size=600,  # Aligned with Qdrant
+            chunk_overlap_token_size=150,  # 25% overlap (aligned with Qdrant)
         )
 
         logger.info(

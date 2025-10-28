@@ -188,7 +188,9 @@ class UnifiedEmbeddingService:
         cache_key = self._cache_key(text)
         cached = self.cache.get(cache_key)
         if cached:
-            logger.debug("embedding_cache_hit", text_preview=text[:50])
+            # Safe logging: remove non-ASCII characters for Windows console
+            safe_preview = text[:50].encode('ascii', errors='replace').decode('ascii')
+            logger.debug("embedding_cache_hit", text_preview=safe_preview)
             return cached
 
         # Generate embedding with fresh AsyncClient (pickle-compatible approach)
@@ -208,9 +210,11 @@ class UnifiedEmbeddingService:
             # Cache result
             self.cache.set(cache_key, embedding)
 
+            # Safe logging: remove non-ASCII characters for Windows console
+            safe_preview = text[:50].encode('ascii', errors='replace').decode('ascii')
             logger.debug(
                 "embedding_generated",
-                text_preview=text[:50],
+                text_preview=safe_preview,
                 embedding_dim=len(embedding),
             )
 

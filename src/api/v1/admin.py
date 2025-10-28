@@ -12,8 +12,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from qdrant_client.models import Distance
 
+from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.shared.embedding_service import get_embedding_service
-from src.components.vector_search.ingestion import DocumentIngestionPipeline
+from src.components.vector_search.ingestion import ingest_documents
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
@@ -64,10 +65,8 @@ async def reindex_progress_stream(
         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': 'Initializing re-indexing pipeline...'})}\n\n"
 
         # Initialize services
-        chunking_service = get_chunking_service()
         embedding_service = get_embedding_service()
         qdrant_client = get_qdrant_client()
-        pipeline = DocumentIngestionPipeline()
 
         # Discover documents
         if not input_dir.exists():
@@ -86,12 +85,12 @@ async def reindex_progress_stream(
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 10, 'message': 'Deleting old indexes...'})}\n\n"
 
             # Delete Qdrant collection
-            collection_name = settings.qdrant_collection_name
+            collection_name = settings.qdrant_collection
             await qdrant_client.delete_collection(collection_name)
             logger.info("deleted_qdrant_collection", collection=collection_name)
 
             # Recreate collection with BGE-M3 dimensions
-            embedding_dim = embedding_service.get_embedding_dimension()
+            embedding_dim = embedding_service.embedding_dim
             await qdrant_client.create_collection(
                 collection_name=collection_name,
                 vector_size=embedding_dim,
@@ -111,50 +110,73 @@ async def reindex_progress_stream(
                 bm25_cache_path.unlink()
                 logger.info("cleared_bm25_cache")
 
-            # TODO: Clear Neo4j graph data (Feature 16.6)
-            # TODO: Clear Graphiti memory data (if needed)
+            # Clear Neo4j graph data (Sprint 16 Feature 16.7: Simultaneous Qdrant + Neo4j indexing)
+            try:
+                lightrag_wrapper = await get_lightrag_wrapper_async()
+                await lightrag_wrapper._clear_neo4j_database()
+                logger.info("cleared_neo4j_database")
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 15, 'message': 'Clearing Neo4j graph database...'})}\n\n"
+            except Exception as e:
+                logger.warning("neo4j_clear_failed", error=str(e))
+                # Continue even if Neo4j clearing fails (might not be available)
 
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 20, 'message': 'Old indexes deleted successfully'})}\n\n"
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 20, 'message': '[DRY RUN] Skipped deletion'})}\n\n"
 
-        # Phase 3: Chunking + Embedding + Indexing
-        docs_processed = 0
+        # Phase 3: Indexing (use ingest_documents helper function)
+        if not dry_run:
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30, 'message': f'Indexing {total_docs} documents into Qdrant...'})}\n\n"
 
-        for doc_file in document_files:
-            docs_processed += 1
-            progress_pct = 20 + (docs_processed / total_docs) * 70  # 20% → 90%
-            elapsed = time.time() - start_time
-            eta = int((elapsed / docs_processed) * (total_docs - docs_processed)) if docs_processed > 0 else None
+            # Use the ingest_documents helper function (Qdrant + BM25)
+            stats = await ingest_documents(
+                input_dir=input_dir,
+                collection_name=collection_name,
+            )
 
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'chunking', 'documents_processed': docs_processed, 'documents_total': total_docs, 'progress_percent': round(progress_pct, 1), 'eta_seconds': eta, 'current_document': doc_file.name, 'message': f'Processing {doc_file.name}...'})}\n\n"
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': f'Indexed {stats.get(\"points_indexed\", 0)} chunks into Qdrant. Starting Neo4j graph indexing...'})}\n\n"
 
-            if not dry_run:
-                # Load document
-                with open(doc_file, "rb") as f:
-                    file_content = f.read()
+            # Phase 3b: Index into Neo4j/LightRAG graph (Sprint 16 Feature 16.7)
+            try:
+                from llama_index.core import SimpleDirectoryReader
 
-                # Chunk using unified chunking service
-                chunks = await chunking_service.chunk_document(
-                    content=file_content,
-                    filename=doc_file.name,
-                    content_type="application/pdf" if doc_file.suffix == ".pdf" else "text/plain",
+                lightrag_wrapper = await get_lightrag_wrapper_async()
+
+                # Load documents
+                loader = SimpleDirectoryReader(
+                    input_dir=str(input_dir),
+                    required_exts=[".pdf", ".txt", ".md", ".docx", ".csv", ".pptx"],
+                    recursive=True,
+                    filename_as_id=True,
                 )
+                documents = loader.load_data()
 
-                # Ingest into Qdrant (includes embedding with BGE-M3)
-                await pipeline.ingest_document(
-                    doc_content=file_content,
-                    doc_metadata={"filename": doc_file.name, "source": str(doc_file)},
-                )
+                # Convert to LightRAG format
+                lightrag_docs = []
+                for doc in documents:
+                    content = doc.get_content()
+                    if content and content.strip():
+                        lightrag_docs.append({
+                            "text": content,
+                            "id": doc.doc_id or doc.metadata.get("file_name", "unknown")
+                        })
 
-                logger.info(
-                    "document_indexed",
-                    filename=doc_file.name,
-                    chunks=len(chunks),
-                    progress=f"{docs_processed}/{total_docs}",
-                )
+                # Insert into LightRAG (entities + relationships + graph)
+                if lightrag_docs:
+                    graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
+                    logger.info("lightrag_indexing_complete", **graph_stats)
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': f'Indexed {graph_stats.get(\"stats\", {}).get(\"total_entities\", 0)} entities and {graph_stats.get(\"stats\", {}).get(\"total_relations\", 0)} relations into Neo4j'})}\n\n"
+                else:
+                    logger.warning("no_documents_for_graph_indexing")
 
-            await asyncio.sleep(0.01)  # Prevent blocking event loop
+            except Exception as e:
+                logger.error("lightrag_indexing_failed", error=str(e))
+                # Continue even if graph indexing fails (Qdrant indexing succeeded)
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': f'Graph indexing failed: {str(e)} (continuing with Qdrant only)'})}\n\n"
+
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': 'Indexing completed successfully'})}\n\n"
+        else:
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': '[DRY RUN] Skipped indexing'})}\n\n"
 
         # Phase 4: Validation
         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Validating index consistency...'})}\n\n"
@@ -164,10 +186,21 @@ async def reindex_progress_stream(
             collection_info = await qdrant_client.get_collection_info(collection_name)
             if collection_info:
                 point_count = collection_info.points_count
-                logger.info("validation_complete", collection=collection_name, points=point_count)
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'Validation successful: {point_count} chunks indexed'})}\n\n"
+                logger.info("qdrant_validation_complete", collection=collection_name, points=point_count)
             else:
                 raise VectorSearchError(f"Collection {collection_name} not found after re-indexing")
+
+            # Validate Neo4j graph
+            try:
+                lightrag_wrapper = await get_lightrag_wrapper_async()
+                graph_stats = await lightrag_wrapper.get_stats()
+                entity_count = graph_stats.get("entity_count", 0)
+                relationship_count = graph_stats.get("relationship_count", 0)
+                logger.info("neo4j_validation_complete", entities=entity_count, relationships=relationship_count)
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'Validation successful: Qdrant={point_count} chunks, Neo4j={entity_count} entities + {relationship_count} relations'})}\n\n"
+            except Exception as e:
+                logger.warning("neo4j_validation_failed", error=str(e))
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'Validation: Qdrant={point_count} chunks (Neo4j validation skipped)'})}\n\n"
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': '[DRY RUN] Validation skipped'})}\n\n"
 
