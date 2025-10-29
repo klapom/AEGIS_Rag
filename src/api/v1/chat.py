@@ -1064,3 +1064,128 @@ def _get_iso_timestamp() -> str:
     """
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
+
+
+# Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
+
+
+@router.post("/sessions/{session_id}/archive", status_code=status.HTTP_200_OK)
+async def archive_conversation(session_id: str) -> dict[str, Any]:
+    """Archive a conversation to Qdrant for semantic search.
+
+    Sprint 17 Feature 17.4 Phase 1: Manual Archive Trigger
+
+    This endpoint:
+    1. Loads conversation from Redis
+    2. Generates embedding from full conversation text
+    3. Stores in Qdrant collection (archived_conversations)
+    4. Removes from Redis (conversation is now archived)
+
+    Args:
+        session_id: Session ID to archive
+
+    Returns:
+        Archive confirmation with Qdrant point ID
+
+    Raises:
+        HTTPException: If archiving fails
+    """
+    logger.info("archive_conversation_requested", session_id=session_id)
+
+    try:
+        from src.components.profiling import get_conversation_archiver
+        from src.models.profiling import ArchiveConversationResponse
+
+        archiver = get_conversation_archiver()
+
+        # Archive conversation
+        point_id = await archiver.archive_conversation(
+            session_id=session_id,
+            user_id="default_user",  # TODO: Extract from auth context
+            reason="manual_archive",
+        )
+
+        response = ArchiveConversationResponse(
+            session_id=session_id,
+            status="success",
+            message=f"Conversation '{session_id}' archived successfully",
+            archived_at=_get_iso_timestamp(),
+            qdrant_point_id=point_id,
+        )
+
+        logger.info(
+            "conversation_archived_successfully",
+            session_id=session_id,
+            point_id=point_id,
+        )
+
+        return response.model_dump()
+
+    except Exception as e:
+        logger.error("archive_conversation_failed", session_id=session_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to archive conversation: {str(e)}",
+        ) from e
+
+
+@router.post("/search", status_code=status.HTTP_200_OK)
+async def search_archived_conversations(
+    request: "ConversationSearchRequest",
+) -> "ConversationSearchResponse":
+    """Search archived conversations using semantic similarity.
+
+    Sprint 17 Feature 17.4 Phase 1: Semantic Conversation Search
+
+    This endpoint:
+    1. Generates embedding from search query
+    2. Searches Qdrant archived_conversations collection
+    3. Filters to current user only
+    4. Returns conversation snippets with relevance scores
+
+    Args:
+        request: ConversationSearchRequest with query and filters
+
+    Returns:
+        ConversationSearchResponse with matching conversations
+
+    Raises:
+        HTTPException: If search fails
+    """
+    from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
+
+    # Validate request
+    if not isinstance(request, ConversationSearchRequest):
+        request = ConversationSearchRequest(**request)
+
+    logger.info(
+        "search_archived_conversations_requested",
+        query=request.query[:100],
+        limit=request.limit,
+    )
+
+    try:
+        from src.components.profiling import get_conversation_archiver
+
+        archiver = get_conversation_archiver()
+
+        # Search archived conversations
+        results = await archiver.search_archived_conversations(
+            request=request,
+            user_id="default_user",  # TODO: Extract from auth context
+        )
+
+        logger.info(
+            "search_archived_conversations_completed",
+            query=request.query[:100],
+            results_count=results.total_count,
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error("search_archived_conversations_failed", query=request.query, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search archived conversations: {str(e)}",
+        ) from e
