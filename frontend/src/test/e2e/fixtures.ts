@@ -252,3 +252,143 @@ export const sampleQueries = {
     'Query with special chars: @#$%^&*()',
   ],
 };
+
+// ============================================================================
+// Sprint 17 Feature 17.2 & 17.3: Conversation Persistence & Titles
+// ============================================================================
+
+/**
+ * Mock Sessions with Auto-Generated Titles
+ * Sprint 17 Feature 17.3
+ */
+export const mockSessionsWithTitles: SessionInfo[] = [
+  {
+    session_id: 'session-with-title-1',
+    message_count: 3,
+    last_activity: '2025-10-29T12:00:00Z',
+    created_at: '2025-10-29T10:00:00Z',
+    updated_at: '2025-10-29T12:00:00Z',
+    last_message: 'What is a knowledge graph?',
+    title: 'Knowledge Graphs Overview',
+  },
+  {
+    session_id: 'session-with-title-2',
+    message_count: 5,
+    last_activity: '2025-10-28T18:30:00Z',
+    created_at: '2025-10-28T18:00:00Z',
+    updated_at: '2025-10-28T18:30:00Z',
+    last_message: 'Explain RAG architecture',
+    title: 'RAG Architecture',
+  },
+  {
+    session_id: 'session-with-title-3',
+    message_count: 7,
+    last_activity: '2025-10-27T09:15:00Z',
+    created_at: '2025-10-27T08:00:00Z',
+    updated_at: '2025-10-27T09:15:00Z',
+    last_message: 'How does hybrid search work?',
+    title: 'Hybrid Search Explained',
+  },
+];
+
+/**
+ * Mock Conversation with Multi-Turn Context
+ * Sprint 17 Feature 17.2
+ */
+export const mockConversationWithMultiTurn: ConversationMessage[] = [
+  {
+    role: 'user',
+    content: 'What is RAG?',
+    timestamp: '2025-10-29T10:00:00Z',
+  },
+  {
+    role: 'assistant',
+    content: 'RAG stands for Retrieval-Augmented Generation. It combines information retrieval with language generation to provide accurate, grounded responses.',
+    timestamp: '2025-10-29T10:00:05Z',
+    sources: mockSources.slice(0, 2),
+  },
+  {
+    role: 'user',
+    content: 'How does it differ from traditional LLMs?',
+    timestamp: '2025-10-29T10:01:00Z',
+  },
+  {
+    role: 'assistant',
+    content: 'Traditional LLMs rely solely on their training data, while RAG systems retrieve relevant documents at query time, providing up-to-date and verifiable information.',
+    timestamp: '2025-10-29T10:01:08Z',
+    sources: mockSources.slice(1, 3),
+  },
+  {
+    role: 'user',
+    content: 'Can you give me a practical example?',
+    timestamp: '2025-10-29T10:02:30Z',
+  },
+  {
+    role: 'assistant',
+    content: 'A practical example is a company knowledge base chatbot. When you ask about a product feature, it retrieves the latest documentation, then generates an answer based on that specific content rather than potentially outdated training data.',
+    timestamp: '2025-10-29T10:02:38Z',
+    sources: mockSources,
+  },
+];
+
+/**
+ * Mock Title Generation Response
+ * Sprint 17 Feature 17.3
+ */
+export const mockTitleResponse = {
+  session_id: 'session-with-title-1',
+  title: 'Knowledge Graphs in RAG Systems',
+  generated_at: '2025-10-29T10:00:15Z',
+};
+
+// ============================================================================
+// Sprint 17 Feature 17.6: Admin Statistics API
+// ============================================================================
+
+/**
+ * Mock Complete Admin Statistics
+ * Sprint 17 Feature 17.6
+ */
+export const mockAdminStats = {
+  // Qdrant statistics
+  qdrant_total_chunks: 1523,
+  qdrant_collection_name: 'aegis_documents',
+  qdrant_vector_dimension: 1024,
+
+  // BM25 statistics
+  bm25_corpus_size: 342,
+
+  // Neo4j / LightRAG statistics
+  neo4j_total_entities: 856,
+  neo4j_total_relations: 1204,
+  neo4j_total_chunks: 1523,
+
+  // Redis conversation statistics
+  total_conversations: 15,
+
+  // System metadata
+  last_reindex_timestamp: '2025-10-29T08:30:00Z',
+  embedding_model: 'BAAI/bge-m3',
+};
+
+/**
+ * Mock Partial Admin Statistics (some services unavailable)
+ * Sprint 17 Feature 17.6
+ */
+export const mockAdminStatsPartial = {
+  // Required Qdrant statistics
+  qdrant_total_chunks: 450,
+  qdrant_collection_name: 'aegis_documents',
+  qdrant_vector_dimension: 1024,
+
+  // Optional fields (null when services unavailable)
+  bm25_corpus_size: null,
+  neo4j_total_entities: null,
+  neo4j_total_relations: null,
+  neo4j_total_chunks: null,
+  total_conversations: null,
+
+  // System metadata
+  last_reindex_timestamp: null,
+  embedding_model: 'BAAI/bge-m3',
+};

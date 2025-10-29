@@ -274,3 +274,145 @@ export function createMockEventSource() {
     removeEventListener() {}
   };
 }
+
+// ============================================================================
+// Sprint 17 Feature 17.2 & 17.3: Helper Functions for Conversation Persistence & Titles
+// ============================================================================
+
+/**
+ * Mock fetch for session with title
+ * Sprint 17 Feature 17.3
+ */
+export function mockFetchSessionWithTitle(sessionId: string, title: string) {
+  return mockFetchJSONSuccess({
+    session_id: sessionId,
+    title: title,
+    generated_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Mock fetch for title update (PATCH)
+ * Sprint 17 Feature 17.3
+ */
+export function mockFetchTitleUpdate(sessionId: string, newTitle: string) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        session_id: sessionId,
+        title: newTitle,
+        generated_at: new Date().toISOString(),
+      }),
+  });
+}
+
+/**
+ * Mock fetch for title generation failure
+ * Sprint 17 Feature 17.3
+ */
+export function mockFetchTitleGenerationError() {
+  return vi.fn().mockRejectedValue(new Error('Title generation service unavailable'));
+}
+
+// ============================================================================
+// Sprint 17 Feature 17.5: Helper Functions for Streaming Duplicate Fix
+// ============================================================================
+
+/**
+ * Create mock SSE stream with abort signal tracking
+ * Sprint 17 Feature 17.5
+ */
+export function createMockSSEStreamWithAbort(
+  chunks: ChatChunk[],
+  onAbort?: () => void
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  let index = 0;
+
+  return new ReadableStream({
+    async start(controller) {
+      // Simulate abort listening
+      const abortHandler = () => {
+        controller.close();
+        onAbort?.();
+      };
+
+      // In a real implementation, this would be tied to the abort signal
+      // For testing, we simulate the abort behavior
+    },
+    async pull(controller) {
+      if (index < chunks.length) {
+        const chunk = chunks[index];
+        const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
+        controller.enqueue(encoder.encode(sseMessage));
+        index++;
+      } else {
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      }
+    },
+  });
+}
+
+/**
+ * Track active SSE connections for duplicate detection
+ * Sprint 17 Feature 17.5
+ */
+export function createConnectionTracker() {
+  const connections = new Set<string>();
+
+  return {
+    add: (id: string) => connections.add(id),
+    remove: (id: string) => connections.delete(id),
+    has: (id: string) => connections.has(id),
+    count: () => connections.size,
+    clear: () => connections.clear(),
+  };
+}
+
+// ============================================================================
+// Sprint 17 Feature 17.6: Helper Functions for Admin Statistics API
+// ============================================================================
+
+/**
+ * Mock fetch for admin stats
+ * Sprint 17 Feature 17.6
+ */
+export function mockFetchAdminStats(stats: any) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve(stats),
+  });
+}
+
+/**
+ * Mock fetch for admin stats error
+ * Sprint 17 Feature 17.6
+ */
+export function mockFetchAdminStatsError(status: number = 500, message: string = 'Internal Server Error') {
+  return vi.fn().mockResolvedValue({
+    ok: false,
+    status,
+    text: () => Promise.resolve(message),
+  });
+}
+
+/**
+ * Mock fetch for partial admin stats (some services down)
+ * Sprint 17 Feature 17.6
+ */
+export function mockFetchPartialAdminStats() {
+  return mockFetchJSONSuccess({
+    qdrant_total_chunks: 450,
+    qdrant_collection_name: 'aegis_documents',
+    qdrant_vector_dimension: 1024,
+    bm25_corpus_size: null,
+    neo4j_total_entities: null,
+    neo4j_total_relations: null,
+    neo4j_total_chunks: null,
+    total_conversations: null,
+    last_reindex_timestamp: null,
+    embedding_model: 'BAAI/bge-m3',
+  });
+}
