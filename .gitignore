@@ -121,5 +121,8 @@ data/
 uploads/
 downloads/
 
+# LLM cache
+llm_cache/
+
 # Ollama models (optional - these are large)
 .ollama/
