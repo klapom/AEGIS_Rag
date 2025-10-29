@@ -175,7 +175,7 @@ jobs:
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
-    
+
     services:
       qdrant:
         image: qdrant/qdrant:v1.11.0
@@ -225,9 +225,21 @@ jobs:
           --health-retries 10
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # Remove large packages we don't need
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false  # Keep Docker images for our services
+          swap-storage: true
+
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -355,9 +367,20 @@ jobs:
     continue-on-error: true  # Don't block CI if Docker fails (works locally)
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: false  # Keep base images for Docker build
+          swap-storage: true
+
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
