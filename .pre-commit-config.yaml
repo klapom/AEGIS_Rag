@@ -138,6 +138,28 @@ repos:
         always_run: true
         pass_filenames: false
 
+  # 10. IMPORT VALIDATION (TD-42 Sprint 18)
+  - repo: local
+    hooks:
+      - id: check-imports
+        name: "🔍 TD-42: Validate Python Imports"
+        entry: python scripts/check_imports.py
+        language: system
+        types: [python]
+        pass_filenames: true
+        description: "Prevent import errors like Sprint 17 TD-41"
+
+  # 11. ROUTER PREFIX VALIDATION (TD-42 Sprint 18)
+  - repo: local
+    hooks:
+      - id: check-router-prefix
+        name: "🛣️ TD-42: Validate Router Prefixes"
+        entry: python scripts/check_router_prefix.py
+        language: system
+        types: [python]
+        pass_filenames: true
+        description: "Enforce router prefix conventions from TD-41 fix"
+
   # 10. IMPORT SORTING (via Ruff, aber nochmal explizit)
   - repo: https://github.com/PyCQA/isort
     rev: 5.13.2

@@ -1,6 +1,7 @@
 /**
  * SearchResultsPage E2E Tests
  * Sprint 15 Feature 15.4: End-to-end tests for search results page
+ * Sprint 18 TD-38 Phase 2: Modernized selectors (accessibility-first approach)
  *
  * Tests cover:
  * - Page rendering with query params
@@ -8,6 +9,8 @@
  * - New search submission
  * - StreamingAnswer integration
  * - Navigation flows
+ *
+ * TD-38: Migrated to accessibility-first selectors (getByRole, data-testid)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -56,7 +59,7 @@ describe('SearchResultsPage E2E Tests', () => {
         </MemoryRouter>
       );
 
-      // Check that the query is displayed (StreamingAnswer shows it as h1)
+      // TD-38: Query text is unique and safe to use
       expect(screen.getByText('What is RAG')).toBeInTheDocument();
     });
 
@@ -67,6 +70,7 @@ describe('SearchResultsPage E2E Tests', () => {
         </MemoryRouter>
       );
 
+      // TD-38: Query text is unique
       expect(screen.getByText('knowledge graph')).toBeInTheDocument();
     });
 
@@ -77,7 +81,7 @@ describe('SearchResultsPage E2E Tests', () => {
         </MemoryRouter>
       );
 
-      // Mode is passed to StreamingAnswer (checked via query display)
+      // TD-38: Query text "test" is unambiguous in this context
       expect(screen.getByText('test')).toBeInTheDocument();
     });
 
@@ -88,6 +92,7 @@ describe('SearchResultsPage E2E Tests', () => {
         </MemoryRouter>
       );
 
+      // TD-38: Query text is unique
       expect(screen.getByText('test')).toBeInTheDocument();
     });
 
@@ -166,8 +171,8 @@ describe('SearchResultsPage E2E Tests', () => {
 
       const searchInput = screen.getByPlaceholderText(/Neue Suche/i);
 
-      // Change to graph mode
-      const graphChip = screen.getByText('Graph');
+      // TD-38: Change to graph mode using accessible selector
+      const graphChip = screen.getByRole('button', { name: /Graph Mode/i });
       fireEvent.click(graphChip);
 
       fireEvent.change(searchInput, { target: { value: 'another test' } });
