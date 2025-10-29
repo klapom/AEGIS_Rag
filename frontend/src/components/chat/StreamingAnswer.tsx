@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { streamChat, type ChatChunk } from '../../api/chat';
+import { streamChat, generateConversationTitle, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
 import { SourceCardsScroll } from './SourceCardsScroll';
 
@@ -21,15 +21,17 @@ interface StreamingAnswerProps {
   mode: string;
   sessionId?: string;
   onSessionIdReceived?: (sessionId: string) => void;
+  onTitleGenerated?: (title: string) => void;  // Sprint 17 Feature 17.3
 }
 
-export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived }: StreamingAnswerProps) {
+export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated }: StreamingAnswerProps) {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
   const [isStreaming, setIsStreaming] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<string>('');
+  const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
 
   useEffect(() => {
     // Sprint 17 Feature 17.5: Fix duplicate streaming caused by React StrictMode
@@ -78,6 +80,28 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived }:
     };
   }, [query, mode, sessionId]);
 
+  // Sprint 17 Feature 17.3: Auto-trigger title generation after first answer
+  useEffect(() => {
+    const triggerTitleGeneration = async () => {
+      // Only trigger if streaming is complete, we have an answer, and we have a session ID
+      if (!isStreaming && answer && currentSessionId && onTitleGenerated) {
+        try {
+          // Check if this might be the first message (simple heuristic: answer length > 50 chars)
+          if (answer.length > 50) {
+            const response = await generateConversationTitle(currentSessionId);
+            onTitleGenerated(response.title);
+            console.log('Title auto-generated:', response.title);
+          }
+        } catch (err) {
+          // Silently fail - title generation is non-critical
+          console.warn('Failed to auto-generate title:', err);
+        }
+      }
+    };
+
+    triggerTitleGeneration();
+  }, [isStreaming, answer, currentSessionId, onTitleGenerated]);
+
   const handleChunk = (chunk: ChatChunk) => {
     switch (chunk.type) {
       case 'metadata':
@@ -86,8 +110,11 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived }:
           setIntent(chunk.data.intent);
         }
         // Sprint 17 Feature 17.2: Notify parent of session_id for follow-up questions
-        if (chunk.data?.session_id && onSessionIdReceived) {
-          onSessionIdReceived(chunk.data.session_id);
+        if (chunk.data?.session_id) {
+          setCurrentSessionId(chunk.data.session_id);
+          if (onSessionIdReceived) {
+            onSessionIdReceived(chunk.data.session_id);
+          }
         }
         break;
 

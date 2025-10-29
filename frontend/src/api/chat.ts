@@ -174,3 +174,59 @@ export async function deleteConversationHistory(sessionId: string): Promise<void
 export async function deleteSession(sessionId: string): Promise<void> {
   return deleteConversationHistory(sessionId);
 }
+
+// Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+
+export interface TitleResponse {
+  session_id: string;
+  title: string;
+  generated_at: string;
+}
+
+/**
+ * Generate conversation title automatically using LLM
+ * Sprint 17 Feature 17.3
+ *
+ * @param sessionId Session ID to generate title for
+ * @returns TitleResponse with generated title
+ */
+export async function generateConversationTitle(sessionId: string): Promise<TitleResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/generate-title`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Update conversation title manually
+ * Sprint 17 Feature 17.3
+ *
+ * @param sessionId Session ID to update
+ * @param title New title
+ * @returns TitleResponse with updated title
+ */
+export async function updateConversationTitle(sessionId: string, title: string): Promise<TitleResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}

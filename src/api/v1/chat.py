@@ -255,6 +255,7 @@ class SessionInfo(BaseModel):
     message_count: int
     last_activity: str | None = None
     created_at: str | None = None
+    title: str | None = None  # Sprint 17 Feature 17.3: Auto-generated title
 
 
 class SessionListResponse(BaseModel):
@@ -585,12 +586,13 @@ async def list_sessions() -> SessionListResponse:
                     if isinstance(conv_data, dict) and "value" in conv_data:
                         conv_data = conv_data["value"]
 
-                    # Create SessionInfo
+                    # Create SessionInfo (Sprint 17 Feature 17.3: Include title)
                     sessions.append(SessionInfo(
                         session_id=session_id,
                         message_count=conv_data.get("message_count", 0),
                         last_activity=conv_data.get("updated_at"),
                         created_at=conv_data.get("created_at"),
+                        title=conv_data.get("title"),  # Auto-generated or user-edited title
                     ))
             except Exception as e:
                 logger.warning("failed_to_retrieve_session", session_id=session_id, error=str(e))
@@ -712,6 +714,231 @@ async def delete_conversation_history(session_id: str) -> SessionDeleteResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete conversation history: {str(e)}",
+        ) from e
+
+
+# Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+
+
+class TitleGenerationRequest(BaseModel):
+    """Request model for title generation."""
+
+    session_id: str = Field(..., description="Session ID to generate title for")
+
+
+class TitleResponse(BaseModel):
+    """Response model for title generation."""
+
+    session_id: str = Field(..., description="Session ID")
+    title: str = Field(..., description="Generated conversation title")
+    generated_at: str = Field(..., description="Timestamp when title was generated")
+
+
+class UpdateTitleRequest(BaseModel):
+    """Request model for updating conversation title."""
+
+    title: str = Field(..., min_length=1, max_length=100, description="New conversation title")
+
+
+@router.post("/sessions/{session_id}/generate-title", response_model=TitleResponse)
+async def generate_conversation_title(session_id: str) -> TitleResponse:
+    """Auto-generate concise conversation title from first Q&A.
+
+    Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+
+    Uses Ollama LLM to generate a 3-5 word title from the first question-answer exchange
+    in a conversation. The title is stored in Redis conversation metadata.
+
+    Args:
+        session_id: Session ID to generate title for
+
+    Returns:
+        TitleResponse with generated title
+
+    Raises:
+        HTTPException: If session not found or title generation fails
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Load conversation
+        conversation_data = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+        if not conversation_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation '{session_id}' not found",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(conversation_data, dict) and "value" in conversation_data:
+            conversation_data = conversation_data["value"]
+
+        messages = conversation_data.get("messages", [])
+
+        # Need at least 2 messages (user + assistant)
+        if len(messages) < 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Conversation must have at least one Q&A exchange to generate title",
+            )
+
+        # Get first Q&A pair
+        first_user_msg = None
+        first_assistant_msg = None
+
+        for msg in messages[:4]:  # Check first 4 messages to find the first Q&A pair
+            if msg.get("role") == "user" and not first_user_msg:
+                first_user_msg = msg.get("content", "")
+            elif msg.get("role") == "assistant" and not first_assistant_msg and first_user_msg:
+                first_assistant_msg = msg.get("content", "")
+                break
+
+        if not first_user_msg or not first_assistant_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not find first Q&A pair in conversation",
+            )
+
+        # Generate title using Ollama
+        coordinator = get_coordinator()
+
+        # Truncate messages to avoid token limits
+        user_msg_short = first_user_msg[:200]
+        assistant_msg_short = first_assistant_msg[:300]
+
+        title_prompt = f"""Generate a very concise 3-5 word title for this conversation.
+The title should capture the main topic.
+Only return the title, nothing else.
+
+Question: {user_msg_short}
+Answer: {assistant_msg_short}
+
+Title:"""
+
+        try:
+            # Use coordinator's LLM to generate title
+            from src.core.config import settings
+
+            title_result = await coordinator.llm.ainvoke(
+                title_prompt, temperature=0.3, max_tokens=20
+            )
+
+            # Extract title from result
+            if hasattr(title_result, "content"):
+                generated_title = title_result.content.strip()
+            elif isinstance(title_result, str):
+                generated_title = title_result.strip()
+            else:
+                generated_title = str(title_result).strip()
+
+            # Clean up title (remove quotes, extra whitespace)
+            generated_title = generated_title.strip('"\'').strip()
+
+            # Fallback if title is empty or too long
+            if not generated_title or len(generated_title) > 100:
+                generated_title = user_msg_short[:50] + "..."
+
+        except Exception as llm_error:
+            logger.warning(
+                "title_generation_failed_fallback_to_question",
+                session_id=session_id,
+                error=str(llm_error),
+            )
+            # Fallback: Use first few words of question
+            generated_title = " ".join(first_user_msg.split()[:5])
+
+        # Save title to conversation metadata
+        conversation_data["title"] = generated_title
+        conversation_data["title_generated_at"] = _get_iso_timestamp()
+
+        await redis_memory.store(
+            key=session_id,
+            value=conversation_data,
+            ttl_seconds=604800,  # 7 days
+            namespace="conversation",
+        )
+
+        logger.info("conversation_title_generated", session_id=session_id, title=generated_title)
+
+        return TitleResponse(
+            session_id=session_id, title=generated_title, generated_at=_get_iso_timestamp()
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("title_generation_failed", session_id=session_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate title: {str(e)}",
+        ) from e
+
+
+@router.patch("/sessions/{session_id}", response_model=TitleResponse)
+async def update_conversation_title(session_id: str, request: UpdateTitleRequest) -> TitleResponse:
+    """Update conversation title manually.
+
+    Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+
+    Allows users to manually edit conversation titles. The new title is stored
+    in Redis conversation metadata.
+
+    Args:
+        session_id: Session ID to update
+        request: UpdateTitleRequest with new title
+
+    Returns:
+        TitleResponse with updated title
+
+    Raises:
+        HTTPException: If session not found or update fails
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Load conversation
+        conversation_data = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+        if not conversation_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation '{session_id}' not found",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(conversation_data, dict) and "value" in conversation_data:
+            conversation_data = conversation_data["value"]
+
+        # Update title
+        conversation_data["title"] = request.title
+        conversation_data["title_updated_at"] = _get_iso_timestamp()
+
+        # Save back to Redis
+        await redis_memory.store(
+            key=session_id,
+            value=conversation_data,
+            ttl_seconds=604800,  # 7 days
+            namespace="conversation",
+        )
+
+        logger.info("conversation_title_updated", session_id=session_id, new_title=request.title)
+
+        return TitleResponse(
+            session_id=session_id, title=request.title, generated_at=_get_iso_timestamp()
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("title_update_failed", session_id=session_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update title: {str(e)}",
         ) from e
 
 

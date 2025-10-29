@@ -72,6 +72,7 @@ export interface SessionInfo {
   created_at?: string;
   updated_at?: string;
   last_message?: string;
+  title?: string; // Sprint 17 Feature 17.3: Auto-generated or user-edited title
 }
 
 export interface SessionListResponse {
