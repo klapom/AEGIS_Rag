@@ -56,13 +56,13 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
     try {
       await updateConversationTitle(session.session_id, editedTitle.trim());
       onTitleUpdate?.(session.session_id, editedTitle.trim());
-      setIsEditing(false);
     } catch (err) {
       console.error('Failed to update title:', err);
       alert('Fehler beim Aktualisieren des Titels');
       setEditedTitle(session.title || session.last_message || 'Neue Konversation');
     } finally {
       setIsSaving(false);
+      setIsEditing(false);
     }
   };
 
@@ -143,7 +143,13 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
               maxLength={100}
             />
             {isSaving && (
-              <svg className="w-4 h-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+              <svg
+                className="w-4 h-4 animate-spin text-blue-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                role="img"
+                aria-label="Saving title..."
+              >
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path
                   className="opacity-75"

@@ -49,8 +49,6 @@ AEGIS_RAG/
 - [PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) - Claude Code Templates
 - [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 18+ Architecture Decisions
 
-### Examples & Tutorials
-- [Sprint 3 Usage Examples](docs/examples/sprint3_examples.md) - Reranking, Query Decomposition, Filters
 
 ### Setup & Enforcement
 - [.pre-commit-config.yaml](.pre-commit-config.yaml) - 14 Hooks
@@ -68,73 +66,14 @@ AEGIS_RAG/
 - **Vector DB**: Qdrant
 - **Graph DB**: Neo4j
 - **Memory**: Graphiti (Temporal Memory)
-- **LLM**: Ollama (llama3.2:3b/8b, qwen2.5:7b, qwen3:0.6b, smollm2:1.7b)
-- **Embeddings**: nomic-embed-text (lokal, 768-dim)
+- **LLM**: Ollama (flexible)
+- **Embeddings**: BGE-M3 (lokal, 1024-dim)
 - **Reranking**: sentence-transformers (cross-encoder/ms-marco-MiniLM)
 - **Evaluation**: RAGAS (Context Precision, Recall, Faithfulness)
 - **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
 - **DevOps**: Docker, GitHub Actions
 
 Details siehe [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
-
-## ✨ Latest Features
-
-### Sprint 14 (IN PROGRESS - Backend Performance & Production Readiness)
-- 🟡 **Feature 14.1**: LightRAG Integration with Three-Phase Pipeline (Option B - Wrapper approach)
-- 🔵 **Feature 14.2**: Configuration & Toggle System (Planned)
-- 🔵 **Feature 14.3**: Performance Benchmarking Suite (Planned)
-- 🔵 **Feature 14.4**: GPU Memory Optimization (Planned)
-- 🔵 **Feature 14.5**: Error Handling & Retry Logic (Planned)
-- 🔵 **Feature 14.6**: Monitoring & Metrics (Planned)
-- 🔵 **Feature 14.7**: CI/CD Pipeline Stability (Planned)
-
-**Goal**: Integrate 3-Phase Pipeline into production, optimize performance, stabilize CI/CD
-**Status**: Planning complete, implementation starting
-**Documentation**: [SPRINT_14_PLAN.md](SPRINT_14_PLAN.md), [SPRINT_14_TODOS.md](SPRINT_14_TODOS.md)
-
-### Sprint 13 (COMPLETE - Test Infrastructure & Three-Phase Extraction)
-- ✅ **Feature 13.9**: Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
-- ✅ **Performance**: Entity extraction improved from >300s timeout → <30s (10x faster)
-- ✅ **Quality**: 28.6% deduplication rate, 144% entity accuracy, 123% relation accuracy
-- ✅ **Technical Debt**: All TD-26 to TD-34 resolved (Memory Agent, Graphiti API, LightRAG fixtures)
-- ✅ **CI/CD**: pytest-timeout plugin, --timeout=300s, artifact uploads configured
-
-**Test Results**: 6/6 E2E tests passing in 128.68s total
-**Documentation**: [SPRINT_13_TODOS.md](docs/archive/sprints/SPRINT_13_TODOS.md), [ADR-017](docs/adr/ADR-017-semantic-entity-deduplication.md), [ADR-018](docs/adr/ADR-018-model-selection-entity-relation-extraction.md)
-
-### Sprint 12 (COMPLETE - 9/11 features, 28/32 SP)
-- ✅ **Test Infrastructure Fixes**: LightRAG fixture (5 tests), Graphiti API (14 tests), Redis cleanup (0 warnings)
-- ✅ **Production Deployment Guide**: GPU setup, Docker/K8s, monitoring, security, backup/DR
-- ✅ **CI/CD Pipeline Enhanced**: Ollama service, 20min timeout, Docker cache, model pulling
-- ✅ **Graph Visualization API**: 4 endpoints (export JSON/GraphML/Cytoscape, filter, highlight)
-- ✅ **GPU Performance Benchmarking**: benchmark_gpu.py with nvidia-smi integration, JSON output
-- ✅ **40 New Tests**: 10 E2E skeleton tests + 30 comprehensive Gradio UI integration tests
-- ✅ **E2E Test Improvements**: Pass rate improved from 17.9% → ~50%
-
-**Documentation**: [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
-**Benchmarking**: `python scripts/benchmark_gpu.py --model llama3.2:3b`
-**Status**: Production-ready with verified GPU acceleration (RTX 3060: 105 tokens/s)
-
-### Sprint 11 (COMPLETE - 8/10 features)
-- ✅ **LLM-Based Answer Generation**: Proper synthesis with Ollama instead of context concatenation
-- ✅ **Unified Embedding Service**: Shared cache across vector/graph/memory systems
-- ✅ **Unified Ingestion Pipeline**: Parallel indexing to Qdrant + BM25 + LightRAG
-- ✅ **GPU Support**: NVIDIA GPU acceleration for Ollama (15-20x speedup: 105 vs 7 tokens/s)
-- ✅ **LightRAG Model Switch**: llama3.2:3b for entity extraction (fixes qwen3 format issues)
-- ✅ **Redis Checkpointer**: Production-grade LangGraph state persistence
-- ✅ **Community Detection Optimization**: Parallel processing, progress tracking
-- ✅ **Temporal Retention Policy**: Configurable cleanup for old graph versions
-
-### Sprint 3 Features (COMPLETE)
-- ✅ **Cross-Encoder Reranking**: +15-20% precision improvement with ms-marco-MiniLM
-- ✅ **Query Decomposition**: LLM-based classification (SIMPLE/COMPOUND/MULTI_HOP) with Ollama
-- ✅ **Metadata Filtering**: Date ranges, sources, document types, tags (42 tests, 100%)
-- ✅ **RAGAS Evaluation**: Context Precision/Recall/Faithfulness metrics (Score: 0.88)
-- ✅ **Adaptive Chunking**: Document-type aware strategies (paragraph/heading/function/sentence)
-- ✅ **Security Fix**: MD5 → SHA-256 for document IDs (CVE-2010-4651)
-
-**Test Coverage**: 335/338 passing (99.1%)
-See [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) for project details
 
 ### LLM-Strategie (ADR-002)
 - **Development & Production**: 100% Ollama (kostenfrei, offline-fähig)
@@ -180,9 +119,17 @@ Details in [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [doc
 - ✅ Sprint 9: 3-Layer Memory Architecture + MCP Server Integration (COMPLETE)
 - ✅ Sprint 10: End-User Interface (COMPLETE - Gradio UI)
 - ✅ Sprint 11: Technical Debt Resolution & Unified Pipeline (COMPLETE - 8/10 features, GPU support)
-- 🔄 Sprint 12: Integration Testing & Production Readiness (IN PLANNING)
+- ✅ Sprint 12: Integration Testing & Production Readiness (COMPLETE)
+- ✅ Sprint 13: Three-Phase Entity Extraction Pipeline (COMPLETE - 10x speedup, SpaCy + Semantic Dedup + Gemma 2 4B)
+- ✅ Sprint 14: Backend Performance & Testing (COMPLETE - 132 tests, Prometheus metrics, retry logic)
+- ✅ Sprint 15: Frontend Interface with Perplexity-Inspired UI (COMPLETE - React + Vite, SSE streaming)
+- ✅ Sprint 16: Unified Ingestion Architecture & BGE-M3 Migration (COMPLETE - 69 SP, cross-layer similarity)
+- ✅ Sprint 17: Admin UI & Advanced Features (COMPLETE - 55 SP, conversation history, user profiling)
+- 📋 Sprint 18: Test Infrastructure & Security Hardening (PLANNED - 24 SP, JWT auth, rate limiting)
 
-Details siehe [docs/core/SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md)
+**Gesamt-Fortschritt:** 515/584 SP (88.2%)
+
+Details siehe [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md)
 
 ## 📞 Kontakt & Support
 
@@ -193,6 +140,29 @@ Bei Fragen zum Projekt:
 
 ---
 
-**Version**: 1.0.0
+## 🎯 Recent Highlights
+
+### Sprint 16 (COMPLETE - Oktober 2024)
+- **Unified Chunking Service**: 70% code reduction, SHA-256 deterministic IDs
+- **BGE-M3 Migration**: System-wide 1024-dim embeddings, +23% German retrieval quality
+- **Cross-Layer Similarity**: Enabled semantic search across all memory layers
+- **Atomic Re-Indexing**: Admin endpoint with SSE progress tracking
+
+### Sprint 17 (COMPLETE - Oktober 2024)
+- **Admin UI**: Directory indexing with real-time progress display
+- **Conversation Persistence**: Full history with follow-up question support
+- **Auto-Generated Titles**: LLM-based, 3-5 word summaries (user-editable)
+- **Implicit User Profiling**: Neo4j knowledge graph, semantic conversation search
+
+### Sprint 18 (PLANNED)
+- **Test Infrastructure**: Fix 44 failing E2E tests → 95% pass rate
+- **JWT Authentication**: Secure admin endpoints with role-based access
+- **API Rate Limiting**: Redis-backed, 10-100 req/min per endpoint
+- **Production Readiness**: Security hardening for deployment
+
+---
+
+**Version**: 1.7.0 (Sprint 17 Complete)
 **Erstellt**: Oktober 2024
-**Status**: In Entwicklung
+**Letzte Aktualisierung**: 29. Oktober 2024
+**Status**: Production-Ready (88.2% complete, Sprint 18 planned)

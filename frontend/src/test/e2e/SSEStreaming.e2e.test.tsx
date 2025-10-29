@@ -676,8 +676,11 @@ describe('SSE Streaming E2E Tests', () => {
         </MemoryRouter>
       );
 
-      // During new stream, old answer should be cleared
-      expect(screen.queryByText(/This is a test answer/i)).toBeInTheDocument();
+      // TD-38: Wait for new stream to start and verify the answer persists (mock returns same answer)
+      // Since we're using mockFetchSSESuccess(), it returns the same mock answer for both queries
+      await waitFor(() => {
+        expect(screen.getByText(/This is a test answer/i)).toBeInTheDocument();
+      });
     });
   });
 });

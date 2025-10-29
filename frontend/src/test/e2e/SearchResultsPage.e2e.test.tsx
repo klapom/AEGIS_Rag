@@ -208,8 +208,8 @@ describe('SearchResultsPage E2E Tests', () => {
         </MemoryRouter>
       );
 
-      // Click memory mode chip
-      const memoryChip = screen.getByText('Memory');
+      // TD-38: Click memory mode chip using accessible selector
+      const memoryChip = screen.getByRole('button', { name: /Memory Mode/i });
       fireEvent.click(memoryChip);
 
       const searchInput = screen.getByPlaceholderText(/Neue Suche/i);
