@@ -48,7 +48,7 @@ async def save_conversation_turn(
     user_message: str,
     assistant_message: str,
     intent: str | None = None,
-    sources: list[SourceDocument] | None = None,
+    sources: list["SourceDocument"] | None = None,
 ) -> bool:
     """Save a conversation turn to Redis.
 

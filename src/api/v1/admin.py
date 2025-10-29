@@ -10,6 +10,7 @@ from typing import AsyncGenerator
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
 
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
@@ -305,9 +306,6 @@ async def reindex_all_documents(
 # ============================================================================
 
 
-from pydantic import BaseModel, Field
-
-
 class SystemStats(BaseModel):
     """System statistics for admin dashboard.
 
@@ -475,3 +473,4 @@ async def get_system_stats() -> SystemStats:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system statistics: {str(e)}",
         ) from e
+
