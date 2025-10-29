@@ -1,7 +1,8 @@
 # Sprint 17: Admin UI & Advanced Features
-**Status:** 📋 PLANNED (for after Sprint 16)
+**Status:** 🚧 IN PROGRESS (started 2025-10-29)
 **Goal:** Admin UI for re-indexing management and advanced frontend features
 **Duration:** 5-7 days (estimated)
+**Completed:** 4/6 features (24 SP / 55 SP total - 44% complete)
 
 ---
 
@@ -81,45 +82,52 @@ export function AdminPage() {
 ---
 
 ### Feature 17.2: Conversation History Fixes (8 SP)
-**Status:** 📋 PLANNED
+**Status:** ✅ COMPLETED (2025-10-29)
+**Commit:** `7346801` - fix(sprint-17): Fix duplicate streaming & implement conversation persistence
 **Duration:** 1 day
 **Priority:** HIGH (User-reported bugs)
 
 **Problem:**
-Two critical issues prevent proper conversation management:
-1. **Conversations not saving**: Messages are never persisted to Redis after processing
-2. **Follow-up questions don't work**: Each search creates a new session instead of reusing existing session_id
+Three critical issues prevented proper conversation management:
+1. **Conversations not saving**: Messages were never persisted to Redis after processing
+2. **Follow-up questions don't work**: Each search created a new session instead of reusing existing session_id
+3. **Empty session list**: `list_sessions()` returned hardcoded empty list
 
-**Root Causes:**
-- `src/api/v1/chat.py` (Lines 273-398): `chat_stream()` never calls `memory_api.store()` to save messages
-- `src/api/v1/chat.py` (Lines 419-430): `list_sessions()` returns hardcoded empty list (TODO not implemented)
-- `frontend/src/pages/SearchResultsPage.tsx` (Lines 20-22): `handleNewSearch()` never includes `session_id` in URL
-- Frontend creates NEW session for every search, losing conversation context
+**Root Causes Identified:**
+- `src/api/v1/chat.py` (Lines 273-398): `chat_stream()` never called `memory_api.store()` to save messages
+- `src/api/v1/chat.py` (Lines 419-430): `list_sessions()` returned hardcoded empty list (TODO not implemented)
+- `frontend/src/pages/SearchResultsPage.tsx` (Lines 20-22): `handleNewSearch()` never included `session_id` in URL
+- Frontend created NEW session for every search, losing conversation context
 
-**Solution:**
-Fix backend persistence and frontend session management.
+**Solution Implemented:**
+Fixed backend persistence and frontend session management.
 
 **Tasks:**
-- [ ] **Backend: Add conversation persistence**
-  - Add `memory_api.store()` call after streaming completes in `chat_stream()`
-  - Add `memory_api.store()` call in `chat()` endpoint
-  - Store both user question and assistant answer
-  - Save to Redis with key pattern: `conversation:{session_id}`
-- [ ] **Backend: Implement session listing**
-  - Replace TODO in `list_sessions()` with actual Redis scan
-  - Query Redis keys matching `conversation:*` pattern
-  - Extract session metadata (last_message, created_at, message_count)
-  - Return populated SessionListResponse
-- [ ] **Frontend: Preserve session_id across searches**
-  - Modify `handleNewSearch()` to include current `session_id` in URL
-  - Add state management to track active session_id
-  - Pass session_id to StreamingAnswer component
-  - Ensure follow-up questions reuse same session
-- [ ] **Frontend: Load conversation history**
-  - Fetch previous messages when session_id exists
-  - Display conversation context before new answer
-- [ ] Add integration tests for conversation persistence
-- [ ] Add E2E test for follow-up questions
+- [x] **Backend: Add conversation persistence**
+  - Added `save_conversation_turn()` helper function
+  - Added persistence call after streaming completes in `chat_stream()`
+  - Added persistence call in `chat()` endpoint
+  - Stores both user question and assistant answer
+  - Saves to Redis with key pattern: `conversation:{session_id}`, 7-day TTL
+- [x] **Backend: Implement session listing**
+  - Replaced TODO in `list_sessions()` with actual Redis SCAN
+  - Queries Redis keys matching `conversation:*` pattern
+  - Extracts session metadata (last_activity, created_at, message_count)
+  - Returns populated SessionListResponse, sorted by last_activity
+- [x] **Frontend: Preserve session_id across searches**
+  - Modified `handleNewSearch()` to include current `session_id` in URL
+  - Added state management to track activeSessionId
+  - Passes session_id to StreamingAnswer component
+  - Follow-up questions now reuse same session
+- [x] **Frontend: Session ID callback**
+  - Added `onSessionIdReceived` callback to StreamingAnswer
+  - Captures session_id from metadata for new conversations
+- [x] **Backend: Implement get_conversation_history**
+  - Retrieves conversation from Redis by session_id
+  - Returns 404 if session not found
+  - Extracts messages and metadata
+- [ ] Add integration tests for conversation persistence (TODO)
+- [ ] Add E2E test for follow-up questions (TODO)
 
 **Deliverables:**
 ```python
@@ -169,7 +177,8 @@ const handleNewSearch = (newQuery: string, newMode: SearchMode) => {
 ---
 
 ### Feature 17.3: Auto-Generated Conversation Titles (5 SP)
-**Status:** 📋 PLANNED
+**Status:** ✅ COMPLETED (2025-10-29)
+**Commit:** `e30a5e2` - feat(sprint-17): Feature 17.3 - Auto-generated conversation titles with inline editing
 **Duration:** 0.5 day
 **Priority:** MEDIUM (User-requested feature)
 
@@ -183,26 +192,31 @@ Conversations in sidebar show generic IDs or timestamps instead of meaningful ti
 Auto-generate concise conversation title after first answer using LLM, with user edit capability.
 
 **Tasks:**
-- [ ] **Backend: Title generation endpoint**
-  - Add `POST /api/v1/chat/sessions/{session_id}/generate-title` endpoint
-  - Use Ollama LLM to generate 3-5 word title from first Q&A exchange
-  - Prompt: "Generate a concise 3-5 word title for this conversation: Q: {question} A: {answer}"
-  - Store title in Redis conversation metadata
-- [ ] **Backend: Title update endpoint**
-  - Add `PATCH /api/v1/chat/sessions/{session_id}` endpoint
-  - Allow user to update conversation title
-  - Validate title length (max 50 chars)
-- [ ] **Frontend: Auto-trigger title generation**
-  - After first answer streams, call generate-title endpoint
-  - Update session in sidebar with new title
-  - Handle loading state during generation
-- [ ] **Frontend: Editable titles**
-  - Add inline edit functionality to SessionItem component
-  - Click to edit → Input field → Save/Cancel buttons
-  - Call PATCH endpoint on save
+- [x] **Backend: Title generation endpoint**
+  - Added `POST /api/v1/chat/sessions/{session_id}/generate-title` endpoint
+  - Uses Ollama LLM to generate 3-5 word title from first Q&A exchange
+  - Prompt: "Generate a very concise 3-5 word title for this conversation..."
+  - Stores title in Redis conversation metadata with timestamp
+- [x] **Backend: Title update endpoint**
+  - Added `PATCH /api/v1/chat/sessions/{session_id}` endpoint
+  - Allows user to update conversation title
+  - Validates title length (1-100 chars)
+  - Updates Redis with new title and timestamp
+- [x] **Frontend: Auto-trigger title generation**
+  - Auto-triggers after first answer completes (answer length > 50 chars)
+  - Calls generate-title endpoint when streaming ends
+  - Updates session in sidebar via onTitleGenerated callback
+  - Silently fails if generation fails (non-critical)
+- [x] **Frontend: Editable titles**
+  - Added inline edit functionality to SessionItem component
+  - Click to edit → Input field with auto-focus/select
+  - Save on blur or Enter key, cancel on Escape
+  - Calls PATCH endpoint on save with loading spinner
+  - Hover effect indicates editability
   - Optimistic UI update
-- [ ] Add caching for generated titles (avoid regeneration)
-- [ ] Add tests for title generation and editing
+- [x] Extended SessionInfo model with optional title field
+- [x] Updated list_sessions() to include title in response
+- [ ] Add tests for title generation and editing (deferred to E2E test phase)
 
 **Deliverables:**
 ```python
@@ -701,121 +715,113 @@ System: [Technische Details, Annahme von Vorwissen]
 ---
 
 ### Feature 17.5: Fix Duplicate Answer Streaming (3 SP)
-**Status:** 📋 PLANNED
+**Status:** ✅ COMPLETED (2025-10-29)
+**Commit:** `7346801` - fix(sprint-17): Fix duplicate streaming & implement conversation persistence
 **Duration:** 0.5 day
 **Priority:** HIGH (User-reported bug)
 
 **Problem:**
-Streaming answers are duplicated - the same answer appears twice in the frontend.
+Streaming answers were duplicated - the same answer appeared twice in the frontend.
 
 **User Report:**
 > "Die Ausgabe nach der Frage enthält die gleiche Antwort doppelt: Basierend auf dem bereitgestellten Kontext [...] [repeated twice]"
 
-**Root Cause Analysis:**
-Likely causes:
-1. **Double streaming**: SSE endpoint sends chunks twice
-2. **Frontend double-rendering**: StreamingAnswer component renders twice
-3. **State management**: Answer appended to state twice
-4. **Event listener duplication**: Multiple SSE connections to same stream
+**Root Cause Identified:**
+React StrictMode intentionally double-mounts components in development, causing `useEffect` to fire twice and create TWO SSE connections for the same query.
+
+**Evidence:**
+Backend logs confirmed duplicate requests arriving within milliseconds:
+```
+06:18:56 session_id=34991fde-7d81-421a-a4d7-9dec4f19343a query="welche dokumente hast du geladen"
+06:18:56 session_id=727d9444-8c6e-4c1f-b796-b96674e5a7c3 query="welche dokumente hast du geladen"
+```
+→ Same query, different session_ids, same timestamp
 
 **Investigation Tasks:**
-- [ ] Check `src/api/v1/chat.py` streaming logic (lines 273-398)
-  - Verify `yield` statements are not duplicated
-  - Check if streaming loop runs twice
-- [ ] Check `frontend/src/components/chat/StreamingAnswer.tsx`
-  - Verify useEffect dependencies
-  - Check if stream is consumed twice
-  - Look for double event listeners
-- [ ] Check browser network tab
-  - Are there 2 SSE connections?
-  - Is same data sent twice in one connection?
+- [x] Checked browser network tab - Found 2 SSE connections per request
+- [x] Identified React StrictMode as root cause
+- [x] Confirmed useEffect lacked cleanup function to abort connections
+- [x] Verified streaming logic was correct, problem was double mounting
 
-**Solution:**
-Fix streaming deduplication based on root cause.
+**Solution Implemented:**
+Added AbortController to cancel SSE connections on component unmount.
 
-**Possible Fixes:**
+**Implementation:**
 
-**Scenario 1: Backend sends twice**
-```python
-# src/api/v1/chat.py (check around line 350-370)
+**Fix Applied:**
 
-async def chat_stream(...):
-    # BAD: Double yield
-    for chunk in agent_response:
-        yield f"data: {chunk}\n\n"
-        yield f"data: {chunk}\n\n"  # Remove this!
-
-    # GOOD: Single yield
-    for chunk in agent_response:
-        yield f"data: {chunk}\n\n"
-```
-
-**Scenario 2: Frontend processes twice**
 ```typescript
 // frontend/src/components/chat/StreamingAnswer.tsx
-
 useEffect(() => {
-    const processStream = async () => {
-        for await (const chunk of streamChat(...)) {
-            setAnswer(prev => prev + chunk);  // Should only append once
+    // Sprint 17 Feature 17.5: Fix duplicate streaming caused by React StrictMode
+    const abortController = new AbortController();
+    let isAborted = false;
+
+    const fetchStream = async () => {
+        try {
+            for await (const chunk of streamChat({
+                query,
+                intent: mode,
+                session_id: sessionId,
+                include_sources: true
+            }, abortController.signal)) {  // ← Pass AbortSignal
+                if (isAborted) break;  // Stop if unmounted
+                handleChunk(chunk);
+            }
+        } catch (err) {
+            if (isAborted || (err instanceof Error && err.name === 'AbortError')) {
+                return;  // Ignore expected abort
+            }
+            // Handle other errors...
         }
     };
-    processStream();
-}, [query, mode]);  // Check: Does query/mode change trigger re-run?
+
+    fetchStream();
+
+    // Cleanup: Cancel SSE connection when component unmounts
+    return () => {
+        isAborted = true;
+        abortController.abort();
+    };
+}, [query, mode, sessionId]);
 ```
 
-**Scenario 3: Multiple SSE connections**
 ```typescript
-// Fix: Cleanup previous connection
-useEffect(() => {
-    const controller = new AbortController();
-
-    streamChat({ query, signal: controller.signal })
-        .then(...)
-
-    return () => controller.abort();  // Cleanup on unmount
-}, [query]);
+// frontend/src/api/chat.ts
+export async function* streamChat(request: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatChunk> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal,  // ← Pass signal to fetch
+  });
+  // ... rest of implementation
+}
 ```
 
 **Tasks:**
-- [ ] Add logging to identify duplication source
-  - Backend: Log each `yield` with timestamp
-  - Frontend: Log each chunk received
-- [ ] Fix streaming logic based on root cause
-- [ ] Add deduplication safeguard (防御性编程)
-  ```python
-  seen_chunks = set()
-  for chunk in agent_response:
-      chunk_hash = hashlib.md5(chunk.encode()).hexdigest()
-      if chunk_hash not in seen_chunks:
-          seen_chunks.add(chunk_hash)
-          yield f"data: {chunk}\n\n"
-  ```
-- [ ] Add integration test for streaming
-  ```python
-  async def test_no_duplicate_streaming():
-      chunks = []
-      async for chunk in chat_stream("test query"):
-          chunks.append(chunk)
+- [x] Added AbortController to StreamingAnswer component
+- [x] Added cleanup function to cancel connection on unmount
+- [x] Modified streamChat() to accept AbortSignal parameter
+- [x] Properly handle AbortError in error handling
+- [x] Tested with React StrictMode enabled
+- [ ] Add integration test for streaming (TODO)
 
-      # Assert no duplicates
-      assert len(chunks) == len(set(chunks))
-  ```
-
-**Deliverables:**
-- Fixed streaming (no duplicates)
-- Logging for debugging
-- Integration test for streaming
+**Files Modified:**
+- `frontend/src/components/chat/StreamingAnswer.tsx`
+- `frontend/src/api/chat.ts`
 
 **Benefits:**
-- ✅ Clean answer display
+- ✅ Clean answer display (no duplicates)
 - ✅ Better user experience
 - ✅ Reduced bandwidth (50% less data)
+- ✅ Works correctly with React StrictMode in development
 
 ---
 
 ### Feature 17.6: Admin Statistics API (5 SP)
-**Status:** 📋 PLANNED
+**Status:** ✅ COMPLETED (2025-10-29)
+**Commit:** `7111c78` - feat(sprint-17): Feature 17.6 - Admin Statistics API
 **Duration:** 0.5 day
 
 **Problem:**
@@ -825,19 +831,20 @@ No API endpoint to retrieve system statistics for admin UI display.
 Create admin endpoints for system statistics and indexing history.
 
 **Tasks:**
-- [ ] `GET /api/v1/admin/stats` endpoint
-  - Total documents indexed
-  - Total chunks in Qdrant (collection.info())
-  - BM25 corpus size
-  - Neo4j entity count (Cypher query)
-  - LightRAG graph statistics
-  - Last re-indexing timestamp
-- [ ] `GET /api/v1/admin/history` endpoint
-  - List of past re-indexing operations
-  - Timestamp, duration, status, document count
-  - Store in SQLite database
-- [ ] Add authentication middleware (JWT required)
-- [ ] OpenAPI documentation
+- [x] `GET /api/v1/admin/stats` endpoint implemented
+  - Qdrant: Total chunks, collection name, vector dimension
+  - BM25: Corpus size (graceful degradation if unavailable)
+  - Neo4j: Entity count, relationship count, chunk count (Cypher queries)
+  - Redis: Active conversation count (scan conversation:*)
+  - System: Embedding model name, last reindex timestamp (placeholder)
+  - Individual stat collection wrapped in try-except for resilience
+  - Returns partial results if some stats fail
+- [x] Pydantic SystemStats model with optional fields
+- [x] Comprehensive error handling and logging
+- [x] OpenAPI documentation (auto-generated by FastAPI)
+- [ ] `GET /api/v1/admin/history` endpoint (deferred - requires persistent storage implementation)
+- [ ] Authentication middleware (deferred - Sprint 18 security hardening)
+- [ ] Add tests for statistics endpoint (deferred to E2E test phase)
 
 **Deliverables:**
 ```python
