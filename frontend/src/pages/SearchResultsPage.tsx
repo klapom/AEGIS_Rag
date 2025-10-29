@@ -44,7 +44,8 @@ export function SearchResultsPage() {
     }
   };
 
-  if (!query) {
+  // TD-38: Handle empty or whitespace-only queries
+  if (!query || !query.trim()) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
