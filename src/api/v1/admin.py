@@ -134,7 +134,9 @@ async def reindex_progress_stream(
                 collection_name=collection_name,
             )
 
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': f'Indexed {stats.get(\"points_indexed\", 0)} chunks into Qdrant. Starting Neo4j graph indexing...'})}\n\n"
+            points_indexed = stats.get("points_indexed", 0)
+            message = f"Indexed {points_indexed} chunks into Qdrant. Starting Neo4j graph indexing..."
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': message})}\n\n"
 
             # Phase 3b: Index into Neo4j/LightRAG graph (Sprint 16 Feature 16.7)
             try:
@@ -165,14 +167,18 @@ async def reindex_progress_stream(
                 if lightrag_docs:
                     graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
                     logger.info("lightrag_indexing_complete", **graph_stats)
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': f'Indexed {graph_stats.get(\"stats\", {}).get(\"total_entities\", 0)} entities and {graph_stats.get(\"stats\", {}).get(\"total_relations\", 0)} relations into Neo4j'})}\n\n"
+                    total_entities = graph_stats.get("stats", {}).get("total_entities", 0)
+                    total_relations = graph_stats.get("stats", {}).get("total_relations", 0)
+                    graph_message = f"Indexed {total_entities} entities and {total_relations} relations into Neo4j"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': graph_message})}\n\n"
                 else:
                     logger.warning("no_documents_for_graph_indexing")
 
             except Exception as e:
                 logger.error("lightrag_indexing_failed", error=str(e))
                 # Continue even if graph indexing fails (Qdrant indexing succeeded)
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': f'Graph indexing failed: {str(e)} (continuing with Qdrant only)'})}\n\n"
+                error_message = f"Graph indexing failed: {str(e)} (continuing with Qdrant only)"
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': error_message})}\n\n"
 
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': 'Indexing completed successfully'})}\n\n"
         else:

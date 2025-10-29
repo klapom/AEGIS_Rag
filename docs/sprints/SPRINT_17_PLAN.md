@@ -80,7 +80,741 @@ export function AdminPage() {
 
 ---
 
-### Feature 17.2: Admin Statistics API (5 SP)
+### Feature 17.2: Conversation History Fixes (8 SP)
+**Status:** 📋 PLANNED
+**Duration:** 1 day
+**Priority:** HIGH (User-reported bugs)
+
+**Problem:**
+Two critical issues prevent proper conversation management:
+1. **Conversations not saving**: Messages are never persisted to Redis after processing
+2. **Follow-up questions don't work**: Each search creates a new session instead of reusing existing session_id
+
+**Root Causes:**
+- `src/api/v1/chat.py` (Lines 273-398): `chat_stream()` never calls `memory_api.store()` to save messages
+- `src/api/v1/chat.py` (Lines 419-430): `list_sessions()` returns hardcoded empty list (TODO not implemented)
+- `frontend/src/pages/SearchResultsPage.tsx` (Lines 20-22): `handleNewSearch()` never includes `session_id` in URL
+- Frontend creates NEW session for every search, losing conversation context
+
+**Solution:**
+Fix backend persistence and frontend session management.
+
+**Tasks:**
+- [ ] **Backend: Add conversation persistence**
+  - Add `memory_api.store()` call after streaming completes in `chat_stream()`
+  - Add `memory_api.store()` call in `chat()` endpoint
+  - Store both user question and assistant answer
+  - Save to Redis with key pattern: `conversation:{session_id}`
+- [ ] **Backend: Implement session listing**
+  - Replace TODO in `list_sessions()` with actual Redis scan
+  - Query Redis keys matching `conversation:*` pattern
+  - Extract session metadata (last_message, created_at, message_count)
+  - Return populated SessionListResponse
+- [ ] **Frontend: Preserve session_id across searches**
+  - Modify `handleNewSearch()` to include current `session_id` in URL
+  - Add state management to track active session_id
+  - Pass session_id to StreamingAnswer component
+  - Ensure follow-up questions reuse same session
+- [ ] **Frontend: Load conversation history**
+  - Fetch previous messages when session_id exists
+  - Display conversation context before new answer
+- [ ] Add integration tests for conversation persistence
+- [ ] Add E2E test for follow-up questions
+
+**Deliverables:**
+```python
+# Backend: src/api/v1/chat.py (add after streaming completes)
+async def save_conversation(session_id: str, user_message: str, assistant_message: str):
+    memory_api = get_unified_memory_api()
+    await memory_api.store(
+        key=f"conversation:{session_id}",
+        value={
+            "messages": [...],
+            "updated_at": datetime.now(),
+            "message_count": len(messages)
+        },
+        namespace="conversations"
+    )
+
+# Backend: Implement list_sessions()
+async def list_sessions() -> SessionListResponse:
+    redis_client = await get_redis_manager()
+    keys = await redis_client.scan_match("conversation:*")
+    sessions = []
+    for key in keys:
+        session_data = await redis_client.get(key)
+        sessions.append(SessionInfo(...))
+    return SessionListResponse(sessions=sessions, total_count=len(sessions))
+```
+
+```typescript
+// Frontend: src/pages/SearchResultsPage.tsx
+const handleNewSearch = (newQuery: string, newMode: SearchMode) => {
+    const params = new URLSearchParams({
+        q: newQuery,
+        mode: newMode,
+        session_id: sessionId || ""  // FIX: Preserve session_id!
+    });
+    navigate(`/search?${params.toString()}`);
+};
+```
+
+**Benefits:**
+- ✅ Conversations persist across browser refreshes
+- ✅ Session sidebar shows actual conversation history
+- ✅ Follow-up questions maintain conversation context
+- ✅ Users can continue conversations from history
+- ✅ Multi-turn conversations work as expected
+
+---
+
+### Feature 17.3: Auto-Generated Conversation Titles (5 SP)
+**Status:** 📋 PLANNED
+**Duration:** 0.5 day
+**Priority:** MEDIUM (User-requested feature)
+
+**Problem:**
+Conversations in sidebar show generic IDs or timestamps instead of meaningful titles. Users cannot quickly identify conversations.
+
+**User Request:**
+> "eine Konversation sollte auch nach der ersten Antwort eine kurze präzise Zusammenfassung als Titel erhalten, mit der Möglichkeit durch den Benutzer den Namen zu ändern"
+
+**Solution:**
+Auto-generate concise conversation title after first answer using LLM, with user edit capability.
+
+**Tasks:**
+- [ ] **Backend: Title generation endpoint**
+  - Add `POST /api/v1/chat/sessions/{session_id}/generate-title` endpoint
+  - Use Ollama LLM to generate 3-5 word title from first Q&A exchange
+  - Prompt: "Generate a concise 3-5 word title for this conversation: Q: {question} A: {answer}"
+  - Store title in Redis conversation metadata
+- [ ] **Backend: Title update endpoint**
+  - Add `PATCH /api/v1/chat/sessions/{session_id}` endpoint
+  - Allow user to update conversation title
+  - Validate title length (max 50 chars)
+- [ ] **Frontend: Auto-trigger title generation**
+  - After first answer streams, call generate-title endpoint
+  - Update session in sidebar with new title
+  - Handle loading state during generation
+- [ ] **Frontend: Editable titles**
+  - Add inline edit functionality to SessionItem component
+  - Click to edit → Input field → Save/Cancel buttons
+  - Call PATCH endpoint on save
+  - Optimistic UI update
+- [ ] Add caching for generated titles (avoid regeneration)
+- [ ] Add tests for title generation and editing
+
+**Deliverables:**
+```python
+# Backend: src/api/v1/chat.py
+@router.post("/sessions/{session_id}/generate-title")
+async def generate_conversation_title(session_id: str) -> TitleResponse:
+    """Auto-generate concise conversation title from first Q&A."""
+    # Get first message pair
+    conversation = await memory_api.get(f"conversation:{session_id}")
+    first_qa = conversation["messages"][:2]
+
+    # Generate title with LLM
+    prompt = f"Generate a concise 3-5 word title: Q: {first_qa[0]} A: {first_qa[1]}"
+    title = await ollama_client.generate(prompt, max_tokens=20)
+
+    # Save title
+    conversation["title"] = title
+    await memory_api.store(f"conversation:{session_id}", conversation)
+
+    return TitleResponse(title=title)
+
+@router.patch("/sessions/{session_id}")
+async def update_conversation_title(session_id: str, request: UpdateTitleRequest):
+    """Allow user to manually edit conversation title."""
+    conversation = await memory_api.get(f"conversation:{session_id}")
+    conversation["title"] = request.title
+    await memory_api.store(f"conversation:{session_id}", conversation)
+    return {"status": "updated"}
+```
+
+```typescript
+// Frontend: src/components/sidebar/SessionItem.tsx
+export function SessionItem({ session }: { session: SessionInfo }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [title, setTitle] = useState(session.title);
+
+    const handleSave = async () => {
+        await updateSessionTitle(session.id, title);
+        setIsEditing(false);
+    };
+
+    return isEditing ? (
+        <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleSave}
+        />
+    ) : (
+        <div onClick={() => setIsEditing(true)}>{title}</div>
+    );
+}
+```
+
+**Benefits:**
+- ✅ Users can quickly identify conversations in sidebar
+- ✅ Automatic title generation saves user time
+- ✅ User can customize titles for better organization
+- ✅ Improved conversation management UX
+
+---
+
+### Feature 17.4: Implicit User Profiling & Conversation Search (21 SP)
+**Status:** 📋 PLANNED
+**Duration:** 3 days
+**Priority:** HIGH (Strategic feature)
+
+**Problem:**
+System has no "memory" of user behavior across sessions. Cannot:
+1. Search through past conversations semantically
+2. Understand user's role, interests, and expertise level
+3. Personalize answers based on user's history
+4. Provide context-aware recommendations
+
+**User Request:**
+> "Es soll möglich sein, in vergangenen Session zu suchen. Ebenso soll das System ein 'Gefühl' oder 'Wissen' um die Person aufbauen die gerade sucht. [...] Das Wissen um die Person soll dabei aber implizit im System vorhanden sein und nicht an die Oberfläche kommen."
+
+**Solution:**
+Hybrid storage architecture with implicit user profiling:
+- **Qdrant**: Semantic search over archived conversations
+- **Neo4j**: User behavior knowledge graph (implicit profile)
+- **Redis**: Active session state (hot cache)
+
+**Architecture:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Conversation Lifecycle                     │
+├─────────────────────────────────────────────────────────────┤
+│ Phase 1: ACTIVE (Redis)                                     │
+│  └─ Real-time chat (TTL: 7 days)                           │
+│  └─ Ultra-fast reads/writes (<1ms)                         │
+├─────────────────────────────────────────────────────────────┤
+│ Phase 2: ARCHIVED (Qdrant + Background Processing)         │
+│  └─ After 7 days OR user-triggered archive                 │
+│  └─ Semantic search enabled                                 │
+│  └─ Extract implicit profile signals                        │
+├─────────────────────────────────────────────────────────────┤
+│ Phase 3: PROFILING (Neo4j Knowledge Graph)                 │
+│  └─ User → INTERESTED_IN → Topic                           │
+│  └─ User → ROLE → JobFunction                              │
+│  └─ User → EXPERTISE_LEVEL → Domain                        │
+│  └─ User → FREQUENTLY_ASKS_ABOUT → Category               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implicit Profiling Strategy:**
+
+The system builds a user profile WITHOUT storing personal data:
+
+```cypher
+// Example Neo4j Knowledge Graph (Implicit Profile)
+
+// User asks many questions about scripting
+(user:User {id: "user-123"})
+  -[:INTERESTED_IN {strength: 0.85, signal_count: 12}]->
+  (topic:Topic {name: "OMNITRACKER Scripting"})
+
+// User's questions indicate admin-level knowledge
+(user)
+  -[:HAS_ROLE {confidence: 0.78, inferred_from: "query_complexity"}]->
+  (role:Role {name: "System Administrator"})
+
+// User frequently asks about advanced topics
+(user)
+  -[:EXPERTISE_LEVEL {level: "advanced", evidence_count: 8}]->
+  (domain:Domain {name: "OMNITRACKER Administration"})
+
+// User's conversation patterns
+(user)
+  -[:PREFERS_MODE {usage_ratio: 0.65}]->
+  (mode:SearchMode {name: "hybrid"})
+
+// Cross-session knowledge connections
+(user)
+  -[:DISCUSSED {session_count: 3, last_date: "2025-10-29"}]->
+  (doc:Document {title: "Advanced Scripting Guide"})
+```
+
+**Privacy-First Design:**
+- ❌ NO personal identifiable information stored
+- ❌ NO conversation content in profile graph
+- ✅ ONLY behavioral signals (topics, patterns, preferences)
+- ✅ User can clear profile anytime
+- ✅ GDPR-compliant (pseudo-anonymized user IDs)
+
+**Tasks:**
+
+**A. Conversation Archiving Pipeline:**
+- [ ] **Background job: Archive conversations after 7 days**
+  - Celery task scheduled daily
+  - Move Redis → Qdrant + Neo4j
+  - Preserve only metadata in Redis (title, date, archive_id)
+- [ ] **Conversation embedding for semantic search**
+  - Generate embedding from full conversation text
+  - Store in Qdrant collection: `archived_conversations`
+  - Payload: title, summary, topics, date, user_id
+- [ ] **Manual archive trigger**
+  - `POST /api/v1/chat/sessions/{session_id}/archive` endpoint
+  - User can archive important conversations immediately
+
+**B. Semantic Conversation Search:**
+- [ ] **Search endpoint: `POST /api/v1/chat/search`**
+  ```python
+  {
+    "query": "Was habe ich über Scripting gelernt?",
+    "user_id": "user-123",  # Filter to current user only
+    "limit": 10,
+    "time_range": "last_30_days"  # Optional
+  }
+  ```
+  - Semantic search in Qdrant over user's archived conversations
+  - Return: Conversation snippets with relevance scores
+- [ ] **Frontend: Conversation search UI**
+  - Search bar in SessionSidebar
+  - Display results with highlighted snippets
+  - Click to load full conversation
+
+**C. Implicit Profile Extraction:**
+- [ ] **Signal extraction from conversations**
+  ```python
+  async def extract_profile_signals(conversation: Conversation, user_id: str):
+      # 1. Topic Extraction
+      topics = await llm.extract_topics(conversation)
+      # → INTERESTED_IN relations
+
+      # 2. Role Inference
+      role_signals = analyze_question_complexity(conversation)
+      # → HAS_ROLE relation (Admin, Developer, User)
+
+      # 3. Expertise Level
+      expertise = infer_expertise_from_questions(conversation)
+      # → EXPERTISE_LEVEL (Beginner, Intermediate, Advanced)
+
+      # 4. Search Mode Preference
+      mode_usage = count_search_modes(conversation)
+      # → PREFERS_MODE (hybrid, vector, graph)
+
+      # 5. Frequently Discussed Documents
+      mentioned_docs = extract_document_references(conversation)
+      # → DISCUSSED relations
+  ```
+- [ ] **Neo4j schema for user profile graph**
+  ```cypher
+  // Nodes
+  CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE
+  CREATE CONSTRAINT topic_name IF NOT EXISTS FOR (t:Topic) REQUIRE t.name IS UNIQUE
+  CREATE CONSTRAINT role_name IF NOT EXISTS FOR (r:Role) REQUIRE r.name IS UNIQUE
+
+  // Indices for fast queries
+  CREATE INDEX user_profile_lookup IF NOT EXISTS FOR (u:User) ON (u.id)
+  ```
+- [ ] **Incremental profile updates**
+  - After each conversation: Update strength/confidence scores
+  - Decay old signals over time (time-weighted)
+  - Merge conflicting signals with confidence scoring
+
+**D. Profile-Aware RAG (Personalization):**
+- [ ] **Inject user profile into retrieval context**
+  ```python
+  async def retrieve_with_profile(query: str, user_id: str):
+      # 1. Get user profile from Neo4j
+      profile = await neo4j.get_user_profile(user_id)
+      # {
+      #   "interests": ["Scripting", "Administration"],
+      #   "expertise": {"OMNITRACKER": "advanced"},
+      #   "role": "System Administrator"
+      # }
+
+      # 2. Boost retrieval for relevant topics
+      boosted_query = f"{query} (User context: {profile['role']}, interested in {profile['interests']})"
+
+      # 3. Filter/rank results based on expertise
+      results = await hybrid_search(boosted_query)
+      results = adjust_for_expertise(results, profile['expertise'])
+
+      return results
+  ```
+- [ ] **Answer adaptation based on profile**
+  ```python
+  system_prompt = f"""
+  You are answering for a user with the following implicit profile:
+  - Role: {profile['role']}
+  - Expertise: {profile['expertise']}
+  - Interests: {profile['interests']}
+
+  Adapt your answer complexity and terminology accordingly.
+  - For "Beginner": Use simple explanations, more examples
+  - For "Advanced": Be concise, assume knowledge, go deeper
+
+  DO NOT mention the user's profile explicitly in your answer.
+  """
+  ```
+
+**E. Profile Management (Privacy Controls):**
+- [ ] **View profile signals (optional transparency)**
+  - `GET /api/v1/users/me/profile` endpoint
+  - Show inferred topics, expertise, preferences
+  - "Here's what the system has learned about you"
+- [ ] **Clear profile**
+  - `DELETE /api/v1/users/me/profile` endpoint
+  - Delete all profile nodes and relations from Neo4j
+  - Keep archived conversations (they're useful!)
+- [ ] **Opt-out of profiling**
+  - User setting: `enable_personalization: false`
+  - System uses default behavior (no profile boost)
+
+**F. Analytics & Monitoring:**
+- [ ] **Profile accuracy metrics**
+  - Track: Are personalized answers more helpful?
+  - User feedback: Thumbs up/down on answers
+  - A/B test: Profile-aware vs. default retrieval
+- [ ] **Profile drift detection**
+  - Alert if user profile changes significantly
+  - Example: "Beginner" user suddenly asks advanced questions
+  - Suggest: Re-calibrate expertise level
+
+**Deliverables:**
+
+```python
+# Backend: src/components/profiling/profile_extractor.py
+
+class ImplicitProfileExtractor:
+    """Extract behavioral signals from conversations."""
+
+    async def extract_topics(self, conversation: Conversation) -> List[Topic]:
+        """Extract topics using LLM."""
+        prompt = f"Extract 3-5 main topics from this conversation: {conversation.summary}"
+        topics = await self.llm.generate(prompt)
+        return [Topic(name=t, confidence=0.8) for t in topics]
+
+    async def infer_role(self, conversation: Conversation) -> Role:
+        """Infer user role from question complexity."""
+        complexity_score = self._analyze_complexity(conversation)
+        if complexity_score > 0.7:
+            return Role(name="System Administrator", confidence=complexity_score)
+        elif complexity_score > 0.4:
+            return Role(name="Power User", confidence=complexity_score)
+        else:
+            return Role(name="End User", confidence=complexity_score)
+
+    async def infer_expertise(self, user_id: str, domain: str) -> ExpertiseLevel:
+        """Infer expertise from historical conversations."""
+        conversations = await self.get_user_conversations(user_id, domain=domain)
+
+        # Analyze question progression
+        early_questions = conversations[:5]
+        recent_questions = conversations[-5:]
+
+        progression_score = self._compare_complexity(early_questions, recent_questions)
+
+        if progression_score > 0.5:
+            return ExpertiseLevel.ADVANCED
+        elif progression_score > 0.2:
+            return ExpertiseLevel.INTERMEDIATE
+        else:
+            return ExpertiseLevel.BEGINNER
+
+# Backend: src/components/profiling/profile_aware_retrieval.py
+
+class ProfileAwareRetrieval:
+    """Personalize retrieval based on user profile."""
+
+    async def retrieve(self, query: str, user_id: str) -> List[Document]:
+        # 1. Get profile
+        profile = await self.neo4j.get_profile(user_id)
+
+        # 2. Boost query for user interests
+        boosted_query = self._boost_for_interests(query, profile.interests)
+
+        # 3. Standard hybrid retrieval
+        results = await self.hybrid_search.search(boosted_query)
+
+        # 4. Re-rank for expertise level
+        results = self._rerank_for_expertise(results, profile.expertise)
+
+        return results
+
+    def _boost_for_interests(self, query: str, interests: List[str]) -> str:
+        """Add implicit boost for user's known interests."""
+        # Semantic boost (not visible to user)
+        interest_context = " ".join(interests)
+        return f"{query} [Context: {interest_context}]"
+
+    def _rerank_for_expertise(self, results: List[Document], expertise: Dict[str, ExpertiseLevel]) -> List[Document]:
+        """Adjust document complexity to match user expertise."""
+        for doc in results:
+            domain = doc.metadata.get("domain")
+            user_level = expertise.get(domain, ExpertiseLevel.INTERMEDIATE)
+            doc_level = doc.metadata.get("complexity", "intermediate")
+
+            # Boost if levels match
+            if doc_level == user_level.value:
+                doc.score *= 1.2
+            # Penalize if too complex or too simple
+            elif abs(self._level_diff(doc_level, user_level)) > 1:
+                doc.score *= 0.8
+
+        return sorted(results, key=lambda x: x.score, reverse=True)
+```
+
+```typescript
+// Frontend: src/components/search/ConversationSearch.tsx
+
+export function ConversationSearch() {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<ConversationSearchResult[]>([]);
+
+    const handleSearch = async () => {
+        const response = await fetch('/api/v1/chat/search', {
+            method: 'POST',
+            body: JSON.stringify({
+                query,
+                limit: 10,
+                time_range: 'all'
+            })
+        });
+        setResults(await response.json());
+    };
+
+    return (
+        <div className="conversation-search">
+            <input
+                placeholder="Durchsuche deine früheren Konversationen..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <SearchResults results={results} />
+        </div>
+    );
+}
+
+// Frontend: src/components/profile/ProfileInsights.tsx (Optional)
+
+export function ProfileInsights() {
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [showProfile, setShowProfile] = useState(false);
+
+    useEffect(() => {
+        fetch('/api/v1/users/me/profile')
+            .then(r => r.json())
+            .then(setProfile);
+    }, []);
+
+    if (!showProfile) return null;
+
+    return (
+        <div className="profile-insights">
+            <h3>Was das System über dich gelernt hat:</h3>
+            <div>
+                <strong>Hauptinteressen:</strong>
+                <ul>
+                    {profile.interests.map(i => (
+                        <li key={i.topic}>{i.topic} (Stärke: {i.strength.toFixed(2)})</li>
+                    ))}
+                </ul>
+            </div>
+            <div>
+                <strong>Erkannte Rolle:</strong> {profile.role}
+            </div>
+            <div>
+                <strong>Expertise-Level:</strong>
+                {Object.entries(profile.expertise).map(([domain, level]) => (
+                    <span key={domain}>{domain}: {level}</span>
+                ))}
+            </div>
+            <button onClick={clearProfile}>Profil löschen</button>
+        </div>
+    );
+}
+```
+
+**Benefits:**
+- ✅ Semantic search through past conversations
+- ✅ System "remembers" user preferences implicitly
+- ✅ Personalized answer complexity (beginner vs. expert)
+- ✅ Relevance boost for user's known interests
+- ✅ Privacy-first: No PII stored, only behavioral signals
+- ✅ User control: View and delete profile anytime
+- ✅ GDPR-compliant: Pseudo-anonymized, purpose-limited
+
+**Privacy Guarantees:**
+```python
+# What IS stored:
+{
+  "user_id": "hash(email)",  # Pseudo-anonymized
+  "interests": ["Scripting", "Administration"],
+  "expertise": {"OMNITRACKER": "advanced"},
+  "role": "System Administrator"
+}
+
+# What is NOT stored:
+❌ Conversation content (only in Qdrant embeddings)
+❌ Personal information (name, email, etc.)
+❌ Explicit tracking ("User clicked X")
+❌ Profile exposed to user (unless they request it)
+```
+
+**Example User Experience:**
+
+```
+Session 1:
+User: "Wie erstelle ich einen Benutzer?"
+System: [Detaillierte Anfänger-Anleitung]
+→ Profile: Beginner, interested in "User Management"
+
+Session 5:
+User: "Batch-Import von 1000 Benutzern per Script"
+System: [Knappe Code-Beispiele, fortgeschrittene Optionen]
+→ Profile: Intermediate→Advanced, interested in "Scripting"
+
+Session 10:
+User: "Performance-Optimierung für LDAP-Sync"
+System: [Technische Details, Annahme von Vorwissen]
+→ Profile: Advanced, role=Administrator
+→ Retrieval boost: Zeigt zuerst Admin-Docs
+```
+
+**Implementation Phases:**
+
+**Phase 1 (MVP - 1 day):**
+- Conversation archiving (Redis → Qdrant)
+- Semantic search over conversations
+- Basic topic extraction
+
+**Phase 2 (Profiling - 1.5 days):**
+- Neo4j profile graph
+- Implicit signal extraction
+- Profile-aware retrieval boost
+
+**Phase 3 (Privacy & UX - 0.5 days):**
+- Profile management endpoints
+- Privacy controls (view/delete)
+- Optional transparency UI
+
+---
+
+### Feature 17.5: Fix Duplicate Answer Streaming (3 SP)
+**Status:** 📋 PLANNED
+**Duration:** 0.5 day
+**Priority:** HIGH (User-reported bug)
+
+**Problem:**
+Streaming answers are duplicated - the same answer appears twice in the frontend.
+
+**User Report:**
+> "Die Ausgabe nach der Frage enthält die gleiche Antwort doppelt: Basierend auf dem bereitgestellten Kontext [...] [repeated twice]"
+
+**Root Cause Analysis:**
+Likely causes:
+1. **Double streaming**: SSE endpoint sends chunks twice
+2. **Frontend double-rendering**: StreamingAnswer component renders twice
+3. **State management**: Answer appended to state twice
+4. **Event listener duplication**: Multiple SSE connections to same stream
+
+**Investigation Tasks:**
+- [ ] Check `src/api/v1/chat.py` streaming logic (lines 273-398)
+  - Verify `yield` statements are not duplicated
+  - Check if streaming loop runs twice
+- [ ] Check `frontend/src/components/chat/StreamingAnswer.tsx`
+  - Verify useEffect dependencies
+  - Check if stream is consumed twice
+  - Look for double event listeners
+- [ ] Check browser network tab
+  - Are there 2 SSE connections?
+  - Is same data sent twice in one connection?
+
+**Solution:**
+Fix streaming deduplication based on root cause.
+
+**Possible Fixes:**
+
+**Scenario 1: Backend sends twice**
+```python
+# src/api/v1/chat.py (check around line 350-370)
+
+async def chat_stream(...):
+    # BAD: Double yield
+    for chunk in agent_response:
+        yield f"data: {chunk}\n\n"
+        yield f"data: {chunk}\n\n"  # Remove this!
+
+    # GOOD: Single yield
+    for chunk in agent_response:
+        yield f"data: {chunk}\n\n"
+```
+
+**Scenario 2: Frontend processes twice**
+```typescript
+// frontend/src/components/chat/StreamingAnswer.tsx
+
+useEffect(() => {
+    const processStream = async () => {
+        for await (const chunk of streamChat(...)) {
+            setAnswer(prev => prev + chunk);  // Should only append once
+        }
+    };
+    processStream();
+}, [query, mode]);  // Check: Does query/mode change trigger re-run?
+```
+
+**Scenario 3: Multiple SSE connections**
+```typescript
+// Fix: Cleanup previous connection
+useEffect(() => {
+    const controller = new AbortController();
+
+    streamChat({ query, signal: controller.signal })
+        .then(...)
+
+    return () => controller.abort();  // Cleanup on unmount
+}, [query]);
+```
+
+**Tasks:**
+- [ ] Add logging to identify duplication source
+  - Backend: Log each `yield` with timestamp
+  - Frontend: Log each chunk received
+- [ ] Fix streaming logic based on root cause
+- [ ] Add deduplication safeguard (防御性编程)
+  ```python
+  seen_chunks = set()
+  for chunk in agent_response:
+      chunk_hash = hashlib.md5(chunk.encode()).hexdigest()
+      if chunk_hash not in seen_chunks:
+          seen_chunks.add(chunk_hash)
+          yield f"data: {chunk}\n\n"
+  ```
+- [ ] Add integration test for streaming
+  ```python
+  async def test_no_duplicate_streaming():
+      chunks = []
+      async for chunk in chat_stream("test query"):
+          chunks.append(chunk)
+
+      # Assert no duplicates
+      assert len(chunks) == len(set(chunks))
+  ```
+
+**Deliverables:**
+- Fixed streaming (no duplicates)
+- Logging for debugging
+- Integration test for streaming
+
+**Benefits:**
+- ✅ Clean answer display
+- ✅ Better user experience
+- ✅ Reduced bandwidth (50% less data)
+
+---
+
+### Feature 17.6: Admin Statistics API (5 SP)
 **Status:** 📋 PLANNED
 **Duration:** 0.5 day
 

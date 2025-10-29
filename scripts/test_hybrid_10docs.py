@@ -59,7 +59,7 @@ async def main():
         logger.info("=== Step 4: Loading 10 documents ===")
         loader = SimpleDirectoryReader(
             input_dir=str(input_dir),
-            required_exts=[".txt"],  # Only TXT for speed
+            required_exts=[".pdf", ".docx"],  # Use available file types
             recursive=True,
             filename_as_id=True,
         )

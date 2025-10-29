@@ -1069,7 +1069,140 @@ docs/adr/ADR-024-graphiti-optimization-strategy.md (if needed)
 
 ---
 
-## Post-Sprint 12: Continuous Improvement Backlog
+## Sprint 17: Admin UI & Advanced Features
+**Ziel:** Admin UI for re-indexing, conversation history fixes, implicit user profiling
+**Status:** 📋 PLANNED (2025-10-29)
+**Duration:** 7-9 days (55 Story Points)
+
+### Context
+After Sprint 16 completion, several critical UX issues and strategic features were identified:
+- ❌ **Conversations not saving**: Messages never persisted to Redis
+- ❌ **Follow-up questions broken**: New session created for each search
+- ❌ **No conversation search**: Cannot find past discussions
+- ❌ **Duplicate answer streaming**: Same answer appears twice
+- ✅ **User profiling opportunity**: Build implicit user understanding from behavior
+
+### Deliverables
+- [ ] **Feature 17.1**: Admin UI for Directory Indexing (13 SP)
+- [ ] **Feature 17.2**: Conversation History Fixes (8 SP) 🚨 **HIGH PRIORITY**
+- [ ] **Feature 17.3**: Auto-Generated Conversation Titles (5 SP)
+- [ ] **Feature 17.4**: Implicit User Profiling & Conversation Search (21 SP) ⭐ **STRATEGIC**
+- [ ] **Feature 17.5**: Fix Duplicate Answer Streaming (3 SP) 🚨 **HIGH PRIORITY**
+- [ ] **Feature 17.6**: Admin Statistics API (5 SP)
+
+### Technical Tasks
+
+**Feature 17.1: Admin UI for Directory Indexing**
+- Create AdminPage component with directory selection
+- Real-time progress display (SSE integration)
+- System statistics dashboard (Qdrant/Neo4j/BM25 stats)
+- Indexing history table
+- Responsive design
+
+**Feature 17.2: Conversation History Fixes** 🚨
+**Problem:** Users lose all conversation history
+**Root Causes:**
+- `src/api/v1/chat.py` (273-398): Missing `memory_api.store()` calls
+- `src/api/v1/chat.py` (419-430): `list_sessions()` returns empty list
+- `frontend/src/pages/SearchResultsPage.tsx` (20-22): No `session_id` preservation
+
+Tasks:
+- Add conversation persistence after streaming
+- Implement session listing with Redis scan
+- Preserve `session_id` in frontend navigation
+- Load conversation history for follow-up questions
+
+**Feature 17.3: Auto-Generated Conversation Titles**
+**User Request:** Generate 3-5 word title after first answer, user-editable
+Tasks:
+- LLM-based title generation endpoint
+- Store title in Redis metadata
+- Inline edit functionality in SessionItem
+- Title update endpoint
+
+**Feature 17.4: Implicit User Profiling & Conversation Search** ⭐
+**User Request:** "Das System soll ein 'Gefühl' um die Person aufbauen, implizit"
+
+**Architecture:**
+```
+Phase 1: ACTIVE (Redis, 7 days TTL)
+  ↓
+Phase 2: ARCHIVED (Qdrant, semantic search)
+  ↓
+Phase 3: PROFILING (Neo4j, implicit profile graph)
+```
+
+**Neo4j Profile Graph:**
+```cypher
+(user:User)
+  -[:INTERESTED_IN {strength: 0.85}]-> (topic:Topic {name: "Scripting"})
+  -[:HAS_ROLE {confidence: 0.78}]-> (role:Role {name: "Administrator"})
+  -[:EXPERTISE_LEVEL {level: "advanced"}]-> (domain:Domain)
+```
+
+Tasks:
+- Conversation archiving pipeline (Redis → Qdrant after 7 days)
+- Semantic conversation search endpoint
+- Profile signal extraction (topics, role, expertise)
+- Profile-aware retrieval (boost relevant docs)
+- Answer adaptation (complexity matches user level)
+- Privacy controls (view/delete profile)
+
+**Benefits:**
+- Semantic search through past conversations
+- System "remembers" user preferences implicitly
+- Personalized answer complexity (beginner vs. expert)
+- Privacy-first: No PII, only behavioral signals
+
+**Feature 17.5: Fix Duplicate Answer Streaming** 🚨
+**Problem:** Same answer appears twice in frontend
+**Investigation:** Check backend yields, frontend useEffect, SSE connections
+Tasks:
+- Add logging to identify duplication source
+- Fix root cause (backend, frontend, or state)
+- Add deduplication safeguard
+- Integration test for streaming
+
+**Feature 17.6: Admin Statistics API**
+Tasks:
+- GET /api/v1/admin/stats endpoint
+- GET /api/v1/admin/history endpoint
+- Authentication middleware
+- OpenAPI documentation
+
+### Success Criteria
+- [ ] Conversations persist across browser refreshes
+- [ ] Follow-up questions maintain context
+- [ ] Session sidebar shows conversation history
+- [ ] No duplicate answers in streaming
+- [ ] Semantic conversation search works
+- [ ] User profile builds implicitly over time
+- [ ] Admin UI allows directory indexing
+- [ ] System statistics visible in dashboard
+
+### Story Point Breakdown
+```
+Feature 17.1: Admin UI                           13 SP
+Feature 17.2: Conversation History Fixes          8 SP
+Feature 17.3: Auto-Generated Titles               5 SP
+Feature 17.4: Implicit User Profiling            21 SP
+Feature 17.5: Fix Duplicate Streaming             3 SP
+Feature 17.6: Admin Statistics API                5 SP
+-----------------------------------------------------------
+Total:                                           55 SP
+```
+
+### Dependencies
+- Sprint 16 Feature 16.2 (Unified Re-Indexing) ✅ Complete
+- Sprint 15 (Frontend with SSE) ✅ Complete
+
+### Reference Documents
+- Full Sprint 17 Plan: `docs/sprints/Sprint_17_Plan.md`
+- Session Summary: `docs/SESSION_SUMMARY_2025-10-29.md`
+
+---
+
+## Post-Sprint 17: Continuous Improvement Backlog
 
 ### High Priority
 - Advanced Query Decomposition (Tree-of-Thought)
