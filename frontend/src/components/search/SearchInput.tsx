@@ -69,6 +69,8 @@ export function SearchInput({
         <button
           onClick={handleSubmit}
           disabled={!query.trim()}
+          data-testid="search-submit-button" // TD-38: Add testid for E2E tests
+          aria-label="Suche starten"
           className="absolute right-3 top-1/2 -translate-y-1/2
                      w-10 h-10 flex items-center justify-center
                      bg-primary hover:bg-primary-hover
@@ -149,6 +151,10 @@ function ModeChip({ active, onClick, icon, label, description }: ModeChipProps) 
     <button
       onClick={onClick}
       title={description}
+      data-testid={`mode-${label.toLowerCase()}-button`} // TD-38: Add testid for E2E tests
+      aria-label={`${label} Mode`} // TD-38: Improved accessibility
+      role="button"
+      aria-pressed={active}
       className={`
         px-5 py-2.5 rounded-full border-2
         flex items-center space-x-2

@@ -51,6 +51,8 @@ export function HomePage() {
               <button
                 key={prompt}
                 onClick={() => handleQuickPrompt(prompt)}
+                data-testid={`quick-prompt-${prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} // TD-38: Add testid for E2E tests
+                aria-label={`Quick prompt: ${prompt}`}
                 className="p-4 text-left border-2 border-gray-200 rounded-xl
                            hover:border-primary hover:shadow-md hover:bg-gray-50
                            transition-all text-sm text-gray-700 font-medium"

@@ -1,6 +1,7 @@
 /**
  * HomePage E2E Tests
  * Sprint 15 Feature 15.3: End-to-end tests for landing page
+ * Sprint 18 TD-38: Modernized selectors (accessibility-first approach)
  *
  * Tests cover:
  * - Initial page render
@@ -8,6 +9,11 @@
  * - Mode selection
  * - Quick prompt navigation
  * - Form submission
+ *
+ * TD-38 Phase 1: Migrated from brittle text-based selectors to:
+ * - data-testid for ambiguous elements
+ * - getByRole for accessible elements
+ * - getByLabelText for form inputs
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -60,10 +66,11 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByText('Hybrid')).toBeInTheDocument();
-      expect(screen.getByText('Vector')).toBeInTheDocument();
-      expect(screen.getByText('Graph')).toBeInTheDocument();
-      expect(screen.getByText('Memory')).toBeInTheDocument();
+      // TD-38: Use getByRole with accessible names instead of ambiguous getByText
+      expect(screen.getByRole('button', { name: /Hybrid Mode/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Vector Mode/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Graph Mode/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Memory Mode/i })).toBeInTheDocument();
     });
 
     it('should render quick prompt examples', () => {
@@ -86,10 +93,11 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByText('Vector Search')).toBeInTheDocument();
-      expect(screen.getByText('Graph RAG')).toBeInTheDocument();
-      expect(screen.getByText('Memory')).toBeInTheDocument();
-      expect(screen.getByText('Hybrid')).toBeInTheDocument();
+      // TD-38: Use getByRole with heading to distinguish feature cards from mode chips
+      expect(screen.getByRole('heading', { name: 'Vector Search', level: 3 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Graph RAG', level: 3 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Memory', level: 3 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Hybrid', level: 3 })).toBeInTheDocument();
     });
   });
 
@@ -137,7 +145,8 @@ describe('HomePage E2E Tests', () => {
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
       fireEvent.change(input, { target: { value: 'another test' } });
 
-      const submitButton = screen.getByTitle(/Suche starten/i);
+      // TD-38: Use getByRole with aria-label instead of getByTitle
+      const submitButton = screen.getByRole('button', { name: /Suche starten/i });
       fireEvent.click(submitButton);
 
       await waitFor(() => {
@@ -154,7 +163,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      const submitButton = screen.getByTitle(/Suche starten/i);
+      // TD-38: Use getByRole with aria-label instead of getByTitle
+      const submitButton = screen.getByRole('button', { name: /Suche starten/i });
       fireEvent.click(submitButton);
 
       expect(mockNavigate).not.toHaveBeenCalled();
@@ -205,7 +215,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      const vectorChip = screen.getByText('Vector');
+      // TD-38: Use getByRole with accessible name instead of getByText
+      const vectorChip = screen.getByRole('button', { name: /Vector Mode/i });
       fireEvent.click(vectorChip);
 
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
@@ -226,7 +237,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      const graphChip = screen.getByText('Graph');
+      // TD-38: Use getByRole with accessible name instead of getByText
+      const graphChip = screen.getByRole('button', { name: /Graph Mode/i });
       fireEvent.click(graphChip);
 
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
@@ -247,7 +259,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      const memoryChip = screen.getByText('Memory');
+      // TD-38: Use getByRole with accessible name instead of getByText
+      const memoryChip = screen.getByRole('button', { name: /Memory Mode/i });
       fireEvent.click(memoryChip);
 
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
@@ -268,8 +281,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      // Select vector mode
-      const vectorChip = screen.getByText('Vector');
+      // TD-38: Select vector mode with accessible selector
+      const vectorChip = screen.getByRole('button', { name: /Vector Mode/i });
       fireEvent.click(vectorChip);
 
       // First submission
@@ -367,7 +380,8 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
-      const submitButton = screen.getByTitle(/Suche starten/i) as HTMLButtonElement;
+      // TD-38: Use getByRole with aria-label instead of getByTitle
+      const submitButton = screen.getByRole('button', { name: /Suche starten/i }) as HTMLButtonElement;
       expect(submitButton.disabled).toBe(true);
     });
 
@@ -381,7 +395,8 @@ describe('HomePage E2E Tests', () => {
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
       fireEvent.change(input, { target: { value: 'test' } });
 
-      const submitButton = screen.getByTitle(/Suche starten/i) as HTMLButtonElement;
+      // TD-38: Use getByRole with aria-label instead of getByTitle
+      const submitButton = screen.getByRole('button', { name: /Suche starten/i }) as HTMLButtonElement;
       expect(submitButton.disabled).toBe(false);
     });
 
@@ -395,7 +410,8 @@ describe('HomePage E2E Tests', () => {
       const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
       fireEvent.change(input, { target: { value: '   ' } });
 
-      const submitButton = screen.getByTitle(/Suche starten/i) as HTMLButtonElement;
+      // TD-38: Use getByRole with aria-label instead of getByTitle
+      const submitButton = screen.getByRole('button', { name: /Suche starten/i }) as HTMLButtonElement;
       expect(submitButton.disabled).toBe(true);
     });
   });
