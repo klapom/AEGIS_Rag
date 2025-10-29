@@ -117,7 +117,8 @@ prometheus_data/
 grafana_data/
 
 # Application data
-data/
+data/*
+!data/.gitkeep
 uploads/
 downloads/
 
