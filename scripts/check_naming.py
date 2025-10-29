@@ -92,6 +92,10 @@ class NamingChecker:
 
             # Check function definitions
             elif line.startswith('def '):
+                # Skip if line has noqa comment
+                if '# noqa' in line or '#noqa' in line:
+                    continue
+
                 match = re.match(r'def\s+(\w+)', line)
                 if match:
                     func_name = match.group(1)
