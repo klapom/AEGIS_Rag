@@ -10,13 +10,18 @@ AEGIS_RAG/
 └── .pre-commit-config.yaml         # 14 Pre-Commit Hooks
 ```
 
-### 📚 Core Dokumentation (4 Dateien)
+### 📚 Core Dokumentation (3 Dateien)
 ```
 docs/core/
 ├── PROJECT_SUMMARY.md              # ⭐ Gesamtübersicht - START HIER!
-├── SPRINT_PLAN.md                  # 10-Sprint Roadmap
 ├── QUICK_START.md                  # Tag-1-Setup
 └── PROMPT_TEMPLATES.md             # 8 Claude Code Templates
+```
+
+### 📅 Sprint Planning
+```
+docs/sprints/
+└── SPRINT_PLAN.md                  # 18-Sprint Roadmap
 ```
 
 ### 🏗️ Architecture Decision Records
@@ -54,7 +59,7 @@ scripts/
 - See [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) for architecture decisions
 
 ### 3. Projektplanung
-- ✅ [docs/core/SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md)
+- ✅ [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md)
 - ✅ [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
 
 ### 4. Claude Code Integration
@@ -88,7 +93,7 @@ scripts/
 2. [.github/workflows/ci.yml](.github/workflows/ci.yml) - CI/CD Pipeline
 
 ### "Ich plane Features"
-1. [docs/core/SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - Roadmap
+1. [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md) - Roadmap
 2. [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Vision
 3. [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) - Constraints
 
