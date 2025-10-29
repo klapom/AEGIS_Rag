@@ -298,3 +298,180 @@ async def reindex_all_documents(
             "X-Accel-Buffering": "no",  # Disable nginx buffering
         },
     )
+
+
+# ============================================================================
+# Sprint 17 Feature 17.6: Admin Statistics API
+# ============================================================================
+
+
+from pydantic import BaseModel, Field
+
+
+class SystemStats(BaseModel):
+    """System statistics for admin dashboard.
+
+    Sprint 17 Feature 17.6: Admin Statistics API
+    """
+
+    # Qdrant statistics
+    qdrant_total_chunks: int = Field(..., description="Total chunks indexed in Qdrant")
+    qdrant_collection_name: str = Field(..., description="Qdrant collection name")
+    qdrant_vector_dimension: int = Field(..., description="Vector dimension (BGE-M3: 1024)")
+
+    # BM25 statistics (if available)
+    bm25_corpus_size: int | None = Field(None, description="BM25 corpus size (number of documents)")
+
+    # Neo4j / LightRAG statistics
+    neo4j_total_entities: int | None = Field(None, description="Total entities in Neo4j graph")
+    neo4j_total_relations: int | None = Field(None, description="Total relationships in Neo4j graph")
+    neo4j_total_chunks: int | None = Field(None, description="Total chunks stored in Neo4j")
+
+    # System metadata
+    last_reindex_timestamp: str | None = Field(None, description="Timestamp of last re-indexing operation")
+    embedding_model: str = Field(..., description="Current embedding model name")
+
+    # Additional stats
+    total_conversations: int | None = Field(None, description="Total active conversations in Redis")
+
+
+@router.get("/stats", response_model=SystemStats)
+async def get_system_stats() -> SystemStats:
+    """Get comprehensive system statistics for admin dashboard.
+
+    Sprint 17 Feature 17.6: Admin Statistics API
+
+    Returns statistics from:
+    - Qdrant (vector database)
+    - BM25 (keyword search corpus)
+    - Neo4j/LightRAG (knowledge graph)
+    - Redis (conversation storage)
+    - System configuration
+
+    **Example Response:**
+    ```json
+    {
+      "qdrant_total_chunks": 1523,
+      "qdrant_collection_name": "aegis_documents",
+      "qdrant_vector_dimension": 1024,
+      "bm25_corpus_size": 342,
+      "neo4j_total_entities": 856,
+      "neo4j_total_relations": 1204,
+      "neo4j_total_chunks": 1523,
+      "last_reindex_timestamp": "2025-10-29T10:30:00Z",
+      "embedding_model": "BAAI/bge-m3",
+      "total_conversations": 15
+    }
+    ```
+
+    Returns:
+        SystemStats with comprehensive system statistics
+
+    Raises:
+        HTTPException: If statistics retrieval fails
+    """
+    logger.info("admin_stats_requested")
+
+    try:
+        # Qdrant statistics
+        qdrant_client = get_qdrant_client()
+        embedding_service = get_embedding_service()
+        collection_name = settings.qdrant_collection
+
+        try:
+            collection_info = await qdrant_client.get_collection(collection_name)
+            qdrant_total_chunks = collection_info.points_count
+        except Exception as e:
+            logger.warning("failed_to_get_qdrant_stats", error=str(e))
+            qdrant_total_chunks = 0
+
+        # BM25 statistics (optional - requires BM25 manager)
+        bm25_corpus_size = None
+        try:
+            from src.components.vector_search.bm25_manager import get_bm25_manager
+            bm25_manager = get_bm25_manager()
+            if hasattr(bm25_manager, 'get_corpus_size'):
+                bm25_corpus_size = bm25_manager.get_corpus_size()
+        except Exception as e:
+            logger.debug("bm25_stats_unavailable", error=str(e))
+
+        # Neo4j / LightRAG statistics
+        neo4j_total_entities = None
+        neo4j_total_relations = None
+        neo4j_total_chunks = None
+
+        try:
+            lightrag = await get_lightrag_wrapper_async()
+
+            # Query Neo4j for statistics
+            query_entities = "MATCH (e:Entity) RETURN count(e) as count"
+            query_relations = "MATCH ()-[r]->() RETURN count(r) as count"
+            query_chunks = "MATCH (c:Chunk) RETURN count(c) as count"
+
+            # Execute queries
+            entities_result = await lightrag.graph_storage_cls.execute_query(query_entities)
+            if entities_result and len(entities_result) > 0:
+                neo4j_total_entities = entities_result[0].get('count', 0)
+
+            relations_result = await lightrag.graph_storage_cls.execute_query(query_relations)
+            if relations_result and len(relations_result) > 0:
+                neo4j_total_relations = relations_result[0].get('count', 0)
+
+            chunks_result = await lightrag.graph_storage_cls.execute_query(query_chunks)
+            if chunks_result and len(chunks_result) > 0:
+                neo4j_total_chunks = chunks_result[0].get('count', 0)
+
+        except Exception as e:
+            logger.warning("failed_to_get_neo4j_stats", error=str(e))
+
+        # Redis conversation statistics
+        total_conversations = None
+        try:
+            from src.components.memory import get_redis_memory
+            redis_memory = get_redis_memory()
+            redis_client = await redis_memory.client
+
+            # Count conversation keys
+            conversation_count = 0
+            cursor = 0
+            while True:
+                cursor, keys = await redis_client.scan(
+                    cursor=cursor,
+                    match="conversation:*",
+                    count=100
+                )
+                conversation_count += len(keys)
+                if cursor == 0:
+                    break
+
+            total_conversations = conversation_count
+        except Exception as e:
+            logger.warning("failed_to_get_redis_stats", error=str(e))
+
+        # Last reindex timestamp (TODO: Implement persistent storage for this)
+        # For now, return None - could be stored in Redis or a separate metadata store
+        last_reindex_timestamp = None
+
+        stats = SystemStats(
+            qdrant_total_chunks=qdrant_total_chunks,
+            qdrant_collection_name=collection_name,
+            qdrant_vector_dimension=embedding_service.embedding_dim,
+            bm25_corpus_size=bm25_corpus_size,
+            neo4j_total_entities=neo4j_total_entities,
+            neo4j_total_relations=neo4j_total_relations,
+            neo4j_total_chunks=neo4j_total_chunks,
+            last_reindex_timestamp=last_reindex_timestamp,
+            embedding_model=embedding_service.model_name,
+            total_conversations=total_conversations,
+        )
+
+        logger.info("admin_stats_retrieved", stats=stats.model_dump())
+
+        return stats
+
+    except Exception as e:
+        logger.error("admin_stats_failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve system statistics: {str(e)}",
+        ) from e
