@@ -1,10 +1,12 @@
 /**
  * SearchResultsPage Component
  * Sprint 15 Feature 15.4: Display streaming search results
+ * Sprint 17 Feature 17.2: Preserve session_id for follow-up questions
  *
  * Shows query, streaming answer, and sources
  */
 
+import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { StreamingAnswer } from '../components/chat';
 import { SearchInput, type SearchMode } from '../components/search';
@@ -15,10 +17,31 @@ export function SearchResultsPage() {
 
   const query = searchParams.get('q') || '';
   const mode = (searchParams.get('mode') || 'hybrid') as SearchMode;
-  const sessionId = searchParams.get('session_id') || undefined;
+  const initialSessionId = searchParams.get('session_id') || undefined;
+
+  // Sprint 17 Feature 17.2: Track active session ID for follow-up questions
+  const [activeSessionId, setActiveSessionId] = useState<string | undefined>(initialSessionId);
+
+  // Update activeSessionId when URL session_id changes
+  useEffect(() => {
+    if (initialSessionId) {
+      setActiveSessionId(initialSessionId);
+    }
+  }, [initialSessionId]);
 
   const handleNewSearch = (newQuery: string, newMode: SearchMode) => {
-    navigate(`/search?q=${encodeURIComponent(newQuery)}&mode=${newMode}`);
+    // Sprint 17 Feature 17.2: Include session_id in URL to maintain conversation context
+    const url = activeSessionId
+      ? `/search?q=${encodeURIComponent(newQuery)}&mode=${newMode}&session_id=${activeSessionId}`
+      : `/search?q=${encodeURIComponent(newQuery)}&mode=${newMode}`;
+    navigate(url);
+  };
+
+  // Sprint 17 Feature 17.2: Callback to update session ID from metadata
+  const handleSessionIdReceived = (sessionId: string) => {
+    if (!activeSessionId && sessionId) {
+      setActiveSessionId(sessionId);
+    }
   };
 
   if (!query) {
@@ -55,7 +78,8 @@ export function SearchResultsPage() {
         <StreamingAnswer
           query={query}
           mode={mode}
-          sessionId={sessionId}
+          sessionId={activeSessionId}
+          onSessionIdReceived={handleSessionIdReceived}
         />
       </div>
     </div>

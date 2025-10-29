@@ -13,16 +13,20 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 /**
  * Stream chat response using Server-Sent Events (SSE)
  *
+ * Sprint 17 Feature 17.5: Added AbortController support to prevent duplicate streams
+ *
  * @param request Chat request with query and optional session_id
+ * @param signal Optional AbortSignal to cancel the stream
  * @yields ChatChunk objects (metadata, tokens, sources, errors)
  */
-export async function* streamChat(request: ChatRequest): AsyncGenerator<ChatChunk> {
+export async function* streamChat(request: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatChunk> {
   const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
+    signal,  // Pass AbortSignal to fetch
   });
 
   if (!response.ok) {

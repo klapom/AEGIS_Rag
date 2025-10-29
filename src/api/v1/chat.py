@@ -2,6 +2,7 @@
 
 Sprint 10 Feature 10.1: FastAPI Chat Endpoints
 Sprint 15 Feature 15.1: SSE Streaming Endpoint
+Sprint 17 Feature 17.2: Conversation History Persistence
 
 This module provides RESTful chat endpoints for the Gradio UI and React frontend.
 It integrates the CoordinatorAgent for query processing and UnifiedMemoryAPI for session management.
@@ -10,6 +11,7 @@ Includes Server-Sent Events (SSE) streaming for real-time token-by-token respons
 
 import json
 import uuid
+from datetime import datetime, timezone
 from typing import Any, AsyncGenerator
 
 import structlog
@@ -36,6 +38,97 @@ def get_coordinator() -> CoordinatorAgent:
         _coordinator = CoordinatorAgent(use_persistence=True)
         logger.info("coordinator_initialized_for_chat_api")
     return _coordinator
+
+
+# Sprint 17 Feature 17.2: Conversation persistence helpers
+
+
+async def save_conversation_turn(
+    session_id: str,
+    user_message: str,
+    assistant_message: str,
+    intent: str | None = None,
+    sources: list[SourceDocument] | None = None,
+) -> bool:
+    """Save a conversation turn to Redis.
+
+    Sprint 17 Feature 17.2: Conversation History Persistence
+
+    Args:
+        session_id: Session ID
+        user_message: User's question
+        assistant_message: Assistant's answer
+        intent: Query intent (vector, graph, hybrid)
+        sources: Source documents used
+
+    Returns:
+        True if saved successfully
+    """
+    try:
+        from src.components.memory import get_redis_memory
+        redis_memory = get_redis_memory()
+
+        # Load existing conversation or create new one
+        existing_conv = await redis_memory.retrieve(
+            key=session_id,
+            namespace="conversation"
+        )
+
+        if existing_conv:
+            # Extract value from Redis wrapper
+            if isinstance(existing_conv, dict) and "value" in existing_conv:
+                existing_conv = existing_conv["value"]
+
+            # Append to existing conversation
+            messages = existing_conv.get("messages", [])
+            created_at = existing_conv.get("created_at")
+        else:
+            # New conversation
+            messages = []
+            created_at = datetime.now(timezone.utc).isoformat()
+
+        # Add new messages
+        messages.append({
+            "role": "user",
+            "content": user_message,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+        messages.append({
+            "role": "assistant",
+            "content": assistant_message,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "intent": intent,
+            "source_count": len(sources) if sources else 0,
+        })
+
+        # Save updated conversation (7 days TTL)
+        conversation_data = {
+            "messages": messages,
+            "created_at": created_at,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "message_count": len(messages),
+        }
+
+        success = await redis_memory.store(
+            key=session_id,
+            value=conversation_data,
+            ttl_seconds=604800,  # 7 days
+            namespace="conversation",
+        )
+
+        if success:
+            logger.info(
+                "conversation_saved",
+                session_id=session_id,
+                message_count=len(messages),
+            )
+
+        return success
+
+    except Exception as e:
+        logger.error("conversation_save_failed", session_id=session_id, error=str(e))
+        return False
 
 
 # Request/Response Models
@@ -248,6 +341,15 @@ async def chat(request: ChatRequest) -> ChatResponse:
             latency=metadata.get("latency_seconds"),
         )
 
+        # Sprint 17 Feature 17.2: Save conversation to Redis
+        await save_conversation_turn(
+            session_id=session_id,
+            user_message=request.query,
+            assistant_message=answer,
+            intent=result.get("intent"),
+            sources=sources,
+        )
+
         return response
 
     except AegisRAGException as e:
@@ -306,7 +408,15 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
     )
 
     async def generate_stream() -> AsyncGenerator[str, None]:
-        """Generate SSE-formatted stream of chat response."""
+        """Generate SSE-formatted stream of chat response.
+
+        Sprint 17 Feature 17.2: Collect answer during streaming and save to Redis
+        """
+        # Sprint 17 Feature 17.2: Accumulate answer tokens and sources
+        collected_answer = []
+        collected_sources = []
+        collected_intent = None
+
         try:
             # Send initial metadata
             yield _format_sse_message({
@@ -326,6 +436,15 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     session_id=session_id,
                     intent=request.intent
                 ):
+                    # Sprint 17 Feature 17.2: Collect tokens and sources
+                    if isinstance(chunk, dict):
+                        if chunk.get("type") == "token" and "content" in chunk:
+                            collected_answer.append(chunk["content"])
+                        elif chunk.get("type") == "source" and "source" in chunk:
+                            collected_sources.append(chunk["source"])
+                        elif chunk.get("type") == "metadata" and "intent" in chunk.get("data", {}):
+                            collected_intent = chunk["data"]["intent"]
+
                     yield _format_sse_message(chunk)
             else:
                 # Fallback: Non-streaming mode (for backward compatibility)
@@ -341,11 +460,13 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     intent=request.intent
                 )
 
-                # Extract answer
+                # Extract answer and intent
                 answer = _extract_answer(result)
+                collected_intent = result.get("intent")
 
                 # Send answer as tokens (simulate streaming)
                 for token in answer.split():
+                    collected_answer.append(token + " ")
                     yield _format_sse_message({
                         "type": "token",
                         "content": token + " "
@@ -354,6 +475,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 # Send sources if available
                 if request.include_sources:
                     sources = _extract_sources(result)
+                    collected_sources = [s.model_dump() if hasattr(s, 'model_dump') else s for s in sources]
                     for source in sources:
                         yield _format_sse_message({
                             "type": "source",
@@ -364,6 +486,18 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             yield "data: [DONE]\n\n"
 
             logger.info("chat_stream_completed", session_id=session_id)
+
+            # Sprint 17 Feature 17.2: Save conversation after streaming completes
+            full_answer = "".join(collected_answer)
+            if full_answer:
+                await save_conversation_turn(
+                    session_id=session_id,
+                    user_message=request.query,
+                    assistant_message=full_answer,
+                    intent=collected_intent,
+                    sources=collected_sources,
+                )
+                logger.info("conversation_saved_after_streaming", session_id=session_id)
 
         except AegisRAGException as e:
             logger.error(
@@ -403,6 +537,7 @@ async def list_sessions() -> SessionListResponse:
     """List all active conversation sessions.
 
     Sprint 15 Feature 15.5: Session Management for History Sidebar
+    Sprint 17 Feature 17.2: Implement proper session listing from Redis
 
     Returns:
         SessionListResponse with list of session information
@@ -413,14 +548,56 @@ async def list_sessions() -> SessionListResponse:
     logger.info("session_list_requested")
 
     try:
-        # Get unified memory API
-        memory_api = get_unified_memory_api()
+        from src.components.memory import get_redis_memory
+        redis_memory = get_redis_memory()
 
-        # TODO: Implement proper session listing in UnifiedMemoryAPI
-        # For now, return empty list as placeholder
-        # In future: Scan Redis keys matching "conversation:*" pattern
+        # Get Redis client for scanning
+        redis_client = await redis_memory.client
 
+        # Scan for conversation keys
+        conversation_keys = []
+        cursor = 0
+        while True:
+            cursor, keys = await redis_client.scan(
+                cursor=cursor,
+                match="conversation:*",
+                count=100
+            )
+            conversation_keys.extend(keys)
+            if cursor == 0:
+                break
+
+        # Retrieve session info for each conversation
         sessions: list[SessionInfo] = []
+        for key in conversation_keys:
+            try:
+                # Extract session_id from key (format: "conversation:{session_id}")
+                session_id = key.split(":", 1)[1] if ":" in key else key
+
+                # Retrieve conversation data
+                conv_data = await redis_memory.retrieve(
+                    key=session_id,
+                    namespace="conversation"
+                )
+
+                if conv_data:
+                    # Extract value from Redis wrapper
+                    if isinstance(conv_data, dict) and "value" in conv_data:
+                        conv_data = conv_data["value"]
+
+                    # Create SessionInfo
+                    sessions.append(SessionInfo(
+                        session_id=session_id,
+                        message_count=conv_data.get("message_count", 0),
+                        last_activity=conv_data.get("updated_at"),
+                        created_at=conv_data.get("created_at"),
+                    ))
+            except Exception as e:
+                logger.warning("failed_to_retrieve_session", session_id=session_id, error=str(e))
+                continue
+
+        # Sort by last activity (most recent first)
+        sessions.sort(key=lambda s: s.last_activity or "", reverse=True)
 
         logger.info("session_list_retrieved", count=len(sessions))
 
@@ -441,6 +618,8 @@ async def list_sessions() -> SessionListResponse:
 async def get_conversation_history(session_id: str) -> ConversationHistoryResponse:
     """Retrieve conversation history for a session.
 
+    Sprint 17 Feature 17.2: Implement proper conversation history retrieval from Redis
+
     Args:
         session_id: Session ID to retrieve history for
 
@@ -453,19 +632,29 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
     logger.info("conversation_history_requested", session_id=session_id)
 
     try:
-        # Get unified memory API
-        memory_api = get_unified_memory_api()
+        from src.components.memory import get_redis_memory
+        redis_memory = get_redis_memory()
 
-        # Retrieve conversation history from memory
-        # Note: UnifiedMemoryAPI uses namespace "conversation:{session_id}"
-        history_key = f"conversation:{session_id}"
-
-        # Try to retrieve from Redis (recent conversations)
-        history_data = await memory_api.retrieve(key=history_key, namespace="memory")
+        # Retrieve conversation from Redis
+        history_data = await redis_memory.retrieve(
+            key=session_id,
+            namespace="conversation"
+        )
 
         messages = []
         if history_data:
+            # Extract value from Redis wrapper
+            if isinstance(history_data, dict) and "value" in history_data:
+                history_data = history_data["value"]
+
             messages = history_data.get("messages", [])
+        else:
+            # Session not found
+            logger.warning("conversation_history_not_found", session_id=session_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Conversation history not found for session: {session_id}",
+            )
 
         logger.info(
             "conversation_history_retrieved", session_id=session_id, message_count=len(messages)
@@ -475,6 +664,8 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
             session_id=session_id, messages=messages, message_count=len(messages)
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("conversation_history_retrieval_failed", session_id=session_id, error=str(e))
         raise HTTPException(

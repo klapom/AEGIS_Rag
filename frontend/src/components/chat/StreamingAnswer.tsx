@@ -20,9 +20,10 @@ interface StreamingAnswerProps {
   query: string;
   mode: string;
   sessionId?: string;
+  onSessionIdReceived?: (sessionId: string) => void;
 }
 
-export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps) {
+export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived }: StreamingAnswerProps) {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
@@ -31,6 +32,11 @@ export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps
   const [intent, setIntent] = useState<string>('');
 
   useEffect(() => {
+    // Sprint 17 Feature 17.5: Fix duplicate streaming caused by React StrictMode
+    // AbortController cancels SSE connection on cleanup (e.g., during StrictMode unmount)
+    const abortController = new AbortController();
+    let isAborted = false;
+
     const fetchStream = async () => {
       setAnswer('');
       setSources([]);
@@ -45,10 +51,18 @@ export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps
           intent: mode,
           session_id: sessionId,
           include_sources: true
-        })) {
+        }, abortController.signal)) {  // Pass signal to streamChat
+          // Stop processing if component unmounted
+          if (isAborted) {
+            break;
+          }
           handleChunk(chunk);
         }
       } catch (err) {
+        // Ignore AbortError (expected during cleanup)
+        if (isAborted || (err instanceof Error && err.name === 'AbortError')) {
+          return;
+        }
         console.error('Streaming error:', err);
         setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
         setIsStreaming(false);
@@ -56,6 +70,12 @@ export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps
     };
 
     fetchStream();
+
+    // Cleanup: Cancel SSE connection when component unmounts
+    return () => {
+      isAborted = true;
+      abortController.abort();
+    };
   }, [query, mode, sessionId]);
 
   const handleChunk = (chunk: ChatChunk) => {
@@ -64,6 +84,10 @@ export function StreamingAnswer({ query, mode, sessionId }: StreamingAnswerProps
         setMetadata(chunk.data || chunk);
         if (chunk.data?.intent) {
           setIntent(chunk.data.intent);
+        }
+        // Sprint 17 Feature 17.2: Notify parent of session_id for follow-up questions
+        if (chunk.data?.session_id && onSessionIdReceived) {
+          onSessionIdReceived(chunk.data.session_id);
         }
         break;
 
