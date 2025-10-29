@@ -13,7 +13,9 @@ class ArchivedConversation(BaseModel):
 
     session_id: str = Field(..., description="Unique session ID")
     user_id: str = Field(..., description="User identifier")
-    title: str | None = Field(default=None, description="Conversation title (auto-generated or manual)")
+    title: str | None = Field(
+        default=None, description="Conversation title (auto-generated or manual)"
+    )
     summary: str | None = Field(default=None, description="Conversation summary")
     topics: list[str] = Field(default_factory=list, description="Extracted topics")
     created_at: str = Field(..., description="Conversation creation timestamp (ISO 8601)")

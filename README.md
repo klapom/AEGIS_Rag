@@ -11,7 +11,6 @@ AEGIS_RAG/
 │   │   ├── PROJECT_SUMMARY.md      # ⭐ Gesamtübersicht - Start hier!
 │   │   ├── QUICK_START.md          # Tag-1-Setup
 │   │   ├── CLAUDE.md               # Hauptkontext für Claude Code
-│   │   ├── SPRINT_PLAN.md          # 12-Sprint Roadmap
 │   │   ├── NAMING_CONVENTIONS.md   # Code Standards
 │   │   ├── TECH_STACK.md           # Complete Technology Stack
 │   │   ├── SUBAGENTS.md            # 5 Subagenten-Definitionen
@@ -44,7 +43,7 @@ AEGIS_RAG/
 
 ### Core Dokumentation
 - [PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Gesamtübersicht
-- [SPRINT_PLAN.md](docs/core/SPRINT_PLAN.md) - 12-Sprint Roadmap
+- [SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md) - 12-Sprint Roadmap
 - [QUICK_START.md](docs/core/QUICK_START.md) - Day-1 Setup Guide
 - [PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) - Claude Code Templates
 - [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 18+ Architecture Decisions

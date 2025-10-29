@@ -142,7 +142,9 @@ class Chunk(BaseModel):
         input_str = f"{document_id}:{chunk_index}:{content}"
         hash_hex = hashlib.sha256(input_str.encode("utf-8")).hexdigest()[:32]
         # Format as UUID4: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-        return f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"
+        return (
+            f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"
+        )
 
     def to_qdrant_payload(self) -> dict[str, Any]:
         """Convert chunk to Qdrant point payload.

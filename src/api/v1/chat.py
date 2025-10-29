@@ -12,7 +12,7 @@ Includes Server-Sent Events (SSE) streaming for real-time token-by-token respons
 import json
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -68,13 +68,11 @@ async def save_conversation_turn(
     """
     try:
         from src.components.memory import get_redis_memory
+
         redis_memory = get_redis_memory()
 
         # Load existing conversation or create new one
-        existing_conv = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         if existing_conv:
             # Extract value from Redis wrapper
@@ -87,28 +85,32 @@ async def save_conversation_turn(
         else:
             # New conversation
             messages = []
-            created_at = datetime.now(datetime.UTC).isoformat()
+            created_at = datetime.now(timezone.utc).isoformat()
 
         # Add new messages
-        messages.append({
-            "role": "user",
-            "content": user_message,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": user_message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
-        messages.append({
-            "role": "assistant",
-            "content": assistant_message,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
-            "intent": intent,
-            "source_count": len(sources) if sources else 0,
-        })
+        messages.append(
+            {
+                "role": "assistant",
+                "content": assistant_message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "intent": intent,
+                "source_count": len(sources) if sources else 0,
+            }
+        )
 
         # Save updated conversation (7 days TTL)
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
-            "updated_at": datetime.now(datetime.UTC).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "message_count": len(messages),
         }
 
@@ -152,14 +154,16 @@ class ChatRequest(BaseModel):
         default=False, description="Include MCP tool call information in response"
     )
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "query": "Was ist AEGIS RAG?",
-            "session_id": "user-123-session",
-            "include_sources": True,
-            "include_tool_calls": False,
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "query": "Was ist AEGIS RAG?",
+                "session_id": "user-123-session",
+                "include_sources": True,
+                "include_tool_calls": False,
+            }
         }
-    })
+    )
 
 
 class SourceDocument(BaseModel):
@@ -201,37 +205,39 @@ class ChatResponse(BaseModel):
         default_factory=dict, description="Execution metadata (latency, agent_path, etc.)"
     )
 
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "answer": "AEGIS RAG ist ein agentisches RAG-System...",
-            "query": "Was ist AEGIS RAG?",
-            "session_id": "user-123-session",
-            "intent": "vector",
-            "sources": [
-                {
-                    "text": "AEGIS RAG steht für...",
-                    "title": "CLAUDE.md",
-                    "source": "docs/core/CLAUDE.md",
-                    "score": 0.92,
-                }
-            ],
-            "tool_calls": [
-                {
-                    "tool_name": "read_file",
-                    "server": "filesystem-server",
-                    "arguments": {"path": "/docs/CLAUDE.md"},
-                    "result": {"content": "# CLAUDE.md - AegisRAG..."},
-                    "duration_ms": 45.2,
-                    "success": True,
-                    "error": None,
-                }
-            ],
-            "metadata": {
-                "latency_seconds": 1.23,
-                "agent_path": ["router", "vector_agent", "generator"],
-            },
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "answer": "AEGIS RAG ist ein agentisches RAG-System...",
+                "query": "Was ist AEGIS RAG?",
+                "session_id": "user-123-session",
+                "intent": "vector",
+                "sources": [
+                    {
+                        "text": "AEGIS RAG steht für...",
+                        "title": "CLAUDE.md",
+                        "source": "docs/core/CLAUDE.md",
+                        "score": 0.92,
+                    }
+                ],
+                "tool_calls": [
+                    {
+                        "tool_name": "read_file",
+                        "server": "filesystem-server",
+                        "arguments": {"path": "/docs/CLAUDE.md"},
+                        "result": {"content": "# CLAUDE.md - AegisRAG..."},
+                        "duration_ms": 45.2,
+                        "success": True,
+                        "error": None,
+                    }
+                ],
+                "metadata": {
+                    "latency_seconds": 1.23,
+                    "agent_path": ["router", "vector_agent", "generator"],
+                },
+            }
         }
-    })
+    )
 
 
 class ConversationHistoryResponse(BaseModel):
@@ -422,22 +428,22 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
         try:
             # Send initial metadata
-            yield _format_sse_message({
-                "type": "metadata",
-                "session_id": session_id,
-                "timestamp": _get_iso_timestamp(),
-            })
+            yield _format_sse_message(
+                {
+                    "type": "metadata",
+                    "session_id": session_id,
+                    "timestamp": _get_iso_timestamp(),
+                }
+            )
 
             # Get coordinator
             coordinator = get_coordinator()
 
             # Check if coordinator has streaming method
-            if hasattr(coordinator, 'process_query_stream'):
+            if hasattr(coordinator, "process_query_stream"):
                 # Stream from CoordinatorAgent
                 async for chunk in coordinator.process_query_stream(
-                    query=request.query,
-                    session_id=session_id,
-                    intent=request.intent
+                    query=request.query, session_id=session_id, intent=request.intent
                 ):
                     # Sprint 17 Feature 17.2: Collect tokens and sources
                     if isinstance(chunk, dict):
@@ -453,14 +459,12 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 # Fallback: Non-streaming mode (for backward compatibility)
                 logger.warning(
                     "coordinator_streaming_not_available",
-                    message="process_query_stream not implemented, falling back to non-streaming"
+                    message="process_query_stream not implemented, falling back to non-streaming",
                 )
 
                 # Process query normally
                 result = await coordinator.process_query(
-                    query=request.query,
-                    session_id=session_id,
-                    intent=request.intent
+                    query=request.query, session_id=session_id, intent=request.intent
                 )
 
                 # Extract answer and intent
@@ -470,20 +474,16 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 # Send answer as tokens (simulate streaming)
                 for token in answer.split():
                     collected_answer.append(token + " ")
-                    yield _format_sse_message({
-                        "type": "token",
-                        "content": token + " "
-                    })
+                    yield _format_sse_message({"type": "token", "content": token + " "})
 
                 # Send sources if available
                 if request.include_sources:
                     sources = _extract_sources(result)
-                    collected_sources = [s.model_dump() if hasattr(s, 'model_dump') else s for s in sources]
+                    collected_sources = [
+                        s.model_dump() if hasattr(s, "model_dump") else s for s in sources
+                    ]
                     for source in sources:
-                        yield _format_sse_message({
-                            "type": "source",
-                            "source": source.model_dump()
-                        })
+                        yield _format_sse_message({"type": "source", "source": source.model_dump()})
 
             # Signal completion
             yield "data: [DONE]\n\n"
@@ -509,19 +509,15 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 error=str(e),
                 details=e.details,
             )
-            yield _format_sse_message({
-                "type": "error",
-                "error": f"RAG system error: {e.message}",
-                "code": "AEGIS_ERROR"
-            })
+            yield _format_sse_message(
+                {"type": "error", "error": f"RAG system error: {e.message}", "code": "AEGIS_ERROR"}
+            )
 
         except Exception as e:
             logger.error("chat_stream_failed_unexpected", session_id=session_id, error=str(e))
-            yield _format_sse_message({
-                "type": "error",
-                "error": f"Unexpected error: {str(e)}",
-                "code": "INTERNAL_ERROR"
-            })
+            yield _format_sse_message(
+                {"type": "error", "error": f"Unexpected error: {str(e)}", "code": "INTERNAL_ERROR"}
+            )
 
     return StreamingResponse(
         generate_stream(),
@@ -531,7 +527,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
             "Access-Control-Allow-Origin": "*",  # CORS for SSE
-        }
+        },
     )
 
 
@@ -552,6 +548,7 @@ async def list_sessions() -> SessionListResponse:
 
     try:
         from src.components.memory import get_redis_memory
+
         redis_memory = get_redis_memory()
 
         # Get Redis client for scanning
@@ -561,11 +558,7 @@ async def list_sessions() -> SessionListResponse:
         conversation_keys = []
         cursor = 0
         while True:
-            cursor, keys = await redis_client.scan(
-                cursor=cursor,
-                match="conversation:*",
-                count=100
-            )
+            cursor, keys = await redis_client.scan(cursor=cursor, match="conversation:*", count=100)
             conversation_keys.extend(keys)
             if cursor == 0:
                 break
@@ -578,10 +571,7 @@ async def list_sessions() -> SessionListResponse:
                 session_id = key.split(":", 1)[1] if ":" in key else key
 
                 # Retrieve conversation data
-                conv_data = await redis_memory.retrieve(
-                    key=session_id,
-                    namespace="conversation"
-                )
+                conv_data = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
                 if conv_data:
                     # Extract value from Redis wrapper
@@ -589,13 +579,15 @@ async def list_sessions() -> SessionListResponse:
                         conv_data = conv_data["value"]
 
                     # Create SessionInfo (Sprint 17 Feature 17.3: Include title)
-                    sessions.append(SessionInfo(
-                        session_id=session_id,
-                        message_count=conv_data.get("message_count", 0),
-                        last_activity=conv_data.get("updated_at"),
-                        created_at=conv_data.get("created_at"),
-                        title=conv_data.get("title"),  # Auto-generated or user-edited title
-                    ))
+                    sessions.append(
+                        SessionInfo(
+                            session_id=session_id,
+                            message_count=conv_data.get("message_count", 0),
+                            last_activity=conv_data.get("updated_at"),
+                            created_at=conv_data.get("created_at"),
+                            title=conv_data.get("title"),  # Auto-generated or user-edited title
+                        )
+                    )
             except Exception as e:
                 logger.warning("failed_to_retrieve_session", session_id=session_id, error=str(e))
                 continue
@@ -605,10 +597,7 @@ async def list_sessions() -> SessionListResponse:
 
         logger.info("session_list_retrieved", count=len(sessions))
 
-        return SessionListResponse(
-            sessions=sessions,
-            total_count=len(sessions)
-        )
+        return SessionListResponse(sessions=sessions, total_count=len(sessions))
 
     except Exception as e:
         logger.error("session_list_failed", error=str(e))
@@ -637,13 +626,11 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
 
     try:
         from src.components.memory import get_redis_memory
+
         redis_memory = get_redis_memory()
 
         # Retrieve conversation from Redis
-        history_data = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        history_data = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         messages = []
         if history_data:
@@ -835,7 +822,7 @@ Title:"""
                 generated_title = str(title_result).strip()
 
             # Clean up title (remove quotes, extra whitespace)
-            generated_title = generated_title.strip('"\'').strip()
+            generated_title = generated_title.strip("\"'").strip()
 
             # Fallback if title is empty or too long
             if not generated_title or len(generated_title) > 100:
@@ -1062,7 +1049,7 @@ def _get_iso_timestamp() -> str:
     Returns:
         ISO 8601 timestamp string
     """
-    return datetime.now(datetime.UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline

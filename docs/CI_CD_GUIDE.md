@@ -477,6 +477,6 @@ def mock_ollama(monkeypatch):
 ## References
 
 - [GitHub Actions Best Practices](https://docs.github.com/en/actions/learn-github-actions/security-hardening-for-github-actions)
-- [Poetry CI/CD Guide](https://python-poetry.org/docs/ci/)
+- [Poetry Documentation](https://python-poetry.org/docs/)
 - [Pytest Best Practices](https://docs.pytest.org/en/stable/goodpractices.html)
 - [Docker Build Optimization](https://docs.docker.com/build/cache/)

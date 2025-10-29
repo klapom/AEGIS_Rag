@@ -63,8 +63,8 @@ class DocumentIngestionPipeline:
         # Aligned with Neo4j/LightRAG for maximum synergie
         chunk_strategy = ChunkStrategy(
             method="adaptive",  # Sentence-aware chunking
-            chunk_size=600,     # Optimized for entity extraction (was: 512)
-            overlap=150,        # 25% overlap for context bridges (was: 128)
+            chunk_size=600,  # Optimized for entity extraction (was: 512)
+            overlap=150,  # 25% overlap for context bridges (was: 128)
         )
         self.chunking_service = get_chunking_service(strategy=chunk_strategy)
 

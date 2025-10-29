@@ -236,7 +236,7 @@ logger.info(
     "router_registered",
     router="admin_router",
     prefix="/api/v1/admin",
-    note="Sprint 18 TD-41: Admin router with /stats endpoint - prefix fixed!"
+    note="Sprint 18 TD-41: Admin router with /stats endpoint - prefix fixed!",
 )
 
 # Chat API router (Sprint 10: Feature 10.1)

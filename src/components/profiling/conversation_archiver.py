@@ -9,7 +9,7 @@ This module provides:
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import structlog
@@ -106,7 +106,9 @@ class ConversationArchiver:
             return True
 
         except Exception as e:
-            logger.error("collection_creation_failed", collection=self.collection_name, error=str(e))
+            logger.error(
+                "collection_creation_failed", collection=self.collection_name, error=str(e)
+            )
             raise VectorSearchError(f"Failed to ensure collection exists: {e}") from e
 
     async def archive_conversation(
@@ -159,8 +161,8 @@ class ConversationArchiver:
             title = conversation_data.get("title")
             summary = self._generate_summary(messages)
             topics = self._extract_topics(messages)
-            created_at = conversation_data.get("created_at", datetime.now(datetime.UTC).isoformat())
-            archived_at = datetime.now(datetime.UTC).isoformat()
+            created_at = conversation_data.get("created_at", datetime.now(timezone.utc).isoformat())
+            archived_at = datetime.now(timezone.utc).isoformat()
             message_count = len(messages)
 
             # Create Qdrant point
@@ -230,9 +232,7 @@ class ConversationArchiver:
             query_embedding = await self.embedding_service.embed_single(request.query)
 
             # Build filter (user-scoped)
-            filter_conditions = [
-                FieldCondition(key="user_id", match=MatchValue(value=user_id))
-            ]
+            filter_conditions = [FieldCondition(key="user_id", match=MatchValue(value=user_id))]
 
             # Add date filters if provided
             if request.date_from:
@@ -288,16 +288,14 @@ class ConversationArchiver:
                 query=request.query,
                 results=results,
                 total_count=len(results),
-                search_timestamp=datetime.now(datetime.UTC).isoformat(),
+                search_timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
         except Exception as e:
             logger.error("conversation_search_failed", query=request.query, error=str(e))
             raise VectorSearchError(f"Failed to search archived conversations: {e}") from e
 
-    async def archive_old_conversations(
-        self, max_conversations: int = 100
-    ) -> dict[str, Any]:
+    async def archive_old_conversations(self, max_conversations: int = 100) -> dict[str, Any]:
         """Background job: Archive conversations older than configured threshold.
 
         Args:
@@ -328,7 +326,7 @@ class ConversationArchiver:
             # Process each conversation
             archived_count = 0
             failed_count = 0
-            cutoff_date = datetime.now(datetime.UTC) - timedelta(days=self.auto_archive_days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.auto_archive_days)
 
             for key in conversation_keys[:max_conversations]:
                 try:

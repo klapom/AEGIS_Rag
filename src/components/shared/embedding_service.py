@@ -189,7 +189,7 @@ class UnifiedEmbeddingService:
         cached = self.cache.get(cache_key)
         if cached:
             # Safe logging: remove non-ASCII characters for Windows console
-            safe_preview = text[:50].encode('ascii', errors='replace').decode('ascii')
+            safe_preview = text[:50].encode("ascii", errors="replace").decode("ascii")
             logger.debug("embedding_cache_hit", text_preview=safe_preview)
             return cached
 
@@ -211,7 +211,7 @@ class UnifiedEmbeddingService:
             self.cache.set(cache_key, embedding)
 
             # Safe logging: remove non-ASCII characters for Windows console
-            safe_preview = text[:50].encode('ascii', errors='replace').decode('ascii')
+            safe_preview = text[:50].encode("ascii", errors="replace").decode("ascii")
             logger.debug(
                 "embedding_generated",
                 text_preview=safe_preview,

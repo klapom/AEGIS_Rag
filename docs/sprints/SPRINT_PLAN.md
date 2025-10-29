@@ -229,7 +229,7 @@
 ### Sprint 3 Summary
 **Test Coverage**: 335/338 passing (99.1%)
 **Features Delivered**: 6 (including security fix)
-**Documentation**: [SPRINT_3_SUMMARY.md](../../SPRINT_3_SUMMARY.md)
+**Documentation**: [SPRINT_3_SUMMARY.md](../archive/sprints/SPRINT_3_SUMMARY.md)
 **Examples**: [sprint3_examples.md](../examples/sprint3_examples.md)
 
 **Key Components**:
@@ -461,7 +461,7 @@ Sprint 6 CI failures revealed a critical gap: **432 mocked unit tests passed loc
 - Parallel: 1 week (4 subagents, 10 SP each)
 
 **References:**
-- [SPRINT_8_PLAN.md](../../SPRINT_8_PLAN.md) - Detailed plan with critical path analysis
+- [SPRINT_8_PLAN.md](../archive/sprints/SPRINT_8_PLAN.md) - Detailed plan with critical path analysis
 - [ADR-015](../adr/ADR-015-critical-path-testing.md) - Critical Path Testing Strategy
 - [ADR-014](../adr/ADR-014-e2e-integration-testing.md) - E2E Integration Testing Strategy
 
@@ -624,8 +624,8 @@ frontend/src/
 ### References
 - [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md) - Detailed implementation plan (1240 lines)
 - [SPRINT_15_COMPLETION_REPORT.md](../sprints/SPRINT_15_COMPLETION_REPORT.md) - Full completion report
-- [ADR-020](../decisions/ADR-020-sse-streaming.md) - SSE vs WebSocket decision
-- [ADR-021](../decisions/ADR-021-perplexity-ui-design.md) - Perplexity UI adoption rationale
+- [ADR-020](../adr/ADR-020-sse-streaming-for-chat.md) - SSE vs WebSocket decision
+- [ADR-021](../adr/ADR-021-perplexity-inspired-ui-design.md) - Perplexity UI adoption rationale
 - Branch: `sprint-15-frontend` (merged to main: 2025-10-28)
 - Release: v0.15.0
 
@@ -908,9 +908,9 @@ docs/adr/ADR-024-graphiti-optimization-strategy.md (if needed)
 - BGE-M3 evaluation needs benchmarking infrastructure
 
 ### Architecture Decisions
-- [ADR-022](../decisions/ADR-022-unified-chunking-service.md) - Unified Chunking Service 🆕
-- [ADR-023](../decisions/ADR-023-unified-reindexing-pipeline.md) - Unified Re-Indexing Pipeline 🆕
-- [ADR-024](../decisions/ADR-024-bge-m3-standardization.md) - BGE-M3 Standardization Strategy 🆕
+- [ADR-022](../adr/ADR-022-unified-chunking-service.md) - Unified Chunking Service 🆕
+- [ADR-023](../adr/ADR-023-unified-reindexing-pipeline.md) - Unified Re-Indexing Pipeline 🆕
+- [ADR-024](../adr/ADR-024-bge-m3-system-wide-standardization.md) - BGE-M3 Standardization Strategy 🆕
 
 ### Technical Debt Addressed
 - **TD-35**: Frontend E2E Tests (from Sprint 15) ✅

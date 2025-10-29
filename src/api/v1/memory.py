@@ -73,10 +73,7 @@ class MemorySearchRequest(BaseModel):
         description="Limit temporal search to recent N hours",
     )
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        str_strip_whitespace=True
-    )
+    model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
 
 class MemorySearchResult(BaseModel):
@@ -124,10 +121,7 @@ class PointInTimeQueryRequest(BaseModel):
         description="Maximum results to return",
     )
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        str_strip_whitespace=True
-    )
+    model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
 
 class PointInTimeQueryResponse(BaseModel):
@@ -167,9 +161,7 @@ class ConsolidationRequest(BaseModel):
         examples=[["session_123", "session_456"]],
     )
 
-    model_config = ConfigDict(
-        validate_assignment=True
-    )
+    model_config = ConfigDict(validate_assignment=True)
 
 
 class ConsolidationResponse(BaseModel):

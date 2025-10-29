@@ -30,7 +30,7 @@ logger.info(
     "admin_router_initialized",
     prefix="/admin",
     tags=["admin"],
-    note="Sprint 18 TD-41: Router prefix fixed - will be combined with /api/v1 in main.py"
+    note="Sprint 18 TD-41: Router prefix fixed - will be combined with /api/v1 in main.py",
 )
 
 
@@ -142,7 +142,9 @@ async def reindex_progress_stream(
             )
 
             points_indexed = stats.get("points_indexed", 0)
-            message = f"Indexed {points_indexed} chunks into Qdrant. Starting Neo4j graph indexing..."
+            message = (
+                f"Indexed {points_indexed} chunks into Qdrant. Starting Neo4j graph indexing..."
+            )
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': message})}\n\n"
 
             # Phase 3b: Index into Neo4j/LightRAG graph (Sprint 16 Feature 16.7)
@@ -165,10 +167,12 @@ async def reindex_progress_stream(
                 for doc in documents:
                     content = doc.get_content()
                     if content and content.strip():
-                        lightrag_docs.append({
-                            "text": content,
-                            "id": doc.doc_id or doc.metadata.get("file_name", "unknown")
-                        })
+                        lightrag_docs.append(
+                            {
+                                "text": content,
+                                "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
+                            }
+                        )
 
                 # Insert into LightRAG (entities + relationships + graph)
                 if lightrag_docs:
@@ -199,7 +203,9 @@ async def reindex_progress_stream(
             collection_info = await qdrant_client.get_collection_info(collection_name)
             if collection_info:
                 point_count = collection_info.points_count
-                logger.info("qdrant_validation_complete", collection=collection_name, points=point_count)
+                logger.info(
+                    "qdrant_validation_complete", collection=collection_name, points=point_count
+                )
             else:
                 raise VectorSearchError(f"Collection {collection_name} not found after re-indexing")
 
@@ -209,7 +215,11 @@ async def reindex_progress_stream(
                 graph_stats = await lightrag_wrapper.get_stats()
                 entity_count = graph_stats.get("entity_count", 0)
                 relationship_count = graph_stats.get("relationship_count", 0)
-                logger.info("neo4j_validation_complete", entities=entity_count, relationships=relationship_count)
+                logger.info(
+                    "neo4j_validation_complete",
+                    entities=entity_count,
+                    relationships=relationship_count,
+                )
                 yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'Validation successful: Qdrant={point_count} chunks, Neo4j={entity_count} entities + {relationship_count} relations'})}\n\n"
             except Exception as e:
                 logger.warning("neo4j_validation_failed", error=str(e))
@@ -328,11 +338,15 @@ class SystemStats(BaseModel):
 
     # Neo4j / LightRAG statistics
     neo4j_total_entities: int | None = Field(None, description="Total entities in Neo4j graph")
-    neo4j_total_relations: int | None = Field(None, description="Total relationships in Neo4j graph")
+    neo4j_total_relations: int | None = Field(
+        None, description="Total relationships in Neo4j graph"
+    )
     neo4j_total_chunks: int | None = Field(None, description="Total chunks stored in Neo4j")
 
     # System metadata
-    last_reindex_timestamp: str | None = Field(None, description="Timestamp of last re-indexing operation")
+    last_reindex_timestamp: str | None = Field(
+        None, description="Timestamp of last re-indexing operation"
+    )
     embedding_model: str = Field(..., description="Current embedding model name")
 
     # Additional stats
@@ -379,7 +393,7 @@ async def get_system_stats() -> SystemStats:
         "admin_stats_endpoint_called",
         endpoint="/api/v1/admin/stats",
         method="GET",
-        note="Sprint 18 TD-41: Tracking stats request"
+        note="Sprint 18 TD-41: Tracking stats request",
     )
 
     try:
@@ -397,9 +411,7 @@ async def get_system_stats() -> SystemStats:
             collection_info = await qdrant_client.get_collection(collection_name)
             qdrant_total_chunks = collection_info.points_count
             logger.info(
-                "qdrant_stats_retrieved",
-                chunks=qdrant_total_chunks,
-                collection=collection_name
+                "qdrant_stats_retrieved", chunks=qdrant_total_chunks, collection=collection_name
             )
         except Exception as e:
             logger.warning("failed_to_get_qdrant_stats", error=str(e), exc_info=True)
@@ -410,8 +422,9 @@ async def get_system_stats() -> SystemStats:
         bm25_corpus_size = None
         try:
             from src.components.vector_search.bm25_manager import get_bm25_manager
+
             bm25_manager = get_bm25_manager()
-            if hasattr(bm25_manager, 'get_corpus_size'):
+            if hasattr(bm25_manager, "get_corpus_size"):
                 bm25_corpus_size = bm25_manager.get_corpus_size()
                 logger.info("bm25_stats_retrieved", corpus_size=bm25_corpus_size)
             else:
@@ -438,19 +451,19 @@ async def get_system_stats() -> SystemStats:
             logger.info("executing_neo4j_query", query="entities")
             entities_result = await lightrag.graph_storage_cls.execute_query(query_entities)
             if entities_result and len(entities_result) > 0:
-                neo4j_total_entities = entities_result[0].get('count', 0)
+                neo4j_total_entities = entities_result[0].get("count", 0)
                 logger.info("neo4j_entities_retrieved", count=neo4j_total_entities)
 
             logger.info("executing_neo4j_query", query="relations")
             relations_result = await lightrag.graph_storage_cls.execute_query(query_relations)
             if relations_result and len(relations_result) > 0:
-                neo4j_total_relations = relations_result[0].get('count', 0)
+                neo4j_total_relations = relations_result[0].get("count", 0)
                 logger.info("neo4j_relations_retrieved", count=neo4j_total_relations)
 
             logger.info("executing_neo4j_query", query="chunks")
             chunks_result = await lightrag.graph_storage_cls.execute_query(query_chunks)
             if chunks_result and len(chunks_result) > 0:
-                neo4j_total_chunks = chunks_result[0].get('count', 0)
+                neo4j_total_chunks = chunks_result[0].get("count", 0)
                 logger.info("neo4j_chunks_retrieved", count=neo4j_total_chunks)
 
         except Exception as e:
@@ -461,6 +474,7 @@ async def get_system_stats() -> SystemStats:
         total_conversations = None
         try:
             from src.components.memory import get_redis_memory
+
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
             logger.info("redis_client_initialized")
@@ -471,9 +485,7 @@ async def get_system_stats() -> SystemStats:
             scan_iterations = 0
             while True:
                 cursor, keys = await redis_client.scan(
-                    cursor=cursor,
-                    match="conversation:*",
-                    count=100
+                    cursor=cursor, match="conversation:*", count=100
                 )
                 conversation_count += len(keys)
                 scan_iterations += 1
@@ -484,7 +496,7 @@ async def get_system_stats() -> SystemStats:
             logger.info(
                 "redis_stats_retrieved",
                 conversations=total_conversations,
-                scan_iterations=scan_iterations
+                scan_iterations=scan_iterations,
             )
         except Exception as e:
             logger.warning("failed_to_get_redis_stats", error=str(e), exc_info=True)
@@ -512,7 +524,7 @@ async def get_system_stats() -> SystemStats:
         logger.info(
             "admin_stats_successfully_retrieved",
             stats=stats.model_dump(),
-            note="Sprint 18 TD-41: Stats successfully assembled and ready to return"
+            note="Sprint 18 TD-41: Stats successfully assembled and ready to return",
         )
 
         return stats
@@ -523,10 +535,9 @@ async def get_system_stats() -> SystemStats:
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True,
-            note="Sprint 18 TD-41: Stats retrieval failed with exception"
+            note="Sprint 18 TD-41: Stats retrieval failed with exception",
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system statistics: {str(e)}",
         ) from e
-

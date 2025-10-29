@@ -83,7 +83,7 @@ class SearchRequest(BaseModel):
         # P1: Validate assignment to prevent invalid data
         validate_assignment=True,
         # P1: Strict validation
-        str_strip_whitespace=True
+        str_strip_whitespace=True,
     )
 
 
@@ -132,10 +132,7 @@ class IngestionRequest(BaseModel):
         max_length=20,  # P1: Prevent DoS with excessive extensions
     )
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        str_strip_whitespace=True
-    )
+    model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
 
 class IngestionResponse(BaseModel):
