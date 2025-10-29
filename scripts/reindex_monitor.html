@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS RAG - Re-Indexing Monitor</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #4ec9b0;
+        }
+        .config {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .config input {
+            width: 400px;
+            padding: 8px;
+            margin: 5px 0;
+            background: #1e1e1e;
+            border: 1px solid #3e3e3e;
+            color: #d4d4d4;
+        }
+        button {
+            padding: 10px 20px;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        button:disabled {
+            background: #3e3e3e;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #1e1e1e;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e639c, #1177bb);
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 4px solid #4ec9b0;
+            background: #1e1e1e;
+        }
+        .status.error {
+            border-left-color: #f48771;
+        }
+        .status.completed {
+            border-left-color: #4ec9b0;
+        }
+        .phase {
+            color: #dcdcaa;
+            font-weight: bold;
+        }
+        .log {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 AEGIS RAG Re-Indexing Monitor</h1>
+
+    <div class="config">
+        <h3>Konfiguration</h3>
+        <label>
+            Input Directory:<br>
+            <input type="text" id="inputDir" value="data/sample_documents/30. GAC">
+        </label><br>
+        <label>
+            <input type="checkbox" id="confirmCheck"> Ich bestätige das Löschen aller bestehenden Indizes
+        </label><br>
+        <button id="startBtn" onclick="startReindexing()">Start Re-Indexing</button>
+        <button id="stopBtn" onclick="stopReindexing()" disabled>Stop</button>
+    </div>
+
+    <div class="progress-container" id="progressContainer" style="display:none;">
+        <h3>Fortschritt</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%;">0%</div>
+        </div>
+        <div id="currentStatus" class="status">
+            <span class="phase" id="currentPhase">-</span>: <span id="currentMessage">-</span>
+        </div>
+        <div>
+            <strong>Dokumente:</strong> <span id="docsProcessed">0</span> / <span id="docsTotal">0</span>
+            <strong style="margin-left: 20px;">ETA:</strong> <span id="eta">-</span>
+        </div>
+
+        <h4>Event Log</h4>
+        <div class="log" id="eventLog"></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        function startReindexing() {
+            const inputDir = document.getElementById('inputDir').value;
+            const confirmCheck = document.getElementById('confirmCheck').checked;
+
+            if (!confirmCheck) {
+                alert('Bitte bestätige das Löschen der Indizes!');
+                return;
+            }
+
+            // Show progress container
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+
+            // Clear previous logs
+            document.getElementById('eventLog').innerHTML = '';
+
+            // Start SSE connection
+            const url = `http://localhost:8000/api/v1/admin/reindex?input_dir=${encodeURIComponent(inputDir)}&confirm=true`;
+            eventSource = new EventSource(url);
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                updateProgress(data);
+                logEvent(data);
+
+                if (data.status === 'completed' || data.status === 'error') {
+                    eventSource.close();
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('SSE Error:', error);
+                logEvent({status: 'error', message: 'Verbindung zur API unterbrochen'});
+                eventSource.close();
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+            };
+        }
+
+        function stopReindexing() {
+            if (eventSource) {
+                eventSource.close();
+                logEvent({status: 'error', message: 'Abgebrochen durch Benutzer'});
+            }
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function updateProgress(data) {
+            const progress = data.progress_percent || 0;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+
+            document.getElementById('currentPhase').textContent = data.phase || '-';
+            document.getElementById('currentMessage').textContent = data.message || '-';
+            document.getElementById('docsProcessed').textContent = data.documents_processed || 0;
+            document.getElementById('docsTotal').textContent = data.documents_total || 0;
+
+            if (data.eta_seconds) {
+                const minutes = Math.floor(data.eta_seconds / 60);
+                const seconds = data.eta_seconds % 60;
+                document.getElementById('eta').textContent = `${minutes}m ${seconds}s`;
+            } else {
+                document.getElementById('eta').textContent = '-';
+            }
+
+            // Update status style
+            const statusDiv = document.getElementById('currentStatus');
+            statusDiv.className = 'status ' + data.status;
+        }
+
+        function logEvent(data) {
+            const log = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.textContent = `[${timestamp}] [${data.phase || data.status}] ${data.message || ''}`;
+            entry.style.color = data.status === 'error' ? '#f48771' :
+                               data.status === 'completed' ? '#4ec9b0' : '#d4d4d4';
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+    </script>
+</body>
+</html>

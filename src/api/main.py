@@ -219,13 +219,29 @@ async def track_requests(request: Request, call_next):
 
 
 # Include routers
+# TD-41: Enhanced router registration logging
+logger.info("registering_routers", phase="startup")
+
 app.include_router(health_router)
+logger.info("router_registered", router="health_router", prefix="(default)")
+
 app.include_router(v1_health_router)
+logger.info("router_registered", router="v1_health_router", prefix="/api/v1")
+
 app.include_router(retrieval_router)
-app.include_router(admin_router)  # Sprint 16 Feature 16.3: Admin re-indexing
+logger.info("router_registered", router="retrieval_router", prefix="/api/v1/retrieval")
+
+app.include_router(admin_router, prefix="/api/v1")  # Sprint 16 Feature 16.3: Admin re-indexing
+logger.info(
+    "router_registered",
+    router="admin_router",
+    prefix="/api/v1/admin",
+    note="Sprint 18 TD-41: Admin router with /stats endpoint - prefix fixed!"
+)
 
 # Chat API router (Sprint 10: Feature 10.1)
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
+logger.info("router_registered", router="chat_router", prefix="/api/v1")
 
 # Memory API router (Sprint 7: Feature 7.6)
 app.include_router(memory_router, prefix="/api/v1", tags=["memory"])

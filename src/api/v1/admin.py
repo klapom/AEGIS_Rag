@@ -23,7 +23,17 @@ from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+# TD-41: Enhanced logging for debugging 404 issue
+# FIX: Changed prefix from "/api/v1/admin" to "/admin" to match other routers
+# The full path will be constructed in main.py: app.include_router(admin_router, prefix="/api/v1")
+logger.info(
+    "admin_router_initialized",
+    prefix="/admin",
+    tags=["admin"],
+    note="Sprint 18 TD-41: Router prefix fixed - will be combined with /api/v1 in main.py"
+)
 
 
 # ============================================================================
@@ -368,38 +378,60 @@ async def get_system_stats() -> SystemStats:
     Raises:
         HTTPException: If statistics retrieval fails
     """
-    logger.info("admin_stats_requested")
+    # TD-41: Enhanced logging for request tracking
+    logger.info(
+        "admin_stats_endpoint_called",
+        endpoint="/api/v1/admin/stats",
+        method="GET",
+        note="Sprint 18 TD-41: Tracking stats request"
+    )
 
     try:
+        # TD-41: Log stats collection start
+        logger.info("stats_collection_started", phase="initialization")
+
         # Qdrant statistics
+        logger.info("stats_collection_phase", phase="qdrant", status="starting")
         qdrant_client = get_qdrant_client()
         embedding_service = get_embedding_service()
         collection_name = settings.qdrant_collection
+        logger.info("qdrant_clients_initialized", collection=collection_name)
 
         try:
             collection_info = await qdrant_client.get_collection(collection_name)
             qdrant_total_chunks = collection_info.points_count
+            logger.info(
+                "qdrant_stats_retrieved",
+                chunks=qdrant_total_chunks,
+                collection=collection_name
+            )
         except Exception as e:
-            logger.warning("failed_to_get_qdrant_stats", error=str(e))
+            logger.warning("failed_to_get_qdrant_stats", error=str(e), exc_info=True)
             qdrant_total_chunks = 0
 
         # BM25 statistics (optional - requires BM25 manager)
+        logger.info("stats_collection_phase", phase="bm25", status="starting")
         bm25_corpus_size = None
         try:
             from src.components.vector_search.bm25_manager import get_bm25_manager
             bm25_manager = get_bm25_manager()
             if hasattr(bm25_manager, 'get_corpus_size'):
                 bm25_corpus_size = bm25_manager.get_corpus_size()
+                logger.info("bm25_stats_retrieved", corpus_size=bm25_corpus_size)
+            else:
+                logger.debug("bm25_manager_missing_get_corpus_size_method")
         except Exception as e:
             logger.debug("bm25_stats_unavailable", error=str(e))
 
         # Neo4j / LightRAG statistics
+        logger.info("stats_collection_phase", phase="neo4j", status="starting")
         neo4j_total_entities = None
         neo4j_total_relations = None
         neo4j_total_chunks = None
 
         try:
             lightrag = await get_lightrag_wrapper_async()
+            logger.info("lightrag_wrapper_initialized")
 
             # Query Neo4j for statistics
             query_entities = "MATCH (e:Entity) RETURN count(e) as count"
@@ -407,31 +439,40 @@ async def get_system_stats() -> SystemStats:
             query_chunks = "MATCH (c:Chunk) RETURN count(c) as count"
 
             # Execute queries
+            logger.info("executing_neo4j_query", query="entities")
             entities_result = await lightrag.graph_storage_cls.execute_query(query_entities)
             if entities_result and len(entities_result) > 0:
                 neo4j_total_entities = entities_result[0].get('count', 0)
+                logger.info("neo4j_entities_retrieved", count=neo4j_total_entities)
 
+            logger.info("executing_neo4j_query", query="relations")
             relations_result = await lightrag.graph_storage_cls.execute_query(query_relations)
             if relations_result and len(relations_result) > 0:
                 neo4j_total_relations = relations_result[0].get('count', 0)
+                logger.info("neo4j_relations_retrieved", count=neo4j_total_relations)
 
+            logger.info("executing_neo4j_query", query="chunks")
             chunks_result = await lightrag.graph_storage_cls.execute_query(query_chunks)
             if chunks_result and len(chunks_result) > 0:
                 neo4j_total_chunks = chunks_result[0].get('count', 0)
+                logger.info("neo4j_chunks_retrieved", count=neo4j_total_chunks)
 
         except Exception as e:
-            logger.warning("failed_to_get_neo4j_stats", error=str(e))
+            logger.warning("failed_to_get_neo4j_stats", error=str(e), exc_info=True)
 
         # Redis conversation statistics
+        logger.info("stats_collection_phase", phase="redis", status="starting")
         total_conversations = None
         try:
             from src.components.memory import get_redis_memory
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
+            logger.info("redis_client_initialized")
 
             # Count conversation keys
             conversation_count = 0
             cursor = 0
+            scan_iterations = 0
             while True:
                 cursor, keys = await redis_client.scan(
                     cursor=cursor,
@@ -439,16 +480,25 @@ async def get_system_stats() -> SystemStats:
                     count=100
                 )
                 conversation_count += len(keys)
+                scan_iterations += 1
                 if cursor == 0:
                     break
 
             total_conversations = conversation_count
+            logger.info(
+                "redis_stats_retrieved",
+                conversations=total_conversations,
+                scan_iterations=scan_iterations
+            )
         except Exception as e:
-            logger.warning("failed_to_get_redis_stats", error=str(e))
+            logger.warning("failed_to_get_redis_stats", error=str(e), exc_info=True)
 
         # Last reindex timestamp (TODO: Implement persistent storage for this)
         # For now, return None - could be stored in Redis or a separate metadata store
         last_reindex_timestamp = None
+
+        # TD-41: Log final stats assembly
+        logger.info("stats_collection_phase", phase="assembly", status="starting")
 
         stats = SystemStats(
             qdrant_total_chunks=qdrant_total_chunks,
@@ -463,12 +513,22 @@ async def get_system_stats() -> SystemStats:
             total_conversations=total_conversations,
         )
 
-        logger.info("admin_stats_retrieved", stats=stats.model_dump())
+        logger.info(
+            "admin_stats_successfully_retrieved",
+            stats=stats.model_dump(),
+            note="Sprint 18 TD-41: Stats successfully assembled and ready to return"
+        )
 
         return stats
 
     except Exception as e:
-        logger.error("admin_stats_failed", error=str(e))
+        logger.error(
+            "admin_stats_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+            note="Sprint 18 TD-41: Stats retrieval failed with exception"
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system statistics: {str(e)}",
