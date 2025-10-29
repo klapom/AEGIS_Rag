@@ -7,12 +7,9 @@ Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 import asyncio
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import structlog
 from llama_index.core import Document, SimpleDirectoryReader
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.schema import TextNode
 from qdrant_client.models import PointStruct
 
 from src.components.vector_search.embeddings import EmbeddingService

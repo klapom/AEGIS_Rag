@@ -3,7 +3,6 @@
 Sprint 17 Feature 17.4: Implicit User Profiling - Conversation Archiving Pipeline (Phase 1)
 """
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field

@@ -3,9 +3,8 @@
 Sprint 16 Feature 16.3: Unified Re-Indexing Pipeline with SSE progress tracking.
 """
 
-import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
@@ -17,7 +16,6 @@ from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.ingestion import ingest_documents
 from src.components.vector_search.qdrant_client import get_qdrant_client
-from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 
@@ -114,8 +112,6 @@ async def reindex_progress_stream(
             )
 
             # Clear BM25 cache (will be rebuilt during indexing)
-            from src.components.vector_search.bm25_search import BM25Search
-
             bm25_cache_path = Path("data/cache/bm25_model.pkl")
             if bm25_cache_path.exists():
                 bm25_cache_path.unlink()

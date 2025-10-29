@@ -161,7 +161,7 @@ class Chunk(BaseModel):
             **self.metadata,
         }
 
-    def to_bm25_document(self) -> dict[str, Any]:
+    def to_bm25_document(self) -> dict[str, Any]:  # noqa: N802 (BM25 is an acronym)
         """Convert chunk to BM25 document format.
 
         Returns:

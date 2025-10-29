@@ -9,22 +9,20 @@ This module provides:
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any
 
 import structlog
-from qdrant_client.models import Distance, Filter, FieldCondition, MatchValue, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct
 
 from src.components.memory import get_redis_memory
 from src.components.shared import get_embedding_service
 from src.components.vector_search import get_qdrant_client
-from src.core.config import settings
 from src.core.exceptions import MemoryError, VectorSearchError
 from src.models.profiling import (
-    ArchivedConversation,
     ConversationSearchRequest,
-    ConversationSearchResult,
     ConversationSearchResponse,
+    ConversationSearchResult,
 )
 
 logger = structlog.get_logger(__name__)
@@ -161,8 +159,8 @@ class ConversationArchiver:
             title = conversation_data.get("title")
             summary = self._generate_summary(messages)
             topics = self._extract_topics(messages)
-            created_at = conversation_data.get("created_at", datetime.now(timezone.utc).isoformat())
-            archived_at = datetime.now(timezone.utc).isoformat()
+            created_at = conversation_data.get("created_at", datetime.now(datetime.UTC).isoformat())
+            archived_at = datetime.now(datetime.UTC).isoformat()
             message_count = len(messages)
 
             # Create Qdrant point
@@ -290,7 +288,7 @@ class ConversationArchiver:
                 query=request.query,
                 results=results,
                 total_count=len(results),
-                search_timestamp=datetime.now(timezone.utc).isoformat(),
+                search_timestamp=datetime.now(datetime.UTC).isoformat(),
             )
 
         except Exception as e:
@@ -330,7 +328,7 @@ class ConversationArchiver:
             # Process each conversation
             archived_count = 0
             failed_count = 0
-            cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.auto_archive_days)
+            cutoff_date = datetime.now(datetime.UTC) - timedelta(days=self.auto_archive_days)
 
             for key in conversation_keys[:max_conversations]:
                 try:

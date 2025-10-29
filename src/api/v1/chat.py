@@ -11,8 +11,9 @@ Includes Server-Sent Events (SSE) streaming for real-time token-by-token respons
 
 import json
 import uuid
-from datetime import datetime, timezone
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import datetime
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
@@ -22,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.agents.coordinator import CoordinatorAgent
 from src.components.memory import get_unified_memory_api
 from src.core.exceptions import AegisRAGException
+from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
 
 logger = structlog.get_logger(__name__)
 
@@ -85,19 +87,19 @@ async def save_conversation_turn(
         else:
             # New conversation
             messages = []
-            created_at = datetime.now(timezone.utc).isoformat()
+            created_at = datetime.now(datetime.UTC).isoformat()
 
         # Add new messages
         messages.append({
             "role": "user",
             "content": user_message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         })
 
         messages.append({
             "role": "assistant",
             "content": assistant_message,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "intent": intent,
             "source_count": len(sources) if sources else 0,
         })
@@ -106,7 +108,7 @@ async def save_conversation_turn(
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(datetime.UTC).isoformat(),
             "message_count": len(messages),
         }
 
@@ -820,8 +822,6 @@ Title:"""
 
         try:
             # Use coordinator's LLM to generate title
-            from src.core.config import settings
-
             title_result = await coordinator.llm.ainvoke(
                 title_prompt, temperature=0.3, max_tokens=20
             )
@@ -1062,8 +1062,7 @@ def _get_iso_timestamp() -> str:
     Returns:
         ISO 8601 timestamp string
     """
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(datetime.UTC).isoformat()
 
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
@@ -1131,8 +1130,8 @@ async def archive_conversation(session_id: str) -> dict[str, Any]:
 
 @router.post("/search", status_code=status.HTTP_200_OK)
 async def search_archived_conversations(
-    request: "ConversationSearchRequest",
-) -> "ConversationSearchResponse":
+    request: ConversationSearchRequest,
+) -> ConversationSearchResponse:
     """Search archived conversations using semantic similarity.
 
     Sprint 17 Feature 17.4 Phase 1: Semantic Conversation Search
@@ -1152,8 +1151,6 @@ async def search_archived_conversations(
     Raises:
         HTTPException: If search fails
     """
-    from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
-
     # Validate request
     if not isinstance(request, ConversationSearchRequest):
         request = ConversationSearchRequest(**request)

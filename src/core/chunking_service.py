@@ -16,7 +16,6 @@ Benefits:
 
 import re
 import time
-from typing import Literal
 
 import structlog
 import tiktoken
