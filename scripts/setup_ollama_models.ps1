@@ -21,7 +21,7 @@ try {
 
 Write-Host ""
 
-# Models to download
+# Models to download (Sprint 19 - Current Production)
 $models = @(
     @{
         Name = "llama3.2:3b"
@@ -29,14 +29,14 @@ $models = @(
         Size = "~2GB"
     },
     @{
-        Name = "llama3.1:8b"
-        Description = "Latest 8B model for high-quality generation (128K context)"
-        Size = "~4.7GB"
+        Name = "gemma-3-4b-it-Q8_0"
+        Description = "Entity/relation extraction for LightRAG knowledge graph"
+        Size = "~4.5GB"
     },
     @{
-        Name = "nomic-embed-text"
-        Description = "Embedding model (768-dim) for vector search"
-        Size = "~274MB"
+        Name = "bge-m3"
+        Description = "Embedding model (1024-dim) for vector search (upgraded from nomic-embed-text)"
+        Size = "~2.2GB"
     }
 )
 
@@ -47,7 +47,8 @@ foreach ($model in $models) {
 }
 
 Write-Host ""
-Write-Host "Total download size: ~7GB" -ForegroundColor Yellow
+Write-Host "Total download size: ~8.7GB" -ForegroundColor Yellow
+Write-Host "Sprint 19 Update: Uses bge-m3 (1024D) instead of nomic-embed-text (768D)" -ForegroundColor Cyan
 Write-Host ""
 
 # Download each model
@@ -105,8 +106,9 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Update your .env file with these models:" -ForegroundColor White
 Write-Host "     OLLAMA_MODEL_QUERY=llama3.2:3b" -ForegroundColor Gray
-Write-Host "     OLLAMA_MODEL_GENERATION=llama3.1:8b" -ForegroundColor Gray
-Write-Host "     OLLAMA_MODEL_EMBEDDING=nomic-embed-text" -ForegroundColor Gray
+Write-Host "     OLLAMA_MODEL_GENERATION=llama3.2:3b" -ForegroundColor Gray
+Write-Host "     OLLAMA_MODEL_EMBEDDING=bge-m3" -ForegroundColor Gray
+Write-Host "     OLLAMA_LIGHTRAG_EXTRACTION_MODEL=gemma-3-4b-it-Q8_0" -ForegroundColor Gray
 Write-Host "  2. Test the setup: .\scripts\check_ollama_health.ps1" -ForegroundColor White
-Write-Host "  3. Start the API server: uvicorn src.api.main:app --reload" -ForegroundColor White
+Write-Host "  3. Start the API server: poetry run uvicorn src.api.main:app --reload" -ForegroundColor White
 Write-Host ""

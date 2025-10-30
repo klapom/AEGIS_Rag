@@ -1,13 +1,14 @@
 # Ollama Health Check Script for AegisRAG
 # Verifies Ollama is running and required models are loaded
+# Sprint 19 Update: Updated for current production models
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Ollama Health Check" -ForegroundColor Cyan
+Write-Host "Ollama Health Check (Sprint 19)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Required models
-$requiredModels = @("llama3.2:3b", "llama3.1:8b", "nomic-embed-text")
+# Required models (Sprint 19 production)
+$requiredModels = @("llama3.2:3b", "gemma-3-4b-it-Q8_0", "bge-m3")
 
 # Check if Ollama is reachable
 Write-Host "[1/3] Checking Ollama connectivity..." -ForegroundColor Yellow
@@ -101,5 +102,7 @@ Write-Host "  Total model size: $totalSizeGB GB" -ForegroundColor White
 
 Write-Host ""
 Write-Host "Ready to use! Start the API server:" -ForegroundColor Cyan
-Write-Host "  uvicorn src.api.main:app --reload" -ForegroundColor White
+Write-Host "  poetry run uvicorn src.api.main:app --reload" -ForegroundColor White
+Write-Host ""
+Write-Host "Note: Sprint 19 uses bge-m3 (1024D) instead of nomic-embed-text (768D)" -ForegroundColor Yellow
 Write-Host ""

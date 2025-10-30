@@ -50,9 +50,26 @@ export function SessionSidebar({ isOpen, onToggle }: SessionSidebarProps) {
     setSessions(sessions.filter((s) => s.session_id !== sessionId));
   };
 
+  // Sprint 19: Search by conversation title/name
+  const getSessionTitle = (session: SessionInfo): string => {
+    if (session.title) return session.title;
+    if (session.last_message) return session.last_message;
+    // Try to extract first user message from messages array
+    if (session.messages && session.messages.length > 0) {
+      const firstUserMsg = session.messages.find(m => m.role === 'user');
+      if (firstUserMsg?.content) {
+        return firstUserMsg.content.length > 60
+          ? firstUserMsg.content.substring(0, 60) + '...'
+          : firstUserMsg.content;
+      }
+    }
+    return 'Neue Konversation';
+  };
+
   const filteredSessions = sessions.filter((session) => {
     if (!searchQuery) return true;
-    return session.last_message?.toLowerCase().includes(searchQuery.toLowerCase());
+    const title = getSessionTitle(session);
+    return title.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   const groupedSessions = groupSessionsByDate(filteredSessions);

@@ -26,7 +26,7 @@ export function SearchInput({
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<SearchMode>('hybrid');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (autoFocus && inputRef.current) {
@@ -41,28 +41,29 @@ export function SearchInput({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
+    // Shift+Enter allows line breaks
   };
 
   return (
     <div className="max-w-3xl mx-auto w-full space-y-6">
       {/* Search Input */}
       <div className="relative">
-        <input
+        <textarea
           ref={inputRef}
-          type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full h-16 px-6 pr-20 text-lg border-2 border-gray-300 rounded-2xl
+          rows={3}
+          className="w-full min-h-[4rem] px-6 pr-20 py-4 text-lg border-2 border-gray-300 rounded-2xl
                      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20
                      placeholder-gray-400 transition-all duration-200
-                     hover:border-gray-400"
+                     hover:border-gray-400 resize-none"
         />
 
         {/* Submit Button */}
@@ -132,7 +133,11 @@ export function SearchInput({
         <kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded">
           Enter
         </kbd>
-        {' '}zum Senden
+        {' '}zum Senden · {' '}
+        <kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded">
+          Shift+Enter
+        </kbd>
+        {' '}für Zeilenumbruch
       </div>
     </div>
   );

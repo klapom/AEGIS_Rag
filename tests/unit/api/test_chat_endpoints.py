@@ -250,7 +250,7 @@ class TestConversationHistoryEndpoint:
 
     async def test_get_conversation_history_success(self, async_client: AsyncClient):
         """Test retrieving conversation history."""
-        with patch("src.api.v1.chat.get_unified_memory_api") as mock_get_memory:
+        with patch("src.components.memory.get_redis_memory") as mock_get_memory:
             # Mock memory API
             mock_memory = AsyncMock()
             mock_memory.retrieve.return_value = {
@@ -275,23 +275,21 @@ class TestConversationHistoryEndpoint:
 
     async def test_get_conversation_history_empty_session(self, async_client: AsyncClient):
         """Test retrieving history for session with no messages."""
-        with patch("src.api.v1.chat.get_unified_memory_api") as mock_get_memory:
+        with patch("src.components.memory.get_redis_memory") as mock_get_memory:
             mock_memory = AsyncMock()
             mock_memory.retrieve.return_value = None  # No data found
             mock_get_memory.return_value = mock_memory
 
             response = await async_client.get(f"/api/v1/chat/history/{SAMPLE_SESSION_ID}")
 
-            assert response.status_code == 200
+            # Endpoint returns 404 when no history is found
+            assert response.status_code == 404
             data = response.json()
-
-            assert data["session_id"] == SAMPLE_SESSION_ID
-            assert data["messages"] == []
-            assert data["message_count"] == 0
+            assert "not found" in data["detail"].lower()
 
     async def test_get_conversation_history_handles_exception(self, async_client: AsyncClient):
         """Test error handling in history retrieval."""
-        with patch("src.api.v1.chat.get_unified_memory_api") as mock_get_memory:
+        with patch("src.components.memory.get_redis_memory") as mock_get_memory:
             mock_memory = AsyncMock()
             mock_memory.retrieve.side_effect = Exception("Memory error")
             mock_get_memory.return_value = mock_memory

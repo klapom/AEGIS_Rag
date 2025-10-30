@@ -1,6 +1,11 @@
 """
-Simple document indexing script for Sprint 2.
-Indexes all documents from data/sample_documents/ into Qdrant.
+Production document indexing script.
+Indexes all documents from data/sample_documents/ into Qdrant + Neo4j.
+
+Sprint 19 Update: Uses current production settings:
+- BGE-M3 embeddings (1024D, upgraded from nomic-embed-text 768D)
+- Adaptive chunking (600 tokens, 150 overlap - Sprint 16 alignment)
+- Hybrid RAG (Qdrant + Neo4j/LightRAG)
 """
 import asyncio
 import sys
@@ -10,105 +15,51 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from llama_index.core import SimpleDirectoryReader, Settings
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.embeddings.ollama import OllamaEmbedding
-from llama_index.vector_stores.qdrant import QdrantVectorStore
-from qdrant_client import QdrantClient, models
+from src.components.vector_search.ingestion import DocumentIngestionPipeline
+from src.core.config import settings
 
 
 async def main():
-    print("[*] Starting document indexing...")
+    print("[*] Starting production document indexing...")
+    print(f"    Embedding: bge-m3 (1024D)")
+    print(f"    Chunking: 600 tokens, adaptive, 150 overlap")
 
     # Configuration
-    collection_name = "aegis_documents"
+    collection_name = settings.qdrant_collection
     documents_path = project_root / "data" / "sample_documents"
-    embedding_model = "nomic-embed-text"
-    vector_dim = 768
 
-    # Step 1: Initialize Qdrant Client
-    print(f"\n[1/6] Connecting to Qdrant...")
-    qdrant_client = QdrantClient(url="http://localhost:6333")
+    # Use production ingestion pipeline
+    print(f"\n[1/3] Initializing production ingestion pipeline...")
+    pipeline = DocumentIngestionPipeline()
+    print("   [OK] Pipeline ready")
 
-    # Check if collection exists, delete if it does
-    try:
-        collections = qdrant_client.get_collections().collections
-        if any(c.name == collection_name for c in collections):
-            print(f"   Deleting existing collection '{collection_name}'...")
-            qdrant_client.delete_collection(collection_name)
-    except Exception as e:
-        print(f"   Warning: {e}")
+    # Step 2: Index documents (Qdrant only)
+    print(f"\n[2/3] Indexing documents from '{documents_path}'...")
+    print(f"   This will load, chunk, embed, and index all documents.")
 
-    # Create collection
-    print(f"   Creating collection '{collection_name}'...")
-    qdrant_client.create_collection(
-        collection_name=collection_name,
-        vectors_config=models.VectorParams(
-            size=vector_dim,
-            distance=models.Distance.COSINE,
-        ),
-    )
-    print("   [OK] Collection created")
-
-    # Step 2: Initialize Embedding Model
-    print(f"\n[2/6] Initializing embedding model '{embedding_model}'...")
-    embed_model = OllamaEmbedding(
-        model_name=embedding_model,
-        base_url="http://localhost:11434",
-    )
-    Settings.embed_model = embed_model
-    print("   [OK] Embedding model ready")
-
-    # Step 3: Load Documents
-    print(f"\n[3/6] Loading documents from '{documents_path}'...")
-    reader = SimpleDirectoryReader(
+    stats = await pipeline.index_documents(
         input_dir=str(documents_path),
-        required_exts=[".pdf", ".docx", ".md", ".txt"],
-        recursive=True,
-    )
-    documents = reader.load_data()
-    print(f"   [OK] Loaded {len(documents)} documents")
-
-    # Step 4: Chunk Documents
-    print(f"\n[4/6] Chunking documents...")
-    splitter = SentenceSplitter(
-        chunk_size=512,
-        chunk_overlap=128,
-    )
-    nodes = splitter.get_nodes_from_documents(documents)
-    print(f"   [OK] Created {len(nodes)} chunks")
-
-    # Step 5: Create Vector Store and Index
-    print(f"\n[5/6] Generating embeddings and indexing...")
-    vector_store = QdrantVectorStore(
-        client=qdrant_client,
-        collection_name=collection_name,
+        batch_size=100,
     )
 
-    # Index nodes (this generates embeddings and stores in Qdrant)
-    from llama_index.core import VectorStoreIndex, StorageContext
+    print(f"   [OK] Indexing complete")
 
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
-    index = VectorStoreIndex(
-        nodes=nodes,
-        storage_context=storage_context,
-        show_progress=True,
-    )
+    # Step 3: Verify
+    print(f"\n[3/3] Verifying indexing...")
+    qdrant_info = await pipeline.qdrant_client.get_collection_info(collection_name)
+    if qdrant_info:
+        print(f"   Collection '{collection_name}' has {qdrant_info.points_count} points")
 
-    print(f"   [OK] Indexed {len(nodes)} chunks")
-
-    # Step 6: Verify
-    print(f"\n[6/6] Verifying indexing...")
-    collection_info = qdrant_client.get_collection(collection_name)
-    print(f"   Collection '{collection_name}' has {collection_info.points_count} points")
-
-    print("\n[SUCCESS] Indexing complete!")
+    print("\n[SUCCESS] Production indexing complete!")
     print(f"\nSummary:")
-    print(f"   - Documents loaded: {len(documents)}")
-    print(f"   - Chunks created: {len(nodes)}")
-    print(f"   - Points indexed: {collection_info.points_count}")
+    print(f"   - Documents loaded: {stats.get('documents_loaded', 0)}")
+    print(f"   - Chunks created: {stats.get('chunks_created', 0)}")
+    print(f"   - Points indexed: {stats.get('points_indexed', 0)}")
     print(f"   - Collection: {collection_name}")
-    print(f"   - Embedding model: {embedding_model}")
+    print(f"   - Embedding model: bge-m3 (1024D)")
+    print(f"   - Chunking: 600 tokens, adaptive, 150 overlap")
+    print(f"\nNote: This script indexes to Qdrant only.")
+    print(f"      For Neo4j/LightRAG indexing, use index_three_specific_docs.py")
 
 
 if __name__ == "__main__":

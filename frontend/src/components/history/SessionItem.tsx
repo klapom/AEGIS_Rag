@@ -17,14 +17,37 @@ interface SessionItemProps {
 
 export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemProps) {
   const navigate = useNavigate();
-  const [showDelete, setShowDelete] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Sprint 17 Feature 17.3: Title editing state
+  // Sprint 19: Extract first user message as fallback title
+  const getDisplayTitle = () => {
+    if (session.title) return session.title;
+    if (session.last_message) return session.last_message;
+    // Try to extract first user message from messages array
+    if (session.messages && session.messages.length > 0) {
+      const firstUserMsg = session.messages.find(m => m.role === 'user');
+      if (firstUserMsg?.content) {
+        // Truncate to reasonable length
+        return firstUserMsg.content.length > 60
+          ? firstUserMsg.content.substring(0, 60) + '...'
+          : firstUserMsg.content;
+      }
+    }
+    return 'Neue Konversation';
+  };
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(session.title || session.last_message || 'Neue Konversation');
+  const [editedTitle, setEditedTitle] = useState(getDisplayTitle());
   const [isSaving, setIsSaving] = useState(false);
+  const [displayTitle, setDisplayTitle] = useState(getDisplayTitle());
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Update displayTitle when session.title changes
+  useEffect(() => {
+    setDisplayTitle(getDisplayTitle());
+  }, [session.title, session.last_message]);
 
   // Auto-focus input when entering edit mode
   useEffect(() => {
@@ -47,7 +70,7 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
   };
 
   const handleTitleSave = async () => {
-    if (!editedTitle.trim() || editedTitle === (session.title || session.last_message)) {
+    if (!editedTitle.trim() || editedTitle === displayTitle) {
       setIsEditing(false);
       return;
     }
@@ -55,11 +78,13 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
     setIsSaving(true);
     try {
       await updateConversationTitle(session.session_id, editedTitle.trim());
+      // Update local display title immediately
+      setDisplayTitle(editedTitle.trim());
       onTitleUpdate?.(session.session_id, editedTitle.trim());
     } catch (err) {
       console.error('Failed to update title:', err);
       alert('Fehler beim Aktualisieren des Titels');
-      setEditedTitle(session.title || session.last_message || 'Neue Konversation');
+      setEditedTitle(displayTitle);
     } finally {
       setIsSaving(false);
       setIsEditing(false);
@@ -67,7 +92,7 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
   };
 
   const handleTitleCancel = () => {
-    setEditedTitle(session.title || session.last_message || 'Neue Konversation');
+    setEditedTitle(displayTitle);
     setIsEditing(false);
   };
 
@@ -120,12 +145,17 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
     });
   };
 
+  const handleRenameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+  };
+
   return (
     <div
       className="group relative p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition"
       onClick={handleClick}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       {/* Content - Sprint 17 Feature 17.3: Inline title editing */}
       <div className="pr-8 flex-1">
@@ -162,11 +192,10 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
         ) : (
           <>
             <div
-              className="text-sm font-medium text-gray-900 line-clamp-2 mb-1 cursor-text hover:text-blue-600 transition"
-              onClick={handleTitleClick}
-              title="Klicken zum Bearbeiten"
+              className="text-sm font-medium text-gray-900 line-clamp-2 mb-1"
+              title={displayTitle}
             >
-              {session.title || session.last_message || 'Neue Konversation'}
+              {displayTitle}
             </div>
             <div className="text-xs text-gray-500 flex items-center space-x-2">
               <span>{session.message_count || 0} Nachricht{(session.message_count || 0) !== 1 ? 'en' : ''}</span>
@@ -177,39 +206,55 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
         )}
       </div>
 
-      {/* Delete Button */}
-      {showDelete && (
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="absolute right-3 top-1/2 -translate-y-1/2
-                     p-1.5 bg-red-500 text-white rounded-md
-                     opacity-0 group-hover:opacity-100
-                     hover:bg-red-600
-                     disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all"
-          title="Löschen"
-        >
-          {isDeleting ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-          ) : (
+      {/* Action Buttons - Sprint 19: Rename + Delete */}
+      {showActions && !isEditing && (
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Rename Button */}
+          <button
+            onClick={handleRenameClick}
+            className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            title="Umbenennen"
+            aria-label="Konversation umbenennen"
+          >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
               />
             </svg>
-          )}
-        </button>
+          </button>
+
+          {/* Delete Button */}
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Löschen"
+            aria-label="Konversation löschen"
+          >
+            {isDeleting ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
       )}
     </div>
   );
