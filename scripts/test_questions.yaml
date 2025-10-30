@@ -1,0 +1,206 @@
+# Sprint 20 Feature 20.1: Test Questions
+# Document-based questions for Gemma vs Llama chat evaluation
+#
+# Documents: DE-D-OTAutBasic.pdf, DE-D-OTAutAdvanced.pdf
+# Languages: German (5) + English (5)
+# Tiers: 1 (Simple), 2 (Medium), 3 (Complex)
+
+questions:
+  # ========================================
+  # TIER 1: Simple factual questions
+  # ========================================
+
+  - tier: 1
+    language: de
+    question: "Was ist VBScript laut dem Dokument?"
+    expected_topics:
+      - VBScript
+      - Scripting-Sprache
+      - Visual Basic
+      - Microsoft
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: simple_factual
+
+  - tier: 1
+    language: en
+    question: "What is VBScript according to the document?"
+    expected_topics:
+      - VBScript
+      - scripting language
+      - Visual Basic
+      - Microsoft
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: simple_factual
+
+  - tier: 1
+    language: de
+    question: "Welches Automation Interface wird im Dokument beschrieben?"
+    expected_topics:
+      - Automation Interface
+      - COM
+      - OLE
+      - ActiveX
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: simple_factual
+
+  - tier: 1
+    language: en
+    question: "Which Automation Interface is described in the document?"
+    expected_topics:
+      - Automation Interface
+      - COM
+      - OLE
+      - ActiveX
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: simple_factual
+
+  # ========================================
+  # TIER 2: Medium technical questions
+  # ========================================
+
+  - tier: 2
+    language: de
+    question: "Welche Vorteile bietet serverseitiges Scripting gegenüber clientseitigem laut Dokument?"
+    expected_topics:
+      - Server-Side Scripting
+      - Client-Side Scripting
+      - Vorteile
+      - Unterschiede
+      - Performance
+      - Sicherheit
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: medium_technical
+
+  - tier: 2
+    language: en
+    question: "What advantages does server-side scripting offer compared to client-side according to the document?"
+    expected_topics:
+      - server-side scripting
+      - client-side scripting
+      - advantages
+      - comparison
+      - performance
+      - security
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: medium_technical
+
+  - tier: 2
+    language: de
+    question: "Welche Sicherheitsaspekte müssen bei der Verwendung von VBScript beachtet werden?"
+    expected_topics:
+      - Sicherheit
+      - VBScript
+      - Risiken
+      - Best Practices
+      - Berechtigungen
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: medium_technical
+
+  # ========================================
+  # TIER 3: Complex multi-hop questions
+  # ========================================
+
+  - tier: 3
+    language: de
+    question: "Erkläre den Unterschied zwischen Client-Side und Server-Side Scripting mit konkreten Beispielen aus dem Dokument. Welche Anwendungsfälle eignen sich jeweils besser?"
+    expected_topics:
+      - Client-Side Scripting
+      - Server-Side Scripting
+      - Unterschiede
+      - Beispiele
+      - Anwendungsfälle
+      - Vor- und Nachteile
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: complex_multihop
+
+  - tier: 3
+    language: en
+    question: "Explain the difference between client-side and server-side scripting with specific examples from the document. Which use cases are better suited for each approach?"
+    expected_topics:
+      - client-side scripting
+      - server-side scripting
+      - differences
+      - examples
+      - use cases
+      - advantages and disadvantages
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: complex_multihop
+
+  - tier: 3
+    language: de
+    question: "Welche Schritte sind nötig, um ein VBScript für die Automation zu erstellen und auszuführen? Fasse den kompletten Prozess aus dem Dokument zusammen und erkläre die wichtigsten Komponenten."
+    expected_topics:
+      - VBScript
+      - Automation
+      - Schritte
+      - Prozess
+      - Anleitung
+      - Komponenten
+      - Entwicklung
+      - Ausführung
+    document: "DE-D-OTAutBasic.pdf"
+    difficulty: complex_multihop
+
+# Evaluation Rubric (for human evaluation after benchmark)
+# Scale: 1-5 for each dimension
+evaluation_rubric:
+  dimensions:
+    - name: "Fluency (DE)"
+      description: "German language fluency and naturalness"
+      scale: "1 (poor) - 5 (native-like)"
+
+    - name: "Fluency (EN)"
+      description: "English language fluency and naturalness"
+      scale: "1 (poor) - 5 (native-like)"
+
+    - name: "Technical Accuracy"
+      description: "Correctness of technical information about VBScript/Automation"
+      scale: "1 (incorrect) - 5 (fully accurate)"
+
+    - name: "Completeness"
+      description: "How well the answer covers expected topics"
+      scale: "1 (incomplete) - 5 (comprehensive)"
+
+    - name: "Coherence"
+      description: "Logical flow and structure of the answer"
+      scale: "1 (incoherent) - 5 (perfectly structured)"
+
+    - name: "Source Citation"
+      description: "How well the answer cites or references the document context"
+      scale: "1 (no citation) - 5 (clear citations)"
+
+  overall_scoring:
+    weights:
+      fluency_de: 0.20
+      fluency_en: 0.20
+      technical_accuracy: 0.25
+      completeness: 0.15
+      coherence: 0.10
+      source_citation: 0.10
+
+# Decision Matrix (to be filled after evaluation)
+decision_matrix:
+  criteria:
+    - criterion: "Chat Quality (DE)"
+      weight: 0.20
+      description: "German language quality + accuracy"
+
+    - criterion: "Chat Quality (EN)"
+      weight: 0.20
+      description: "English language quality + accuracy"
+
+    - criterion: "Response Speed"
+      weight: 0.20
+      description: "Tokens per second (inference speed)"
+
+    - criterion: "Context Switch Time"
+      weight: 0.20
+      description: "Model loading time when switching from extraction"
+
+    - criterion: "VRAM Usage"
+      weight: 0.10
+      description: "GPU memory consumption"
+
+    - criterion: "Ease of Maintenance"
+      weight: 0.10
+      description: "Complexity of managing 1 vs 2 models"
