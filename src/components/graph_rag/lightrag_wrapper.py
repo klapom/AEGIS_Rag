@@ -642,20 +642,25 @@ class LightRAGWrapper:
                 )
 
                 # Annotate entities with chunk_id and chunk metadata
+                # Sprint 16 fix (d8e52c0): Handle both old and new Chunk formats
+                tokens = chunk.get("tokens", chunk.get("token_count", 0))
+                start_token = chunk.get("start_token", 0)  # Default to 0 if not present
+                end_token = chunk.get("end_token", tokens)  # Default to token count
+
                 for entity in entities:
                     entity["chunk_id"] = chunk_id
                     entity["document_id"] = document_id
                     entity["chunk_index"] = chunk_index
-                    entity["start_token"] = chunk["start_token"]
-                    entity["end_token"] = chunk["end_token"]
+                    entity["start_token"] = start_token
+                    entity["end_token"] = end_token
 
                 # Annotate relations with chunk_id and chunk metadata
                 for relation in relations:
                     relation["chunk_id"] = chunk_id
                     relation["document_id"] = document_id
                     relation["chunk_index"] = chunk_index
-                    relation["start_token"] = chunk["start_token"]
-                    relation["end_token"] = chunk["end_token"]
+                    relation["start_token"] = start_token
+                    relation["end_token"] = end_token
 
                 all_entities.extend(entities)
                 all_relations.extend(relations)
