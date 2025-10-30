@@ -1,0 +1,29 @@
+version: '1.0'
+description: Ground truth annotations for entity/relation extraction evaluation
+test_cases:
+- id: test_001
+  text: VBScript is a scripting language developed by Microsoft. It is used for automation
+    in Windows environments.
+  ground_truth_entities:
+  - name: VBScript
+    type: PRODUCT
+    description: VBScript is a scripting language
+  - name: Microsoft
+    type: ORGANIZATION
+    description: Microsoft is a company
+  - name: Windows
+    type: PRODUCT
+    description: Windows is an operating system
+  ground_truth_relations:
+  - source: VBScript
+    target: Microsoft
+    description: VBScript was developed by Microsoft
+    strength: 9
+  - source: VBScript
+    target: Windows
+    description: VBScript is used in Windows environments
+    strength: 8
+- id: test_002
+  text: 'TODO: Add more test cases with your domain-specific text'
+  ground_truth_entities: []
+  ground_truth_relations: []
