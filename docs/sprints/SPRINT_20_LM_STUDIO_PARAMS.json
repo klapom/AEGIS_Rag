@@ -1,0 +1,255 @@
+{
+  "timestamp": "2025-10-30T14:45:05.846055",
+  "model": "gemma-3-4b-it",
+  "lm_studio_api": "http://localhost:1234/v1",
+  "total_questions": 2,
+  "configurations_tested": 5,
+  "quick_mode": true,
+  "configurations": [
+    {
+      "name": "ollama_baseline",
+      "description": "Ollama default parameters (baseline)",
+      "params": {
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 40
+      },
+      "extra_params": {}
+    },
+    {
+      "name": "mirostat_v2",
+      "description": "Mirostat 2.0 - Adaptive sampling for consistent perplexity",
+      "params": {
+        "temperature": 0.7
+      },
+      "extra_params": {
+        "mirostat_mode": 2,
+        "mirostat_tau": 5.0,
+        "mirostat_eta": 0.1
+      }
+    },
+    {
+      "name": "typical_sampling",
+      "description": "Typical sampling with min_p threshold",
+      "params": {
+        "temperature": 0.7,
+        "top_p": 0.9
+      },
+      "extra_params": {
+        "typical_p": 0.9,
+        "min_p": 0.05
+      }
+    },
+    {
+      "name": "low_temp_precise",
+      "description": "Low temperature for precise, deterministic answers",
+      "params": {
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "top_k": 20
+      },
+      "extra_params": {
+        "min_p": 0.1
+      }
+    },
+    {
+      "name": "high_temp_creative",
+      "description": "High temperature for creative, varied answers",
+      "params": {
+        "temperature": 0.9,
+        "top_p": 0.95,
+        "top_k": 50
+      },
+      "extra_params": {}
+    }
+  ],
+  "results": {
+    "ollama_baseline": [
+      {
+        "success": true,
+        "config_name": "ollama_baseline",
+        "question": "Was ist VBScript laut dem Dokument?",
+        "language": "de",
+        "tier": 1,
+        "answer": "Laut dem Dokument ist VBScript (Visual Basic Scripting Edition) eine **interpretierte, objektorientierte Skriptsprache**, die von Microsoft entwickelt wurde.  Es handelt sich um eine leicht erlernbare Sprache, die hauptsächlich für die Automatisierung von Aufgaben in Windows-Umgebungen verwendet wird. \n\nWichtige Aspekte, die im Dokument hervorgehoben werden:\n\n*   **Skriptsprache:** VBScript ist keine eigenständige Programmiersprache, sondern ein Skript, das direkt von der .NET Framework Runtime ausgeführt wird.\n*   **Automatisierung:**  Es dient dazu, repetitive Aufgaben zu automatisieren, z.B. Dateiverarbeitung, Systemadministration, Web-Browsing und die Steuerung anderer Anwendungen.\n*   **Objektorientiert:** Es ermöglicht die Erstellung von Objekten mit Eigenschaften und Methoden, was die Entwicklung komplexerer Skripte erleichtert.\n*   **Einfache Syntax:**  Die Syntax ähnelt der von Visual Basic 6, wodurch es für VB-Entwickler relativ einfach zu erlernen ist.\n\nUm dir eine noch genauere Antwort geben zu können, wäre es hilfreich zu wissen, aus welchem spezifischen Dokument du diese Frage stellst. Aber die obige Beschreibung fasst die wichtigsten Punkte über VBScript zusammen.\n",
+        "completion_tokens": 277,
+        "prompt_tokens": 36,
+        "total_tokens": 313,
+        "time_seconds": 9.280501899998853,
+        "tokens_per_sec": 29.847523656024922
+      },
+      {
+        "success": true,
+        "config_name": "ollama_baseline",
+        "question": "What is VBScript according to the document?",
+        "language": "en",
+        "tier": 1,
+        "answer": "Please provide me with the document you’re referring to! I need the text of the document to tell you what it says about VBScript. 😊 \n\nOnce you paste the document here, I'll gladly answer your question based on its content.",
+        "completion_tokens": 53,
+        "prompt_tokens": 37,
+        "total_tokens": 90,
+        "time_seconds": 2.003228900000977,
+        "tokens_per_sec": 26.457286034548602
+      }
+    ],
+    "mirostat_v2": [
+      {
+        "success": true,
+        "config_name": "mirostat_v2",
+        "question": "Was ist VBScript laut dem Dokument?",
+        "language": "de",
+        "tier": 1,
+        "answer": "Laut dem Dokument ist VBScript (Visual Basic Scripting Edition) eine **interpretierte, objektorientierte Skriptsprache**, die von Microsoft entwickelt wurde. Es handelt sich um eine **leichtgewichtige und einfach zu erlernende Sprache** für die Automatisierung von Aufgaben in Windows-Umgebungen. \n\nHier sind einige wichtige Punkte, die im Dokument hervorgehoben werden:\n\n*   **Basierend auf Visual Basic:** VBScript basiert auf der visuellen Programmiersprache Visual Basic und bietet daher eine vertraute Umgebung für VB-Entwickler.\n*   **Automatisierung:** Es wurde speziell für die Automatisierung von Windows-Anwendungen, Systemaufgaben und das Schreiben von Skripten entwickelt.\n*   **Objektorientiert:**  VBScript unterstützt objektorientierte Programmierung, was es ermöglicht, komplexe Anwendungen zu erstellen.\n*   **Einfache Integration:** Es lässt sich leicht in andere Programme integrieren, beispielsweise in Microsoft Office-Anwendungen und Windows-Systemtools.\n\nZusammenfassend lässt sich sagen: VBScript ist ein Werkzeug zur **Automatisierung von Prozessen in der Windows-Welt**. \n\nUm dir noch genauer zu helfen, wäre es hilfreich zu wissen, welches Dokument du meinst.  Wenn du mir den Titel oder den Link zum Dokument geben könntest, könnte ich dir eine präzisere Antwort liefern.\n",
+        "completion_tokens": 293,
+        "prompt_tokens": 36,
+        "total_tokens": 329,
+        "time_seconds": 9.562674300001163,
+        "tokens_per_sec": 30.639964387364355
+      },
+      {
+        "success": true,
+        "config_name": "mirostat_v2",
+        "question": "What is VBScript according to the document?",
+        "language": "en",
+        "tier": 1,
+        "answer": "Please provide me with the document you’re referring to! I need the text of the document to tell you what it says about VBScript. 😊 \n\nOnce you paste the document here, I’ll be happy to answer your question accurately based on its content.",
+        "completion_tokens": 56,
+        "prompt_tokens": 37,
+        "total_tokens": 93,
+        "time_seconds": 2.0138344000006327,
+        "tokens_per_sec": 27.807648930807023
+      }
+    ],
+    "typical_sampling": [
+      {
+        "success": true,
+        "config_name": "typical_sampling",
+        "question": "Was ist VBScript laut dem Dokument?",
+        "language": "de",
+        "tier": 1,
+        "answer": "Laut dem Dokument, das Sie wahrscheinlich meinen (ich kann ohne den genauen Originaltext nicht genau sagen), ist **VBScript (Visual Basic Scripting Edition)** eine:\n\n*   **Skriptsprache**, die auf der Basis von Visual Basic entwickelt wurde.\n*   Eine **interpretierte Sprache**, was bedeutet, dass sie direkt ausgeführt wird, ohne in eine ausführbare Datei kompiliert werden zu müssen.\n*   Hauptsächlich für die **Automatisierung von Aufgaben** und die **Erstellung von Benutzeroberflächen** in Windows-Umgebungen gedacht.\n*   Oft verwendet für das **Manipulieren von Dateien, Registrierungseinträgen und anderen Systemressourcen**.\n\nKurz gesagt: VBScript ist eine Skriptsprache, die es ermöglicht, Aufgaben in Windows automatisch auszuführen oder zu steuern.\n\nGibt es einen bestimmten Dokumenttext, auf den Sie sich beziehen? Wenn ja, können Sie ihn mir geben, dann kann ich Ihnen eine noch genauere Antwort geben.\n",
+        "completion_tokens": 212,
+        "prompt_tokens": 36,
+        "total_tokens": 248,
+        "time_seconds": 7.046771799999988,
+        "tokens_per_sec": 30.084697790270486
+      },
+      {
+        "success": true,
+        "config_name": "typical_sampling",
+        "question": "What is VBScript according to the document?",
+        "language": "en",
+        "tier": 1,
+        "answer": "Please provide me with the document you're referring to! I need the text of the document to tell you what it says about VBScript. 😊 \n\nOnce you paste the document here, I’ll be happy to answer your question accurately based on its content.",
+        "completion_tokens": 56,
+        "prompt_tokens": 37,
+        "total_tokens": 93,
+        "time_seconds": 2.088189300000522,
+        "tokens_per_sec": 26.81749207314969
+      }
+    ],
+    "low_temp_precise": [
+      {
+        "success": true,
+        "config_name": "low_temp_precise",
+        "question": "Was ist VBScript laut dem Dokument?",
+        "language": "de",
+        "tier": 1,
+        "answer": "Laut dem Dokument (und allgemein bekannt) ist **VBScript (Visual Basic Scripting Edition)** eine interpretierte, objektorientierte Skriptsprache, die von Microsoft entwickelt wurde. Es handelt sich um eine leichtgewichtige Sprache, die hauptsächlich für die Automatisierung von Aufgaben in Windows-Umgebungen verwendet wird. \n\nHier sind einige Schlüsselpunkte aus der Definition:\n\n*   **Interpretierte Sprache:** VBScript-Code wird zur Laufzeit interpretiert und nicht kompiliert.\n*   **Objektorientiert:**  Es unterstützt objektorientierte Programmierkonzepte wie Klassen und Objekte.\n*   **Automatisierung:** Hauptzweck ist die Automatisierung von Aufgaben, z.B. in Windows-Anwendungen, Registry-Änderungen oder Dateiverarbeitung.\n*   **Microsoft-Technologie:** Es ist eng mit der Microsoft-Plattform (Windows) verbunden.\n\nGibt es noch etwas Spezielles, das Sie über VBScript wissen möchten?  Vielleicht interessieren Sie sich für bestimmte Anwendungen oder Funktionen?",
+        "completion_tokens": 223,
+        "prompt_tokens": 36,
+        "total_tokens": 259,
+        "time_seconds": 7.2990264000000025,
+        "tokens_per_sec": 30.552019924191523
+      },
+      {
+        "success": true,
+        "config_name": "low_temp_precise",
+        "question": "What is VBScript according to the document?",
+        "language": "en",
+        "tier": 1,
+        "answer": "Please provide me with the document you're referring to! I need the text of the document to tell you what it says about VBScript. 😊 \n\nOnce you paste the document here, I’ll be happy to answer your question accurately based on its content.",
+        "completion_tokens": 56,
+        "prompt_tokens": 37,
+        "total_tokens": 93,
+        "time_seconds": 2.1094396999997116,
+        "tokens_per_sec": 26.547333872595484
+      }
+    ],
+    "high_temp_creative": [
+      {
+        "success": true,
+        "config_name": "high_temp_creative",
+        "question": "Was ist VBScript laut dem Dokument?",
+        "language": "de",
+        "tier": 1,
+        "answer": "Laut dem Dokument, das du mir gegeben hast (ich habe kein Zugriff auf ein spezifisches Dokument, sondern basiere auf meinem allgemeinen Wissen), ist **VBScript (Visual Basic Scripting Edition)** eine **interpretierte Programmiersprache**, die von Microsoft entwickelt wurde.\n\nHier sind einige Kernpunkte aus der Definition:\n\n*   **Eine Skriptsprache:** Sie wird nicht kompiliert, sondern direkt von einem Interpreter ausgeführt.\n*   **Basierend auf Visual Basic:**  Sie teilt viele ähnliche Syntax-Elemente mit der klassischen Visual Basic-Programmierung.\n*   **Für die Automatisierung und das Scripting:**  VBScript wurde primär für die Automatisierung von Aufgaben in Windows-Umgebungen konzipiert, z.B. das Ausführen von Systembefehlen, die Manipulation von Dateien und Registrierungseinträgen oder das Interagieren mit COM-Objekten (Component Object Model).\n*   **Wurde oft zur Verwaltung von Windows-Systemen verwendet:**  Insbesondere in der Vergangenheit war VBScript ein häufig verwendeter Werkzeugkasten für Systemadministratoren und Entwickler, die Aufgaben wie Softwareinstallationen, Konfigurationsänderungen oder das Erstellen von Tools automatisiert haben.\n\nObwohl VBScript heute nicht mehr so verbreitet ist wie früher (und wird durch PowerShell in vielen Fällen ersetzt), bleibt es ein wichtiger Bestandteil vieler älterer Windows-Anwendungen und Skripte.\n",
+        "completion_tokens": 304,
+        "prompt_tokens": 36,
+        "total_tokens": 340,
+        "time_seconds": 10.114316600000166,
+        "tokens_per_sec": 30.056405392727672
+      },
+      {
+        "success": true,
+        "config_name": "high_temp_creative",
+        "question": "What is VBScript according to the document?",
+        "language": "en",
+        "tier": 1,
+        "answer": "Please provide me with the document you're referring to! I need the text of the document to tell you what it says about VBScript. 😊 \n\nOnce you paste the document here, I’ll gladly extract and summarize the definition of VBScript as described within it.",
+        "completion_tokens": 59,
+        "prompt_tokens": 37,
+        "total_tokens": 96,
+        "time_seconds": 2.0864852000013343,
+        "tokens_per_sec": 28.277219507697573
+      }
+    ]
+  },
+  "metrics": {
+    "ollama_baseline": {
+      "total_questions": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_tokens_per_sec": 28.15240484528676,
+      "avg_time_seconds": 5.641865399999915,
+      "total_completion_tokens": 330,
+      "avg_completion_tokens": 165.0
+    },
+    "mirostat_v2": {
+      "total_questions": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_tokens_per_sec": 29.22380665908569,
+      "avg_time_seconds": 5.788254350000898,
+      "total_completion_tokens": 349,
+      "avg_completion_tokens": 174.5
+    },
+    "typical_sampling": {
+      "total_questions": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_tokens_per_sec": 28.451094931710088,
+      "avg_time_seconds": 4.567480550000255,
+      "total_completion_tokens": 268,
+      "avg_completion_tokens": 134.0
+    },
+    "low_temp_precise": {
+      "total_questions": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_tokens_per_sec": 28.549676898393503,
+      "avg_time_seconds": 4.704233049999857,
+      "total_completion_tokens": 279,
+      "avg_completion_tokens": 139.5
+    },
+    "high_temp_creative": {
+      "total_questions": 2,
+      "successful": 2,
+      "failed": 0,
+      "avg_tokens_per_sec": 29.166812450212625,
+      "avg_time_seconds": 6.10040090000075,
+      "total_completion_tokens": 363,
+      "avg_completion_tokens": 181.5
+    }
+  }
+}
