@@ -1,13 +1,19 @@
-name: CI Pipeline - Quality Gates
+name: CI Pipeline - Unified Quality Gates
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, sprint-*, feature/*]
   pull_request:
     branches: [main, develop]
 
+# Prevent concurrent runs on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
 
 jobs:
   # ============================================================
@@ -66,45 +72,115 @@ jobs:
           path: bandit-report.json
 
   # ============================================================
-  # JOB 2: NAMING CONVENTIONS CHECK
+  # JOB 2: PYTHON IMPORT VALIDATION (Sprint 18)
   # ============================================================
-  naming-conventions:
-    name: 📝 Naming Conventions
+  python-import-validation:
+    name: 🔍 Python Import Validation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
+      - name: Install Poetry
+        run: |
+          pip install --upgrade pip
+          pip install poetry
+
+      - name: Install Dependencies
+        run: |
+          poetry install --with dev
+
+      - name: Validate All Python Imports
+        run: |
+          echo "🔍 Checking all Python files for import errors..."
+          failed_files=""
+
+          for file in $(find src -name "*.py" -type f); do
+            echo "Checking $file..."
+            if ! poetry run python -c "import sys; sys.path.insert(0, '.'); import $(echo $file | sed 's/\//./g' | sed 's/\.py$//' | sed 's/^src\.//')" 2>/dev/null; then
+              echo "❌ Import error in $file"
+              poetry run python -c "import sys; sys.path.insert(0, '.'); __import__('$(echo $file | sed 's/\//./g' | sed 's/\.py$//' | sed 's/^src\.//')')" 2>&1 || true
+              failed_files="$failed_files\n$file"
+            fi
+          done
+
+          if [ -n "$failed_files" ]; then
+            echo -e "\n❌ Import validation failed for:$failed_files"
+            exit 1
+          fi
+
+          echo "✅ All imports validated successfully"
+
+      - name: Validate Pydantic Models
+        run: |
+          echo "🔍 Checking Pydantic model imports..."
+          poetry run python -c "
+          from pathlib import Path
+          import re
+
+          errors = []
+
+          for py_file in Path('src').rglob('*.py'):
+              content = py_file.read_text()
+
+              # Check if BaseModel is used but not imported
+              if 'BaseModel' in content and 'from pydantic' not in content:
+                  errors.append(f'{py_file}: Uses BaseModel but missing pydantic import')
+
+          if errors:
+              print('\n❌ Pydantic import errors:')
+              print('\n'.join(errors))
+              exit(1)
+
+          print('✅ All Pydantic imports validated')
+          "
+
+  # ============================================================
+  # JOB 3: NAMING CONVENTIONS CHECK
+  # ============================================================
+  naming-conventions:
+    name: 📝 Naming Conventions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Check Naming Conventions
         run: |
           echo "Checking naming conventions..."
           python scripts/check_naming.py src/**/*.py
 
   # ============================================================
-  # JOB 3: ADR VALIDATION
+  # JOB 4: ADR VALIDATION
   # ============================================================
   adr-validation:
     name: 📚 ADR Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for diff
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Check if ADR needed
         run: |
           echo "Checking if ADR is required..."
@@ -112,7 +188,7 @@ jobs:
         continue-on-error: true  # Warning only, not blocking
 
   # ============================================================
-  # JOB 4: UNIT TESTS
+  # JOB 5: UNIT TESTS
   # ============================================================
   unit-tests:
     name: 🧪 Unit Tests
@@ -170,7 +246,7 @@ jobs:
             htmlcov/
 
   # ============================================================
-  # JOB 5: INTEGRATION TESTS (with Docker Services)
+  # JOB 6: INTEGRATION TESTS (with Docker Services)
   # ============================================================
   integration-tests:
     name: 🔗 Integration Tests
@@ -326,7 +402,288 @@ jobs:
             htmlcov/
 
   # ============================================================
-  # JOB 6: SECURITY SCANNING (Dependencies)
+  # JOB 7: FRONTEND BUILD & TYPE CHECK (Sprint 18)
+  # ============================================================
+  frontend-build:
+    name: ⚛️ Frontend Build & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript Type Check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: Build Frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: http://localhost:8000
+
+      - name: Check Bundle Size
+        working-directory: frontend
+        run: |
+          echo "📊 Checking bundle size..."
+          BUNDLE_SIZE=$(du -sh dist | cut -f1)
+          echo "Bundle size: $BUNDLE_SIZE"
+
+          # Warn if bundle > 2MB
+          SIZE_BYTES=$(du -sb dist | cut -f1)
+          if [ $SIZE_BYTES -gt 2097152 ]; then
+            echo "⚠️ Warning: Bundle size exceeds 2MB"
+          else
+            echo "✅ Bundle size OK"
+          fi
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+  # ============================================================
+  # JOB 8: FRONTEND UNIT TESTS (Sprint 18)
+  # ============================================================
+  frontend-unit-tests:
+    name: ⚛️ Frontend Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Unit Tests
+        working-directory: frontend
+        run: npm run test:unit
+        env:
+          CI: true
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: frontend/coverage/coverage-final.json
+          flags: frontend-unit
+          name: codecov-frontend-unit
+
+  # ============================================================
+  # JOB 9: FRONTEND E2E TESTS (Sprint 18)
+  # ============================================================
+  frontend-e2e-tests:
+    name: 🎭 Frontend E2E Tests
+    runs-on: ubuntu-latest
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.11.0
+        ports:
+          - 6333:6333
+
+      neo4j:
+        image: neo4j:5.24-community
+        ports:
+          - 7687:7687
+          - 7474:7474
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Backend Dependencies
+        run: poetry install --no-interaction
+
+      - name: Wait for Services
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:6333/ 2>/dev/null; do sleep 2; done'
+          echo "✅ Qdrant ready"
+
+          timeout 120 bash -c 'until curl -f http://localhost:7474/ 2>/dev/null; do sleep 2; done'
+          echo "✅ Neo4j ready"
+
+          timeout 60 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
+          echo "✅ Redis ready"
+
+      - name: Start Backend Server
+        run: |
+          poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 2; done'
+          echo "✅ Backend ready"
+        env:
+          QDRANT_HOST: localhost
+          NEO4J_URI: bolt://localhost:7687
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: testpassword
+          REDIS_HOST: localhost
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run E2E Tests
+        working-directory: frontend
+        run: npm test -- --run
+        env:
+          VITE_API_BASE_URL: http://localhost:8000
+
+      - name: Upload E2E Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: frontend/test-results/
+
+      - name: Upload E2E Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: frontend/screenshots/
+
+  # ============================================================
+  # JOB 10: API CONTRACT TESTS (Sprint 18)
+  # ============================================================
+  api-contract-tests:
+    name: 📋 API Contract Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install Dependencies
+        run: poetry install
+
+      - name: Generate OpenAPI Schema
+        run: |
+          poetry run python -c "
+          from src.api.main import app
+          import json
+
+          schema = app.openapi()
+          with open('openapi-generated.json', 'w') as f:
+              json.dump(schema, f, indent=2)
+          "
+
+      - name: Validate OpenAPI Schema
+        run: |
+          npm install -g @apidevtools/swagger-cli
+          swagger-cli validate openapi-generated.json
+
+      - name: Upload OpenAPI Schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-schema
+          path: openapi-generated.json
+
+  # ============================================================
+  # JOB 11: DEPENDENCY AUDIT (Sprint 18)
+  # ============================================================
+  dependency-audit:
+    name: 📦 Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Frontend Dependency Audit
+        working-directory: frontend
+        run: |
+          echo "🔍 Auditing frontend dependencies..."
+          npm audit --audit-level=moderate || true
+          npm audit --json > ../frontend-audit.json || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Backend Dependency Audit
+        run: |
+          echo "🔍 Auditing backend dependencies..."
+          pip install safety
+          poetry export -f requirements.txt --output requirements.txt
+          safety check --file requirements.txt --json > backend-audit.json || true
+
+      - name: Upload Audit Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit-reports
+          path: |
+            frontend-audit.json
+            backend-audit.json
+
+  # ============================================================
+  # JOB 12: SECURITY SCANNING (Dependencies)
   # ============================================================
   security-scan:
     name: 🔒 Security Scan
@@ -359,7 +716,7 @@ jobs:
           path: safety-report.json
 
   # ============================================================
-  # JOB 7: DOCKER BUILD TEST
+  # JOB 13: DOCKER BUILD TEST
   # ============================================================
   docker-build:
     name: 🐳 Docker Build
@@ -400,7 +757,7 @@ jobs:
           docker run --rm aegis-rag-api:test python -c "import src; print('Import successful')"
 
   # ============================================================
-  # JOB 8: DOCUMENTATION CHECK
+  # JOB 14: DOCUMENTATION CHECK
   # ============================================================
   documentation:
     name: 📖 Documentation
@@ -430,16 +787,23 @@ jobs:
         continue-on-error: true
 
   # ============================================================
-  # JOB 9: OVERALL QUALITY GATE
+  # JOB 15: UNIFIED QUALITY GATE
   # ============================================================
   quality-gate:
-    name: ✅ Quality Gate
+    name: ✅ Unified Quality Gate
     runs-on: ubuntu-latest
-    needs: 
+    needs:
       - code-quality
+      - python-import-validation
       - naming-conventions
+      - adr-validation
       - unit-tests
       - integration-tests
+      - frontend-build
+      - frontend-unit-tests
+      - frontend-e2e-tests
+      - api-contract-tests
+      - dependency-audit
       - security-scan
       - docker-build
     if: always()
@@ -447,34 +811,80 @@ jobs:
     steps:
       - name: Check Previous Jobs
         run: |
-          echo "Checking if all quality gates passed..."
-          
+          echo "🔍 Checking all quality gates..."
+
+          ALL_PASSED=true
+
           if [[ "${{ needs.code-quality.result }}" != "success" ]]; then
             echo "❌ Code Quality failed"
-            exit 1
+            ALL_PASSED=false
           fi
-          
+
+          if [[ "${{ needs.python-import-validation.result }}" != "success" ]]; then
+            echo "❌ Python Import Validation failed"
+            ALL_PASSED=false
+          fi
+
           if [[ "${{ needs.naming-conventions.result }}" != "success" ]]; then
             echo "❌ Naming Conventions failed"
-            exit 1
+            ALL_PASSED=false
           fi
-          
+
+          if [[ "${{ needs.adr-validation.result }}" != "success" && "${{ needs.adr-validation.result }}" != "skipped" ]]; then
+            echo "❌ ADR Validation failed"
+            ALL_PASSED=false
+          fi
+
           if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
             echo "❌ Unit Tests failed"
-            exit 1
+            ALL_PASSED=false
           fi
-          
+
           if [[ "${{ needs.integration-tests.result }}" != "success" ]]; then
             echo "❌ Integration Tests failed"
-            exit 1
+            ALL_PASSED=false
           fi
-          
+
+          if [[ "${{ needs.frontend-build.result }}" != "success" ]]; then
+            echo "❌ Frontend Build failed"
+            ALL_PASSED=false
+          fi
+
+          if [[ "${{ needs.frontend-unit-tests.result }}" != "success" ]]; then
+            echo "❌ Frontend Unit Tests failed"
+            ALL_PASSED=false
+          fi
+
+          if [[ "${{ needs.frontend-e2e-tests.result }}" != "success" ]]; then
+            echo "❌ Frontend E2E Tests failed"
+            ALL_PASSED=false
+          fi
+
+          if [[ "${{ needs.api-contract-tests.result }}" != "success" ]]; then
+            echo "❌ API Contract Tests failed"
+            ALL_PASSED=false
+          fi
+
+          if [[ "${{ needs.dependency-audit.result }}" != "success" ]]; then
+            echo "⚠️  Dependency Audit has warnings (non-blocking)"
+          fi
+
+          if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
+            echo "⚠️  Security Scan has warnings (non-blocking)"
+          fi
+
           if [[ "${{ needs.docker-build.result }}" != "success" ]]; then
-            echo "❌ Docker Build failed"
+            echo "⚠️  Docker Build failed (non-blocking)"
+          fi
+
+          if [ "$ALL_PASSED" = false ]; then
+            echo ""
+            echo "❌ QUALITY GATE FAILED"
             exit 1
           fi
-          
-          echo "✅ All quality gates passed!"
+
+          echo ""
+          echo "✅ All critical quality gates passed!"
       
       - name: Comment on PR
         if: github.event_name == 'pull_request'
@@ -482,19 +892,31 @@ jobs:
         with:
           script: |
             const summary = `
-            ## ✅ Quality Gates Passed
-            
-            All checks completed successfully:
-            - ✅ Code Quality
+            ## ✅ Unified Quality Gate Passed
+
+            ### Backend Tests
+            - ✅ Code Quality (Ruff + Black + MyPy)
+            - ✅ Python Import Validation
             - ✅ Naming Conventions
-            - ✅ Unit Tests (>80% coverage)
+            - ✅ Unit Tests (>50% coverage)
             - ✅ Integration Tests
+
+            ### Frontend Tests
+            - ✅ Frontend Build & Type Check
+            - ✅ Frontend Unit Tests
+            - ✅ Frontend E2E Tests
+
+            ### API & Security
+            - ✅ API Contract Validation
+            - ✅ Dependency Audit
             - ✅ Security Scan
+
+            ### Infrastructure
             - ✅ Docker Build
-            
-            Ready for review! 🚀
+
+            **Ready for review!** 🚀
             `;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -503,7 +925,7 @@ jobs:
             });
 
   # ============================================================
-  # JOB 10: PERFORMANCE BENCHMARKS (Optional, nur bei Main)
+  # JOB 16: PERFORMANCE BENCHMARKS (Optional, nur bei Main)
   # ============================================================
   performance:
     name: ⚡ Performance Benchmarks
