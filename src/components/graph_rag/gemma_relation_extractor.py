@@ -253,6 +253,7 @@ class GemmaRelationExtractor:
                     "num_ctx": self.num_ctx,
                 },
                 format="json",
+                keep_alive="30m",  # Sprint 20.4: Keep model in VRAM for 30 minutes
             )
 
             # Parse JSON response

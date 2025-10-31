@@ -11,6 +11,8 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
+      # Sprint 20 Feature 20.4: Keep models in VRAM for 30 minutes (prevents 76s reloads)
+      - OLLAMA_KEEP_ALIVE=30m
     # GPU Support for NVIDIA RTX 3060 (Sprint 11: 15-20x speedup vs CPU)
     # Required for LightRAG entity extraction with llama3.2:3b (otherwise 360s timeout)
     deploy:
