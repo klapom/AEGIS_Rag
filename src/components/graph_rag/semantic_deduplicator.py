@@ -19,7 +19,7 @@ Author: Claude Code
 Date: 2025-10-24, Updated: 2025-10-30
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 

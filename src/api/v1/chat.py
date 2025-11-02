@@ -12,7 +12,7 @@ Includes Server-Sent Events (SSE) streaming for real-time token-by-token respons
 import json
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import structlog
