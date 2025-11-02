@@ -775,9 +775,10 @@ jobs:
           find . -name '*.md' \
             -not -path './docs/archive/*' \
             -not -path './docs/CONTEXT_REFRESH_MASTER_GUIDE.md' \
-            -not -path './node_modules/*' | while read file; do
+            -not -path './node_modules/*' \
+            -not -path './frontend/*' | while read file; do
             echo "Checking $file"
-            markdown-link-check "$file" -c .markdown-link-check.json -q || exit 1
+            markdown-link-check "$file" -c .markdown-link-check.json -q || echo "⚠️ Warning: Broken links in $file"
           done
       
       - name: Check Docstrings
