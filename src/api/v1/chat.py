@@ -85,14 +85,14 @@ async def save_conversation_turn(
         else:
             # New conversation
             messages = []
-            created_at = datetime.now(timezone.utc).isoformat()
+            created_at = datetime.now(datetime.UTC).isoformat()
 
         # Add new messages
         messages.append(
             {
                 "role": "user",
                 "content": user_message,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
             }
         )
 
@@ -100,7 +100,7 @@ async def save_conversation_turn(
             {
                 "role": "assistant",
                 "content": assistant_message,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "intent": intent,
                 "source_count": len(sources) if sources else 0,
             }
@@ -110,7 +110,7 @@ async def save_conversation_turn(
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(datetime.UTC).isoformat(),
             "message_count": len(messages),
         }
 
@@ -1049,7 +1049,7 @@ def _get_iso_timestamp() -> str:
     Returns:
         ISO 8601 timestamp string
     """
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(datetime.UTC).isoformat()
 
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline

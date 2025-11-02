@@ -27,7 +27,6 @@ logger = structlog.get_logger(__name__)
 
 # Conditional imports
 try:
-    import torch
     from sentence_transformers import SentenceTransformer
     from sklearn.metrics.pairwise import cosine_similarity
 
@@ -44,7 +43,7 @@ except ImportError:
 # Sprint 20 Feature 20.3: SINGLETON PATTERN
 # ============================================================================
 
-_sentence_transformer_instance: Optional[SentenceTransformer] = None
+_sentence_transformer_instance: SentenceTransformer | None = None
 _singleton_lock = None  # Will be threading.Lock() if needed
 
 
