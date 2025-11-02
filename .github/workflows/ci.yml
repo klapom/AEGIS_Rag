@@ -103,9 +103,11 @@ jobs:
 
           for file in $(find src -name "*.py" -type f); do
             echo "Checking $file..."
-            if ! poetry run python -c "import sys; sys.path.insert(0, '.'); import $(echo $file | sed 's/\//./g' | sed 's/\.py$//' | sed 's/^src\.//')" 2>/dev/null; then
+            # Convert file path to module path (keep src. prefix)
+            module_path=$(echo $file | sed 's/\//./g' | sed 's/\.py$//')
+            if ! poetry run python -c "import sys; sys.path.insert(0, '.'); import $module_path" 2>/dev/null; then
               echo "❌ Import error in $file"
-              poetry run python -c "import sys; sys.path.insert(0, '.'); __import__('$(echo $file | sed 's/\//./g' | sed 's/\.py$//' | sed 's/^src\.//')')" 2>&1 || true
+              poetry run python -c "import sys; sys.path.insert(0, '.'); import $module_path" 2>&1 || true
               failed_files="$failed_files\n$file"
             fi
           done
