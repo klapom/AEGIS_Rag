@@ -94,10 +94,7 @@ def get_sentence_transformer_singleton(
                 note="First initialization - subsequent calls will reuse this instance"
             )
 
-            _sentence_transformer_instance = SentenceTransformer(
-                model_name,
-                device=device
-            )
+            _sentence_transformer_instance = SentenceTransformer(model_name, device=device)
 
             logger.info(
                 "sentence_transformer_singleton_ready",
@@ -163,10 +160,7 @@ class SemanticDeduplicator:
             )
 
         # Sprint 20.3: Use singleton instead of creating new model
-        self.model = get_sentence_transformer_singleton(
-            model_name=model_name,
-            device=device
-        )
+        self.model = get_sentence_transformer_singleton(model_name=model_name, device=device)
         self.threshold = threshold
         self.device = device
         self.model_name = model_name
