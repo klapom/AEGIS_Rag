@@ -1,10 +1,10 @@
 # Sprint 21: Foundation - Auth & Multi-Tenancy
 
 **Status:** 📋 PLANNED
-**Goal:** Establish foundation for Org/User/Project hierarchy with authentication
-**Duration:** 5 days (estimated)
+**Goal:** Establish foundation for Org/User/Project hierarchy with authentication + mem0 User Preferences
+**Duration:** 6.5 days (estimated)
 **Prerequisites:** Sprint 20 complete (Performance optimizations)
-**Story Points:** 16 SP
+**Story Points:** 24 SP (increased from 16 SP - added Feature 21.5: mem0 Integration)
 
 ---
 
@@ -16,6 +16,7 @@
 3. Establish user/organization management
 4. Create Redis namespace strategy for project isolation
 5. Implement authorization middleware for all endpoints
+6. **NEW: Integrate mem0 as Layer 0 for User Preference Learning**
 
 ### **Success Criteria:**
 - ✅ Users can register and login
@@ -24,6 +25,9 @@
 - ✅ Redis keys namespaced by org/user/project
 - ✅ All endpoints enforce authentication
 - ✅ 100% test coverage for auth flows
+- ✅ **mem0 extracts user preferences from conversations**
+- ✅ **Preferences injected into chat prompts**
+- ✅ **4-Layer Memory Architecture operational (mem0 + Redis + Qdrant + Graphiti)**
 
 ---
 
@@ -1643,6 +1647,1078 @@ tests/api/test_authorization.py
 
 ---
 
+### Feature 21.5: mem0 User Preference Layer (8 SP)
+**Priority:** HIGH - Foundation for personalized AI experience
+**Duration:** 2 days
+**Dependencies:** Feature 21.1 (Database Schema), Feature 21.2 (JWT Auth)
+
+#### **Problem:**
+Currently, user preferences are stored as static JSONB in PostgreSQL:
+```sql
+preferences JSONB DEFAULT '{
+    "default_search_mode": "hybrid",
+    "theme": "light",
+    "language": "de"
+}'
+```
+
+**Limitations:**
+- ❌ Static, manually set preferences
+- ❌ No learning from user behavior
+- ❌ No personalization across conversations
+- ❌ Cannot extract implicit preferences from interactions
+
+**Missing Capabilities:**
+- "Klaus prefers concise answers" (communication style)
+- "User works with Python and VBScript" (technical context)
+- "User always asks about server-side scripting" (topic affinity)
+- "User prefers German responses" (language preference)
+
+#### **Solution:**
+Integrate **mem0** as **Layer 0** (User Preference Memory) to enable:
+1. **LLM-driven preference extraction** from conversations
+2. **Semantic storage** of user facts (not static JSON)
+3. **Automatic personalization** without manual config
+4. **Cross-session learning** and memory consolidation
+
+#### **Architecture: 4-Layer Memory System**
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                   Layer 0: mem0                           │
+│              USER PREFERENCE LAYER (NEW!)                 │
+│                                                           │
+│  Purpose: Long-term user preferences, behaviors, context  │
+│  Storage: Qdrant (Vector) + Optional Neo4j (Graph)       │
+│  Latency: <50ms (fast fact retrieval)                    │
+│  Scope: Cross-session, persistent per user               │
+│                                                           │
+│  Examples:                                                │
+│  - "Klaus prefers Python over JavaScript"                 │
+│  - "User wants detailed technical explanations"           │
+│  - "User works in industrial automation domain"           │
+└───────────────────┬───────────────────────────────────────┘
+                    │
+                    ↓ (Inject preferences into prompts)
+                    │
+┌───────────────────┴───────────────────────────────────────┐
+│                  Layer 1: Redis                           │
+│           SHORT-TERM CONVERSATION CONTEXT                 │
+│  (Unchanged - Session-scoped messages)                    │
+└───────────────────┬───────────────────────────────────────┘
+                    │
+                    ↓
+┌───────────────────┴───────────────────────────────────────┐
+│         Layer 2: Qdrant + BM25 + LightRAG                 │
+│              DOCUMENT RETRIEVAL LAYER                     │
+│  (Unchanged - Semantic + Keyword + Graph search)          │
+└───────────────────┬───────────────────────────────────────┘
+                    │
+                    ↓
+┌───────────────────┴───────────────────────────────────────┐
+│                  Layer 3: Graphiti                        │
+│               EPISODIC MEMORY LAYER                       │
+│  (Unchanged - Temporal knowledge graph)                   │
+└───────────────────────────────────────────────────────────┘
+```
+
+#### **mem0 Integration Architecture**
+
+**Technology Stack:**
+```yaml
+Library: mem0ai (Apache 2.0 licensed)
+Vector Store: Qdrant (shared instance, separate collection)
+LLM: Ollama (llama3.2:3b - same as chat generation)
+Embeddings: BGE-M3 (1024-dim - AEGIS RAG standard)
+Optional Graph: Neo4j (reuse existing instance)
+```
+
+**Qdrant Collections:**
+```
+rag_documents              # Existing (Layer 2 - Document chunks)
+mem0_user_preferences      # NEW (Layer 0 - User memories)
+```
+
+#### **Tasks:**
+
+- [ ] **Setup mem0 Dependencies**
+  ```bash
+  poetry add mem0ai
+  # Dependencies: qdrant-client, openai (for API compatibility)
+  ```
+
+- [ ] **Database Schema Extension**
+  ```sql
+  -- Add to existing users table (Feature 21.1)
+  ALTER TABLE users
+  ADD COLUMN mem0_enabled BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN mem0_memory_count INT NOT NULL DEFAULT 0,
+  ADD COLUMN last_preference_update TIMESTAMP WITH TIME ZONE;
+
+  CREATE INDEX idx_users_mem0_enabled
+  ON users(mem0_enabled)
+  WHERE mem0_enabled = true;
+  ```
+
+- [ ] **Implement Mem0Wrapper**
+  - `src/components/memory/mem0_wrapper.py`
+  - Ollama LLM configuration
+  - Qdrant collection setup
+  - User memory CRUD operations
+  - Optional: Neo4j graph store
+
+- [ ] **Chat API Integration**
+  - Preference retrieval before RAG
+  - System prompt augmentation
+  - Memory update after conversation
+  - Error handling & fallback
+
+- [ ] **User Preferences API**
+  ```
+  GET  /api/v1/users/me/preferences        # Get static + learned
+  POST /api/v1/users/me/preferences/sync   # Sync preferences
+  DELETE /api/v1/users/me/preferences/{id} # Delete memory
+  ```
+
+- [ ] **Frontend Integration**
+  - User profile page with learned preferences
+  - Toggle mem0 learning on/off
+  - Preference history viewer
+  - Memory management UI
+
+#### **Implementation:**
+
+```python
+# src/components/memory/mem0_wrapper.py
+"""
+Sprint 21 Feature 21.5: mem0 User Preference Layer
+
+Integrates mem0 as Layer 0 of AEGIS RAG's 4-layer memory architecture.
+Enables LLM-driven extraction and storage of user preferences.
+"""
+from typing import Optional
+from uuid import UUID
+
+from mem0 import Memory
+from mem0.configs.base import MemoryConfig
+from mem0.configs.vector_stores import VectorStoreConfig, QdrantConfig
+from mem0.configs.llms import LlmConfig, OllamaConfig
+from mem0.configs.embedders import EmbedderConfig, OllamaEmbedderConfig
+
+from src.core.config import settings
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class Mem0Wrapper:
+    """User Preference Memory Layer (Layer 0).
+
+    Manages long-term user preferences extracted from conversations.
+    Complements Graphiti's episodic memory (Layer 3) with user-centric facts.
+
+    Architecture:
+        - Vector Store: Qdrant (shared instance, separate collection)
+        - LLM: Ollama (llama3.2:3b for fact extraction)
+        - Embeddings: BGE-M3 (1024-dim, matches AEGIS RAG standard)
+        - Optional Graph: Neo4j (entity relationships)
+
+    Usage:
+        mem0 = get_mem0_wrapper()
+
+        # Add user memory from conversation
+        await mem0.add_user_memory(
+            user_id="uuid-here",
+            messages=[
+                {"role": "user", "content": "I prefer concise answers"},
+                {"role": "assistant", "content": "Noted! I'll keep responses brief."}
+            ]
+        )
+
+        # Retrieve preferences for prompt injection
+        prefs = await mem0.get_user_preferences(
+            user_id="uuid-here",
+            query="communication style and preferences"
+        )
+    """
+
+    def __init__(self):
+        """Initialize mem0 with AEGIS RAG infrastructure."""
+
+        # Configure mem0 to use existing AEGIS RAG infrastructure
+        config = MemoryConfig(
+            # Vector Store: Qdrant (shared instance, separate collection)
+            vector_store=VectorStoreConfig(
+                provider="qdrant",
+                config=QdrantConfig(
+                    host=settings.qdrant_host,
+                    port=settings.qdrant_port,
+                    collection_name="mem0_user_preferences",
+                    # Use same settings as main Qdrant instance
+                    embedding_dim=1024,  # BGE-M3 dimensions
+                )
+            ),
+
+            # LLM: Ollama (same model as chat generation)
+            llm=LlmConfig(
+                provider="ollama",
+                config=OllamaConfig(
+                    model=settings.ollama_model_generation,  # llama3.2:3b
+                    base_url=settings.ollama_base_url,       # http://localhost:11434
+                    # mem0 uses LLM for fact extraction and update decisions
+                )
+            ),
+
+            # Embeddings: BGE-M3 (AEGIS RAG standard)
+            embedder=EmbedderConfig(
+                provider="ollama",
+                config=OllamaEmbedderConfig(
+                    model="bge-m3",
+                    base_url=settings.ollama_base_url,
+                    embedding_dims=1024,
+                )
+            ),
+
+            # OPTIONAL: Neo4j Graph Store for entity relationships
+            # graph_store=GraphStoreConfig(
+            #     provider="neo4j",
+            #     config=Neo4jConfig(
+            #         uri=settings.neo4j_uri,
+            #         user=settings.neo4j_user,
+            #         password=settings.neo4j_password,
+            #     )
+            # )
+        )
+
+        self.memory = Memory.from_config(config)
+
+        logger.info(
+            "mem0 initialized",
+            collection="mem0_user_preferences",
+            llm=settings.ollama_model_generation,
+            embedder="bge-m3",
+        )
+
+    async def add_user_memory(
+        self,
+        user_id: str,
+        messages: list[dict],
+        metadata: Optional[dict] = None
+    ) -> dict:
+        """Extract and store user preferences from conversation.
+
+        Args:
+            user_id: User UUID as string
+            messages: Conversation messages [{"role": "user/assistant", "content": "..."}]
+            metadata: Optional metadata (session_id, project_id, etc.)
+
+        Returns:
+            dict: {"message": "...", "results": [...]}
+
+        Example:
+            result = await mem0.add_user_memory(
+                user_id="abc-123",
+                messages=[
+                    {"role": "user", "content": "I prefer Python for scripting"},
+                    {"role": "assistant", "content": "Noted! Python is great."}
+                ],
+                metadata={"session_id": "xyz-789"}
+            )
+        """
+        try:
+            result = self.memory.add(
+                messages=messages,
+                user_id=user_id,
+                metadata=metadata or {}
+            )
+
+            logger.info(
+                "User memory added",
+                user_id=user_id,
+                extracted_facts=len(result.get("results", [])),
+                metadata=metadata,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                "Failed to add user memory",
+                user_id=user_id,
+                error=str(e),
+            )
+            # Graceful degradation: don't fail chat if mem0 fails
+            return {"message": "Memory extraction failed", "results": []}
+
+    async def get_user_preferences(
+        self,
+        user_id: str,
+        query: Optional[str] = None,
+        limit: int = 5
+    ) -> list[dict]:
+        """Retrieve user preferences for prompt injection.
+
+        Args:
+            user_id: User UUID as string
+            query: Optional query to filter preferences (e.g., "communication style")
+            limit: Max number of preferences to return
+
+        Returns:
+            list[dict]: [{"memory": "...", "score": 0.95, "metadata": {...}}]
+
+        Example:
+            prefs = await mem0.get_user_preferences(
+                user_id="abc-123",
+                query="technical preferences and skills",
+                limit=3
+            )
+            # Returns: [
+            #     {"memory": "User prefers Python for scripting", "score": 0.98},
+            #     {"memory": "User works with VBScript automation", "score": 0.87}
+            # ]
+        """
+        try:
+            results = self.memory.search(
+                query=query or "user preferences and behaviors",
+                user_id=user_id,
+                limit=limit
+            )
+
+            logger.debug(
+                "User preferences retrieved",
+                user_id=user_id,
+                count=len(results),
+                query=query,
+            )
+
+            return results
+
+        except Exception as e:
+            logger.error(
+                "Failed to retrieve user preferences",
+                user_id=user_id,
+                error=str(e),
+            )
+            # Graceful degradation
+            return []
+
+    async def update_preference(
+        self,
+        memory_id: str,
+        data: dict
+    ) -> dict:
+        """Update existing preference.
+
+        Args:
+            memory_id: Memory UUID to update
+            data: New data (e.g., {"text": "Updated preference"})
+
+        Returns:
+            dict: Update result
+        """
+        try:
+            result = self.memory.update(
+                memory_id=memory_id,
+                data=data
+            )
+
+            logger.info(
+                "User preference updated",
+                memory_id=memory_id,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                "Failed to update preference",
+                memory_id=memory_id,
+                error=str(e),
+            )
+            raise
+
+    async def delete_preference(
+        self,
+        memory_id: str,
+        user_id: str
+    ) -> bool:
+        """Delete user preference.
+
+        Args:
+            memory_id: Memory UUID to delete
+            user_id: User UUID (for authorization)
+
+        Returns:
+            bool: True if deleted successfully
+        """
+        try:
+            self.memory.delete(
+                memory_id=memory_id,
+                user_id=user_id
+            )
+
+            logger.info(
+                "User preference deleted",
+                memory_id=memory_id,
+                user_id=user_id,
+            )
+
+            return True
+
+        except Exception as e:
+            logger.error(
+                "Failed to delete preference",
+                memory_id=memory_id,
+                error=str(e),
+            )
+            return False
+
+    async def get_all_user_memories(
+        self,
+        user_id: str
+    ) -> list[dict]:
+        """Get all memories for a user (for UI display).
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            list[dict]: All user memories
+        """
+        try:
+            results = self.memory.get_all(user_id=user_id)
+
+            logger.debug(
+                "Retrieved all user memories",
+                user_id=user_id,
+                count=len(results),
+            )
+
+            return results
+
+        except Exception as e:
+            logger.error(
+                "Failed to retrieve all memories",
+                user_id=user_id,
+                error=str(e),
+            )
+            return []
+
+
+# Singleton instance
+_mem0_wrapper: Optional[Mem0Wrapper] = None
+
+
+def get_mem0_wrapper() -> Mem0Wrapper:
+    """Get or create mem0 wrapper singleton."""
+    global _mem0_wrapper
+
+    if _mem0_wrapper is None:
+        _mem0_wrapper = Mem0Wrapper()
+
+    return _mem0_wrapper
+```
+
+```python
+# src/api/v1/chat.py (UPDATED for mem0 integration)
+
+from src.components.memory.mem0_wrapper import get_mem0_wrapper
+
+@router.post("/chat/stream")
+async def chat_stream(
+    request: ChatRequest,
+    user: User = Depends(get_current_user),
+):
+    """Stream chat response with user preference injection.
+
+    NEW: Integrates mem0 Layer 0 for personalization.
+    """
+
+    # STEP 1: Get user preferences from mem0 (Layer 0)
+    mem0 = get_mem0_wrapper()
+    preferences = await mem0.get_user_preferences(
+        user_id=str(user.id),
+        query=request.query,  # Contextual preference retrieval
+        limit=3
+    )
+
+    logger.info(
+        "User preferences retrieved",
+        user_id=str(user.id),
+        preference_count=len(preferences),
+    )
+
+    # STEP 2: Build personalized system prompt
+    system_prompt = build_system_prompt(
+        user_name=user.name,
+        preferences=preferences,
+        language=user.preferences.get("language", "de")
+    )
+
+    # Example system prompt output:
+    # """
+    # You are AegisRAG, a helpful AI assistant.
+    #
+    # User: Klaus
+    # Preferences:
+    # - User prefers concise, technical answers
+    # - User works with Python and VBScript
+    # - User prefers German responses
+    #
+    # Please tailor your responses accordingly.
+    # """
+
+    # STEP 3: Execute RAG + LLM generation (existing logic)
+    full_response = ""
+
+    async def generate():
+        nonlocal full_response
+
+        try:
+            async for chunk in coordinator.stream(
+                query=request.query,
+                mode=request.mode,
+                session_id=request.session_id,
+                system_prompt=system_prompt  # Inject personalized prompt
+            ):
+                yield f"data: {chunk.model_dump_json()}\n\n"
+
+                if chunk.type == "answer_chunk":
+                    full_response += chunk.content
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            logger.error("Streaming failed", error=str(e))
+            error_chunk = {"type": "error", "error": str(e)}
+            yield f"data: {json.dumps(error_chunk)}\n\n"
+
+    # STEP 4: Stream response to user
+    response = StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+    )
+
+    # STEP 5: Store conversation in mem0 for future learning (background task)
+    async def update_memory():
+        await mem0.add_user_memory(
+            user_id=str(user.id),
+            messages=[
+                {"role": "user", "content": request.query},
+                {"role": "assistant", "content": full_response}
+            ],
+            metadata={
+                "session_id": request.session_id,
+                "mode": request.mode,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        )
+
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(update_memory)
+    response.background = background_tasks
+
+    return response
+
+
+def build_system_prompt(
+    user_name: str,
+    preferences: list[dict],
+    language: str = "de"
+) -> str:
+    """Build personalized system prompt with user preferences.
+
+    Args:
+        user_name: User's name
+        preferences: List of mem0 preferences
+        language: Preferred language
+
+    Returns:
+        str: Personalized system prompt
+    """
+    base_prompt = f"""You are AegisRAG, a helpful AI assistant specialized in technical documentation and industrial automation.
+
+User: {user_name}
+"""
+
+    if preferences:
+        base_prompt += "\nUser Preferences (learned from conversations):\n"
+        for pref in preferences:
+            base_prompt += f"- {pref['memory']}\n"
+        base_prompt += "\nPlease tailor your responses according to these preferences.\n"
+
+    if language == "de":
+        base_prompt += "\nRespond in German unless the user requests otherwise.\n"
+
+    return base_prompt
+```
+
+```python
+# src/api/v1/users.py (NEW - User Preferences API)
+"""
+Sprint 21 Feature 21.5: User Preferences API
+
+Endpoints for managing user preferences (static + learned).
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from uuid import UUID
+
+from src.core.auth import get_current_user
+from src.models.database import User
+from src.components.memory.mem0_wrapper import get_mem0_wrapper
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+
+class UserPreferencesResponse(BaseModel):
+    """User preferences (static + learned)."""
+    static: dict  # From PostgreSQL users.preferences
+    learned: list[dict]  # From mem0
+
+
+class DeletePreferenceRequest(BaseModel):
+    memory_id: str
+
+
+@router.get("/me/preferences", response_model=UserPreferencesResponse)
+async def get_my_preferences(
+    user: User = Depends(get_current_user),
+):
+    """Get user preferences from both PostgreSQL and mem0.
+
+    Returns:
+        - static: Theme, language, search mode (from DB)
+        - learned: Preferences extracted from conversations (from mem0)
+    """
+    mem0 = get_mem0_wrapper()
+
+    # Static preferences from PostgreSQL
+    static_prefs = user.preferences
+
+    # Dynamic preferences from mem0
+    learned_prefs_raw = await mem0.get_all_user_memories(
+        user_id=str(user.id)
+    )
+
+    # Format learned preferences for frontend
+    learned_prefs = [
+        {
+            "id": pref["id"],
+            "memory": pref["memory"],
+            "created_at": pref.get("created_at"),
+            "updated_at": pref.get("updated_at"),
+            "metadata": pref.get("metadata", {}),
+        }
+        for pref in learned_prefs_raw
+    ]
+
+    return UserPreferencesResponse(
+        static=static_prefs,
+        learned=learned_prefs
+    )
+
+
+@router.delete("/me/preferences/{memory_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_preference(
+    memory_id: str,
+    user: User = Depends(get_current_user),
+):
+    """Delete a learned preference.
+
+    Allows users to remove incorrect or outdated preferences.
+    """
+    mem0 = get_mem0_wrapper()
+
+    success = await mem0.delete_preference(
+        memory_id=memory_id,
+        user_id=str(user.id)
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Preference not found or already deleted"
+        )
+
+    logger.info(
+        "User deleted preference",
+        user_id=str(user.id),
+        memory_id=memory_id,
+    )
+
+
+@router.post("/me/preferences/sync")
+async def sync_preferences(
+    user: User = Depends(get_current_user),
+):
+    """Sync static preferences to mem0.
+
+    Creates initial mem0 memories from PostgreSQL preferences.
+    Useful for onboarding existing users.
+    """
+    mem0 = get_mem0_wrapper()
+
+    # Convert static preferences to mem0 memories
+    messages = [
+        {"role": "system", "content": f"User's preferred language is {user.preferences.get('language', 'de')}"},
+        {"role": "system", "content": f"User's default search mode is {user.preferences.get('default_search_mode', 'hybrid')}"},
+        {"role": "system", "content": f"User's theme is {user.preferences.get('theme', 'light')}"},
+    ]
+
+    result = await mem0.add_user_memory(
+        user_id=str(user.id),
+        messages=messages,
+        metadata={"type": "sync", "source": "static_preferences"}
+    )
+
+    logger.info(
+        "Static preferences synced to mem0",
+        user_id=str(user.id),
+        synced_count=len(result.get("results", [])),
+    )
+
+    return {"message": "Preferences synced successfully", "synced": len(result.get("results", []))}
+```
+
+#### **Frontend Integration:**
+
+```typescript
+// src/pages/UserProfilePage.tsx (NEW)
+import { useState, useEffect } from 'react'
+import { useAuthStore } from '../stores/authStore'
+import api from '../utils/axios'
+
+interface LearnedPreference {
+  id: string
+  memory: string
+  created_at: string
+  metadata: Record<string, any>
+}
+
+export function UserProfilePage() {
+  const { user } = useAuthStore()
+  const [staticPrefs, setStaticPrefs] = useState<Record<string, any>>({})
+  const [learnedPrefs, setLearnedPrefs] = useState<LearnedPreference[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadPreferences()
+  }, [])
+
+  const loadPreferences = async () => {
+    try {
+      const response = await api.get('/users/me/preferences')
+      setStaticPrefs(response.data.static)
+      setLearnedPrefs(response.data.learned)
+    } catch (error) {
+      console.error('Failed to load preferences', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deletePreference = async (memoryId: string) => {
+    try {
+      await api.delete(`/users/me/preferences/${memoryId}`)
+      setLearnedPrefs(prefs => prefs.filter(p => p.id !== memoryId))
+      toast.success('Preference deleted')
+    } catch (error) {
+      toast.error('Failed to delete preference')
+    }
+  }
+
+  if (loading) return <div>Loading...</div>
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">User Profile</h1>
+
+      {/* Static Preferences */}
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Settings</h2>
+        <div className="bg-white rounded-lg shadow p-4 space-y-2">
+          <div><strong>Language:</strong> {staticPrefs.language || 'de'}</div>
+          <div><strong>Theme:</strong> {staticPrefs.theme || 'light'}</div>
+          <div><strong>Search Mode:</strong> {staticPrefs.default_search_mode || 'hybrid'}</div>
+        </div>
+      </section>
+
+      {/* Learned Preferences (mem0) */}
+      <section>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Learned Preferences</h2>
+          <span className="text-sm text-gray-500">
+            {learnedPrefs.length} preferences learned from conversations
+          </span>
+        </div>
+
+        {learnedPrefs.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+            No preferences learned yet. Start chatting to build your profile!
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {learnedPrefs.map(pref => (
+              <div key={pref.id} className="bg-white rounded-lg shadow p-4 flex justify-between items-start">
+                <div className="flex-1">
+                  <p className="text-gray-800">{pref.memory}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Learned: {new Date(pref.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deletePreference(pref.id)}
+                  className="ml-4 text-red-500 hover:text-red-700"
+                  title="Delete preference"
+                >
+                  <TrashIcon className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+```
+
+#### **Database Migration:**
+
+```python
+# migrations/versions/002_add_mem0_support.py
+"""Add mem0 support to users table
+
+Revision ID: 002
+Revises: 001
+Create Date: 2025-11-XX
+"""
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+
+def upgrade():
+    """Add mem0 fields to users table."""
+
+    # Add mem0-related columns
+    op.add_column('users', sa.Column('mem0_enabled', sa.Boolean(), nullable=False, server_default='true'))
+    op.add_column('users', sa.Column('mem0_memory_count', sa.Integer(), nullable=False, server_default='0'))
+    op.add_column('users', sa.Column('last_preference_update', sa.DateTime(timezone=True), nullable=True))
+
+    # Create index for mem0-enabled users
+    op.create_index(
+        'idx_users_mem0_enabled',
+        'users',
+        ['mem0_enabled'],
+        postgresql_where=sa.text('mem0_enabled = true')
+    )
+
+
+def downgrade():
+    """Remove mem0 support."""
+
+    op.drop_index('idx_users_mem0_enabled', table_name='users')
+    op.drop_column('users', 'last_preference_update')
+    op.drop_column('users', 'mem0_memory_count')
+    op.drop_column('users', 'mem0_enabled')
+```
+
+#### **Configuration:**
+
+```python
+# src/core/config.py (UPDATED)
+
+class Settings(BaseSettings):
+    # ... existing settings ...
+
+    # mem0 Settings
+    mem0_enabled: bool = Field(default=True, description="Enable mem0 user preference learning")
+    mem0_collection_name: str = Field(default="mem0_user_preferences", description="Qdrant collection for mem0")
+
+    class Config:
+        env_file = ".env"
+```
+
+```bash
+# .env (ADD)
+MEM0_ENABLED=true
+MEM0_COLLECTION_NAME=mem0_user_preferences
+```
+
+#### **Deliverables:**
+```bash
+# Backend
+src/components/memory/mem0_wrapper.py
+src/api/v1/users.py (preferences endpoints)
+src/api/v1/chat.py (updated with mem0 integration)
+migrations/versions/002_add_mem0_support.py
+
+# Tests
+tests/memory/test_mem0_wrapper.py
+tests/api/test_user_preferences.py
+tests/integration/test_mem0_chat_integration.py
+
+# Frontend
+src/pages/UserProfilePage.tsx
+src/hooks/useUserPreferences.ts
+
+# Documentation
+docs/sprints/SPRINT_21_MEM0_INTEGRATION.md
+docs/adr/ADR-025-mem0-user-preference-layer.md
+docs/MEMORY_ARCHITECTURE.md (updated with 4-layer diagram)
+```
+
+#### **Acceptance Criteria:**
+- ✅ mem0 installed and configured with Ollama + Qdrant
+- ✅ User preferences automatically extracted from conversations
+- ✅ Preferences retrieved and injected into chat prompts
+- ✅ GET /users/me/preferences returns static + learned preferences
+- ✅ DELETE /users/me/preferences/{id} removes preference
+- ✅ Frontend displays learned preferences in user profile
+- ✅ Users can toggle mem0 learning on/off
+- ✅ Database migration runs successfully
+- ✅ 100% test coverage for mem0 integration
+- ✅ mem0 failures gracefully degrade (don't break chat)
+- ✅ Performance impact <50ms per chat request
+
+#### **Testing Strategy:**
+
+```python
+# tests/memory/test_mem0_wrapper.py
+import pytest
+from src.components.memory.mem0_wrapper import Mem0Wrapper
+
+@pytest.mark.asyncio
+async def test_add_user_memory():
+    """Test adding user memory from conversation."""
+    mem0 = Mem0Wrapper()
+
+    result = await mem0.add_user_memory(
+        user_id="test-user-123",
+        messages=[
+            {"role": "user", "content": "I prefer Python for scripting"},
+            {"role": "assistant", "content": "Noted! Python is a great choice."}
+        ]
+    )
+
+    assert "results" in result
+    assert len(result["results"]) > 0
+    # mem0 should extract: "User prefers Python for scripting"
+
+
+@pytest.mark.asyncio
+async def test_get_user_preferences():
+    """Test retrieving user preferences."""
+    mem0 = Mem0Wrapper()
+
+    # First add some preferences
+    await mem0.add_user_memory(
+        user_id="test-user-123",
+        messages=[
+            {"role": "user", "content": "I work with VBScript and Python"}
+        ]
+    )
+
+    # Then retrieve
+    prefs = await mem0.get_user_preferences(
+        user_id="test-user-123",
+        query="technical skills"
+    )
+
+    assert len(prefs) > 0
+    assert any("Python" in pref["memory"] or "VBScript" in pref["memory"] for pref in prefs)
+
+
+@pytest.mark.asyncio
+async def test_graceful_degradation_on_failure():
+    """Test that mem0 failures don't break chat."""
+    mem0 = Mem0Wrapper()
+
+    # Simulate failure by using invalid user_id
+    result = await mem0.add_user_memory(
+        user_id="invalid!!!",
+        messages=[{"role": "user", "content": "test"}]
+    )
+
+    # Should return empty result, not raise exception
+    assert "message" in result
+    assert "results" in result
+```
+
+```python
+# tests/api/test_user_preferences.py
+import pytest
+from httpx import AsyncClient
+
+@pytest.mark.asyncio
+async def test_get_preferences_authenticated(client: AsyncClient, auth_headers):
+    """Test getting user preferences."""
+    response = await client.get(
+        "/api/v1/users/me/preferences",
+        headers=auth_headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "static" in data
+    assert "learned" in data
+    assert isinstance(data["learned"], list)
+
+
+@pytest.mark.asyncio
+async def test_delete_preference(client: AsyncClient, auth_headers):
+    """Test deleting a learned preference."""
+    # First, create a preference
+    # ... (setup code)
+
+    # Then delete it
+    response = await client.delete(
+        f"/api/v1/users/me/preferences/{memory_id}",
+        headers=auth_headers
+    )
+
+    assert response.status_code == 204
+
+    # Verify it's gone
+    prefs_response = await client.get(
+        "/api/v1/users/me/preferences",
+        headers=auth_headers
+    )
+    prefs = prefs_response.json()["learned"]
+    assert not any(p["id"] == memory_id for p in prefs)
+```
+
+#### **Performance Considerations:**
+
+**mem0 Overhead:**
+- Fact extraction: ~200-500ms (LLM call to Ollama)
+- Preference retrieval: <50ms (Qdrant vector search)
+- Memory update: Async background task (doesn't block chat)
+
+**Mitigation:**
+- ✅ Preference retrieval cached in Redis (Layer 1)
+- ✅ Memory updates run as background tasks
+- ✅ Graceful degradation if mem0 fails
+- ✅ User can disable mem0 learning
+
+#### **Security Considerations:**
+
+**User Privacy:**
+- ✅ User preferences isolated by user_id
+- ✅ Users can view all learned preferences
+- ✅ Users can delete individual preferences
+- ✅ Users can disable mem0 learning entirely
+- ✅ mem0 data encrypted at rest (Qdrant encryption)
+
+**Access Control:**
+- ✅ Only user can access their own preferences
+- ✅ JWT authentication required for all endpoints
+- ✅ No cross-user preference leakage
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -1729,10 +2805,13 @@ async def test_protected_endpoint_without_auth(client):
 
 - [ ] PostgreSQL backup configured
 - [ ] Environment variables set
-- [ ] Database migrations run
+- [ ] Database migrations run (including 002_add_mem0_support.py)
 - [ ] JWT secret key rotated
 - [ ] Connection pool tuned
 - [ ] Redis namespaces migrated
+- [ ] **mem0 Qdrant collection created (mem0_user_preferences)**
+- [ ] **mem0 dependencies installed (poetry add mem0ai)**
+- [ ] **MEM0_ENABLED=true in .env**
 - [ ] Health checks passing
 - [ ] Smoke tests passing
 
@@ -1748,8 +2827,12 @@ async def test_protected_endpoint_without_auth(client):
 | Database query time | <50ms p95 | Query logs |
 | Test coverage | >90% | Coverage report |
 | Auth failure rate | <1% | Error logs |
+| **mem0 fact extraction** | **<500ms** | **LLM call timing** |
+| **mem0 preference retrieval** | **<50ms** | **Qdrant search** |
+| **mem0 chat overhead** | **<50ms added** | **Total request time** |
+| **mem0 uptime** | **>99%** | **Error rate** |
 
 ---
 
-**Sprint 21 Completion:** Foundation ready for Sprint 22 (Projects)
-**Next Sprint:** Sprint 22 - Project Collaboration System
+**Sprint 21 Completion:** Foundation ready for Sprint 22 (Projects) + 4-Layer Memory Architecture operational
+**Next Sprint:** Sprint 22 - Project Collaboration System (with optional Feature 22.5: Project-scoped mem0)

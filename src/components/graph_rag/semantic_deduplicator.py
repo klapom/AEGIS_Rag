@@ -177,7 +177,7 @@ class SemanticDeduplicator:
             threshold=threshold,
             device=device,
             singleton_mode=True,
-            note="Using singleton SentenceTransformer (Sprint 20.3)"
+            note="Using singleton SentenceTransformer (Sprint 20.3)",
         )
 
     def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:

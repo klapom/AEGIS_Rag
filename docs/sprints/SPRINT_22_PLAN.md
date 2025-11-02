@@ -1,10 +1,10 @@
 # Sprint 22: Project Collaboration System
 
 **Status:** 📋 PLANNED
-**Goal:** Implement full project-based collaboration with document management
-**Duration:** 6 days (estimated)
-**Prerequisites:** Sprint 21 complete (Auth + Multi-Tenancy)
-**Story Points:** 29 SP
+**Goal:** Implement full project-based collaboration with document management + Project Memory (optional)
+**Duration:** 6-7 days (estimated)
+**Prerequisites:** Sprint 21 complete (Auth + Multi-Tenancy + mem0 User Preferences)
+**Story Points:** 29-34 SP (29 SP base + optional 5 SP for Feature 22.5)
 
 ---
 
@@ -17,6 +17,7 @@
 4. Implement project-scoped sessions
 5. Build project-aware RAG (Qdrant + Graphiti)
 6. Deliver polished frontend project UI
+7. **OPTIONAL: Extend mem0 with project-level memory**
 
 ### **Success Criteria:**
 - ✅ Users can create and manage projects
@@ -26,6 +27,7 @@
 - ✅ RAG searches only project documents
 - ✅ Knowledge graph isolated per project
 - ✅ Intuitive project UI with drag-and-drop
+- ✅ **OPTIONAL: Project-specific preferences learned (Feature 22.5)**
 
 ---
 
@@ -1273,6 +1275,143 @@ src/hooks/useProjectDocuments.ts
 - ✅ Member management UI
 - ✅ Responsive on mobile
 - ✅ Loading states for async operations
+
+---
+
+### Feature 22.5: Project-Scoped mem0 Memory - OPTIONAL (5 SP)
+**Priority:** LOW - Nice to have, can be deferred
+**Duration:** 1 day
+**Dependencies:** Feature 21.5 (mem0 User Preferences), Feature 22.1 (Project API)
+
+#### **Problem:**
+User preferences (Layer 0) are global across all projects. In multi-project setups, each project may have unique:
+- **Team terminology** ("Vertrag" means different things in legal vs tech projects)
+- **Communication styles** (formal reports vs quick notes)
+- **Domain-specific knowledge** ("Always use Python 3.11 in this project")
+
+#### **Solution:**
+Extend mem0 to support **project-level memory** in addition to user-level memory.
+
+#### **Use Cases:**
+
+1. **Project-Specific Terminology:**
+   - Project A (Legal): "Vertrag" = detailed contract document
+   - Project B (IT): "Vertrag" = SLA agreement
+   → mem0 learns project-specific vocabulary
+
+2. **Team Communication Style:**
+   - Project A: Formal, detailed, executive summaries
+   - Project B: Concise, bullet points, developer-focused
+   → mem0 adapts to team preferences
+
+3. **Project Standards:**
+   - "In diesem Projekt verwenden wir immer TypeScript strict mode"
+   - "Alle API calls müssen gegen staging getestet werden"
+   → mem0 stores project conventions
+
+#### **Implementation:**
+
+```python
+# src/components/memory/mem0_wrapper.py (EXTEND existing from Sprint 21)
+
+class Mem0Wrapper:
+    """User + Project Preference Memory Layer."""
+
+    async def add_project_memory(
+        self,
+        project_id: str,
+        messages: list[dict],
+        metadata: Optional[dict] = None
+    ) -> dict:
+        """Store project-level preferences/knowledge.
+
+        Uses mem0's agent_id parameter for projects.
+        """
+        return self.memory.add(
+            messages=messages,
+            agent_id=f"project_{project_id}",  # Use agent_id for projects
+            metadata=metadata or {}
+        )
+
+    async def get_project_preferences(
+        self,
+        project_id: str,
+        query: Optional[str] = None,
+        limit: int = 5
+    ) -> list[dict]:
+        """Retrieve project-level preferences."""
+        return self.memory.search(
+            query=query or "project conventions and standards",
+            agent_id=f"project_{project_id}",
+            limit=limit
+        )
+```
+
+```python
+# src/api/v1/chat.py (UPDATE from Sprint 21)
+
+@router.post("/projects/{project_id}/sessions/{session_id}/stream")
+async def stream_chat_project(
+    project_id: str,
+    user: User = Depends(get_current_user),
+    project: Project = Depends(require_project_access),
+):
+    """Stream chat with user + project preferences."""
+    mem0 = get_mem0_wrapper()
+
+    # Layer 0A: User preferences (from Sprint 21)
+    user_prefs = await mem0.get_user_preferences(
+        user_id=str(user.id),
+        limit=3
+    )
+
+    # Layer 0B: Project preferences (NEW in Sprint 22)
+    project_prefs = await mem0.get_project_preferences(
+        project_id=project_id,
+        limit=3
+    )
+
+    # Combine both for system prompt
+    system_prompt = build_system_prompt(
+        user_name=user.name,
+        user_preferences=user_prefs,
+        project_preferences=project_prefs,
+        project_name=project.name
+    )
+
+    # ... rest of chat logic
+```
+
+#### **Tasks:**
+- [ ] Extend Mem0Wrapper with project memory methods
+- [ ] Update chat API to retrieve project preferences
+- [ ] Update system prompt builder to include project context
+- [ ] Add project memory to background task updates
+- [ ] Optional: Project preferences API endpoint
+  ```
+  GET /api/v1/projects/{id}/preferences
+  ```
+
+#### **Deliverables:**
+```bash
+src/components/memory/mem0_wrapper.py (extended)
+src/api/v1/chat.py (updated for project context)
+tests/memory/test_mem0_project_memory.py
+docs/sprints/SPRINT_22_PROJECT_MEMORY.md
+```
+
+#### **Acceptance Criteria:**
+- ✅ Project memory stored separately from user memory
+- ✅ Project preferences retrieved during chat
+- ✅ System prompt includes both user + project context
+- ✅ Project memory updates after conversations
+- ✅ No cross-project memory leakage
+
+#### **Decision:**
+- **IF time allows** after Features 22.1-22.4 → Implement Feature 22.5
+- **IF sprint runs late** → Defer to Sprint 23
+- **Benefit:** Team-level personalization, project-specific learning
+- **Cost:** +5 SP, +1 day
 
 ---
 

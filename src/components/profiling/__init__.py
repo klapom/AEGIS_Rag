@@ -20,34 +20,37 @@ from src.components.profiling.conversation_archiver import (
     ConversationArchiver,
     get_conversation_archiver,
 )
-from src.components.profiling.neo4j_profile_manager import (
-    Neo4jProfileManager,
-    get_profile_manager,
-)
-from src.components.profiling.profile_aware_retrieval import (
-    ProfileAwareRetrieval,
-    get_profile_aware_retrieval,
-)
-from src.components.profiling.profile_extractor import (
-    ExpertiseLevel,
-    ProfileExtractor,
-    ProfileSignals,
-    get_profile_extractor,
-)
+
+# TODO: Sprint 17 - Implement remaining profiling modules
+# from src.components.profiling.neo4j_profile_manager import (
+#     Neo4jProfileManager,
+#     get_profile_manager,
+# )
+# from src.components.profiling.profile_aware_retrieval import (
+#     ProfileAwareRetrieval,
+#     get_profile_aware_retrieval,
+# )
+# from src.components.profiling.profile_extractor import (
+#     ExpertiseLevel,
+#     ProfileExtractor,
+#     ProfileSignals,
+#     get_profile_extractor,
+# )
 
 __all__ = [
-    # Profile Extraction
-    "ProfileExtractor",
-    "ProfileSignals",
-    "ExpertiseLevel",
-    "get_profile_extractor",
-    # Neo4j Profile Manager
-    "Neo4jProfileManager",
-    "get_profile_manager",
-    # Profile-Aware Retrieval
-    "ProfileAwareRetrieval",
-    "get_profile_aware_retrieval",
-    # Conversation Archiving (Phase 1)
+    # Conversation Archiving (Phase 1 - Implemented)
     "ConversationArchiver",
     "get_conversation_archiver",
+    # TODO: Sprint 17 - Uncomment when implemented
+    # # Profile Extraction
+    # "ProfileExtractor",
+    # "ProfileSignals",
+    # "ExpertiseLevel",
+    # "get_profile_extractor",
+    # # Neo4j Profile Manager
+    # "Neo4jProfileManager",
+    # "get_profile_manager",
+    # # Profile-Aware Retrieval
+    # "ProfileAwareRetrieval",
+    # "get_profile_aware_retrieval",
 ]
