@@ -521,75 +521,95 @@ async def test_search_error():
 @pytest.mark.asyncio
 async def test_add_entity_success():
     """Test adding entity to memory graph."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Wrapper
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Wrapper
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_entity.return_value = {"id": "entity_789", "name": "Alice"}
-                            mock_graphiti_class.return_value = mock_graphiti
+        # Mock LLM client with string attributes
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            wrapper = GraphitiWrapper()
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_entity.return_value = {"id": "entity_789", "name": "Alice"}
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When: Add entity
-                            result = await wrapper.add_entity(
-                                name="Alice",
-                                entity_type="person",
-                                properties={"role": "engineer"},
-                            )
+        wrapper = GraphitiWrapper()
 
-                            # Then: Verify entity added
-                            assert result["entity_id"] == "entity_789"
-                            assert result["name"] == "Alice"
-                            assert result["type"] == "person"
-                            assert result["properties"]["role"] == "engineer"
-                            assert "timestamp" in result
+        # When: Add entity
+        result = await wrapper.add_entity(
+            name="Alice",
+            entity_type="person",
+            properties={"role": "engineer"},
+        )
+
+        # Then: Verify entity added
+        assert result["entity_id"] == "entity_789"
+        assert result["name"] == "Alice"
+        assert result["type"] == "person"
+        assert result["properties"]["role"] == "engineer"
+        assert "timestamp" in result
 
 
 @pytest.mark.asyncio
 async def test_add_entity_error():
     """Test add_entity handles errors gracefully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Add entity fails
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Add entity fails
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_entity.side_effect = Exception("Entity error")
-                            mock_graphiti_class.return_value = mock_graphiti
+        # Mock LLM client with string attributes
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            wrapper = GraphitiWrapper()
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_entity.side_effect = Exception("Entity error")
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When/Then: Should raise MemoryError
-                            with pytest.raises(MemoryError) as exc_info:
-                                await wrapper.add_entity(name="Alice", entity_type="person")
+        wrapper = GraphitiWrapper()
 
-                            assert "Failed to add entity" in str(exc_info.value)
+        # When/Then: Should raise MemoryError
+        with pytest.raises(MemoryError) as exc_info:
+            await wrapper.add_entity(name="Alice", entity_type="person")
+
+        assert "Failed to add entity" in str(exc_info.value)
 
 
 # ============================================================================
@@ -600,81 +620,101 @@ async def test_add_entity_error():
 @pytest.mark.asyncio
 async def test_add_edge_success():
     """Test adding edge/relationship between entities."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Wrapper
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Wrapper
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_edge.return_value = {"id": "edge_123", "type": "knows"}
-                            mock_graphiti_class.return_value = mock_graphiti
+        # Mock LLM client with string attributes
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            wrapper = GraphitiWrapper()
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_edge.return_value = {"id": "edge_123", "type": "knows"}
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When: Add edge
-                            result = await wrapper.add_edge(
-                                source_entity_id="entity_1",
-                                target_entity_id="entity_2",
-                                relationship_type="knows",
-                                properties={"since": "2024"},
-                            )
+        wrapper = GraphitiWrapper()
 
-                            # Then: Verify edge added
-                            assert result["edge_id"] == "edge_123"
-                            assert result["source_id"] == "entity_1"
-                            assert result["target_id"] == "entity_2"
-                            assert result["type"] == "knows"
-                            assert result["properties"]["since"] == "2024"
-                            assert "timestamp" in result
+        # When: Add edge
+        result = await wrapper.add_edge(
+            source_entity_id="entity_1",
+            target_entity_id="entity_2",
+            relationship_type="knows",
+            properties={"since": "2024"},
+        )
+
+        # Then: Verify edge added
+        assert result["edge_id"] == "edge_123"
+        assert result["source_id"] == "entity_1"
+        assert result["target_id"] == "entity_2"
+        assert result["type"] == "knows"
+        assert result["properties"]["since"] == "2024"
+        assert "timestamp" in result
 
 
 @pytest.mark.asyncio
 async def test_add_edge_error():
     """Test add_edge handles errors gracefully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Add edge fails
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Add edge fails
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_edge.side_effect = Exception("Edge error")
-                            mock_graphiti_class.return_value = mock_graphiti
+        # Mock LLM client with string attributes
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            wrapper = GraphitiWrapper()
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_edge.side_effect = Exception("Edge error")
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When/Then: Should raise MemoryError
-                            with pytest.raises(MemoryError) as exc_info:
-                                await wrapper.add_edge(
-                                    source_entity_id="e1",
-                                    target_entity_id="e2",
-                                    relationship_type="knows",
-                                )
+        wrapper = GraphitiWrapper()
 
-                            assert "Failed to add edge" in str(exc_info.value)
+        # When/Then: Should raise MemoryError
+        with pytest.raises(MemoryError) as exc_info:
+            await wrapper.add_edge(
+                source_entity_id="e1",
+                target_entity_id="e2",
+                relationship_type="knows",
+            )
+
+        assert "Failed to add edge" in str(exc_info.value)
 
 
 # ============================================================================
@@ -685,37 +725,47 @@ async def test_add_edge_error():
 @pytest.mark.asyncio
 async def test_aclose_success():
     """Test async connection cleanup."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Wrapper with connections
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Wrapper with connections
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_neo4j = AsyncMock()
-                            mock_neo4j.close = AsyncMock()
-                            mock_get_neo4j.return_value = mock_neo4j
+        mock_neo4j = AsyncMock()
+        mock_neo4j.close = AsyncMock()
+        mock_get_neo4j.return_value = mock_neo4j
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.close = AsyncMock()
-                            mock_graphiti_class.return_value = mock_graphiti
+        # Mock LLM client with string attributes
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            wrapper = GraphitiWrapper()
+        mock_graphiti = AsyncMock()
+        mock_graphiti.close = AsyncMock()
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When: Close connections
-                            await wrapper.aclose()
+        wrapper = GraphitiWrapper()
 
-                            # Then: Should close both connections
-                            mock_graphiti.close.assert_called_once()
-                            mock_neo4j.close.assert_called_once()
+        # When: Close connections
+        await wrapper.aclose()
+
+        # Then: Should close both connections
+        mock_graphiti.close.assert_called_once()
+        mock_neo4j.close.assert_called_once()
 
 
 # ============================================================================
