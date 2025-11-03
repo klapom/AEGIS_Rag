@@ -82,6 +82,7 @@ def get_sentence_transformer_singleton(
     # Lazy lock creation (avoid import if not needed)
     if _singleton_lock is None:
         import threading
+
         _singleton_lock = threading.Lock()
 
     # Double-checked locking pattern
@@ -336,6 +337,9 @@ def create_deduplicator_from_config(config) -> SemanticDeduplicator:
 
     # Sprint 20.5: Default to 'cpu' instead of 'auto' to free VRAM
     device = getattr(config, "semantic_dedup_device", "cpu")
+    # Convert 'auto' to 'cpu' (Sprint 20.5: no auto-detection, always use CPU)
+    if device == "auto":
+        device = "cpu"
 
     return SemanticDeduplicator(
         model_name=getattr(

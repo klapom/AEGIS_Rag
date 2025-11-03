@@ -576,7 +576,7 @@ def test_create_deduplicator_from_config_custom_model(
     # Then: Should use custom model
     assert dedup is not None
     mock_get_singleton.assert_called_once_with(
-        "sentence-transformers/paraphrase-MiniLM-L3-v2", device="cpu"
+        model_name="sentence-transformers/paraphrase-MiniLM-L3-v2", device="cpu"
     )
 
 
