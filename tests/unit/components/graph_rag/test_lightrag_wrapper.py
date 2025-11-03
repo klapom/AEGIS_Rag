@@ -160,25 +160,28 @@ class TestLightRAGWrapper:
             # Mock Neo4j driver and session
             mock_driver = MagicMock()
             mock_session = MagicMock()
-            mock_entity_result = AsyncMock()
-            mock_rel_result = AsyncMock()
 
-            # Mock entity count
+            # Create separate mock results for entities and relationships
+            mock_entity_result = MagicMock()
             mock_entity_record = {"count": 10}
             mock_entity_result.single = AsyncMock(return_value=mock_entity_record)
 
-            # Mock relationship count
+            mock_rel_result = MagicMock()
             mock_rel_record = {"count": 15}
             mock_rel_result.single = AsyncMock(return_value=mock_rel_record)
 
-            # Set up session.run to return different results
-            async def mock_run(query: str):
-                if "Entity" in query:
+            # Set up session.run to return different results based on query
+            call_count = [0]  # Use list to allow modification in nested function
+
+            async def mock_run(query: str, **kwargs):
+                call_count[0] += 1
+                # First call is entities, second is relationships
+                if call_count[0] == 1:
                     return mock_entity_result
                 else:
                     return mock_rel_result
 
-            mock_session.run = AsyncMock(side_effect=mock_run)
+            mock_session.run = mock_run
             mock_driver.session = MagicMock(return_value=mock_session)
             mock_driver.close = AsyncMock()
             mock_db.driver = MagicMock(return_value=mock_driver)
@@ -332,33 +335,36 @@ class TestLightRAGWrapperSprint16:
         """
         wrapper = LightRAGWrapper()
 
-        # Mock the lightrag module import (lazy import in _ensure_initialized)
-        with patch("builtins.__import__") as mock_import:
-            # Create mock lightrag module
-            mock_lightrag_module = MagicMock()
-            mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
-            mock_lightrag_module.LightRAG = mock_lightrag_class
-            mock_lightrag_module.QueryParam = MagicMock()
+        # Mock the embedding service BEFORE the lightrag import
+        with patch(
+            "src.components.shared.embedding_service.get_embedding_service"
+        ) as mock_get_service:
+            mock_embedding_service = MagicMock()
+            mock_get_service.return_value = mock_embedding_service
 
-            def import_side_effect(name, *args, **kwargs):
-                if name == "lightrag":
-                    return mock_lightrag_module
-                elif name == "lightrag.kg.shared_storage":
-                    mock_storage = MagicMock()
-                    mock_storage.initialize_pipeline_status = AsyncMock()
-                    return mock_storage
-                else:
-                    # Use real import for other modules
-                    return __import__(name, *args, **kwargs)
+            # Mock the lightrag module import (lazy import in _ensure_initialized)
+            with patch("builtins.__import__") as mock_import:
+                # Create mock lightrag module
+                mock_lightrag_module = MagicMock()
+                mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
+                mock_lightrag_module.LightRAG = mock_lightrag_class
+                mock_lightrag_module.QueryParam = MagicMock()
 
-            mock_import.side_effect = import_side_effect
+                # Store original __import__
+                original_import = __import__
 
-            # Mock UnifiedEmbeddingFunc
-            with patch(
-                "src.components.graph_rag.lightrag_wrapper.get_embedding_service"
-            ) as mock_get_service:
-                mock_embedding_service = MagicMock()
-                mock_get_service.return_value = mock_embedding_service
+                def import_side_effect(name, *args, **kwargs):
+                    if name == "lightrag":
+                        return mock_lightrag_module
+                    elif name == "lightrag.kg.shared_storage":
+                        mock_storage = MagicMock()
+                        mock_storage.initialize_pipeline_status = AsyncMock()
+                        return mock_storage
+                    else:
+                        # Use original import for other modules
+                        return original_import(name, *args, **kwargs)
+
+                mock_import.side_effect = import_side_effect
 
                 # Initialize wrapper (triggers _ensure_initialized)
                 await wrapper._ensure_initialized()
@@ -382,33 +388,43 @@ class TestLightRAGWrapperSprint16:
         """
         wrapper = LightRAGWrapper()
 
-        with patch("builtins.__import__") as mock_import:
-            mock_lightrag_module = MagicMock()
-            mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
-            mock_lightrag_module.LightRAG = mock_lightrag_class
-            mock_lightrag_module.QueryParam = MagicMock()
+        # Mock the embedding service BEFORE the lightrag import
+        with patch(
+            "src.components.shared.embedding_service.get_embedding_service"
+        ) as mock_get_service:
+            mock_embedding_service = MagicMock()
+            mock_get_service.return_value = mock_embedding_service
 
-            def import_side_effect(name, *args, **kwargs):
-                if name == "lightrag":
-                    return mock_lightrag_module
-                elif name == "lightrag.kg.shared_storage":
-                    mock_storage = MagicMock()
-                    mock_storage.initialize_pipeline_status = AsyncMock()
-                    return mock_storage
-                else:
-                    return __import__(name, *args, **kwargs)
+            with patch("builtins.__import__") as mock_import:
+                mock_lightrag_module = MagicMock()
+                mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
+                mock_lightrag_module.LightRAG = mock_lightrag_class
+                mock_lightrag_module.QueryParam = MagicMock()
 
-            mock_import.side_effect = import_side_effect
+                # Store original __import__
+                original_import = __import__
 
-            await wrapper._ensure_initialized()
+                def import_side_effect(name, *args, **kwargs):
+                    if name == "lightrag":
+                        return mock_lightrag_module
+                    elif name == "lightrag.kg.shared_storage":
+                        mock_storage = MagicMock()
+                        mock_storage.initialize_pipeline_status = AsyncMock()
+                        return mock_storage
+                    else:
+                        return original_import(name, *args, **kwargs)
 
-            # Verify LightRAG was initialized with chunking disabled
-            mock_lightrag_class.assert_called_once()
-            call_kwargs = mock_lightrag_class.call_args[1]
+                mock_import.side_effect = import_side_effect
 
-            # Sprint 16: chunk_token_size should be 99999 (disabled)
-            assert call_kwargs["chunk_token_size"] == 99999
-            assert call_kwargs["chunk_overlap_token_size"] == 0
+                await wrapper._ensure_initialized()
+
+                # Verify LightRAG was initialized with chunking disabled
+                mock_lightrag_class.assert_called_once()
+                call_kwargs = mock_lightrag_class.call_args[1]
+
+                # Sprint 16: chunk_token_size should be 99999 (disabled)
+                assert call_kwargs["chunk_token_size"] == 99999
+                assert call_kwargs["chunk_overlap_token_size"] == 0
 
     def test_chunk_text_with_unified_service(self):
         """Test that _chunk_text_with_metadata uses ChunkingService.
