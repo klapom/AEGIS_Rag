@@ -241,58 +241,62 @@ async def test_ollama_llm_client_generate_embeddings_connection_error():
 
 def test_graphiti_wrapper_init_default():
     """Test GraphitiWrapper initialization with default parameters."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Default initialization
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Default initialization
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_neo4j = AsyncMock()
-                            mock_get_neo4j.return_value = mock_neo4j
+        mock_neo4j = AsyncMock()
+        mock_get_neo4j.return_value = mock_neo4j
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti_class.return_value = mock_graphiti
+        mock_graphiti = AsyncMock()
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            # When: Initialize wrapper
-                            wrapper = GraphitiWrapper()
+        # When: Initialize wrapper
+        wrapper = GraphitiWrapper()
 
-                            # Then: Verify initialization
-                            assert wrapper.llm_client is not None
-                            assert wrapper.neo4j_client == mock_neo4j
-                            assert wrapper.graphiti == mock_graphiti
+        # Then: Verify initialization
+        assert wrapper.llm_client is not None
+        assert wrapper.neo4j_client == mock_neo4j
+        assert wrapper.graphiti == mock_graphiti
 
 
 def test_graphiti_wrapper_init_connection_error():
     """Test GraphitiWrapper handles initialization errors."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                # Given: Neo4j connection fails
-                mock_settings.neo4j_uri = "bolt://localhost:7687"
-                mock_settings.neo4j_user = "neo4j"
-                mock_password = MagicMock()
-                mock_password.get_secret_value.return_value = "password"
-                mock_settings.neo4j_password = mock_password
+        # Given: Neo4j connection fails
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                mock_get_neo4j.return_value = AsyncMock()
-                mock_graphiti_class.side_effect = Exception("Connection failed")
+        mock_get_neo4j.return_value = AsyncMock()
+        mock_graphiti_class.side_effect = Exception("Connection failed")
 
-                # When/Then: Should raise MemoryError
-                with pytest.raises(MemoryError) as exc_info:
-                    GraphitiWrapper()
+        # When/Then: Should raise MemoryError
+        with pytest.raises(MemoryError) as exc_info:
+            GraphitiWrapper()
 
-                assert "Failed to initialize Graphiti" in str(exc_info.value)
+        assert "Failed to initialize Graphiti" in str(exc_info.value)
 
 
 # ============================================================================
@@ -303,80 +307,84 @@ def test_graphiti_wrapper_init_connection_error():
 @pytest.mark.asyncio
 async def test_add_episode_success():
     """Test adding episode to episodic memory successfully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Wrapper with mocked Graphiti
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Wrapper with mocked Graphiti
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_episode.return_value = {
-                                "id": "episode_123",
-                                "entities": [{"id": "entity_1", "name": "Alice"}],
-                                "relationships": [{"id": "rel_1", "type": "knows"}],
-                            }
-                            mock_graphiti_class.return_value = mock_graphiti
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_episode.return_value = {
+            "id": "episode_123",
+            "entities": [{"id": "entity_1", "name": "Alice"}],
+            "relationships": [{"id": "rel_1", "type": "knows"}],
+        }
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            wrapper = GraphitiWrapper()
+        wrapper = GraphitiWrapper()
 
-                            # When: Add episode
-                            result = await wrapper.add_episode(
-                                content="Alice met Bob at the conference.",
-                                source="test",
-                                metadata={"importance": "high"},
-                            )
+        # When: Add episode
+        result = await wrapper.add_episode(
+            content="Alice met Bob at the conference.",
+            source="test",
+            metadata={"importance": "high"},
+        )
 
-                            # Then: Verify episode added
-                            assert result["episode_id"] == "episode_123"
-                            assert "timestamp" in result
-                            assert len(result["entities"]) == 1
-                            assert len(result["relationships"]) == 1
-                            assert result["source"] == "test"
-                            assert result["metadata"]["importance"] == "high"
+        # Then: Verify episode added
+        assert result["episode_id"] == "episode_123"
+        assert "timestamp" in result
+        assert len(result["entities"]) == 1
+        assert len(result["relationships"]) == 1
+        assert result["source"] == "test"
+        assert result["metadata"]["importance"] == "high"
 
 
 @pytest.mark.asyncio
 async def test_add_episode_error():
     """Test add_episode handles errors gracefully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Graphiti raises error
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Graphiti raises error
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.add_episode.side_effect = Exception("Database error")
-                            mock_graphiti_class.return_value = mock_graphiti
+        mock_graphiti = AsyncMock()
+        mock_graphiti.add_episode.side_effect = Exception("Database error")
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            wrapper = GraphitiWrapper()
+        wrapper = GraphitiWrapper()
 
-                            # When/Then: Should raise MemoryError
-                            with pytest.raises(MemoryError) as exc_info:
-                                await wrapper.add_episode(content="Test", source="test")
+        # When/Then: Should raise MemoryError
+        with pytest.raises(MemoryError) as exc_info:
+            await wrapper.add_episode(content="Test", source="test")
 
-                            assert "Failed to add episode" in str(exc_info.value)
+        assert "Failed to add episode" in str(exc_info.value)
 
 
 # ============================================================================
@@ -387,49 +395,51 @@ async def test_add_episode_error():
 @pytest.mark.asyncio
 async def test_search_success():
     """Test searching episodic memory successfully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Wrapper with search results
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Wrapper with search results
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.search.return_value = [
-                                {
-                                    "id": "result_1",
-                                    "type": "entity",
-                                    "content": "Test result",
-                                    "score": 0.95,
-                                    "timestamp": "2024-01-01T12:00:00",
-                                    "metadata": {"key": "value"},
-                                }
-                            ]
-                            mock_graphiti_class.return_value = mock_graphiti
+        mock_graphiti = AsyncMock()
+        mock_graphiti.search.return_value = [
+            {
+                "id": "result_1",
+                "type": "entity",
+                "content": "Test result",
+                "score": 0.95,
+                "timestamp": "2024-01-01T12:00:00",
+                "metadata": {"key": "value"},
+            }
+        ]
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            wrapper = GraphitiWrapper()
+        wrapper = GraphitiWrapper()
 
-                            # When: Search
-                            results = await wrapper.search(
-                                query="test query",
-                                limit=5,
-                                score_threshold=0.7,
-                            )
+        # When: Search
+        results = await wrapper.search(
+            query="test query",
+            limit=5,
+            score_threshold=0.7,
+        )
 
-                            # Then: Verify results
-                            assert len(results) == 1
-                            assert results[0]["id"] == "result_1"
-                            assert results[0]["score"] == 0.95
+        # Then: Verify results
+        assert len(results) == 1
+        assert results[0]["id"] == "result_1"
+        assert results[0]["score"] == 0.95
 
 
 @pytest.mark.asyncio
