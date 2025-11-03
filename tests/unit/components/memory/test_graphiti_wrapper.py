@@ -266,6 +266,9 @@ def test_graphiti_wrapper_init_default():
         mock_graphiti_class.return_value = mock_graphiti
 
         mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
         mock_ollama.return_value = mock_llm_client
 
         # When: Initialize wrapper
@@ -316,7 +319,7 @@ async def test_add_episode_success():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
-        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -339,6 +342,12 @@ async def test_add_episode_success():
             "relationships": [{"id": "rel_1", "type": "knows"}],
         }
         mock_graphiti_class.return_value = mock_graphiti
+
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
         wrapper = GraphitiWrapper()
 
@@ -365,7 +374,7 @@ async def test_add_episode_error():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
-        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -384,6 +393,12 @@ async def test_add_episode_error():
         mock_graphiti = AsyncMock()
         mock_graphiti.add_episode.side_effect = Exception("Database error")
         mock_graphiti_class.return_value = mock_graphiti
+
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
         wrapper = GraphitiWrapper()
 
@@ -406,7 +421,7 @@ async def test_search_success():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
-        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -435,6 +450,12 @@ async def test_search_success():
         ]
         mock_graphiti_class.return_value = mock_graphiti
 
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
+
         wrapper = GraphitiWrapper()
 
         # When: Search
@@ -453,34 +474,43 @@ async def test_search_success():
 @pytest.mark.asyncio
 async def test_search_error():
     """Test search handles errors gracefully."""
-    with patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class:
-        with patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j:
-            with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
-                with patch("src.components.memory.graphiti_wrapper.OpenAIClient"):
-                    with patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"):
-                        with patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"):
-                            from src.components.memory.graphiti_wrapper import GraphitiWrapper
+    with (
+        patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
+        patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
+        patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
+        patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
+        patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
+    ):
+        from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
-                            # Given: Search fails
-                            mock_settings.neo4j_uri = "bolt://localhost:7687"
-                            mock_settings.neo4j_user = "neo4j"
-                            mock_password = MagicMock()
-                            mock_password.get_secret_value.return_value = "password"
-                            mock_settings.neo4j_password = mock_password
+        # Given: Search fails
+        mock_settings.neo4j_uri = "bolt://localhost:7687"
+        mock_settings.neo4j_user = "neo4j"
+        mock_password = MagicMock()
+        mock_password.get_secret_value.return_value = "password"
+        mock_settings.neo4j_password = mock_password
 
-                            mock_get_neo4j.return_value = AsyncMock()
+        mock_get_neo4j.return_value = AsyncMock()
 
-                            mock_graphiti = AsyncMock()
-                            mock_graphiti.search.side_effect = Exception("Search failed")
-                            mock_graphiti_class.return_value = mock_graphiti
+        mock_graphiti = AsyncMock()
+        mock_graphiti.search.side_effect = Exception("Search failed")
+        mock_graphiti_class.return_value = mock_graphiti
 
-                            wrapper = GraphitiWrapper()
+        mock_llm_client = MagicMock()
+        mock_llm_client.base_url = "http://localhost:11434"
+        mock_llm_client.model = "llama2"
+        mock_llm_client.temperature = 0.1
+        mock_ollama.return_value = mock_llm_client
 
-                            # When/Then: Should raise MemoryError
-                            with pytest.raises(MemoryError) as exc_info:
-                                await wrapper.search(query="test")
+        wrapper = GraphitiWrapper()
 
-                            assert "Memory search failed" in str(exc_info.value)
+        # When/Then: Should raise MemoryError
+        with pytest.raises(MemoryError) as exc_info:
+            await wrapper.search(query="test")
+
+        assert "Memory search failed" in str(exc_info.value)
 
 
 # ============================================================================
