@@ -293,7 +293,9 @@ class SemanticDeduplicator:
             if len(similar) > 1:
                 # Merge descriptions from duplicates
                 duplicate_names = [entities[idx]["name"] for idx in similar]
-                representative["description"] = f"{entities[i]['description']} [Deduplicated from {len(similar)} mentions]"
+                representative["description"] = (
+                    f"{entities[i]['description']} [Deduplicated from {len(similar)} mentions]"
+                )
 
                 logger.debug(
                     "entities_merged",

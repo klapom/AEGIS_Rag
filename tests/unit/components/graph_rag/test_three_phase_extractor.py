@@ -364,13 +364,13 @@ class TestPhase3RelationExtraction:
                         mock_relation_extractor.extract.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_relation_extraction_failure_graceful_degradation(self, mock_nlp, mock_relation_extractor, sample_text):
+    async def test_relation_extraction_failure_graceful_degradation(self, mock_nlp, mock_deduplicator, mock_relation_extractor, sample_text):
         """Test graceful handling of relation extraction failure."""
         mock_relation_extractor.extract = AsyncMock(side_effect=Exception("Relation extraction failed"))
 
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
             with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
-                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
+                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config", return_value=mock_relation_extractor):
                         from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
@@ -408,13 +408,13 @@ class TestEndToEndExtraction:
                         mock_relation_extractor.extract.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_extraction_with_spacy_failure_uses_regex_fallback(self, mock_relation_extractor, sample_text):
+    async def test_extraction_with_spacy_failure_uses_regex_fallback(self, mock_deduplicator, mock_relation_extractor, sample_text):
         """Test that SpaCy failure triggers regex fallback."""
         mock_nlp_failing = MagicMock(side_effect=Exception("SpaCy processing failed"))
 
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
             with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp_failing):
-                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
+                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config", return_value=mock_relation_extractor):
                         from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
@@ -433,11 +433,11 @@ class TestConvenienceFunction:
     """Test convenience function for extraction."""
 
     @pytest.mark.asyncio
-    async def test_extract_with_three_phase_convenience_function(self, mock_nlp, mock_relation_extractor):
+    async def test_extract_with_three_phase_convenience_function(self, mock_nlp, mock_deduplicator, mock_relation_extractor):
         """Test convenience function for three-phase extraction."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
             with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
-                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
+                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config", return_value=mock_relation_extractor):
                         from src.components.graph_rag.three_phase_extractor import extract_with_three_phase
 
