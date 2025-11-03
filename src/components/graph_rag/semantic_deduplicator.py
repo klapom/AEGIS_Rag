@@ -92,7 +92,7 @@ def get_sentence_transformer_singleton(
                 "sentence_transformer_singleton_initializing",
                 model=model_name,
                 device=device,
-                note="First initialization - subsequent calls will reuse this instance"
+                note="First initialization - subsequent calls will reuse this instance",
             )
 
             _sentence_transformer_instance = SentenceTransformer(model_name, device=device)
@@ -293,10 +293,7 @@ class SemanticDeduplicator:
             if len(similar) > 1:
                 # Merge descriptions from duplicates
                 duplicate_names = [entities[idx]["name"] for idx in similar]
-                representative["description"] = (
-                    f"{entities[i]['description']} "
-                    f"[Deduplicated from {len(similar)} mentions]"
-                )
+                representative["description"] = f"{entities[i]['description']} [Deduplicated from {len(similar)} mentions]"
 
                 logger.debug(
                     "entities_merged",

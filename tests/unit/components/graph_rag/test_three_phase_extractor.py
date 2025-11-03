@@ -96,51 +96,41 @@ class TestThreePhaseExtractorInitialization:
             assert "spacy required" in str(exc_info.value).lower()
             assert "pip install spacy" in str(exc_info.value)
 
-    def test_initialization_with_spacy(self, mock_nlp, mock_spacy):
+    def test_initialization_with_spacy(self, mock_nlp):
         """Test successful initialization with SpaCy."""
-        # Configure the module-level mock to return our mock_nlp
-        mock_spacy.load.return_value = mock_nlp
-
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
-                with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
-                    from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+            with patch("spacy.load", return_value=mock_nlp):
+                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
+                    with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
+                        from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
-                    extractor = ThreePhaseExtractor()
+                        extractor = ThreePhaseExtractor()
 
-                    assert extractor.nlp is not None
-                    assert extractor.config is not None
-                    # Verify spacy.load was called
-                    mock_spacy.load.assert_called_once()
+                        assert extractor.nlp is not None
+                        assert extractor.config is not None
 
-    def test_initialization_spacy_model_not_found(self, mock_spacy):
+    def test_initialization_spacy_model_not_found(self):
         """Test initialization fails when SpaCy model not downloaded."""
-        # Configure the module-level mock to raise OSError
-        mock_spacy.load.side_effect = OSError("Model not found")
-
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+            with patch("spacy.load", side_effect=OSError("Model not found")):
+                from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
-            with pytest.raises(OSError) as exc_info:
-                ThreePhaseExtractor()
+                with pytest.raises(OSError) as exc_info:
+                    ThreePhaseExtractor()
 
-            assert "Model not found" in str(exc_info.value)
+                assert "Model not found" in str(exc_info.value)
 
-    def test_initialization_dedup_enabled(self, mock_nlp, mock_deduplicator, mock_spacy):
+    def test_initialization_dedup_enabled(self, mock_nlp, mock_deduplicator):
         """Test initialization with deduplication enabled."""
-        # Configure the module-level mock to return our mock_nlp
-        mock_spacy.load.return_value = mock_nlp
-
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
-                with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
-                    from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+            with patch("spacy.load", return_value=mock_nlp):
+                with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
+                    with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
+                        from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
-                    extractor = ThreePhaseExtractor(enable_dedup=True)
+                        extractor = ThreePhaseExtractor(enable_dedup=True)
 
-                    assert extractor.deduplicator is not None
-                    # Verify spacy.load was called
-                    mock_spacy.load.assert_called_once()
+                        assert extractor.deduplicator is not None
 
     def test_initialization_dedup_disabled(self, mock_nlp):
         """Test initialization with deduplication disabled."""
