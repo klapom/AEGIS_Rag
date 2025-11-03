@@ -99,7 +99,7 @@ class TestThreePhaseExtractorInitialization:
     def test_initialization_with_spacy(self, mock_nlp):
         """Test successful initialization with SpaCy."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("spacy.load", return_value=mock_nlp):
+            with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
                 with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config"):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
                         from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
@@ -112,7 +112,7 @@ class TestThreePhaseExtractorInitialization:
     def test_initialization_spacy_model_not_found(self):
         """Test initialization fails when SpaCy model not downloaded."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("spacy.load", side_effect=OSError("Model not found")):
+            with patch("src.components.graph_rag.three_phase_extractor.spacy.load", side_effect=OSError("Model not found")):
                 from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
                 with pytest.raises(OSError) as exc_info:
@@ -123,7 +123,7 @@ class TestThreePhaseExtractorInitialization:
     def test_initialization_dedup_enabled(self, mock_nlp, mock_deduplicator):
         """Test initialization with deduplication enabled."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("spacy.load", return_value=mock_nlp):
+            with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
                 with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", return_value=mock_deduplicator):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
                         from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
@@ -135,7 +135,7 @@ class TestThreePhaseExtractorInitialization:
     def test_initialization_dedup_disabled(self, mock_nlp):
         """Test initialization with deduplication disabled."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("spacy.load", return_value=mock_nlp):
+            with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
                 with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
                     from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 
@@ -146,7 +146,7 @@ class TestThreePhaseExtractorInitialization:
     def test_initialization_dedup_init_failure(self, mock_nlp):
         """Test graceful handling of deduplicator initialization failure."""
         with patch("src.components.graph_rag.three_phase_extractor.SPACY_AVAILABLE", True):
-            with patch("spacy.load", return_value=mock_nlp):
+            with patch("src.components.graph_rag.three_phase_extractor.spacy.load", return_value=mock_nlp):
                 with patch("src.components.graph_rag.three_phase_extractor.create_deduplicator_from_config", side_effect=Exception("Dedup init failed")):
                     with patch("src.components.graph_rag.three_phase_extractor.create_relation_extractor_from_config"):
                         from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
