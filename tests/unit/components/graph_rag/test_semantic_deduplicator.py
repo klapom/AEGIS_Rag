@@ -156,46 +156,19 @@ def test_semantic_deduplicator_init_custom_params(mock_get_singleton):
     )
 
 
-@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_semantic_deduplicator_init_auto_device_cpu(mock_get_singleton):
-    """Test device auto-detection selects CPU when CUDA unavailable."""
-    from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
+# Sprint 20.5: Auto-device detection removed - tests disabled
+# Device now defaults to 'cpu' to free VRAM for LLMs
+# @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+# @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+# def test_semantic_deduplicator_init_auto_device_cpu(mock_get_singleton):
+#     """Test device defaults to CPU (Sprint 20.5)."""
+#     pass
 
-    # Given: No CUDA available
-    mock_torch.cuda.is_available.return_value = False
-    mock_get_singleton.return_value = MagicMock()
-
-    # When: Initialize with device=None (auto-detect)
-    dedup = SemanticDeduplicator(device=None)
-
-    # Then: Should use CPU
-    assert dedup.device == "cpu"
-    mock_get_singleton.assert_called_once_with(
-        "sentence-transformers/all-MiniLM-L6-v2", device="cpu"
-    )
-
-
-@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_semantic_deduplicator_init_auto_device_cuda(mock_get_singleton):
-    """Test device auto-detection selects CUDA when available."""
-    from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
-
-    # Given: CUDA available
-    mock_torch.cuda.is_available.return_value = True
-    mock_torch.cuda.get_device_name.return_value = "NVIDIA RTX 3090"
-    mock_torch.cuda.get_device_properties.return_value.total_memory = 24 * 1024**3
-    mock_get_singleton.return_value = MagicMock()
-
-    # When: Initialize with device=None (auto-detect)
-    dedup = SemanticDeduplicator(device=None)
-
-    # Then: Should use CUDA
-    assert dedup.device == "cuda"
-    mock_get_singleton.assert_called_once_with(
-        "sentence-transformers/all-MiniLM-L6-v2", device="cuda"
-    )
+# @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+# @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+# def test_semantic_deduplicator_init_auto_device_cuda(mock_get_singleton):
+#     """Test explicit CUDA device selection (Sprint 20.5)."""
+#     pass
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", False)
@@ -216,18 +189,17 @@ def test_semantic_deduplicator_init_missing_dependencies():
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_deduplicate_with_duplicates(
-    mock_cosine_sim, mock_st_class, mock_torch, sample_entities
+    mock_get_singleton, mock_cosine_sim, sample_entities
 ):
-    """Test deduplication removes duplicate entities."""
+    """Test deduplication removes duplicate entities (Sprint 20.3 Singleton)."""
     import numpy as np
 
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Deduplicator and entities with duplicates
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -261,7 +233,6 @@ def test_deduplicate_empty_list(mock_get_singleton):
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Empty entity list
-    mock_torch.cuda.is_available.return_value = False
     mock_get_singleton.return_value = MagicMock()
     dedup = SemanticDeduplicator()
 
@@ -284,7 +255,6 @@ def test_deduplicate_no_duplicates(
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Entities with no duplicates
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -313,7 +283,6 @@ def test_deduplicate_single_entity(mock_get_singleton):
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Single entity
-    mock_torch.cuda.is_available.return_value = False
     mock_get_singleton.return_value = MagicMock()
     dedup = SemanticDeduplicator()
 
@@ -339,7 +308,6 @@ def test_deduplicate_groups_by_type(
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Entities of different types
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -385,7 +353,6 @@ def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_get_singleton):
         {"name": "Alex", "type": "PERSON", "description": "Developer"},
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -428,7 +395,6 @@ def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_get_singleton)
         {"name": "Alice", "type": "PERSON", "description": "Third"},
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -463,7 +429,6 @@ def test_deduplicate_missing_type_field(mock_get_singleton):
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Entities without type field
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -498,7 +463,6 @@ def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_get_singleton):
         {"name": "Python", "type": "TECHNOLOGY", "description": "Language"},
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -542,7 +506,6 @@ def test_create_deduplicator_from_config_enabled(mock_get_singleton, mock_config
     )
 
     # Given: Config with deduplication enabled
-    mock_torch.cuda.is_available.return_value = False
     mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
@@ -583,7 +546,6 @@ def test_create_deduplicator_from_config_auto_device(
 
     # Given: Config with device='auto'
     mock_config.semantic_dedup_device = "auto"
-    mock_torch.cuda.is_available.return_value = False
     mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
@@ -606,7 +568,6 @@ def test_create_deduplicator_from_config_custom_model(
 
     # Given: Config with custom model
     mock_config.semantic_dedup_model = "sentence-transformers/paraphrase-MiniLM-L3-v2"
-    mock_torch.cuda.is_available.return_value = False
     mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
@@ -639,7 +600,6 @@ def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_get_singleton):
         {"name": "Alice", "type": "PERSON", "description": "Duplicate description"},
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -682,7 +642,6 @@ def test_deduplicate_logs_statistics(mock_logger, mock_get_singleton):
         {"name": "Bob", "type": "PERSON", "description": "Designer"},
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 
@@ -715,7 +674,6 @@ def test_deduplicate_batch_processing(mock_get_singleton):
         for i in range(100)
     ]
 
-    mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
     mock_get_singleton.return_value = mock_model
 

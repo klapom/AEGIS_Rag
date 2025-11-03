@@ -293,7 +293,8 @@ class SemanticDeduplicator:
                 # Merge descriptions from duplicates
                 duplicate_names = [entities[idx]["name"] for idx in similar]
                 representative["description"] = (
-                    f"{entities[i]['description']} " f"[Deduplicated from {len(similar)} mentions]"
+                    f"{entities[i]['description']} "
+                    f"[Deduplicated from {len(similar)} mentions]"
                 )
 
                 logger.debug(
