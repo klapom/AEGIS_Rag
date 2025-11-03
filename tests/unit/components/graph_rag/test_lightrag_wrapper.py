@@ -322,6 +322,7 @@ class TestLightRAGWrapperSprint16:
         mock_instance = MagicMock()
         mock_instance.ainsert = AsyncMock(return_value={"status": "success"})
         mock_instance.aquery = AsyncMock(return_value="Mock answer")
+        mock_instance.initialize_storages = AsyncMock(return_value=None)  # Fix: AsyncMock for await
         mock_instance.chunk_entity_relation_graph = MagicMock()
         return mock_instance
 
