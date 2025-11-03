@@ -311,6 +311,10 @@ class TestConsolidationPipeline:
     @pytest.mark.asyncio
     async def test_cron_scheduler_parsing(self, consolidation_pipeline):
         """Test 8: Test cron schedule validation."""
+        # Ensure scheduler is stopped before starting
+        if consolidation_pipeline.scheduler.running:
+            consolidation_pipeline.stop_scheduler()
+
         # Valid schedules
         valid_schedules = [
             "0 2 * * *",  # Daily at 2 AM
@@ -322,6 +326,8 @@ class TestConsolidationPipeline:
             # Should not raise
             consolidation_pipeline.start_cron_scheduler(schedule)
             consolidation_pipeline.stop_scheduler()
+            # Wait a bit for shutdown to complete
+            await asyncio.sleep(0.1)
 
         # Invalid schedule (not 5 parts)
         with pytest.raises(ValueError, match="Invalid cron schedule"):
@@ -333,6 +339,11 @@ class TestConsolidationPipeline:
     @pytest.mark.asyncio
     async def test_scheduler_start_stop(self, consolidation_pipeline):
         """Test 9: Test scheduler lifecycle."""
+        # Ensure clean state
+        if consolidation_pipeline.scheduler.running:
+            consolidation_pipeline.stop_scheduler()
+            await asyncio.sleep(0.1)
+
         # Start scheduler
         consolidation_pipeline.start_cron_scheduler("0 2 * * *")
         assert consolidation_pipeline.scheduler.running
@@ -343,6 +354,8 @@ class TestConsolidationPipeline:
 
         # Stop scheduler
         consolidation_pipeline.stop_scheduler()
+        # Wait for scheduler to fully stop
+        await asyncio.sleep(0.1)
         assert not consolidation_pipeline.scheduler.running
 
     @pytest.mark.asyncio

@@ -43,7 +43,7 @@ from src.core.exceptions import LLMError, MemoryError
 
 def test_ollama_llm_client_init_default():
     """Test OllamaLLMClient initialization with default parameters."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings_module:
             from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
@@ -66,7 +66,7 @@ def test_ollama_llm_client_init_default():
 
 def test_ollama_llm_client_init_custom_params():
     """Test OllamaLLMClient initialization with custom parameters."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
         # Given: Custom parameters
@@ -95,7 +95,7 @@ def test_ollama_llm_client_init_custom_params():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_success():
     """Test OllamaLLMClient generates text response successfully."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
         # Given: LLM client with mocked Ollama
