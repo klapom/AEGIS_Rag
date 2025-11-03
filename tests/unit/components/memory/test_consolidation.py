@@ -13,6 +13,7 @@ Tests:
 10. test_consolidation_with_empty_items - Test empty data handling
 """
 
+import asyncio
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 

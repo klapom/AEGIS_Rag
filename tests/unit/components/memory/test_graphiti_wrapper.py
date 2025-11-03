@@ -119,7 +119,7 @@ async def test_ollama_llm_client_generate_response_success():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_invalid_response():
     """Test OllamaLLMClient handles invalid Ollama response."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
         # Given: LLM client with invalid response
@@ -140,7 +140,7 @@ async def test_ollama_llm_client_generate_response_invalid_response():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_connection_error():
     """Test OllamaLLMClient handles connection errors."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
         # Given: LLM client with connection error
@@ -166,7 +166,7 @@ async def test_ollama_llm_client_generate_response_connection_error():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_embeddings_success():
     """Test OllamaLLMClient generates embeddings successfully."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
             from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
@@ -191,7 +191,7 @@ async def test_ollama_llm_client_generate_embeddings_success():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_embeddings_invalid_response():
     """Test OllamaLLMClient handles invalid embedding response."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
             from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
@@ -214,7 +214,7 @@ async def test_ollama_llm_client_generate_embeddings_invalid_response():
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_embeddings_connection_error():
     """Test OllamaLLMClient handles embedding connection errors."""
-    with patch("ollama.AsyncClient") as mock_async_client_class:
+    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
         with patch("src.components.memory.graphiti_wrapper.settings") as mock_settings:
             from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
