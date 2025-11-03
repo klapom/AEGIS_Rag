@@ -245,6 +245,7 @@ def test_graphiti_wrapper_init_default():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient") as mock_ollama,
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -264,6 +265,9 @@ def test_graphiti_wrapper_init_default():
         mock_graphiti = AsyncMock()
         mock_graphiti_class.return_value = mock_graphiti
 
+        mock_llm_client = MagicMock()
+        mock_ollama.return_value = mock_llm_client
+
         # When: Initialize wrapper
         wrapper = GraphitiWrapper()
 
@@ -279,6 +283,7 @@ def test_graphiti_wrapper_init_connection_error():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
     ):
         from src.components.memory.graphiti_wrapper import GraphitiWrapper
 
@@ -311,6 +316,7 @@ async def test_add_episode_success():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -359,6 +365,7 @@ async def test_add_episode_error():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
@@ -399,6 +406,7 @@ async def test_search_success():
         patch("src.components.memory.graphiti_wrapper.Graphiti") as mock_graphiti_class,
         patch("src.components.memory.graphiti_wrapper.get_neo4j_client") as mock_get_neo4j,
         patch("src.components.memory.graphiti_wrapper.settings") as mock_settings,
+        patch("src.components.memory.graphiti_wrapper.OllamaLLMClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIClient"),
         patch("src.components.memory.graphiti_wrapper.OpenAIEmbedder"),
         patch("src.components.memory.graphiti_wrapper.OpenAIRerankerClient"),
