@@ -109,46 +109,36 @@ def mock_config():
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_semantic_deduplicator_init_default(mock_st_class, mock_torch):
-    """Test initialization with default parameters."""
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_semantic_deduplicator_init_default(mock_get_singleton):
+    """Test initialization with default parameters (Sprint 20.3 Singleton)."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
-    # Given: Default initialization
-    mock_torch.cuda.is_available.return_value = False
+    # Given: Default initialization with singleton
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # When: Initialize deduplicator
     dedup = SemanticDeduplicator()
 
-    # Then: Verify initialization
+    # Then: Verify initialization uses singleton
     assert dedup.model == mock_model
     assert dedup.threshold == 0.93
     assert dedup.device == "cpu"
-    mock_st_class.assert_called_once_with(
-        "sentence-transformers/all-MiniLM-L6-v2", device="cpu"
+    mock_get_singleton.assert_called_once_with(
+        model_name="sentence-transformers/all-MiniLM-L6-v2", device="cpu"
     )
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_semantic_deduplicator_init_custom_params(mock_st_class, mock_torch):
-    """Test initialization with custom parameters."""
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_semantic_deduplicator_init_custom_params(mock_get_singleton):
+    """Test initialization with custom parameters (Sprint 20.3 Singleton)."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
-    # Given: Custom parameters
-    mock_torch.cuda.is_available.return_value = True
-    mock_torch.cuda.get_device_name.return_value = "NVIDIA RTX 3090"
-    # Mock the device properties with proper vram value
-    mock_device_props = MagicMock()
-    mock_device_props.total_memory = 24 * 1024**3  # 24GB as int
-    mock_torch.cuda.get_device_properties.return_value = mock_device_props
-
+    # Given: Custom parameters with singleton
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # When: Initialize with custom params
     dedup = SemanticDeduplicator(
@@ -157,40 +147,38 @@ def test_semantic_deduplicator_init_custom_params(mock_st_class, mock_torch):
         device="cuda",
     )
 
-    # Then: Verify custom configuration
+    # Then: Verify custom configuration uses singleton
     assert dedup.model == mock_model
     assert dedup.threshold == 0.90
     assert dedup.device == "cuda"
-    mock_st_class.assert_called_once_with(
-        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device="cuda"
+    mock_get_singleton.assert_called_once_with(
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", device="cuda"
     )
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_semantic_deduplicator_init_auto_device_cpu(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_semantic_deduplicator_init_auto_device_cpu(mock_get_singleton):
     """Test device auto-detection selects CPU when CUDA unavailable."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: No CUDA available
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
 
     # When: Initialize with device=None (auto-detect)
     dedup = SemanticDeduplicator(device=None)
 
     # Then: Should use CPU
     assert dedup.device == "cpu"
-    mock_st_class.assert_called_once_with(
+    mock_get_singleton.assert_called_once_with(
         "sentence-transformers/all-MiniLM-L6-v2", device="cpu"
     )
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_semantic_deduplicator_init_auto_device_cuda(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_semantic_deduplicator_init_auto_device_cuda(mock_get_singleton):
     """Test device auto-detection selects CUDA when available."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
@@ -198,14 +186,14 @@ def test_semantic_deduplicator_init_auto_device_cuda(mock_st_class, mock_torch):
     mock_torch.cuda.is_available.return_value = True
     mock_torch.cuda.get_device_name.return_value = "NVIDIA RTX 3090"
     mock_torch.cuda.get_device_properties.return_value.total_memory = 24 * 1024**3
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
 
     # When: Initialize with device=None (auto-detect)
     dedup = SemanticDeduplicator(device=None)
 
     # Then: Should use CUDA
     assert dedup.device == "cuda"
-    mock_st_class.assert_called_once_with(
+    mock_get_singleton.assert_called_once_with(
         "sentence-transformers/all-MiniLM-L6-v2", device="cuda"
     )
 
@@ -228,8 +216,7 @@ def test_semantic_deduplicator_init_missing_dependencies():
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_with_duplicates(
     mock_cosine_sim, mock_st_class, mock_torch, sample_entities
@@ -242,7 +229,7 @@ def test_deduplicate_with_duplicates(
     # Given: Deduplicator and entities with duplicates
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings - first two PERSON entities are similar
     embeddings_np = np.array([[0.1] * 384, [0.1] * 384, [0.5] * 384, [0.9] * 384])
@@ -268,15 +255,14 @@ def test_deduplicate_with_duplicates(
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_deduplicate_empty_list(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_deduplicate_empty_list(mock_get_singleton):
     """Test deduplication with empty entity list."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Empty entity list
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
     dedup = SemanticDeduplicator()
 
     # When: Deduplicate empty list
@@ -287,8 +273,7 @@ def test_deduplicate_empty_list(mock_st_class, mock_torch):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_no_duplicates(
     mock_cosine_sim, mock_st_class, mock_torch, sample_entities_no_duplicates
@@ -301,7 +286,7 @@ def test_deduplicate_no_duplicates(
     # Given: Entities with no duplicates
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings - all different
     n = len(sample_entities_no_duplicates)
@@ -322,15 +307,14 @@ def test_deduplicate_no_duplicates(
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_deduplicate_single_entity(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_deduplicate_single_entity(mock_get_singleton):
     """Test deduplication with single entity."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Single entity
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
     dedup = SemanticDeduplicator()
 
     single_entity = [{"name": "Alice", "type": "PERSON", "description": "Engineer"}]
@@ -344,8 +328,7 @@ def test_deduplicate_single_entity(mock_st_class, mock_torch):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_groups_by_type(
     mock_cosine_sim, mock_st_class, mock_torch, sample_entities
@@ -358,7 +341,7 @@ def test_deduplicate_groups_by_type(
     # Given: Entities of different types
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings for each type group
     def mock_encode(names, **kwargs):
@@ -388,10 +371,9 @@ def test_deduplicate_groups_by_type(
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
-def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_st_class, mock_torch):
+def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_get_singleton):
     """Test deduplication behavior with different threshold values."""
     import numpy as np
 
@@ -405,7 +387,7 @@ def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_st_class, mock_
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings - moderate similarity (0.92)
     embeddings_np = np.array([[0.1] * 384, [0.15] * 384])
@@ -431,10 +413,9 @@ def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_st_class, mock_
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
-def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_st_class, mock_torch):
+def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_get_singleton):
     """Test deduplication keeps first entity as representative."""
     import numpy as np
 
@@ -449,7 +430,7 @@ def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_st_class, mock
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings - all identical
     embeddings_np = np.array([[0.1] * 384, [0.1] * 384, [0.1] * 384])
@@ -476,16 +457,15 @@ def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_st_class, mock
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_deduplicate_missing_type_field(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_deduplicate_missing_type_field(mock_get_singleton):
     """Test deduplication handles entities missing 'type' field."""
     from src.components.graph_rag.semantic_deduplicator import SemanticDeduplicator
 
     # Given: Entities without type field
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     entities = [
         {"name": "Alice", "description": "Engineer"},  # Missing type
@@ -502,10 +482,9 @@ def test_deduplicate_missing_type_field(mock_st_class, mock_torch):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
-def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_st_class, mock_torch):
+def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_get_singleton):
     """Test deduplication correctly handles multiple entity types."""
     import numpy as np
 
@@ -521,7 +500,7 @@ def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_st_class, mock_t
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock encode called once per type group
     def mock_encode_side_effect(names, **kwargs):
@@ -555,9 +534,8 @@ def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_st_class, mock_t
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_create_deduplicator_from_config_enabled(mock_st_class, mock_torch, mock_config):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_create_deduplicator_from_config_enabled(mock_get_singleton, mock_config):
     """Test factory function creates deduplicator from config."""
     from src.components.graph_rag.semantic_deduplicator import (
         create_deduplicator_from_config,
@@ -565,7 +543,7 @@ def test_create_deduplicator_from_config_enabled(mock_st_class, mock_torch, mock
 
     # Given: Config with deduplication enabled
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
     dedup = create_deduplicator_from_config(mock_config)
@@ -573,7 +551,7 @@ def test_create_deduplicator_from_config_enabled(mock_st_class, mock_torch, mock
     # Then: Should create deduplicator
     assert dedup is not None
     assert dedup.threshold == 0.93
-    mock_st_class.assert_called_once()
+    mock_get_singleton.assert_called_once()
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
@@ -594,8 +572,7 @@ def test_create_deduplicator_from_config_disabled(mock_config):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_create_deduplicator_from_config_auto_device(
     mock_st_class, mock_torch, mock_config
 ):
@@ -607,7 +584,7 @@ def test_create_deduplicator_from_config_auto_device(
     # Given: Config with device='auto'
     mock_config.semantic_dedup_device = "auto"
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
     dedup = create_deduplicator_from_config(mock_config)
@@ -618,8 +595,7 @@ def test_create_deduplicator_from_config_auto_device(
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_create_deduplicator_from_config_custom_model(
     mock_st_class, mock_torch, mock_config
 ):
@@ -631,14 +607,14 @@ def test_create_deduplicator_from_config_custom_model(
     # Given: Config with custom model
     mock_config.semantic_dedup_model = "sentence-transformers/paraphrase-MiniLM-L3-v2"
     mock_torch.cuda.is_available.return_value = False
-    mock_st_class.return_value = MagicMock()
+    mock_get_singleton.return_value = MagicMock()
 
     # When: Create from config
     dedup = create_deduplicator_from_config(mock_config)
 
     # Then: Should use custom model
     assert dedup is not None
-    mock_st_class.assert_called_once_with(
+    mock_get_singleton.assert_called_once_with(
         "sentence-transformers/paraphrase-MiniLM-L3-v2", device="cpu"
     )
 
@@ -649,10 +625,9 @@ def test_create_deduplicator_from_config_custom_model(
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
-def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_st_class, mock_torch):
+def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_get_singleton):
     """Test deduplication merges descriptions from duplicate entities."""
     import numpy as np
 
@@ -666,7 +641,7 @@ def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_st_class, mock_to
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings - identical
     embeddings_np = np.array([[0.1] * 384, [0.1] * 384])
@@ -693,10 +668,9 @@ def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_st_class, mock_to
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.logger")
-def test_deduplicate_logs_statistics(mock_logger, mock_st_class, mock_torch):
+def test_deduplicate_logs_statistics(mock_logger, mock_get_singleton):
     """Test deduplication logs statistics about removed/kept entities."""
     import numpy as np
 
@@ -710,7 +684,7 @@ def test_deduplicate_logs_statistics(mock_logger, mock_st_class, mock_torch):
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings
     embeddings_np = np.array([[0.1] * 384, [0.5] * 384])
@@ -728,9 +702,8 @@ def test_deduplicate_logs_statistics(mock_logger, mock_st_class, mock_torch):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.torch")
-@patch("src.components.graph_rag.semantic_deduplicator.SentenceTransformer")
-def test_deduplicate_batch_processing(mock_st_class, mock_torch):
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_deduplicate_batch_processing(mock_get_singleton):
     """Test deduplication uses batch encoding for efficiency."""
     import numpy as np
 
@@ -744,7 +717,7 @@ def test_deduplicate_batch_processing(mock_st_class, mock_torch):
 
     mock_torch.cuda.is_available.return_value = False
     mock_model = MagicMock()
-    mock_st_class.return_value = mock_model
+    mock_get_singleton.return_value = mock_model
 
     # Mock embeddings
     embeddings_np = np.array([[i * 0.01] * 384 for i in range(100)])
