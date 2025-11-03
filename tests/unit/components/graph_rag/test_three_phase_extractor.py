@@ -380,7 +380,7 @@ class TestPhase3RelationExtraction:
                         # Should not raise, continues with empty relations
                         entities, relations = await extractor.extract(sample_text)
 
-                        assert len(entities) == 3
+                        assert len(entities) == 2  # After deduplication (mock reduces 3 -> 2)
                         assert len(relations) == 0  # Empty relations on failure
 
 

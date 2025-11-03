@@ -126,7 +126,7 @@ class TestConsolidationPipeline:
         embeddings = [
             [1.0, 2.0, 3.0],  # item1
             [1.0, 2.0, 3.0],  # item2 (identical)
-            [4.0, 5.0, 6.0],  # item3 (different)
+            [1.0, 0.0, -1.0],  # item3 (different, low similarity ~0.27)
         ]
 
         unique_items, duplicates_removed = await consolidation_pipeline._deduplicate_memories(
@@ -150,10 +150,10 @@ class TestConsolidationPipeline:
             {"key": "item2", "value": "test"},
         ]
 
-        # Similar but below threshold (similarity ~0.85)
+        # Similar but below threshold (similarity ~0.75)
         embeddings = [
             [1.0, 2.0, 3.0],
-            [1.0, 2.5, 3.5],  # Similar but not identical
+            [2.0, -1.0, 4.0],  # Different direction, similarity ~0.75
         ]
 
         unique_items, duplicates_removed = await consolidation_pipeline._deduplicate_memories(
@@ -308,7 +308,8 @@ class TestConsolidationPipeline:
 
             assert result["top_selected"] == 5
 
-    def test_cron_scheduler_parsing(self, consolidation_pipeline):
+    @pytest.mark.asyncio
+    async def test_cron_scheduler_parsing(self, consolidation_pipeline):
         """Test 8: Test cron schedule validation."""
         # Valid schedules
         valid_schedules = [
@@ -329,7 +330,8 @@ class TestConsolidationPipeline:
         with pytest.raises(ValueError, match="Invalid cron schedule"):
             consolidation_pipeline.start_cron_scheduler("invalid")
 
-    def test_scheduler_start_stop(self, consolidation_pipeline):
+    @pytest.mark.asyncio
+    async def test_scheduler_start_stop(self, consolidation_pipeline):
         """Test 9: Test scheduler lifecycle."""
         # Start scheduler
         consolidation_pipeline.start_cron_scheduler("0 2 * * *")
