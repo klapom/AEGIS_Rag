@@ -38,8 +38,8 @@ async def main():
         project_root
         / "data"
         / "sample_documents"
-        / "3. Basic Scripting"
-        / "DE-D-OTAutBasic.pdf"
+        / "9. Performance Tuning"
+        / "EN-D-Performance Tuning.pptx"
     )
 
     if not test_file.exists():

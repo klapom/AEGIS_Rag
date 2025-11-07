@@ -914,6 +914,43 @@ class LightRAGWrapper:
 
                 logger.info("chunk_nodes_created", count=len(chunks))
 
+                # Step 1.5: Create :base entity nodes (FIX for missing entity_name bug)
+                # These nodes were never being created, causing MENTIONED_IN to fail!
+                for entity in entities:
+                    entity_id = entity.get("entity_id", "")
+                    entity_name = entity.get("entity_name", entity_id)  # Fallback to entity_id
+                    entity_type = entity.get("entity_type", "UNKNOWN")
+
+                    if not entity_id:
+                        logger.warning("entity_missing_id", entity=entity)
+                        continue
+
+                    # Create dynamic label based on entity type (e.g., :base:ORGANIZATION)
+                    # This matches the label structure seen in Neo4j (base:ORGANIZATION, etc.)
+                    labels_str = f"base:{entity_type}"
+
+                    await session.run(
+                        f"""
+                        MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                        SET e.entity_name = $entity_name,
+                            e.entity_type = $entity_type,
+                            e.description = $description,
+                            e.source_id = $source_id,
+                            e.file_path = $file_path,
+                            e.chunk_index = $chunk_index,
+                            e.created_at = datetime()
+                        """,
+                        entity_id=entity_id,
+                        entity_name=entity_name,
+                        entity_type=entity_type,
+                        description=entity.get("description", ""),
+                        source_id=entity.get("source_id", ""),
+                        file_path=entity.get("file_path", ""),
+                        chunk_index=entity.get("chunk_index", 0),
+                    )
+
+                logger.info("entity_nodes_created", count=len(entities))
+
                 # Step 2: Create MENTIONED_IN relationships
                 # Group entities by chunk_id for efficient batch creation
                 entities_by_chunk = {}
