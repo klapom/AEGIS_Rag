@@ -1,4 +1,21 @@
 """
+============================================================================
+⚠️ DEPRECATED SCRIPT: Sprint 21
+============================================================================
+This script uses LlamaIndex SimpleDirectoryReader which is being replaced
+by Docling CUDA Container in Sprint 21.
+
+REPLACEMENT: Sprint 21 scripts will use:
+  1. DoclingContainerClient for document parsing (GPU-accelerated, OCR)
+  2. LangGraph pipeline for orchestration (memory-optimized)
+  3. BatchOrchestrator for batch processing (10 docs/batch)
+  4. SSE streaming for React UI progress (real-time updates)
+
+MIGRATION STATUS: DO NOT USE for production ingestion
+USE INSTEAD: scripts/batch_ingest_langgraph.py (Sprint 21, Feature 21.3)
+REMOVAL: Sprint 22
+============================================================================
+
 Production document indexing script.
 Indexes all documents from data/sample_documents/ into Qdrant + Neo4j.
 
@@ -6,6 +23,8 @@ Sprint 19 Update: Uses current production settings:
 - BGE-M3 embeddings (1024D, upgraded from nomic-embed-text 768D)
 - Adaptive chunking (600 tokens, 150 overlap - Sprint 16 alignment)
 - Hybrid RAG (Qdrant + Neo4j/LightRAG)
+
+⚠️ WARNING: This script will be replaced in Sprint 21
 """
 import asyncio
 import sys

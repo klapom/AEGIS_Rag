@@ -1,5 +1,28 @@
 """Unified document ingestion pipeline for all AEGIS RAG components.
 
+============================================================================
+⚠️ DEPRECATED: Sprint 21 - This module will be replaced by LangGraph pipeline
+============================================================================
+REASON: Parallel execution (asyncio.gather) incompatible with:
+  - Memory constraints (4.4GB RAM limit, RTX 3060 6GB VRAM)
+  - Container lifecycle management (Docling start/stop between batches)
+  - SSE progress streaming (React UI real-time updates)
+  - Sequential stage execution (memory-optimized pipeline)
+
+REPLACEMENT: Feature 21.2 - LangGraph Ingestion State Machine
+  from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
+
+  pipeline = create_ingestion_graph()
+  async for event in pipeline.astream(initial_state):
+      node_name = list(event.keys())[0]
+      state = event[node_name]
+      # Stream progress to React UI via SSE
+      await send_sse({"node": node_name, "progress": state["overall_progress"]})
+
+MIGRATION STATUS: DO NOT USE for new code
+REMOVAL: Sprint 22 (after LangGraph migration complete)
+============================================================================
+
 Indexes documents to:
 - Qdrant (vector search)
 - BM25 (keyword search)

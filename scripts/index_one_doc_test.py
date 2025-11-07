@@ -1,10 +1,23 @@
 """
+============================================================================
+⚠️ DEPRECATED SCRIPT: Sprint 21
+============================================================================
+This script uses LlamaIndex SimpleDirectoryReader which is being replaced
+by Docling CUDA Container in Sprint 21.
+
+REPLACEMENT: Use scripts/test_docling_single_doc.py (Sprint 21, Feature 21.1)
+MIGRATION STATUS: DO NOT USE for new testing
+REMOVAL: Sprint 22
+============================================================================
+
 Sprint 19: Simple indexing for ONE document (UI testing).
 Uses BOTH Qdrant AND Neo4j/LightRAG with fixes from Sprint 10 and Sprint 16.
 
 Bug Fixes Applied:
 - d8e52c0: start_token/end_token KeyError fix (Sprint 16)
 - 79abe52: Path traversal temp directory fix (Sprint 10)
+
+⚠️ WARNING: This script will be replaced in Sprint 21
 """
 import asyncio
 import shutil

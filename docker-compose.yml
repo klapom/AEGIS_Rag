@@ -33,6 +33,78 @@ services:
       - aegis-network
 
   # ============================================================================
+  # Docling - GPU-Accelerated Document Parsing (Sprint 21)
+  # ============================================================================
+  # IMPORTANT: This service uses the "ingestion" profile to avoid always-on GPU usage
+  # Start with: docker compose --profile ingestion up -d docling
+  # Stop with:  docker compose stop docling
+  #
+  # Memory Management:
+  # - RTX 3060: 6GB VRAM (80% = 4.8GB allocated to Docling)
+  # - System RAM: ~4.4GB available (container lifecycle managed by LangGraph)
+  # - Sequential execution: Start → Parse batch → Stop → Free VRAM for next stage
+  #
+  # Known Issues:
+  # - GPU memory leak in batch processing (monitor with nvidia-smi)
+  # - Workaround: Restart container after 10-20 docs (handled by BatchOrchestrator)
+  # ============================================================================
+  docling:
+    # Official Docling-Serve with CUDA 12.4 support
+    image: quay.io/docling-project/docling-serve-cu124:latest
+    container_name: aegis-docling
+    profiles:
+      - ingestion  # Only start when explicitly requested (not part of default stack)
+    ports:
+      - "8080:8080"  # HTTP API for parsing
+    volumes:
+      # Cache volumes to persist downloaded models (OCR, layout, table detection)
+      - docling_hf_cache:/root/.cache/huggingface
+      - docling_ocr_cache:/root/.EasyOCR
+      # Optional: Mount document directory for direct access
+      # - ./data/documents:/input:ro
+    environment:
+      # CUDA Configuration
+      - CUDA_VISIBLE_DEVICES=0  # Use first GPU (RTX 3060)
+      - DOCLING_GPU_MEMORY_FRACTION=0.8  # Allocate 80% of VRAM (4.8GB)
+
+      # Model Configuration
+      - DOCLING_LAZY_LOADING=true  # Load models on-demand to reduce startup time
+      - DOCLING_OCR_ENGINE=easyocr  # EasyOCR with GPU acceleration
+      - DOCLING_TABLE_STRUCTURE=true  # Enable table structure preservation
+      - DOCLING_LAYOUT_ANALYSIS=true  # Enable layout detection (headings, lists)
+
+      # Performance Tuning
+      - NUM_WORKERS=2  # Parallel workers (limited by VRAM, 2 = ~2.4GB each)
+      - DOCLING_BATCH_SIZE=1  # Process 1 doc at a time (prevents memory leak)
+      - DOCLING_TIMEOUT=300  # 5 min timeout for large PDFs with OCR
+
+      # Logging
+      - LOG_LEVEL=INFO
+
+    # GPU Resource Allocation
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  # Use 1 GPU (RTX 3060)
+              capabilities: [gpu]
+        limits:
+          memory: 3G  # System RAM limit (leaves 1.4GB for other containers)
+
+    # Health Check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s  # First model load takes ~30-45s
+
+    # Note: No restart policy - container managed by LangGraph pipeline
+    networks:
+      - aegis-network
+
+  # ============================================================================
   # Qdrant - Vector Database
   # ============================================================================
   qdrant:
@@ -198,6 +270,11 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  # Sprint 21: Docling model caches (OCR, layout, table detection)
+  docling_hf_cache:
+    driver: local
+  docling_ocr_cache:
     driver: local
 
 # ============================================================================

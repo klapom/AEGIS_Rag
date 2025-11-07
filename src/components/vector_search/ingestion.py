@@ -133,6 +133,35 @@ class DocumentIngestionPipeline:
     ) -> list[Document]:
         """Load documents from directory using LlamaIndex.
 
+        ============================================================================
+        ⚠️ DEPRECATED: Sprint 21 - This method will be replaced by DoclingContainerClient
+        ============================================================================
+        REASON: LlamaIndex SimpleDirectoryReader lacks:
+          - OCR for scanned PDFs (80% of enterprise docs are scanned)
+          - Table extraction (tables lost in plain text conversion)
+          - Layout analysis (formatting/structure lost)
+          - GPU acceleration (CPU-only parsing is 10x slower)
+
+        REPLACEMENT: Feature 21.1 - DoclingContainerClient
+          from src.components.ingestion.docling_client import DoclingContainerClient
+
+          docling = DoclingContainerClient(base_url="http://localhost:8080")
+          await docling.start_container()  # Start CUDA container
+          parsed = await docling.parse_document(file_path)
+          await docling.stop_container()   # Free VRAM
+
+          # Returns: {
+          #   "text": "...",           # Full text with OCR
+          #   "metadata": {...},       # Rich metadata
+          #   "tables": [...],         # Structured tables
+          #   "images": [...],         # Image references
+          #   "layout": {...}          # Document structure
+          # }
+
+        MIGRATION STATUS: DO NOT USE for new code
+        REMOVAL: Sprint 22 (after full Docling migration)
+        ============================================================================
+
         Args:
             input_dir: Directory containing documents
             required_exts: File extensions to load (default: [".pdf", ".txt", ".md"])

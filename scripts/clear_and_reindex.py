@@ -1,5 +1,18 @@
 """
+============================================================================
+⚠️ DEPRECATED SCRIPT: Sprint 21
+============================================================================
+This script uses LlamaIndex SimpleDirectoryReader which is being replaced
+by Docling CUDA Container in Sprint 21.
+
+REPLACEMENT: Use scripts/test_docling_clear_reindex.py (Sprint 21, Feature 21.1)
+MIGRATION STATUS: DO NOT USE for new testing
+REMOVAL: Sprint 22
+============================================================================
+
 Clear Neo4j manually and reindex Performance Tuning.pptx with the fix.
+
+⚠️ WARNING: This script will be replaced in Sprint 21
 """
 import asyncio
 import shutil

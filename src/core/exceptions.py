@@ -79,3 +79,12 @@ class AuthorizationError(AegisRAGException):
     """Raised when authorization fails."""
 
     pass
+
+
+class IngestionError(AegisRAGException):
+    """Raised when document ingestion fails.
+
+    Sprint 21: Used by DoclingContainerClient and LangGraph ingestion pipeline.
+    """
+
+    pass
