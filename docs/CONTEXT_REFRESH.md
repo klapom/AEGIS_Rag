@@ -178,7 +178,7 @@ Neue Session / Major Context Loss. Vollständiger Architektur-Context benötigt:
 13. Check for ***LATEST*** SPRINT files SPRINT_*PLAN.md or  SPRINT_*SUMMARY.md or SPRINT_*TEST*.md  
 
 🎯 TECHNICAL STATE (Post-Sprint 15):
-- GPU: RTX 3060 verified (105 tokens/s)
+- GPU: RTX 3060 verified 
 - Backend: FastAPI + LangGraph + Ollama (100% local)
 - Frontend: React 18.2 + Vite 7.1 + Tailwind CSS v4.1
 - RAG: Hybrid (Vector + Graph + BM25 with RRF)
@@ -229,7 +229,7 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 
 ### Tech Stack (Post-Sprint 15)
 ```yaml
-Frontend (NEW - Sprint 15):
+Frontend (Sprint 15):
   - React: 18.2.0
   - TypeScript: 5.9.0
   - Vite: 7.1.0
