@@ -102,21 +102,28 @@ SAMPLING_CONFIGS = [
 
 async def load_test_questions(quick: bool = False) -> List[Dict]:
     """Load test questions from YAML file."""
+    # Try NO-RAG version first (for when DB is empty)
+    questions_file_norag = Path(__file__).parent / "test_questions_norag.yaml"
     questions_file = Path(__file__).parent / "test_questions.yaml"
 
-    if not questions_file.exists():
-        console.print(f"[red]Error: {questions_file} not found![/red]")
-        raise FileNotFoundError(f"{questions_file} does not exist")
+    if questions_file_norag.exists():
+        console.print("[yellow]Using NO-RAG test questions (no document context needed)[/yellow]")
+        with open(questions_file_norag, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            questions = data.get("questions", [])
+    elif questions_file.exists():
+        with open(questions_file, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            questions = data.get("questions", [])
+    else:
+        console.print(f"[red]Error: No test questions file found![/red]")
+        raise FileNotFoundError("test_questions.yaml or test_questions_norag.yaml")
 
-    with open(questions_file, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-        questions = data.get("questions", [])
+    if quick:
+        # Use only 2 questions for quick testing (1 German, 1 English, different tiers)
+        return [q for q in questions if q["tier"] in [1, 2]][:2]
 
-        if quick:
-            # Use only 2 questions for quick testing (1 German, 1 English, different tiers)
-            return [q for q in questions if q["tier"] in [1, 2]][:2]
-
-        return questions
+    return questions
 
 
 async def test_single_question(

@@ -154,7 +154,7 @@
 
 ---
 
-## SPRINT 13+ FUTURE DECISIONS (PLANNED)
+## FUTURE DECISIONS (PLANNED)
 
 ### TBD | React + Next.js 14 Frontend (Sprint 14)
 **Decision (Planned):** Replace Gradio with Next.js 14 + TypeScript + Tailwind CSS.
@@ -176,7 +176,7 @@
 **Original:** qwen3:0.6b (ultra-lightweight, 0.5GB RAM)
 **Problem:** Entity extraction format issues (JSON parsing errors)
 **Pivot:** llama3.2:3b (better structured output)
-**Trade-off:** Slower (150 → 105 tokens/s), but +20% accuracy
+**Trade-off:** Slower  but +20% accuracy
 **Lesson:** Model quality > speed for entity extraction
 
 ### Sprint 14 (Planned): Gradio → React Migration
@@ -226,7 +226,39 @@
 
 ---
 
-**Last Updated:** 2025-10-28 (Post-Sprint 16 Start)
-**Total Decisions Documented:** 40+
-**Current Sprint:** Sprint 16 (Unified Architecture & BGE-M3 Migration)
-**Next Sprint:** Sprint 17 (TBD)
+## SPRINT 20: PERFORMANCE OPTIMIZATION & EXTRACTION QUALITY
+
+### 2025-11-07 | Mirostat v2 for Ollama Sampling (Sprint 20.1)
+**Decision:** Use mirostat_mode=2, tau=5.0, eta=0.1 for all Ollama LLM calls.
+**Rationale:** 86% speed improvement (18.2 → 33.9 tokens/s) while maintaining quality. Adaptive sampling provides consistent perplexity without manual temperature tuning. Tested across 6 configurations, mirostat_v2 outperformed baseline, temperature sweep, and top_k/top_p.
+
+### 2025-11-07 | LLM Extraction Pipeline with Config Switch (Sprint 20.4)
+**Decision:** Implement dual extraction pipelines: three_phase (SpaCy, fast) vs llm_extraction (LLM, high quality).
+**Rationale:** Trade-off between speed and quality. three_phase: ~15s/doc but high false positives (103 CONCEPT entities). llm_extraction: ~200s/doc but 98% noise removal (Few-Shot prompts). Config switch `EXTRACTION_PIPELINE` enables use-case selection (bulk ingestion vs quality-critical).
+
+### 2025-11-07 | Chunk Size Bottleneck Identified (Sprint 20.5)
+**Decision:** Defer full reindexing to Sprint 21, optimize chunk size first.
+**Rationale:** Chunk analysis revealed 103 small chunks (~112 tokens avg) create massive LLM overhead (8-9s/call, ~36 min total). Increasing LIGHTRAG_CHUNK_TOKEN_SIZE from 600 → 1800 will reduce chunks by 65% (~12 min total). Better to reindex ONCE with optimal settings than twice.
+
+### 2025-11-07 | Entity Extraction Bug Fix (Sprint 20.2 - Unplanned)
+**Decision:** Fix type mismatch: dict → GraphEntity in ThreePhaseExtractor.
+**Rationale:** Entities not created in Neo4j due to silent type mismatch. LightRAG expected GraphEntity objects, but ThreePhaseExtractor returned dicts. Fix enabled entity graph construction (0 → 107 entities). Critical for graph-based retrieval.
+
+---
+
+## SPRINT 21: UNIFIED INGESTION PIPELINE (PLANNED)
+
+### TBD | Docling for Heavy Document Parsing
+**Decision (Planned):** Replace LlamaIndex SimpleDirectoryReader with IBM Docling for PDF, DOCX, PPTX, XLSX, HTML.
+**Rationale:** Better extraction quality (layout-aware parsing, table preservation, OCR). SimpleDirectoryReader loses structure (avg 470 chars/page from PowerPoint, suspected data loss). Docling provides Markdown output (RAG-friendly), image extraction, and table structure. Trade-off: Additional dependency but massive quality gain.
+
+### TBD | Tree-sitter for Code Parsing
+**Decision (Planned):** Add Tree-sitter AST parsing for Python, JavaScript, TypeScript, Java code files.
+**Rationale:** Code files contain structured information (functions, classes) that should be extracted for better RAG. Treating code as plain text loses metadata. Tree-sitter provides language-agnostic parsing with function/class line numbers, docstring extraction.
+
+---
+
+**Last Updated:** 2025-11-07 (Post-Sprint 20 Complete)
+**Total Decisions Documented:** 44+
+**Current Sprint:** Sprint 20 (Complete: 90%)
+**Next Sprint:** Sprint 21 (Unified Ingestion Pipeline - Planned)

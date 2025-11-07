@@ -37,6 +37,7 @@ class ExtractionPipelineFactory:
 
     Supports:
     - "three_phase": ThreePhaseExtractor (SpaCy + Dedup + Gemma) - Sprint 13
+    - "llm_extraction": Pure LLM extraction via ExtractionService (Sprint 20)
     - "lightrag_default": Legacy LightRAG extraction (for comparison)
 
     Example:
@@ -69,12 +70,14 @@ class ExtractionPipelineFactory:
 
         if pipeline_type == "three_phase":
             return ExtractionPipelineFactory._create_three_phase(config)
+        elif pipeline_type == "llm_extraction":
+            return ExtractionPipelineFactory._create_llm_extraction(config)
         elif pipeline_type == "lightrag_default":
             return ExtractionPipelineFactory._create_lightrag_legacy(config)
         else:
             raise ValueError(
                 f"Unsupported extraction pipeline: {pipeline_type}. "
-                f"Must be 'three_phase' or 'lightrag_default'"
+                f"Must be 'three_phase', 'llm_extraction', or 'lightrag_default'"
             )
 
     @staticmethod
@@ -100,6 +103,112 @@ class ExtractionPipelineFactory:
         )
 
         return extractor
+
+    @staticmethod
+    def _create_llm_extraction(config) -> ExtractionPipeline:
+        """Create LLM-based extraction pipeline using ExtractionService.
+
+        Sprint 20 Feature: Option 3 - Pure LLM entity/relation extraction
+        Uses Few-Shot prompts with llama3.2:8b or gemma-3-4b for high-quality
+        domain-specific extraction.
+
+        Performance: ~200-300s/doc (slower but better quality)
+        Quality: High - LLM understands technical context and German terms
+
+        Returns:
+            LLMExtractionPipeline adapter instance
+        """
+        from src.components.graph_rag.extraction_service import ExtractionService
+
+        logger.info(
+            "llm_extraction_pipeline_creating",
+            llm_model=getattr(config, "lightrag_llm_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"),
+            temperature=0.1,
+            note="Using ExtractionService with Few-Shot prompts for high-quality extraction",
+        )
+
+        class LLMExtractionPipeline:
+            """Adapter: ExtractionService → LightRAG format."""
+
+            def __init__(self, config):
+                # Use Gemma-3-4b (currently loaded in Ollama)
+                self.service = ExtractionService(
+                    llm_model=getattr(
+                        config,
+                        "lightrag_llm_model",
+                        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
+                    ),
+                    ollama_base_url=getattr(config, "ollama_base_url", "http://localhost:11434"),
+                    temperature=0.1,  # Low for consistent results
+                    max_tokens=getattr(config, "lightrag_llm_max_tokens", 4000),
+                )
+
+                logger.info(
+                    "llm_extraction_pipeline_initialized",
+                    llm_model=self.service.llm_model,
+                    temperature=self.service.temperature,
+                )
+
+            async def extract(
+                self, text: str, document_id: str = None
+            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+                """Extract entities and relations using LLM.
+
+                Args:
+                    text: Source text to extract from
+                    document_id: Optional document ID for provenance
+
+                Returns:
+                    Tuple of (entities, relations) in LightRAG format
+                """
+                logger.info(
+                    "llm_extraction_starting",
+                    document_id=document_id,
+                    text_length=len(text),
+                )
+
+                # Step 1: Extract entities using ExtractionService
+                entities_graph = await self.service.extract_entities(text, document_id)
+
+                # Step 2: Extract relationships using ExtractionService
+                relationships_graph = await self.service.extract_relationships(
+                    text, entities_graph, document_id
+                )
+
+                # Step 3: Convert GraphEntity → LightRAG format
+                lightrag_entities = []
+                for entity in entities_graph:
+                    lightrag_entities.append(
+                        {
+                            "entity_name": entity.name,
+                            "entity_type": entity.type,
+                            "description": entity.description or f"{entity.type}: {entity.name}",
+                            "source_id": entity.source_document or document_id or "unknown",
+                        }
+                    )
+
+                # Step 4: Convert GraphRelationship → LightRAG format
+                lightrag_relations = []
+                for rel in relationships_graph:
+                    lightrag_relations.append(
+                        {
+                            "source": rel.source,
+                            "target": rel.target,
+                            "description": rel.description or f"{rel.source} {rel.type} {rel.target}",
+                            "strength": 8,  # Default strength (LightRAG uses 1-10)
+                        }
+                    )
+
+                logger.info(
+                    "llm_extraction_complete",
+                    document_id=document_id,
+                    entities_extracted=len(lightrag_entities),
+                    relations_extracted=len(lightrag_relations),
+                )
+
+                return (lightrag_entities, lightrag_relations)
+
+        return LLMExtractionPipeline(config)
 
     @staticmethod
     def _create_lightrag_legacy(config) -> ExtractionPipeline:
