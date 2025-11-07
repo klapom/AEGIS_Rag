@@ -127,3 +127,21 @@ llm_cache/
 
 # Ollama models (optional - these are large)
 .ollama/
+
+# Sprint 20 - Temporary analysis files
+CHUNK_ANALYSIS_LOG.txt
+ENTITIES_AND_RELATIONS_FOR_ANNOTATION.txt
+ENTITY_VALIDATION_RESULTS.txt
+
+# Experimental/debug scripts (not production ready)
+scripts/check_neo4j_labels.py
+scripts/index_performance_tuning_debug.py
+scripts/log_chunks_and_entities.py
+scripts/quick_index_pptx.py
+scripts/test_questions_norag.yaml
+
+# Poetry helper script
+poetry.sh
+
+# Backup venv
+.venv.backup/
