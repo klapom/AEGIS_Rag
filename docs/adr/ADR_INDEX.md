@@ -28,6 +28,15 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 019 | Integration Tests as E2E Tests | Accepted | 2025-10-27 |
 | 020 | Server-Sent Events (SSE) Streaming for Chat | Accepted | 2025-10-27 |
 | 021 | Perplexity-Inspired UI Design for Frontend | Accepted | 2025-10-27 |
+| 022 | Unified Chunking Service | Accepted | 2025-10-28 |
+| 023 | Unified Re-Indexing Pipeline | Accepted | 2025-10-28 |
+| 024 | BGE-M3 System-Wide Embedding Standardization | Accepted | 2025-10-28 |
+| 025 | Mem0 as Layer 0 for User Preference Learning | Accepted | 2025-10-31 |
+| 026 | Pure LLM Extraction as Default Pipeline | Accepted | 2025-11-07 |
+| 027 | Docling Container vs. LlamaIndex for Document Ingestion | Accepted | 2025-11-07 |
+| 028 | LlamaIndex Deprecation Strategy | Accepted | 2025-11-07 |
+| 029 | React Frontend Migration Deferral | Accepted | 2025-11-07 |
+| 030 | Sprint Extension from 12 to 21+ Sprints | Accepted | 2025-11-07 |
 
 ---
 
