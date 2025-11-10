@@ -13,6 +13,9 @@ services:
       - OLLAMA_HOST=0.0.0.0
       # Sprint 20 Feature 20.4: Keep models in VRAM for 30 minutes (prevents 76s reloads)
       - OLLAMA_KEEP_ALIVE=30m
+      # Sprint 21 Feature 21.6: Only load 1 model at a time (sequential pipeline)
+      # This ensures full memory available for qwen3-vl (3.0 GiB) and gemma-3-4b-it (2.5 GiB)
+      - OLLAMA_MAX_LOADED_MODELS=1
     # GPU Support for NVIDIA RTX 3060 (Sprint 11: 15-20x speedup vs CPU)
     # Required for LightRAG entity extraction with llama3.2:3b (otherwise 360s timeout)
     deploy:
@@ -22,6 +25,8 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+        limits:
+          memory: 8G  # System RAM limit (allows 3.0GB + overhead for model loading)
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 30s
@@ -72,6 +77,10 @@ services:
       - DOCLING_OCR_ENGINE=easyocr  # EasyOCR with GPU acceleration
       - DOCLING_TABLE_STRUCTURE=true  # Enable table structure preservation
       - DOCLING_LAYOUT_ANALYSIS=true  # Enable layout detection (headings, lists)
+
+      # Feature 21.6: Image Extraction for VLM Processing
+      - DOCLING_GENERATE_PICTURE_IMAGES=true  # Extract images for Qwen3-VL
+      - DOCLING_IMAGES_SCALE=2.0  # Image scaling factor (2x for better VLM quality)
 
       # Performance Tuning
       - NUM_WORKERS=2  # Parallel workers (limited by VRAM, 2 = ~2.4GB each)

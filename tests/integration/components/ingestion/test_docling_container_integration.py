@@ -410,3 +410,88 @@ async def test_container_restart_between_batches():
     assert client._container_running is False
 
     print("[TEST] Container successfully restarted between batches")
+
+# =============================================================================
+# Integration Tests: Feature 21.5 - Table/Image/Layout Extraction
+# =============================================================================
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+@pytest.mark.gpu
+async def test_extract_tables_images_layout_from_pdf():
+    """Test Feature 21.5: Extract tables, images, and layout from PDFs.
+
+    Tests extraction of rich metadata from Docling JSON content:
+    - Tables with captions, page numbers, bounding boxes
+    - Images/pictures with captions and provenance
+    - Layout information (schema, pages, texts count)
+
+    Uses specific test documents to ensure consistent results.
+    """
+    from pathlib import Path
+
+    # Use OTByteArray.pdf: small (446KB), quick to parse for initial testing
+    test_pdf = Path("C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/data/sample_documents/OTByteArray.pdf")
+
+    assert test_pdf.exists(), f"Test PDF not found: {test_pdf}"
+
+    test_pdfs = [test_pdf]  # Use small PDF for quick smoke test
+
+    print(f"\n[TEST] Feature 21.5: Testing {len(test_pdfs)} PDFs for metadata extraction")
+
+    client = DoclingContainerClient(base_url="http://localhost:8080")
+
+    async with client:
+        for pdf_file in test_pdfs:
+            print(f"\n[TEST] Parsing: {pdf_file.name}")
+            parsed = await client.parse_document(pdf_file)
+
+            # Verify basic parsing
+            assert isinstance(parsed, DoclingParsedDocument)
+            assert len(parsed.text) > 0, f"{pdf_file.name}: Should have extracted text"
+
+            # Feature 21.5: Verify tables extraction
+            print(f"  Tables found: {len(parsed.tables)}")
+            if parsed.tables:
+                table = parsed.tables[0]
+                assert "ref" in table, "Table should have 'ref' field"
+                assert "label" in table, "Table should have 'label' field"
+                assert "captions" in table, "Table should have 'captions' field"
+                assert "page_no" in table, "Table should have 'page_no' field"
+                assert "bbox" in table, "Table should have 'bbox' field"
+                print(f"    First table: ref={table['ref']}, page={table['page_no']}")
+
+            # Feature 21.5: Verify images extraction
+            print(f"  Images found: {len(parsed.images)}")
+            if parsed.images:
+                image = parsed.images[0]
+                assert "ref" in image, "Image should have 'ref' field"
+                assert "label" in image, "Image should have 'label' field"
+                assert "captions" in image, "Image should have 'captions' field"
+                assert "page_no" in image, "Image should have 'page_no' field"
+                assert "bbox" in image, "Image should have 'bbox' field"
+                print(f"    First image: ref={image['ref']}, page={image['page_no']}")
+
+            # Feature 21.5: Verify layout extraction
+            print(f"  Layout info:")
+            assert isinstance(parsed.layout, dict), "Layout should be a dict"
+            assert "schema_name" in parsed.layout, "Layout should have 'schema_name'"
+            assert "version" in parsed.layout, "Layout should have 'version'"
+            assert "pages" in parsed.layout, "Layout should have 'pages'"
+            assert "texts_count" in parsed.layout, "Layout should have 'texts_count'"
+            assert "groups_count" in parsed.layout, "Layout should have 'groups_count'"
+            print(f"    Schema: {parsed.layout.get('schema_name')}")
+            print(f"    Pages: {len(parsed.layout.get('pages', {}))}")
+            print(f"    Texts: {parsed.layout.get('texts_count')}")
+
+            # Verify metadata
+            assert "schema_name" in parsed.metadata, "Metadata should include schema_name"
+            assert "version" in parsed.metadata, "Metadata should include version"
+            print(f"  Metadata: {list(parsed.metadata.keys())}")
+
+            # Verify parse time
+            assert parsed.parse_time_ms > 0, "Parse time should be recorded"
+            print(f"  Parse time: {parsed.parse_time_ms:.0f}ms")
+
+    print("\n[TEST] Feature 21.5: All metadata extraction tests passed!")

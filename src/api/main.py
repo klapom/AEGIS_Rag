@@ -15,6 +15,7 @@ from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
 from src.api.routers import graph_viz
 from src.api.v1.admin import router as admin_router
+from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.chat import router as chat_router
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.memory import router as memory_router
@@ -230,6 +231,10 @@ logger.info("router_registered", router="v1_health_router", prefix="/api/v1")
 
 app.include_router(retrieval_router)
 logger.info("router_registered", router="retrieval_router", prefix="/api/v1/retrieval")
+
+# Feature 21.6: Image Annotations API
+app.include_router(annotations_router)
+logger.info("router_registered", router="annotations_router", prefix="/api/v1/annotations")
 
 app.include_router(admin_router, prefix="/api/v1")  # Sprint 16 Feature 16.3: Admin re-indexing
 logger.info(

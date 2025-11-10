@@ -69,6 +69,8 @@ class DoclingParsedDocument(BaseModel):
     images: list[dict[str, Any]] = Field(default_factory=list, description="Image references")
     layout: dict[str, Any] = Field(default_factory=dict, description="Layout structure")
     parse_time_ms: float = Field(description="Parsing duration")
+    json_content: dict[str, Any] = Field(default_factory=dict, description="Full Docling JSON response")
+    md_content: str = Field(default="", description="Markdown with embedded base64 images")
 
 
 class DoclingContainerClient:
@@ -144,9 +146,11 @@ class DoclingContainerClient:
         """Start Docling CUDA container via Docker Compose.
 
         Workflow:
-            1. Run: docker compose --profile ingestion up -d docling
-            2. Wait for health check: GET /health → 200 OK
-            3. Set _container_running = True
+            1. Check if container already running (docker ps)
+            2. If running: Skip start, just verify health
+            3. If not running: Start container via docker compose
+            4. Wait for health check: GET /health → 200 OK
+            5. Set _container_running = True
 
         Raises:
             IngestionError: If container fails to start or health check times out
@@ -158,6 +162,22 @@ class DoclingContainerClient:
         logger.info("docling_container_start_requested")
 
         try:
+            # Check if container already running
+            check_result = subprocess.run(
+                ["docker", "ps", "--filter", "name=aegis-docling", "--format", "{{.Names}}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            if "aegis-docling" in check_result.stdout:
+                logger.info("docling_container_already_running", container="aegis-docling")
+                # Verify it's healthy
+                await self._wait_for_ready()
+                self._container_running = True
+                logger.info("docling_container_verified_healthy", base_url=self.base_url)
+                return
+
             # Start Docker Compose service with "ingestion" profile
             # Sprint 21: Docling service uses profile to avoid always-on GPU usage
             result = subprocess.run(
@@ -306,16 +326,17 @@ class DoclingContainerClient:
         )
 
     async def parse_document(self, file_path: Path) -> DoclingParsedDocument:
-        """Parse a single document via Docling container.
+        """Parse a single document via Docling container (async pattern).
 
         Workflow:
             1. Validate file exists and is readable
-            2. Send file via POST /parse (multipart/form-data)
-            3. Receive parsed content (JSON)
-            4. Parse into DoclingParsedDocument
+            2. POST /v1/convert/file/async → get task_id
+            3. Poll GET /v1/status/poll/{task_id} until success/failure
+            4. GET /v1/result/{task_id} → parse content
+            5. Return DoclingParsedDocument
 
         Args:
-            file_path: Path to document file (PDF, DOCX, PPTX, etc.)
+            file_path: Path to document file (PDF, DOCX, PPTX, TXT, etc.)
 
         Returns:
             DoclingParsedDocument with text, metadata, tables, images, layout
@@ -346,40 +367,153 @@ class DoclingContainerClient:
         start_time = time.time()
 
         try:
-            # Open file and prepare multipart upload
+            # Step 1: Submit file to async API
             with open(file_path, "rb") as f:
-                files = {"file": (file_path.name, f, "application/octet-stream")}
+                files = {"files": (file_path.name, f, "application/octet-stream")}
+                # Request both markdown and JSON (Feature 21.5: JSON for tables/images/layout)
+                # Note: image_export_mode=embedded only works for MD/HTML, not JSON
+                # For JSON, images are references only - we extract from MD
+                data = {
+                    "to_formats": ["md", "json"],
+                    "image_export_mode": "embedded",  # Embed images as base64 in MD output
+                    "include_images": True,  # Extract images from document
+                    "images_scale": 2.0,  # Scale factor for image quality
+                }
 
-                # Send parse request
                 response = await client.post(
-                    f"{self.base_url}/parse",
+                    f"{self.base_url}/v1/convert/file/async",
                     files=files,
-                    timeout=self.timeout_seconds,
+                    data=data,
+                    timeout=30.0,  # Short timeout for submission
                 )
-
                 response.raise_for_status()
 
-            # Parse response
-            parse_data = response.json()
+            task_data = response.json()
+            task_id = task_data.get("task_id")
+            if not task_id:
+                raise IngestionError(f"No task_id in response: {task_data}")
+
+            logger.info("docling_task_submitted", task_id=task_id, file_path=str(file_path))
+
+            # Step 2: Poll for task completion
+            poll_interval = 2.0  # seconds
+            max_polls = int(self.timeout_seconds / poll_interval)
+
+            for attempt in range(max_polls):
+                await asyncio.sleep(poll_interval)
+
+                status_response = await client.get(
+                    f"{self.base_url}/v1/status/poll/{task_id}",
+                    timeout=30.0,  # Longer timeout for status polling (Docling can be slow)
+                )
+                status_response.raise_for_status()
+                status_data = status_response.json()
+                task_status = status_data.get("task_status")
+
+                if task_status == "success":
+                    logger.info("docling_task_completed", task_id=task_id, attempts=attempt + 1)
+                    break
+                elif task_status == "failure":
+                    raise IngestionError(f"Docling task failed: {status_data}")
+                elif task_status in ("pending", "processing", "started"):
+                    # Task still in progress, continue polling
+                    continue
+                else:
+                    raise IngestionError(f"Unknown task status: {task_status}")
+
+            else:
+                # Timeout: max_polls reached
+                elapsed = time.time() - start_time
+                raise IngestionError(
+                    f"Docling task timeout after {elapsed:.1f}s (task_id: {task_id}, file: {file_path.name})"
+                )
+
+            # Step 3: Fetch result
+            result_response = await client.get(
+                f"{self.base_url}/v1/result/{task_id}",
+                timeout=30.0,
+            )
+            result_response.raise_for_status()
+            result_data = result_response.json()
+
             parse_time = (time.time() - start_time) * 1000  # Convert to ms
+
+            # Extract document content
+            document = result_data.get("document", {})
+            text = document.get("md_content", "") or document.get("text_content", "")
+            json_content = document.get("json_content", {})
+
+            # Extract markdown content with embedded images (for HTML report generation)
+            md_content = document.get("md_content", "")
+
+            # Extract tables from JSON (Feature 21.5)
+            tables_data = []
+            for table in json_content.get("tables", []):
+                table_info = {
+                    "ref": table.get("self_ref", ""),
+                    "label": table.get("label", "table"),
+                    "captions": table.get("captions", []),
+                    "page_no": None,
+                    "bbox": None,
+                }
+                # Extract provenance (page number, bounding box)
+                prov = table.get("prov", [])
+                if prov:
+                    p = prov[0] if isinstance(prov, list) else prov
+                    table_info["page_no"] = p.get("page_no")
+                    table_info["bbox"] = p.get("bbox")
+                tables_data.append(table_info)
+
+            # Extract images/pictures from JSON (Feature 21.5)
+            images_data = []
+            for picture in json_content.get("pictures", []):
+                image_info = {
+                    "ref": picture.get("self_ref", ""),
+                    "label": picture.get("label", "picture"),
+                    "captions": picture.get("captions", []),
+                    "page_no": None,
+                    "bbox": None,
+                }
+                # Extract provenance
+                prov = picture.get("prov", [])
+                if prov:
+                    p = prov[0] if isinstance(prov, list) else prov
+                    image_info["page_no"] = p.get("page_no")
+                    image_info["bbox"] = p.get("bbox")
+                images_data.append(image_info)
+
+            # Extract layout information (Feature 21.5)
+            layout_info = {
+                "schema_name": json_content.get("schema_name", ""),
+                "version": json_content.get("version", ""),
+                "pages": json_content.get("pages", {}),
+                "body": json_content.get("body", {}),
+                "texts_count": len(json_content.get("texts", [])),
+                "groups_count": len(json_content.get("groups", [])),
+            }
 
             # Create DoclingParsedDocument
             parsed = DoclingParsedDocument(
-                text=parse_data.get("text", ""),
-                metadata=parse_data.get("metadata", {}),
-                tables=parse_data.get("tables", []),
-                images=parse_data.get("images", []),
-                layout=parse_data.get("layout", {}),
+                text=text,
+                metadata={
+                    "filename": document.get("filename", file_path.name),
+                    "schema_name": layout_info["schema_name"],
+                    "version": layout_info["version"],
+                },
+                tables=tables_data,
+                images=images_data,
+                layout=layout_info,
                 parse_time_ms=parse_time,
+                json_content=json_content,  # Store full JSON for advanced features (table content, embedded images)
+                md_content=md_content,  # Store markdown with embedded base64 images
             )
 
             logger.info(
                 "docling_parse_success",
                 file_path=str(file_path),
                 text_length=len(parsed.text),
-                tables_count=len(parsed.tables),
-                images_count=len(parsed.images),
                 parse_time_ms=round(parse_time, 2),
+                task_id=task_id,
             )
 
             return parsed
