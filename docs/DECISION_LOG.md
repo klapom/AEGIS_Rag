@@ -256,9 +256,13 @@
 **Decision (Planned):** Add Tree-sitter AST parsing for Python, JavaScript, TypeScript, Java code files.
 **Rationale:** Code files contain structured information (functions, classes) that should be extracted for better RAG. Treating code as plain text loses metadata. Tree-sitter provides language-agnostic parsing with function/class line numbers, docstring extraction.
 
+### 2025-11-07 | Pure LLM Extraction as Default (ADR-026, Sprint 21)
+**Decision:** Switch default extraction pipeline from `three_phase` (SpaCy + Dedup + Gemma) to `llm_extraction` (Pure LLM, NO SpaCy).
+**Rationale:** Sprint 21 increases chunk size from 600 → 1800 tokens (3x), reducing total chunks by 65%. Pure LLM extraction (200-300s/doc) is slower per document but provides better quality (domain-specific terms, German support, no false positives). Chunk reduction compensates for LLM slowness, achieving similar total pipeline time as Sprint 20's fast SpaCy approach. Gemma 3 4B with Mirostat v2 (86% faster) makes this strategy viable. Config switch available: `EXTRACTION_PIPELINE=llm_extraction`.
+
 ---
 
-**Last Updated:** 2025-11-07 (Post-Sprint 20 Complete)
+**Last Updated:** 2025-11-07 (Post-Sprint 20 Complete, Sprint 21 ADR-026 Added)
 **Total Decisions Documented:** 44+
 **Current Sprint:** Sprint 20 (Complete: 90%)
 **Next Sprint:** Sprint 21 (Unified Ingestion Pipeline - Planned)

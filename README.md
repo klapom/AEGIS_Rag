@@ -59,7 +59,7 @@ AEGIS_RAG/
 
 ## 🛠️ Technologie-Stack
 
-- **Backend**: Python 3.11+, FastAPI
+- **Backend**: Python 3.12+, FastAPI
 - **Orchestration**: LangGraph
 - **RAG**: LlamaIndex, LightRAG
 - **Vector DB**: Qdrant
@@ -71,7 +71,8 @@ AEGIS_RAG/
 - **Evaluation**: RAGAS (Context Precision, Recall, Faithfulness)
 - **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
 - **DevOps**: Docker, GitHub Actions
-
+- **Windows System: nur ASCII Zeichen in logs verwenden!!
+- **POETRY als Umgebung ist gesetzt
 Details siehe [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
 
 ### LLM-Strategie (ADR-002)
