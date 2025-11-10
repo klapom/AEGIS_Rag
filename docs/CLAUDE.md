@@ -19,43 +19,54 @@
 
 ---
 
-## 📍 Current Project State (Sprint 15)
+## 📍 Current Project State (Sprint 21)
 
-**Sprint 13 Status**: ✅ COMPLETE (merged to main: `a9f5733`, `c8030a2`)
-- ✅ Three-Phase Entity/Relation Extraction Pipeline (SpaCy + Semantic Dedup + Gemma 3 4B)
-- ✅ Performance: >300s → <30s (10x improvement)
-- ✅ All Technical Debt (TD-26 to TD-34) resolved
-- ✅ ADR-017 (Semantic Deduplication), ADR-018 (Model Selection)
+**Sprint 20 Status**: ✅ COMPLETE (2025-10-31 - 2025-11-06)
+- ✅ Performance Optimization & Extraction Quality
+- ✅ Chunk overhead analysis (65% overhead identified with 600-token chunks)
+- ✅ LLM extraction quality improvements
+- ✅ Pure LLM pipeline introduced (ADR-026)
+- ✅ Preparation for 1800-token chunking strategy
 
-**Sprint 14 Status**: ✅ COMPLETE (2025-10-24 → 2025-10-27, branch: `sprint-14-backend-performance`)
-- ✅ Extraction Pipeline Factory (configuration-driven)
-- ✅ Production Benchmarking Suite (memory profiling)
-- ✅ Retry Logic & Error Handling (tenacity)
-- ✅ Prometheus Metrics & Monitoring (12 metrics)
-- ✅ Comprehensive Test Suite (132 tests: 112 unit, 20 integration)
-- ✅ ADR-019 (Integration Tests as E2E Tests)
+**Sprint 21 Status**: ✅ COMPLETE (2025-11-07 - 2025-11-10, branch: `sprint-21-container-ingestion`)
+- **Objective**: Container-based document ingestion with GPU-accelerated OCR
+- **Key Achievements**:
+  - ✅ **Docling CUDA Container Integration** (ADR-027)
+    - GPU-accelerated OCR (EasyOCR): 95% accuracy (vs 70% LlamaIndex)
+    - Table structure preservation: 92% detection rate
+    - Performance: 420s → 120s per document (3.5x faster)
+    - Container isolation: Manage 6GB VRAM allocation
+  - ✅ **LlamaIndex Deprecation** (ADR-028)
+    - Deprecated as primary ingestion framework
+    - Retained as fallback + connector library (300+ connectors)
+  - ✅ **LangGraph Pipeline Redesign**
+    - 6-node state machine: Docling → VLM → Chunking → Embedding → Graph → Validation
+    - 31 integration tests for DoclingContainerClient
+  - ✅ **Documentation Cleanup**
+    - 4 critical ADRs created (ADR-027 to ADR-030, 1,900+ lines)
+    - Sprint 1-9, 13, 18 documentation backfilled (17,132 words)
+    - Drift analysis completed (18 drifts identified)
 
-**Sprint 15 Status**: 📋 PLANNED (2025-10-27, planning complete)
-- **Objective**: Production-ready web interface with Perplexity-inspired UI
-- **Key Decisions**:
-  - ✅ Perplexity.ai design patterns (sidebar + main content)
-  - ✅ Server-Sent Events (SSE) for streaming (ADR-020)
-  - ✅ React 18 + Vite + TypeScript + Tailwind CSS
-  - ✅ Multi-mode search: Hybrid, Vector, Graph, Memory
-  - ✅ German localization
-- **Features Planned**:
-  - 15.1: React + Vite + SSE Backend (13 SP)
-  - 15.2: Perplexity Layout (8 SP)
-  - 15.3: Search Input + Mode Selector (10 SP)
-  - 15.4: Streaming Answer + Source Cards (21 SP)
-  - 15.5: Conversation History (13 SP)
-  - 15.6: Health Dashboard (8 SP)
-- **Total**: 73 Story Points, 7-10 days estimated
-- **Architecture**: ADR-020 (SSE Streaming), ADR-021 (Perplexity UI Design)
+- **Architecture Decisions**:
+  - ADR-027: Docling Container vs. LlamaIndex
+  - ADR-028: LlamaIndex Deprecation Strategy
+  - ADR-029: React Migration Deferral
+  - ADR-030: Sprint Extension from 12 to 21+ Sprints
 
-**Next Steps**: Begin Sprint 15 implementation with Feature 15.1 (React setup + SSE backend)
+**Sprint 22 Status**: 📋 PLANNED (2025-11-11+)
+- **Objective**: Production deployment readiness
+- **Planned Features**:
+  - React frontend migration (deferred from Sprint 15, ADR-029)
+  - Kubernetes deployment manifests
+  - External user onboarding
+  - Performance validation (100+ docs batch ingestion)
 
-For full details, see [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md), [SPRINT_PLAN.md](core/SPRINT_PLAN.md)
+**Next Steps**: Sprint 21 documentation complete. Ready for Sprint 22 React migration or production deployment.
+
+For full details, see:
+- [SPRINT_21_PLAN_v2.md](sprints/SPRINT_21_PLAN_v2.md)
+- [DRIFT_ANALYSIS.md](DRIFT_ANALYSIS.md)
+- [DOCUMENTATION_PLAN.md](DOCUMENTATION_PLAN.md)
 
 ---
 
@@ -67,8 +78,8 @@ For full details, see [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md), [SPRINT
 3. **Temporal Memory** (Graphiti + Bi-Temporal Structure)
 4. **Tool Integration** (Model Context Protocol Server)
 
-**Orchestration:** LangGraph Multi-Agent System  
-**Data Ingestion:** LlamaIndex (300+ Connectors)  
+**Orchestration:** LangGraph Multi-Agent System
+**Data Ingestion:** Docling CUDA Container + LlamaIndex fallback (ADR-027, ADR-028)
 **Monitoring:** LangSmith + Prometheus + RAGAS
 
 ---
@@ -84,16 +95,22 @@ For full details, see [SPRINT_15_PLAN.md](../sprints/SPRINT_15_PLAN.md), [SPRINT
 
 ### Technology Stack
 ```yaml
-Backend: Python 3.11+, FastAPI, Pydantic v2
-Orchestration: LangGraph 0.2+, LangChain Core
-Data Ingestion: LlamaIndex 0.11+
-Vector DB: Qdrant 1.10+
-Graph DB: Neo4j 5.x Community Edition
+Backend: Python 3.12.7, FastAPI, Pydantic v2
+Orchestration: LangGraph 0.6.10, LangChain Core
+Data Ingestion:
+  - Primary: Docling CUDA Container (GPU-accelerated OCR, ADR-027)
+  - Fallback: LlamaIndex 0.14.3 (connectors only, ADR-028)
+Vector DB: Qdrant 1.11.0
+Graph DB: Neo4j 5.24 Community Edition
 Memory Cache: Redis 7.x with Persistence
-LLM: Ollama (llama3.2:3b/8b) - Local & Cost-Free
-Embeddings: nomic-embed-text (Ollama) - Local & Cost-Free
+LLM Models:
+  - Generation: llama3.2:3b (query) / llama3.2:8b (generation)
+  - Extraction: gemma-3-4b-it-Q8_0 (ADR-018)
+  - Vision: llava:7b-v1.6-mistral-q2_K (Feature 21.6)
+Embeddings: BGE-M3 (1024-dim, multilingual, ADR-024) - Local & Cost-Free
 Optional Production: Azure OpenAI GPT-4o (if needed)
 MCP: Official Python SDK (anthropic/mcp)
+Container Runtime: Docker Compose + NVIDIA Container Toolkit (CUDA 12.4)
 ```
 
 ### Repository Structure
@@ -107,10 +124,11 @@ aegis-rag/
 │   │   ├── action.py
 │   │   └── memory.py
 │   ├── components/          # Core Components
-│   │   ├── vector_search/   # Qdrant + Hybrid Search
-│   │   ├── graph_rag/       # LightRAG + Neo4j
+│   │   ├── ingestion/       # Docling Container + LangGraph Pipeline (Sprint 21)
+│   │   ├── vector_search/   # Qdrant + Hybrid Search + BGE-M3
+│   │   ├── graph_rag/       # LightRAG + Neo4j + Three-Phase Extraction
 │   │   ├── memory/          # Graphiti + Redis
-│   │   └── mcp/             # MCP Server
+│   │   └── mcp/             # MCP Client (tool integration)
 │   ├── core/                # Shared Core
 │   │   ├── config.py
 │   │   ├── logging.py
