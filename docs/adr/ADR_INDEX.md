@@ -20,6 +20,10 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 007 | Model Context Protocol Integration | Accepted | 2025-01-15 |
 | 008 | Python + FastAPI für Backend | Accepted | 2025-01-15 |
 | 009 | Reciprocal Rank Fusion für Hybrid Search | Accepted | 2025-01-15 |
+| 010 | Adaptive Chunking Strategy | Accepted | 2025-10-15 |
+| 011 | Pydantic Settings for Configuration Management | Accepted | 2025-10-14 |
+| 012 | Embedding Model Selection (nomic-embed-text) | Superseded | 2025-10-14 |
+| 013 | Document Parsing Strategy (LlamaIndex) | Superseded | 2025-10-14 |
 | 014 | E2E Integration Testing Strategy | Accepted | 2025-10-17 |
 | 015 | Critical Path Testing Strategy | Accepted | 2025-10-17 |
 | 016 | BGE-M3 Embedding Model für Graphiti | Accepted | 2025-10-22 |
