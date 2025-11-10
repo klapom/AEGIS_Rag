@@ -25,27 +25,86 @@ The Ingestion Component handles document parsing, chunking, embedding, and graph
 
 ### System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   Ingestion Pipeline (LangGraph)             │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────┐   ┌────────────────┐   ┌──────────────┐  │
-│  │   Docling    │   │  VLM Enrichment│   │   Chunking   │  │
-│  │  Container   │ → │  (llava:7b)    │ → │ (1800 tokens)│  │
-│  │  (CUDA GPU)  │   │                │   │              │  │
-│  └──────────────┘   └────────────────┘   └──────────────┘  │
-│          │                  │                    │          │
-│          ▼                  ▼                    ▼          │
-│  ┌──────────────┐   ┌────────────────┐   ┌──────────────┐  │
-│  │  Embedding   │   │ Graph Extract  │   │  Validation  │  │
-│  │  (BGE-M3)    │   │  (Gemma-3-4b)  │   │              │  │
-│  └──────────────┘   └────────────────┘   └──────────────┘  │
-│          │                  │                    │          │
-│          ▼                  ▼                    ▼          │
-│     Qdrant             Neo4j                Redis           │
-│  (Vector DB)        (Graph DB)           (State Store)      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    START([Start Ingestion])
+
+    subgraph "Node 1: Docling Parse"
+        DOCLING[Docling CUDA Container<br/>GPU-Accelerated OCR]
+        DOCLING_START[Start Container<br/>6GB VRAM]
+        DOCLING_PARSE[Parse PDF/DOCX<br/>EasyOCR + Layout]
+        DOCLING_STOP[Stop Container<br/>Free VRAM]
+
+        DOCLING_START --> DOCLING_PARSE
+        DOCLING_PARSE --> DOCLING_STOP
+    end
+
+    subgraph "Node 2: VLM Enrichment"
+        VLM[Vision Language Model<br/>llava:7b-v1.6-mistral]
+        VLM_DETECT[Detect Images<br/>from Docling]
+        VLM_ANNOTATE[Generate Captions<br/>Image Descriptions]
+
+        VLM_DETECT --> VLM_ANNOTATE
+    end
+
+    subgraph "Node 3: Chunking"
+        CHUNK[Adaptive Chunking<br/>1800 tokens ADR-026]
+        CHUNK_SPLIT[Split by Content Type<br/>Prose/Code/Tables]
+        CHUNK_META[Add Metadata<br/>page, section, type]
+
+        CHUNK_SPLIT --> CHUNK_META
+    end
+
+    subgraph "Node 4: Embedding"
+        EMBED[BGE-M3 Embeddings<br/>1024-dim ADR-024]
+        EMBED_GEN[Generate Embeddings<br/>~180ms/chunk]
+        EMBED_QDRANT[Upload to Qdrant<br/>Vector DB]
+
+        EMBED_GEN --> EMBED_QDRANT
+    end
+
+    subgraph "Node 5: Graph Extraction"
+        GRAPH[Pure LLM Extraction<br/>gemma-3-4b ADR-026]
+        GRAPH_ENTITIES[Extract Entities<br/>Domain-aware]
+        GRAPH_RELATIONS[Extract Relations<br/>Context-aware]
+        GRAPH_NEO4J[Store to Neo4j<br/>Knowledge Graph]
+
+        GRAPH_ENTITIES --> GRAPH_RELATIONS
+        GRAPH_RELATIONS --> GRAPH_NEO4J
+    end
+
+    subgraph "Node 6: Validation"
+        VALID[Validation & Logging]
+        VALID_CHECK[Check Completeness<br/>All stages OK?]
+        VALID_LOG[Log Stats<br/>Redis State Store]
+
+        VALID_CHECK --> VALID_LOG
+    end
+
+    END([End - Ready for Retrieval])
+
+    START --> DOCLING
+    DOCLING --> VLM
+    VLM --> CHUNK
+    CHUNK --> EMBED
+    EMBED --> GRAPH
+    GRAPH --> VALID
+    VALID --> END
+
+    EMBED_QDRANT -.->|Vector Search| QDRANT[(Qdrant<br/>Vector DB)]
+    GRAPH_NEO4J -.->|Graph RAG| NEO4J[(Neo4j<br/>Knowledge Graph)]
+    VALID_LOG -.->|State Tracking| REDIS[(Redis<br/>State Store)]
+
+    style DOCLING fill:#ff6b6b
+    style VLM fill:#4ecdc4
+    style CHUNK fill:#ffe66d
+    style EMBED fill:#95e1d3
+    style GRAPH fill:#a8e6cf
+    style VALID fill:#c7ceea
+
+    style QDRANT fill:#1e90ff
+    style NEO4J fill:#32cd32
+    style REDIS fill:#ff6347
 ```
 
 ### Component Files

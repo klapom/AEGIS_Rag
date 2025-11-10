@@ -1,7 +1,7 @@
 # Graph RAG Component
 
-**Sprint 4-13:** LightRAG + Neo4j for Knowledge Graph Reasoning
-**Architecture:** Three-Phase Extraction + Dual-Level Retrieval
+**Sprint 4-21:** LightRAG + Neo4j for Knowledge Graph Reasoning
+**Architecture:** Pure LLM Extraction (Sprint 21+, ADR-026) + Dual-Level Retrieval
 **Performance:** <150ms p95 for graph queries on 15K entities
 
 ---
@@ -11,12 +11,14 @@
 The Graph RAG Component provides **graph-based reasoning** over document knowledge using:
 - **LightRAG:** Lightweight Graph RAG framework for entity/relation extraction
 - **Neo4j:** Property graph database for knowledge storage
-- **Three-Phase Extraction:** Entity → Relation → Community (ADR-018, Sprint 13)
+- **Pure LLM Extraction:** Single-pass extraction with gemma-3-4b (ADR-026, Sprint 21+, **DEFAULT**)
+- **Three-Phase Extraction:** DEPRECATED - Available for compatibility (ADR-018, Sprint 13-20)
 - **Dual-Level Retrieval:** Entity-level + Community-level search
 
 ### Key Features
 
-- **Three-Phase Extraction:** Optimized extraction pipeline (ADR-018)
+- **Pure LLM Extraction:** Default since Sprint 21 (ADR-026) - High quality, domain-aware extraction
+- **Three-Phase Extraction:** DEPRECATED - Available via `EXTRACTION_PIPELINE=three_phase` for compatibility (ADR-018)
 - **Semantic Deduplication:** GPT-4o-based entity deduplication (ADR-017, Sprint 13)
 - **Community Detection:** Louvain algorithm for topic clustering
 - **Temporal Query Builder:** Time-aware graph traversal
@@ -30,17 +32,19 @@ The Graph RAG Component provides **graph-based reasoning** over document knowled
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  Graph RAG Pipeline                          │
+│           Graph RAG Pipeline (Sprint 21+)                    │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │        Extraction Pipeline (3-Phase)                 │  │
+│  │    Extraction Pipeline (Pure LLM - ADR-026)          │  │
 │  │                                                       │  │
-│  │  Phase 1: Entity Extraction (Gemma-3-4b)            │  │
-│  │           ↓                                          │  │
-│  │  Phase 2: Relation Extraction (Gemma-3-4b)          │  │
-│  │           ↓                                          │  │
-│  │  Phase 3: Community Detection (Louvain)             │  │
+│  │  Single-Pass LLM Extraction (gemma-3-4b-Q8_0)       │  │
+│  │    • Entities + Relations in one call                │  │
+│  │    • Domain-aware (technical terms, German)          │  │
+│  │    • No SpaCy NER (simpler pipeline)                 │  │
+│  │                                                       │  │
+│  │  ↓                                                    │  │
+│  │  Community Detection (Louvain, graph-level)          │  │
 │  └──────────────────────────────────────────────────────┘  │
 │                      │                                       │
 │                      ▼                                       │
@@ -132,11 +136,54 @@ results = await lightrag.query(
 
 ---
 
-## Three-Phase Extraction Pipeline
+## Extraction Pipelines
 
-### Overview
+### Current: Pure LLM Extraction (Sprint 21+, ADR-026)
 
-**ADR-018 (Sprint 13):** Optimized extraction with separate entity and relation phases.
+**Default since Sprint 21.** Single-pass extraction with gemma-3-4b for higher quality.
+
+```python
+# src/components/graph_rag/extraction_factory.py
+
+# Automatic (config-based)
+extractor = get_extraction_service()  # Uses llm_extraction by default
+
+# Explicit
+extractor = get_extraction_service(pipeline="llm_extraction")
+
+# Extract entities + relations in one call
+result = await extractor.extract(text)
+# Returns: {
+#   "entities": [...],    # High-quality entity extraction
+#   "relations": [...]    # Context-aware relations
+# }
+```
+
+**Why Pure LLM? (ADR-026)**
+- ✅ **Higher Quality:** Domain-specific entities (technical terms, product names)
+- ✅ **German Support:** Handles technical documentation in German
+- ✅ **Contextual:** Understands relationships without explicit entity lists
+- ✅ **Simpler:** No SpaCy NER dependency
+- ✅ **Scalable:** 1800-token chunks → 65% fewer chunks → similar total time as Sprint 20
+
+**Performance:**
+- **Quality:** 90%+ entity precision (vs ~70% three-phase)
+- **Time:** ~200s/doc (acceptable with 65% chunk reduction)
+- **Model:** gemma-3-4b-it-Q8_0 with Mirostat v2 (33.9 t/s)
+
+---
+
+### Legacy: Three-Phase Extraction Pipeline (DEPRECATED)
+
+**⚠️ DEPRECATED:** Available for compatibility only. Use Pure LLM Extraction instead.
+
+**ADR-018 (Sprint 13-20):** Optimized extraction with separate entity and relation phases.
+
+**To use (compatibility mode):**
+```bash
+# .env
+EXTRACTION_PIPELINE=three_phase
+```
 
 ### Pipeline Stages
 
@@ -514,7 +561,7 @@ results = await builder.query_temporal(
 ```python
 from src.components.graph_rag.extraction_service import get_extraction_service
 
-# Get extraction service (three-phase by default, ADR-018)
+# Get extraction service (pure LLM by default, ADR-026 Sprint 21+)
 extractor = get_extraction_service()
 
 # Extract from text
@@ -618,7 +665,8 @@ NEO4J_PASSWORD=password
 
 # Extraction
 EXTRACTION_MODEL=gemma-3-4b-it-Q8_0
-EXTRACTION_PIPELINE=three_phase  # ADR-018
+EXTRACTION_PIPELINE=llm_extraction  # ADR-026 (Sprint 21+ default)
+# EXTRACTION_PIPELINE=three_phase   # DEPRECATED: Use for compatibility only
 
 # Community Detection
 COMMUNITY_MIN_SIZE=5
@@ -660,11 +708,14 @@ dbms.memory.pagecache.size=1g
 
 **Solutions:**
 ```bash
-# Use three-phase pipeline (ADR-018)
+# Use pure LLM extraction (default, ADR-026)
+EXTRACTION_PIPELINE=llm_extraction
+
+# Or fallback to three-phase (deprecated)
 EXTRACTION_PIPELINE=three_phase
 
-# Batch processing
-# Process 10 documents in parallel
+# Batch processing: Process 10 documents in parallel
+# (Recommended for large document sets)
 ```
 
 ### Issue: Low entity detection accuracy
@@ -684,12 +735,15 @@ DEDUP_MODEL=gpt-4o
 
 - **ADR-005:** LightRAG statt Microsoft GraphRAG
 - **ADR-017:** Semantic Entity Deduplication (Sprint 13)
-- **ADR-018:** Model Selection for Entity/Relation Extraction (Sprint 13)
+- **ADR-018:** Three-Phase Extraction (Sprint 13-20, DEPRECATED)
+- **ADR-026:** Pure LLM Extraction as Default Pipeline (Sprint 21+, **CURRENT**)
 - **Sprint 04-06 Summary:** [SPRINT_04-06_GRAPH_RAG_SUMMARY.md](../../docs/sprints/SPRINT_04-06_GRAPH_RAG_SUMMARY.md)
 - **Sprint 13 Summary:** [SPRINT_13_SUMMARY.md](../../docs/sprints/SPRINT_13_SUMMARY.md)
+- **Sprint 20 Summary:** [SPRINT_20_SUMMARY.md](../../docs/sprints/SPRINT_20_SUMMARY.md)
+- **Sprint 21 Plan:** [SPRINT_21_PLAN_v2.md](../../docs/sprints/SPRINT_21_PLAN_v2.md)
 
 ---
 
 **Last Updated:** 2025-11-10
-**Sprint:** 4-13 (Core: Sprint 4-6, Enhanced: Sprint 13)
+**Sprint:** 4-21 (Core: Sprint 4-6, Enhanced: Sprint 13, Pure LLM: Sprint 21+)
 **Maintainer:** Klaus Pommer + Claude Code (backend-agent, documentation-agent)
