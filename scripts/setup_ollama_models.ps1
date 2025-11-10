@@ -1,5 +1,47 @@
-# Setup Ollama Models for AegisRAG
-# This script downloads all required Ollama models for development
+<#
+.SYNOPSIS
+    Setup Ollama Models for AEGIS RAG System
+
+.DESCRIPTION
+    Downloads and verifies all required Ollama models for AEGIS RAG development.
+    This script automates the model provisioning process and ensures all required
+    models are available before running the application.
+
+.PARAMETER None
+    This script does not accept parameters.
+
+.EXAMPLE
+    .\scripts\setup_ollama_models.ps1
+    Downloads all required models: llama3.2:3b, gemma-3-4b-it-Q8_0, bge-m3
+
+.NOTES
+    Sprint Context: Sprint 19 (2025-10-30) - Model Configuration Update
+
+    Models Downloaded:
+    - llama3.2:3b (~2GB): Fast query understanding and generation
+    - gemma-3-4b-it-Q8_0 (~4.5GB): Entity/relation extraction for LightRAG
+    - bge-m3 (~2.2GB): Embedding model (1024D, upgraded from nomic-embed-text)
+
+    Total Download Size: ~8.7GB
+
+    Sprint 19 Changes:
+    - Upgraded: nomic-embed-text (768D) → bge-m3 (1024D)
+    - Changed: llama3.1:8b → gemma-3-4b-it-Q8_0 for graph extraction
+    - Kept: llama3.2:3b for chat/generation
+
+    Prerequisites:
+    - Docker Desktop must be running
+    - Ollama service must be accessible at http://localhost:11434
+    - Minimum 10GB free disk space
+
+    Exit Codes:
+    0 - Success (all models downloaded and verified)
+    1 - Failure (Ollama not running or download failed)
+
+.LINK
+    https://github.com/your-org/aegis-rag
+    scripts/check_ollama_health.ps1
+#>
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "AegisRAG - Ollama Model Setup" -ForegroundColor Cyan

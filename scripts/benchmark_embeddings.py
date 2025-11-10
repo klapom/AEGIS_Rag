@@ -1,16 +1,51 @@
 """
-Benchmark script for comparing embedding models (nomic-embed-text vs BGE-M3).
+Embedding Model Benchmark Script for AEGIS RAG.
 
-This script benchmarks:
-1. Retrieval Quality (NDCG@10, MRR, Precision@5)
-2. Latency (embedding generation time)
-3. Memory (Qdrant collection size)
-4. Cross-layer similarity (Qdrant vectors vs Graphiti vectors)
+Sprint Context: Sprint 16 (2025-10-28) - Feature 16.4: BGE-M3 Benchmarking Infrastructure
+
+This script provides comprehensive benchmarking for embedding models to compare
+nomic-embed-text (768D) vs BGE-M3 (1024D) across multiple dimensions.
+
+Benchmarks:
+    1. Retrieval Quality: NDCG@10, MRR, Precision@5 (requires test queries)
+    2. Latency: Single embedding, batch embedding, P50/P95/P99 percentiles
+    3. Memory: Model size in memory, Qdrant collection size
+    4. Cross-layer Similarity: Compatibility with Graphiti (1024D only)
 
 Usage:
+    # Compare both models (default)
+    poetry run python scripts/benchmark_embeddings.py
+
+    # Specific models
     poetry run python scripts/benchmark_embeddings.py --models nomic-embed-text bge-m3
+
+    # Custom dataset
     poetry run python scripts/benchmark_embeddings.py --dataset data/benchmark/test_corpus.json
+
+    # Custom output location
     poetry run python scripts/benchmark_embeddings.py --output results/embedding_benchmark.json
+
+    # Benchmark fewer documents for quick test
+    poetry run python scripts/benchmark_embeddings.py --num-documents 50
+
+Results:
+    The script generates a JSON report with metrics comparison and console output
+    showing latency, memory, and dimension differences between models.
+
+Sprint 16 Decision:
+    BGE-M3 was chosen over nomic-embed-text based on:
+    - Better cross-layer similarity potential (1024D matches Graphiti)
+    - Improved retrieval quality in benchmarks
+    - Acceptable latency trade-off (~50% slower but still <100ms)
+
+Exit Codes:
+    0: Success (benchmark completed)
+    1: Failure (Qdrant connection error or benchmark failure)
+
+Dependencies:
+    - qdrant-client: For collection management and indexing
+    - UnifiedEmbeddingService: Shared embedding service
+    - statistics: For percentile calculations
 """
 
 import asyncio

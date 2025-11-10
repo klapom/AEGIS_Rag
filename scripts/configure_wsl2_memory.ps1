@@ -1,5 +1,54 @@
-# PowerShell Script to Configure WSL 2 Memory for Docker
-# This creates/updates .wslconfig in user profile
+<#
+.SYNOPSIS
+    Configure WSL 2 Memory Allocation for Docker Desktop
+
+.DESCRIPTION
+    Creates or updates the .wslconfig file in the user profile to allocate
+    sufficient memory for AEGIS RAG Docker containers.
+
+    This script is essential for running LightRAG, Neo4j, Qdrant, and Ollama
+    simultaneously without memory constraints.
+
+.PARAMETER None
+    This script does not accept parameters.
+
+.EXAMPLE
+    .\scripts\configure_wsl2_memory.ps1
+    Creates .wslconfig with 12GB memory allocation
+
+.NOTES
+    Sprint Context: Sprint 12-19 - Infrastructure Configuration
+
+    Memory Requirements:
+    - LightRAG: ~5GB (entity extraction + graph operations)
+    - Neo4j: ~2GB (graph database)
+    - Qdrant: ~2GB (vector database)
+    - Ollama: ~3GB (model inference)
+    - System overhead: ~2GB
+    Total: ~14GB recommended (configured for 12GB + 2GB swap)
+
+    Configuration Details:
+    memory=12GB      # Main memory allocation
+    processors=4     # CPU cores for WSL2
+    swap=2GB        # Swap space
+    pageReporting=false  # Performance optimization
+    localhostForwarding=true  # For Docker port forwarding
+
+    File Location: %USERPROFILE%\.wslconfig
+
+    Important Notes:
+    - Existing .wslconfig is backed up with timestamp
+    - WSL 2 must be restarted for changes to take effect
+    - Run: wsl --shutdown (then restart Docker Desktop)
+
+    Exit Codes:
+    0 - Success (.wslconfig created/updated)
+    1 - Failure (file write error)
+
+.LINK
+    https://docs.microsoft.com/en-us/windows/wsl/wsl-config
+    scripts/increase_docker_memory.ps1
+#>
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "WSL 2 Memory Configuration Script" -ForegroundColor Cyan

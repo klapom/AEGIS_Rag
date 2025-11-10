@@ -1,3 +1,79 @@
+<#
+.SYNOPSIS
+    Integrated Q&A Workflow Script for AEGIS RAG
+
+.DESCRIPTION
+    Comprehensive workflow script that:
+    1. Checks if API is running, starts it if needed
+    2. Opens logging window with real-time API logs
+    3. Launches interactive Q&A client (ask_question.py)
+
+    This provides a complete development/testing workflow in one command.
+
+.PARAMETER ApiPort
+    Port for the API server (default: 8000)
+
+.PARAMETER BaseUrl
+    Base URL for API (default: http://localhost:8000)
+
+.PARAMETER LogDir
+    Directory for log files (default: logs)
+
+.PARAMETER LogFile
+    Log file path (default: logs/api.log)
+
+.PARAMETER RestartApi
+    Force restart of API even if already running
+
+.EXAMPLE
+    .\scripts\run_qa.ps1
+    Standard workflow: Check API, open logs, start Q&A
+
+.EXAMPLE
+    .\scripts\run_qa.ps1 -RestartApi
+    Force restart API with fresh logging, then start Q&A
+
+.EXAMPLE
+    .\scripts\run_qa.ps1 -ApiPort 8001 -BaseUrl http://localhost:8001
+    Use custom port and URL
+
+.OUTPUTS
+    - API server window (PowerShell with uvicorn)
+    - Logging window (tailing logs/api.log)
+    - Q&A client window (interactive Python script)
+
+.NOTES
+    Sprint Context: Sprint 7-10 - Development Workflow Automation
+
+    Workflow Steps:
+    [1/3] API Check/Start
+          - Tests $BaseUrl/api/v1/health/
+          - Starts uvicorn in separate window if not running
+          - Waits up to 120s for API to become ready
+
+    [2/3] Logging Window
+          - Opens PowerShell window with Get-Content -Wait
+          - Real-time log monitoring (logs/api.log)
+
+    [3/3] Q&A Client
+          - Launches scripts/ask_question.py
+          - Interactive query interface
+          - Type 'exit', 'quit', or ':q' to quit
+
+    Prerequisites:
+    - Poetry environment configured
+    - Docker services running (docker compose up -d)
+    - All Ollama models downloaded
+
+    Exit Codes:
+    0 - Success (workflow completed)
+    1 - Failure (API startup failed)
+
+.LINK
+    scripts/ask_question.py
+    scripts/check_ollama_health.ps1
+#>
+
 Param(
   [int]$ApiPort = 8000,
   [string]$BaseUrl = "http://localhost:8000",

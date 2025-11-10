@@ -1,4 +1,55 @@
-"""Application configuration using Pydantic Settings."""
+"""
+Application Configuration using Pydantic Settings.
+
+Sprint Context: Sprint 1 (2025-10-14) - Feature 1.1: Core Configuration Management
+
+This module provides a unified configuration system for the entire AEGIS RAG application,
+using Pydantic Settings for type-safe environment variable loading and validation.
+
+Architecture:
+    Environment Variables → .env File → Pydantic Validation → Settings Object
+
+    All configuration is loaded from environment variables with .env file fallback.
+    The Settings class uses Pydantic's BaseSettings for automatic validation,
+    type coercion, and default values.
+
+Configuration Categories:
+    - Application: Basic app metadata (name, version, environment)
+    - API Server: FastAPI server configuration with security settings
+    - LLM Models: Ollama/Azure OpenAI model selection and parameters
+    - Vector Database: Qdrant connection and collection settings
+    - Graph Database: Neo4j connection and graph features
+    - Memory: Redis cache and 3-layer memory configuration
+    - Retrieval: Search, chunking, and reranking parameters
+    - Security: API authentication, rate limiting, input validation
+
+Security Design:
+    - Sensitive values use Pydantic SecretStr (masked in logs)
+    - API binding to 0.0.0.0 is intentional for Docker/K8s (see Bandit B104 exemption)
+    - Rate limiting enforced: 10 req/min (search), 5 req/hour (ingest)
+    - JWT authentication configurable via api_auth_enabled
+    - Documents restricted to documents_base_path (path traversal protection)
+
+Example:
+    >>> from src.core.config import settings
+    >>> print(settings.app_name)
+    'aegis-rag'
+    >>> print(settings.ollama_base_url)
+    'http://localhost:11434'
+    >>> settings.qdrant_url
+    'http://localhost:6333'
+
+Notes:
+    - All settings have sensible defaults for local development
+    - Production deployments should override via environment variables
+    - Use @lru_cache to ensure Settings is singleton (single instance)
+    - Changes to settings require application restart (no hot-reload)
+
+See Also:
+    - docs/adr/ADR-001-configuration-management.md: Configuration architecture decision
+    - .env.example: Example environment file with all available settings
+    - Sprint 1 Features: Core infrastructure and configuration
+"""
 
 from functools import lru_cache
 from typing import Literal
@@ -8,7 +59,81 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
+    """
+    Application settings loaded from environment variables.
+
+    This class uses Pydantic BaseSettings to automatically load configuration
+    from environment variables with .env file fallback. All fields have type
+    hints for validation and default values for local development.
+
+    Attributes:
+        app_name (str): Application name (default: "aegis-rag")
+        app_version (str): Application version (default: "0.1.0")
+        environment (Literal): Deployment environment (development/staging/production)
+        debug (bool): Enable debug mode (default: False)
+        log_level (str): Logging level (DEBUG/INFO/WARNING/ERROR/CRITICAL)
+        json_logs (bool): Output logs in JSON format for production (default: False)
+
+        api_host (str): API server host (default: "0.0.0.0" for Docker/K8s)
+        api_port (int): API server port (default: 8000)
+        api_workers (int): Number of Uvicorn workers (default: 1)
+        api_reload (bool): Enable auto-reload for development (default: False)
+
+        api_auth_enabled (bool): Enable JWT authentication (default: True)
+        api_secret_key (SecretStr): JWT secret key (min 32 chars for production)
+        api_admin_password (SecretStr): Admin password for token endpoint
+
+        ollama_base_url (str): Ollama server URL (default: http://localhost:11434)
+        ollama_model_generation (str): LLM for text generation (default: llama3.1:8b)
+        ollama_model_query (str): LLM for query understanding (default: llama3.2:3b)
+        ollama_model_embedding (str): Embedding model (default: bge-m3, Sprint 16)
+        ollama_model_router (str): LLM for query routing (default: llama3.2:3b)
+
+        qdrant_host (str): Qdrant server host (default: localhost)
+        qdrant_port (int): Qdrant HTTP port (default: 6333)
+        qdrant_grpc_port (int): Qdrant gRPC port (default: 6334)
+        qdrant_collection (str): Qdrant collection name (default: aegis_documents)
+
+        neo4j_uri (str): Neo4j connection URI (default: bolt://localhost:7687)
+        neo4j_user (str): Neo4j username (default: neo4j)
+        neo4j_password (SecretStr): Neo4j password
+        neo4j_database (str): Neo4j database name (default: neo4j)
+
+        redis_host (str): Redis server host (default: localhost)
+        redis_port (int): Redis server port (default: 6379)
+        redis_db (int): Redis database number (default: 0)
+        redis_ttl (int): Redis default TTL in seconds (default: 3600)
+
+        extraction_pipeline (Literal): Entity/relation extraction pipeline
+            - 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT
+            - 'three_phase': SpaCy + Dedup + Gemma (fast, ~15-17s/doc)
+            - 'lightrag_default': Legacy LightRAG baseline
+
+        retrieval_top_k (int): Number of documents to retrieve (default: 5)
+        retrieval_score_threshold (float): Minimum relevance score (default: 0.7)
+
+    Example:
+        >>> settings = Settings()
+        >>> print(settings.app_name)
+        'aegis-rag'
+        >>> settings.qdrant_url  # Computed property
+        'http://localhost:6333'
+        >>> settings.redis_url  # Computed property with password
+        'redis://localhost:6379/0'
+
+    Notes:
+        - Environment variables are case-insensitive (e.g., API_HOST or api_host)
+        - SecretStr fields are masked in logs and repr() output
+        - Extra environment variables are ignored (extra="ignore")
+        - Validators ensure log_level is valid (DEBUG/INFO/WARNING/ERROR/CRITICAL)
+        - Sprint 16: Migrated from nomic-embed-text to bge-m3 (1024-dim embeddings)
+        - Sprint 21: Pure LLM extraction is default for high-quality entity/relation extraction
+
+    See Also:
+        - get_settings(): Factory function with @lru_cache for singleton pattern
+        - .env.example: Example environment file
+        - docs/configuration.md: Detailed configuration guide
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -101,6 +226,55 @@ class Settings(BaseSettings):
     # Anthropic (Optional Fallback)
     anthropic_api_key: SecretStr | None = Field(default=None, description="Anthropic API key")
 
+    # Feature 21.6: Qwen3-VL Image Processing
+    qwen3vl_model: str = Field(
+        default="qwen3-vl:4b-instruct",
+        description="Qwen3-VL model for image description (via Ollama)",
+    )
+    qwen3vl_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Temperature for Qwen3-VL (0.7 = model default)",
+    )
+    qwen3vl_top_p: float = Field(
+        default=0.8, ge=0.0, le=1.0, description="Top-p sampling for Qwen3-VL"
+    )
+    qwen3vl_top_k: int = Field(default=20, ge=1, le=100, description="Top-k sampling for Qwen3-VL")
+    qwen3vl_num_ctx: int = Field(
+        default=4096, ge=512, le=8192, description="Context window for Qwen3-VL"
+    )
+
+    # Feature 21.6: Image Filtering
+    image_min_size: int = Field(
+        default=100, ge=10, le=1000, description="Minimum image size (width or height) in pixels"
+    )
+    image_min_aspect_ratio: float = Field(
+        default=0.1,
+        ge=0.01,
+        le=1.0,
+        description="Minimum aspect ratio (width/height) for images",
+    )
+    image_max_aspect_ratio: float = Field(
+        default=10.0,
+        ge=1.0,
+        le=100.0,
+        description="Maximum aspect ratio (width/height) for images",
+    )
+
+    # Feature 21.6: Chunking (HybridChunker with BGE-M3)
+    chunking_tokenizer_model: str = Field(
+        default="BAAI/bge-m3",
+        description="HuggingFace tokenizer model for HybridChunker",
+    )
+    chunking_max_tokens: int = Field(
+        default=8192, ge=512, le=32768, description="Max tokens for BGE-M3 chunker"
+    )
+    chunking_merge_peers: bool = Field(
+        default=True,
+        description="Merge adjacent chunks in HybridChunker for better context",
+    )
+
     # Qdrant Vector Database
     qdrant_host: str = Field(default="localhost", description="Qdrant host")
     qdrant_port: int = Field(default=6333, description="Qdrant HTTP port")
@@ -157,10 +331,15 @@ class Settings(BaseSettings):
         default=16384, ge=2048, le=32768, description="Context window for Gemma model"
     )
 
-    # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2)
-    extraction_pipeline: Literal["lightrag_default", "three_phase"] = Field(
-        default="three_phase",
-        description="Entity/relation extraction pipeline to use (three_phase recommended)",
+    # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2, Sprint 20+21)
+    extraction_pipeline: Literal["lightrag_default", "three_phase", "llm_extraction"] = Field(
+        default="llm_extraction",
+        description=(
+            "Entity/relation extraction pipeline to use:\n"
+            "- 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT Sprint 21+\n"
+            "- 'three_phase': SpaCy + Dedup + Gemma (fast, ~15-17s/doc) - Production Sprint 20\n"
+            "- 'lightrag_default': Legacy LightRAG baseline (for comparison only)"
+        ),
     )
     enable_legacy_extraction: bool = Field(
         default=False, description="Enable legacy LightRAG extraction for A/B comparison"
@@ -420,7 +599,24 @@ class Settings(BaseSettings):
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, v: str) -> str:
-        """Validate log level."""
+        """
+        Validate log level is one of the standard Python logging levels.
+
+        Args:
+            v: Log level string (case-insensitive)
+
+        Returns:
+            Uppercase log level string
+
+        Raises:
+            ValueError: If log level is not valid
+
+        Example:
+            >>> Settings(log_level="info").log_level
+            'INFO'
+            >>> Settings(log_level="DEBUG").log_level
+            'DEBUG'
+        """
         valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         v = v.upper()
         if v not in valid_levels:
@@ -429,12 +625,44 @@ class Settings(BaseSettings):
 
     @property
     def qdrant_url(self) -> str:
-        """Get Qdrant HTTP URL."""
+        """
+        Get Qdrant HTTP URL from host and port.
+
+        Returns:
+            Formatted HTTP URL (e.g., "http://localhost:6333")
+
+        Example:
+            >>> settings.qdrant_url
+            'http://localhost:6333'
+
+        Notes:
+            - Always returns HTTP URL (not HTTPS)
+            - For production, use reverse proxy with TLS termination
+        """
         return f"http://{self.qdrant_host}:{self.qdrant_port}"
 
     @property
     def redis_url(self) -> str:
-        """Get Redis connection URL."""
+        """
+        Get Redis connection URL with optional password.
+
+        Returns:
+            Formatted Redis URL (e.g., "redis://localhost:6379/0" or "redis://:password@localhost:6379/0")
+
+        Example:
+            >>> # Without password
+            >>> settings.redis_url
+            'redis://localhost:6379/0'
+            >>> # With password
+            >>> settings_with_pw = Settings(redis_password="secret123")
+            >>> settings_with_pw.redis_url
+            'redis://:secret123@localhost:6379/0'
+
+        Notes:
+            - Password is included in URL if redis_password is set
+            - Format follows Redis connection string spec: redis://[:password@]host:port/db
+            - For production, always use password-protected Redis
+        """
         password = f":{self.redis_password.get_secret_value()}@" if self.redis_password else ""
         return f"redis://{password}{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
@@ -442,10 +670,35 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """
-    Get cached settings instance.
+    Get cached settings instance (singleton pattern).
+
+    This function uses @lru_cache to ensure only one Settings instance is created
+    throughout the application lifecycle. This is important for:
+    - Performance: Avoid re-parsing environment variables on every access
+    - Consistency: All modules use the same configuration
+    - Memory efficiency: Single instance instead of multiple copies
 
     Returns:
-        Application settings
+        Settings: Cached application settings instance
+
+    Example:
+        >>> from src.core.config import get_settings
+        >>> settings1 = get_settings()
+        >>> settings2 = get_settings()
+        >>> settings1 is settings2  # Same instance
+        True
+        >>> settings1.app_name
+        'aegis-rag'
+
+    Notes:
+        - First call loads from environment and caches the instance
+        - Subsequent calls return cached instance (O(1) lookup)
+        - To reload settings, restart the application (no hot-reload)
+        - For testing, consider using Settings() directly instead of singleton
+
+    See Also:
+        - Settings: The settings class definition
+        - functools.lru_cache: Python's LRU cache decorator
     """
     return Settings()
 

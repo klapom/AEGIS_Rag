@@ -1,6 +1,59 @@
-# Ollama Health Check Script for AegisRAG
-# Verifies Ollama is running and required models are loaded
-# Sprint 19 Update: Updated for current production models
+<#
+.SYNOPSIS
+    Ollama Health Check for AEGIS RAG System
+
+.DESCRIPTION
+    Comprehensive health check script that verifies:
+    1. Ollama service connectivity
+    2. Required models are installed
+    3. Model inference capability (test query)
+
+    This script is used to validate the Ollama setup before running AEGIS RAG.
+
+.PARAMETER None
+    This script does not accept parameters.
+
+.EXAMPLE
+    .\scripts\check_ollama_health.ps1
+    Runs all health checks and displays results
+
+.OUTPUTS
+    Console output with color-coded status:
+    - Green ✓: Check passed
+    - Red ✗: Check failed
+    - Yellow: Warnings or informational messages
+
+.NOTES
+    Sprint Context: Sprint 19 (2025-10-30) - Model Configuration Update
+
+    Health Checks Performed:
+    [1/3] Ollama Connectivity
+          - Verifies http://localhost:11434 is accessible
+          - Queries /api/tags endpoint
+
+    [2/3] Required Models
+          - llama3.2:3b: Fast query model
+          - gemma-3-4b-it-Q8_0: LightRAG extraction model
+          - bge-m3: Embedding model (1024D)
+
+    [3/3] Model Inference Test
+          - Sends test prompt to llama3.2:3b
+          - Measures load_duration and total_duration
+          - Validates response generation
+
+    Troubleshooting:
+    - If Ollama not reachable: Check docker ps, docker compose up -d
+    - If models missing: Run .\scripts\setup_ollama_models.ps1
+    - If inference fails: Check docker compose logs ollama
+
+    Exit Codes:
+    0 - Success (all checks passed)
+    1 - Failure (connectivity, missing models, or inference failed)
+
+.LINK
+    https://github.com/your-org/aegis-rag
+    scripts/setup_ollama_models.ps1
+#>
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Ollama Health Check (Sprint 19)" -ForegroundColor Cyan
