@@ -1,8 +1,8 @@
 # CONTEXT REFRESH MASTER GUIDE
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Purpose:** Complete guide for achieving FULL context refresh in any session
-**Version:** 4.0 (Sprint 16 COMPLETE, Documentation Consolidated)
-**Last Updated:** 2025-10-28
+**Purpose:** Timeless guide for achieving FULL context refresh in any session
+**Version:** 5.0 (Sprint-Independent, Reference-Based)
+**Last Updated:** 2025-11-10
 
 ---
 
@@ -11,10 +11,9 @@
 1. [Quick Start](#quick-start) - Get context back in 1-5 minutes
 2. [When to Refresh](#when-to-refresh) - Recognize the signs
 3. [Three Refresh Strategies](#three-refresh-strategies) - Quick, Standard, Deep
-4. [Current Project State](#current-project-state) - Where we are NOW
-5. [Core Documentation Map](#core-documentation-map) - What to read
-6. [Verification Checklist](#verification-checklist) - Confirm understanding
-7. [Best Practices](#best-practices) - Optimize your workflow
+4. [Core Documentation Map](#core-documentation-map) - What to read
+5. [Verification Checklist](#verification-checklist) - Confirm understanding
+6. [Best Practices](#best-practices) - Optimize your workflow
 
 ---
 
@@ -23,32 +22,32 @@
 ### Copy-Paste This Prompt (Recommended for Most Cases)
 
 ```
-🔄 CONTEXT REFRESH - AEGIS RAG (Sprint 17 Ready)
+🔄 CONTEXT REFRESH - AEGIS RAG
 
 Bitte mach dich mit dem Projekt vertraut. Lies folgende Dateien:
 
-📖 CORE CONTEXT:
+📖 CORE CONTEXT (IMMER):
 1. docs/CLAUDE.md - Projekt-Übersicht & Architektur
 2. docs/SUBAGENTS.md - Delegation Strategy & File Ownership
 3. docs/NAMING_CONVENTIONS.md - Code Standards
-4. docs/core/PROJECT_SUMMARY.md - Projekt-Status (515/584 SP, 88.2%)
+4. README.md - Projekt-Status & Quick Start
 
-📊 CURRENT STATE:
-5. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht (1-17)
-6. docs/sprints/SPRINT_16_COMPLETION_REPORT.md - Sprint 16: 100% COMPLETE
-7. docs/sprints/SPRINT_17_PLAN.md - Sprint 17: Admin UI (39 SP, BEREIT)
+📊 CURRENT STATE (DYNAMISCH):
+5. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht & aktueller Sprint
+6. Neueste SPRINT_*_PLAN.md oder SPRINT_*_SUMMARY.md - Aktueller Sprint-Status
+7. docs/adr/ADR_INDEX.md - Alle Architecture Decisions (mit Querverweisen)
 
-📚 UPDATED DOCUMENTATION:
-8. docs/TECH_STACK.md - Tech Stack inkl. Sprint 16 Updates
-9. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-16 Journey
-10. docs/COMPONENT_INTERACTION_MAP.md - Unified Re-Indexing Flow
+📚 ARCHITECTURE (BEI BEDARF):
+8. docs/TECH_STACK.md - Tech Stack (dynamisch aktualisiert)
+9. docs/ARCHITECTURE_EVOLUTION.md - Sprint Journey & Learnings
+10. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data Flows
 
 Gib mir einen Executive Summary mit 5 Bulletpoints:
-- Projekt-Ziel & 3-Layer Architektur
-- Sprint 16 COMPLETE (69/69 SP): Unified Chunking, BGE-M3, Re-Indexing
-- Sprint 17 READY: Admin UI für Directory Indexing (13 SP Priorität)
-- Tech Stack (React 18.2, FastAPI, LangGraph, BGE-M3 1024-dim)
-- Wichtigste ADRs (ADR-022: Chunking, ADR-023: Re-Indexing, ADR-024: BGE-M3)
+- Projekt-Ziel & Architektur (3-Layer Memory)
+- Aktueller Sprint & Status (aus SPRINT_PLAN.md)
+- Nächste Priorität
+- Tech Stack Highlights
+- Wichtigste ADRs (3-5)
 ```
 
 **Expected Reading Time:** 3-5 minutes
@@ -90,7 +89,7 @@ Team-Übergabe:                        → Deep Refresh
 
 **Copy-Paste Prompt:**
 ```
-Context Refresh: Lies docs/CLAUDE.md, docs/core/SPRINT_PLAN.md (Sprint 16),
+Context Refresh: Lies docs/CLAUDE.md, docs/sprints/SPRINT_PLAN.md (aktueller Sprint),
 docs/SUBAGENTS.md, docs/NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 ```
 
@@ -111,26 +110,28 @@ docs/SUBAGENTS.md, docs/NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 
 **Copy-Paste Prompt:**
 ```
-🔄 STANDARD CONTEXT REFRESH (Sprint 16)
+🔄 STANDARD CONTEXT REFRESH
 
 Bitte reaktiviere vollständigen Projekt-Context:
 
 📖 CORE:
 1. docs/CLAUDE.md - Projekt & Architektur
-2. docs/core/SPRINT_PLAN.md - 
-3. docs/SUBAGENTS.md - 5 Subagenten & File Ownership
-4. docs/NAMING_CONVENTIONS.md - Code Standards
+2. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht
+3. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
+4. docs/SUBAGENTS.md - 5 Subagenten & File Ownership
+5. docs/NAMING_CONVENTIONS.md - Code Standards
 
 📚 TECH & DECISIONS:
-5. docs/TECH_STACK.md - React 18.2, FastAPI, LangGraph
-6. docs/TECHNICAL_DEBT_SUMMARY.md - Current status
-7. README.md - Project overview
+6. docs/TECH_STACK.md - Tech Stack Updates
+7. docs/adr/ADR_INDEX.md - Architecture Decisions
+8. README.md - Project overview
 
 Bestätige mit Zusammenfassung (5 Bulletpoints):
 - Projekt-Ziel & 3-Layer Architecture
-- Tech Stack Updates
-- Next Priority 
-- Key ADRs 
+- Aktueller Sprint & Status
+- Tech Stack Highlights
+- Next Priority
+- Key ADRs (3-5)
 ```
 
 **What Gets Refreshed:**
@@ -138,6 +139,7 @@ Bestätige mit Zusammenfassung (5 Bulletpoints):
 - ✅ Aktueller Sprint-Plan & Status
 - ✅ Tech Stack & Recent Updates
 - ✅ Subagent Workflow
+- ✅ Important ADRs
 
 **When to Use:**
 - Nach größerer Kompaktierung
@@ -150,56 +152,48 @@ Bestätige mit Zusammenfassung (5 Bulletpoints):
 
 **Copy-Paste Prompt:**
 ```
-🔄 DEEP CONTEXT REFRESH - Sprint 16 (VOLLSTÄNDIG)
+🔄 DEEP CONTEXT REFRESH (VOLLSTÄNDIG)
 
 Neue Session / Major Context Loss. Vollständiger Architektur-Context benötigt:
 
 📋 PROJECT FOUNDATION:
-1. README.md - Projekt-Überblick & Sprint Status
+1. README.md - Projekt-Überblick & Quick Start
 2. docs/CLAUDE.md - Vollständiger Projekt-Context
-3. docs/ARCHITECTURE_EVOLUTION.md - Sprint 1-N Journey & Learnings
-4. docs/core/SPRINT_PLAN.md - Sprint Plan
+3. docs/ARCHITECTURE_EVOLUTION.md - Sprint Journey & Learnings
+4. docs/sprints/SPRINT_PLAN.md - Master Sprint Plan
 
 🏗️ ARCHITECTURE & TECH STACK:
-5. docs/TECH_STACK.md - Complete stack with Sprint additions
-6. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts
-7. docs/DEPENDENCY_RATIONALE.md - Library choice justifications
-8. docs/architecture/LIGHTRAG_VS_GRAPHITI.md - Layer 2 vs Layer 3 comparison
+5. docs/TECH_STACK.md - Complete stack
+6. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design
+7. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts
+8. docs/DEPENDENCY_RATIONALE.md - Library choice justifications
 
 👥 WORKFLOW & STANDARDS:
 9.  docs/SUBAGENTS.md - Delegation Strategy
 10. docs/NAMING_CONVENTIONS.md - Code Standards
-11. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status
+11. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status (falls vorhanden)
 
 🎯 ADRs (Architecture Decisions):
-12. docs/adr/ADR*.md 
+12. docs/adr/ADR_INDEX.md - Alle ADRs mit Querverweisen
+13. Relevante ADRs basierend auf aktuellem Sprint
 
-📊 SPRINT STATUS:
-13. Check for ***LATEST*** SPRINT files SPRINT_*PLAN.md or  SPRINT_*SUMMARY.md or SPRINT_*TEST*.md  
-
-🎯 TECHNICAL STATE (Post-Sprint 15):
-- GPU: RTX 3060 verified 
-- Backend: FastAPI + LangGraph + Ollama (100% local)
-- Frontend: React 18.2 + Vite 7.1 + Tailwind CSS v4.1
-- RAG: Hybrid (Vector + Graph + BM25 with RRF)
-- Memory: 3-Layer (Redis → Qdrant → Graphiti)
-- Extraction: Three-Phase Pipeline (SpaCy + Semantic Dedup + Gemma 2 4B)
-
-🎯 NÄCHSTE PRIORITÄTEN:
-14. Check for ***LATEST*** SPRINT files SPRINT_*PLAN.md or  SPRINT_*SUMMARY.md or SPRINT_*TEST*.md  
+📊 CURRENT SPRINT STATUS:
+14. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
+15. Neueste SPRINT_*_SUMMARY.md - Sprint-Abschluss (falls completed)
 
 Gib mir einen Executive Summary (7 Bulletpoints):
 - Projekt-Ziel & Architektur (3-Layer Memory)
-- LATEST Sprint  Achievements 
-- Sprint N Focus 
-- Key Architectural Issues 
+- Aktueller Sprint & Achievements
+- Nächster Sprint Focus
+- Key Architectural Patterns
 - Tech Stack (Full-stack)
+- Top 5 Important ADRs
 - Top 3 Immediate Priorities
 ```
 
 **What Gets Refreshed:**
 - ✅ COMPLETE Project Context
-- ✅ Full Sprint History (Last 6 Sprints)
+- ✅ Full Sprint History & Status
 - ✅ All Architecture Decisions (ADRs)
 - ✅ Complete Tech Stack & Dependencies
 - ✅ Architecture Evolution & Learnings
@@ -215,112 +209,73 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 
 ---
 
-## 📊 CURRENT PROJECT STATE (As of 2025-10-28)
-
-### Project Overview
-**Name:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Purpose:** Enterprise-grade Hybrid Retrieval-Augmented Generation system
-**Status:** Production-ready frontend + backend (Sprint 15 complete)
-
-### Architecture (3-Layer Memory)
-1. **Layer 1 (Redis):** Short-term memory (conversation context)
-2. **Layer 2 (Qdrant + BM25 + LightRAG):** Semantic search + keyword search + graph retrieval
-3. **Layer 3 (Graphiti):** Episodic memory (temporal queries, communities)
-
-### Tech Stack (Post-Sprint 15)
-```yaml
-Frontend (Sprint 15):
-  - React: 18.2.0
-  - TypeScript: 5.9.0
-  - Vite: 7.1.0
-  - Tailwind CSS: 4.1.0 (v4 syntax: @import)
-  - React Router: 7.9.2
-  - Zustand: 5.0.3 (state management)
-  - SSE: Native EventSource API
-
-Backend:
-  - Python: 3.12+
-  - Framework: FastAPI 0.115.6
-  - Orchestration: LangGraph 0.2.53
-  - LLM: Ollama (llama3.2:3b/8b, qwen2.5:7b, gemma2:4b)
-  - Embeddings: nomic-embed-text (768d) + BGE-M3 (1024d for Graphiti)
-
-Databases:
-  - Vector: Qdrant 1.12.1
-  - Graph: Neo4j 5.24-community
-  - Memory: Redis 7.4-alpine
-
-Extraction (Sprint 13):
-  - SpaCy: en_core_web_lg (NER)
-  - Sentence-Transformers: all-MiniLM-L6-v2 (dedup)
-  - Gemma 2 4B: Quantized (Q4_K_M) relation extraction
-  - FAISS: IndexFlatL2 (384-dim)
-
-Infrastructure:
-  - Docker: docker-compose.yml
-  - CI/CD: GitHub Actions
-  - GPU: NVIDIA RTX 3060 (105 tokens/s)
-```
-
-
 ## 📚 CORE DOCUMENTATION MAP
 
 ### Essential Reading (Always Read These)
 
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/CLAUDE.md** | Complete project context, architecture, workflows | Every refresh |
-| **docs/SUBAGENTS.md** | 5 subagents, file ownership, delegation rules | Every refresh |
-| **docs/NAMING_CONVENTIONS.md** | snake_case, PascalCase, SCREAMING_SNAKE rules | Every refresh |
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **docs/CLAUDE.md** | Complete project context, architecture, workflows | Every refresh | ✅ Auto-updated |
+| **docs/SUBAGENTS.md** | 5 subagents, file ownership, delegation rules | Every refresh | ✅ Stable |
+| **docs/NAMING_CONVENTIONS.md** | snake_case, PascalCase, SCREAMING_SNAKE rules | Every refresh | ✅ Stable |
+| **README.md** | Project overview, quick start, current status | Every refresh | ✅ Auto-updated |
 
-### Sprint Planning & Status
+### Sprint Planning & Status (DYNAMIC - Check Latest Files)
 
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/core/SPRINT_PLAN.md** | Master sprint plan (Sprints 1-16), current Sprint 16 | Standard/Deep refresh |
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **docs/sprints/SPRINT_PLAN.md** | Master sprint plan (all sprints), **ALWAYS CHECK CURRENT SPRINT** | Standard/Deep refresh | ✅ Auto-updated |
+| **Latest SPRINT_N_PLAN.md** | Current sprint plan (N = aktueller Sprint) | Standard/Deep refresh | 🔄 Dynamic |
+| **Latest SPRINT_N_SUMMARY.md** | Completed sprint summary | After sprint completion | 🔄 Dynamic |
 
-### Architecture & Deep Understanding (MUST READ for Deep Refresh)
+### Architecture & Deep Understanding (Read for Deep Refresh)
 
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/ARCHITECTURE_EVOLUTION.md** | Sprint 1-15 journey, learnings, architectural decisions | Deep refresh |
-| **docs/TECH_STACK.md** | Complete tech stack with Sprint 12-15 additions | Standard/Deep refresh |
-| **docs/architecture/COMPONENT_INTERACTION_MAP.md** | Data flows, API contracts, request scenarios | Deep refresh |
-| **docs/DEPENDENCY_RATIONALE.md** | Library choice justifications (70+ dependencies) | Deep refresh |
-| **docs/architecture/LIGHTRAG_VS_GRAPHITI.md** | Layer 2 vs Layer 3 comparison (NEW - Sprint 16) | Deep refresh |
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **docs/ARCHITECTURE_EVOLUTION.md** | Sprint journey, learnings, architectural decisions | Deep refresh | ✅ Backfilled |
+| **docs/TECH_STACK.md** | Complete tech stack (dynamisch aktualisiert) | Standard/Deep refresh | ✅ Auto-updated |
+| **docs/architecture/ARCHITECTURE_OVERVIEW.md** | System design, components | Deep refresh | ✅ Stable |
+| **docs/architecture/COMPONENT_INTERACTION_MAP.md** | Data flows, API contracts, request scenarios | Deep refresh | ✅ Updated |
+| **docs/DEPENDENCY_RATIONALE.md** | Library choice justifications (70+ dependencies) | Deep refresh | ✅ Stable |
 
-### Technical Reference
+### Architecture Decisions (ADRs) - Read Task-Specific
 
-| Document | What It Contains | Read When |
-|----------|------------------|-----------|
-| **docs/TECHNICAL_DEBT_SUMMARY.md** | Current TD status | Standard/Deep refresh |
-| **docs/adr/** | Architecture Decision Records (23 ADRs) | Task-specific |
-| **docs/ADR_INDEX.md** | ADR index and quick reference | Before architectural changes |
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **docs/adr/ADR_INDEX.md** | ADR index and quick reference with cross-references | Standard/Deep refresh | ✅ Auto-updated |
+| **docs/adr/ADR-*.md** | Individual Architecture Decision Records | Task-specific | 🔄 Growing |
+
+### Component-Specific Documentation
+
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **src/components/*/README.md** | Component architecture, usage, APIs | Task-specific | ✅ Complete |
+| **docs/api/**.md | API documentation (endpoints, SSE, errors) | API development | ✅ Complete |
 
 ### File Reading Order (Deep Refresh)
 
 ```
-Priority 1 (MUST READ):
-1. README.md
-2. docs/CLAUDE.md
-3. docs/core/SPRINT_PLAN.md (Sprint 16)
-4. docs/TECH_STACK.md
+Priority 1 (MUST READ - ALWAYS CURRENT):
+1. README.md - Project status
+2. docs/CLAUDE.md - Full context
+3. docs/sprints/SPRINT_PLAN.md - Sprint overview (check CURRENT sprint)
+4. Latest SPRINT_*_PLAN.md - Current sprint details
 
 Priority 2 (SHOULD READ - Architecture):
-5. docs/ARCHITECTURE_EVOLUTION.md
-6. docs/architecture/COMPONENT_INTERACTION_MAP.md
-7. docs/DEPENDENCY_RATIONALE.md
-8. docs/architecture/LIGHTRAG_VS_GRAPHITI.md
+5. docs/TECH_STACK.md - Tech stack
+6. docs/ARCHITECTURE_EVOLUTION.md - Sprint journey
+7. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design
+8. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows
 
 Priority 3 (SHOULD READ - Workflow):
-9. docs/SUBAGENTS.md
-10. docs/NAMING_CONVENTIONS.md
-11. docs/TECHNICAL_DEBT_SUMMARY.md
+9. docs/SUBAGENTS.md - Delegation
+10. docs/NAMING_CONVENTIONS.md - Code standards
+11. docs/adr/ADR_INDEX.md - Architecture decisions
 
 Priority 4 (OPTIONAL - Task-Specific):
-12. docs/adr/ADR-022-unified-chunking-service.md
-13. docs/adr/ADR-023-unified-reindexing-pipeline.md
-14. Specific ADRs based on task
+12. Specific ADRs based on task (from ADR_INDEX.md)
+13. Component READMEs (src/components/*/README.md)
+14. API Documentation (docs/api/*.md)
 ```
 
 ---
@@ -334,30 +289,37 @@ After ANY refresh, Claude Code should be able to confirm:
 - [ ] Projekt-Name: AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 - [ ] Purpose: Enterprise-grade Hybrid RAG
 - [ ] 3-Layer Memory: Redis → Qdrant/BM25/LightRAG → Graphiti
-- [ ] Status: Sprint N complete, Sprint N+1 planned or in progress
+- [ ] Status: Aktueller Sprint klar (aus SPRINT_PLAN.md)
 ```
 
 ### ✅ ARCHITECTURE
 ```
 - [ ] Layer 1: Redis (short-term memory)
-- [ ] Layer 2: Qdrant (vector) + BM25 (keyword) + LightRAG (graph) - CHUNK-BASED
-- [ ] Layer 3: Graphiti (episodic memory) - EPISODE-BASED (different data model!)
+- [ ] Layer 2: Qdrant (vector) + BM25 (keyword) + LightRAG (graph)
+- [ ] Layer 3: Graphiti (episodic memory)
 - [ ] Orchestration: LangGraph with multi-agent state management
 - [ ] LLM Strategy: 100% local (Ollama), zero API costs
 ```
 
-### ✅ TECH STACK
+### ✅ TECH STACK (Check docs/TECH_STACK.md for current versions)
 ```
-- [ ] Frontend: React 18.2, TypeScript 5.9, Vite 7.1, Tailwind CSS v4.1
-- [ ] Backend: Python 3.12+, FastAPI 0.115.6
-- [ ] Orchestration: LangGraph 0.2.53
-- [ ] LLMs: Ollama (llama3.2:3b/8b, qwen2.5:7b, gemma2:4b)
-- [ ] Embeddings: nomic-embed-text (768d) + BGE-M3 (1024d for Graphiti)
-- [ ] Vector: Qdrant 1.12.1
-- [ ] Graph: Neo4j 5.24-community
-- [ ] Memory: Redis 7.4-alpine
+- [ ] Frontend: React + TypeScript + Vite + Tailwind CSS
+- [ ] Backend: Python 3.12+, FastAPI
+- [ ] Orchestration: LangGraph
+- [ ] LLMs: Ollama (llama3.2, gemma, qwen)
+- [ ] Embeddings: BGE-M3 (1024-dim, multilingual)
+- [ ] Vector: Qdrant
+- [ ] Graph: Neo4j
+- [ ] Memory: Redis
 ```
 
+### ✅ CURRENT STATE (Check SPRINT_PLAN.md for latest)
+```
+- [ ] Aktueller Sprint bekannt (Sprint N)
+- [ ] Sprint-Ziel klar
+- [ ] Nächste Priorität identifiziert
+- [ ] Wichtigste ADRs für aktuellen Sprint bekannt (3-5)
+```
 
 ### ✅ WORKFLOW & STANDARDS
 ```
@@ -370,7 +332,6 @@ After ANY refresh, Claude Code should be able to confirm:
 - [ ] 1 Feature = 1 Commit workflow
 ```
 
-
 ---
 
 ## 🎯 BEST PRACTICES
@@ -382,8 +343,9 @@ After ANY refresh, Claude Code should be able to confirm:
 ✅ Deep Refresh am Montag / Sprint-Start
 ✅ Standard Refresh am Session-Start (nach >1 Tag)
 ✅ Quick Check alle 20-30 Nachrichten
+✅ Lies SPRINT_PLAN.md für aktuellen Sprint-Status
 ✅ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context
-✅ Lies TECH_STACK.md für Sprint 12-15 Updates
+✅ Lies TECH_STACK.md für aktuelle Versionen
 ✅ Nutze die Copy-Paste Prompts aus diesem Guide
 ✅ Bestätige Verständnis mit Verification Checklist
 ```
@@ -395,8 +357,9 @@ After ANY refresh, Claude Code should be able to confirm:
 ❌ Hoffen dass Context "von selbst zurückkommt"
 ❌ Quick Refresh bei Major Context Loss (nutze Deep Refresh!)
 ❌ CLAUDE.md skippen (immer lesen!)
-❌ ARCHITECTURE_EVOLUTION.md ignorieren (kritisch für Deep Refresh!)
-❌ Alte Dateien lesen (CONTEXT_REFRESH.md, CONTEXT_REFRESH_CHEATSHEET.txt - VERALTET)
+❌ SPRINT_PLAN.md ignorieren (prüfe aktuellen Sprint!)
+❌ Alte Sprint-spezifische Details im Gedächtnis behalten
+❌ Hardcoded Sprint-Nummern annehmen (immer nachschlagen!)
 ```
 
 ### Timing Guidelines
@@ -416,15 +379,15 @@ Session Duration    | Recommended Refreshes
 
 ### Every 20-30 Messages (Long Sessions)
 ```
-Quick Check: Sprint N noch klar? Feature N.M next?
+Quick Check: Aktueller Sprint noch klar? Feature N.M next?
 Subagenten-Delegation OK? Naming Conventions (snake_case) befolgt?
 Falls unsicher → Quick Refresh.
 ```
 
 ### Before Critical Tasks
 ```
-Context Check: Lies docs/CLAUDE.md + docs/core/SPRINT_PLAN.md Feature 16.X
-für diese Task. Architektur klar? (Layer 2 vs Layer 3?)
+Context Check: Lies docs/CLAUDE.md + docs/sprints/SPRINT_PLAN.md
+für diese Task. Architektur klar? ADRs bekannt?
 ```
 
 ### After Kompaktierung (Always)
@@ -436,7 +399,7 @@ Falls Major Kompaktierung: Standard Refresh (Strategy 2)
 ### Monday / Sprint-Start
 ```
 Deep Refresh (Strategy 3) durchführen.
-Verify: Sprint N complete, Sprint N+1 planned.
+Verify: Aktueller Sprint-Status aus SPRINT_PLAN.md.
 Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ```
 
@@ -452,6 +415,9 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ║  Besser 2-7 Minuten für vollständigen Context investieren      ║
 ║  als 30-60 Minuten mit suboptimalem/falschem Context arbeiten. ║
 ║                                                                ║
+║  SPRINT_PLAN.md = ALWAYS CHECK CURRENT SPRINT!                 ║
+║  CLAUDE.md = ALWAYS UPDATED PROJECT CONTEXT!                   ║
+║                                                                ║
 ║  Deep Refresh = ARCHITECTURE_EVOLUTION.md + TECH_STACK.md!     ║
 ║                                                                ║
 ║                    Happy Coding! 🚀                            ║
@@ -461,16 +427,32 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 
 ---
 
-**Document Version:** 3.0 (Sprint 16 Architecture-Focused Update)
-**Created:** 2025-10-22
-**Project:** AEGIS RAG
-**Current Sprint:** Sprint 18 
-**Last Updated:** 2025-10-28
+## 🔄 Document Maintenance
+
+**This Document:**
+- **Version:** 5.0 (Sprint-Independent, Reference-Based)
+- **Created:** 2025-10-22
+- **Last Updated:** 2025-11-10
+- **Maintenance:** This document is TIMELESS - no sprint references
+
+**Referenced Documents (Auto-Updated):**
+- **docs/CLAUDE.md** - Auto-updated with current sprint status
+- **docs/sprints/SPRINT_PLAN.md** - Master plan, always current
+- **docs/TECH_STACK.md** - Tech stack, dynamically updated
+- **docs/adr/ADR_INDEX.md** - ADR index, growing list
+
+**How to Find Current Sprint:**
+1. Read `docs/sprints/SPRINT_PLAN.md` (look for "Current Sprint" section)
+2. Find latest `SPRINT_N_PLAN.md` (highest N)
+3. Check `docs/CLAUDE.md` (Current Project State section)
+
+---
 
 **Quick Access Commands:**
-- Full Project Context: Read docs/CLAUDE.md
-- Architecture History: Read docs/ARCHITECTURE_EVOLUTION.md (Sprint 1-15 journey)
-- Tech Stack Updates: Read docs/TECH_STACK.md (Sprint 12-15 additions)
-- Layer Comparison: Read docs/architecture/LIGHTRAG_VS_GRAPHITI.md
+- Full Project Context: Read `docs/CLAUDE.md`
+- Current Sprint Status: Read `docs/sprints/SPRINT_PLAN.md`
+- Architecture History: Read `docs/ARCHITECTURE_EVOLUTION.md`
+- Tech Stack: Read `docs/TECH_STACK.md`
+- All ADRs: Read `docs/adr/ADR_INDEX.md`
 - Quick Refresh: Use Strategy 1 prompt above
 - Deep Refresh: Use Strategy 3 prompt above

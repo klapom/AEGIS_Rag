@@ -958,7 +958,196 @@ class QueryRequest(BaseModel):
 
 ---
 
-**Last Updated:** 2025-10-28 (Post-Sprint 16)
-**Total Dependencies:** 61+ (production + dev)
+## SPRINT 17-21 DEPENDENCY UPDATES
+
+### Sprint 17: Admin UI & User Profiling
+**Status:** ✅ COMPLETE (2025-10-29 → 2025-11-05)
+
+**No New pyproject.toml Dependencies**
+- Conversation archiving uses existing Redis + Qdrant clients
+- User profiling uses existing Neo4j driver
+- Admin UI uses existing React + FastAPI stack
+
+---
+
+### Sprint 18-19: CI/CD & Consolidation
+**Status:** ✅ COMPLETE (2025-11-05 → 2025-11-08)
+
+**No New Dependencies**
+- CI/CD enhancements use existing GitHub Actions
+- System consolidation through refactoring
+
+---
+
+### Sprint 20: Performance Optimization & Pure LLM Extraction
+**Status:** ✅ COMPLETE (2025-10-31 → 2025-11-06)
+
+**No New Dependencies (ADR-026)**
+- Pure LLM Extraction uses existing gemma-3-4b-it-Q8_0 (Ollama)
+- Chunk overhead analysis uses existing libraries
+- 1800-token chunking uses existing BGE-M3 tokenizer
+
+---
+
+### Sprint 21: Container-Based Ingestion & VLM Enrichment
+**Status:** ✅ COMPLETE (2025-11-07 → 2025-11-10)
+
+#### New Runtime Dependencies (Ollama Models)
+
+**VLM Models (Vision Language Models):**
+
+```bash
+# llava:7b-v1.6-mistral-q2_K | Image Description (Primary)
+ollama pull llava:7b-v1.6-mistral-q2_K
+```
+
+**Version:** Latest from Ollama registry
+**Size:** ~4.7GB (quantized Q2_K)
+**Purpose:** Generate natural language descriptions of images extracted from documents
+
+**Rationale:**
+- **Accurate Image Understanding:** Mistral-based vision model with strong captioning abilities
+- **Quantized for Performance:** Q2_K quantization reduces size while maintaining quality
+- **Local & Cost-Free:** No API costs, offline capable
+- **Context-Aware:** Generates descriptions considering document context
+
+**Alternatives Rejected:**
+- **OpenAI GPT-4V:** Too expensive ($0.01/image), cloud dependency
+- **Google Gemini Vision:** Similar costs, less local control
+- **BLIP-2:** Weaker captioning quality than llava:7b-v1.6
+
+```bash
+# qwen3-vl:4b | Image Description (Alternative)
+ollama pull qwen3-vl:4b
+```
+
+**Version:** Latest from Ollama registry (Qwen3 VL 4B)
+**Size:** ~2.5GB
+**Purpose:** Alternative VLM model for image descriptions (faster, slightly lower quality)
+
+**Rationale:**
+- **Faster Inference:** Smaller model, ~1.5x faster than llava
+- **Good Quality:** Qwen3 base model with vision capabilities
+- **Fallback Option:** Use when llava is slow or unavailable
+
+**Trade-offs:**
+- ⚠️ Slightly lower caption quality vs. llava
+- ✅ Faster inference (useful for batch processing)
+- ✅ Lower VRAM usage (~3GB vs ~5GB)
+
+---
+
+#### Container Runtime Dependency
+
+**Docling CUDA Container (ds4sd/docling:latest):**
+
+**Purpose:** GPU-accelerated OCR, layout analysis, table extraction
+**Technology:** Docker container with NVIDIA CUDA 12.4, EasyOCR, PDFPlumber
+**VRAM:** 6GB allocation (auto-release after parsing)
+
+**Rationale (ADR-027):**
+- **Superior OCR Quality:** 95% accuracy vs 70% with LlamaIndex
+- **Table Structure Preservation:** 92% detection rate vs 60%
+- **GPU Acceleration:** 3.5x faster (420s → 120s per document)
+- **Container Isolation:** Prevents GPU memory leaks, manages VRAM
+- **Professional Tool:** IBM Research project, enterprise-grade
+
+**Alternatives Rejected:**
+- **LlamaIndex OCR:** Lower quality (70%), slower, CPU-only
+- **Tesseract:** Open-source but lower accuracy, no table understanding
+- **Azure Document Intelligence:** Cloud dependency, costs ($1.50/1000 pages)
+
+**Container Management:**
+- Started on-demand (first document upload)
+- Auto-stopped after parsing (frees 6GB VRAM)
+- Health checks ensure container readiness
+- Managed via DoclingContainerClient
+
+**Dependencies:**
+```toml
+# No new pyproject.toml dependencies for Docling
+# Container managed externally via Docker Compose or Docker SDK
+# Optional: docker-py for programmatic container control
+```
+
+---
+
+#### Updated LLM Model Stack (Post-Sprint 21)
+
+**Ollama Models (Complete Stack):**
+
+| Use Case | Model | Size | Purpose | Sprint Added |
+|----------|-------|------|---------|--------------|
+| **Query Understanding** | llama3.2:3b | 2GB | Fast query classification | Sprint 1 |
+| **Answer Generation** | llama3.2:8b | 4.7GB | Quality responses | Sprint 1 |
+| **Entity Extraction** | gemma-3-4b-it-Q8_0 | 2.7GB | LLM extraction (ADR-026) | Sprint 13/20 |
+| **Complex Reasoning** | qwen2.5:7b | 4.7GB | Multi-hop queries | Sprint 11 |
+| **VLM Image (Primary)** | llava:7b-v1.6-mistral-q2_K | 4.7GB | Image descriptions | **Sprint 21** ✨ |
+| **VLM Image (Alternative)** | qwen3-vl:4b | 2.5GB | Faster image descriptions | **Sprint 21** ✨ |
+| **Embeddings** | BGE-M3 (via HuggingFace) | 2.3GB | 1024-dim embeddings | Sprint 16 |
+
+**Total Model Storage:** ~23GB (all models)
+**Typical VRAM Usage:** 8-12GB (2-3 models loaded simultaneously)
+
+---
+
+#### LlamaIndex Deprecation (ADR-028)
+
+**Sprint 21 Decision:** LlamaIndex moved from **primary ingestion** to **fallback + connector library**
+
+**Before Sprint 21:**
+```toml
+llama-index-core = "^0.14.3"  # PRIMARY ingestion framework
+llama-index-llms-ollama = "^0.8.0"
+llama-index-embeddings-ollama = "^0.8.3"
+llama-index-readers-file = "^0.5.4"
+llama-index-vector-stores-qdrant = "^0.8.6"
+```
+
+**After Sprint 21:**
+```toml
+# RETAINED for connector ecosystem (300+ connectors) and fallback
+llama-index-core = "^0.14.3"  # FALLBACK ONLY
+llama-index-llms-ollama = "^0.8.0"  # Fallback LLM
+llama-index-embeddings-ollama = "^0.8.3"  # Fallback embeddings
+llama-index-readers-file = "^0.5.4"  # Fallback for non-PDF formats
+llama-index-vector-stores-qdrant = "^0.8.6"  # Qdrant integration
+
+# PRIMARY ingestion now: Docling CUDA Container (no pyproject.toml entry)
+```
+
+**Rationale:**
+- Docling provides superior OCR, table extraction, GPU performance
+- LlamaIndex retained for 300+ connector ecosystem (APIs, Cloud, Databases)
+- Fallback path if Docling container unavailable
+
+**Migration Path:**
+- PDF/DOCX: Use Docling CUDA Container (primary)
+- APIs/Cloud: Use LlamaIndex connectors (Notion, Google Drive, Slack, etc.)
+- Fallback: LlamaIndex SimpleDirectoryReader if Docling fails
+
+---
+
+#### HybridChunker Architecture (Sprint 21)
+
+**New Component:** `src/components/ingestion/hybrid_chunker.py`
+
+**Dependencies:**
+- BGE-M3 Tokenizer (existing, from transformers library)
+- Transformers library (already in pyproject.toml)
+
+**Purpose:**
+- Context-aware chunking with image/table references
+- BBox provenance tracking (spatial coordinates)
+- BGE-M3 optimized token counting (8192 context window)
+- Replaces ChunkingService for ingestion pipeline
+
+---
+
+**Last Updated:** 2025-11-10 (Post-Sprint 21)
+**Total Dependencies:** 61+ (production + dev, unchanged)
 **Dependency Health:** All actively maintained, no critical CVEs
-**Sprint 16 Additions:** python-pptx (1.0.2), Pydantic v2 ConfigDict migration
+**Sprint 21 Additions:**
+- **VLM Models:** llava:7b-v1.6-mistral-q2_K, qwen3-vl:4b (Ollama registry)
+- **Container:** Docling CUDA (Docker image, externally managed)
+- **Architecture:** LlamaIndex → Fallback, Docling → Primary (ADR-027, ADR-028)

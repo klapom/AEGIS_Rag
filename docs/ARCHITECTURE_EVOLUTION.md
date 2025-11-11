@@ -1,7 +1,7 @@
-# ARCHITECTURE EVOLUTION - Sprint 1-16 Journey
+# ARCHITECTURE EVOLUTION - Sprint 1-21 Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete architectural history from foundation to production-ready system
-**Last Updated:** 2025-10-28 (Sprint 16 In Progress)
+**Last Updated:** 2025-11-10 (Sprint 21 Complete)
 
 ---
 
@@ -47,7 +47,13 @@
 | 13 | Entity Pipeline | 3-phase extraction, semantic dedup | ✅ COMPLETE |
 | 14 | Backend Performance | Benchmarking, monitoring, retry logic | ✅ COMPLETE |
 | 15 | React Frontend | SSE streaming, Perplexity UI | ✅ COMPLETE |
-| 16 | Unified Architecture | BGE-M3 system-wide, unified chunking | 🔄 IN PROGRESS |
+| 16 | Unified Architecture | BGE-M3 system-wide, unified chunking | ✅ COMPLETE |
+| 17 | Admin UI & Profiling | Conversation archiving, user profiling | ✅ COMPLETE |
+| 18 | CI/CD & Debt | Technical debt resolution, CI improvements | ✅ COMPLETE |
+| 19 | Consolidation | System consolidation, optimization | ✅ COMPLETE |
+| 20 | Extraction Quality | Pure LLM pipeline, chunk analysis | ✅ COMPLETE |
+| 21 | Container Ingestion | Docling CUDA, VLM enrichment, LangGraph | ✅ COMPLETE |
+| 22 | Production | React migration, Kubernetes, onboarding | 📋 PLANNED |
 
 ---
 
@@ -1491,6 +1497,240 @@ similarity = cosine_similarity(qdrant_vector, graphiti_vector)  # Success!
 # Use case: Find semantically similar episodic memories (Graphiti Layer 3)
 # for a given document chunk (Qdrant Layer 2)
 ```
+
+---
+
+### Sprint 17: Admin UI & User Profiling
+**Duration:** 2025-10-29 → 2025-11-05
+**Goal:** Admin interface, conversation history fixes, implicit user profiling
+**Status:** ✅ COMPLETE
+
+#### Architecture Decisions
+- **Conversation Archiving Pipeline:** Redis → Qdrant after 7 days (semantic search)
+- **User Profile Graph:** Neo4j implicit profiling (topics, roles, expertise)
+- **Privacy-First Design:** No PII, only behavioral signals
+
+#### Key Achievements
+- ✅ **Feature 17.2:** Fixed conversation history persistence bugs
+- ✅ **Feature 17.3:** Auto-generated conversation titles (LLM-based, 3-5 words)
+- ✅ **Feature 17.4:** Implicit user profiling with semantic search
+- ✅ **Feature 17.5:** Eliminated duplicate answer streaming
+- ✅ **Feature 17.1/17.6:** Admin UI for directory indexing + statistics
+
+#### Architecture Changes
+```
+Phase 1: ACTIVE (Redis, 7 days TTL)
+  ↓
+Phase 2: ARCHIVED (Qdrant, semantic search enabled)
+  ↓
+Phase 3: PROFILING (Neo4j, implicit profile graph)
+
+Neo4j Profile Graph:
+(user:User)
+  -[:INTERESTED_IN {strength: 0.85}]-> (topic:Topic {name: "Scripting"})
+  -[:HAS_ROLE {confidence: 0.78}]-> (role:Role {name: "Administrator"})
+  -[:EXPERTISE_LEVEL {level: "advanced"}]-> (domain:Domain)
+```
+
+#### Key Learnings
+✅ **What Worked:**
+- Implicit profiling avoids user data entry friction
+- Semantic conversation search enables RAG over history
+- Profile-aware retrieval improves answer relevance
+
+⚠️ **Challenges:**
+- Conversation history bugs revealed state management issues
+- User profiling requires careful privacy considerations
+
+---
+
+### Sprint 18: CI/CD & Technical Debt Resolution
+**Duration:** 2025-11-05 → 2025-11-07
+**Goal:** Resolve technical debt, improve CI/CD stability
+**Status:** ✅ COMPLETE
+
+#### Key Achievements
+- ✅ Enhanced GitHub Actions workflows
+- ✅ Improved integration test stability
+- ✅ Resolved multiple technical debt items
+- ✅ CI/CD pipeline optimization
+
+---
+
+### Sprint 19: System Consolidation
+**Duration:** 2025-11-07 → 2025-11-08
+**Goal:** System consolidation and optimization
+**Status:** ✅ COMPLETE
+
+#### Key Achievements
+- ✅ System consolidation and refactoring
+- ✅ Documentation updates
+- ✅ Performance improvements
+
+---
+
+### Sprint 20: Performance Optimization & Extraction Quality
+**Duration:** 2025-10-31 → 2025-11-06
+**Goal:** Optimize extraction pipeline, analyze chunk overhead
+**Status:** ✅ COMPLETE
+
+#### Architecture Decisions
+- **ADR-026:** Pure LLM Extraction as Default Pipeline
+  - *Rationale:* Simpler than Three-Phase, single LLM call for entities + relations
+  - *Performance:* Comparable quality, reduced complexity
+  - *Alternative:* Three-Phase (SpaCy + Semantic Dedup + Gemma) deprecated
+
+#### Key Achievements
+- ✅ **Pure LLM Pipeline:** Single-pass entity + relation extraction with gemma-3-4b-it-Q8_0
+- ✅ **Chunk Overhead Analysis:** Discovered 65% overhead with 600-token chunks
+- ✅ **1800-Token Chunking Strategy:** Preparation for larger context windows
+- ✅ **LLM Extraction Quality:** Improved accuracy with optimized prompts
+
+#### Technical Changes
+```python
+# Pure LLM Extraction (ADR-026)
+from src.components.graph_rag.extraction.llm_extraction import LLMExtractionService
+
+extractor = LLMExtractionService(
+    model="gemma-3-4b-it-Q8_0",  # Quantized for speed
+    extraction_prompt="extract_entities_and_relations_v2"
+)
+
+# Single LLM call extracts BOTH entities AND relations
+result = await extractor.extract(text)
+# Returns: {"entities": [...], "relations": [...]}
+
+# vs. Three-Phase (DEPRECATED):
+# Phase 1: SpaCy NER (fast but low recall)
+# Phase 2: Semantic Deduplication (FAISS + Levenshtein)
+# Phase 3: Gemma 3 relation extraction
+```
+
+#### Key Learnings
+✅ **What Worked:**
+- Pure LLM extraction simplifies pipeline significantly
+- Chunk overhead analysis revealed optimization opportunity
+- Quantized models maintain quality with better performance
+
+---
+
+### Sprint 21: Container-Based Ingestion & VLM Enrichment
+**Duration:** 2025-11-07 → 2025-11-10
+**Goal:** GPU-accelerated ingestion, image description, LangGraph pipeline
+**Status:** ✅ COMPLETE
+
+#### Architecture Decisions
+- **ADR-027:** Docling CUDA Container vs. LlamaIndex
+  - *Rationale:* 95% OCR accuracy (vs 70%), 92% table detection, 3.5x faster
+  - *Decision:* Docling primary, LlamaIndex fallback/connectors only
+
+- **ADR-028:** LlamaIndex Deprecation Strategy
+  - *Rationale:* Docling superior for OCR, table extraction, GPU performance
+  - *Decision:* Deprecate as primary ingestion, retain for 300+ connectors
+
+- **ADR-029:** React Migration Deferral
+  - *Rationale:* Focus on backend ingestion quality first
+  - *Decision:* Defer full React migration to Sprint 22
+
+- **ADR-030:** Sprint Extension from 12 to 21+ Sprints
+  - *Rationale:* Expanded scope (VLM, container ingestion, profiling)
+  - *Decision:* Extend to 21+ sprints for production readiness
+
+#### Key Achievements
+- ✅ **Docling CUDA Container:** GPU-accelerated OCR (95% accuracy, EasyOCR)
+- ✅ **VLM Integration:** llava:7b-v1.6-mistral-q2_K + Qwen3-VL 4B for image descriptions
+- ✅ **LangGraph 6-Node Pipeline:** Docling → VLM → Chunking → Embedding → Graph → Validation
+- ✅ **HybridChunker:** Context-aware chunking with BBox provenance
+- ✅ **BGE-M3 Tokenizer:** 8192 token context, 1024-dim embeddings
+- ✅ **31 Integration Tests:** DoclingContainerClient fully tested
+- ✅ **Performance:** 420s → 120s per document (3.5x speedup)
+
+#### Architecture Changes
+```
+Before Sprint 21 (LlamaIndex Primary):
+User Upload → LlamaIndex Reader → SimpleDirectoryReader → SentenceSplitter → Qdrant/Neo4j
+
+After Sprint 21 (Docling Primary):
+User Upload → Docling CUDA Container (GPU OCR + Layout Analysis)
+            ↓
+        [LangGraph 6-Node Pipeline]
+            ↓
+Node 1: Docling Parse (start container, parse PDF, stop container → free VRAM)
+Node 2: VLM Enrichment (detect images, generate captions with BBox)
+Node 3: Chunking (HybridChunker with BBox provenance)
+Node 4: Embedding (BGE-M3 batch embeddings)
+Node 5: Graph Extraction (Pure LLM with gemma-3-4b-it-Q8_0)
+Node 6: Validation (schema validation, provenance checks)
+            ↓
+        Qdrant + Neo4j (with BBox data)
+```
+
+#### Technical Stack
+```python
+# Docling CUDA Container Integration
+from src.components.ingestion.docling_client import DoclingContainerClient
+
+docling = DoclingContainerClient(
+    container_image="ds4sd/docling:latest",
+    gpu_enabled=True,
+    vram_limit="6GB"  # Container isolation
+)
+
+# Image Extraction with BBox Coordinates
+images = await docling.extract_images_with_bbox(pdf_path)
+# Returns: [{"image": PIL.Image, "bbox": [x, y, w, h], "page": 1}, ...]
+
+# VLM Image Enrichment
+from src.components.ingestion.image_processor import ImageProcessor
+
+processor = ImageProcessor(
+    vlm_model="llava:7b-v1.6-mistral-q2_K",  # or "qwen3-vl:4b"
+    enable_bbox_provenance=True
+)
+
+descriptions = await processor.generate_descriptions(images)
+# Returns: [{"description": "...", "bbox": [...], "confidence": 0.92}, ...]
+
+# HybridChunker (Replaces ChunkingService)
+from src.components.ingestion.hybrid_chunker import HybridChunker
+
+chunker = HybridChunker(
+    tokenizer="BAAI/bge-m3",
+    max_tokens=1024,  # BGE-M3 optimized
+    context_window=8192,
+    preserve_bbox=True
+)
+
+chunks = await chunker.chunk_with_context(text, images, tables)
+# Returns contextualized chunks with image/table references
+```
+
+#### Performance Metrics
+- **OCR Accuracy:** 70% (LlamaIndex) → 95% (Docling CUDA)
+- **Table Detection:** 60% (LlamaIndex) → 92% (Docling)
+- **Processing Time:** 420s → 120s per document (3.5x faster)
+- **VRAM Management:** 6GB allocation, auto-release after parsing
+- **Integration Tests:** 31 tests, 100% pass rate
+
+#### Key Learnings
+✅ **What Worked:**
+- Container isolation prevents GPU memory leaks
+- VLM image descriptions significantly improve RAG quality
+- BBox provenance enables spatial reasoning in Q&A
+- LangGraph state machine provides excellent observability
+- BGE-M3 tokenizer eliminates token count errors
+
+⚠️ **Challenges:**
+- Container startup overhead (~5-10s per document)
+- VLM inference slow without GPU quantization
+- LlamaIndex deeply integrated (full replacement complex)
+
+#### LlamaIndex Migration Strategy (ADR-028)
+- **Before Sprint 21:** Primary ingestion framework
+- **After Sprint 21:** Fallback + connector library only (300+ connectors)
+- **Reason:** Docling provides superior OCR, table extraction, GPU performance
+- **Status:** Retained for connector ecosystem, deprecated for primary ingestion
+- **Migration Path:** Docling for PDF/DOCX, LlamaIndex for APIs/Cloud connectors
 
 ---
 

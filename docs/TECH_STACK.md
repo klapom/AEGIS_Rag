@@ -12,7 +12,7 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 | **Language** | Python | 3.11+ | TypeScript | Go | AI/ML Ecosystem (ADR-007) |
 | **Web Framework** | FastAPI | 0.115+ | Django | Flask | Performance + Type Safety |
 | **Orchestration** | LangGraph | 0.2+ | CrewAI | AutoGen | Workflow Control (ADR-001) |
-| **Data Ingestion** | LlamaIndex | 0.11+ | LangChain | Custom | RAG-Optimized |
+| **Data Ingestion** | Docling CUDA Container | Latest | LlamaIndex (Fallback) | Custom | GPU OCR + VLM (ADR-027) |
 | **Vector DB** | Qdrant | 1.10+ | Pinecone | Weaviate | Performance (ADR-003) |
 | **Graph DB** | Neo4j | 5.x | FalkorDB | Memgraph | Maturity + Community |
 | **GraphRAG** | LightRAG | Latest | Microsoft GraphRAG | LlamaIndex PropertyGraph | Cost + Speed (ADR-004) |
@@ -20,7 +20,7 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 | **Cache** | Redis | 7.x | Memcached | DragonflyDB | Persistence + Features |
 | **MCP** | Official Python SDK | Latest | TypeScript SDK | Custom | Native Support |
 | **LLM** | Ollama (llama3.2:3b/8b) | Latest | Azure OpenAI GPT-4o | Anthropic Claude | Cost-Free Dev + Local (ADR-002) |
-| **Embeddings** | nomic-embed-text (Ollama) | Latest | text-embedding-3-large | all-MiniLM-L6-v2 | Local + Cost-Free |
+| **Embeddings** | BGE-M3 (1024-dim) | Latest | nomic-embed-text | text-embedding-3-large | Multilingual + Cross-Layer (ADR-024) |
 | **Monitoring** | Prometheus + Grafana | Latest | Datadog | New Relic | Open Source |
 | **Logging** | Structlog | Latest | Python Logging | Loguru | Structured JSON |
 | **Container** | Docker | 24+ | Podman | - | Industry Standard |
@@ -29,7 +29,7 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 
 ---
 
-## Sprint Progress (Sprints 12-16)
+## Sprint Progress (Sprints 12-21)
 
 ### Sprint 12: Advanced Features
 **Status:** ✅ COMPLETE (2025-10-18 → 2025-10-21)
@@ -194,7 +194,199 @@ POST /api/v1/admin/reindex
   - Safety: confirm=true, dry-run mode
 ```
 
-### Cumulative Technology Additions (Sprints 12-16)
+### Sprint 17: Admin UI & User Profiling
+**Status:** ✅ COMPLETE (2025-10-29 → 2025-11-05)
+
+**Technologies Added:**
+- **Conversation Archiving**: Redis → Qdrant semantic search pipeline
+- **User Profiling**: Implicit profile graph in Neo4j (topics, roles, expertise)
+- **Admin UI**: Directory indexing interface with SSE progress tracking
+- **LLM Title Generation**: Auto-generated conversation titles (3-5 words)
+
+**Achievements:**
+- Semantic search across conversation history
+- Privacy-first user profiling (behavioral signals only)
+- Profile-aware retrieval (boost relevant docs based on user context)
+- Answer adaptation (complexity matches user expertise level)
+- Fixed conversation history persistence bugs
+- Eliminated duplicate answer streaming
+
+**Technical Stack:**
+```python
+# Conversation Archiving Pipeline
+ConversationArchiver(
+    redis_client=redis,
+    qdrant_client=qdrant,
+    archive_threshold_days=7,
+    cleanup_after_archive=True
+)
+
+# User Profile Graph (Neo4j)
+(user:User)
+  -[:INTERESTED_IN {strength: 0.85}]-> (topic:Topic {name: "Scripting"})
+  -[:HAS_ROLE {confidence: 0.78}]-> (role:Role {name: "Administrator"})
+  -[:EXPERTISE_LEVEL {level: "advanced"}]-> (domain:Domain)
+```
+
+---
+
+### Sprint 18: CI/CD & Technical Debt Resolution
+**Status:** ✅ COMPLETE (2025-11-05 → 2025-11-07)
+
+**Technologies Added:**
+- **GitHub Actions**: Enhanced CI/CD workflows
+- **Test Infrastructure**: Improved integration test stability
+
+**Achievements:**
+- Resolved multiple technical debt items
+- Improved test coverage and reliability
+- Enhanced CI/CD pipeline stability
+
+---
+
+### Sprint 19: System Consolidation
+**Status:** ✅ COMPLETE (2025-11-07 → 2025-11-08)
+
+**Achievements:**
+- System consolidation and optimization
+- Documentation updates
+- Performance improvements
+
+---
+
+### Sprint 20: Performance Optimization & Extraction Quality
+**Status:** ✅ COMPLETE (2025-10-31 → 2025-11-06)
+
+**Technologies Added:**
+- **Pure LLM Extraction Pipeline**: Single-pass entity + relation extraction (ADR-026)
+- **Chunk Overhead Analysis**: Discovered 65% overhead with 600-token chunks
+- **1800-Token Chunking Strategy**: Preparation for larger context windows
+
+**Achievements:**
+- Pure LLM pipeline introduced as alternative to Three-Phase
+- Chunk size optimization analysis (600 → 1800 tokens planned)
+- LLM extraction quality improvements
+- Reduced complexity vs. Three-Phase pipeline
+- ADR-026 (Pure LLM Extraction as Default Pipeline)
+
+**Technical Stack:**
+```python
+# Pure LLM Extraction (ADR-026, Sprint 21+ Default)
+from src.components.graph_rag.extraction.llm_extraction import LLMExtractionService
+
+extractor = LLMExtractionService(
+    model="gemma-3-4b-it-Q8_0",  # Quantized for speed
+    extraction_prompt="extract_entities_and_relations_v2"
+)
+
+# Single LLM call extracts both entities AND relations
+result = await extractor.extract(text)
+# Returns: {"entities": [...], "relations": [...]}
+```
+
+---
+
+### Sprint 21: Container-Based Ingestion & VLM Enrichment
+**Status:** ✅ COMPLETE (2025-11-07 → 2025-11-10)
+
+**Technologies Added:**
+- **Docling CUDA Container**: GPU-accelerated OCR with EasyOCR (95% accuracy)
+- **Vision Language Models (VLM)**: llava:7b-v1.6-mistral-q2_K, Qwen3-VL 4B
+- **LangGraph Pipeline**: 6-node state machine (Docling → VLM → Chunking → Embedding → Graph → Validation)
+- **HybridChunker**: Context-aware chunking with BBox provenance
+- **BGE-M3 Tokenizer**: 8192 token context window, 1024-dim embeddings
+
+**Major Changes:**
+- **LlamaIndex Deprecation (ADR-028)**: Moved to fallback/connector library only
+- **Docling Primary Ingestion (ADR-027)**: GPU container replaces LlamaIndex
+- **Image Provenance**: Full BBox data in Qdrant, minimal reference in Neo4j
+- **Pure LLM Extraction Default (ADR-026)**: Replaces Three-Phase as primary pipeline
+
+**Achievements:**
+- GPU-accelerated OCR: 95% accuracy (vs 70% LlamaIndex)
+- Table structure preservation: 92% detection rate
+- Performance: 420s → 120s per document (3.5x faster)
+- VLM image descriptions with BBox coordinates
+- 31 integration tests for DoclingContainerClient
+- Container isolation: Manage 6GB VRAM allocation
+- ADR-027 (Docling vs. LlamaIndex), ADR-028 (LlamaIndex Deprecation), ADR-029 (React Migration Deferral), ADR-030 (Sprint Extension)
+
+**Technical Stack:**
+```python
+# Docling CUDA Container Integration
+from src.components.ingestion.docling_client import DoclingContainerClient
+
+docling = DoclingContainerClient(
+    container_image="ds4sd/docling:latest",
+    gpu_enabled=True,
+    vram_limit="6GB"
+)
+
+# Image Extraction with BBox Coordinates
+images = await docling.extract_images_with_bbox(pdf_path)
+# Returns: [{"image": PIL.Image, "bbox": [x, y, w, h], "page": 1}, ...]
+
+# VLM Image Enrichment
+from src.components.ingestion.image_processor import ImageProcessor
+
+processor = ImageProcessor(
+    vlm_model="llava:7b-v1.6-mistral-q2_K",  # or "qwen3-vl:4b"
+    enable_bbox_provenance=True
+)
+
+descriptions = await processor.generate_descriptions(images)
+# Returns: [{"description": "...", "bbox": [...], "confidence": 0.92}, ...]
+
+# HybridChunker (Replaces ChunkingService)
+from src.components.ingestion.hybrid_chunker import HybridChunker
+
+chunker = HybridChunker(
+    tokenizer="BAAI/bge-m3",
+    max_tokens=1024,  # BGE-M3 optimized
+    context_window=8192,
+    preserve_bbox=True
+)
+
+chunks = await chunker.chunk_with_context(text, images, tables)
+# Returns contextualized chunks with image/table references
+
+# LangGraph 6-Node Pipeline
+from src.components.ingestion.langgraph_pipeline import IngestionPipeline
+
+pipeline = IngestionPipeline()
+result = await pipeline.run({
+    "file_path": "document.pdf",
+    "enable_vlm": True,
+    "enable_graph_extraction": True
+})
+# Nodes: Docling → VLM → Chunking → Embedding → Graph → Validation
+```
+
+**LlamaIndex Migration (ADR-028):**
+- **Before Sprint 21**: Primary ingestion framework
+- **After Sprint 21**: Fallback + connector library only (300+ connectors)
+- **Reason**: Docling provides superior OCR, table extraction, and GPU performance
+- **Status**: Retained for connector ecosystem, deprecated for primary ingestion
+
+---
+
+### Sprint 22: Production Deployment Readiness
+**Status:** 📋 PLANNED (2025-11-11+)
+
+**Planned Technologies:**
+- **React Frontend Migration**: Full production UI (deferred from Sprint 15, ADR-029)
+- **Kubernetes Manifests**: Helm charts for production deployment
+- **External User Onboarding**: Authentication and authorization
+- **Performance Validation**: 100+ document batch ingestion
+
+**Objectives:**
+- Production deployment readiness
+- External user access
+- Performance at scale validation
+
+---
+
+### Cumulative Technology Additions (Sprints 12-21)
 
 | Sprint | Category | Technology | Version | Purpose |
 |--------|----------|------------|---------|---------|
@@ -219,6 +411,17 @@ POST /api/v1/admin/reindex
 | 16 | Documents | python-pptx | 1.0.2 | PowerPoint support |
 | 16 | Validation | Pydantic v2 | 2.9.0 | ConfigDict migration |
 | 16 | Admin API | Re-Indexing | Custom | Atomic rebuild endpoint |
+| 17 | Profiling | ConversationArchiver | Custom | Redis → Qdrant archiving |
+| 17 | Graph | User Profile Graph | Neo4j | Implicit profiling (topics, roles) |
+| 17 | Admin UI | Directory Indexing | React | Admin interface |
+| 20 | Extraction | Pure LLM Pipeline | ADR-026 | Single-pass entity+relation |
+| 20 | Analysis | Chunk Overhead | Custom | 65% overhead discovered |
+| 21 | OCR | Docling CUDA | Latest | GPU-accelerated (95% accuracy) |
+| 21 | VLM | llava:7b-v1.6-mistral-q2_K | Ollama | Image descriptions |
+| 21 | VLM | Qwen3-VL 4B | Ollama | Alternative VLM model |
+| 21 | Pipeline | LangGraph 6-Node | Custom | Docling → VLM → Graph |
+| 21 | Chunking | HybridChunker | Custom | BBox-aware chunking |
+| 21 | Extraction | gemma-3-4b-it-Q8_0 | Ollama | LLM extraction (quantized) |
 
 ### Embedding Model Evolution
 
@@ -229,20 +432,29 @@ POST /api/v1/admin/reindex
 - **Layer 3 (Graphiti):** BGE-M3 (1024-dim) → Episodic memory
 - **Issue:** Incompatible embedding spaces, no cross-layer similarity
 
-**Sprint 16 (Unified Architecture):**
+**Sprint 16 (Unified Architecture - ADR-024):**
 - **All Layers:** BGE-M3 (1024-dim) system-wide
 - **Layer 2 (Qdrant):** BGE-M3 → Semantic document search
 - **Layer 3 (Graphiti):** BGE-M3 → Episodic memory
 - **Benefits:**
   - ✅ Cross-layer similarity enabled
-  - ✅ Better multilingual support (German)
+  - ✅ Better multilingual support (German OMNITRACKER docs)
   - ✅ Unified caching and performance optimization
   - ✅ Reduced complexity (single model, single API)
+
+**Sprint 21 (BGE-M3 Tokenizer Integration):**
+- **HybridChunker:** Uses BGE-M3 tokenizer for accurate token counting
+- **Context Window:** 8192 tokens (vs 512 with nomic-embed-text)
+- **Chunk Optimization:** 1024-token chunks (optimal for BGE-M3)
+- **Benefits:**
+  - ✅ No token estimation errors
+  - ✅ Larger chunks with better context preservation
+  - ✅ Better alignment with BGE-M3 embedding space
 
 **Migration (ADR-024):**
 - Reason: Enable semantic search across memory layers
 - Impact: Requires re-indexing all documents (933+ docs)
-- Solution: Unified re-indexing endpoint (Feature 16.3)
+- Solution: Unified re-indexing endpoint (Feature 16.2)
 
 ---
 
