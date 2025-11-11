@@ -140,6 +140,9 @@ scripts/log_chunks_and_entities.py
 scripts/quick_index_pptx.py
 scripts/test_questions_norag.yaml
 
+# Sprint 21 Feature 21.6 - Development/testing files
+scripts/feature_21_6/
+
 # Poetry helper script
 poetry.sh
 
