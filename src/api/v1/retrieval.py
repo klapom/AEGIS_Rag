@@ -44,6 +44,11 @@ settings = get_settings()  # Sprint 22 Feature 22.2.3: Config-driven rate limits
 
 router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 
+# Initialize format router (Sprint 22 Feature 22.3)
+from src.components.ingestion.format_router import FormatRouter
+
+_format_router = FormatRouter()  # Will check Docling availability at startup
+
 
 # Request/Response Models
 class SearchRequest(BaseModel):
@@ -421,7 +426,7 @@ async def upload_file(
 
     Args:
         request: FastAPI request (for rate limiting)
-        file: Uploaded file (PDF, TXT, MD, DOCX, CSV)
+        file: Uploaded file (30 formats supported, see /formats endpoint)
         current_user: Authenticated user (optional)
 
     Returns:
@@ -437,15 +442,36 @@ async def upload_file(
     import shutil
     import tempfile
 
-    # Validate file extension
-    allowed_extensions = {".pdf", ".txt", ".md", ".docx", ".csv"}
-    file_ext = Path(file.filename).suffix.lower()
+    from src.components.ingestion.format_router import ALL_FORMATS
 
-    if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(allowed_extensions)}",
+    # Validate file format using FormatRouter (Sprint 22 Feature 22.3/22.4)
+    file_path = Path(file.filename)
+
+    # Check if format is supported
+    if not _format_router.is_supported(file_path):
+        supported_formats = sorted(ALL_FORMATS)
+        logger.warning(
+            "unsupported_format_upload",
+            filename=file.filename,
+            format=file_path.suffix,
+            supported_count=len(supported_formats),
         )
+        raise InvalidFileFormatError(
+            filename=file.filename,
+            expected_formats=supported_formats,
+        )
+
+    # Get routing decision (Docling or LlamaIndex)
+    routing_decision = _format_router.route(file_path)
+
+    logger.info(
+        "upload_format_routing",
+        filename=file.filename,
+        format=routing_decision.format,
+        parser=routing_decision.parser,
+        reason=routing_decision.reason,
+        confidence=routing_decision.confidence,
+    )
 
     try:
         # Save uploaded file to temporary directory
@@ -514,6 +540,64 @@ async def upload_file(
             status_code=500,
             detail=f"Failed to process file: {str(e)}",
         ) from None
+
+
+@router.get("/formats")
+async def get_supported_formats():
+    """Get list of all supported document formats.
+
+    Returns format information including:
+    - Total supported formats (30)
+    - Formats by parser (Docling, LlamaIndex, Shared)
+    - Parser capabilities (GPU acceleration, OCR accuracy, etc.)
+
+    Sprint 22 Features 22.3/22.4: Hybrid Docling/LlamaIndex ingestion
+
+    Returns:
+        Dictionary with format support information
+
+    Example:
+        ```bash
+        curl http://localhost:8000/api/v1/retrieval/formats
+        ```
+    """
+    from src.components.ingestion.format_router import (
+        ALL_FORMATS,
+        DOCLING_FORMATS,
+        LLAMAINDEX_EXCLUSIVE,
+        SHARED_FORMATS,
+        ParserType,
+    )
+
+    return {
+        "total_formats": len(ALL_FORMATS),
+        "formats": {
+            "docling_exclusive": sorted(DOCLING_FORMATS - SHARED_FORMATS),
+            "llamaindex_exclusive": sorted(LLAMAINDEX_EXCLUSIVE),
+            "shared": sorted(SHARED_FORMATS),
+        },
+        "parser_info": {
+            "docling": {
+                "formats": len(DOCLING_FORMATS | SHARED_FORMATS),
+                "features": [
+                    "GPU-accelerated OCR (95% accuracy)",
+                    "Table extraction (92% accuracy)",
+                    "Image extraction with BBox coordinates",
+                    "Layout preservation",
+                ],
+            },
+            "llamaindex": {
+                "formats": len(LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS),
+                "features": [
+                    "Text-only extraction",
+                    "300+ connector ecosystem",
+                    "E-book support (EPUB)",
+                    "LaTeX and Markdown parsing",
+                ],
+            },
+        },
+        "all_formats": sorted(ALL_FORMATS),
+    }
 
 
 @router.post("/prepare-bm25")
