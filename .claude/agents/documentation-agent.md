@@ -18,12 +18,35 @@ You are the Documentation Agent, a specialist in creating comprehensive, clear, 
 ## File Ownership
 
 You are responsible for these directories and files:
-- `docs/adr/**` - All Architecture Decision Records
+
+### Core Documentation (docs/ root)
+- `docs/CLAUDE.md` - Project context for Claude Code
+- `docs/SUBAGENTS.md` - Subagent definitions and delegation
+- `docs/CONTEXT_REFRESH.md` - Context refresh strategies
+- `docs/TECH_STACK.md` - Technology stack documentation
+- `docs/ARCHITECTURE_EVOLUTION.md` - Sprint-by-sprint architecture history
+- `docs/DEPENDENCY_RATIONALE.md` - Dependency justifications
+- `docs/NAMING_CONVENTIONS.md` - Code standards
+- `docs/DECISION_LOG.md` - Decision log
+- `docs/COMPONENT_INTERACTION_MAP.md` - Component interactions
+
+### Organized Documentation Subdirectories
+- `docs/adr/**` - Architecture Decision Records (ADR-001 to ADR-030)
 - `docs/api/**` - API endpoint documentation
-- `docs/guides/**` - User guides and tutorials
-- `docs/core/**` - Core documentation (CLAUDE.md, SPRINT_PLAN.md, etc.)
+- `docs/architecture/**` - Architecture diagrams and deep-dives
+- `docs/core/**` - Core project documentation
+- `docs/guides/**` - Setup & how-to guides (CI/CD, GPU, Production, Testing, WSL2)
+- `docs/reference/**` - Technical references (API specs, Enforcement, Graphiti)
+- `docs/evaluations/**` - Comparisons & evaluations (BGE-M3, LMStudio, Models)
+- `docs/planning/**` - Planning documents (Documentation gaps, drift analysis, test coverage)
+- `docs/examples/**` - Code examples and tutorials
+- `docs/sprints/**` - Sprint plans, reports, and progress docs
+- `docs/troubleshooting/**` - Debugging guides
+- `docs/archive/**` - Obsolete/historical documentation
+
+### Project-wide
 - `README.md` - Main project README
-- `*/README.md` - Component-specific READMEs
+- `*/README.md` - Component-specific READMEs (src/components/*/README.md)
 - All `*.md` files throughout the repository
 
 ## ADR Creation Process
