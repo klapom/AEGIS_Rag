@@ -38,7 +38,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 025 | Mem0 as Layer 0 for User Preference Learning | Accepted | 2025-10-31 |
 | 026 | Pure LLM Extraction as Default Pipeline | Accepted | 2025-11-07 |
 | 027 | Docling Container vs. LlamaIndex for Document Ingestion | Accepted | 2025-11-07 |
-| 028 | LlamaIndex Deprecation Strategy | Accepted | 2025-11-07 |
+| 028 | Docling-First Hybrid Ingestion Strategy | Accepted | 2025-11-07 |
 | 029 | React Frontend Migration Deferral | Accepted | 2025-11-07 |
 | 030 | Sprint Extension from 12 to 21+ Sprints | Accepted | 2025-11-07 |
 
