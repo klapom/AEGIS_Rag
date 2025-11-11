@@ -1,9 +1,14 @@
 # ADR-031: Ollama Cloud Hybrid Execution Strategy
 
-**Status:** 🔬 PROPOSED (2025-11-11)
+**Status:** 📋 EXTENDED BY ADR-032 (2025-11-11)
+**Extended By:** ADR-032 (Multi-Cloud Execution with OpenAI API)
 **Deciders:** Project Lead (Klaus Pommer), Backend Team
 **Date:** 2025-11-11
 **Sprint:** Sprint 23 (Feature 23.4)
+
+> **Note:** This ADR proposes a **two-tier hybrid** (Local + Ollama Cloud).
+> ADR-032 extends this to a **three-tier multi-cloud** strategy (Local + Ollama Cloud + OpenAI API).
+> For the full multi-cloud strategy, see [ADR-032](ADR-032-multi-cloud-execution-strategy.md).
 
 ---
 
