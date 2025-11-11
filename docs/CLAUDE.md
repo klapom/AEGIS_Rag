@@ -3,11 +3,12 @@
 ## 🔄 Session Continuity Check
 
 **Falls diese Session kompaktiert wurde:**
-1. Lies dieses gesamte CLAUDE.md Dokument
-2. Checke SPRINT_PLAN.md für aktuellen Sprint-Status
-3. Reaktiviere Subagenten-Context aus SUBAGENTS.md
-4. Verifiziere ADR-Awareness aus ADR_INDEX.md
-5. Bestätige Naming Conventions aus NAMING_CONVENTIONS.md
+1. **DEEP CONTEXT REFRESH:** Lies [CONTEXT_REFRESH.md](CONTEXT_REFRESH.md) für vollständigen Projekt-Context
+2. Lies dieses gesamte CLAUDE.md Dokument
+3. Checke SPRINT_PLAN.md für aktuellen Sprint-Status
+4. Reaktiviere Subagenten-Context aus SUBAGENTS.md
+5. Verifiziere ADR-Awareness aus ADR_INDEX.md
+6. Bestätige Naming Conventions aus NAMING_CONVENTIONS.md
 
 **Zeichen für Context Loss:**
 - Du kennst Projekt-Struktur nicht mehr
@@ -15,7 +16,7 @@
 - Du nutzt Subagenten nicht mehr systematisch
 - Du hältst dich nicht an Naming Conventions
 
-→ Dann: Context Refresh durchführen!
+→ Dann: **CONTEXT_REFRESH.md lesen** (umfassender Context Refresh mit 3 Strategien)
 
 ---
 

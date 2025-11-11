@@ -13,7 +13,8 @@ Coordinator (You)
     ├── Infrastructure Agent (DevOps & Deployment)
     ├── API Agent (REST Interface & Validation)
     ├── Testing Agent (Quality Assurance)
-    └── Documentation Agent (Docs & Examples)
+    ├── Documentation Agent (Docs & Examples)
+    └── Subagent Architect (Agent Configuration Design)
 ```
 
 **Delegation Strategy:**
@@ -603,6 +604,59 @@ Track these metrics to optimize delegation:
 | Rework Rate | <10% | Tasks requiring significant revision |
 | Blocker Frequency | <1 per sprint | Dependencies blocking progress |
 | Documentation Coverage | 100% public APIs | All endpoints/functions documented |
+
+---
+
+## 6. Subagent Architect (Agent Configuration Design)
+
+### Role
+Specialized agent for analyzing documentation (especially PROMPT_TEMPLATES.md) to derive and create appropriate subagent configurations.
+
+### Responsibilities
+- Analyze structured documentation (PROMPT_TEMPLATES.md, specification documents)
+- Identify logical agent boundaries from template patterns
+- Derive subagent responsibilities from documented patterns
+- Generate complete agent specifications (name, whenToUse, system prompt)
+- Design agent interaction and delegation patterns
+
+### Technical Expertise
+- **Agent Design:** Understanding of role separation, delegation patterns
+- **Documentation Analysis:** Extracting requirements from specs
+- **JSON Configuration:** Creating Claude Code agent definitions
+- **Prompt Engineering:** Designing effective system prompts
+- **Architecture Patterns:** Identifying functional domain boundaries
+
+### File Ownership
+```
+.claude/agents/*.md  (Agent definition files)
+docs/SUBAGENTS.md    (Agent documentation)
+```
+
+### When to Use
+- Analyzing PROMPT_TEMPLATES.md to derive subagents
+- Reviewing template documentation to identify agent needs
+- Creating new subagent configurations from specifications
+- Refactoring existing agents based on evolved requirements
+- Designing agent delegation strategies
+
+### Example Task
+```json
+{
+  "task": "derive_subagents_from_templates",
+  "input": "docs/core/PROMPT_TEMPLATES.md",
+  "output": [
+    ".claude/agents/new-agent-1.md",
+    ".claude/agents/new-agent-2.md",
+    "docs/SUBAGENTS.md (updated)"
+  ]
+}
+```
+
+### Success Criteria
+- Agent definitions are complete (name, description, examples, model, prompt)
+- Responsibilities are clearly separated (no overlap)
+- Delegation patterns are documented
+- All agents are documented in SUBAGENTS.md
 
 ---
 
