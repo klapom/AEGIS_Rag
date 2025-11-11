@@ -1,168 +1,238 @@
-# AEGIS RAG - AI-Enhanced Guardrail Integration System
+# AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-Enterprise-grade Retrieval-Augmented Generation System mit integrierten Guardrails.
+**Status:** Sprint 21 Complete (2025-11-10)
+**Version:** 1.0.0 (Production-Ready)
 
-## 📁 Projektstruktur
+Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, and GPU-accelerated ingestion.
 
-```
-AEGIS_RAG/
-├── docs/                           # Dokumentation
-│   ├── core/                       # Kern-Dokumentation
-│   │   ├── PROJECT_SUMMARY.md      # ⭐ Gesamtübersicht - Start hier!
-│   │   ├── QUICK_START.md          # Tag-1-Setup
-│   │   ├── CLAUDE.md               # Hauptkontext für Claude Code
-│   │   ├── NAMING_CONVENTIONS.md   # Code Standards
-│   │   ├── TECH_STACK.md           # Complete Technology Stack
-│   │   ├── SUBAGENTS.md            # 5 Subagenten-Definitionen
-│   │   ├── PROMPT_TEMPLATES.md     # 8 Claude Code Templates
-│   │   └── ENFORCEMENT_GUIDE.md    # Quality Gates Übersicht
-│   └── adr/                        # Architecture Decision Records
-│       └── ADR_INDEX.md            # 8 Architecture Decisions
-│
-├── .github/                        # GitHub Konfiguration
-│   ├── workflows/
-│   │   └── ci.yml                  # 10-Job CI/CD Pipeline
-│   ├── pull_request_template.md    # PR Checklist
-│   └── CODEOWNERS                  # Auto-Review Zuweisungen
-│
-├── scripts/                        # Automation Scripts
-│   ├── check_adr.py                # ADR Detection
-│   └── check_naming.py             # Naming Convention Checker
-│
-├── .pre-commit-config.yaml         # 14 Pre-Commit Hooks
-└── README.md                       # Diese Datei
-```
+---
 
 ## 🚀 Quick Start
 
-1. **Dokumentation lesen**: Beginne mit [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md)
-2. **Setup durchführen**: Folge [docs/core/QUICK_START.md](docs/core/QUICK_START.md)
-3. **Claude Code nutzen**: Siehe [docs/core/PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) für Templates
+**New to the project?**
+1. Read [docs/CLAUDE.md](docs/CLAUDE.md) - Complete project context
+2. Review [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md) - Context refresh strategies
+3. Check [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md) - Current sprint status
 
-## 📚 Wichtige Dokumente
+**Ready to develop?**
+1. Follow [docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md](docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md)
+2. Review [docs/NAMING_CONVENTIONS.md](docs/NAMING_CONVENTIONS.md)
+3. Read [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 30 Architecture Decisions
 
-### Core Dokumentation
-- [PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) - Gesamtübersicht
-- [SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md) - 12-Sprint Roadmap
-- [QUICK_START.md](docs/core/QUICK_START.md) - Day-1 Setup Guide
-- [PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md) - Claude Code Templates
-- [ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 18+ Architecture Decisions
+---
 
+## 📋 Current Sprint Status
 
-### Setup & Enforcement
-- [.pre-commit-config.yaml](.pre-commit-config.yaml) - 14 Hooks
-- [ci.yml](.github/workflows/ci.yml) - 10-Job Pipeline
-- [pull_request_template.md](.github/pull_request_template.md) - PR Checklist
-- [check_adr.py](scripts/check_adr.py) - ADR Detection
-- [check_naming.py](scripts/check_naming.py) - Naming Checker
-- [CODEOWNERS](.github/CODEOWNERS) - Auto-Review
+### Sprint 21: Container-Based Ingestion ✅ COMPLETE
+**Duration:** 2025-11-07 → 2025-11-10
 
-## 🛠️ Technologie-Stack
+**Key Achievements:**
+- ✅ Docling CUDA Container (95% OCR accuracy, 3.5x faster)
+- ✅ VLM Integration (llava:7b-v1.6-mistral-q2_K, Qwen3-VL 4B)
+- ✅ LangGraph 6-Node Pipeline (Docling → VLM → Chunking → Embedding → Graph → Validation)
+- ✅ LlamaIndex Deprecation (now fallback only, ADR-028)
+- ✅ 31 Integration Tests (100% pass rate)
+- ✅ Documentation complete (Sprint 1-21)
 
-- **Backend**: Python 3.12+, FastAPI
-- **Orchestration**: LangGraph
-- **RAG**: LlamaIndex, LightRAG
-- **Vector DB**: Qdrant
-- **Graph DB**: Neo4j
-- **Memory**: Graphiti (Temporal Memory)
-- **LLM**: Ollama (flexible)
-- **Embeddings**: BGE-M3 (lokal, 1024-dim)
-- **Reranking**: sentence-transformers (cross-encoder/ms-marco-MiniLM)
-- **Evaluation**: RAGAS (Context Precision, Recall, Faithfulness)
-- **Security**: Custom Guardrails, Content Filtering, SHA-256 hashing
-- **DevOps**: Docker, GitHub Actions
-- **Windows System: nur ASCII Zeichen in logs verwenden!!
-- **POETRY als Umgebung ist gesetzt
-Details siehe [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
+**Architecture Decisions:**
+- ADR-026: Pure LLM Extraction as Default Pipeline
+- ADR-027: Docling CUDA Container vs. LlamaIndex
+- ADR-028: LlamaIndex Deprecation Strategy
+- ADR-029: React Migration Deferral
+- ADR-030: Sprint Extension (12 → 21+ Sprints)
 
-### LLM-Strategie (ADR-002)
-- **Development & Production**: 100% Ollama (kostenfrei, offline-fähig)
-- **Compliance**: Vollständig air-gapped Deployment
-- **Privacy**: Keine Daten verlassen lokales Netzwerk
+### Sprint 22: Production Deployment 📋 PLANNED
+**Planned:**
+- React Frontend Migration
+- Kubernetes Deployment
+- External User Onboarding
+- Performance Validation (100+ docs)
 
-## 📋 Entwicklungsprozess
+---
 
-1. **Pre-Commit Hooks**: Automatische Checks bei jedem Commit
-2. **CI/CD Pipeline**: 10 Jobs in GitHub Actions
-3. **Architecture Decisions**: Dokumentiert in ADRs
-4. **Code Review**: Automatische Zuweisung via CODEOWNERS
-5. **Quality Gates**: Definiert in ENFORCEMENT_GUIDE.md
+## 🛠️ Technology Stack (Sprint 21)
+
+### Core Components
+- **Backend:** Python 3.12.7, FastAPI, Pydantic v2
+- **Orchestration:** LangGraph 0.6.10, LangChain Core
+- **Ingestion:** Docling CUDA Container (GPU-accelerated OCR, ADR-027)
+- **Fallback:** LlamaIndex 0.14.3 (connectors only, ADR-028)
+
+### Databases
+- **Vector DB:** Qdrant 1.11.0 (semantic search)
+- **Graph DB:** Neo4j 5.24 Community (knowledge graph)
+- **Memory Cache:** Redis 7.x (short-term memory)
+
+### AI Models (Local & Cost-Free)
+- **Query Understanding:** llama3.2:3b (Ollama)
+- **Answer Generation:** llama3.2:8b (Ollama)
+- **Entity Extraction:** gemma-3-4b-it-Q8_0 (Ollama, ADR-026)
+- **Vision (VLM):** llava:7b-v1.6-mistral-q2_K (Sprint 21)
+- **Vision (Alt):** qwen3-vl:4b (Sprint 21)
+- **Embeddings:** BGE-M3 (1024-dim, multilingual, ADR-024)
+
+### Infrastructure
+- **Container Runtime:** Docker + NVIDIA Container Toolkit (CUDA 12.4)
+- **CI/CD:** GitHub Actions
+- **GPU:** NVIDIA RTX 3060 (12GB VRAM, Sprint 21 Feature 21.6)
+
+---
+
+## 📚 Documentation Structure
+
+### Core Docs (docs/ root) - 9 files
+Essential reference documentation:
+- **CLAUDE.md** - Project context for Claude Code
+- **CONTEXT_REFRESH.md** - Context refresh strategies (Quick/Standard/Deep)
+- **TECH_STACK.md** - Complete technology stack (Sprint 1-21)
+- **ARCHITECTURE_EVOLUTION.md** - Sprint-by-sprint architecture history
+- **DEPENDENCY_RATIONALE.md** - Dependency justifications
+- **SUBAGENTS.md** - 6 specialized subagents
+- **NAMING_CONVENTIONS.md** - Code standards
+- **DECISION_LOG.md** - Decision log
+- **COMPONENT_INTERACTION_MAP.md** - Component interactions
+
+### Organized Subdirectories - 12 categories
+- **docs/adr/** - Architecture Decision Records (ADR-001 to ADR-030)
+- **docs/api/** - API endpoint documentation
+- **docs/architecture/** - Architecture diagrams
+- **docs/core/** - Core project documentation
+- **docs/guides/** - Setup & how-to guides
+- **docs/reference/** - Technical references
+- **docs/evaluations/** - Comparisons & evaluations
+- **docs/planning/** - Planning documents
+- **docs/examples/** - Code examples
+- **docs/sprints/** - Sprint plans & reports
+- **docs/troubleshooting/** - Debugging guides
+- **docs/archive/** - Obsolete/historical docs
+
+---
+
+## 🏗️ Architecture Highlights
+
+### Hybrid RAG System
+- **Vector Search:** Qdrant + BGE-M3 embeddings
+- **Graph Reasoning:** LightRAG + Neo4j (entity/relation extraction)
+- **BM25 Keyword:** Reciprocal Rank Fusion (RRF)
+- **Reranking:** Cross-encoder (ms-marco-MiniLM-L-6-v2)
+
+### 3-Layer Memory Architecture
+- **Layer 1:** Redis (short-term, <10ms)
+- **Layer 2:** Qdrant (semantic, <50ms)
+- **Layer 3:** Graphiti (episodic, bi-temporal, <200ms)
+
+### LangGraph Multi-Agent System
+- **Coordinator Agent:** Query routing & orchestration
+- **Vector Search Agent:** Qdrant hybrid search
+- **Graph Query Agent:** Neo4j + LightRAG
+- **Memory Agent:** Graphiti retrieval
+- **Action Agent:** Tool execution (MCP)
+
+### Ingestion Pipeline (Sprint 21)
+**6-Node LangGraph State Machine:**
+1. **Docling Parse:** GPU-accelerated OCR (95% accuracy)
+2. **VLM Enrichment:** Image descriptions with BBox provenance
+3. **Chunking:** HybridChunker (1024 tokens, BGE-M3 optimized)
+4. **Embedding:** BGE-M3 batch embeddings
+5. **Graph Extraction:** Pure LLM (gemma-3-4b-it-Q8_0, ADR-026)
+6. **Validation:** Schema validation, provenance checks
+
+---
 
 ## 🤖 Claude Code Integration
 
-Das Projekt ist vollständig auf Claude Code optimiert:
-- Hauptkontext in [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md)
-- Prompt-Templates in [docs/core/PROMPT_TEMPLATES.md](docs/core/PROMPT_TEMPLATES.md)
-- Naming Conventions integriert
+**6 Specialized Subagents:**
+1. **backend-agent** - Core business logic, LangGraph agents
+2. **infrastructure-agent** - Docker, CI/CD, Kubernetes
+3. **api-agent** - FastAPI endpoints, OpenAPI docs
+4. **testing-agent** - Unit, integration, E2E tests
+5. **documentation-agent** - ADRs, API docs, guides
+6. **subagent-architect** - Agent configuration design
 
-## 🔒 Sicherheit
-
-- Enterprise-Compliance (Air-Gapped, DSGVO)
-- Multi-Layer Guardrails
-- Content Filtering
-- PII Detection
-- Access Control
-
-Details in [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md) und [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
-
-## 📅 Sprint Plan
-
-12 Sprints geplant über 12 Wochen:
-- ✅ Sprint 1: Foundation & Infrastructure Setup (COMPLETE)
-- ✅ Sprint 2: Vector Search Foundation (COMPLETE - 212 tests passing)
-- ✅ Sprint 3: Advanced Retrieval (COMPLETE - 335 tests passing, 99.1%)
-- ✅ Sprint 4: LangGraph Orchestration Layer (COMPLETE)
-- ✅ Sprint 5: LightRAG Integration (COMPLETE)
-- ✅ Sprint 6: Hybrid Vector-Graph Retrieval (COMPLETE)
-- ✅ Sprint 7: Graphiti Memory Integration (COMPLETE)
-- ✅ Sprint 8: Critical Path E2E Testing (COMPLETE - 80% baseline)
-- ✅ Sprint 9: 3-Layer Memory Architecture + MCP Server Integration (COMPLETE)
-- ✅ Sprint 10: End-User Interface (COMPLETE - Gradio UI)
-- ✅ Sprint 11: Technical Debt Resolution & Unified Pipeline (COMPLETE - 8/10 features, GPU support)
-- ✅ Sprint 12: Integration Testing & Production Readiness (COMPLETE)
-- ✅ Sprint 13: Three-Phase Entity Extraction Pipeline (COMPLETE - 10x speedup, SpaCy + Semantic Dedup + Gemma 2 4B)
-- ✅ Sprint 14: Backend Performance & Testing (COMPLETE - 132 tests, Prometheus metrics, retry logic)
-- ✅ Sprint 15: Frontend Interface with Perplexity-Inspired UI (COMPLETE - React + Vite, SSE streaming)
-- ✅ Sprint 16: Unified Ingestion Architecture & BGE-M3 Migration (COMPLETE - 69 SP, cross-layer similarity)
-- ✅ Sprint 17: Admin UI & Advanced Features (COMPLETE - 55 SP, conversation history, user profiling)
-- 📋 Sprint 18: Test Infrastructure & Security Hardening (PLANNED - 24 SP, JWT auth, rate limiting)
-
-**Gesamt-Fortschritt:** 515/584 SP (88.2%)
-
-Details siehe [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md)
-
-## 📞 Kontakt & Support
-
-Bei Fragen zum Projekt:
-1. Konsultiere [docs/core/PROJECT_SUMMARY.md](docs/core/PROJECT_SUMMARY.md)
-2. Prüfe die [ADRs](docs/adr/ADR_INDEX.md) für Architekturentscheidungen
-3. Nutze die [Prompt Templates](docs/core/PROMPT_TEMPLATES.md) für Claude Code
+**Usage:**
+- See [docs/SUBAGENTS.md](docs/SUBAGENTS.md) for delegation strategies
+- Use [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md) for context recovery
 
 ---
 
-## 🎯 Recent Highlights
+## 📊 Project Status
 
-### Sprint 16 (COMPLETE - Oktober 2024)
-- **Unified Chunking Service**: 70% code reduction, SHA-256 deterministic IDs
-- **BGE-M3 Migration**: System-wide 1024-dim embeddings, +23% German retrieval quality
-- **Cross-Layer Similarity**: Enabled semantic search across all memory layers
-- **Atomic Re-Indexing**: Admin endpoint with SSE progress tracking
+### Sprint Completion
+- **Sprints 1-21:** ✅ COMPLETE (Container-based ingestion, VLM enrichment)
+- **Sprint 22:** 📋 PLANNED (Production deployment, React migration)
 
-### Sprint 17 (COMPLETE - Oktober 2024)
-- **Admin UI**: Directory indexing with real-time progress display
-- **Conversation Persistence**: Full history with follow-up question support
-- **Auto-Generated Titles**: LLM-based, 3-5 word summaries (user-editable)
-- **Implicit User Profiling**: Neo4j knowledge graph, semantic conversation search
+### Test Coverage
+- **Unit Tests:** 112+ tests
+- **Integration Tests:** 51+ tests (including 31 for Docling)
+- **E2E Tests:** 28+ tests
+- **Total Coverage:** >80%
 
-### Sprint 18 (PLANNED)
-- **Test Infrastructure**: Fix 44 failing E2E tests → 95% pass rate
-- **JWT Authentication**: Secure admin endpoints with role-based access
-- **API Rate Limiting**: Redis-backed, 10-100 req/min per endpoint
-- **Production Readiness**: Security hardening for deployment
+### Documentation
+- **ADRs:** 30 Architecture Decision Records (ADR-001 to ADR-030)
+- **Sprint Reports:** 21 sprint completion reports
+- **Component READMEs:** 10+ component documentation files
+- **Total Docs:** 100+ markdown files
 
 ---
 
-**Version**: 1.7.0 (Sprint 17 Complete)
-**Erstellt**: Oktober 2024
-**Letzte Aktualisierung**: 29. Oktober 2024
-**Status**: Production-Ready (88.2% complete, Sprint 18 planned)
+## 🔒 Security & Compliance
+
+### Local-First Strategy (ADR-002)
+- **100% Ollama:** No cloud dependencies
+- **Offline Capable:** Air-gapped deployment
+- **DSGVO Compliant:** No data leaves local network
+- **Cost-Free:** Zero API costs in development
+
+### Security Features
+- SHA-256 hashing for chunk IDs
+- Input validation and sanitization
+- Rate limiting
+- Content filtering
+
+---
+
+## 📦 Dependencies
+
+**Runtime:**
+- Python 3.11+
+- Docker + NVIDIA Container Toolkit
+- Ollama (7 models: llama3.2, gemma-3, llava, qwen3-vl, BGE-M3)
+- Poetry (dependency management)
+
+**GPU Requirements:**
+- NVIDIA GPU with CUDA 12.4 support
+- 12GB+ VRAM recommended (for VLM + Docling)
+- RTX 3060 / RTX 3070 / RTX 4060 or better
+
+---
+
+## 🚀 Next Steps
+
+### For Developers
+1. Read [docs/CLAUDE.md](docs/CLAUDE.md) - Project context
+2. Review [docs/NAMING_CONVENTIONS.md](docs/NAMING_CONVENTIONS.md)
+3. Check [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) for architecture decisions
+
+### For Architects
+1. Study [docs/ARCHITECTURE_EVOLUTION.md](docs/ARCHITECTURE_EVOLUTION.md)
+2. Review ADR-026 through ADR-030 (Sprint 21 decisions)
+3. Read [docs/TECH_STACK.md](docs/TECH_STACK.md) for complete stack
+
+### For DevOps
+1. Follow [docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md](docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md)
+2. Review [docs/guides/GPU_REQUIREMENTS.md](docs/guides/GPU_REQUIREMENTS.md)
+3. Check [docs/guides/CI_CD_GUIDE.md](docs/guides/CI_CD_GUIDE.md)
+
+---
+
+## 📞 Resources
+
+- **GitHub:** [github.com/klapom/AEGIS_Rag](https://github.com/klapom/AEGIS_Rag)
+- **Documentation:** [docs/](docs/)
+- **Issues:** GitHub Issues
+- **ADRs:** [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
+
+---
+
+**Last Updated:** 2025-11-10 (Sprint 21 Complete)
+**Maintainer:** AEGIS RAG Team
