@@ -525,6 +525,33 @@ class Settings(BaseSettings):
     mcp_server_port: int = Field(default=3000, description="MCP server port")
     mcp_auth_enabled: bool = Field(default=False, description="Enable MCP authentication")
 
+    # Rate Limiting (Sprint 22 Feature 22.2.3)
+    rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
+    rate_limit_per_minute: int = Field(
+        default=100, ge=1, le=1000, description="Global requests per minute per IP (development)"
+    )
+    rate_limit_upload: int = Field(
+        default=10, ge=1, le=100, description="Upload requests per minute per IP"
+    )
+    rate_limit_search: int = Field(
+        default=100, ge=1, le=500, description="Search requests per minute per IP"
+    )
+    rate_limit_storage_uri: str = Field(
+        default="memory://", description="Rate limit storage (memory:// or redis://host:port)"
+    )
+
+    # CORS Configuration (Sprint 22 Feature 22.2.3)
+    cors_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://localhost:3000"],
+        description="Allowed CORS origins (comma-separated in .env)",
+    )
+    cors_allow_credentials: bool = Field(default=True, description="Allow credentials in CORS")
+    cors_allow_methods: list[str] = Field(
+        default=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        description="Allowed HTTP methods for CORS",
+    )
+    cors_allow_headers: list[str] = Field(default=["*"], description="Allowed headers for CORS")
+
     # Performance
     max_concurrent_requests: int = Field(default=50, description="Maximum concurrent requests")
     request_timeout: int = Field(default=60, description="Request timeout in seconds")
@@ -621,6 +648,28 @@ class Settings(BaseSettings):
         v = v.upper()
         if v not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
+        return v
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
+        """
+        Parse CORS origins from comma-separated string or list.
+
+        Args:
+            v: CORS origins as string (comma-separated) or list
+
+        Returns:
+            List of origin URLs
+
+        Example:
+            >>> Settings(cors_origins="http://localhost:3000,http://localhost:5173").cors_origins
+            ['http://localhost:3000', 'http://localhost:5173']
+            >>> Settings(cors_origins=["http://localhost:3000"]).cors_origins
+            ['http://localhost:3000']
+        """
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     @property
