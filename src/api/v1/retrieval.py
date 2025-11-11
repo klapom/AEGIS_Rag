@@ -379,9 +379,10 @@ async def upload_file(
 ) -> IngestionResponse:
     """Upload and index a single document file.
 
-    Sprint 11 Feature 11.3: Unified Ingestion Pipeline
-    - Indexes to Qdrant + BM25 + Neo4j in parallel
-    - Returns statistics for all systems
+    Sprint 21 Feature 21.2: LangGraph Ingestion Pipeline
+    - Sequential pipeline: Docling → Chunking → Embedding (Qdrant) → Graph (Neo4j)
+    - Container-based parsing with GPU acceleration
+    - Progress tracking and error handling
 
     Args:
         request: FastAPI request (for rate limiting)
@@ -397,6 +398,7 @@ async def upload_file(
              -F "file=@document.pdf"
         ```
     """
+    import hashlib
     import shutil
     import tempfile
 
@@ -423,33 +425,52 @@ async def upload_file(
                 "file_uploaded_to_temp", filename=file.filename, size=temp_path.stat().st_size
             )
 
-            # Use unified pipeline (indexes to Qdrant + BM25 + Neo4j in parallel)
-            # Create new instance with temp_dir as allowed_base_path for security
-            from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
+            # Generate document ID (SHA-256 hash of file path)
+            document_id = hashlib.sha256(str(temp_path).encode()).hexdigest()[:16]
+            batch_id = f"upload_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-            temp_pipeline = UnifiedIngestionPipeline(allowed_base_path=temp_dir)
-            result = await temp_pipeline.ingest_directory(input_dir=temp_dir)
+            # Use new LangGraph ingestion pipeline (Sprint 21)
+            from src.components.ingestion import run_ingestion_pipeline
+
+            start_time = datetime.now()
+            final_state = await run_ingestion_pipeline(
+                document_path=str(temp_path),
+                document_id=document_id,
+                batch_id=batch_id,
+                batch_index=0,
+                total_documents=1,
+                max_retries=3,
+            )
+            duration_seconds = (datetime.now() - start_time).total_seconds()
+
+            # Extract statistics from final state
+            chunks_created = len(final_state.get("chunks", []))
+            points_indexed = len(final_state.get("embedded_chunk_ids", []))
+            neo4j_entities = len(final_state.get("entities", []))
+            neo4j_relationships = len(final_state.get("relations", []))
 
             logger.info(
                 "file_ingestion_complete",
                 filename=file.filename,
-                documents=result.total_documents,
-                qdrant_indexed=result.qdrant_indexed,
-                neo4j_entities=result.neo4j_entities,
-                neo4j_relationships=result.neo4j_relationships,
-                duration=result.duration_seconds,
+                documents=1,
+                chunks_created=chunks_created,
+                points_indexed=points_indexed,
+                neo4j_entities=neo4j_entities,
+                neo4j_relationships=neo4j_relationships,
+                duration=duration_seconds,
+                errors=len(final_state.get("errors", [])),
             )
 
             return IngestionResponse(
-                status="success",
-                documents_loaded=result.total_documents,
-                chunks_created=result.qdrant_indexed,  # Approximate from indexed count
-                embeddings_generated=result.qdrant_indexed,  # Approximate from indexed count
-                points_indexed=result.qdrant_indexed,
-                duration_seconds=result.duration_seconds,
+                status="success" if final_state.get("graph_status") == "completed" else "partial",
+                documents_loaded=1,
+                chunks_created=chunks_created,
+                embeddings_generated=points_indexed,
+                points_indexed=points_indexed,
+                duration_seconds=duration_seconds,
                 collection_name="aegis_rag_docs",  # Default collection name
-                neo4j_entities=result.neo4j_entities,
-                neo4j_relationships=result.neo4j_relationships,
+                neo4j_entities=neo4j_entities,
+                neo4j_relationships=neo4j_relationships,
             )
 
     except Exception as e:
