@@ -1,0 +1,297 @@
+# Code Quality Sprint-End Check
+# Runs automatically at sprint end (manual trigger) to detect technical debt accumulation
+
+name: Sprint-End Code Quality Report
+
+on:
+  workflow_dispatch:  # Manual trigger at sprint end
+    inputs:
+      sprint_number:
+        description: 'Sprint number (e.g., 22)'
+        required: true
+        type: string
+  schedule:
+    # Run every 2 weeks on Friday at 17:00 UTC (sprint end)
+    - cron: '0 17 * * 5'
+
+jobs:
+  code-quality-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for trend analysis
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install poetry
+          poetry install --with dev
+
+      - name: Install code quality tools
+        run: |
+          pip install radon vulture jscpd safety pip-audit
+
+      - name: Run code complexity analysis
+        id: complexity
+        run: |
+          echo "## Complexity Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Cyclomatic Complexity
+          echo "### Cyclomatic Complexity (High Risk: >10)" >> $GITHUB_STEP_SUMMARY
+          radon cc src/ -a -s --min B | tee complexity.txt
+
+          # Count high complexity functions
+          HIGH_COMPLEXITY=$(radon cc src/ -a -s --min B | grep -E "^\s+[A-F]" | wc -l)
+          echo "High complexity functions: $HIGH_COMPLEXITY" >> $GITHUB_STEP_SUMMARY
+          echo "high_complexity=$HIGH_COMPLEXITY" >> $GITHUB_OUTPUT
+
+      - name: Run maintainability index
+        id: maintainability
+        run: |
+          echo "## Maintainability Index" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Maintainability Index (0-100, higher is better)
+          radon mi src/ -s | tee maintainability.txt
+
+          # Average MI
+          AVG_MI=$(radon mi src/ -j | jq '[.[] | .mi] | add / length')
+          echo "Average Maintainability Index: $AVG_MI" >> $GITHUB_STEP_SUMMARY
+          echo "avg_mi=$AVG_MI" >> $GITHUB_OUTPUT
+
+      - name: Detect code duplication
+        id: duplication
+        run: |
+          echo "## Code Duplication" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # jscpd (JavaScript Copy/Paste Detector, works for Python too)
+          npx jscpd src/ --min-lines 5 --min-tokens 50 --format markdown --output duplication-report.md || true
+
+          # Count duplicates
+          if [ -f duplication-report.md ]; then
+            DUPLICATES=$(grep -c "Duplicated lines" duplication-report.md || echo "0")
+            cat duplication-report.md >> $GITHUB_STEP_SUMMARY
+          else
+            DUPLICATES=0
+            echo "No significant duplications found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "duplicates=$DUPLICATES" >> $GITHUB_OUTPUT
+
+      - name: Detect dead code
+        id: dead_code
+        run: |
+          echo "## Dead Code Detection" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Vulture (detects unused code)
+          vulture src/ --min-confidence 80 --sort-by-size | tee dead-code.txt || true
+
+          # Count dead code items
+          DEAD_CODE=$(wc -l < dead-code.txt || echo "0")
+          echo "Potential dead code items: $DEAD_CODE" >> $GITHUB_STEP_SUMMARY
+
+          if [ $DEAD_CODE -gt 0 ]; then
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            head -20 dead-code.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "dead_code=$DEAD_CODE" >> $GITHUB_OUTPUT
+
+      - name: Track TODOs and FIXMEs
+        id: todos
+        run: |
+          echo "## TODO/FIXME/HACK Tracking" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count TODOs
+          TODO_COUNT=$(grep -r "TODO" src/ | wc -l || echo "0")
+          FIXME_COUNT=$(grep -r "FIXME" src/ | wc -l || echo "0")
+          HACK_COUNT=$(grep -r "HACK" src/ | wc -l || echo "0")
+
+          echo "- TODOs: $TODO_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- FIXMEs: $FIXME_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "- HACKs: $HACK_COUNT" >> $GITHUB_STEP_SUMMARY
+
+          # Show top 10 TODOs
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Top 10 TODOs:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          grep -r "TODO" src/ | head -10 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          echo "todos=$TODO_COUNT" >> $GITHUB_OUTPUT
+          echo "fixmes=$FIXME_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Security scan
+        id: security
+        run: |
+          echo "## Security Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Bandit (Python security issues)
+          bandit -r src/ -f json -o bandit-sprint-end.json || true
+
+          # Count issues by severity
+          if [ -f bandit-sprint-end.json ]; then
+            HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-sprint-end.json)
+            MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-sprint-end.json)
+            LOW=$(jq '[.results[] | select(.issue_severity=="LOW")] | length' bandit-sprint-end.json)
+
+            echo "- High: $HIGH" >> $GITHUB_STEP_SUMMARY
+            echo "- Medium: $MEDIUM" >> $GITHUB_STEP_SUMMARY
+            echo "- Low: $LOW" >> $GITHUB_STEP_SUMMARY
+
+            echo "security_high=$HIGH" >> $GITHUB_OUTPUT
+            echo "security_medium=$MEDIUM" >> $GITHUB_OUTPUT
+          fi
+
+          # pip-audit (dependency vulnerabilities)
+          pip-audit --format json --output pip-audit-sprint-end.json || true
+
+          if [ -f pip-audit-sprint-end.json ]; then
+            VULNS=$(jq '.dependencies | length' pip-audit-sprint-end.json || echo "0")
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Dependency vulnerabilities: $VULNS" >> $GITHUB_STEP_SUMMARY
+            echo "dep_vulns=$VULNS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test coverage trend
+        id: coverage
+        run: |
+          echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Run tests with coverage
+          poetry run pytest tests/ --cov=src --cov-report=json --cov-report=term | tee coverage-output.txt
+
+          # Extract coverage percentage
+          COVERAGE=$(jq '.totals.percent_covered' coverage.json)
+          echo "Current coverage: $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Lines of code metrics
+        id: loc
+        run: |
+          echo "## Lines of Code Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count lines by type
+          TOTAL_LOC=$(find src/ -name "*.py" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          TEST_LOC=$(find tests/ -name "*.py" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          TOTAL_FILES=$(find src/ -name "*.py" | wc -l)
+
+          echo "- Source LOC: $TOTAL_LOC" >> $GITHUB_STEP_SUMMARY
+          echo "- Test LOC: $TEST_LOC" >> $GITHUB_STEP_SUMMARY
+          echo "- Total files: $TOTAL_FILES" >> $GITHUB_STEP_SUMMARY
+          echo "- Test/Code ratio: $(echo "scale=2; $TEST_LOC / $TOTAL_LOC" | bc)" >> $GITHUB_STEP_SUMMARY
+
+          echo "total_loc=$TOTAL_LOC" >> $GITHUB_OUTPUT
+          echo "test_loc=$TEST_LOC" >> $GITHUB_OUTPUT
+
+      - name: Generate sprint-end report
+        env:
+          SPRINT_NUMBER: ${{ github.event.inputs.sprint_number || 'auto' }}
+          HIGH_COMPLEXITY: ${{ steps.complexity.outputs.high_complexity }}
+          AVG_MI: ${{ steps.maintainability.outputs.avg_mi }}
+          DUPLICATES: ${{ steps.duplication.outputs.duplicates }}
+          DEAD_CODE: ${{ steps.dead_code.outputs.dead_code }}
+          TODOS: ${{ steps.todos.outputs.todos }}
+          FIXMES: ${{ steps.todos.outputs.fixmes }}
+          SECURITY_HIGH: ${{ steps.security.outputs.security_high }}
+          SECURITY_MEDIUM: ${{ steps.security.outputs.security_medium }}
+          DEP_VULNS: ${{ steps.security.outputs.dep_vulns }}
+          COVERAGE: ${{ steps.coverage.outputs.coverage }}
+          TOTAL_LOC: ${{ steps.loc.outputs.total_loc }}
+          TEST_LOC: ${{ steps.loc.outputs.test_loc }}
+        run: |
+          python scripts/generate_sprint_end_report.py \
+            --sprint "$SPRINT_NUMBER" \
+            --complexity "$HIGH_COMPLEXITY" \
+            --maintainability "$AVG_MI" \
+            --duplicates "$DUPLICATES" \
+            --dead-code "$DEAD_CODE" \
+            --todos "$TODOS" \
+            --fixmes "$FIXMES" \
+            --security-high "$SECURITY_HIGH" \
+            --security-medium "$SECURITY_MEDIUM" \
+            --dep-vulns "$DEP_VULNS" \
+            --coverage "$COVERAGE" \
+            --loc "$TOTAL_LOC" \
+            --test-loc "$TEST_LOC" \
+            --output "docs/sprints/SPRINT_${SPRINT_NUMBER}_CODE_QUALITY_REPORT.md"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-quality-sprint-end
+          path: |
+            complexity.txt
+            maintainability.txt
+            duplication-report.md
+            dead-code.txt
+            bandit-sprint-end.json
+            pip-audit-sprint-end.json
+            coverage.json
+            docs/sprints/SPRINT_*_CODE_QUALITY_REPORT.md
+
+      - name: Check quality thresholds
+        run: |
+          # Fail if critical thresholds exceeded
+          HIGH_COMPLEXITY=${{ steps.complexity.outputs.high_complexity }}
+          SECURITY_HIGH=${{ steps.security.outputs.security_high }}
+          COVERAGE=${{ steps.coverage.outputs.coverage }}
+
+          FAIL=0
+
+          if [ "$HIGH_COMPLEXITY" -gt 20 ]; then
+            echo "❌ Too many high-complexity functions: $HIGH_COMPLEXITY (threshold: 20)"
+            FAIL=1
+          fi
+
+          if [ "$SECURITY_HIGH" -gt 0 ]; then
+            echo "❌ High-severity security issues found: $SECURITY_HIGH"
+            FAIL=1
+          fi
+
+          if [ $(echo "$COVERAGE < 80" | bc) -eq 1 ]; then
+            echo "❌ Test coverage below 80%: $COVERAGE%"
+            FAIL=1
+          fi
+
+          if [ $FAIL -eq 1 ]; then
+            echo ""
+            echo "⚠️ Sprint-end quality check FAILED. Please review the report and fix critical issues."
+            exit 1
+          fi
+
+          echo "✅ Sprint-end quality check PASSED"
+
+      - name: Comment on PR (if triggered from PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = `docs/sprints/SPRINT_${process.env.SPRINT_NUMBER}_CODE_QUALITY_REPORT.md`;
+            const report = fs.readFileSync(reportPath, 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Sprint-End Code Quality Report\n\n${report}`
+            });
