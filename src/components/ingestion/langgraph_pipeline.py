@@ -99,6 +99,7 @@ from src.components.ingestion.langgraph_nodes import (
     docling_parse_node,
     embedding_node,
     graph_extraction_node,
+    llamaindex_parse_node,
     memory_check_node,
 )
 
@@ -140,33 +141,9 @@ async def initialize_pipeline_router():
 
 
 # =============================================================================
-# LLAMAINDEX PARSE NODE (STUB FOR FEATURE 22.4)
+# LLAMAINDEX PARSE NODE (FEATURE 22.4 - IMPLEMENTED)
 # =============================================================================
-
-
-async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
-    """Node: Parse document with LlamaIndex (Feature 22.4 - NOT YET IMPLEMENTED).
-
-    This is a STUB implementation. Full LlamaIndex parser will be added in Feature 22.4.
-
-    Args:
-        state: Current ingestion state
-
-    Returns:
-        Updated state (currently raises NotImplementedError)
-
-    Raises:
-        NotImplementedError: Always (Feature 22.4 not yet implemented)
-    """
-    logger.error(
-        "llamaindex_parse_not_implemented",
-        document_id=state["document_id"],
-        document_path=state["document_path"],
-    )
-    raise NotImplementedError(
-        "LlamaIndex parser not yet implemented. "
-        "This is Feature 22.4. Use Docling-supported formats for now."
-    )
+# Note: Implementation moved to langgraph_nodes.py for consistency with other nodes
 
 
 # =============================================================================
@@ -174,22 +151,31 @@ async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
 # =============================================================================
 
 
-def create_ingestion_graph() -> StateGraph:
-    """Create LangGraph StateGraph for document ingestion pipeline.
+def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> StateGraph:
+    """Create LangGraph StateGraph for document ingestion pipeline (Sprint 22.4).
 
-    Creates a sequential pipeline with 5 nodes:
+    Creates a sequential pipeline with 5 nodes (with conditional parser routing):
     1. memory_check → Verify RAM/VRAM available
-    2. docling → Parse document with Docling container
+    2. docling OR llamaindex → Parse document (selected by router)
     3. chunking → Split into 1800-token chunks
     4. embedding → Generate BGE-M3 vectors → Qdrant
     5. graph → Extract entities/relations → Neo4j
+
+    Args:
+        parser_type: Parser to use (DOCLING or LLAMAINDEX). Default: DOCLING.
+                     Set via FormatRouter in run_ingestion_pipeline().
 
     Returns:
         Compiled StateGraph ready for execution
 
     Example:
-        >>> pipeline = create_ingestion_graph()
+        >>> # Docling pipeline (default)
+        >>> pipeline = create_ingestion_graph(ParserType.DOCLING)
         >>> state = create_initial_state(...)
+        >>> final_state = await pipeline.ainvoke(state)
+
+        >>> # LlamaIndex pipeline (for .md, .epub, etc.)
+        >>> pipeline = create_ingestion_graph(ParserType.LLAMAINDEX)
         >>> final_state = await pipeline.ainvoke(state)
 
     Note:
@@ -197,24 +183,31 @@ def create_ingestion_graph() -> StateGraph:
         - State passed through all nodes
         - Error handling in each node
         - Progress tracking automatic
+        - Parser selection based on format (Sprint 22.3 routing)
     """
-    logger.info("ingestion_graph_create_start")
+    logger.info("ingestion_graph_create_start", parser_type=parser_type)
 
     # Create graph with IngestionState schema
     graph = StateGraph(IngestionState)
 
-    # Add nodes (5 stages)
+    # Add nodes (5 stages with conditional parser)
     graph.add_node("memory_check", memory_check_node)
-    graph.add_node("docling", docling_parse_node)
+
+    # Sprint 22.4: Add both parsers (router decides which to use)
+    if parser_type == ParserType.DOCLING:
+        graph.add_node("parse", docling_parse_node)
+    else:
+        graph.add_node("parse", llamaindex_parse_node)
+
     graph.add_node("chunking", chunking_node)
     graph.add_node("embedding", embedding_node)
     graph.add_node("graph", graph_extraction_node)
 
     # Define edges (sequential flow)
-    # START → memory_check → docling → chunking → embedding → graph → END
+    # START → memory_check → parse → chunking → embedding → graph → END
     graph.set_entry_point("memory_check")
-    graph.add_edge("memory_check", "docling")
-    graph.add_edge("docling", "chunking")
+    graph.add_edge("memory_check", "parse")
+    graph.add_edge("parse", "chunking")
     graph.add_edge("chunking", "embedding")
     graph.add_edge("embedding", "graph")
     graph.add_edge("graph", END)
@@ -224,7 +217,8 @@ def create_ingestion_graph() -> StateGraph:
 
     logger.info(
         "ingestion_graph_created",
-        nodes=["memory_check", "docling", "chunking", "embedding", "graph"],
+        nodes=["memory_check", "parse", "chunking", "embedding", "graph"],
+        parser=parser_type,
         flow="sequential",
     )
 
@@ -317,17 +311,8 @@ async def run_ingestion_pipeline(
         fallback_available=routing_decision.fallback_available,
     )
 
-    # Check if LlamaIndex parser needed (Feature 22.4 not yet implemented)
-    if routing_decision.parser == ParserType.LLAMAINDEX:
-        logger.error(
-            "llamaindex_parser_required_but_not_implemented",
-            document_id=document_id,
-            format=routing_decision.format,
-        )
-        raise NotImplementedError(
-            f"LlamaIndex parser required for {routing_decision.format} but not yet implemented. "
-            f"This is Feature 22.4. Use Docling-supported formats for now."
-        )
+    # Feature 22.4: LlamaIndex parser now fully implemented
+    # No need to check - both parsers are available
 
     # Create initial state
     state = create_initial_state(
@@ -339,8 +324,8 @@ async def run_ingestion_pipeline(
         max_retries=max_retries,
     )
 
-    # Create and execute pipeline
-    pipeline = create_ingestion_graph()
+    # Create and execute pipeline (with parser selection from routing decision)
+    pipeline = create_ingestion_graph(parser_type=routing_decision.parser)
     final_state = await pipeline.ainvoke(state)
 
     logger.info(
@@ -428,6 +413,22 @@ async def run_ingestion_pipeline_streaming(
         batch_id=batch_id,
     )
 
+    # Sprint 22.4: Route to appropriate parser
+    global _format_router
+    if _format_router is None:
+        logger.warning("format_router_not_initialized_fallback")
+        _format_router = await initialize_format_router()
+
+    file_path = Path(document_path)
+    routing_decision = _format_router.route(file_path)
+
+    logger.info(
+        "format_routing_decision_streaming",
+        document_id=document_id,
+        format=routing_decision.format,
+        parser=routing_decision.parser,
+    )
+
     # Create initial state
     state = create_initial_state(
         document_path=document_path,
@@ -438,8 +439,8 @@ async def run_ingestion_pipeline_streaming(
         max_retries=max_retries,
     )
 
-    # Create pipeline
-    pipeline = create_ingestion_graph()
+    # Create pipeline (with parser selection)
+    pipeline = create_ingestion_graph(parser_type=routing_decision.parser)
 
     # Stream state updates (astream yields after each node)
     async for event in pipeline.astream(state):
@@ -590,5 +591,4 @@ __all__ = [
     "run_ingestion_pipeline_streaming",
     "run_batch_ingestion",
     "initialize_pipeline_router",  # Sprint 22.3
-    "llamaindex_parse_node",  # Sprint 22.4 stub
 ]

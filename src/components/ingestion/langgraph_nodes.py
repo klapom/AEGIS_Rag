@@ -34,8 +34,11 @@ Example:
 import subprocess
 import time
 from pathlib import Path
+from typing import Any, Dict
 
 import structlog
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.schema import Document as LlamaDocument
 
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -291,6 +294,168 @@ async def docling_parse_node(state: IngestionState) -> IngestionState:
     This alias exists for backward compatibility with existing pipelines.
     """
     return await docling_extraction_node(state)
+
+
+# =============================================================================
+# NODE 2B: LLAMAINDEX PARSING (Sprint 22 Feature 22.4)
+# =============================================================================
+
+
+async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
+    """Node 2B: Parse document using LlamaIndex SimpleDirectoryReader (Feature 22.4).
+
+    Supports 9 LlamaIndex-exclusive formats:
+    - .epub (E-books)
+    - .rtf (Rich Text Format)
+    - .tex (LaTeX documents)
+    - .md (Markdown)
+    - .rst (reStructuredText)
+    - .adoc (AsciiDoc)
+    - .org (Org-Mode)
+    - .odt (OpenDocument Text)
+    - .msg (Outlook messages)
+
+    Architecture:
+    - Uses SimpleDirectoryReader for broad format support
+    - Parser-agnostic output (compatible with ParsedDocument model)
+    - Text-only parsing (no image/table extraction)
+    - Graceful error handling with informative messages
+
+    Args:
+        state: Current ingestion state with document_path
+
+    Returns:
+        Updated state with parsed_document fields:
+        - parsed_content: Extracted text content (combined from all pages)
+        - parsed_metadata: Document metadata (format, parser, page_count)
+        - parsed_tables: Empty list (LlamaIndex basic parsing)
+        - parsed_images: Empty list (no image extraction)
+        - parsed_layout: Empty dict (no layout analysis)
+        - docling_status: 'completed' (reused for consistency)
+
+    Raises:
+        IngestionError: If parsing fails
+        ValueError: If format not supported by LlamaIndex
+
+    Example:
+        >>> state = await llamaindex_parse_node(state)
+        >>> len(state["parsed_content"])
+        5000  # 5KB of parsed text
+        >>> state["parsed_metadata"]["parser"]
+        'llamaindex'
+    """
+    logger.info(
+        "node_llamaindex_start",
+        document_id=state["document_id"],
+        document_path=state["document_path"],
+    )
+
+    state["docling_status"] = "running"
+    state["docling_start_time"] = time.time()
+
+    try:
+        # Get document path
+        doc_path = Path(state["document_path"])
+
+        if not doc_path.exists():
+            raise IngestionError(
+                document_id=state["document_id"], reason=f"Document not found: {doc_path}"
+            )
+
+        # Validate format is supported
+        file_extension = doc_path.suffix.lower()
+        from src.components.ingestion.format_router import LLAMAINDEX_EXCLUSIVE, SHARED_FORMATS
+
+        supported_formats = LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
+        if file_extension not in supported_formats:
+            raise ValueError(
+                f"Format {file_extension} not supported by LlamaIndex. "
+                f"Supported formats: {', '.join(sorted(supported_formats))}"
+            )
+
+        logger.info(
+            "llamaindex_parsing_started",
+            document_id=state["document_id"],
+            format=file_extension,
+        )
+
+        try:
+            # Use SimpleDirectoryReader for broad format support
+            reader = SimpleDirectoryReader(
+                input_files=[str(doc_path)],
+                filename_as_id=True,
+            )
+
+            # Load document
+            llama_documents = reader.load_data()
+
+            if not llama_documents:
+                raise ValueError(f"LlamaIndex returned no documents for {doc_path}")
+
+            # Extract text content (combine all pages/sections)
+            full_text = "\n\n".join(doc.text for doc in llama_documents)
+
+            # Extract metadata (from first document)
+            base_metadata = llama_documents[0].metadata if llama_documents else {}
+
+            # Create comprehensive metadata
+            metadata = {
+                "source": str(doc_path),
+                "format": file_extension,
+                "parser": "llamaindex",
+                "page_count": len(llama_documents),
+                **base_metadata,
+            }
+
+            # Store in state (same format as Docling for compatibility)
+            state["document"] = None  # No DoclingDocument object
+            state["page_dimensions"] = {}  # No page dimensions
+            state["parsed_content"] = full_text
+            state["parsed_metadata"] = metadata
+            state["parsed_tables"] = []  # LlamaIndex basic parsing doesn't extract tables
+            state["parsed_images"] = []  # No image extraction
+            state["parsed_layout"] = {}  # No layout analysis
+            state["docling_status"] = "completed"
+
+            logger.info(
+                "llamaindex_parsing_completed",
+                document_id=state["document_id"],
+                text_length=len(full_text),
+                page_count=len(llama_documents),
+                format=file_extension,
+            )
+
+        except ValueError as e:
+            if "No reader found" in str(e):
+                logger.error(
+                    "llamaindex_unsupported_format",
+                    document_id=state["document_id"],
+                    format=file_extension,
+                    error=str(e),
+                )
+                raise ValueError(
+                    f"Format {file_extension} not supported by LlamaIndex. "
+                    f"Supported formats: {', '.join(sorted(supported_formats))}"
+                ) from e
+            raise
+
+        state["docling_end_time"] = time.time()
+        state["overall_progress"] = calculate_progress(state)
+
+        logger.info(
+            "node_llamaindex_complete",
+            document_id=state["document_id"],
+            duration_seconds=round(state["docling_end_time"] - state["docling_start_time"], 2),
+        )
+
+        return state
+
+    except Exception as e:
+        logger.error("node_llamaindex_error", document_id=state["document_id"], error=str(e))
+        add_error(state, "llamaindex", str(e), "error")
+        state["docling_status"] = "failed"
+        state["docling_end_time"] = time.time()
+        raise
 
 
 # =============================================================================
