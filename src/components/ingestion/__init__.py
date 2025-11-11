@@ -1,4 +1,4 @@
-"""Ingestion Pipeline Components - Sprint 21.
+"""Ingestion Pipeline Components - Sprint 21 + Sprint 22.
 
 This module provides the new container-based document ingestion architecture:
 
@@ -16,8 +16,16 @@ Feature 21.3: Batch Processing + Progress Monitoring
   - SSE streaming for React UI real-time progress
   - Error handling with partial success
 
+Feature 22.3: Format Router (Sprint 22 - NEW)
+  - FormatRouter: Intelligent routing between Docling and LlamaIndex
+  - 30+ supported formats (14 Docling + 9 LlamaIndex + 7 shared)
+  - Graceful degradation when Docling unavailable
+  - Health check integration
+
 Architecture:
   Docling Container → DoclingClient → LangGraph Pipeline → Qdrant + Neo4j
+                                              ↓
+                                      FormatRouter (NEW Sprint 22.3)
                                               ↓
                                       ChunkingService (1800 tokens)
                                               ↓
@@ -28,7 +36,7 @@ Architecture:
 Usage:
     >>> from src.components.ingestion import run_ingestion_pipeline
     >>>
-    >>> # Single document (blocking)
+    >>> # Single document (blocking) - now with automatic format routing
     >>> final_state = await run_ingestion_pipeline(
     ...     document_path="/data/doc.pdf",
     ...     document_id="doc_001",
@@ -42,11 +50,27 @@ Usage:
     >>> # Batch processing
     >>> async for result in run_batch_ingestion(doc_paths, "batch_001"):
     ...     print(f"Document {result['document_id']}: {result['batch_progress']:.0%}")
+    >>>
+    >>> # Check supported formats (Sprint 22.3)
+    >>> from src.components.ingestion import FormatRouter
+    >>> router = FormatRouter()
+    >>> print(f"Supported formats: {len(router.get_supported_formats())}")  # 30
 """
 
 from src.components.ingestion.docling_client import (
     DoclingContainerClient,
     DoclingParsedDocument,
+)
+from src.components.ingestion.format_router import (
+    ALL_FORMATS,
+    DOCLING_FORMATS,
+    LLAMAINDEX_EXCLUSIVE,
+    SHARED_FORMATS,
+    FormatRouter,
+    ParserType,
+    RoutingDecision,
+    check_docling_availability,
+    initialize_format_router,
 )
 from src.components.ingestion.ingestion_state import (
     IngestionState,
@@ -58,6 +82,7 @@ from src.components.ingestion.ingestion_state import (
 )
 from src.components.ingestion.langgraph_pipeline import (
     create_ingestion_graph,
+    initialize_pipeline_router,
     run_batch_ingestion,
     run_ingestion_pipeline,
     run_ingestion_pipeline_streaming,
@@ -80,4 +105,15 @@ __all__ = [
     "run_ingestion_pipeline_streaming",
     # Batch Processing (Feature 21.3 preview)
     "run_batch_ingestion",
+    # Format Router (Feature 22.3 - NEW)
+    "FormatRouter",
+    "ParserType",
+    "RoutingDecision",
+    "DOCLING_FORMATS",
+    "LLAMAINDEX_EXCLUSIVE",
+    "SHARED_FORMATS",
+    "ALL_FORMATS",
+    "check_docling_availability",
+    "initialize_format_router",
+    "initialize_pipeline_router",
 ]

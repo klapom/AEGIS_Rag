@@ -1,4 +1,4 @@
-"""LangGraph Ingestion Pipeline Compiler - Sprint 21 Feature 21.2.
+"""LangGraph Ingestion Pipeline Compiler - Sprint 21 Feature 21.2 + Sprint 22 Feature 22.3.
 
 This module creates the LangGraph StateGraph that connects the 5 ingestion nodes
 into a sequential pipeline with error handling and progress tracking.
@@ -8,7 +8,9 @@ Pipeline Flow:
     ↓
   memory_check_node (5% progress)
     ↓
-  docling_parse_node (30% progress)
+  format_routing (Sprint 22.3: Decide Docling vs LlamaIndex)
+    ↓
+  docling_parse_node OR llamaindex_parse_node (30% progress)
     ↓
   chunking_node (45% progress)
     ↓
@@ -24,11 +26,17 @@ Architecture:
 - Error accumulation (continue on non-fatal errors)
 - Progress tracking (0.0 to 1.0)
 - Container lifecycle management (start/stop between stages)
+- **NEW Sprint 22.3:** Format-based routing (30+ formats supported)
 
 Memory Management:
 - 4.4GB RAM constraint → Sequential execution (no parallel stages)
 - 6GB VRAM constraint → Container start/stop to free memory
 - VRAM leak detection → Auto-restart if >5.5GB
+
+Sprint 22.3 Integration:
+- FormatRouter determines Docling vs LlamaIndex per document
+- 30+ formats supported: 14 Docling + 9 LlamaIndex + 7 shared
+- Graceful degradation when Docling unavailable
 
 Usage:
     >>> from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
@@ -79,9 +87,12 @@ Example with Error Handling:
     ...     print(f"Graph extraction succeeded: {len(final_state['entities'])} entities")
 """
 
+from pathlib import Path
+
 import structlog
 from langgraph.graph import END, StateGraph
 
+from src.components.ingestion.format_router import ParserType, initialize_format_router
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
@@ -92,6 +103,70 @@ from src.components.ingestion.langgraph_nodes import (
 )
 
 logger = structlog.get_logger(__name__)
+
+# =============================================================================
+# GLOBAL FORMAT ROUTER (initialized at module import)
+# =============================================================================
+
+# Initialize format router with Docling availability check
+# This will be set during application startup (see initialize_pipeline_router())
+_format_router = None
+
+
+# =============================================================================
+# ROUTER INITIALIZATION
+# =============================================================================
+
+
+async def initialize_pipeline_router():
+    """Initialize global format router during application startup.
+
+    This function should be called during FastAPI lifespan initialization
+    to ensure the format router is properly initialized with Docling availability.
+
+    Example:
+        >>> # In FastAPI app
+        >>> @asynccontextmanager
+        >>> async def lifespan(app: FastAPI):
+        ...     await initialize_pipeline_router()
+        ...     yield
+    """
+    global _format_router
+    _format_router = await initialize_format_router()
+    logger.info(
+        "pipeline_router_initialized",
+        docling_available=_format_router.docling_available,
+    )
+
+
+# =============================================================================
+# LLAMAINDEX PARSE NODE (STUB FOR FEATURE 22.4)
+# =============================================================================
+
+
+async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
+    """Node: Parse document with LlamaIndex (Feature 22.4 - NOT YET IMPLEMENTED).
+
+    This is a STUB implementation. Full LlamaIndex parser will be added in Feature 22.4.
+
+    Args:
+        state: Current ingestion state
+
+    Returns:
+        Updated state (currently raises NotImplementedError)
+
+    Raises:
+        NotImplementedError: Always (Feature 22.4 not yet implemented)
+    """
+    logger.error(
+        "llamaindex_parse_not_implemented",
+        document_id=state["document_id"],
+        document_path=state["document_path"],
+    )
+    raise NotImplementedError(
+        "LlamaIndex parser not yet implemented. "
+        "This is Feature 22.4. Use Docling-supported formats for now."
+    )
 
 
 # =============================================================================
@@ -172,10 +247,11 @@ async def run_ingestion_pipeline(
     """Run ingestion pipeline for a single document (convenience function).
 
     This is a high-level convenience function that:
-    1. Creates initial state
-    2. Creates pipeline graph
-    3. Executes pipeline (blocking)
-    4. Returns final state
+    1. Routes document to appropriate parser (Docling or LlamaIndex) - Sprint 22.3
+    2. Creates initial state
+    3. Creates pipeline graph
+    4. Executes pipeline (blocking)
+    5. Returns final state
 
     Args:
         document_path: Absolute path to document file
@@ -190,6 +266,7 @@ async def run_ingestion_pipeline(
 
     Raises:
         IngestionError: If any critical error occurs (propagated from nodes)
+        ValueError: If format not supported (from FormatRouter)
 
     Example:
         >>> final_state = await run_ingestion_pipeline(
@@ -208,6 +285,7 @@ async def run_ingestion_pipeline(
         - Errors accumulate in state["errors"]
         - Check node status fields to identify failures
         - Container lifecycle managed automatically
+        - **Sprint 22.3:** Format routing with 30+ supported formats
     """
     from src.components.ingestion.ingestion_state import create_initial_state
 
@@ -216,7 +294,40 @@ async def run_ingestion_pipeline(
         document_id=document_id,
         batch_id=batch_id,
         batch_index=batch_index,
+        document_path=document_path,
     )
+
+    # Sprint 22.3: Route to appropriate parser
+    global _format_router
+    if _format_router is None:
+        # Initialize if not already done (fallback)
+        logger.warning("format_router_not_initialized_fallback")
+        _format_router = await initialize_format_router()
+
+    file_path = Path(document_path)
+    routing_decision = _format_router.route(file_path)
+
+    logger.info(
+        "format_routing_decision",
+        document_id=document_id,
+        format=routing_decision.format,
+        parser=routing_decision.parser,
+        reason=routing_decision.reason,
+        confidence=routing_decision.confidence,
+        fallback_available=routing_decision.fallback_available,
+    )
+
+    # Check if LlamaIndex parser needed (Feature 22.4 not yet implemented)
+    if routing_decision.parser == ParserType.LLAMAINDEX:
+        logger.error(
+            "llamaindex_parser_required_but_not_implemented",
+            document_id=document_id,
+            format=routing_decision.format,
+        )
+        raise NotImplementedError(
+            f"LlamaIndex parser required for {routing_decision.format} but not yet implemented. "
+            f"This is Feature 22.4. Use Docling-supported formats for now."
+        )
 
     # Create initial state
     state = create_initial_state(
@@ -238,6 +349,7 @@ async def run_ingestion_pipeline(
         overall_progress=final_state.get("overall_progress", 0.0),
         error_count=len(final_state.get("errors", [])),
         chunks_created=len(final_state.get("chunks", [])),
+        parser_used=routing_decision.parser,
     )
 
     return final_state
@@ -477,4 +589,6 @@ __all__ = [
     "run_ingestion_pipeline",
     "run_ingestion_pipeline_streaming",
     "run_batch_ingestion",
+    "initialize_pipeline_router",  # Sprint 22.3
+    "llamaindex_parse_node",  # Sprint 22.4 stub
 ]
