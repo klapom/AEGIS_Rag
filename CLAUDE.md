@@ -97,6 +97,7 @@ For full details, see:
 ### Technology Stack
 ```yaml
 Backend: Python 3.12.7, FastAPI, Pydantic v2
+Dependency Management: Poetry (pyproject.toml)
 Orchestration: LangGraph 0.6.10, LangChain Core
 Data Ingestion:
   - Primary: Docling CUDA Container (GPU-accelerated OCR, ADR-027)
@@ -113,6 +114,66 @@ Optional Production: Azure OpenAI GPT-4o (if needed)
 MCP: Official Python SDK (anthropic/mcp)
 Container Runtime: Docker Compose + NVIDIA Container Toolkit (CUDA 12.4)
 ```
+
+### Development Environment
+
+**Operating System:** Windows (Primary Development)
+- **Python:** 3.12.7
+- **Package Manager:** Poetry (not pip)
+- **Shell:** PowerShell / CMD
+- **Git:** Git for Windows
+
+**Important Windows-Specific Considerations:**
+
+1. **Dependency Installation:**
+   ```bash
+   # Use Poetry, NOT pip
+   poetry install
+   poetry install --with dev  # Include dev dependencies
+
+   # Add new dependencies
+   poetry add package-name
+   poetry add --group dev package-name  # Dev dependency
+   ```
+
+2. **Logging Requirements (Windows Console):**
+   ```python
+   # ❌ AVOID: Unicode characters in logs (Windows console issues)
+   logger.info("✅ Success")  # May display as garbage characters
+   logger.info("🚀 Starting")  # May not render correctly
+
+   # ✅ USE: ASCII-safe logging
+   logger.info("SUCCESS: Operation completed")
+   logger.info("STARTING: Service initialization")
+
+   # ✅ ACCEPTABLE: Unicode in structured fields (not printed to console)
+   logger.info("operation_completed", status="success", emoji="✅")  # OK if structlog JSON
+   ```
+
+3. **Path Handling:**
+   ```python
+   # Use pathlib.Path for cross-platform compatibility
+   from pathlib import Path
+
+   file_path = Path("data") / "documents" / "file.pdf"  # ✅ Works on Windows & Linux
+   file_path = "data\\documents\\file.pdf"  # ❌ Windows-only
+   ```
+
+4. **Docker on Windows:**
+   - Docker Desktop with WSL2 backend
+   - NVIDIA Container Toolkit for CUDA support (GPU acceleration)
+   - Windows paths must be converted for Docker volumes: `C:\Users\...` → `/c/Users/...`
+
+5. **Environment Variables:**
+   - Use `.env` file (loaded by python-dotenv)
+   - Windows: `set VAR=value` (CMD) or `$env:VAR="value"` (PowerShell)
+   - Poetry automatically loads `.env` when running commands
+
+**Rationale for Windows:**
+- Primary development environment
+- NVIDIA GPU support (RTX 3060 6GB)
+- Docker Desktop with WSL2 for containerization
+- Production deployment will be Linux (Kubernetes)
 
 ### Repository Structure
 ```
