@@ -145,7 +145,8 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
         # Check if sufficient memory available
         if ram_available_mb < 2000:  # Less than 2GB RAM available
             raise IngestionError(
-                f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 2GB)"
+                document_id=state["document_id"],
+                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 2GB)"
             )
 
         # Mark check as passed
