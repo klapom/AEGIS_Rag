@@ -7,15 +7,24 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from prometheus_client import Counter, Histogram, make_asgi_app
 from slowapi.errors import RateLimitExceeded
 
 from src.api import graph_analytics, graph_visualization
 from src.api.health import router as health_router
 from src.api.middleware import limiter, rate_limit_handler
+from src.api.middleware.exception_handler import (
+    aegis_exception_handler,
+    generic_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
+from src.api.middleware.request_id import RequestIDMiddleware
 from src.api.routers import graph_viz
 from src.api.v1.admin import router as admin_router
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
+from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.memory import router as memory_router
@@ -23,7 +32,6 @@ from src.api.v1.retrieval import router as retrieval_router
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
-from src.core.models import ErrorResponse
 
 # Initialize settings and logging
 settings = get_settings()
@@ -111,89 +119,50 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Register rate limiter
+# Sprint 22 Feature 22.2.1: Request ID Tracking Middleware
+# IMPORTANT: Must be registered FIRST to ensure all logs have request IDs
+app.add_middleware(RequestIDMiddleware)
+logger.info("middleware_registered", middleware="RequestIDMiddleware", note="First in chain for proper logging")
+
+# Register rate limiter (Sprint 22 Feature 22.2.3)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)  # type: ignore[arg-type]
+logger.info(
+    "rate_limiter_configured",
+    enabled=settings.rate_limit_enabled,
+    global_limit=f"{settings.rate_limit_per_minute}/minute",
+    storage=settings.rate_limit_storage_uri,
+)
 
-# CORS middleware
+# CORS middleware (Sprint 22 Feature 22.2.3: Secure CORS Configuration)
+# SECURITY: No wildcard (*) origins - only specific allowed origins from config
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.environment == "development" else [],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,  # From config (no wildcard!)
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
+)
+logger.info(
+    "cors_configured",
+    allowed_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    note="No wildcard origins (security hardening)",
 )
 
 
-# Exception handlers
-@app.exception_handler(AegisRAGException)
-async def aegis_exception_handler(request: Request, exc: AegisRAGException) -> JSONResponse:
-    """Handle custom AEGIS RAG exceptions."""
-    logger.error(
-        "aegis_exception",
-        error=exc.__class__.__name__,
-        message=exc.message,
-        details=exc.details,
-        path=request.url.path,
-    )
+# Sprint 22 Feature 22.2.2: Standardized Exception Handlers
+# Register exception handlers (order matters - specific to general)
+app.add_exception_handler(AegisRAGException, aegis_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=ErrorResponse(
-            error=exc.__class__.__name__, message=exc.message, details=exc.details
-        ).model_dump(mode="json"),
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
-    """Handle Pydantic validation errors."""
-    logger.warning("validation_error", errors=exc.errors(), path=request.url.path)
-
-    # Convert validation errors to JSON-serializable format
-    errors = []
-    for error in exc.errors():
-        # Only include essential fields to avoid serialization issues
-        errors.append(
-            {
-                "loc": error.get("loc", []),
-                "msg": error.get("msg", ""),
-                "type": error.get("type", ""),
-            }
-        )
-
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=ErrorResponse(
-            error="ValidationError",
-            message="Request validation failed",
-            details={"errors": errors},
-        ).model_dump(
-            mode="json"
-        ),  # mode="json" serializes datetime objects
-    )
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle unexpected exceptions."""
-    logger.error(
-        "unexpected_exception",
-        error=exc.__class__.__name__,
-        message=str(exc),
-        path=request.url.path,
-    )
-
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=ErrorResponse(
-            error="InternalServerError",
-            message="An unexpected error occurred",
-            details={"error": str(exc)} if settings.debug else None,
-        ).model_dump(mode="json"),
-    )
+logger.info(
+    "exception_handlers_registered",
+    handlers=["AegisRAGException", "RequestValidationError", "HTTPException", "Generic"],
+    note="Sprint 22 Feature 22.2.2: Standardized error responses with request IDs",
+)
 
 
 # Middleware for request tracking
@@ -243,6 +212,10 @@ logger.info(
     prefix="/api/v1/admin",
     note="Sprint 18 TD-41: Admin router with /stats endpoint - prefix fixed!",
 )
+
+# Authentication API router (Sprint 22 Feature 22.2.4: JWT Authentication)
+app.include_router(auth_router)
+logger.info("router_registered", router="auth_router", prefix="/api/v1/auth", note="Sprint 22: JWT authentication endpoints")
 
 # Chat API router (Sprint 10: Feature 10.1)
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
