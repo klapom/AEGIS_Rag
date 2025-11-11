@@ -154,24 +154,91 @@ class HealthResponse(BaseModel):
     )
 
 
-class ErrorResponse(BaseModel):
-    """Error response model."""
+class ErrorCode:
+    """Standard error codes used across the API (Sprint 22 Feature 22.2.2).
+
+    Machine-readable error codes for programmatic error handling.
+    """
+
+    # 4xx Client Errors
+    BAD_REQUEST = "BAD_REQUEST"
+    UNAUTHORIZED = "UNAUTHORIZED"
+    FORBIDDEN = "FORBIDDEN"
+    NOT_FOUND = "NOT_FOUND"
+    METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED"
+    CONFLICT = "CONFLICT"
+    UNPROCESSABLE_ENTITY = "UNPROCESSABLE_ENTITY"
+    TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
+
+    # 5xx Server Errors
+    INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
+    SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
+    GATEWAY_TIMEOUT = "GATEWAY_TIMEOUT"
+
+    # Business Logic Errors (Sprint 22)
+    INVALID_FILE_FORMAT = "INVALID_FILE_FORMAT"
+    FILE_TOO_LARGE = "FILE_TOO_LARGE"
+    FILE_NOT_FOUND = "FILE_NOT_FOUND"
+    INGESTION_FAILED = "INGESTION_FAILED"
+    VECTOR_SEARCH_FAILED = "VECTOR_SEARCH_FAILED"
+    GRAPH_QUERY_FAILED = "GRAPH_QUERY_FAILED"
+    DATABASE_CONNECTION_FAILED = "DATABASE_CONNECTION_FAILED"
+    VALIDATION_FAILED = "VALIDATION_FAILED"
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+
+
+class ErrorDetail(BaseModel):
+    """Detailed error information (Sprint 22 Feature 22.2.2).
+
+    Standardized error format with request correlation support.
+    """
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "error": "ValidationError",
-                "message": "Query cannot be empty",
-                "details": {"field": "query"},
-                "timestamp": "2025-01-15T10:00:00Z",
+                "code": "INVALID_FILE_FORMAT",
+                "message": "Invalid file format: document.xyz",
+                "details": {
+                    "filename": "document.xyz",
+                    "expected_formats": [".pdf", ".docx", ".txt"],
+                },
+                "request_id": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+                "timestamp": "2025-11-11T14:30:00Z",
+                "path": "/api/v1/retrieval/upload",
             }
         }
     )
 
-    error: str = Field(..., description="Error type")
-    message: str = Field(..., description="Error message")
-    details: dict[str, Any] | None = Field(None, description="Additional error details")
+    code: str = Field(..., description="Machine-readable error code")
+    message: str = Field(..., description="Human-readable error message")
+    details: dict[str, Any] | None = Field(None, description="Additional error context")
+    request_id: str = Field(..., description="Request ID for log correlation")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
+    path: str = Field(..., description="API endpoint that generated error")
+
+
+class ErrorResponse(BaseModel):
+    """Top-level error response wrapper (Sprint 22 Feature 22.2.2).
+
+    All API errors return this standardized format.
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Request validation failed",
+                    "details": {"field": "query", "issue": "Query cannot be empty"},
+                    "request_id": "a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6",
+                    "timestamp": "2025-11-11T14:30:00Z",
+                    "path": "/api/v1/retrieval/search",
+                }
+            }
+        }
+    )
+
+    error: ErrorDetail = Field(..., description="Error details")
 
 
 # ============================================================================

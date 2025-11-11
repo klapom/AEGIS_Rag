@@ -1,6 +1,8 @@
 """Retrieval API Endpoints - Sprint 2.
 
 FastAPI endpoints for document ingestion and hybrid search retrieval.
+
+Sprint 22 Feature 22.2.2: Using standardized error responses with custom exceptions.
 """
 
 from datetime import datetime
@@ -21,14 +23,24 @@ from fastapi import (
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.api.auth.jwt import get_current_user
+from src.api.dependencies import get_request_id  # Sprint 22 Feature 22.2.1
 from src.api.middleware import limiter
 from src.components.retrieval import MetadataFilters
 from src.components.vector_search import (
     DocumentIngestionPipeline,
     HybridSearch,
 )
+from src.core.config import get_settings
+from src.core.exceptions import (
+    FileTooLargeError,
+    IngestionError,
+    InvalidFileFormatError,
+    ValidationError,
+    VectorSearchError,
+)
 
 logger = structlog.get_logger(__name__)
+settings = get_settings()  # Sprint 22 Feature 22.2.3: Config-driven rate limits
 
 router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 
@@ -163,11 +175,12 @@ def get_hybrid_search() -> HybridSearch:
 
 
 @router.post("/search", response_model=SearchResponse)
-@limiter.limit("10/minute")  # Rate limit: 10 requests per minute
+@limiter.limit(f"{settings.rate_limit_search}/minute")  # Config-driven rate limit
 async def search(
     request: Request,
     search_params: SearchRequest,
     current_user: str | None = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),  # Sprint 22 Feature 22.2.1
 ) -> SearchResponse:
     """Search documents using vector, BM25, or hybrid search.
 
@@ -177,9 +190,10 @@ async def search(
         request: FastAPI request (for rate limiting)
         search_params: Search request parameters
         current_user: Authenticated user (from JWT token)
+        request_id: Unique request ID (auto-injected by RequestIDMiddleware)
 
     Returns:
-        SearchResponse with ranked results
+        SearchResponse with ranked results (includes request_id in metadata)
 
     Example:
         ```bash
@@ -188,9 +202,25 @@ async def search(
              -H "Content-Type: application/json" \\
              -H "Authorization: Bearer <your-token>" \\
              -d '{"query": "What is RAG?", "search_type": "hybrid", "top_k": 10}'
+
+        # Response includes X-Request-ID header for debugging:
+        # X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
         ```
+
+    Note:
+        Sprint 22 Feature 22.2.1: All logs for this request automatically include
+        the request_id field for correlation and debugging.
     """
     try:
+        # Request ID is automatically in all logs via structlog contextvars
+        logger.info(
+            "search_request_received",
+            query_length=len(search_params.query),
+            search_type=search_params.search_type,
+            top_k=search_params.top_k,
+            user=current_user or "anonymous",
+        )
+
         hybrid_search = get_hybrid_search()
 
         # Parse metadata filters if provided
@@ -214,10 +244,8 @@ async def search(
                 )
             except Exception as e:
                 logger.warning("Failed to parse metadata filters", error=str(e))
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid metadata filters: {str(e)}",
-                ) from None
+                # Sprint 22 Feature 22.2.2: Use custom exception
+                raise ValidationError(field="filters", issue=str(e)) from None
 
         if search_params.search_type == "hybrid":
             # Hybrid search (Vector + BM25 + RRF + optional Reranking + optional Filters)
@@ -228,6 +256,12 @@ async def search(
                 use_reranking=search_params.use_reranking,  # Sprint 3
                 rerank_top_k=search_params.rerank_top_k,  # Sprint 3
                 filters=metadata_filters,  # Sprint 3
+            )
+
+            logger.info(
+                "search_completed",
+                search_type="hybrid",
+                results_count=result["total_results"],
             )
 
             return SearchResponse(
@@ -274,14 +308,14 @@ async def search(
                 detail=f"Invalid search_type: {search_params.search_type}. Use 'vector', 'bm25', or 'hybrid'.",
             )
 
-    except HTTPException:
+    except ValidationError:
+        # Re-raise custom exceptions (will be handled by global handler)
         raise
     except Exception as e:
-        logger.error("Search failed", error=str(e), query=search_params.query, exc_info=True)
-        # P1: Don't expose internal error details to client
-        raise HTTPException(
-            status_code=500, detail="Search operation failed. Please try again or contact support."
-        ) from None
+        # Sprint 22 Feature 22.2.1: request_id automatically in logs
+        logger.error("search_failed", error=str(e), query=search_params.query, exc_info=True)
+        # Sprint 22 Feature 22.2.2: Use custom exception with request_id
+        raise VectorSearchError(query=search_params.query, reason=str(e)) from None
 
 
 @router.post("/ingest", response_model=IngestionResponse)
@@ -317,9 +351,10 @@ async def ingest(
         # Validate input directory
         input_path = Path(ingest_params.input_dir)
         if not input_path.exists():
-            raise HTTPException(
-                status_code=400,
-                detail=f"Input directory does not exist: {ingest_params.input_dir}",
+            # Sprint 22 Feature 22.2.2: Use custom exception
+            raise ValidationError(
+                field="input_dir",
+                issue=f"Directory does not exist: {ingest_params.input_dir}",
             )
 
         if not input_path.is_dir():
@@ -371,7 +406,7 @@ async def ingest(
 
 
 @router.post("/upload")
-@limiter.limit("10/hour")  # Rate limit: 10 file uploads per hour
+@limiter.limit(f"{settings.rate_limit_upload}/minute")  # Config-driven rate limit
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
