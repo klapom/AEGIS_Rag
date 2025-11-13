@@ -604,8 +604,8 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                                 },
                             }
 
-                    # 3c. Generate VLM description
-                    description = processor.process_image(
+                    # 3c. Generate VLM description (Sprint 25 Feature 25.4: now async)
+                    description = await processor.process_image(
                         image=pil_image,
                         picture_index=idx,
                     )

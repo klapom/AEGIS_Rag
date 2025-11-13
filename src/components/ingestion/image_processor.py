@@ -348,14 +348,16 @@ class ImageProcessor:
             temp_dir=str(self.temp_dir),
         )
 
-    def process_image(
+    async def process_image(
         self,
         image: Image.Image,
         picture_index: int,
         skip_filtering: bool = False,
         use_proxy: bool = True,
     ) -> str | None:
-        """Process a single image with VLM.
+        """Process a single image with VLM (ASYNC).
+
+        Sprint 25 Feature 25.4: Refactored to async to eliminate ThreadPoolExecutor complexity.
 
         Args:
             image: PIL Image object
@@ -369,7 +371,7 @@ class ImageProcessor:
         Example:
             >>> processor = ImageProcessor()
             >>> img = Image.new('RGB', (500, 500))
-            >>> desc = processor.process_image(img, picture_index=0)
+            >>> desc = await processor.process_image(img, picture_index=0)
         """
         # Image filtering
         if not skip_filtering:
@@ -402,36 +404,18 @@ class ImageProcessor:
             )
 
             # Generate VLM description
-            # Sprint 23: Use DashScope VLM for cloud routing (instruct primary, thinking fallback)
+            # Sprint 25 Feature 25.4: Direct async calls (no ThreadPoolExecutor complexity!)
             if use_proxy and DASHSCOPE_VLM_AVAILABLE:
                 logger.info(
                     "Using DashScope VLM for description",
                     picture_index=picture_index,
                     routing="cloud_vlm_with_fallback",
                 )
-                # Run async function in sync context
-                # Check if we're already in an event loop
-                try:
-                    asyncio.get_running_loop()
-                    # Already in event loop - use ThreadPoolExecutor to avoid nested loop error
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            asyncio.run,
-                            generate_vlm_description_with_dashscope(
-                                image_path=temp_path,
-                                vl_high_resolution_images=False,
-                            )
-                        )
-                        description = future.result()
-                except RuntimeError:
-                    # Not in event loop - use asyncio.run
-                    description = asyncio.run(
-                        generate_vlm_description_with_dashscope(
-                            image_path=temp_path,
-                            vl_high_resolution_images=False,
-                        )
-                    )
+                # Direct async call
+                description = await generate_vlm_description_with_dashscope(
+                    image_path=temp_path,
+                    vl_high_resolution_images=False,
+                )
             else:
                 logger.info(
                     "Using AegisLLMProxy for VLM description (fallback)",
@@ -439,28 +423,11 @@ class ImageProcessor:
                     routing="aegis_llm_proxy_fallback",
                     reason="proxy_disabled" if not use_proxy else "dashscope_unavailable",
                 )
-                # Sprint 25: Use AegisLLMProxy as fallback (async/sync bridge)
-                try:
-                    asyncio.get_running_loop()
-                    # Already in event loop
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            asyncio.run,
-                            generate_vlm_description_with_proxy(
-                                image_path=temp_path,
-                                temperature=self.config.temperature,
-                            )
-                        )
-                        description = future.result()
-                except RuntimeError:
-                    # Not in event loop
-                    description = asyncio.run(
-                        generate_vlm_description_with_proxy(
-                            image_path=temp_path,
-                            temperature=self.config.temperature,
-                        )
-                    )
+                # Direct async call to AegisLLMProxy
+                description = await generate_vlm_description_with_proxy(
+                    image_path=temp_path,
+                    temperature=self.config.temperature,
+                )
 
             logger.info(
                 "Image processed successfully",
@@ -527,16 +494,16 @@ class ImageProcessor:
 # Convenience Function
 # =============================================================================
 
-def process_image_with_vlm(
+async def process_image_with_vlm(
     image: Image.Image,
     picture_index: int = 0,
     model: str = "qwen3-vl:4b-instruct",
     skip_filtering: bool = False,
     use_proxy: bool = True,
 ) -> str | None:
-    """Convenience function to process a single image.
+    """Convenience function to process a single image (ASYNC).
 
-    Sprint 25: Now uses AegisLLMProxy for fallback VLM routing
+    Sprint 25 Feature 25.4: Refactored to async for consistency
 
     Args:
         image: PIL Image object
@@ -550,7 +517,7 @@ def process_image_with_vlm(
 
     Example:
         >>> img = Image.open("diagram.png")
-        >>> desc = process_image_with_vlm(img)  # Uses DashScope VLM or AegisLLMProxy fallback
+        >>> desc = await process_image_with_vlm(img)  # Uses DashScope VLM or AegisLLMProxy fallback
         >>> print(desc)
     """
     config = ImageProcessorConfig()
@@ -559,7 +526,7 @@ def process_image_with_vlm(
     processor = ImageProcessor(config=config)
 
     try:
-        return processor.process_image(
+        return await processor.process_image(
             image=image,
             picture_index=picture_index,
             skip_filtering=skip_filtering,

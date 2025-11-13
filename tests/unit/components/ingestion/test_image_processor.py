@@ -203,69 +203,76 @@ def test_image_processor__cleanup__removes_temp_files():
 # =============================================================================
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_image__valid_image__returns_description(mock_ollama_chat, sample_image):
-    """Test successful VLM image processing."""
-    # Mock Ollama response
-    mock_ollama_chat.return_value = {
-        "message": {"content": "A red square image with dimensions 200x200 pixels."}
-    }
+@pytest.mark.asyncio
+async def test_process_image__valid_image__returns_description(sample_image):
+    """Test successful VLM image processing (ASYNC - Sprint 25 Feature 25.4)."""
+    # Mock DashScope VLM response
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock
+    ) as mock_vlm:
+        mock_vlm.return_value = "A red square image with dimensions 200x200 pixels."
 
-    processor = ImageProcessor()
+        processor = ImageProcessor()
 
-    # Process image
-    description = processor.process_image(sample_image, picture_index=0)
+        # Process image (now async!)
+        description = await processor.process_image(sample_image, picture_index=0)
 
-    assert description is not None
-    assert "red square" in description.lower()
-    mock_ollama_chat.assert_called_once()
+        assert description is not None
+        assert "red square" in description.lower()
+        mock_vlm.assert_called_once()
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_image__filtered_image__returns_none(mock_ollama_chat, small_image):
-    """Test that filtered images return None."""
+@pytest.mark.asyncio
+async def test_process_image__filtered_image__returns_none(small_image):
+    """Test that filtered images return None (ASYNC - Sprint 25 Feature 25.4)."""
     processor = ImageProcessor()
 
     # Process small image (should be filtered)
-    description = processor.process_image(small_image, picture_index=0)
+    description = await processor.process_image(small_image, picture_index=0)
 
     assert description is None
-    # Ollama should not be called for filtered images
-    mock_ollama_chat.assert_not_called()
+    # VLM should not be called for filtered images
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_image__creates_temp_file(mock_ollama_chat, sample_image):
-    """Test that temporary file is created during processing."""
-    mock_ollama_chat.return_value = {
-        "message": {"content": "Test description"}
-    }
+@pytest.mark.asyncio
+async def test_process_image__creates_temp_file(sample_image):
+    """Test that temporary file is created during processing (ASYNC - Sprint 25 Feature 25.4)."""
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock
+    ) as mock_vlm:
+        mock_vlm.return_value = "Test description"
 
-    processor = ImageProcessor()
+        processor = ImageProcessor()
 
-    # Process image
-    processor.process_image(sample_image, picture_index=0)
+        # Process image (now async!)
+        await processor.process_image(sample_image, picture_index=0)
 
-    # Verify temp file was created
-    assert len(processor.temp_files) == 1
-    temp_file = processor.temp_files[0]
-    assert temp_file.exists()
-    assert temp_file.suffix == ".png"
+        # Verify temp file was created
+        assert len(processor.temp_files) == 1
+        temp_file = processor.temp_files[0]
+        assert temp_file.exists()
+        assert temp_file.suffix == ".png"
 
-    # Cleanup
-    processor.cleanup()
+        # Cleanup
+        processor.cleanup()
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_image__ollama_error__returns_none(mock_ollama_chat, sample_image):
-    """Test error handling when Ollama fails."""
-    mock_ollama_chat.side_effect = Exception("Ollama connection error")
+@pytest.mark.asyncio
+async def test_process_image__vlm_error__returns_none(sample_image):
+    """Test error handling when VLM fails (ASYNC - Sprint 25 Feature 25.4)."""
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock
+    ) as mock_vlm:
+        mock_vlm.side_effect = Exception("VLM connection error")
 
-    processor = ImageProcessor()
+        processor = ImageProcessor()
 
-    # Should return None on error (not raise)
-    description = processor.process_image(sample_image, picture_index=0)
-    assert description is None
+        # Should return None on error (not raise)
+        description = await processor.process_image(sample_image, picture_index=0)
+        assert description is None
 
 
 @patch("src.components.ingestion.image_processor.ollama.chat")
