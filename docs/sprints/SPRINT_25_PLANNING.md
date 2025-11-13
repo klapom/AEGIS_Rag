@@ -1,10 +1,10 @@
-# Sprint 25: Production Readiness & Refactoring Cleanup
+# Sprint 25: Production Readiness & Architecture Consolidation
 
-**Status:** 📋 PLANNED
-**Goal:** Production monitoring, integration tests, deferred Sprint 24 features, AND Sprint 22 refactoring cleanup
-**Duration:** 7 days (2025-11-15 to 2025-11-23)
+**Status:** 📋 PLANNED → 🚧 IN PROGRESS
+**Goal:** Production monitoring, integration tests, deferred Sprint 24 features, Sprint 22 refactoring cleanup, AND LLM architecture consolidation
+**Duration:** 8 days (2025-11-15 to 2025-11-24)
 **Prerequisites:** Sprint 24 complete (Dependency Optimization & CI Performance)
-**Story Points:** 40 SP (22 SP deferred from Sprint 24 + 10 SP refactoring + 8 SP new work)
+**Story Points:** 45 SP (22 SP deferred from Sprint 24 + 10 SP refactoring + 8 SP new work + 5 SP LLM migration)
 
 ---
 
@@ -999,6 +999,220 @@ from src.components.vector_search.qdrant_client import QdrantClient
 
 ---
 
+### Category 6: LLM Architecture Consolidation (Sprint 23 Debt)
+
+#### Feature 25.10: Migrate All LLM Calls to AegisLLMProxy (5 SP) ⭐⭐⭐
+**Priority:** P1 (High) - **Architecture Consistency & Cost Tracking**
+**Duration:** 2.5 days
+**Source:** Comprehensive LLM Call Analysis (Sprint 25 Discovery)
+
+**Problem:**
+7 files make direct Ollama API calls, bypassing AegisLLMProxy routing layer. Estimated **$11,750/year** in untracked LLM costs.
+
+**Current State:**
+- **router.py:** Intent classification (EVERY query bypasses proxy!)
+- **extraction_service.py:** Entity/relation extraction (EVERY document ingestion bypasses proxy!)
+- **graphiti_wrapper.py:** Memory operations (EVERY memory op bypasses proxy!)
+- **community_labeler.py:** Community labeling
+- **dual_level_search.py:** Answer generation
+- **custom_metrics.py:** Evaluation metrics
+- **image_processor.py:** VLM fallback
+
+**Impact:**
+- ❌ **No cost tracking** (~$11,750/year hidden costs)
+- ❌ **No Prometheus metrics** (request count, latency, tokens)
+- ❌ **No multi-cloud routing** (stuck on local Ollama)
+- ❌ **No budget limits** (unlimited spending possible)
+- ❌ **Architecture inconsistency** (violates Sprint 23 design)
+
+**Solution:**
+Refactor all 7 files to use `AegisLLMProxy.generate()` instead of direct `ollama.AsyncClient` calls.
+
+**Implementation Pattern:**
+
+**Before (router.py example):**
+```python
+from ollama import AsyncClient
+
+class IntentClassifier:
+    def __init__(self, ...):
+        self.client = AsyncClient(host=self.base_url)
+
+    async def classify_intent(self, query: str) -> QueryIntent:
+        response = await self.client.generate(
+            model=self.model_name,
+            prompt=prompt,
+            options={"temperature": self.temperature, ...}
+        )
+        llm_response = response.get("response", "")
+        intent = self._parse_intent(llm_response)
+        return intent
+```
+
+**After (with AegisLLMProxy):**
+```python
+from src.components.llm_proxy.aegis_llm_proxy import (
+    AegisLLMProxy, LLMTask, TaskType, QualityRequirement, Complexity
+)
+
+class IntentClassifier:
+    def __init__(self, ...):
+        self.llm_proxy = AegisLLMProxy()
+
+    async def classify_intent(self, query: str) -> QueryIntent:
+        task = LLMTask(
+            task_type=TaskType.QUERY_CLASSIFICATION,
+            prompt=CLASSIFICATION_PROMPT.format(query=query),
+            quality_requirement=QualityRequirement.MEDIUM,
+            complexity=Complexity.LOW,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+        )
+
+        result = await self.llm_proxy.generate(task)
+        intent = self._parse_intent(result.content)
+        return intent
+```
+
+**Files to Migrate (Priority Order):**
+
+**Week 2 (Day 8): Feature 25.10 - LLM Migration** (5 SP)
+
+**Morning (2 SP):**
+1. **src/agents/router.py** (Intent Classification) - 0.5 day
+   - Most critical: Every query passes through this
+   - Task type: `TaskType.QUERY_CLASSIFICATION`
+   - Quality: `QualityRequirement.MEDIUM`, Complexity: `Complexity.LOW`
+
+2. **src/components/graph_rag/extraction_service.py** (Entity Extraction) - 0.5 day
+   - Critical: Every document ingestion uses this
+   - Task type: `TaskType.ENTITY_EXTRACTION`
+   - Quality: `QualityRequirement.HIGH`, Complexity: `Complexity.MEDIUM`
+
+**Afternoon (1.5 SP):**
+3. **src/components/memory/graphiti_wrapper.py** (Memory Operations) - 0.5 day
+   - Custom `OllamaLLMClient` class for Graphiti
+   - Implements Graphiti's LLMClient interface
+   - Task type: `TaskType.MEMORY_CONSOLIDATION`
+   - Quality: `QualityRequirement.HIGH`, Complexity: `Complexity.MEDIUM`
+
+4. **src/components/graph_rag/community_labeler.py** (Community Labeling) - 0.25 day
+   - Task type: `TaskType.SUMMARIZATION`
+   - Quality: `QualityRequirement.MEDIUM`, Complexity: `Complexity.LOW`
+
+5. **src/components/graph_rag/dual_level_search.py** (Answer Generation) - 0.25 day
+   - Task type: `TaskType.ANSWER_GENERATION`
+   - Quality: `QualityRequirement.HIGH`, Complexity: `Complexity.MEDIUM`
+
+**Evening (1.5 SP):**
+6. **src/evaluation/custom_metrics.py** (Evaluation Metrics) - 0.25 day
+   - Task type: `TaskType.EVALUATION`
+   - Quality: `QualityRequirement.HIGH`, Complexity: `Complexity.LOW`
+
+7. **src/components/ingestion/image_processor.py** (VLM Fallback) - 0.25 day
+   - Lowest priority: Only fallback when DashScope unavailable
+   - Task type: `TaskType.VLM_DESCRIPTION`
+   - Note: Keep as fallback, DashScope VLM is primary
+
+**Deliverables:**
+- [ ] router.py migrated to AegisLLMProxy
+- [ ] extraction_service.py migrated to AegisLLMProxy
+- [ ] graphiti_wrapper.py migrated to AegisLLMProxy
+- [ ] community_labeler.py migrated to AegisLLMProxy
+- [ ] dual_level_search.py migrated to AegisLLMProxy
+- [ ] custom_metrics.py migrated to AegisLLMProxy
+- [ ] image_processor.py migrated to AegisLLMProxy (fallback)
+- [ ] All tests updated
+- [ ] Cost tracking validates all LLM calls
+- [ ] Prometheus metrics show all request types
+
+**Acceptance Criteria:**
+- ✅ All 7 files use AegisLLMProxy for text generation
+- ✅ Cost tracking includes all LLM requests (SQLite database)
+- ✅ Prometheus metrics show all request types (if Feature 25.1 done)
+- ✅ Multi-cloud routing available (Local → Alibaba → OpenAI)
+- ✅ Budget limits enforced per provider
+- ✅ Tests passing (100%)
+- ✅ No regressions in functionality
+- ✅ **$11,750/year cost visibility** achieved!
+
+**Testing Strategy:**
+```python
+# tests/integration/components/llm_proxy/test_llm_migration.py
+
+async def test_intent_classification_uses_proxy():
+    """Verify intent classification uses AegisLLMProxy."""
+    classifier = IntentClassifier()
+
+    # Mock proxy to verify it's called
+    with patch('src.components.llm_proxy.aegis_llm_proxy.AegisLLMProxy.generate') as mock_generate:
+        mock_generate.return_value = LLMResult(content="VECTOR", ...)
+
+        intent = await classifier.classify_intent("What is RAG?")
+
+        assert mock_generate.called
+        assert intent == QueryIntent.VECTOR
+
+async def test_extraction_uses_proxy():
+    """Verify entity extraction uses AegisLLMProxy."""
+    service = ExtractionService()
+
+    with patch('src.components.llm_proxy.aegis_llm_proxy.AegisLLMProxy.generate') as mock_generate:
+        mock_generate.return_value = LLMResult(content='[{"name": "RAG", ...}]', ...)
+
+        entities = await service.extract_entities("RAG is a technique...")
+
+        assert mock_generate.called
+        assert len(entities) > 0
+```
+
+**Cost Tracking Validation:**
+```python
+# After migration, verify all LLM calls tracked in SQLite
+from src.components.llm_proxy.cost_tracker import CostTracker
+
+tracker = CostTracker()
+requests = await tracker.get_requests_by_provider("local_ollama")
+
+# Should include:
+assert any(r.task_type == "query_classification" for r in requests)
+assert any(r.task_type == "entity_extraction" for r in requests)
+assert any(r.task_type == "memory_consolidation" for r in requests)
+# ... etc
+```
+
+**Files to Modify:**
+- `src/agents/router.py`
+- `src/components/graph_rag/extraction_service.py`
+- `src/components/memory/graphiti_wrapper.py`
+- `src/components/graph_rag/community_labeler.py`
+- `src/components/graph_rag/dual_level_search.py`
+- `src/evaluation/custom_metrics.py`
+- `src/components/ingestion/image_processor.py`
+- `tests/unit/agents/test_router.py`
+- `tests/unit/components/graph_rag/test_extraction_service.py`
+- `tests/unit/components/memory/test_graphiti_wrapper.py`
+- `tests/integration/components/llm_proxy/test_llm_migration.py` (NEW)
+
+**Prometheus Metrics (if Feature 25.1 completed):**
+After migration, `/metrics` endpoint will show:
+```prometheus
+# HELP llm_requests_total Total LLM requests
+# TYPE llm_requests_total counter
+llm_requests_total{provider="local_ollama",model="llama3.2:3b",task_type="query_classification"} 1250
+llm_requests_total{provider="local_ollama",model="llama3.2:8b",task_type="entity_extraction"} 450
+llm_requests_total{provider="local_ollama",model="llama3.2:8b",task_type="memory_consolidation"} 320
+# ... etc
+
+# HELP llm_cost_usd Total LLM cost in USD
+# TYPE llm_cost_usd counter
+llm_cost_usd{provider="local_ollama",model="llama3.2:3b"} 0.00  # Local is free!
+llm_cost_usd{provider="alibaba_cloud",model="qwen-turbo"} 2.35
+llm_cost_usd{provider="openai",model="gpt-4o-mini"} 5.12
+```
+
+---
+
 ## 🔧 Technical Debt Resolution Summary
 
 ### Deferred from Sprint 24
@@ -1067,6 +1281,13 @@ from src.components.vector_search.qdrant_client import QdrantClient
 - Morning: Feature 25.7 completion (verify ADR compliance)
 - Afternoon: Feature 25.8 - Consolidate duplicates (base agent, embedding service)
 - Evening: Feature 25.9 - Standardize client naming (aliases + imports)
+
+### Week 2 (Day 8): LLM Architecture Consolidation
+
+**Day 8: Feature 25.10 - Migrate All LLM Calls to AegisLLMProxy** (5 SP)
+- Morning: Migrate router.py + extraction_service.py (2 SP)
+- Afternoon: Migrate graphiti_wrapper.py + community_labeler.py + dual_level_search.py (1.5 SP)
+- Evening: Migrate custom_metrics.py + image_processor.py + tests (1.5 SP)
 
 ---
 
