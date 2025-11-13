@@ -24,21 +24,20 @@ Usage:
     response = await proxy.generate(task)
 """
 
-from src.components.llm_proxy.models import (
-    TaskType,
-    DataClassification,
-    QualityRequirement,
-    Complexity,
-    ExecutionLocation,
-    LLMTask,
-    LLMResponse,
-)
-
 # AegisLLMProxy (ready to use once ANY-LLM SDK is installed)
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy, get_aegis_llm_proxy
 
 # Cost tracking (Sprint 23 - persistent SQLite tracking)
 from src.components.llm_proxy.cost_tracker import CostTracker
+from src.components.llm_proxy.models import (
+    Complexity,
+    DataClassification,
+    ExecutionLocation,
+    LLMResponse,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 
 __all__ = [
     # Models

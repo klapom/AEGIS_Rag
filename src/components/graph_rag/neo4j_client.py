@@ -92,7 +92,7 @@ class Neo4jClient:
                 logger.info("Neo4j driver initialized")
             except Exception as e:
                 logger.error("Failed to initialize Neo4j driver", error=str(e))
-                raise DatabaseConnectionError(f"Failed to initialize Neo4j driver: {e}") from e
+                raise DatabaseConnectionError("Neo4j", f"Failed to initialize Neo4j driver: {e}") from e
         return self._driver
 
     @retry(
@@ -122,7 +122,7 @@ class Neo4jClient:
             raise
         except Exception as e:
             logger.error("Neo4j health check failed", error=str(e))
-            raise DatabaseConnectionError(f"Neo4j health check failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Neo4j health check failed: {e}") from e
 
     @retry(
         stop=stop_after_attempt(DEFAULT_MAX_RETRY_ATTEMPTS),
@@ -166,7 +166,7 @@ class Neo4jClient:
             raise
         except Exception as e:
             logger.error("Query execution failed", query=query[:100], error=str(e))
-            raise DatabaseConnectionError(f"Query execution failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Query execution failed: {e}") from e
 
     async def execute_read(
         self,
@@ -235,7 +235,7 @@ class Neo4jClient:
             raise
         except Exception as e:
             logger.error("Write transaction failed", query=query[:100], error=str(e))
-            raise DatabaseConnectionError(f"Write transaction failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Write transaction failed: {e}") from e
 
     async def create_temporal_indexes(self) -> dict[str, bool]:
         """Create indexes on temporal properties for performance.

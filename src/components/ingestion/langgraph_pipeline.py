@@ -505,7 +505,6 @@ async def run_batch_ingestion(
         - Full Feature 21.3 adds: error recovery, partial success handling, React UI
     """
     import hashlib
-    from pathlib import Path
 
     total_documents = len(document_paths)
 

@@ -150,7 +150,7 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to calculate centrality", error=str(e), entity_id=entity_id)
-            raise DatabaseConnectionError(f"Centrality calculation failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Centrality calculation failed: {e}") from e
 
     async def _calculate_degree_centrality(self, entity_id: str) -> float:
         """Calculate degree centrality (number of connections).
@@ -282,7 +282,7 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to calculate PageRank", error=str(e))
-            raise DatabaseConnectionError(f"PageRank calculation failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"PageRank calculation failed: {e}") from e
 
     async def find_influential_entities(self, top_k: int = 10) -> list[dict[str, Any]]:
         """Find the most influential entities by PageRank.
@@ -369,7 +369,7 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to detect knowledge gaps", error=str(e))
-            raise DatabaseConnectionError(f"Knowledge gap detection failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Knowledge gap detection failed: {e}") from e
 
     async def get_graph_statistics(self) -> GraphStatistics:
         """Get overall graph statistics and metrics.
@@ -453,7 +453,7 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to calculate graph statistics", error=str(e))
-            raise DatabaseConnectionError(f"Graph statistics calculation failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Graph statistics calculation failed: {e}") from e
 
     async def _build_networkx_graph(self) -> nx.DiGraph:
         """Build a NetworkX graph from Neo4j data for fallback algorithms.
@@ -495,7 +495,7 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to build NetworkX graph", error=str(e))
-            raise DatabaseConnectionError(f"NetworkX graph construction failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"NetworkX graph construction failed: {e}") from e
 
 
 # Singleton instance

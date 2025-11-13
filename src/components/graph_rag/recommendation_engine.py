@@ -83,7 +83,7 @@ class RecommendationEngine:
 
         except Exception as e:
             logger.error("Failed to generate recommendations", error=str(e), entity_id=entity_id)
-            raise DatabaseConnectionError(f"Recommendation generation failed: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Recommendation generation failed: {e}") from e
 
     async def recommend_by_collaborative(self, entity_id: str, top_k: int) -> list[Recommendation]:
         """Recommend entities using collaborative filtering.

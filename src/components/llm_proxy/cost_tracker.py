@@ -16,7 +16,6 @@ Features:
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import structlog
 
@@ -26,7 +25,7 @@ logger = structlog.get_logger(__name__)
 class CostTracker:
     """Persistent cost tracking for LLM requests."""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """Initialize cost tracker.
 
         Args:
@@ -106,10 +105,10 @@ class CostTracker:
         tokens_input: int,
         tokens_output: int,
         cost_usd: float,
-        latency_ms: Optional[float] = None,
-        routing_reason: Optional[str] = None,
+        latency_ms: float | None = None,
+        routing_reason: str | None = None,
         fallback_used: bool = False,
-        task_id: Optional[str] = None,
+        task_id: str | None = None,
     ) -> int:
         """Track a single LLM request.
 
@@ -172,7 +171,7 @@ class CostTracker:
 
         return row_id
 
-    def get_monthly_spending(self, provider: Optional[str] = None) -> Dict[str, float]:
+    def get_monthly_spending(self, provider: str | None = None) -> dict[str, float]:
         """Get current month spending by provider.
 
         Args:
@@ -218,9 +217,9 @@ class CostTracker:
 
     def get_total_spending(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        provider: Optional[str] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        provider: str | None = None,
     ) -> float:
         """Get total spending in date range.
 
@@ -278,8 +277,8 @@ class CostTracker:
     def get_request_stats(
         self,
         days: int = 30,
-        provider: Optional[str] = None,
-    ) -> Dict[str, any]:
+        provider: str | None = None,
+    ) -> dict[str, any]:
         """Get aggregated statistics for recent requests.
 
         Args:
@@ -389,7 +388,7 @@ class CostTracker:
 
         return stats
 
-    def export_to_csv(self, output_path: Path, days: Optional[int] = None):
+    def export_to_csv(self, output_path: Path, days: int | None = None):
         """Export cost data to CSV.
 
         Args:

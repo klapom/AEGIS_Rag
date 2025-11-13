@@ -20,7 +20,6 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
 
 import ollama
 import structlog
@@ -88,7 +87,7 @@ def should_process_image(
     min_size: int = 100,
     min_aspect_ratio: float = 0.1,
     max_aspect_ratio: float = 10.0,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """Determine if an image should be processed by VLM.
 
     Args:
@@ -132,7 +131,7 @@ def should_process_image(
 
 async def generate_vlm_description_with_dashscope(
     image_path: Path,
-    prompt_template: Optional[str] = None,
+    prompt_template: str | None = None,
     vl_high_resolution_images: bool = False,
 ) -> str:
     """Generate image description using DashScope VLM (Cloud VLM).
@@ -218,7 +217,7 @@ def generate_vlm_description(
     top_k: int = 20,
     num_ctx: int = 4096,
     num_gpu: int = 15,
-    prompt_template: Optional[str] = None,
+    prompt_template: str | None = None,
 ) -> str:
     """Generate image description using Qwen3-VL via Ollama.
 
@@ -329,7 +328,7 @@ class ImageProcessor:
         >>> print(description)
     """
 
-    def __init__(self, config: Optional[ImageProcessorConfig] = None):
+    def __init__(self, config: ImageProcessorConfig | None = None):
         """Initialize image processor.
 
         Args:
@@ -354,7 +353,7 @@ class ImageProcessor:
         picture_index: int,
         skip_filtering: bool = False,
         use_proxy: bool = True,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Process a single image with VLM.
 
         Args:
@@ -520,7 +519,7 @@ def process_image_with_vlm(
     model: str = "qwen3-vl:4b-instruct",
     skip_filtering: bool = False,
     use_proxy: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Convenience function to process a single image.
 
     Args:

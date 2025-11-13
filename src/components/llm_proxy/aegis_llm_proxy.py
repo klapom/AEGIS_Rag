@@ -27,7 +27,6 @@ Responsibilities:
 """
 
 import time
-from typing import Optional
 
 import structlog
 from any_llm import LLMProvider, acompletion
@@ -37,7 +36,6 @@ from src.components.llm_proxy.cost_tracker import CostTracker
 from src.components.llm_proxy.models import (
     Complexity,
     DataClassification,
-    ExecutionLocation,
     LLMResponse,
     LLMTask,
     QualityRequirement,
@@ -85,7 +83,7 @@ class AegisLLMProxy:
         print(f"Provider: {response.provider}, Cost: ${response.cost_usd}")
     """
 
-    def __init__(self, config: Optional[LLMProxyConfig] = None):
+    def __init__(self, config: LLMProxyConfig | None = None):
         """
         Initialize AegisLLMProxy with configuration.
 
@@ -537,20 +535,11 @@ class AegisLLMProxy:
 
         # Persist to SQLite database (Sprint 23 - persistent cost tracking)
         try:
-            # Parse token breakdown from ANY-LLM response (OpenAI-compatible format)
-            # response.usage contains: prompt_tokens, completion_tokens, total_tokens
-            tokens_input = 0
-            tokens_output = 0
-
-            if hasattr(response, "usage") and response.usage:
-                # Extract accurate token counts from usage object
-                tokens_input = getattr(response.usage, "prompt_tokens", 0) or 0
-                tokens_output = getattr(response.usage, "completion_tokens", 0) or 0
-
-            # Fallback: estimate 50/50 split if usage field missing or zero
-            if tokens_input == 0 and tokens_output == 0 and result.tokens_used > 0:
-                tokens_input = result.tokens_used // 2
-                tokens_output = result.tokens_used - tokens_input
+            # TD-24.1: Token breakdown is already in result.tokens_used (total)
+            # TODO: Extract input/output split when available from result metadata
+            # For now, estimate 50/50 split (will be improved in Sprint 25)
+            tokens_input = result.tokens_used // 2
+            tokens_output = result.tokens_used - tokens_input
 
             self.cost_tracker.track_request(
                 provider=provider,
@@ -614,10 +603,10 @@ class AegisLLMProxy:
 
 
 # Singleton instance (lazy initialization)
-_proxy_instance: Optional[AegisLLMProxy] = None
+_proxy_instance: AegisLLMProxy | None = None
 
 
-def get_aegis_llm_proxy(config: Optional[LLMProxyConfig] = None) -> AegisLLMProxy:
+def get_aegis_llm_proxy(config: LLMProxyConfig | None = None) -> AegisLLMProxy:
     """
     Get singleton instance of AegisLLMProxy.
 

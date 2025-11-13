@@ -174,7 +174,7 @@ class GraphVisualizationExporter:
 
         except Exception as e:
             logger.error("Failed to fetch subgraph", error=str(e), entity_ids=entity_ids)
-            raise DatabaseConnectionError(f"Failed to fetch subgraph: {e}") from e
+            raise DatabaseConnectionError("Neo4j", f"Failed to fetch subgraph: {e}") from e
 
     def export_for_d3js(
         self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]

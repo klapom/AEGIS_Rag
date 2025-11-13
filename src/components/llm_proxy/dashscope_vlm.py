@@ -16,7 +16,6 @@ Reference: https://www.alibabacloud.com/help/en/model-studio/vision
 import base64
 import os
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import structlog
@@ -33,8 +32,8 @@ class DashScopeVLMClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
+        api_key: str | None = None,
+        base_url: str | None = None,
     ):
         """Initialize DashScope VLM client.
 

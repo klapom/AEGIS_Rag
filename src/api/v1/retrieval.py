@@ -32,8 +32,6 @@ from src.components.vector_search import (
 )
 from src.core.config import get_settings
 from src.core.exceptions import (
-    FileTooLargeError,
-    IngestionError,
     InvalidFileFormatError,
     ValidationError,
     VectorSearchError,
@@ -566,7 +564,6 @@ async def get_supported_formats():
         DOCLING_FORMATS,
         LLAMAINDEX_EXCLUSIVE,
         SHARED_FORMATS,
-        ParserType,
     )
 
     return {

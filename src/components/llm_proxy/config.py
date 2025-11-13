@@ -11,7 +11,7 @@ from YAML files and environment variables.
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 import yaml
@@ -32,17 +32,17 @@ class LLMProxyConfig(BaseModel):
     and environment variables.
     """
 
-    providers: Dict[str, Dict[str, Any]] = Field(
+    providers: dict[str, dict[str, Any]] = Field(
         ...,
         description="Provider configuration (local_ollama, ollama_cloud, openai)",
     )
-    budgets: Dict[str, Any] = Field(..., description="Budget limits and thresholds")
-    routing: Dict[str, Any] = Field(..., description="Routing configuration")
-    model_defaults: Dict[str, Dict[str, str]] = Field(
+    budgets: dict[str, Any] = Field(..., description="Budget limits and thresholds")
+    routing: dict[str, Any] = Field(..., description="Routing configuration")
+    model_defaults: dict[str, dict[str, str]] = Field(
         ..., description="Default models per provider"
     )
-    fallback: Dict[str, Any] = Field(..., description="Fallback configuration")
-    monitoring: Dict[str, bool] = Field(..., description="Monitoring flags")
+    fallback: dict[str, Any] = Field(..., description="Fallback configuration")
+    monitoring: dict[str, bool] = Field(..., description="Monitoring flags")
 
     @classmethod
     def from_env(cls, config_path: Path | None = None) -> "LLMProxyConfig":
@@ -71,7 +71,7 @@ class LLMProxyConfig(BaseModel):
             )
 
         # Load YAML
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             config_str = f.read()
 
         # Interpolate environment variables
@@ -136,7 +136,7 @@ class LLMProxyConfig(BaseModel):
         pattern = r"\$\{([^}]+)\}"
         return re.sub(pattern, replace_env_var, config_str)
 
-    def get_provider_config(self, provider: str) -> Dict[str, Any]:
+    def get_provider_config(self, provider: str) -> dict[str, Any]:
         """
         Get configuration for specific provider.
 

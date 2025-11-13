@@ -30,12 +30,11 @@ See Also:
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
 
 import structlog
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from src.core.config import settings
 
@@ -97,7 +96,7 @@ class User(BaseModel):
     user_id: str
     username: str
     role: str
-    email: Optional[str] = None
+    email: str | None = None
 
     def is_admin(self) -> bool:
         """Check if user has admin privileges.
@@ -261,14 +260,14 @@ def decode_access_token(token: str) -> TokenData:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
+            ) from e
         else:
             logger.warning("token_invalid", error=str(e), token_preview=token[:20] + "...")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
+            ) from e
     except Exception as e:
         logger.error("token_decode_error", error=str(e))
         raise HTTPException(

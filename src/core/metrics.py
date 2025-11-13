@@ -39,8 +39,8 @@ Usage:
     update_budget_metrics(cost_tracker)
 """
 
+
 from prometheus_client import Counter, Gauge, Histogram
-from typing import Optional
 
 # LLM Request Counter
 # Labels: provider (local_ollama, alibaba_cloud, openai)
@@ -112,8 +112,8 @@ def track_llm_request(
     tokens_used: int,
     cost_usd: float,
     latency_seconds: float,
-    tokens_input: Optional[int] = None,
-    tokens_output: Optional[int] = None,
+    tokens_input: int | None = None,
+    tokens_output: int | None = None,
 ) -> None:
     """Track a successful LLM request.
 

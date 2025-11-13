@@ -34,11 +34,9 @@ Example:
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict
 
 import structlog
 from llama_index.core import SimpleDirectoryReader
-from llama_index.core.schema import Document as LlamaDocument
 
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -873,8 +871,9 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         )
 
         # Create Qdrant points with full provenance
-        from qdrant_client.models import PointStruct
         import hashlib
+
+        from qdrant_client.models import PointStruct
 
         page_dimensions = state.get("page_dimensions", {})
         points = []

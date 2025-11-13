@@ -9,7 +9,6 @@ including task types, quality requirements, and execution locations.
 """
 
 from enum import Enum
-from typing import Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -129,15 +128,15 @@ class LLMTask(BaseModel):
     )
 
     # Model preferences (optional, provider-specific)
-    model_local: Optional[str] = Field(
+    model_local: str | None = Field(
         default=None,
         description="Preferred local model (default: gemma-3-4b-it-Q8_0)",
     )
-    model_cloud: Optional[str] = Field(
+    model_cloud: str | None = Field(
         default=None,
         description="Preferred Ollama Cloud model (default: llama3-70b)",
     )
-    model_openai: Optional[str] = Field(
+    model_openai: str | None = Field(
         default=None,
         description="Preferred OpenAI model (default: gpt-4o)",
     )
@@ -157,7 +156,7 @@ class LLMTask(BaseModel):
     )
 
     # Batch processing
-    batch_size: Optional[int] = Field(
+    batch_size: int | None = Field(
         default=None,
         ge=1,
         description="Number of items in batch (for parallel processing)",
@@ -208,14 +207,14 @@ class LLMResponse(BaseModel):
 
     # Cost & performance
     cost_usd: float = Field(..., ge=0.0, description="Cost in USD")
-    latency_ms: Optional[float] = Field(
+    latency_ms: float | None = Field(
         default=None,
         ge=0.0,
         description="Request latency in milliseconds",
     )
 
     # Optional: Structured metadata
-    routing_reason: Optional[str] = Field(
+    routing_reason: str | None = Field(
         default=None,
         description="Reason for provider selection (for debugging)",
     )

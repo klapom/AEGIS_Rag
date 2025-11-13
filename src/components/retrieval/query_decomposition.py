@@ -32,7 +32,6 @@ from src.components.llm_proxy.models import (
     QualityRequirement,
     TaskType,
 )
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
