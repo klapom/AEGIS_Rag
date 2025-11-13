@@ -33,6 +33,7 @@ import structlog
 from any_llm import LLMProvider, acompletion
 
 from src.components.llm_proxy.config import LLMProxyConfig, get_llm_proxy_config
+from src.components.llm_proxy.cost_tracker import CostTracker
 from src.components.llm_proxy.models import (
     Complexity,
     DataClassification,
@@ -101,8 +102,16 @@ class AegisLLMProxy:
         if not self.config.is_provider_enabled("local_ollama"):
             raise ValueError("local_ollama provider is required but not configured")
 
+        # Initialize persistent cost tracker (SQLite)
+        self.cost_tracker = CostTracker()
+
         # Track budgets (simplified - no ANY-LLM BudgetManager needed)
-        self._monthly_spending = {"alibaba_cloud": 0.0, "openai": 0.0}
+        # Load current month spending from DB
+        self._monthly_spending = self.cost_tracker.get_monthly_spending()
+        if "alibaba_cloud" not in self._monthly_spending:
+            self._monthly_spending["alibaba_cloud"] = 0.0
+        if "openai" not in self._monthly_spending:
+            self._monthly_spending["openai"] = 0.0
 
         # Track metrics
         self._request_count = 0
@@ -112,6 +121,7 @@ class AegisLLMProxy:
             "aegis_llm_proxy_initialized",
             providers=list(self.config.providers.keys()),
             budgets=self.config.budgets.get("monthly_limits", {}),
+            current_spending=self._monthly_spending,
         )
 
     def _is_budget_exceeded(self, provider: str) -> bool:
@@ -450,9 +460,10 @@ class AegisLLMProxy:
 
     def _track_metrics(self, provider: str, task: LLMTask, result: LLMResponse):
         """
-        Track metrics for observability (Prometheus, LangSmith).
+        Track metrics for observability (Prometheus, LangSmith, SQLite).
 
         Metrics tracked:
+            - SQLite persistent storage (per-request details)
             - llm_requests_total (counter, by provider/task_type)
             - llm_latency_seconds (histogram, by provider)
             - llm_cost_usd (gauge, by provider)
@@ -478,6 +489,27 @@ class AegisLLMProxy:
             routing_reason=result.routing_reason,
             fallback_used=result.fallback_used,
         )
+
+        # Persist to SQLite database (Sprint 23 - persistent cost tracking)
+        try:
+            # Estimate 50/50 split for input/output tokens if not available
+            tokens_input = result.tokens_used // 2
+            tokens_output = result.tokens_used - tokens_input
+
+            self.cost_tracker.track_request(
+                provider=provider,
+                model=result.model,
+                task_type=task.task_type,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                cost_usd=result.cost_usd,
+                latency_ms=result.latency_ms,
+                routing_reason=result.routing_reason,
+                fallback_used=result.fallback_used,
+                task_id=str(task.id),
+            )
+        except Exception as e:
+            logger.warning("Failed to persist cost tracking", error=str(e))
 
         # TODO: Add Prometheus metrics when metrics module is available
         # from src.core.metrics import llm_requests_total, llm_latency_seconds, llm_cost_usd

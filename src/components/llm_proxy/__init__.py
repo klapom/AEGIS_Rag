@@ -37,6 +37,9 @@ from src.components.llm_proxy.models import (
 # AegisLLMProxy (ready to use once ANY-LLM SDK is installed)
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy, get_aegis_llm_proxy
 
+# Cost tracking (Sprint 23 - persistent SQLite tracking)
+from src.components.llm_proxy.cost_tracker import CostTracker
+
 __all__ = [
     # Models
     "TaskType",
@@ -49,4 +52,6 @@ __all__ = [
     # Main proxy
     "AegisLLMProxy",
     "get_aegis_llm_proxy",
+    # Cost tracking
+    "CostTracker",
 ]

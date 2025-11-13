@@ -20,7 +20,8 @@ providers:
       - qwen-turbo          # Fast and cost-effective
       - qwen-plus           # High quality
       - qwen-max            # Best quality (largest model)
-      - qwen3-vl-30b-a3b-thinking  # Vision language model (VLM for image-to-text)
+      - qwen3-vl-30b-a3b-instruct  # Vision language model PRIMARY (cheaper output tokens)
+      - qwen3-vl-30b-a3b-thinking  # Vision language model FALLBACK (on 403 errors)
 
   openai:
     api_key: "${OPENAI_API_KEY:-}"  # Optional - leave empty if not using
@@ -74,7 +75,7 @@ model_defaults:
   alibaba_cloud:
     extraction: qwen3-32b      # High quality extraction (32B params)
     generation: qwen3-32b      # High quality generation (32B params)
-    vision: qwen3-vl-30b-a3b-thinking  # Vision language model (image-to-text)
+    vision: qwen3-vl-30b-a3b-instruct  # Vision language model PRIMARY (cheaper output)
   openai:
     extraction: gpt-4o
     generation: gpt-4o

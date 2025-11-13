@@ -30,13 +30,13 @@ from src.core.config import get_settings
 
 logger = structlog.get_logger(__name__)
 
-# Sprint 23: Import AegisLLMProxy for cloud VLM routing
+# Sprint 23: Import DashScope VLM Client for cloud VLM routing
 try:
-    from src.components.llm_proxy import get_aegis_llm_proxy, LLMTask, TaskType
-    AEGIS_PROXY_AVAILABLE = True
+    from src.components.llm_proxy.dashscope_vlm import get_dashscope_vlm_client
+    DASHSCOPE_VLM_AVAILABLE = True
 except ImportError:
-    AEGIS_PROXY_AVAILABLE = False
-    logger.warning("AegisLLMProxy not available, using direct Ollama only")
+    DASHSCOPE_VLM_AVAILABLE = False
+    logger.warning("DashScope VLM not available, using direct Ollama only")
 
 
 # =============================================================================
@@ -130,19 +130,22 @@ def should_process_image(
 # VLM Description Generation
 # =============================================================================
 
-async def generate_vlm_description_with_proxy(
+async def generate_vlm_description_with_dashscope(
     image_path: Path,
     prompt_template: Optional[str] = None,
+    vl_high_resolution_images: bool = True,
 ) -> str:
-    """Generate image description using AegisLLMProxy (Cloud VLM preferred).
+    """Generate image description using DashScope VLM (Cloud VLM).
 
-    Sprint 23: Uses AegisLLMProxy for intelligent routing:
-    - Alibaba Cloud Qwen3-VL-30B-A3B-Thinking (preferred for high quality)
-    - Falls back to local Ollama VLM if cloud unavailable
+    Sprint 23: Uses DashScope VLM API directly with best practices:
+    - Primary: qwen3-vl-30b-a3b-instruct (cheaper output tokens)
+    - Fallback: qwen3-vl-30b-a3b-thinking (on 403 errors)
+    - High-resolution processing (16,384 vs 2,560 tokens)
 
     Args:
         image_path: Path to image file
         prompt_template: Custom prompt (optional)
+        vl_high_resolution_images: Use high-res processing (default: True)
 
     Returns:
         VLM-generated description text
@@ -151,13 +154,13 @@ async def generate_vlm_description_with_proxy(
         RuntimeError: If VLM generation fails
         FileNotFoundError: If image file doesn't exist
     """
-    if not AEGIS_PROXY_AVAILABLE:
-        raise RuntimeError("AegisLLMProxy not available, cannot use cloud VLM routing")
+    if not DASHSCOPE_VLM_AVAILABLE:
+        raise RuntimeError("DashScope VLM not available, cannot use cloud VLM")
 
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    # Default prompt
+    # Default prompt (Qwen3-VL best practice: simple and direct)
     if prompt_template is None:
         prompt = (
             "Describe this image from a document in detail, including any text, "
@@ -168,41 +171,43 @@ async def generate_vlm_description_with_proxy(
 
     try:
         logger.info(
-            "Generating VLM description with AegisLLMProxy",
+            "Generating VLM description with DashScope",
             image_path=str(image_path),
+            vl_high_res=vl_high_resolution_images,
         )
 
-        # Get proxy instance
-        proxy = get_aegis_llm_proxy()
+        # Get DashScope VLM client
+        client = await get_dashscope_vlm_client()
 
-        # Create vision task (automatically routes to best VLM)
-        task = LLMTask(
-            task_type=TaskType.VISION,
+        # Generate with automatic fallback (instruct → thinking on 403)
+        description, metadata = await client.generate_with_fallback(
+            image_path=image_path,
             prompt=prompt,
-            # Note: Image path handling depends on provider
-            # For now, we use the prompt-based approach
+            primary_model="qwen3-vl-30b-a3b-instruct",
+            fallback_model="qwen3-vl-30b-a3b-thinking",
+            vl_high_resolution_images=vl_high_resolution_images,
         )
-
-        # Generate description
-        response = await proxy.generate(task)
 
         logger.info(
-            "VLM description generated via proxy",
-            provider=response.provider,
-            model=response.model,
-            description_length=len(response.content),
-            cost_usd=response.cost_usd,
+            "VLM description generated via DashScope",
+            model=metadata["model"],
+            tokens_total=metadata["tokens_total"],
+            description_length=len(description),
+            fallback_used=metadata.get("fallback_used", False),
         )
 
-        return response.content
+        # Close client
+        await client.close()
+
+        return description
 
     except Exception as e:
         logger.error(
-            "VLM description with proxy failed",
+            "DashScope VLM description failed",
             error=str(e),
             image_path=str(image_path),
         )
-        raise RuntimeError(f"AegisLLMProxy VLM request failed: {e}") from e
+        raise RuntimeError(f"DashScope VLM request failed: {e}") from e
 
 
 def generate_vlm_description(
@@ -397,12 +402,12 @@ class ImageProcessor:
             )
 
             # Generate VLM description
-            # Sprint 23: Use AegisLLMProxy for cloud VLM routing (preferred)
-            if use_proxy and AEGIS_PROXY_AVAILABLE:
+            # Sprint 23: Use DashScope VLM for cloud routing (instruct primary, thinking fallback)
+            if use_proxy and DASHSCOPE_VLM_AVAILABLE:
                 logger.info(
-                    "Using AegisLLMProxy for VLM description",
+                    "Using DashScope VLM for description",
                     picture_index=picture_index,
-                    routing="cloud_vlm_preferred",
+                    routing="cloud_vlm_with_fallback",
                 )
                 # Run async function in sync context
                 # Check if we're already in an event loop
@@ -413,13 +418,19 @@ class ImageProcessor:
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
                             asyncio.run,
-                            generate_vlm_description_with_proxy(image_path=temp_path)
+                            generate_vlm_description_with_dashscope(
+                                image_path=temp_path,
+                                vl_high_resolution_images=True,
+                            )
                         )
                         description = future.result()
                 except RuntimeError:
                     # Not in event loop - use asyncio.run
                     description = asyncio.run(
-                        generate_vlm_description_with_proxy(image_path=temp_path)
+                        generate_vlm_description_with_dashscope(
+                            image_path=temp_path,
+                            vl_high_resolution_images=True,
+                        )
                     )
             else:
                 logger.info(

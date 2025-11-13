@@ -54,15 +54,58 @@
   - ADR-029: React Migration Deferral
   - ADR-030: Sprint Extension from 12 to 21+ Sprints
 
-**Sprint 22 Status**: 📋 PLANNED (2025-11-11+)
-- **Objective**: Production deployment readiness
-- **Planned Features**:
-  - React frontend migration (deferred from Sprint 15, ADR-029)
-  - Kubernetes deployment manifests
-  - External user onboarding
-  - Performance validation (100+ docs batch ingestion)
+**Sprint 22 Status**: ✅ COMPLETE (2025-11-11, 1 day)
+- **Objective**: Post-Sprint 21 cleanup and documentation
+- **Key Achievements**:
+  - ✅ Repository organization and cleanup
+  - ✅ Test execution report (Sprint 22)
+  - ✅ Comprehensive documentation review
 
-**Next Steps**: Sprint 21 documentation complete. Ready for Sprint 22 React migration or production deployment.
+**Sprint 23 Status**: 🚧 IN PROGRESS (2025-11-11 - Present, branch: `main`)
+- **Objective**: Multi-Cloud LLM Execution & VLM Integration
+- **Key Achievements** (Day 1-2):
+  - ✅ **AegisLLMProxy Implementation** (ADR-033)
+    - 509 LOC unified LLM routing layer
+    - ANY-LLM Core Library integration (`acompletion()` function)
+    - Budget tracking with provider-specific limits
+    - 28/28 unit tests passing
+  - ✅ **Alibaba Cloud DashScope Integration**
+    - Replaced "Ollama Cloud" (API not available yet)
+    - Qwen-Turbo/Plus/Max models (text generation)
+    - OpenAI-compatible API format
+  - ✅ **SQLite Cost Tracker** (Day 2)
+    - 389 LOC persistent cost tracking
+    - Per-request tracking (timestamp, provider, model, tokens, cost, latency)
+    - Monthly aggregations and budget monitoring
+    - CSV/JSON export capabilities
+    - Database: `data/cost_tracking.db`
+  - ✅ **DashScope VLM Client** (Day 2)
+    - 267 LOC direct Alibaba Cloud VLM integration
+    - Primary model: `qwen3-vl-30b-a3b-instruct` (cheaper output tokens)
+    - Fallback model: `qwen3-vl-30b-a3b-thinking` (on 403 errors)
+    - VLM best practices:
+      - `enable_thinking=True` for thinking model (better reasoning)
+      - `vl_high_resolution_images=True` (16,384 vs 2,560 tokens)
+      - Base64 image encoding
+      - Automatic fallback on 403 errors
+  - ✅ **ImageProcessor Integration**
+    - Updated to use DashScope VLM via `generate_vlm_description_with_dashscope()`
+    - Async/sync bridge using ThreadPoolExecutor
+    - Cloud VLM routing with `use_proxy=True` parameter
+- **Architecture Decisions**:
+  - ADR-032: Multi-Cloud Execution Strategy (Local + Ollama Cloud + OpenAI)
+  - ADR-033: ANY-LLM Integration (ACCEPTED 2025-11-13)
+- **Test Results**:
+  - 4/4 DashScope VLM tests passing
+  - Cost tracking: $0.003 tracked in SQLite database
+  - VLM descriptions accurate (color detection, text recognition)
+- **Tech Debt Created**:
+  - TD-23.1: ANY-LLM partial integration (P2) - Core Library only, not Gateway
+  - TD-23.2: DashScope VLM bypass routing (P3) - Direct API calls, not through AegisLLMProxy
+  - TD-23.3: Token split estimation (P3) - 50/50 input/output estimate
+  - TD-23.4: Async/sync bridge (P3) - ThreadPoolExecutor complexity
+
+**Next Steps**: Complete Sprint 23 Day 2 CI validation, then continue with remaining features or Sprint 24.
 
 For full details, see:
 - [SPRINT_21_PLAN_v2.md](sprints/SPRINT_21_PLAN_v2.md)
@@ -105,12 +148,23 @@ Data Ingestion:
 Vector DB: Qdrant 1.11.0
 Graph DB: Neo4j 5.24 Community Edition
 Memory Cache: Redis 7.x with Persistence
+LLM Proxy: AegisLLMProxy (ANY-LLM Core Library, ADR-033)
+  - Multi-cloud routing: Local Ollama → Alibaba Cloud → OpenAI
+  - Budget tracking with provider-specific limits
+  - Cost tracking: SQLite database (persistent tracking)
 LLM Models:
-  - Generation: llama3.2:3b (query) / llama3.2:8b (generation)
-  - Extraction: gemma-3-4b-it-Q8_0 (ADR-018)
-  - Vision: llava:7b-v1.6-mistral-q2_K (Feature 21.6)
+  - Local (Ollama):
+    - Generation: llama3.2:3b (query) / llama3.2:8b (generation)
+    - Extraction: gemma-3-4b-it-Q8_0 (ADR-018)
+    - Vision: llava:7b-v1.6-mistral-q2_K (Feature 21.6)
+  - Cloud (Alibaba DashScope):
+    - Text: qwen-turbo / qwen-plus / qwen-max
+    - Vision (VLM):
+      - Primary: qwen3-vl-30b-a3b-instruct (cheaper output tokens)
+      - Fallback: qwen3-vl-30b-a3b-thinking (on 403 errors, enable_thinking)
+    - Best Practices: vl_high_resolution_images=True (16,384 vs 2,560 tokens)
 Embeddings: BGE-M3 (1024-dim, multilingual, ADR-024) - Local & Cost-Free
-Optional Production: Azure OpenAI GPT-4o (if needed)
+Optional Production: Azure OpenAI GPT-4o (if budget allows)
 MCP: Official Python SDK (anthropic/mcp)
 Container Runtime: Docker Compose + NVIDIA Container Toolkit (CUDA 12.4)
 ```
@@ -190,6 +244,10 @@ aegis-rag/
 │   │   ├── vector_search/   # Qdrant + Hybrid Search + BGE-M3
 │   │   ├── graph_rag/       # LightRAG + Neo4j + Three-Phase Extraction
 │   │   ├── memory/          # Graphiti + Redis
+│   │   ├── llm_proxy/       # Multi-Cloud LLM Routing (Sprint 23)
+│   │   │   ├── aegis_llm_proxy.py    # ANY-LLM wrapper with routing logic
+│   │   │   ├── cost_tracker.py       # SQLite cost tracking (389 LOC)
+│   │   │   └── dashscope_vlm.py      # Alibaba Cloud VLM client (267 LOC)
 │   │   └── mcp/             # MCP Client (tool integration)
 │   ├── core/                # Shared Core
 │   │   ├── config.py
@@ -408,6 +466,13 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL_GENERATION=llama3.2:8b
 OLLAMA_MODEL_QUERY=llama3.2:3b
 OLLAMA_MODEL_EMBEDDING=nomic-embed-text
+
+# Alibaba Cloud DashScope (Sprint 23)
+ALIBABA_CLOUD_API_KEY=sk-...  # Required for cloud VLM and text models
+ALIBABA_CLOUD_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+# Budget limits (optional, defaults to unlimited)
+MONTHLY_BUDGET_ALIBABA_CLOUD=10.0  # USD per month
+MONTHLY_BUDGET_OPENAI=20.0         # USD per month
 
 # Optional: Azure OpenAI (Production only)
 # USE_AZURE_LLM=false
