@@ -32,15 +32,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
       - name: Install Poetry
         run: |
           pip install --upgrade pip
           pip install poetry
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
+      - name: Install Dependencies (Code Quality Only)
         run: |
-          poetry install --with dev
+          poetry install --only dev --no-root
       
       - name: Run Ruff Linter
         run: |
@@ -86,15 +97,27 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
           pip install --upgrade pip
           pip install poetry
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
+      - name: Install Dependencies (Core for Import Validation)
         run: |
-          poetry install --with dev
+          poetry install --no-interaction
 
       - name: Validate All Python Imports
         run: |
@@ -204,15 +227,27 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
+      - name: Install Dependencies (Core + Dev)
         run: |
-          poetry install --no-interaction --no-ansi
+          poetry install --with dev --no-interaction --no-ansi
 
       - name: Run Unit Tests
         run: |
@@ -314,16 +349,28 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
+      - name: Install Dependencies (Core + Dev for Integration)
         run: |
-          poetry install --no-interaction --no-ansi
-      
+          poetry install --with dev --no-interaction --no-ansi
+
       - name: Wait for Services
         run: |
           echo "🔍 Waiting for Qdrant..."
@@ -538,13 +585,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
           pip install poetry
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.in-project true
 
-      - name: Install Backend Dependencies
+      - name: Install Backend Dependencies (Core for E2E)
         run: poetry install --no-interaction
 
       - name: Wait for Services
@@ -609,12 +668,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
-        run: pip install poetry
+        run: |
+          pip install poetry
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
-        run: poetry install
+      - name: Install Dependencies (Core for API Contract)
+        run: poetry install --no-interaction
 
       - name: Generate OpenAPI Schema
         run: |
@@ -665,6 +737,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
       - name: Install Poetry
         run: pip install poetry
@@ -932,22 +1005,34 @@ jobs:
     name: ⚡ Performance Benchmarks
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Cache Poetry Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies
+      - name: Install Dependencies (All for Performance)
         run: |
           poetry install --no-interaction --no-ansi
 
