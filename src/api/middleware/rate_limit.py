@@ -32,7 +32,7 @@ Example:
     ...     return {"results": [...]}
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import Request
@@ -115,7 +115,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
                 "client_ip": get_remote_address(request),
             },
             request_id=request_id,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             path=request.url.path,
         )
     )
@@ -127,7 +127,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
         headers={
             "X-RateLimit-Limit": str(limit),
             "X-RateLimit-Remaining": "0",
-            "X-RateLimit-Reset": str(int(datetime.now(timezone.utc).timestamp()) + 60),
+            "X-RateLimit-Reset": str(int(datetime.now(UTC).timestamp()) + 60),
             "Retry-After": "60",  # Seconds
             "X-Request-ID": request_id,
         },

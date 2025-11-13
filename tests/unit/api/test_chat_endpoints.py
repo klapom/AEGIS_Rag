@@ -199,7 +199,9 @@ class TestChatEndpoint:
 
             assert response.status_code == 500
             data = response.json()
-            assert "detail" in data or "message" in data
+            # API now returns structured error format: {"error": {"code": "...", "message": "..."}}
+            assert "error" in data
+            assert "message" in data["error"]
 
     async def test_chat_endpoint_extracts_answer_from_messages(self, async_client: AsyncClient):
         """Test answer extraction from different result formats."""
@@ -285,7 +287,9 @@ class TestConversationHistoryEndpoint:
             # Endpoint returns 404 when no history is found
             assert response.status_code == 404
             data = response.json()
-            assert "not found" in data["detail"].lower()
+            # API now returns structured error format
+            assert "error" in data
+            assert "not found" in data["error"]["message"].lower()
 
     async def test_get_conversation_history_handles_exception(self, async_client: AsyncClient):
         """Test error handling in history retrieval."""

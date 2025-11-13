@@ -161,13 +161,13 @@ async def get_document_annotations(
 
         # Query Qdrant for chunks with image annotations
         # Note: We use scroll instead of search since we don't need vector similarity
-        from qdrant_client.models import Filter, FieldCondition
+        from qdrant_client.models import FieldCondition, Filter
 
         qdrant_filter = Filter(
             must=[
                 FieldCondition(
                     key=cond["key"],
-                    match=cond["match"] if "match" in cond else None,
+                    match=cond.get("match"),
                 )
                 for cond in filter_conditions
             ]

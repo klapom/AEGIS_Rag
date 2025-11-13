@@ -228,7 +228,7 @@ async def test_process_empty_query(mock_hybrid_search):
 async def test_process_search_error(sample_state):
     """Test error handling when search fails."""
     mock = MagicMock()
-    mock.hybrid_search = AsyncMock(side_effect=VectorSearchError("Search failed"))
+    mock.hybrid_search = AsyncMock(side_effect=VectorSearchError("test query", "Search failed"))
 
     agent = VectorSearchAgent(hybrid_search=mock, max_retries=1)
 
@@ -261,8 +261,8 @@ async def test_retry_on_failure(sample_state):
     # Fail twice, then succeed
     mock.hybrid_search = AsyncMock(
         side_effect=[
-            VectorSearchError("Transient error 1"),
-            VectorSearchError("Transient error 2"),
+            VectorSearchError("test query", "Transient error 1"),
+            VectorSearchError("test query", "Transient error 2"),
             {
                 "query": "test",
                 "results": [],
@@ -296,7 +296,7 @@ async def test_retry_on_failure(sample_state):
 async def test_retry_exhausted(sample_state):
     """Test that retries are exhausted and error is set."""
     mock = MagicMock()
-    mock.hybrid_search = AsyncMock(side_effect=VectorSearchError("Persistent error"))
+    mock.hybrid_search = AsyncMock(side_effect=VectorSearchError("test query", "Persistent error"))
 
     agent = VectorSearchAgent(hybrid_search=mock, max_retries=3)
 

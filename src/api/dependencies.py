@@ -39,8 +39,6 @@ See Also:
     - FastAPI Dependencies: https://fastapi.tiangolo.com/tutorial/dependencies/
 """
 
-from typing import Optional
-
 import structlog
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -126,7 +124,7 @@ def get_request_id(request: Request) -> str:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> User:
     """
     FastAPI dependency to extract and validate JWT token.
@@ -275,8 +273,8 @@ async def get_current_admin_user(
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> Optional[User]:
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> User | None:
     """
     Dependency for endpoints that support optional authentication.
 
