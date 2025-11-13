@@ -1,7 +1,7 @@
 """Unit Tests for Gemma Relation Extractor Retry Logic - Sprint 14 Feature 14.5.
 
 Tests the retry logic and error handling features added in Sprint 14 to
-GemmaRelationExtractor for resilient relation extraction.
+RelationExtractor for resilient relation extraction.
 
 Target Coverage: gemma_relation_extractor.py retry logic
 Focus: Retry mechanisms, exponential backoff, graceful degradation
@@ -17,8 +17,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from tenacity import RetryError
 
-from src.components.graph_rag.gemma_relation_extractor import (
-    GemmaRelationExtractor,
+from src.components.graph_rag.relation_extractor import (
+    RelationExtractor,
     create_relation_extractor_from_config,
 )
 
@@ -38,8 +38,8 @@ def mock_ollama_client():
 
 @pytest.fixture
 def extractor(mock_ollama_client):
-    """Create GemmaRelationExtractor with mock client."""
-    return GemmaRelationExtractor(
+    """Create RelationExtractor with mock client."""
+    return RelationExtractor(
         ollama_client=mock_ollama_client,
         max_retries=3,
         retry_min_wait=0.1,  # Faster for tests
@@ -71,7 +71,7 @@ def sample_text():
 @pytest.mark.unit
 def test_extractor_initialization_with_retry_params():
     """Test extractor initializes with retry parameters."""
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         max_retries=5,
         retry_min_wait=1.0,
         retry_max_wait=20.0,
@@ -85,7 +85,7 @@ def test_extractor_initialization_with_retry_params():
 @pytest.mark.unit
 def test_extractor_default_retry_params():
     """Test extractor uses sensible retry defaults."""
-    extractor = GemmaRelationExtractor()
+    extractor = RelationExtractor()
 
     assert extractor.max_retries == 3
     assert extractor.retry_min_wait == 2.0
@@ -184,7 +184,7 @@ async def test_graceful_degradation_on_general_exception(extractor, sample_text,
 @pytest.mark.unit
 def test_retry_configuration_stored(sample_text, sample_entities):
     """Test that retry configuration is properly stored in extractor."""
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         max_retries=5,
         retry_min_wait=1.0,
         retry_max_wait=10.0,
@@ -207,7 +207,7 @@ async def test_max_retries_exceeded_returns_empty(sample_text, sample_entities):
     client = Mock()
     client.chat.side_effect = ConnectionError("Persistent failure")
 
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         ollama_client=client,
         max_retries=2,
         retry_min_wait=0.05,
@@ -248,7 +248,7 @@ async def test_graceful_degradation_on_persistent_errors(sample_text, sample_ent
     client = Mock()
     client.chat.side_effect = Exception("Catastrophic failure")
 
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         ollama_client=client,
         max_retries=1,
         retry_min_wait=0.01,
@@ -317,7 +317,7 @@ async def test_handles_malformed_json_gracefully(extractor, sample_text, sample_
 @pytest.mark.unit
 def test_parse_json_response_with_markdown():
     """Test _parse_json_response handles markdown code blocks."""
-    extractor = GemmaRelationExtractor()
+    extractor = RelationExtractor()
 
     response = '''```json
 {"relations": [{"source": "A", "target": "B", "description": "test", "strength": 5}]}
@@ -332,7 +332,7 @@ def test_parse_json_response_with_markdown():
 @pytest.mark.unit
 def test_parse_json_response_returns_empty_on_failure():
     """Test _parse_json_response returns empty structure on parse failure."""
-    extractor = GemmaRelationExtractor()
+    extractor = RelationExtractor()
 
     response = "Not valid JSON at all!"
 
@@ -349,7 +349,7 @@ def test_parse_json_response_returns_empty_on_failure():
 @pytest.mark.unit
 def test_extractor_accepts_zero_retries():
     """Test extractor can be configured with 0 retries (fail-fast mode)."""
-    extractor = GemmaRelationExtractor(max_retries=0)
+    extractor = RelationExtractor(max_retries=0)
 
     # Just verify it doesn't raise during init
     assert extractor.max_retries == 0
@@ -358,6 +358,6 @@ def test_extractor_accepts_zero_retries():
 @pytest.mark.unit
 def test_extractor_accepts_high_retry_count():
     """Test extractor accepts high retry count for critical scenarios."""
-    extractor = GemmaRelationExtractor(max_retries=10)
+    extractor = RelationExtractor(max_retries=10)
 
     assert extractor.max_retries == 10
