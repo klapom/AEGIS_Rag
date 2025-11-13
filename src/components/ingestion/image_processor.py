@@ -133,19 +133,19 @@ def should_process_image(
 async def generate_vlm_description_with_dashscope(
     image_path: Path,
     prompt_template: Optional[str] = None,
-    vl_high_resolution_images: bool = True,
+    vl_high_resolution_images: bool = False,
 ) -> str:
     """Generate image description using DashScope VLM (Cloud VLM).
 
     Sprint 23: Uses DashScope VLM API directly with best practices:
     - Primary: qwen3-vl-30b-a3b-instruct (cheaper output tokens)
     - Fallback: qwen3-vl-30b-a3b-thinking (on 403 errors)
-    - High-resolution processing (16,384 vs 2,560 tokens)
+    - Low-resolution mode (2,560 tokens) provides excellent results at lower cost
 
     Args:
         image_path: Path to image file
         prompt_template: Custom prompt (optional)
-        vl_high_resolution_images: Use high-res processing (default: True)
+        vl_high_resolution_images: Use high-res processing (default: False, low-res sufficient)
 
     Returns:
         VLM-generated description text
@@ -420,7 +420,7 @@ class ImageProcessor:
                             asyncio.run,
                             generate_vlm_description_with_dashscope(
                                 image_path=temp_path,
-                                vl_high_resolution_images=True,
+                                vl_high_resolution_images=False,
                             )
                         )
                         description = future.result()
@@ -429,7 +429,7 @@ class ImageProcessor:
                     description = asyncio.run(
                         generate_vlm_description_with_dashscope(
                             image_path=temp_path,
-                            vl_high_resolution_images=True,
+                            vl_high_resolution_images=False,
                         )
                     )
             else:

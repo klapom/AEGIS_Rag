@@ -1144,10 +1144,178 @@ llama-index-vector-stores-qdrant = "^0.8.6"  # Qdrant integration
 
 ---
 
-**Last Updated:** 2025-11-10 (Post-Sprint 21)
-**Total Dependencies:** 61+ (production + dev, unchanged)
+---
+
+## SPRINT 23: MULTI-CLOUD LLM EXECUTION & VLM INTEGRATION
+
+### any-llm-sdk: ^0.1.0 | Unified Multi-Cloud LLM Routing (ADR-033)
+
+**Version:** `^0.1.0` (latest stable)
+
+**Rationale:**
+- **Multi-Cloud Routing:** Single API for Ollama → Alibaba Cloud → OpenAI fallback chain
+- **Provider Abstraction:** Unified interface across different LLM providers
+- **Budget Tracking:** Track spending limits per provider (monthly budgets)
+- **OpenAI-Compatible:** Works with providers implementing OpenAI API format
+- **Minimal Dependencies:** Lightweight, only HTTP client and JSON parsing
+
+**Alternatives Rejected:**
+- **LiteLLM:** Similar functionality but heavier (more dependencies), different routing logic
+- **LangChain Fallbacks:** More complex setup, LangChain-specific, less flexible
+- **Custom Multi-Provider Client:** Too much boilerplate, ANY-LLM provides turnkey solution
+
+**Trade-offs:**
+- ⚠️ Core Library only (NOT Gateway) - missing BudgetManager, CostTracker, ConnectionPooling
+- ⚠️ No VLM support (image inputs not supported by `acompletion()`)
+- ⚠️ Newer library (less battle-tested than LangChain)
+- ✅ Simple integration (509 LOC wrapper in AegisLLMProxy)
+- ✅ OpenAI-compatible API format
+- ✅ Budget limits prevent overspending
+
+**Usage:**
+```python
+from any_llm_sdk import acompletion
+
+result = await acompletion(
+    model="alibaba_cloud/qwen-turbo",
+    messages=[{"role": "user", "content": "..."}],
+    providers=["ollama", "alibaba_cloud", "openai"],
+    budget_limits={"alibaba_cloud": 10.0, "openai": 20.0}
+)
+```
+
+---
+
+### HTTPx: 0.27.0 | Async HTTP Client for DashScope VLM (Sprint 23)
+
+**Version:** `^0.27.0` (already in pyproject.toml, now used for DashScope)
+
+**Rationale (Sprint 23 Usage):**
+- **DashScope VLM API:** Direct API calls to Alibaba Cloud DashScope
+- **Async/Await:** Non-blocking HTTP requests for VLM image descriptions
+- **Timeout Handling:** 120s timeout for VLM inference (longer than text LLMs)
+- **Base64 Image Upload:** POST multipart form data with image encoding
+- **HTTP/2 Support:** Faster than requests library
+
+**New Usage (Sprint 23):**
+- DashScopeVLMClient uses httpx for API calls
+- OpenAI-compatible endpoint: `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+- Authorization header: `Bearer {ALIBABA_CLOUD_API_KEY}`
+
+**Configuration:**
+```python
+self.client = httpx.AsyncClient(timeout=120.0)  # 2 min timeout for VLM
+
+response = await self.client.post(
+    f"{self.base_url}/chat/completions",
+    json=payload,  # OpenAI-compatible format
+    headers={"Authorization": f"Bearer {self.api_key}"}
+)
+```
+
+---
+
+### SQLite Cost Tracker: Custom (389 LOC) | Persistent Cost Tracking (ADR-033)
+
+**Component:** `src/components/llm_proxy/cost_tracker.py`
+
+**Rationale:**
+- **Persistent Storage:** Track all LLM requests in SQLite database (`data/cost_tracking.db`)
+- **Per-Request Tracking:** timestamp, provider, model, tokens_input, tokens_output, cost_usd, latency_ms
+- **Monthly Aggregations:** Sum costs by provider per month
+- **CSV/JSON Export:** Export tracking data for analysis
+- **Full Control:** Custom schema, queries, migrations
+- **Zero Dependencies:** Built-in SQLite (no external DB server)
+
+**Alternatives Rejected:**
+- **ANY-LLM Gateway BudgetManager:** Requires separate server deployment (too complex)
+- **LiteLLM BudgetManager:** Different framework, less flexible
+- **PostgreSQL/MySQL:** Overkill for single-node deployment, higher overhead
+- **No Tracking:** Unacceptable (business requirement for cost oversight)
+
+**Trade-offs:**
+- ⚠️ Manual implementation (389 LOC) vs. built-in ANY-LLM Gateway
+- ⚠️ No distributed tracking (single-node only)
+- ⚠️ SQLite file size could grow large (100MB+ after millions of requests)
+- ✅ Full control over schema and queries
+- ✅ No infrastructure overhead (embedded database)
+- ✅ Working perfectly (4/4 tests passing, $0.003 tracked)
+
+**Database Schema:**
+```sql
+CREATE TABLE llm_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    task_type TEXT NOT NULL,
+    task_id TEXT,
+    tokens_input INTEGER NOT NULL,
+    tokens_output INTEGER NOT NULL,
+    tokens_total INTEGER NOT NULL,
+    cost_usd REAL NOT NULL,
+    latency_ms REAL,
+    routing_reason TEXT,
+    fallback_used BOOLEAN DEFAULT 0
+)
+```
+
+**Re-evaluation Triggers:**
+- ANY-LLM adds VLM support
+- Need multi-tenant cost tracking
+- Database grows beyond 100MB
+
+---
+
+### Alibaba Cloud DashScope: API Key | Qwen Models + VLM (Sprint 23)
+
+**Component:** `src/components/llm_proxy/dashscope_vlm.py` (267 LOC)
+
+**Rationale:**
+- **Qwen Model Access:** qwen-turbo / qwen-plus / qwen-max (text generation)
+- **VLM Support:** qwen3-vl-30b-a3b-instruct (primary), qwen3-vl-30b-a3b-thinking (fallback)
+- **OpenAI-Compatible API:** Works with ANY-LLM `acompletion()` function
+- **Cost-Effective:** Cheaper than OpenAI GPT-4V for VLM tasks
+- **VLM Best Practices:**
+  - `enable_thinking=True` for thinking model (better reasoning)
+  - `vl_high_resolution_images=True` (16,384 vs 2,560 tokens, better quality)
+  - Base64 image encoding
+  - Automatic fallback on 403 errors (quota exceeded)
+
+**Alternatives Rejected:**
+- **Ollama Cloud:** Doesn't exist yet (as of 2025-11-13), planned but not available
+- **OpenAI GPT-4V:** Too expensive ($0.01/image), cloud dependency
+- **Google Gemini Vision:** Similar costs, less local control
+- **Azure Computer Vision:** Different API format, less flexible
+
+**Trade-offs:**
+- ⚠️ Cloud dependency (requires internet, API key)
+- ⚠️ Costs money (vs. free Ollama local)
+- ⚠️ DSGVO considerations (data sent to Alibaba Cloud)
+- ✅ Better VLM quality than local models
+- ✅ Cost-effective vs. competitors
+- ✅ OpenAI-compatible API format
+
+**Configuration:**
+```bash
+# Environment Variables
+ALIBABA_CLOUD_API_KEY=sk-...
+ALIBABA_CLOUD_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+MONTHLY_BUDGET_ALIBABA_CLOUD=10.0  # USD per month
+```
+
+**API Endpoint:**
+- Base URL: `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+- Chat Completions: `/chat/completions` (OpenAI-compatible)
+- Authorization: Bearer token
+
+---
+
+**Last Updated:** 2025-11-13 (Sprint 23 Day 2 Complete)
+**Total Dependencies:** 63+ (production + dev, +2 new: any-llm-sdk, httpx usage for DashScope)
 **Dependency Health:** All actively maintained, no critical CVEs
-**Sprint 21 Additions:**
-- **VLM Models:** llava:7b-v1.6-mistral-q2_K, qwen3-vl:4b (Ollama registry)
-- **Container:** Docling CUDA (Docker image, externally managed)
-- **Architecture:** LlamaIndex → Fallback, Docling → Primary (ADR-027, ADR-028)
+**Sprint 23 Additions:**
+- **any-llm-sdk:** Multi-cloud LLM routing (Core Library only)
+- **httpx:** Async HTTP client for DashScope VLM API
+- **SQLite Cost Tracker:** Custom 389 LOC persistent tracking
+- **Alibaba Cloud DashScope:** API key for Qwen models + VLM

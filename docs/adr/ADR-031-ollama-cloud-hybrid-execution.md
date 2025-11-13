@@ -543,7 +543,7 @@ decision_thresholds:
 1. **Ollama Cloud Documentation:** https://docs.ollama.com/cloud
 2. **ADR-027:** Docling CUDA Container Integration (Sprint 21)
 3. **ADR-028:** Docling-First Hybrid Ingestion Strategy (Sprint 22)
-4. **Sprint 23 Planning:** `docs/sprint-23/SPRINT_23_PLANNING.md`
+4. **Sprint 23 Planning:** `docs/sprints/SPRINT_23_PLANNING_v2_ANY_LLM.md`
 5. **User-Provided Architecture Document:** Ollama Cloud Integration Proposal (2025-11-11)
 
 ---

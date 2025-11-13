@@ -63,7 +63,7 @@
 
 **Sprint 23 Status**: 🚧 IN PROGRESS (2025-11-11 - Present, branch: `main`)
 - **Objective**: Multi-Cloud LLM Execution & VLM Integration
-- **Key Achievements** (Day 1-2):
+- **Key Achievements** (Day 1-3):
   - ✅ **AegisLLMProxy Implementation** (ADR-033)
     - 509 LOC unified LLM routing layer
     - ANY-LLM Core Library integration (`acompletion()` function)
@@ -92,6 +92,11 @@
     - Updated to use DashScope VLM via `generate_vlm_description_with_dashscope()`
     - Async/sync bridge using ThreadPoolExecutor
     - Cloud VLM routing with `use_proxy=True` parameter
+  - ✅ **LangGraph Pipeline Migration (Feature 23.6)** (Day 3)
+    - Migrated 4 components from direct Ollama to AegisLLMProxy
+    - Components: answer_generator, relation_extractor, query_decomposition, lightrag_wrapper
+    - File changes: 5 files, 164 insertions, 114 deletions
+    - Architecture benefits: Unified routing, cost tracking, multi-cloud fallback
 - **Architecture Decisions**:
   - ADR-032: Multi-Cloud Execution Strategy (Local + Ollama Cloud + OpenAI)
   - ADR-033: ANY-LLM Integration (ACCEPTED 2025-11-13)
@@ -105,7 +110,7 @@
   - TD-23.3: Token split estimation (P3) - 50/50 input/output estimate
   - TD-23.4: Async/sync bridge (P3) - ThreadPoolExecutor complexity
 
-**Next Steps**: Complete Sprint 23 Day 2 CI validation, then continue with remaining features or Sprint 24.
+**Next Steps**: Complete Sprint 23 Week 2 integration testing, then proceed with Feature 23.7 rollout.
 
 For full details, see:
 - [SPRINT_21_PLAN_v2.md](sprints/SPRINT_21_PLAN_v2.md)

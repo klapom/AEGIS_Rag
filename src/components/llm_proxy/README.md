@@ -334,7 +334,7 @@ print(response.choices[0].message.content)
 ### Documentation
 - [ADR-033: Mozilla ANY-LLM Integration](../../../docs/adr/ADR-033-any-llm-integration.md)
 - [ANY-LLM Implementation Guide](../../../docs/architecture/ANY_LLM_IMPLEMENTATION_GUIDE.md)
-- [Sprint 23 Planning (Revised)](../../../docs/sprint-23/SPRINT_23_PLANNING_v2_ANY_LLM.md)
+- [Sprint 23 Planning (Revised)](../../../docs/sprints/SPRINT_23_PLANNING_v2_ANY_LLM.md)
 - [Multi-Cloud Evaluation](../../../docs/architecture/MULTI_CLOUD_EVALUATION.md)
 
 ### External Resources

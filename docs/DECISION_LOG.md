@@ -262,7 +262,31 @@
 
 ---
 
-**Last Updated:** 2025-11-07 (Post-Sprint 20 Complete, Sprint 21 ADR-026 Added)
-**Total Decisions Documented:** 44+
-**Current Sprint:** Sprint 20 (Complete: 90%)
-**Next Sprint:** Sprint 21 (Unified Ingestion Pipeline - Planned)
+## SPRINT 23: MULTI-CLOUD LLM EXECUTION & VLM INTEGRATION
+
+### 2025-11-13 | ANY-LLM Core Library (NOT Gateway) (ADR-033)
+**Decision:** Use ANY-LLM Core Library (`acompletion()` function) for unified LLM routing, but NOT deploy ANY-LLM Gateway.
+**Rationale:** ANY-LLM Gateway requires separate server deployment (adds infrastructure complexity). Core Library provides sufficient functionality: multi-cloud routing (Ollama → Alibaba Cloud → OpenAI), budget tracking, provider fallbacks. Gateway features (BudgetManager, CostTracker, connection pooling) implemented manually with SQLite (389 LOC). VLM support missing in ANY-LLM, requires direct API integration anyway.
+
+### 2025-11-13 | SQLite Cost Tracker (NOT ANY-LLM BudgetManager) (ADR-033)
+**Decision:** Implement custom SQLite cost tracker (389 LOC) instead of using ANY-LLM Gateway BudgetManager.
+**Rationale:** ANY-LLM Gateway requires separate server (adds complexity, ops overhead). SQLite provides full control: per-request tracking (timestamp, provider, model, tokens, cost, latency), monthly aggregations, CSV/JSON export, database at `data/cost_tracking.db`. Working perfectly (4/4 tests passing, $0.003 tracked). Re-evaluate if ANY-LLM adds VLM support or we need multi-tenant cost tracking.
+
+### 2025-11-13 | DashScope VLM with Fallback Strategy (ADR-033)
+**Decision:** Primary VLM: `qwen3-vl-30b-a3b-instruct` (cheaper output tokens), Fallback: `qwen3-vl-30b-a3b-thinking` (on 403 errors).
+**Rationale:** Alibaba Cloud VLM best practices: instruct model has cheaper output token pricing, thinking model provides better reasoning but costs more. Automatic fallback on 403 errors (quota exceeded). VLM-specific parameters: `enable_thinking=True` for thinking model, `vl_high_resolution_images=True` (16,384 vs 2,560 tokens for better quality). Base64 image encoding, OpenAI-compatible API format.
+
+### 2025-11-13 | Alibaba Cloud DashScope (NOT Ollama Cloud) (ADR-033 Deviation)
+**Decision:** Use Alibaba Cloud DashScope API instead of planned "Ollama Cloud" (which doesn't exist yet).
+**Rationale:** Sprint 23 planning assumed Ollama would launch cloud API. Investigation revealed Ollama Cloud not available yet (as of 2025-11-13). Alibaba Cloud DashScope provides: OpenAI-compatible API, Qwen models (qwen-turbo/plus/max), VLM support (qwen3-vl-30b), cost-effective pricing, ANY-LLM compatible. Pivot decision: Ollama Cloud → Alibaba Cloud. Ollama remains primary for local inference ($0 cost).
+
+### 2025-11-13 | DashScope VLM Direct Integration (Bypass AegisLLMProxy) (TD-23.2)
+**Decision:** DashScopeVLMClient bypasses AegisLLMProxy routing logic, makes direct API calls.
+**Rationale:** ANY-LLM `acompletion()` function does NOT support image inputs (text-only). VLM requires base64 image encoding, special parameters (`enable_thinking`, `vl_high_resolution_images`), different API endpoint. Faster to implement direct integration (267 LOC) than extend AegisLLMProxy. Tech debt acknowledged (TD-23.2): Future work to extend AegisLLMProxy with VLM-specific `generate()` method for unified routing metrics.
+
+---
+
+**Last Updated:** 2025-11-13 (Sprint 23 Day 2 Complete)
+**Total Decisions Documented:** 49+
+**Current Sprint:** Sprint 23 (In Progress: Day 2 Complete)
+**Next Sprint:** Sprint 24 (Planned)

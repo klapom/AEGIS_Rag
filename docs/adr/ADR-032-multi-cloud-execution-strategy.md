@@ -897,7 +897,7 @@ data:
 1. **ADR-031:** Ollama Cloud Hybrid Execution (superseded by this ADR)
 2. **OpenAI Pricing:** https://openai.com/pricing
 3. **OpenAI API Docs:** https://platform.openai.com/docs
-4. **Sprint 23 Planning:** `docs/sprint-23/SPRINT_23_PLANNING.md`
+4. **Sprint 23 Planning:** `docs/sprints/SPRINT_23_PLANNING_v2_ANY_LLM.md`
 
 ---
 
