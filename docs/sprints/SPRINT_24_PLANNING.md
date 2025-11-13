@@ -376,6 +376,103 @@ Systematic documentation review and completion.
 
 ---
 
+#### Feature 24.13: Remaining Unit Test Failures Documentation (0 SP)
+**Priority:** P1 (High) - DOCUMENTATION ONLY
+**Duration:** 0 hours (documentation task)
+**Source:** CI Run 19341717338 - Post Feature 24.11
+
+**Problem:**
+After successful Feature 24.11 (IngestionError signature fixes), CI run 19341717338 revealed 5 additional unit test failures unrelated to IngestionError:
+
+**Failure 1: test_chunk_id_provenance_tracking (LightRAG Cypher Query)**
+- **File:** `tests/unit/components/graph_rag/test_lightrag_wrapper.py::TestLightRAGWrapperSprint16::test_chunk_id_provenance_tracking`
+- **Error:** `AssertionError: assert 'MATCH (e:base {entity_id: entity_id})' in '...'`
+- **Root Cause:** Cypher query format mismatch
+  - **Expected format:** `MATCH (e:base {entity_id: entity_id})`
+  - **Actual format:** `MERGE (e:base:PERSON {entity_id: $entity_id})`
+- **Analysis:**
+  - Test expects `MATCH` statement but code generates `MERGE`
+  - Test expects non-parameterized syntax (`entity_id: entity_id`) but code uses parameterized (`$entity_id`)
+  - Code uses multi-label format (`:base:PERSON`) which is modern Neo4j best practice
+- **Impact:** Low - Cypher query works correctly, test assertion outdated
+- **Recommendation:** Update test assertion to match modern Cypher format (MERGE + parameterized + multi-label)
+
+**Failure 2: test_start_container_success (Docling Mock Call Count)**
+- **File:** `tests/unit/components/ingestion/test_docling_client_unit.py::test_start_container_success`
+- **Error:** `AssertionError: Expected 'run' to have been called once. Called 2 times.`
+- **Actual Calls:**
+  1. `docker ps --filter name=aegis-docling --format '{{.Names}}'` (check if container running)
+  2. `docker compose --profile ingestion up -d docling` (start container)
+- **Root Cause:** Test expects only the `docker compose` call, but implementation now includes pre-check
+- **Analysis:**
+  - Code behavior: Check if container already running before starting (defensive programming)
+  - Test expectation: Only expects docker compose call
+  - Added defensive check is good practice (avoid duplicate container starts)
+- **Impact:** Low - Implementation improvement, test needs update
+- **Recommendation:** Update test to expect 2 calls instead of 1, or use `assert_called_with()` for specific call
+
+**Failure 3: test_parse_document_success (Docling Task ID)**
+- **File:** `tests/unit/components/ingestion/test_docling_client_unit.py::test_parse_document_success`
+- **Error:** `IngestionError: Unexpected error parsing document: Document ingestion failed: No task_id in response: {...}`
+- **Root Cause:** Mock response structure missing 'task_id' field
+- **Analysis:**
+  - Docling container API uses async task pattern (POST → task_id → poll status)
+  - Mock response returns full document structure directly (synchronous pattern)
+  - Code expects: `{'task_id': 'task_123'}`
+  - Mock returns: `{'text': '...', 'metadata': {...}, 'tables': [...], 'images': [...]}`
+- **Impact:** Medium - Test mock doesn't match actual API contract
+- **Recommendation:** Fix mock to include task_id field and async task flow
+
+**Failure 4: test_parse_batch_success (Docling Batch Parsing)**
+- **File:** `tests/unit/components/ingestion/test_docling_client_unit.py::test_parse_batch_success`
+- **Error:** `AssertionError: assert 0 == 3` (Expected 3 parsed documents, got 0)
+- **Root Cause:** Same as Failure 3 - missing task_id in mock responses
+- **Analysis:**
+  - Test expects 3 documents to be parsed successfully
+  - All 3 fail due to missing task_id in mock response
+  - Batch processing logic works, but mock data structure incorrect
+- **Impact:** Medium - Test infrastructure issue
+- **Recommendation:** Same fix as Failure 3 - update mock data structure
+
+**Failure 5: test_parse_batch_partial_failure (Docling Partial Failure)**
+- **File:** `tests/unit/components/ingestion/test_docling_client_unit.py::test_parse_batch_partial_failure`
+- **Error:** `AssertionError: assert 0 == 2` (Expected 2 successful parses, got 0)
+- **Root Cause:** Same as Failure 3 - missing task_id in mock responses
+- **Analysis:**
+  - Test scenario: 3 documents, 1 should fail, 2 should succeed
+  - Actual result: All 3 fail due to mock data issue
+  - Partial failure handling logic not tested
+- **Impact:** Medium - Critical test scenario not validated
+- **Recommendation:** Same fix as Failure 3 + verify partial failure logic
+
+**Summary:**
+- **Total Failures:** 5 tests
+- **Categories:**
+  1. Outdated test assertions (1 test) - Low priority
+  2. Mock call count mismatches (1 test) - Low priority
+  3. Mock data structure issues (3 tests) - Medium priority
+- **Root Causes:**
+  - LightRAG: Test assertions don't match modern Cypher syntax
+  - Docling: Mock data doesn't match async task API contract
+- **Next Steps (Feature 24.14):**
+  1. Fix LightRAG test assertion (1 line change)
+  2. Update Docling mock call expectations (1 test)
+  3. Fix Docling mock data structure for async task pattern (3 tests)
+
+**Deliverables:**
+- ✅ Documentation of all 5 failures (this section)
+- ✅ Root cause analysis completed
+- ✅ Impact assessment completed
+- ✅ Recommendations for Feature 24.14 provided
+
+**Acceptance Criteria:**
+- ✅ All 5 failures documented with full error details
+- ✅ Root causes identified
+- ✅ Impact and priority assessed
+- ✅ Recommendations for fixes provided
+
+---
+
 ## 🔧 Technical Debt Resolution Summary
 
 ### Sprint 23 Technical Debt
