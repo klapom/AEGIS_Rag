@@ -190,12 +190,16 @@ class LLMResponse(BaseModel):
     This model contains the generated content plus metadata about
     which provider was used, costs, latency, etc.
 
+    Sprint 25 Feature 25.3: Added tokens_input/tokens_output for accurate cost tracking
+
     Example:
         response = LLMResponse(
             content="John Smith (Person) works at Acme Corp (Organization).",
             provider="local_ollama",
             model="gemma-3-4b-it-Q8_0",
             tokens_used=45,
+            tokens_input=25,
+            tokens_output=20,
             cost_usd=0.0,
             latency_ms=120,
         )
@@ -208,6 +212,10 @@ class LLMResponse(BaseModel):
     provider: str = Field(..., description="Provider used (local/ollama_cloud/openai)")
     model: str = Field(..., description="Model name")
     tokens_used: int = Field(..., ge=0, description="Total tokens used (input + output)")
+
+    # Sprint 25 Feature 25.3: Detailed token breakdown for accurate cost calculation
+    tokens_input: int = Field(default=0, ge=0, description="Input tokens (prompt)")
+    tokens_output: int = Field(default=0, ge=0, description="Output tokens (completion)")
 
     # Cost & performance
     cost_usd: float = Field(..., ge=0.0, description="Cost in USD")

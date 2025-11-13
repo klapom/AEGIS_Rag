@@ -380,15 +380,52 @@ class AegisLLMProxy:
         )
 
         # Convert ANY-LLM response to AegisRAG format
-        # Extract token breakdown for accurate cost calculation
+        # Sprint 25 Feature 25.3: Extract detailed token breakdown for accurate cost calculation
         tokens_input = 0
         tokens_output = 0
         tokens_used = 0
+        estimation_used = False
 
+        # Parse usage field if available (contains prompt_tokens, completion_tokens, total_tokens)
         if hasattr(response, "usage") and response.usage:
             tokens_input = getattr(response.usage, "prompt_tokens", 0) or 0
             tokens_output = getattr(response.usage, "completion_tokens", 0) or 0
             tokens_used = getattr(response.usage, "total_tokens", 0) or 0
+
+            # Log successful token parsing
+            logger.info(
+                "token_usage_parsed",
+                provider=provider,
+                model=model,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+                total_tokens=tokens_used,
+                estimation_used=False,
+            )
+        else:
+            # Fallback: Try to get total tokens and estimate split
+            tokens_used = getattr(response, 'tokens_used', 0)
+            if tokens_used > 0:
+                tokens_input = tokens_used // 2
+                tokens_output = tokens_used - tokens_input
+                estimation_used = True
+                logger.warning(
+                    "token_usage_estimated",
+                    provider=provider,
+                    model=model,
+                    tokens_input=tokens_input,
+                    tokens_output=tokens_output,
+                    total_tokens=tokens_used,
+                    estimation_used=True,
+                    reason="usage_field_missing",
+                )
+            else:
+                # No token info available
+                logger.error(
+                    "token_usage_unavailable",
+                    provider=provider,
+                    model=model,
+                )
 
         # Track spending for cloud providers with accurate input/output split
         cost = self._calculate_cost(
@@ -400,11 +437,14 @@ class AegisLLMProxy:
         if provider in self._monthly_spending:
             self._monthly_spending[provider] += cost
 
+        # Create response with token breakdown (Sprint 25 Feature 25.3)
         return LLMResponse(
             content=response.choices[0].message.content,
             provider=provider,
             model=model,
             tokens_used=tokens_used,
+            tokens_input=tokens_input,  # Detailed breakdown for accurate cost calculation
+            tokens_output=tokens_output,  # Detailed breakdown for accurate cost calculation
             cost_usd=cost,
         )
 
@@ -472,11 +512,11 @@ class AegisLLMProxy:
         """
         # If input/output not available, use total tokens (old behavior)
         if tokens_input == 0 and tokens_output == 0 and tokens_total > 0:
-            # Use legacy pricing (average input+output rate)
+            # Use legacy pricing (average input+output rate, per 1M tokens)
             pricing_legacy = {
                 "local_ollama": 0.0,  # Free
-                "alibaba_cloud": 0.000125,  # avg of $0.05/$0.2 per 1M = $0.125/1M
-                "openai": 0.00625,  # avg of $2.50/$10.00 per 1M = $6.25/1M
+                "alibaba_cloud": 0.125,  # avg of $0.05/$0.2 per 1M = $0.125 per 1M
+                "openai": 6.25,  # avg of $2.50/$10.00 per 1M = $6.25 per 1M
             }
             cost = (tokens_total / 1_000_000) * pricing_legacy.get(provider, 0.0)
         else:
@@ -538,11 +578,30 @@ class AegisLLMProxy:
 
         # Persist to SQLite database (Sprint 23 - persistent cost tracking)
         try:
-            # TD-24.1: Token breakdown is already in result.tokens_used (total)
-            # TODO: Extract input/output split when available from result metadata
-            # For now, estimate 50/50 split (will be improved in Sprint 25)
-            tokens_input = result.tokens_used // 2
-            tokens_output = result.tokens_used - tokens_input
+            # Sprint 25 Feature 25.3: Extract accurate token split from response
+            # Parse from result metadata if available, otherwise estimate 50/50
+            tokens_input = 0
+            tokens_output = 0
+            estimation_used = False
+
+            # Check if we stored token breakdown in response metadata
+            if hasattr(result, 'tokens_input') and hasattr(result, 'tokens_output'):
+                tokens_input = result.tokens_input
+                tokens_output = result.tokens_output
+            else:
+                # Fallback to 50/50 estimation
+                tokens_input = result.tokens_used // 2
+                tokens_output = result.tokens_used - tokens_input
+                estimation_used = True
+
+            if estimation_used:
+                logger.warning(
+                    "Token split estimated (50/50)",
+                    provider=provider,
+                    total_tokens=result.tokens_used,
+                    tokens_input=tokens_input,
+                    tokens_output=tokens_output,
+                )
 
             self.cost_tracker.track_request(
                 provider=provider,
