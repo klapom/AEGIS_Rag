@@ -1,10 +1,10 @@
-# Sprint 25: Production Readiness & Monitoring
+# Sprint 25: Production Readiness & Refactoring Cleanup
 
 **Status:** 📋 PLANNED
-**Goal:** Production monitoring, integration tests, and deferred Sprint 24 features
-**Duration:** 5 days (2025-11-15 to 2025-11-21)
+**Goal:** Production monitoring, integration tests, deferred Sprint 24 features, AND Sprint 22 refactoring cleanup
+**Duration:** 7 days (2025-11-15 to 2025-11-23)
 **Prerequisites:** Sprint 24 complete (Dependency Optimization & CI Performance)
-**Story Points:** 30 SP
+**Story Points:** 40 SP (22 SP deferred from Sprint 24 + 10 SP refactoring + 8 SP new work)
 
 ---
 
@@ -739,6 +739,266 @@ poetry install --all-extras
 
 ---
 
+### Category 5: Refactoring Cleanup (Sprint 22 Debt)
+
+#### Feature 25.7: Remove Deprecated Code (5 SP) ⭐
+**Priority:** P1 (High) - **ADR Compliance**
+**Duration:** 2.5 days
+**Source:** REFACTORING_ROADMAP.md (TD-REF-01, TD-REF-02, TD-REF-03)
+
+**Problem:**
+Three deprecated files violate architecture decisions (ADR-026, ADR-027, ADR-028) but still exist in codebase.
+
+**Files to Remove:**
+
+**1. unified_ingestion.py (TD-REF-01)**
+- **File:** `src/components/shared/unified_ingestion.py` (275 lines)
+- **Deprecated:** Sprint 21 (ADR-027)
+- **Replacement:** `src/components/ingestion/langgraph_pipeline.py`
+- **Reason:** Parallel execution (asyncio.gather) violates memory constraints
+- **Impact:** Removes 275 lines, cleaner architecture
+
+**2. three_phase_extractor.py (TD-REF-02)**
+- **File:** `src/components/graph_rag/three_phase_extractor.py` (350 lines)
+- **Deprecated:** Sprint 21 (ADR-026)
+- **Replacement:** Pure LLM extraction (default in config)
+- **Reason:** Three-phase (SpaCy NER + Dedup + Gemma) lower quality than pure LLM
+- **Impact:** Removes 350 lines, simplifies extraction pipeline
+
+**3. LlamaIndex load_documents() (TD-REF-03)**
+- **Method:** `DocumentIngestionPipeline.load_documents()` (~100 lines)
+- **Deprecated:** Sprint 21 (ADR-028)
+- **Replacement:** Docling container client
+- **Reason:** LlamaIndex lacks OCR, table extraction, GPU acceleration
+- **Impact:** Removes ~100 lines, enforces ADR-028
+
+**Implementation Plan:**
+
+**Step 1: Archive Files**
+```bash
+# Create archive directory
+mkdir -p archive/deprecated/sprint-21/
+
+# Move files to archive
+mv src/components/shared/unified_ingestion.py \
+   archive/deprecated/sprint-21/unified_ingestion_deprecated.py
+
+mv src/components/graph_rag/three_phase_extractor.py \
+   archive/deprecated/sprint-21/three_phase_extractor_deprecated.py
+```
+
+**Step 2: Update Imports**
+```python
+# Before (unified_ingestion.py callers):
+from src.components.shared.unified_ingestion import UnifiedIngestionPipeline
+pipeline = UnifiedIngestionPipeline()
+
+# After (LangGraph):
+from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
+pipeline = create_ingestion_graph()
+```
+
+**Step 3: Remove load_documents() Method**
+```python
+# src/components/vector_search/ingestion.py
+# DELETE lines 137-237 (load_documents method)
+# Keep rest of file (chunk_documents, create_points, etc.)
+```
+
+**Step 4: Update Config**
+```python
+# src/core/config.py
+# Before:
+extraction_pipeline: Literal["three_phase", "llm_extraction"] = "llm_extraction"
+
+# After:
+extraction_pipeline: Literal["llm_extraction"] = "llm_extraction"
+```
+
+**Deliverables:**
+- [ ] unified_ingestion.py archived
+- [ ] three_phase_extractor.py archived
+- [ ] load_documents() method removed
+- [ ] All imports updated to new implementations
+- [ ] Tests migrated
+- [ ] Config updated (remove "three_phase" option)
+- [ ] 725+ lines of deprecated code removed
+
+**Acceptance Criteria:**
+- ✅ All deprecated files archived to `archive/deprecated/sprint-21/`
+- ✅ No imports reference deprecated code
+- ✅ Tests passing (100%)
+- ✅ ADR-026, ADR-027, ADR-028 compliance verified
+- ✅ 725+ lines removed from src/
+- ✅ Admin endpoint uses LangGraph pipeline
+- ✅ extraction_factory.py updated (no three_phase branch)
+
+**Files to Modify:**
+- `src/components/shared/unified_ingestion.py` (DELETE)
+- `src/components/graph_rag/three_phase_extractor.py` (DELETE)
+- `src/components/vector_search/ingestion.py` (remove load_documents)
+- `src/api/v1/admin.py` (update to LangGraph)
+- `src/components/graph_rag/extraction_factory.py` (remove three_phase)
+- `src/core/config.py` (update Literal type)
+- `tests/` (migrate tests to LangGraph)
+
+---
+
+#### Feature 25.8: Consolidate Duplicate Code (3 SP)
+**Priority:** P2 (Medium)
+**Duration:** 1.5 days
+**Source:** REFACTORING_ROADMAP.md (TD-REF-04, TD-REF-05)
+
+**Problem:**
+Two critical code duplications exist (base agent, embedding services).
+
+**Duplications to Fix:**
+
+**1. Duplicate Base Agent (TD-REF-04)**
+- **Files:** `src/agents/base.py` (155 lines) vs `src/agents/base_agent.py` (155 lines)
+- **Status:** IDENTICAL classes (100% duplication)
+- **Decision:** Keep `base_agent.py` (more explicit naming), delete `base.py`
+
+**2. Duplicate Embedding Services (TD-REF-05)**
+- **Files:**
+  - `src/components/shared/embedding_service.py` (UnifiedEmbeddingService - 269 lines - core)
+  - `src/components/vector_search/embeddings.py` (EmbeddingService - 160 lines - wrapper)
+- **Status:** EmbeddingService is 100% wrapper (all methods delegate to UnifiedEmbeddingService)
+- **Decision:** Remove wrapper, migrate all imports to UnifiedEmbeddingService
+
+**Implementation:**
+
+**Part 1: Remove base.py**
+```python
+# Update all imports:
+# Before:
+from src.agents.base import BaseAgent
+
+# After:
+from src.agents.base_agent import BaseAgent
+```
+
+**Part 2: Remove EmbeddingService Wrapper**
+```python
+# Update all imports:
+# Before:
+from src.components.vector_search.embeddings import EmbeddingService
+
+# After:
+from src.components.shared.embedding_service import UnifiedEmbeddingService
+
+# Usage:
+# Before:
+embedder = EmbeddingService()
+
+# After:
+embedder = UnifiedEmbeddingService()
+```
+
+**Deliverables:**
+- [ ] `src/agents/base.py` deleted
+- [ ] All agent imports updated to `base_agent.py`
+- [ ] `src/components/vector_search/embeddings.py` (EmbeddingService) removed
+- [ ] All embedding imports updated to `UnifiedEmbeddingService`
+- [ ] Tests migrated
+- [ ] 315 lines of duplicate code removed (155 + 160)
+
+**Acceptance Criteria:**
+- ✅ base.py deleted
+- ✅ EmbeddingService wrapper deleted
+- ✅ All imports updated
+- ✅ Tests passing (100%)
+- ✅ 315 lines of duplicate code removed
+- ✅ No functionality lost
+
+**Files to Modify:**
+- `src/agents/base.py` (DELETE)
+- `src/components/vector_search/embeddings.py` (DELETE EmbeddingService class)
+- All files importing `BaseAgent` from `base.py` (update imports)
+- All files importing `EmbeddingService` (update to UnifiedEmbeddingService)
+- Tests (update imports)
+
+---
+
+#### Feature 25.9: Standardize Client Naming (2 SP)
+**Priority:** P2 (Medium)
+**Duration:** 1 day
+**Source:** REFACTORING_ROADMAP.md (TD-REF-06)
+
+**Problem:**
+Inconsistent naming for client wrapper classes (`Wrapper` suffix vs `Client` suffix).
+
+**Current Naming Inconsistencies:**
+- ❌ `QdrantClientWrapper` (wrapper suffix - redundant)
+- ❌ `GraphitiWrapper` (wrapper suffix)
+- ❌ `LightRAGWrapper` (wrapper suffix)
+- ❌ `DoclingContainerClient` (container + client - verbose)
+- ✅ `Neo4jClient` (client suffix - correct)
+- ✅ `MCPClient` (client suffix - correct)
+
+**Target Naming (Standardized):**
+- ✅ `QdrantClient` (rename from QdrantClientWrapper)
+- ✅ `GraphitiClient` (rename from GraphitiWrapper)
+- ✅ `LightRAGClient` (rename from LightRAGWrapper)
+- ✅ `DoclingClient` (rename from DoclingContainerClient)
+- ✅ `Neo4jClient` (already correct)
+- ✅ `MCPClient` (already correct)
+
+**Implementation:**
+
+**Step 1: Rename Classes**
+```python
+# src/components/vector_search/qdrant_client.py
+# Before:
+class QdrantClientWrapper:
+    ...
+
+# After:
+class QdrantClient:
+    ...
+
+# Backward compatibility alias (deprecation period: Sprint 25-26)
+QdrantClientWrapper = QdrantClient  # DEPRECATED: Use QdrantClient
+```
+
+**Step 2: Update Imports**
+```python
+# Before:
+from src.components.vector_search.qdrant_client import QdrantClientWrapper
+
+# After:
+from src.components.vector_search.qdrant_client import QdrantClient
+```
+
+**Deliverables:**
+- [ ] QdrantClientWrapper → QdrantClient
+- [ ] GraphitiWrapper → GraphitiClient
+- [ ] LightRAGWrapper → LightRAGClient
+- [ ] DoclingContainerClient → DoclingClient
+- [ ] Backward compatibility aliases created (deprecation warnings)
+- [ ] All imports updated
+- [ ] Tests updated
+- [ ] Documentation updated
+
+**Acceptance Criteria:**
+- ✅ All client classes renamed to `<Service>Client` pattern
+- ✅ Backward compatibility aliases in place
+- ✅ All imports updated
+- ✅ Tests passing (100%)
+- ✅ No breaking changes (aliases provide compatibility)
+- ✅ Documentation reflects new naming
+
+**Files to Modify:**
+- `src/components/vector_search/qdrant_client.py` (rename class)
+- `src/components/memory/graphiti_wrapper.py` (rename class)
+- `src/components/graph_rag/lightrag_wrapper.py` (rename class)
+- `src/components/ingestion/docling_client.py` (rename class)
+- All files importing these clients (update imports)
+- Tests (update imports)
+- Documentation (update references)
+
+---
+
 ## 🔧 Technical Debt Resolution Summary
 
 ### Deferred from Sprint 24
@@ -783,7 +1043,7 @@ poetry install --all-extras
 - Afternoon: Update cost tracker + Prometheus metrics
 - Evening: Write unit tests
 
-### Week 1 (Days 4-5): Code Quality & Documentation
+### Week 1 (Days 4-5): Code Quality & Async Refactoring
 
 **Day 4: Feature 25.4 - Async/Sync Bridge** (5 SP)
 - Morning: Refactor `ImageProcessor` to async
@@ -794,6 +1054,19 @@ poetry install --all-extras
 - Morning: MyPy strict mode fixes
 - Afternoon: Architecture documentation updates
 - Evening: Final review, commit all changes
+
+### Week 2 (Days 6-7): Refactoring Cleanup
+
+**Day 6: Feature 25.7 - Remove Deprecated Code (Part 1)** (2.5 SP)
+- Morning: Archive unified_ingestion.py
+- Afternoon: Archive three_phase_extractor.py
+- Evening: Remove load_documents() method
+- Evening: Update imports, tests
+
+**Day 7: Features 25.7-25.9 - Refactoring Cleanup (Part 2)** (7.5 SP)
+- Morning: Feature 25.7 completion (verify ADR compliance)
+- Afternoon: Feature 25.8 - Consolidate duplicates (base agent, embedding service)
+- Evening: Feature 25.9 - Standardize client naming (aliases + imports)
 
 ---
 
@@ -845,6 +1118,7 @@ poetry install --all-extras
 
 ## ✅ Sprint 25 Completion Criteria
 
+### Production Readiness (Features 25.1-25.6)
 - ✅ Prometheus /metrics endpoint operational with LLM-specific metrics
 - ✅ Grafana dashboard displaying cost, latency, and token metrics
 - ✅ Integration tests for LangGraph pipeline (>80% coverage)
@@ -853,15 +1127,43 @@ poetry install --all-extras
 - ✅ MyPy strict mode passing (0 errors)
 - ✅ Architecture documentation updated (CURRENT_ARCHITECTURE.md, PRODUCTION_DEPLOYMENT.md)
 - ✅ All deferred Sprint 24 features completed
+
+### Refactoring Cleanup (Features 25.7-25.9)
+- ✅ Deprecated files archived (unified_ingestion.py, three_phase_extractor.py)
+- ✅ load_documents() method removed (ADR-028 compliance)
+- ✅ Duplicate base agent removed (base.py deleted)
+- ✅ Duplicate embedding service removed (EmbeddingService wrapper deleted)
+- ✅ Client naming standardized (<Service>Client pattern)
+- ✅ ADR-026, ADR-027, ADR-028 compliance verified
+- ✅ 1040+ lines of deprecated/duplicate code removed
+- ✅ Backward compatibility aliases in place (deprecation warnings)
+
+### Quality Assurance
 - ✅ Test coverage >80% maintained
 - ✅ No regressions introduced
+- ✅ All imports updated (no broken references)
+- ✅ CI passing (100% tests)
 
 ---
 
-**Sprint 25 Objectives:** Production monitoring, integration tests, deferred Sprint 24 features ✅
+## 📊 Sprint 25 Impact Summary
+
+| Category | Metric | Target | Impact |
+|----------|--------|--------|--------|
+| **Monitoring** | Prometheus metrics | /metrics endpoint live | Production monitoring |
+| **Testing** | Integration tests | >80% coverage | LangGraph pipeline validated |
+| **Accuracy** | Token tracking | 100% accurate split | Correct cost calculations |
+| **Code Quality** | Deprecated code removed | 725 lines | ADR compliance |
+| **Code Quality** | Duplicate code removed | 315 lines | Cleaner codebase |
+| **Architecture** | Client naming | Standardized | Consistent API |
+| **Total LOC Removed** | Deprecated + duplicates | 1040+ lines | 10% codebase reduction |
+
+---
+
+**Sprint 25 Objectives:** Production monitoring, integration tests, deferred Sprint 24 features, AND Sprint 22 refactoring cleanup ✅
 **Next Sprint:** Sprint 26 - ANY-LLM Full Integration & Advanced Features
 
 **Last Updated:** 2025-11-14
 **Author:** Claude Code (Backend Agent)
 **Prerequisites:** Sprint 24 complete (Dependency Optimization & CI Performance)
-**Story Points:** 30 SP (22 SP deferred from Sprint 24 + 8 SP new work)
+**Story Points:** 40 SP (22 SP deferred from Sprint 24 + 10 SP refactoring + 8 SP new work)
