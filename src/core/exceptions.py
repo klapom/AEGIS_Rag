@@ -108,6 +108,23 @@ class LLMError(AegisRAGException):
         )
 
 
+class LLMExecutionError(AegisRAGException):
+    """Raised when LLM execution fails across all providers.
+
+    Sprint 23: Used by AegisLLMProxy when all providers (OpenAI, Ollama Cloud, Local) fail.
+    """
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+        from src.core.models import ErrorCode
+
+        super().__init__(
+            message=message,
+            error_code=ErrorCode.INTERNAL_SERVER_ERROR,
+            status_code=503,  # Service Unavailable
+            details=details or {},
+        )
+
+
 class MemoryError(AegisRAGException):
     """Raised when memory operation fails."""
 

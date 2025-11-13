@@ -34,8 +34,8 @@ from src.components.llm_proxy.models import (
     LLMResponse,
 )
 
-# AegisLLMProxy will be imported once ANY-LLM SDK is installed
-# from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy, get_aegis_llm_proxy
+# AegisLLMProxy (ready to use once ANY-LLM SDK is installed)
+from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy, get_aegis_llm_proxy
 
 __all__ = [
     # Models
@@ -46,7 +46,7 @@ __all__ = [
     "ExecutionLocation",
     "LLMTask",
     "LLMResponse",
-    # Main proxy (uncomment when ANY-LLM installed)
-    # "AegisLLMProxy",
-    # "get_aegis_llm_proxy",
+    # Main proxy
+    "AegisLLMProxy",
+    "get_aegis_llm_proxy",
 ]
