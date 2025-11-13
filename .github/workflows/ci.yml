@@ -63,11 +63,13 @@ jobs:
           echo "Checking Black formatting..."
           poetry run black --check --diff src/
 
-      - name: Run MyPy Type Checker
+      - name: Run MyPy Type Checker (Strict Mode)
         run: |
-          echo "Running MyPy type checking..."
+          echo "Running MyPy type checking in strict mode..."
           poetry run mypy src/ --config-file=pyproject.toml
-        continue-on-error: true  # Don't fail build, but show warnings
+        # Sprint 25 Feature 25.5: Enforce strict type checking
+        # Set to continue-on-error during migration phase to identify issues
+        continue-on-error: true  # TODO: Remove after fixing all type errors
 
       - name: Run Bandit Security Scanner
         run: |
