@@ -1,9 +1,9 @@
-# AegisRAG Current Architecture (Sprint 23)
+# AegisRAG Current Architecture (Sprint 25)
 
 **Last Updated:** 2025-11-13
-**Sprint:** Sprint 23 (Multi-Cloud LLM Integration)
+**Sprint:** Sprint 25 (Production Readiness & Architecture Consolidation)
 **Status:** Production-Ready Architecture
-**Version:** 0.23.0
+**Version:** 0.25.0
 
 ---
 
@@ -35,11 +35,12 @@
 
 ### Key Differentiators
 
-- **Multi-Cloud LLM Execution:** Intelligent routing across Local Ollama, Alibaba Cloud, and OpenAI
-- **GPU-Accelerated Ingestion:** Docling CUDA container with 95% OCR accuracy
+- **Multi-Cloud LLM Execution:** Intelligent routing across Local Ollama, Alibaba Cloud, and OpenAI (Sprint 23)
+- **GPU-Accelerated Ingestion:** Docling CUDA container with 95% OCR accuracy (Sprint 21)
+- **Modular Dependencies:** Poetry dependency groups for optimized installation (Sprint 24)
 - **Hybrid Retrieval:** Reciprocal Rank Fusion combining vector, graph, and keyword search
 - **Cost Tracking:** SQLite-based persistent tracking with budget management
-- **Production-Ready:** Prometheus monitoring, health checks, and graceful degradation
+- **Production-Ready:** Comprehensive monitoring, health checks, and graceful degradation
 
 ---
 
@@ -804,6 +805,38 @@ CREATE FULLTEXT INDEX entity_description ON :Entity(description)
 | **Tracing** | LangSmith | LLM call tracing (optional) |
 | **Logging** | Structlog | Structured JSON logs |
 
+### Dependency Management (Sprint 24)
+
+**Poetry Dependency Groups:**
+- **Core (always installed):** FastAPI, Qdrant, Neo4j, Redis, Ollama, ANY-LLM, BGE-M3 (~600MB)
+- **ingestion (optional):** llama-index, spacy, docling (~500MB)
+- **reranking (optional):** sentence-transformers (~400MB)
+- **evaluation (optional):** ragas, datasets (~600MB)
+- **graph-analysis (optional):** graspologic (~150MB)
+- **ui (optional):** gradio (~200MB)
+
+**Installation Patterns:**
+```bash
+# Minimal (core only, ~600MB)
+poetry install
+
+# With specific features
+poetry install --with ingestion
+poetry install --with ingestion,reranking
+
+# Full development environment
+poetry install --with dev,ingestion,reranking
+
+# Production (all features)
+poetry install --all-extras
+```
+
+**Benefits:**
+- **CI Optimization:** 85% speedup with Poetry cache (Feature 24.12)
+- **Selective Installation:** Install only what you need
+- **Lazy Imports:** Optional dependencies imported only when needed (Feature 24.15)
+- **Reduced Docker Image Size:** Production images can exclude unused features
+
 ---
 
 ## Performance Characteristics
@@ -1010,7 +1043,8 @@ helm/
 | **Sprint 21** | Ingestion | Docling CUDA, GPU OCR, LlamaIndex deprecation |
 | **Sprint 22** | Cleanup | Documentation, test execution |
 | **Sprint 23** | Multi-Cloud | AegisLLMProxy, Alibaba Cloud, cost tracking |
-| **Sprint 24** (planned) | Observability | Prometheus metrics, Grafana dashboards |
+| **Sprint 24** | Optimization | Poetry dependency groups, lazy imports, CI speedup (85%) |
+| **Sprint 25** (current) | Production Ready | MyPy strict mode, architecture docs, monitoring setup |
 
 ### Architecture Decisions (ADRs)
 
@@ -1028,22 +1062,24 @@ helm/
 
 ## Future Enhancements
 
-### Sprint 24 (Planned)
+### Sprint 26+ (Planned)
 
-1. **Prometheus Metrics:**
-   - Export LLM metrics (requests, latency, cost)
-   - System metrics (CPU, GPU, memory)
+1. **Prometheus Metrics Integration:**
+   - Export LLM metrics (requests, latency, cost) to /metrics endpoint
+   - System metrics (CPU, GPU, memory) monitoring
    - Business metrics (query strategies, user retention)
 
 2. **Grafana Dashboards:**
-   - Application overview (request rate, error rate)
-   - LLM performance (token throughput, cost breakdown)
-   - Database health (Qdrant size, Neo4j node count)
+   - Application overview (request rate, error rate, latency)
+   - LLM performance (token throughput, cost breakdown by provider)
+   - Database health (Qdrant vector count, Neo4j node count)
+   - Budget tracking dashboard (monthly spend, provider breakdown)
 
 3. **Token Tracking Improvements:**
-   - Parse actual input/output token split (not 50/50 estimate)
-   - Track per-user cost allocation
-   - Budget alerts (80%, 90%, 100% thresholds)
+   - Parse actual input/output token split from provider responses
+   - Track per-user cost allocation for multi-tenant billing
+   - Budget alerts (80%, 90%, 100% thresholds via webhooks)
+   - Historical cost trends and forecasting
 
 ### Long-Term Roadmap
 
@@ -1085,10 +1121,10 @@ helm/
 ---
 
 **Document Metadata:**
-- **Created:** 2025-11-13
-- **Author:** Documentation Agent (Claude Code)
-- **Sprint:** Sprint 24, Feature 24.8
-- **Status:** Complete
+- **Created:** 2025-11-13 (Sprint 24)
+- **Last Updated:** 2025-11-13 (Sprint 25, Feature 25.6)
+- **Author:** Backend Agent (Claude Code)
+- **Status:** Production-Ready
 
 Generated with [Claude Code](https://claude.com/claude-code)
 
