@@ -207,10 +207,10 @@ class DoclingContainerClient:
                 stdout=e.stdout[:500] if e.stdout else "",
                 stderr=e.stderr[:500] if e.stderr else "",
             )
-            raise IngestionError(f"Failed to start Docling container: {e.stderr}") from e
+            raise IngestionError("container_lifecycle", f"Failed to start Docling container: {e.stderr}") from e
         except Exception as e:
             logger.error("docling_container_start_error", error=str(e), exc_info=True)
-            raise IngestionError(f"Unexpected error starting Docling container: {e}") from e
+            raise IngestionError("container_lifecycle", f"Unexpected error starting Docling container: {e}") from e
 
     async def stop_container(self) -> None:
         """Stop Docling CUDA container to free VRAM.
@@ -258,10 +258,10 @@ class DoclingContainerClient:
                 returncode=e.returncode,
                 stderr=e.stderr[:500] if e.stderr else "",
             )
-            raise IngestionError(f"Failed to stop Docling container: {e.stderr}") from e
+            raise IngestionError("container_lifecycle", f"Failed to stop Docling container: {e.stderr}") from e
         except Exception as e:
             logger.error("docling_container_stop_error", error=str(e), exc_info=True)
-            raise IngestionError(f"Unexpected error stopping Docling container: {e}") from e
+            raise IngestionError("container_lifecycle", f"Unexpected error stopping Docling container: {e}") from e
 
     async def _wait_for_ready(self, max_wait_seconds: int = 60) -> None:
         """Wait for Docling container to be ready (health check).
@@ -322,6 +322,7 @@ class DoclingContainerClient:
             max_wait_seconds=max_wait_seconds,
         )
         raise IngestionError(
+            "container_lifecycle",
             f"Docling container health check timeout after {elapsed:.1f}s ({attempts} attempts)"
         )
 
@@ -391,7 +392,7 @@ class DoclingContainerClient:
             task_data = response.json()
             task_id = task_data.get("task_id")
             if not task_id:
-                raise IngestionError(f"No task_id in response: {task_data}")
+                raise IngestionError(str(file_path), f"No task_id in response: {task_data}")
 
             logger.info("docling_task_submitted", task_id=task_id, file_path=str(file_path))
 
@@ -414,17 +415,18 @@ class DoclingContainerClient:
                     logger.info("docling_task_completed", task_id=task_id, attempts=attempt + 1)
                     break
                 elif task_status == "failure":
-                    raise IngestionError(f"Docling task failed: {status_data}")
+                    raise IngestionError(str(file_path), f"Docling task failed: {status_data}")
                 elif task_status in ("pending", "processing", "started"):
                     # Task still in progress, continue polling
                     continue
                 else:
-                    raise IngestionError(f"Unknown task status: {task_status}")
+                    raise IngestionError(str(file_path), f"Unknown task status: {task_status}")
 
             else:
                 # Timeout: max_polls reached
                 elapsed = time.time() - start_time
                 raise IngestionError(
+                    str(file_path),
                     f"Docling task timeout after {elapsed:.1f}s (task_id: {task_id}, file: {file_path.name})"
                 )
 
@@ -526,6 +528,7 @@ class DoclingContainerClient:
                 response_text=e.response.text[:500],
             )
             raise IngestionError(
+                str(file_path),
                 f"Docling parse failed (HTTP {e.response.status_code}): {e.response.text[:200]}"
             ) from e
         except httpx.TimeoutException as e:
@@ -537,11 +540,12 @@ class DoclingContainerClient:
                 timeout_seconds=self.timeout_seconds,
             )
             raise IngestionError(
+                str(file_path),
                 f"Docling parse timeout after {elapsed/1000:.1f}s (file: {file_path.name})"
             ) from e
         except Exception as e:
             logger.error("docling_parse_error", file_path=str(file_path), error=str(e), exc_info=True)
-            raise IngestionError(f"Unexpected error parsing document: {e}") from e
+            raise IngestionError(str(file_path), f"Unexpected error parsing document: {e}") from e
 
     async def parse_batch(self, file_paths: list[Path]) -> list[DoclingParsedDocument]:
         """Parse multiple documents efficiently (batch processing).
