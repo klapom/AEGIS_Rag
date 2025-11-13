@@ -243,6 +243,21 @@ LANGSMITH_PROJECT="aegis-rag-prod"
 BM25_CACHE_DIR="./data/cache"
 BM25_K1=1.5
 BM25_B=0.75
+
+# Multi-Cloud LLM Configuration (Sprint 23)
+# Alibaba Cloud DashScope (Primary Cloud Provider)
+ALIBABA_CLOUD_API_KEY=""  # Required for cloud LLM and VLM
+ALIBABA_CLOUD_BASE_URL="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+MONTHLY_BUDGET_ALIBABA_CLOUD=120.0  # USD per month
+
+# OpenAI (Optional, for critical quality tasks)
+USE_OPENAI=false  # Set to true if using OpenAI
+OPENAI_API_KEY=""
+OPENAI_ORGANIZATION=""  # Optional
+MONTHLY_BUDGET_OPENAI=80.0  # USD per month
+
+# Cost Tracking Database
+COST_TRACKING_DB_PATH="./data/cost_tracking.db"
 ```
 
 ### 3. Production Docker Compose
@@ -739,6 +754,316 @@ docker compose -f docker-compose.prod.yml up -d
 
 echo "Restore completed: $BACKUP_DATE"
 ```
+
+---
+
+## Multi-Cloud LLM Setup (Sprint 23)
+
+### Overview
+
+AegisRAG supports multi-cloud LLM execution with intelligent routing across three tiers:
+
+1. **Local Ollama** - Cost-free, fast, GPU-accelerated (gemma-3-4b, llama3.2:8b)
+2. **Alibaba Cloud DashScope** - Cost-effective cloud models (qwen-turbo/plus/max, qwen3-vl-30b)
+3. **OpenAI API** - Premium quality for critical tasks (gpt-4o, optional)
+
+### 1. Alibaba Cloud DashScope Setup
+
+**Step 1: Create Alibaba Cloud Account**
+
+1. Visit [Alibaba Cloud](https://www.alibabacloud.com/)
+2. Sign up for international account
+3. Navigate to **DashScope** service
+4. Enable **Model Studio** (free tier available)
+
+**Step 2: Generate API Key**
+
+```bash
+# Login to Alibaba Cloud Console
+# Navigate to: Model Studio > API Keys
+# Click "Create API Key"
+# Copy the API key (format: sk-xxxxxxxxxxxxxxxx)
+```
+
+**Step 3: Configure Environment**
+
+```bash
+# Add to .env
+ALIBABA_CLOUD_API_KEY="sk-xxxxxxxxxxxxxxxx"
+ALIBABA_CLOUD_BASE_URL="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+MONTHLY_BUDGET_ALIBABA_CLOUD=120.0
+```
+
+**Step 4: Verify Connection**
+
+```bash
+# Test API connection
+curl -X POST "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions" \
+  -H "Authorization: Bearer ${ALIBABA_CLOUD_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen-turbo",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+**Expected Response:**
+```json
+{
+  "id": "chatcmpl-xxxx",
+  "object": "chat.completion",
+  "created": 1700000000,
+  "model": "qwen-turbo",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Hello! How can I help you today?"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 8,
+    "completion_tokens": 12,
+    "total_tokens": 20
+  }
+}
+```
+
+### 2. DashScope VLM (Vision Language Model)
+
+**Models Available:**
+- **qwen3-vl-30b-a3b-instruct** - Primary VLM (cheaper output tokens)
+- **qwen3-vl-30b-a3b-thinking** - Fallback VLM (better reasoning)
+
+**Configuration:**
+
+```bash
+# src/components/llm_proxy/dashscope_vlm.py already configured
+# No additional setup needed if API key is set
+```
+
+**Test VLM:**
+
+```bash
+# Upload test image to ./data/test_image.jpg
+# Run VLM test
+python -c "
+from src.components.llm_proxy.dashscope_vlm import generate_vlm_description_with_dashscope
+import asyncio
+
+async def test():
+    result = await generate_vlm_description_with_dashscope(
+        './data/test_image.jpg',
+        'Describe this image in detail.'
+    )
+    print(result)
+
+asyncio.run(test())
+"
+```
+
+**VLM Best Practices:**
+- Use `vl_high_resolution_images=True` for quality (16,384 vs 2,560 tokens)
+- Primary model for standard images (faster, cheaper output)
+- Fallback model for complex visual reasoning (slower, better quality)
+- Automatic fallback on 403 errors
+
+### 3. OpenAI Setup (Optional)
+
+**Step 1: Create OpenAI Account**
+
+1. Visit [OpenAI Platform](https://platform.openai.com/)
+2. Sign up / log in
+3. Navigate to API Keys
+4. Create new secret key
+
+**Step 2: Configure Environment**
+
+```bash
+# Add to .env
+USE_OPENAI=true
+OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxx"
+OPENAI_ORGANIZATION="org-xxxxxxxxxxxxxxxx"  # Optional
+MONTHLY_BUDGET_OPENAI=80.0
+```
+
+**Step 3: Verify Connection**
+
+```bash
+curl -X POST "https://api.openai.com/v1/chat/completions" \
+  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+### 4. Cost Tracking Setup
+
+**Initialize Database:**
+
+```bash
+# Database is automatically created on first LLM request
+# Location: ./data/cost_tracking.db
+
+# Verify database exists
+ls -lh data/cost_tracking.db
+```
+
+**Query Cost Data:**
+
+```python
+# Python script to query costs
+import sqlite3
+
+conn = sqlite3.connect('data/cost_tracking.db')
+cursor = conn.cursor()
+
+# Monthly cost by provider
+cursor.execute("""
+    SELECT
+        provider,
+        COUNT(*) as requests,
+        SUM(cost_usd) as total_cost,
+        AVG(latency_ms) as avg_latency
+    FROM llm_requests
+    WHERE strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now')
+    GROUP BY provider
+""")
+
+for row in cursor.fetchall():
+    print(f"Provider: {row[0]}, Requests: {row[1]}, Cost: ${row[2]:.4f}, Latency: {row[3]:.0f}ms")
+
+conn.close()
+```
+
+**Export to CSV:**
+
+```bash
+# Export monthly costs
+sqlite3 -header -csv data/cost_tracking.db \
+  "SELECT * FROM llm_requests WHERE strftime('%Y-%m', timestamp) = strftime('%Y-%m', 'now')" \
+  > monthly_costs.csv
+```
+
+### 5. Budget Monitoring
+
+**Check Budget Status:**
+
+```bash
+# API endpoint (add this in Sprint 24)
+curl http://localhost:8000/api/v1/cost/budget-status
+
+# Response:
+{
+  "alibaba_cloud": {
+    "monthly_limit": 120.0,
+    "current_spend": 3.47,
+    "utilization_pct": 2.89,
+    "remaining": 116.53
+  },
+  "openai": {
+    "monthly_limit": 80.0,
+    "current_spend": 0.0,
+    "utilization_pct": 0.0,
+    "remaining": 80.0
+  },
+  "total": {
+    "monthly_limit": 200.0,
+    "current_spend": 3.47,
+    "utilization_pct": 1.74
+  }
+}
+```
+
+**Budget Alerts:**
+
+```bash
+# Configure alert thresholds in .env
+BUDGET_ALERT_THRESHOLD_PCT=80  # Alert at 80% utilization
+BUDGET_BLOCK_THRESHOLD_PCT=100  # Block at 100% utilization
+```
+
+**Automatic Fallback:**
+
+```python
+# AegisLLMProxy automatically falls back to local if budget exceeded
+if self.cost_tracker.is_budget_exceeded(provider="alibaba_cloud"):
+    logger.warning("Budget exceeded, falling back to local Ollama")
+    provider = "local_ollama"
+```
+
+### 6. Multi-Cloud Routing Logic
+
+**Routing Decision Tree:**
+
+```
+User Request
+    │
+    ▼
+[Check Data Classification]
+    │
+    ├─ PII/HIPAA/Confidential ──────────> Local Ollama (privacy)
+    │
+    ├─ Embeddings ──────────────────────> Local Ollama (cost-free)
+    │
+    ▼
+[Check Budget Status]
+    │
+    ├─ Budget Exceeded ─────────────────> Local Ollama (failsafe)
+    │
+    ▼
+[Check Quality Requirement]
+    │
+    ├─ Critical + High Complexity ──────> OpenAI (best quality)
+    │
+    ├─ High Quality or High Complexity ─> Alibaba Cloud (cost-effective)
+    │
+    └─ Default ─────────────────────────> Local Ollama (cost-free)
+```
+
+**Configuration:**
+
+```yaml
+# config/llm_config.yml
+routing:
+  default_provider: "local_ollama"
+  quality_thresholds:
+    critical: "openai"  # OpenAI for critical tasks
+    high: "alibaba_cloud"  # Alibaba for high-quality
+    medium: "local_ollama"  # Local for medium/low
+
+  data_classification_rules:
+    pii: ["local_ollama"]  # Never send PII to cloud
+    hipaa: ["local_ollama"]
+    confidential: ["local_ollama"]
+    internal: ["local_ollama", "alibaba_cloud"]  # Cloud OK for internal
+    public: ["local_ollama", "alibaba_cloud", "openai"]  # All providers
+```
+
+### 7. Production Deployment Checklist
+
+**Pre-Deployment:**
+- [ ] Alibaba Cloud API key configured
+- [ ] Budget limits set (MONTHLY_BUDGET_ALIBABA_CLOUD=120)
+- [ ] Cost tracking database initialized
+- [ ] VLM models tested (qwen3-vl-30b-a3b)
+- [ ] Routing logic verified (PII stays local)
+
+**Post-Deployment:**
+- [ ] First LLM request successful
+- [ ] Cost tracking database populated
+- [ ] Budget monitoring working
+- [ ] Fallback chain tested (cloud → local)
+- [ ] VLM image processing functional
+
+**Monitoring:**
+- [ ] Check cost daily: `sqlite3 data/cost_tracking.db "SELECT SUM(cost_usd) FROM llm_requests WHERE date(timestamp) = date('now')"`
+- [ ] Alert at 80% budget utilization
+- [ ] Review routing decisions (local vs cloud split)
+- [ ] Verify no PII sent to cloud
 
 ---
 

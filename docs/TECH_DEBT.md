@@ -234,16 +234,65 @@ Cost tracking logs structured metrics but doesn't export to Prometheus.
 
 ---
 
+## Sprint 24 - Documentation Debt Resolution
+
+### TD-24.1: Architecture Documentation Gaps
+**Category:** Documentation
+**Priority:** P1 (High)
+**Effort:** 2 days
+**Sprint:** Sprint 24
+**Status:** ✅ RESOLVED (2025-11-13)
+
+**Description:**
+After Sprint 23's major architecture changes (multi-cloud LLM, DashScope VLM, cost tracking), several documentation gaps existed:
+1. No comprehensive current architecture document
+2. Production deployment guide missing multi-cloud setup
+3. No API documentation for metrics endpoints
+
+**Resolution:**
+Created/updated three major documentation files:
+1. **docs/architecture/CURRENT_ARCHITECTURE.md** (350 lines)
+   - Complete Sprint 23 system architecture
+   - Multi-cloud LLM execution details
+   - Component diagrams and data flow
+   - Performance characteristics
+   - Technology stack
+
+2. **docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md** (updated)
+   - Added "Multi-Cloud LLM Setup" section (300 lines)
+   - Alibaba Cloud DashScope setup instructions
+   - DashScope VLM configuration and best practices
+   - OpenAI setup (optional)
+   - Cost tracking database setup
+   - Budget monitoring and alerts
+   - Production deployment checklist
+
+3. **docs/api/METRICS_ENDPOINT.md** (500 lines)
+   - Health check endpoint specification
+   - Cost tracking API endpoints (budget-status, usage, export)
+   - Prometheus metrics endpoint format
+   - System metrics API
+   - Error responses and rate limiting
+   - Grafana dashboard integration
+
+**Impact:**
+- Documentation now reflects Sprint 23 state
+- Production deployment procedures complete
+- API documentation available for monitoring integration
+
+---
+
 ## Priority Matrix
 
-| ID | Description | Priority | Effort | Sprint |
-|----|-------------|----------|--------|--------|
-| TD-23.1 | ANY-LLM partial integration | P2 | 3 days | Future |
-| TD-23.2 | DashScope VLM bypass routing | P3 | 2 days | Future |
-| TD-23.3 | Token split estimation | P3 | 1 day | Sprint 24 |
-| TD-23.4 | Async/sync bridge | P3 | 2 days | Sprint 24 |
-| TD-G.1 | Windows-only dev env | P2 | 1 week | Future |
-| TD-G.2 | No Prometheus metrics | P2 | 3 days | Sprint 24 |
+| ID | Description | Priority | Effort | Sprint | Status |
+|----|-------------|----------|--------|--------|--------|
+| TD-24.1 | Architecture documentation gaps | P1 | 2 days | Sprint 24 | ✅ RESOLVED |
+| TD-23.1 | ANY-LLM partial integration | P2 | 3 days | Future | OPEN |
+| TD-23.2 | DashScope VLM bypass routing | P3 | 2 days | Future | OPEN |
+| TD-23.3 | Token split estimation | P3 | 1 day | Sprint 24 | OPEN |
+| TD-23.4 | Async/sync bridge | P3 | 2 days | Sprint 24 | OPEN |
+| TD-G.1 | Windows-only dev env | P2 | 1 week | Future | OPEN |
+| TD-G.2 | No Prometheus metrics | P2 | 3 days | Sprint 24 | OPEN |
 
 ---
 
