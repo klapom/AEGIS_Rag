@@ -148,8 +148,32 @@ async def reindex_progress_stream(
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': message})}\n\n"
 
             # Phase 3b: Index into Neo4j/LightRAG graph (Sprint 16 Feature 16.7)
+            # Sprint 24 Feature 24.15: Lazy import for optional llama_index dependency
             try:
-                from llama_index.core import SimpleDirectoryReader
+                # ================================================================
+                # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+                # ================================================================
+                # Load llama_index only when re-indexing is executed.
+                # This allows the core API to run without llama_index installed.
+                # ================================================================
+                try:
+                    from llama_index.core import SimpleDirectoryReader
+                except ImportError as e:
+                    error_msg = (
+                        "llama_index is required for graph re-indexing but is not installed.\n\n"
+                        "INSTALLATION OPTIONS:\n"
+                        "1. poetry install --with ingestion\n"
+                        "2. poetry install --all-extras\n\n"
+                        "NOTE: Re-indexing requires LlamaIndex for document loading.\n"
+                        "For production deployments, install the ingestion group."
+                    )
+                    logger.error(
+                        "llamaindex_import_failed",
+                        endpoint="/admin/reindex",
+                        error=str(e),
+                        install_command="poetry install --with ingestion",
+                    )
+                    raise VectorSearchError(error_msg) from e
 
                 lightrag_wrapper = await get_lightrag_wrapper_async()
 

@@ -214,7 +214,7 @@ ignore = [
 "__init__.py" = ["F401", "F403"]
 "tests/**/*" = ["S101", "PLR2004"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["src"]
 
 [tool.black]

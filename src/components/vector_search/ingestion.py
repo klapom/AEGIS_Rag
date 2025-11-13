@@ -1,16 +1,31 @@
 """Document Ingestion Pipeline using LlamaIndex.
 
+============================================================================
+⚠️ DEPRECATED: Sprint 21 ADR-028
+============================================================================
+This module is DEPRECATED and will be removed in Sprint 25.
+Use DoclingContainerClient for new ingestion pipelines.
+
+REASON: LlamaIndex lacks OCR, table extraction, and GPU acceleration.
+REPLACEMENT: src.components.ingestion.docling_client.DoclingContainerClient
+
+Sprint 24 Feature 24.15: Lazy imports for optional llama_index dependency
+============================================================================
+
 This module handles document loading, chunking, and indexing into Qdrant.
 Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 """
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from llama_index.core import Document, SimpleDirectoryReader
 from qdrant_client.models import PointStruct
+
+# TYPE_CHECKING imports - only for type checkers, not runtime
+if TYPE_CHECKING:
+    from llama_index.core import Document, SimpleDirectoryReader
 
 from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
@@ -130,7 +145,7 @@ class DocumentIngestionPipeline:
         input_dir: str | Path,
         required_exts: list[str] | None = None,
         recursive: bool = True,
-    ) -> list[Document]:
+    ) -> list["Document"]:  # Type hint uses string literal
         """Load documents from directory using LlamaIndex.
 
         ============================================================================
@@ -173,7 +188,33 @@ class DocumentIngestionPipeline:
         Raises:
             VectorSearchError: If document loading fails
             ValueError: If path validation fails (path traversal)
+            ImportError: If llama_index not installed
         """
+        # ====================================================================
+        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+        # ====================================================================
+        # Load llama_index only when this deprecated method is called.
+        # This allows the core application to run without llama_index.
+        # ====================================================================
+        try:
+            from llama_index.core import SimpleDirectoryReader
+        except ImportError as e:
+            error_msg = (
+                "llama_index is required for this deprecated method but is not installed.\n\n"
+                "INSTALLATION OPTIONS:\n"
+                "1. poetry install --with ingestion\n"
+                "2. poetry install --all-extras\n\n"
+                "RECOMMENDATION: Use DoclingContainerClient instead (no llama_index needed).\n"
+                "See src.components.ingestion.docling_client for modern ingestion pipeline."
+            )
+            logger.error(
+                "llamaindex_import_failed",
+                method="load_documents",
+                error=str(e),
+                install_command="poetry install --with ingestion",
+            )
+            raise ImportError(error_msg) from e
+
         if required_exts is None:
             # Sprint 16 Feature 16.5: Added .pptx support
             required_exts = [".pdf", ".txt", ".md", ".docx", ".csv", ".pptx"]
@@ -295,11 +336,12 @@ class DocumentIngestionPipeline:
 
     async def chunk_documents(
         self,
-        documents: list[Document],
+        documents: list["Document"],  # Type hint uses string literal
     ) -> list[dict]:
         """Split documents into chunks using unified ChunkingService.
 
         Sprint 16: Now uses ChunkingService for consistent chunking across all pipelines.
+        Sprint 24 Feature 24.15: Lazy imports for optional llama_index dependency.
 
         Args:
             documents: List of LlamaIndex documents
@@ -309,7 +351,11 @@ class DocumentIngestionPipeline:
 
         Raises:
             VectorSearchError: If chunking fails
+            ImportError: If llama_index not installed (deprecated method)
         """
+        # Note: No lazy import needed here - documents are already loaded by load_documents()
+        # which has its own lazy import. If documents are provided externally, they must
+        # come from llama_index which would already be installed.
         try:
             all_chunks = []
             skipped_empty = 0

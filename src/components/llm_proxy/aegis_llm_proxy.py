@@ -303,14 +303,17 @@ class AegisLLMProxy:
             if (
                 task.quality_requirement == QualityRequirement.HIGH
                 and task.complexity == Complexity.HIGH
+                and not self._is_budget_exceeded("alibaba_cloud")
             ):
-                if not self._is_budget_exceeded("alibaba_cloud"):
-                    return ("alibaba_cloud", "high_quality_high_complexity")
+                return ("alibaba_cloud", "high_quality_high_complexity")
 
             # Batch processing (>10 documents)
-            if task.batch_size and task.batch_size > 10:
-                if not self._is_budget_exceeded("alibaba_cloud"):
-                    return ("alibaba_cloud", "batch_processing")
+            if (
+                task.batch_size
+                and task.batch_size > 10
+                and not self._is_budget_exceeded("alibaba_cloud")
+            ):
+                return ("alibaba_cloud", "batch_processing")
 
         # DEFAULT: TIER 1 (Local) - 70% of tasks
         return ("local_ollama", "default_local")

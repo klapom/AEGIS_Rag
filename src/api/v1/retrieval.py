@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.api.auth.jwt import get_current_user
 from src.api.dependencies import get_request_id  # Sprint 22 Feature 22.2.1
 from src.api.middleware import limiter
+from src.components.ingestion.format_router import FormatRouter  # Sprint 22 Feature 22.3
 from src.components.retrieval import MetadataFilters
 from src.components.vector_search import (
     DocumentIngestionPipeline,
@@ -43,8 +44,6 @@ settings = get_settings()  # Sprint 22 Feature 22.2.3: Config-driven rate limits
 router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 
 # Initialize format router (Sprint 22 Feature 22.3)
-from src.components.ingestion.format_router import FormatRouter
-
 _format_router = FormatRouter()  # Will check Docling availability at startup
 
 

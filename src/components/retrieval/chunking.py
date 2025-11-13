@@ -11,21 +11,175 @@ benefit from different chunking approaches:
 
 This improves retrieval quality by preserving semantic units and avoiding
 mid-sentence or mid-function splits.
+
+DEPENDENCY OPTIMIZATION (Sprint 24, Feature 24.15):
+----------------------------------------------------
+This module uses LAZY IMPORTS for llama_index to support optional dependency groups.
+
+WHY LAZY IMPORTS?
+- llama_index is now in the optional "ingestion" group (Feature 24.13)
+- Core application can start WITHOUT llama_index installed
+- Chunking functionality only loads llama_index when actually needed
+- CI/CD jobs that don't need chunking can skip this heavy dependency (~80MB)
+
+HOW IT WORKS:
+1. TYPE_CHECKING imports: Type hints work without runtime import
+2. Lazy loader functions: Import only when first used
+3. Cache imports: After first load, reuse cached classes
+4. Clear error messages: If missing, tell user how to install
+
+WHEN LLAMA_INDEX IS LOADED:
+- First call to AdaptiveChunker.__init__() (instantiation)
+- SentenceSplitter is created in __init__
+- All chunking methods use the cached classes after that
+
+INSTALLATION:
+- poetry install --with ingestion  # Include llama_index
+- poetry install                    # Skip llama_index (core only)
 """
 
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from llama_index.core import Document
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.schema import NodeRelationship, RelatedNodeInfo, TextNode
 
 from src.core.config import settings
 
+# ============================================================================
+# TYPE_CHECKING IMPORTS (Sprint 24, Feature 24.15)
+# ============================================================================
+# These imports are ONLY used by type checkers (mypy, pyright, IDE).
+# They do NOT execute at runtime, so no ModuleNotFoundError occurs.
+#
+# This allows us to have proper type hints without requiring llama_index
+# to be installed for basic imports.
+if TYPE_CHECKING:
+    from llama_index.core import Document
+    from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.core.schema import NodeRelationship, RelatedNodeInfo, TextNode
+
 logger = structlog.get_logger(__name__)
+
+
+# ============================================================================
+# LAZY IMPORT CACHE (Sprint 24, Feature 24.15)
+# ============================================================================
+# Global cache for llama_index classes after first import.
+# This ensures we only import once, then reuse the same classes.
+#
+# Performance:
+# - First call: ~50-100ms (import llama_index)
+# - Subsequent calls: <1ms (cache hit)
+_LLAMA_INDEX_CACHE: dict[str, Any] = {}
+
+
+def _get_llama_index_classes() -> dict[str, Any]:
+    """Lazy import all llama_index classes needed for chunking.
+
+    This function implements the LAZY IMPORT pattern for optional dependencies.
+
+    WHEN THIS IS CALLED:
+    --------------------
+    - First time: AdaptiveChunker.__init__() is called
+    - Subsequent times: Cache is returned (no re-import)
+
+    WHAT HAPPENS:
+    -------------
+    1. Check if already imported (cache hit)
+    2. If not, try to import llama_index
+    3. Cache all classes for reuse
+    4. Return cached classes
+
+    ERROR HANDLING:
+    ---------------
+    If llama_index is not installed, raises ImportError with helpful message
+    telling the user how to install the optional dependency group.
+
+    Returns:
+        Dict with keys: 'Document', 'SentenceSplitter', 'TextNode',
+                       'NodeRelationship', 'RelatedNodeInfo'
+
+    Raises:
+        ImportError: If llama_index is not installed (with installation instructions)
+
+    Example:
+        >>> # First call - imports llama_index
+        >>> classes = _get_llama_index_classes()
+        >>> Document = classes['Document']
+        >>>
+        >>> # Second call - uses cache
+        >>> classes = _get_llama_index_classes()  # <1ms, no import
+    """
+    # ========================================================================
+    # CACHE CHECK: Return cached classes if already imported
+    # ========================================================================
+    if _LLAMA_INDEX_CACHE:
+        logger.debug(
+            "Using cached llama_index classes",
+            cached_classes=list(_LLAMA_INDEX_CACHE.keys()),
+        )
+        return _LLAMA_INDEX_CACHE
+
+    # ========================================================================
+    # FIRST IMPORT: Load llama_index and cache all classes
+    # ========================================================================
+    logger.info(
+        "Lazy importing llama_index (first use)",
+        reason="AdaptiveChunker instantiation requires llama_index classes",
+    )
+
+    try:
+        # Import all required classes from llama_index
+        from llama_index.core import Document
+        from llama_index.core.node_parser import SentenceSplitter
+        from llama_index.core.schema import NodeRelationship, RelatedNodeInfo, TextNode
+
+        # Cache classes for future use
+        _LLAMA_INDEX_CACHE["Document"] = Document
+        _LLAMA_INDEX_CACHE["SentenceSplitter"] = SentenceSplitter
+        _LLAMA_INDEX_CACHE["TextNode"] = TextNode
+        _LLAMA_INDEX_CACHE["NodeRelationship"] = NodeRelationship
+        _LLAMA_INDEX_CACHE["RelatedNodeInfo"] = RelatedNodeInfo
+
+        logger.info(
+            "llama_index lazy import successful",
+            classes_loaded=list(_LLAMA_INDEX_CACHE.keys()),
+            cache_size=len(_LLAMA_INDEX_CACHE),
+        )
+
+        return _LLAMA_INDEX_CACHE
+
+    except ImportError as e:
+        # ====================================================================
+        # HELPFUL ERROR MESSAGE: Tell user how to fix the problem
+        # ====================================================================
+        error_msg = (
+            "llama_index is required for document chunking but is not installed.\n\n"
+            "This is an OPTIONAL dependency in the 'ingestion' group (Sprint 24).\n\n"
+            "INSTALLATION OPTIONS:\n"
+            "--------------------\n"
+            "1. Install with ingestion group:\n"
+            "   poetry install --with ingestion\n\n"
+            "2. Install all optional groups:\n"
+            "   poetry install --all-extras\n\n"
+            "3. Install only llama-index-core:\n"
+            "   poetry add llama-index-core\n\n"
+            "WHY THIS HAPPENED:\n"
+            "-----------------\n"
+            "AdaptiveChunker requires llama_index for document processing.\n"
+            "You tried to use chunking functionality without the 'ingestion' group.\n\n"
+            f"Original error: {e}"
+        )
+
+        logger.error(
+            "llama_index import failed - optional dependency not installed",
+            error=str(e),
+            solution="Install with: poetry install --with ingestion",
+        )
+
+        raise ImportError(error_msg) from e
 
 
 class ChunkingStrategy(str, Enum):
@@ -42,6 +196,27 @@ class AdaptiveChunker:
 
     Document type detection uses file extension as primary signal,
     with content analysis as fallback for ambiguous cases.
+
+    LAZY LOADING (Sprint 24, Feature 24.15):
+    ----------------------------------------
+    This class uses LAZY IMPORTS for llama_index dependencies.
+
+    WHEN LLAMA_INDEX IS IMPORTED:
+    - During __init__() when SentenceSplitter is instantiated
+    - NOT when the class is defined (import time)
+    - NOT when detect_document_type() is called (no llama_index needed)
+
+    BENEFITS:
+    - Application can start without llama_index installed
+    - Only loads heavy dependency when actually chunking documents
+    - CI jobs without chunking can skip 80MB+ of dependencies
+
+    Example:
+        >>> # This WILL import llama_index (needs SentenceSplitter):
+        >>> chunker = AdaptiveChunker()  # Imports llama_index here
+        >>>
+        >>> # This WON'T import llama_index (just enum):
+        >>> strategy = ChunkingStrategy.PARAGRAPH  # No import needed
     """
 
     def __init__(
@@ -54,12 +229,21 @@ class AdaptiveChunker:
     ):
         """Initialize adaptive chunker with type-specific sizes.
 
+        LAZY IMPORT TRIGGER (Sprint 24):
+        ---------------------------------
+        This __init__ method triggers the lazy import of llama_index because
+        it instantiates SentenceSplitter. The import happens once and is cached
+        for all future chunker instances.
+
         Args:
             pdf_chunk_size: Token limit for PDF/DOCX chunks (default: from settings)
             code_chunk_size: Token limit for code chunks (default: from settings)
             markdown_chunk_size: Token limit for Markdown chunks (default: from settings)
             text_chunk_size: Token limit for plain text chunks (default: from settings)
             chunk_overlap: Overlap between chunks in tokens (default: from settings)
+
+        Raises:
+            ImportError: If llama_index not installed (with installation instructions)
         """
         self.pdf_chunk_size = pdf_chunk_size or settings.pdf_chunk_size
         self.code_chunk_size = code_chunk_size or settings.code_chunk_size
@@ -67,7 +251,15 @@ class AdaptiveChunker:
         self.text_chunk_size = text_chunk_size or settings.text_chunk_size
         self.chunk_overlap = chunk_overlap or settings.chunk_overlap
 
+        # ====================================================================
+        # LAZY IMPORT HAPPENS HERE (Sprint 24, Feature 24.15)
+        # ====================================================================
+        # Get llama_index classes (imports on first call, cached thereafter)
+        llama_classes = _get_llama_index_classes()
+        SentenceSplitter = llama_classes["SentenceSplitter"]
+
         # Fallback sentence splitter for when chunks are too large
+        # This uses the lazy-loaded SentenceSplitter class
         self._sentence_splitter = SentenceSplitter(
             chunk_size=self.text_chunk_size,
             chunk_overlap=self.chunk_overlap,
@@ -82,15 +274,19 @@ class AdaptiveChunker:
             chunk_overlap=self.chunk_overlap,
         )
 
-    def detect_document_type(self, doc: Document) -> str:
+    def detect_document_type(self, doc: "Document") -> str:
         """Detect document type from extension and content.
+
+        NOTE (Sprint 24): This method uses TYPE_CHECKING import for 'Document'.
+        The type hint works in IDEs/mypy, but no runtime import occurs.
+        The actual Document object is passed in by caller (who already imported it).
 
         Detection hierarchy:
         1. File extension (primary signal)
         2. Content analysis (fallback)
 
         Args:
-            doc: LlamaIndex Document object
+            doc: LlamaIndex Document object (caller must have llama_index)
 
         Returns:
             Document type string: 'pdf', 'markdown', 'code', or 'text'
@@ -187,10 +383,13 @@ class AdaptiveChunker:
 
     def chunk_by_paragraph(
         self,
-        doc: Document,
+        doc: "Document",
         chunk_size: int,
-    ) -> list[TextNode]:
+    ) -> list["TextNode"]:
         """Chunk document by paragraphs (double newlines).
+
+        NOTE (Sprint 24): Uses cached llama_index classes from __init__.
+        No additional import occurs here - classes are already loaded.
 
         Args:
             doc: Document to chunk
@@ -199,6 +398,10 @@ class AdaptiveChunker:
         Returns:
             List of text nodes
         """
+        # Get cached llama_index classes (already imported in __init__)
+        llama_classes = _get_llama_index_classes()
+        Document = llama_classes["Document"]
+
         content = doc.get_content()
 
         # Split on double newlines (paragraph boundaries)
@@ -207,7 +410,7 @@ class AdaptiveChunker:
         # Filter out empty paragraphs
         paragraphs = [p.strip() for p in paragraphs if p.strip()]
 
-        nodes: list[TextNode] = []
+        nodes: list = []  # Type hint uses string literal to avoid runtime import
         current_chunk: list[str] = []
         current_size: int = 0
 
@@ -262,10 +465,12 @@ class AdaptiveChunker:
 
     def chunk_by_heading(
         self,
-        doc: Document,
+        doc: "Document",
         chunk_size: int,
-    ) -> list[TextNode]:
+    ) -> list["TextNode"]:
         """Chunk Markdown document by headings.
+
+        NOTE (Sprint 24): Uses cached llama_index classes.
 
         Args:
             doc: Document to chunk
@@ -274,6 +479,10 @@ class AdaptiveChunker:
         Returns:
             List of text nodes
         """
+        # Get cached llama_index classes
+        llama_classes = _get_llama_index_classes()
+        Document = llama_classes["Document"]
+
         content = doc.get_content()
 
         # Split on Markdown headers (# at line start)
@@ -301,7 +510,7 @@ class AdaptiveChunker:
                 chunks.append(section)
                 i += 1
 
-        nodes: list[TextNode] = []
+        nodes: list = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -331,13 +540,15 @@ class AdaptiveChunker:
 
     def chunk_by_function(
         self,
-        doc: Document,
+        doc: "Document",
         chunk_size: int,
-    ) -> list[TextNode]:
+    ) -> list["TextNode"]:
         """Chunk code file by function definitions.
 
         Uses simple regex patterns to detect function boundaries.
         Supports Python, JavaScript, Java, C/C++, Go, and similar languages.
+
+        NOTE (Sprint 24): Uses cached llama_index classes.
 
         Args:
             doc: Document to chunk
@@ -346,6 +557,10 @@ class AdaptiveChunker:
         Returns:
             List of text nodes
         """
+        # Get cached llama_index classes
+        llama_classes = _get_llama_index_classes()
+        Document = llama_classes["Document"]
+
         content = doc.get_content()
 
         # Function definition patterns for different languages
@@ -386,7 +601,7 @@ class AdaptiveChunker:
             if preamble.strip():
                 chunks.insert(0, preamble)
 
-        nodes: list[TextNode] = []
+        nodes: list = []
         for chunk in chunks:
             if not chunk.strip():
                 continue
@@ -416,12 +631,14 @@ class AdaptiveChunker:
 
     def chunk_by_sentence(
         self,
-        doc: Document,
+        doc: "Document",
         chunk_size: int,
-    ) -> list[TextNode]:
+    ) -> list["TextNode"]:
         """Chunk document by sentences using LlamaIndex SentenceSplitter.
 
         This is the fallback strategy for plain text documents.
+
+        NOTE (Sprint 24): Uses cached llama_index classes.
 
         Args:
             doc: Document to chunk
@@ -430,6 +647,10 @@ class AdaptiveChunker:
         Returns:
             List of text nodes
         """
+        # Get cached llama_index classes
+        llama_classes = _get_llama_index_classes()
+        SentenceSplitter = llama_classes["SentenceSplitter"]
+
         splitter = SentenceSplitter(
             chunk_size=chunk_size,
             chunk_overlap=self.chunk_overlap,
@@ -448,7 +669,7 @@ class AdaptiveChunker:
 
         return nodes
 
-    def chunk_document(self, doc: Document) -> list[TextNode]:
+    def chunk_document(self, doc: "Document") -> list["TextNode"]:
         """Chunk a single document using adaptive strategy.
 
         Main entry point for adaptive chunking.
@@ -492,7 +713,7 @@ class AdaptiveChunker:
         else:  # SENTENCE
             return self.chunk_by_sentence(doc, chunk_size)
 
-    def chunk_documents(self, documents: list[Document]) -> list[TextNode]:
+    def chunk_documents(self, documents: list["Document"]) -> list["TextNode"]:
         """Chunk multiple documents using adaptive strategies.
 
         Args:
@@ -518,11 +739,13 @@ class AdaptiveChunker:
 
     def _create_node(
         self,
-        doc: Document,
+        doc: "Document",
         text: str,
         chunk_index: int,
-    ) -> TextNode:
+    ) -> "TextNode":
         """Create a TextNode with proper metadata.
+
+        NOTE (Sprint 24): Uses cached llama_index classes.
 
         Args:
             doc: Original document
@@ -532,6 +755,12 @@ class AdaptiveChunker:
         Returns:
             TextNode with metadata
         """
+        # Get cached llama_index classes
+        llama_classes = _get_llama_index_classes()
+        TextNode = llama_classes["TextNode"]
+        NodeRelationship = llama_classes["NodeRelationship"]
+        RelatedNodeInfo = llama_classes["RelatedNodeInfo"]
+
         return TextNode(
             text=text,
             metadata={

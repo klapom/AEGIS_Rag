@@ -33,10 +33,10 @@ Example:
 
 import subprocess
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import structlog
-from llama_index.core import SimpleDirectoryReader
 
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -219,11 +219,9 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
         # Start container (or restart if memory leak detected)
         if state.get("requires_container_restart", False):
             logger.info("docling_container_restart", reason="vram_leak")
-            # Stop any existing container first
-            try:
+            # Stop any existing container first (suppress errors if container not running)
+            with suppress(Exception):
                 await docling.stop_container()
-            except Exception:
-                pass  # Container might not be running
 
         await docling.start_container()
 
@@ -303,6 +301,14 @@ async def docling_parse_node(state: IngestionState) -> IngestionState:
 async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
     """Node 2B: Parse document using LlamaIndex SimpleDirectoryReader (Feature 22.4).
 
+    ============================================================================
+    Sprint 24 Feature 24.15: LAZY IMPORT for llama_index
+    ============================================================================
+    WHY: llama_index is now in optional "ingestion" dependency group (ADR-028)
+    WHEN: Import happens on first call to this function (not at module load)
+    INSTALL: poetry install --with ingestion
+    ============================================================================
+
     Supports 9 LlamaIndex-exclusive formats:
     - .epub (E-books)
     - .rtf (Rich Text Format)
@@ -335,6 +341,7 @@ async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
     Raises:
         IngestionError: If parsing fails
         ValueError: If format not supported by LlamaIndex
+        ImportError: If llama_index not installed
 
     Example:
         >>> state = await llamaindex_parse_node(state)
@@ -351,6 +358,31 @@ async def llamaindex_parse_node(state: IngestionState) -> IngestionState:
 
     state["docling_status"] = "running"
     state["docling_start_time"] = time.time()
+
+    # ========================================================================
+    # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+    # ========================================================================
+    # Load llama_index only when this LlamaIndex-specific node is called.
+    # This allows the core application to run without llama_index installed.
+    # ========================================================================
+    try:
+        from llama_index.core import SimpleDirectoryReader
+    except ImportError as e:
+        error_msg = (
+            "llama_index is required for LlamaIndex parsing but is not installed.\n\n"
+            "INSTALLATION OPTIONS:\n"
+            "1. poetry install --with ingestion\n"
+            "2. poetry install --all-extras\n\n"
+            "NOTE: This node is only needed for LlamaIndex-exclusive formats (.epub, .rtf, .tex, etc.).\n"
+            "For PDF/DOCX/PPTX, use docling_extraction_node instead."
+        )
+        logger.error(
+            "llamaindex_import_failed",
+            document_id=state["document_id"],
+            error=str(e),
+            install_command="poetry install --with ingestion",
+        )
+        raise ImportError(error_msg) from e
 
     try:
         # Get document path

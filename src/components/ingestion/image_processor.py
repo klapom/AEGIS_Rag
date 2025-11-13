@@ -411,8 +411,8 @@ class ImageProcessor:
                 # Run async function in sync context
                 # Check if we're already in an event loop
                 try:
-                    loop = asyncio.get_running_loop()
-                    # Already in event loop - use run_coroutine_threadsafe
+                    asyncio.get_running_loop()
+                    # Already in event loop - use ThreadPoolExecutor to avoid nested loop error
                     import concurrent.futures
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(

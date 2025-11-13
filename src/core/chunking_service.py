@@ -2,6 +2,7 @@
 
 Sprint 16 Feature 16.1 - Unified Chunking Service
 ADR-022: Unified Chunking Service
+Sprint 24 Feature 24.15 - Lazy imports for optional llama_index dependency
 
 This module provides a single source of truth for document chunking
 across all ingestion pipelines (Qdrant, BM25, LightRAG).
@@ -12,19 +13,28 @@ Benefits:
 - SHA-256 chunk_id enables graph-vector alignment
 - Configuration-driven strategies
 - Prometheus metrics for observability
+
+Dependencies:
+- fixed strategy: tiktoken only (always available)
+- adaptive/paragraph strategies: llama_index (optional "ingestion" group)
+- sentence strategy: no dependencies (regex only)
 """
 
 import re
 import time
+from typing import TYPE_CHECKING
 
 import structlog
 import tiktoken
-from llama_index.core import Document
-from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.schema import TextNode
 from prometheus_client import Counter, Gauge, Histogram
 
 from src.core.chunk import Chunk, ChunkStrategy
+
+# TYPE_CHECKING imports - only for type checkers, not runtime
+if TYPE_CHECKING:
+    from llama_index.core import Document
+    from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.core.schema import TextNode
 
 logger = structlog.get_logger(__name__)
 
@@ -86,14 +96,20 @@ class ChunkingService:
             overlap=self.strategy.overlap,
         )
 
-    def _init_chunker(self) -> SentenceSplitter | tiktoken.Encoding | None:
+    def _init_chunker(self) -> "SentenceSplitter | tiktoken.Encoding | None":  # String literal for type hint
         """Initialize chunker based on strategy.
+
+        Sprint 24 Feature 24.15: Lazy import for adaptive/paragraph strategies.
 
         Returns:
             Chunker instance (SentenceSplitter for adaptive/paragraph, tiktoken for fixed, None for sentence)
+
+        Raises:
+            ImportError: If llama_index not installed for adaptive/paragraph strategies
         """
         if self.strategy.method == "fixed":
             # Fixed-size chunking with tiktoken (token-accurate, used by LightRAG)
+            # NO llama_index needed!
             try:
                 return tiktoken.get_encoding("cl100k_base")
             except Exception as e:
@@ -101,7 +117,32 @@ class ChunkingService:
                 raise
 
         elif self.strategy.method in ("adaptive", "paragraph"):
-            # Adaptive/paragraph chunking with LlamaIndex SentenceSplitter
+            # ================================================================
+            # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+            # ================================================================
+            # Adaptive/paragraph chunking requires SentenceSplitter from llama_index.
+            # Load it lazily only when these strategies are used.
+            # ================================================================
+            try:
+                from llama_index.core.node_parser import SentenceSplitter
+            except ImportError as e:
+                error_msg = (
+                    f"llama_index is required for '{self.strategy.method}' chunking strategy but is not installed.\n\n"
+                    "INSTALLATION OPTIONS:\n"
+                    "1. poetry install --with ingestion\n"
+                    "2. poetry install --all-extras\n\n"
+                    "ALTERNATIVE STRATEGIES (no llama_index needed):\n"
+                    "- 'fixed': Token-based chunking with tiktoken\n"
+                    "- 'sentence': Regex-based sentence chunking\n"
+                )
+                logger.error(
+                    "llamaindex_import_failed",
+                    strategy=self.strategy.method,
+                    error=str(e),
+                    install_command="poetry install --with ingestion",
+                )
+                raise ImportError(error_msg) from e
+
             return SentenceSplitter(
                 chunk_size=self.strategy.chunk_size,
                 chunk_overlap=self.strategy.overlap,
@@ -110,6 +151,7 @@ class ChunkingService:
 
         elif self.strategy.method == "sentence":
             # Sentence-based chunking (simple regex, no external chunker needed)
+            # NO llama_index needed!
             return None
 
         else:
@@ -271,6 +313,8 @@ class ChunkingService:
     ) -> list[Chunk]:
         """Adaptive chunking using LlamaIndex SentenceSplitter (sentence-aware).
 
+        Sprint 24 Feature 24.15: Lazy import for llama_index types.
+
         This method provides sentence-aware chunking that respects
         sentence boundaries for better semantic coherence.
 
@@ -281,7 +325,34 @@ class ChunkingService:
 
         Returns:
             List of adaptive chunks
+
+        Raises:
+            ImportError: If llama_index not installed
         """
+        # ====================================================================
+        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+        # ====================================================================
+        # Document and TextNode are needed for adaptive chunking.
+        # SentenceSplitter is already lazy-loaded in _init_chunker().
+        # ====================================================================
+        try:
+            from llama_index.core import Document
+            from llama_index.core.node_parser import SentenceSplitter
+            from llama_index.core.schema import TextNode
+        except ImportError as e:
+            error_msg = (
+                "llama_index is required for adaptive chunking but is not installed.\n\n"
+                "INSTALLATION OPTIONS:\n"
+                "1. poetry install --with ingestion\n"
+                "2. poetry install --all-extras\n"
+            )
+            logger.error(
+                "llamaindex_import_failed",
+                method="_chunk_adaptive",
+                error=str(e),
+            )
+            raise ImportError(error_msg) from e
+
         if not isinstance(self._chunker, SentenceSplitter):
             raise RuntimeError("Adaptive chunking requires SentenceSplitter")
 
@@ -329,6 +400,8 @@ class ChunkingService:
     ) -> list[Chunk]:
         """Paragraph-based chunking with separator (semantic boundaries).
 
+        Sprint 24 Feature 24.15: Lazy import for llama_index types.
+
         This method splits on paragraph boundaries (default: \\n\\n)
         and groups paragraphs to meet target chunk size.
 
@@ -339,7 +412,34 @@ class ChunkingService:
 
         Returns:
             List of paragraph-based chunks
+
+        Raises:
+            ImportError: If llama_index not installed
         """
+        # ====================================================================
+        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
+        # ====================================================================
+        # Document and TextNode are needed for paragraph chunking.
+        # SentenceSplitter is already lazy-loaded in _init_chunker().
+        # ====================================================================
+        try:
+            from llama_index.core import Document
+            from llama_index.core.node_parser import SentenceSplitter
+            from llama_index.core.schema import TextNode
+        except ImportError as e:
+            error_msg = (
+                "llama_index is required for paragraph chunking but is not installed.\n\n"
+                "INSTALLATION OPTIONS:\n"
+                "1. poetry install --with ingestion\n"
+                "2. poetry install --all-extras\n"
+            )
+            logger.error(
+                "llamaindex_import_failed",
+                method="_chunk_paragraph",
+                error=str(e),
+            )
+            raise ImportError(error_msg) from e
+
         if not isinstance(self._chunker, SentenceSplitter):
             raise RuntimeError("Paragraph chunking requires SentenceSplitter")
 
