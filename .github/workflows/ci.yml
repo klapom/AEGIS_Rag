@@ -115,9 +115,9 @@ jobs:
           pip install poetry
           poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies (Core for Import Validation)
+      - name: Install Dependencies (Core + Ingestion for Import Validation)
         run: |
-          poetry install --no-interaction
+          poetry install --with ingestion --no-interaction
 
       - name: Validate All Python Imports
         run: |
@@ -367,9 +367,9 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies (Core + Dev for Integration)
+      - name: Install Dependencies (Core + Dev + Ingestion for Integration)
         run: |
-          poetry install --with dev --no-interaction --no-ansi
+          poetry install --with dev,ingestion --no-interaction --no-ansi
 
       - name: Wait for Services
         run: |
@@ -603,8 +603,8 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           poetry config virtualenvs.in-project true
 
-      - name: Install Backend Dependencies (Core for E2E)
-        run: poetry install --no-interaction
+      - name: Install Backend Dependencies (Core + Ingestion for E2E)
+        run: poetry install --with ingestion --no-interaction
 
       - name: Wait for Services
         run: |
@@ -1032,9 +1032,9 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies (All for Performance)
+      - name: Install Dependencies (All Features for Performance)
         run: |
-          poetry install --no-interaction --no-ansi
+          poetry install --all-extras --no-interaction --no-ansi
 
       - name: Run Benchmarks
         run: |

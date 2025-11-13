@@ -18,9 +18,12 @@ classifiers = [
 ]
 packages = [{include = "src"}]
 
+# ============================================================================
+# CORE DEPENDENCIES (ALWAYS INSTALLED)
+# ============================================================================
 [tool.poetry.dependencies]
 # Core Python
-python = ">=3.11,<3.13"  # Limited by graspologic dependency
+python = ">=3.11,<3.13"  # Limited by graspologic dependency (optional group)
 
 # Web Framework (Sprint 2: REST API)
 fastapi = "^0.115.0"
@@ -28,21 +31,11 @@ uvicorn = {extras = ["standard"], version = "^0.30.0"}
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.0"
 
-# Data Ingestion & RAG (Sprint 2: Document Ingestion)
-# Updated to latest versions with better ollama compatibility
-llama-index-core = "^0.14.3"  # Upgraded for newer ollama packages
-llama-index-llms-ollama = "^0.8.0"  # Requires core >=0.14.3, ollama >=0.5.1
-llama-index-embeddings-ollama = "^0.8.3"  # Requires core >=0.13.0, ollama >=0.3.1 (no upper limit!)
-llama-index-readers-file = "^0.5.4"  # Latest version
-llama-index-vector-stores-qdrant = "^0.8.6"  # For index_documents.py script (requires core >=0.13.0)
-python-pptx = "1.0.2"  # Sprint 16 Feature 16.5: PowerPoint support
-
 # Vector Database (Sprint 2: Qdrant)
 qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.0)
 
 # LLM Provider (Sprint 2: Ollama)
-# Updated to >=0.6.0 for langchain-ollama 1.0.0 compatibility
-ollama = ">=0.6.0,<1.0.0"
+ollama = ">=0.6.0,<1.0.0"  # Updated to >=0.6.0 for langchain-ollama 1.0.0 compatibility
 
 # Multi-Cloud LLM Abstraction (Sprint 23: Mozilla ANY-LLM)
 any-llm-sdk = {extras = ["openai", "ollama"], version = "~1.2.0"}  # Multi-provider LLM abstraction (ADR-033)
@@ -50,22 +43,14 @@ any-llm-sdk = {extras = ["openai", "ollama"], version = "~1.2.0"}  # Multi-provi
 # Hybrid Search (Sprint 2: BM25)
 rank-bm25 = "^0.2.2"
 
-# Reranking (Sprint 3: Cross-Encoder Reranking)
-sentence-transformers = "^3.3.1"  # HuggingFace cross-encoder models
-scikit-learn = "^1.3.0"  # For cosine similarity in semantic deduplication (Sprint 13, ADR-017)
-
-# Evaluation (Sprint 3: RAGAS)
-ragas = "^0.3.7"  # RAG evaluation framework (0.3.7 for better Ollama support)
-datasets = "^4.0.0"  # HuggingFace datasets for evaluation (>=4.0 required by ragas 0.3.7)
-
-# Utilities
+# Utilities (Core)
 python-dotenv = "^1.0.0"
 tenacity = ">=8.1.0,<9.0.0"  # Downgraded for graphiti-core compatibility (Sprint 8)
 structlog = "^24.4.0"
 httpx = "^0.27.0"
 aiofiles = "^24.1.0"
 pyyaml = "^6.0.0"
-python-multipart = "^0.0.20"  # Updated for Gradio compatibility
+python-multipart = "^0.0.20"
 numpy = "^1.26.0"  # For vector operations in consolidation
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
 
@@ -85,22 +70,96 @@ passlib = {extras = ["bcrypt"], version = "^1.7.4"}  # Password hashing
 langgraph = "^0.6.10"
 langchain-core = "^1.0.0"  # Upgraded for langchain-ollama 1.0.0
 langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
-# Note: Sprint 4 uses ollama.AsyncClient directly for LLM calls
 
-# LightRAG & Graph Analysis (Sprint 5: Graph RAG)
+# LightRAG & Graph (Sprint 5: Graph RAG) - Core only, graspologic moved to optional
 lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
-networkx = "^3.2"  # Graph algorithms
-graspologic = "^3.4.1"  # Graph statistics and community detection
+networkx = "^3.2"  # Graph algorithms (CORE - needed by LightRAG)
 
 # Graphiti Memory (Sprint 7: Episodic Memory)
 graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
+langgraph-checkpoint-redis = "^0.1.2"  # LangGraph Redis checkpointing
 
+# ============================================================================
+# OPTIONAL FEATURE GROUPS (Install with: poetry install --with GROUP_NAME)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# INGESTION GROUP: Document ingestion pipeline with LlamaIndex + NLP
+# Install: poetry install --with ingestion
+# Size: ~500MB (llama-index + spacy models)
+# ----------------------------------------------------------------------------
+[tool.poetry.group.ingestion]
+optional = true
+
+[tool.poetry.group.ingestion.dependencies]
+# LlamaIndex Ecosystem (Sprint 2: Document Ingestion, ADR-028 deprecation)
+llama-index-core = "^0.14.3"  # Core LlamaIndex (deprecated primary, connectors only)
+llama-index-llms-ollama = "^0.8.0"  # LlamaIndex Ollama integration
+llama-index-embeddings-ollama = "^0.8.3"  # LlamaIndex embeddings
+llama-index-readers-file = "^0.5.4"  # File readers (PDF, DOCX, etc.)
+llama-index-vector-stores-qdrant = "^0.8.6"  # Qdrant vector store integration
+
+# Document Format Support
+python-pptx = "1.0.2"  # Sprint 16 Feature 16.5: PowerPoint support
+docx2txt = "^0.9"  # DOCX text extraction
+
+# NLP & Entity Extraction
+spacy = "^3.8.7"  # SpaCy for entity extraction (~200MB with models!)
+
+# ----------------------------------------------------------------------------
+# RERANKING GROUP: Cross-encoder reranking for search quality
+# Install: poetry install --with reranking
+# Size: ~400MB (sentence-transformers + PyTorch models)
+# ----------------------------------------------------------------------------
+[tool.poetry.group.reranking]
+optional = true
+
+[tool.poetry.group.reranking.dependencies]
+# Cross-Encoder Reranking (Sprint 3)
+sentence-transformers = "^3.3.1"  # HuggingFace cross-encoder models (~300MB + PyTorch)
+scikit-learn = "^1.3.0"  # For cosine similarity in semantic deduplication (Sprint 13, ADR-017)
+
+# ----------------------------------------------------------------------------
+# EVALUATION GROUP: RAG evaluation with RAGAS
+# Install: poetry install --with evaluation
+# Size: ~600MB+ (datasets is VERY HEAVY!)
+# WARNING: Only install for evaluation tasks, not CI/CD!
+# ----------------------------------------------------------------------------
+[tool.poetry.group.evaluation]
+optional = true
+
+[tool.poetry.group.evaluation.dependencies]
+# RAG Evaluation Framework (Sprint 3)
+ragas = "^0.3.7"  # RAG evaluation framework (0.3.7 for better Ollama support)
+datasets = "^4.0.0"  # HuggingFace datasets for evaluation (~500MB+ !!!)
+
+# ----------------------------------------------------------------------------
+# GRAPH-ANALYSIS GROUP: Advanced graph statistics and community detection
+# Install: poetry install --with graph-analysis
+# Size: ~150MB (NumPy/SciPy heavy dependencies)
+# ----------------------------------------------------------------------------
+[tool.poetry.group.graph-analysis]
+optional = true
+
+[tool.poetry.group.graph-analysis.dependencies]
+# Advanced Graph Statistics (Sprint 5)
+graspologic = "^3.4.1"  # Graph statistics and community detection (~100MB)
+
+# ----------------------------------------------------------------------------
+# UI GROUP: Gradio web interface
+# Install: poetry install --with ui
+# Size: ~200MB (Gradio + frontend dependencies)
+# ----------------------------------------------------------------------------
+[tool.poetry.group.ui]
+optional = true
+
+[tool.poetry.group.ui.dependencies]
 # UI Framework (Sprint 10: Gradio MVP)
-gradio = "^5.49.0"  # Gradio for rapid prototyping UI
-docx2txt = "^0.9"
-langgraph-checkpoint-redis = "^0.1.2"
-spacy = "^3.8.7"
+gradio = "^5.49.0"  # Gradio for rapid prototyping UI (~150MB + deps)
 
+# ============================================================================
+# DEVELOPMENT DEPENDENCIES (Install with: poetry install --with dev)
+# ============================================================================
 [tool.poetry.group.dev.dependencies]
 # Testing
 pytest = "^8.0.0"
@@ -121,12 +180,15 @@ types-aiofiles = "^24.1.0"
 types-python-jose = "^3.3.4"
 types-passlib = "^1.7.7"
 
+# ============================================================================
+# BUILD SYSTEM
+# ============================================================================
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 # ============================================================================
-# Tool Configurations
+# TOOL CONFIGURATIONS
 # ============================================================================
 
 [tool.ruff]
