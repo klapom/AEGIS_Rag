@@ -128,10 +128,21 @@ llm_cache/
 # Ollama models (optional - these are large)
 .ollama/
 
-# Sprint 20 - Temporary analysis files
+# Sprint 20+ - Temporary analysis files
 CHUNK_ANALYSIS_LOG.txt
 ENTITIES_AND_RELATIONS_FOR_ANNOTATION.txt
 ENTITY_VALIDATION_RESULTS.txt
+*_analysis.txt
+*_ANALYSIS_LOG.txt
+test_results*.txt
+DELIVERY_SUMMARY.md
+FINAL_SUMMARY.txt
+IMPLEMENTATION_SUMMARY.txt
+TESTING_AGENT_DELIVERY.md
+
+# Claude Code local settings (user-specific)
+.claude/settings.local.json
+.claude/xxx_*
 
 # Experimental/debug scripts (not production ready)
 scripts/check_neo4j_labels.py
