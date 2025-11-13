@@ -15,8 +15,15 @@ import asyncio
 from typing import Any
 
 import structlog
-from ollama import AsyncClient
 from pydantic import BaseModel, Field
+
+from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -69,42 +76,50 @@ class CustomMetricsEvaluator:
     def __init__(
         self,
         model: str = "qwen3:0.6b",
-        base_url: str = "http://localhost:11434",
         temperature: float = 0.0,
     ):
         """Initialize Custom Metrics Evaluator.
 
         Args:
-            model: Ollama model name
-            base_url: Ollama server URL
+            model: Model name (used as preference for local routing)
             temperature: LLM temperature (0.0 for deterministic)
+
+        Sprint 25: Migrated to AegisLLMProxy for multi-cloud routing
         """
         self.model = model
-        self.base_url = base_url
         self.temperature = temperature
-        self.client = AsyncClient(host=base_url)
+        self.llm_proxy = AegisLLMProxy()
 
         logger.info(
             "custom_metrics_evaluator_initialized",
             model=model,
-            base_url=base_url,
+            temperature=temperature,
+            routing="aegis_llm_proxy",
         )
 
     async def _generate(self, prompt: str) -> str:
-        """Generate response from Ollama.
+        """Generate response using AegisLLMProxy.
 
         Args:
             prompt: Input prompt
 
         Returns:
             Generated text response
+
+        Sprint 25: Uses AegisLLMProxy for evaluation tasks
         """
-        response = await self.client.generate(
-            model=self.model,
+        task = LLMTask(
+            task_type=TaskType.GENERATION,
             prompt=prompt,
-            options={"temperature": self.temperature},
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.LOW,
+            max_tokens=2048,
+            temperature=self.temperature,
+            model_local=self.model,
         )
-        return response["response"].strip()
+
+        response = await self.llm_proxy.generate(task)
+        return response.content.strip()
 
     async def evaluate_context_precision(
         self,

@@ -28,27 +28,34 @@ class TestDualLevelSearch:
             yield mock_instance
 
     @pytest.fixture
-    def mock_ollama_client(self):
-        """Mock Ollama client."""
-        mock_client = MagicMock()
-        mock_client.generate = AsyncMock(
-            return_value={"response": "Mock answer from graph context."}
-        )
-        return mock_client
+    def mock_llm_proxy(self):
+        """Mock AegisLLMProxy."""
+        mock_proxy = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.content = "Mock answer from graph context."
+        mock_result.provider = "local_ollama"
+        mock_result.model = "llama3.2:8b"
+        mock_result.cost_usd = 0.0
+        mock_result.latency_ms = 100
+        mock_proxy.generate.return_value = mock_result
+        return mock_proxy
 
     @pytest.fixture
-    def dual_level_search(self, mock_neo4j_client):
+    def dual_level_search(self, mock_neo4j_client, mock_llm_proxy):
         """DualLevelSearch instance with mocked dependencies."""
-        search = DualLevelSearch(
-            neo4j_uri="bolt://localhost:7687",
-            neo4j_user="neo4j",
-            neo4j_password="test",
-            llm_model="llama3.2:8b",
-            ollama_base_url="http://localhost:11434",
-        )
-        # Replace Neo4j client with mock
-        search.neo4j_client = mock_neo4j_client
-        return search
+        with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy") as mock_get_proxy:
+            mock_get_proxy.return_value = mock_llm_proxy
+            search = DualLevelSearch(
+                neo4j_uri="bolt://localhost:7687",
+                neo4j_user="neo4j",
+                neo4j_password="test",
+                llm_model="llama3.2:8b",
+                ollama_base_url="http://localhost:11434",
+            )
+            # Replace Neo4j client and proxy with mocks
+            search.neo4j_client = mock_neo4j_client
+            search.proxy = mock_llm_proxy
+            return search
 
     def test_initialization(self, dual_level_search):
         """Test DualLevelSearch initializes correctly."""
@@ -245,22 +252,18 @@ class TestDualLevelSearch:
         assert "Programming" in context
 
     @pytest.mark.asyncio
-    async def test_generate_answer(self, dual_level_search, mock_ollama_client):
-        """Test answer generation from graph context."""
-        dual_level_search.ollama_client = mock_ollama_client
-
+    async def test_generate_answer(self, dual_level_search):
+        """Test answer generation from graph context via AegisLLMProxy."""
         context = "Entity: Python (TECHNOLOGY)\nRelationship: John-USES->Python"
         answer = await dual_level_search._generate_answer("What does John use?", context)
 
         assert answer == "Mock answer from graph context."
-        mock_ollama_client.generate.assert_called_once()
+        dual_level_search.proxy.generate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_answer_error(self, dual_level_search):
         """Test answer generation handles errors gracefully."""
-        mock_client = MagicMock()
-        mock_client.generate = AsyncMock(side_effect=Exception("LLM error"))
-        dual_level_search.ollama_client = mock_client
+        dual_level_search.proxy.generate.side_effect = Exception("LLM proxy error")
 
         answer = await dual_level_search._generate_answer("query", "context")
 
@@ -300,10 +303,10 @@ class TestDualLevelSearch:
             side_effect=[entity_results, topic_results, rel_results]
         )
 
-        # Mock answer generation
-        mock_ollama = MagicMock()
-        mock_ollama.generate = AsyncMock(return_value={"response": "Hybrid search answer."})
-        dual_level_search.ollama_client = mock_ollama
+        # Mock proxy answer generation
+        mock_result = MagicMock()
+        mock_result.content = "Hybrid search answer."
+        dual_level_search.proxy.generate.return_value = mock_result
 
         result = await dual_level_search.hybrid_search("python programming", top_k=10)
 
@@ -322,9 +325,9 @@ class TestDualLevelSearch:
         # Note: relationship query won't be called if entities list is empty
         mock_neo4j_client.execute_read = AsyncMock(return_value=[])
 
-        mock_ollama = MagicMock()
-        mock_ollama.generate = AsyncMock(return_value={"response": "Answer."})
-        dual_level_search.ollama_client = mock_ollama
+        mock_result = MagicMock()
+        mock_result.content = "Answer."
+        dual_level_search.proxy.generate.return_value = mock_result
 
         await dual_level_search.hybrid_search("test query", top_k=10)
 

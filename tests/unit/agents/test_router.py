@@ -43,28 +43,26 @@ class TestIntentClassifier:
     """Test IntentClassifier class."""
 
     @pytest.fixture
-    def mock_ollama_client(self):
-        """Create a mock Ollama client."""
-        client = AsyncMock()
-        return client
+    def mock_llm_proxy(self):
+        """Create a mock AegisLLMProxy."""
+        proxy = AsyncMock()
+        return proxy
 
     @pytest.fixture
-    def classifier(self, mock_ollama_client):
-        """Create an IntentClassifier with mocked client."""
-        with patch("src.agents.router.AsyncClient", return_value=mock_ollama_client):
+    def classifier(self, mock_llm_proxy):
+        """Create an IntentClassifier with mocked proxy."""
+        with patch("src.agents.router.AegisLLMProxy", return_value=mock_llm_proxy):
             classifier = IntentClassifier(
                 model_name="llama3.2:3b",
-                base_url="http://localhost:11434",
                 temperature=0.0,
                 max_tokens=50,
             )
-            classifier.client = mock_ollama_client
+            classifier.llm_proxy = mock_llm_proxy
             return classifier
 
     def test_classifier_initialization(self, classifier):
         """Test classifier initializes with correct settings."""
         assert classifier.model_name == "llama3.2:3b"
-        assert classifier.base_url == "http://localhost:11434"
         assert classifier.temperature == 0.0
         assert classifier.max_tokens == 50
 
@@ -109,10 +107,17 @@ class TestIntentClassifier:
             assert intent == QueryIntent(classifier.default_intent)
 
     @pytest.mark.asyncio
-    async def test_classify_intent_vector(self, classifier, mock_ollama_client):
+    async def test_classify_intent_vector(self, classifier, mock_llm_proxy):
         """Test classification of vector search queries."""
-        # Mock LLM response
-        mock_ollama_client.generate.return_value = {"response": "VECTOR"}
+        # Mock LLM proxy response
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="VECTOR",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=10,
+            cost_usd=0.0,
+        )
 
         queries = [
             "What is Retrieval-Augmented Generation?",
@@ -126,10 +131,17 @@ class TestIntentClassifier:
             assert intent == QueryIntent.VECTOR
 
     @pytest.mark.asyncio
-    async def test_classify_intent_graph(self, classifier, mock_ollama_client):
+    async def test_classify_intent_graph(self, classifier, mock_llm_proxy):
         """Test classification of graph search queries."""
-        # Mock LLM response
-        mock_ollama_client.generate.return_value = {"response": "GRAPH"}
+        # Mock LLM proxy response
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="GRAPH",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=10,
+            cost_usd=0.0,
+        )
 
         queries = [
             "How are RAG and knowledge graphs related?",
@@ -143,10 +155,17 @@ class TestIntentClassifier:
             assert intent == QueryIntent.GRAPH
 
     @pytest.mark.asyncio
-    async def test_classify_intent_hybrid(self, classifier, mock_ollama_client):
+    async def test_classify_intent_hybrid(self, classifier, mock_llm_proxy):
         """Test classification of hybrid search queries."""
-        # Mock LLM response
-        mock_ollama_client.generate.return_value = {"response": "HYBRID"}
+        # Mock LLM proxy response
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="HYBRID",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=10,
+            cost_usd=0.0,
+        )
 
         queries = [
             "Find documents about RAG and explain how it relates to knowledge graphs",
@@ -159,10 +178,17 @@ class TestIntentClassifier:
             assert intent == QueryIntent.HYBRID
 
     @pytest.mark.asyncio
-    async def test_classify_intent_memory(self, classifier, mock_ollama_client):
+    async def test_classify_intent_memory(self, classifier, mock_llm_proxy):
         """Test classification of memory search queries."""
-        # Mock LLM response
-        mock_ollama_client.generate.return_value = {"response": "MEMORY"}
+        # Mock LLM proxy response
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="MEMORY",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=10,
+            cost_usd=0.0,
+        )
 
         queries = [
             "What did we discuss yesterday?",
@@ -176,10 +202,10 @@ class TestIntentClassifier:
             assert intent == QueryIntent.MEMORY
 
     @pytest.mark.asyncio
-    async def test_classify_intent_with_error(self, classifier, mock_ollama_client):
+    async def test_classify_intent_with_error(self, classifier, mock_llm_proxy):
         """Test classification handles errors gracefully."""
         # Mock LLM error
-        mock_ollama_client.generate.side_effect = Exception("Connection error")
+        mock_llm_proxy.generate.side_effect = Exception("Connection error")
 
         query = "What is RAG?"
         intent = await classifier.classify_intent(query)
@@ -188,10 +214,17 @@ class TestIntentClassifier:
         assert intent == QueryIntent(classifier.default_intent)
 
     @pytest.mark.asyncio
-    async def test_classify_intent_empty_response(self, classifier, mock_ollama_client):
+    async def test_classify_intent_empty_response(self, classifier, mock_llm_proxy):
         """Test classification with empty LLM response."""
         # Mock empty response
-        mock_ollama_client.generate.return_value = {"response": ""}
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=0,
+            cost_usd=0.0,
+        )
 
         query = "What is RAG?"
         intent = await classifier.classify_intent(query)
@@ -200,12 +233,17 @@ class TestIntentClassifier:
         assert intent == QueryIntent(classifier.default_intent)
 
     @pytest.mark.asyncio
-    async def test_classify_intent_malformed_response(self, classifier, mock_ollama_client):
+    async def test_classify_intent_malformed_response(self, classifier, mock_llm_proxy):
         """Test classification with malformed LLM response."""
         # Mock malformed response
-        mock_ollama_client.generate.return_value = {
-            "response": "This is a random response without any intent"
-        }
+        from src.components.llm_proxy.models import LLMResponse
+        mock_llm_proxy.generate.return_value = LLMResponse(
+            content="This is a random response without any intent",
+            provider="local_ollama",
+            model="llama3.2:3b",
+            tokens_used=20,
+            cost_usd=0.0,
+        )
 
         query = "What is RAG?"
         intent = await classifier.classify_intent(query)
@@ -301,7 +339,7 @@ class TestClassifierSingleton:
 
         router_module._classifier = None
 
-        with patch("src.agents.router.AsyncClient"):
+        with patch("src.agents.router.AegisLLMProxy"):
             classifier1 = get_classifier()
             classifier2 = get_classifier()
 

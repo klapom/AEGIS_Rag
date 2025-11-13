@@ -15,7 +15,6 @@ from enum import Enum
 from typing import Any
 
 import structlog
-from ollama import AsyncClient
 from pydantic import BaseModel, Field
 from tenacity import (
     retry,
@@ -25,6 +24,13 @@ from tenacity import (
 )
 
 from src.components.graph_rag.neo4j_client import Neo4jClient
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.core.models import GraphEntity, GraphQueryResult, GraphRelationship, Topic
 
@@ -57,12 +63,16 @@ class GraphSearchResult(BaseModel):
 class DualLevelSearch:
     """Dual-level graph search with local/global/hybrid modes.
 
+    Sprint 25 Feature 25.10: Migrated to AegisLLMProxy for multi-cloud routing.
+
     Provides:
     - Local search (entity-level): Retrieves specific entities and their direct relationships
     - Global search (topic-level): Retrieves high-level topics/communities and summaries
     - Hybrid search (combined): Combines both local and global results with answer fusion
+    - Multi-cloud routing: Local Ollama → Alibaba Cloud → OpenAI
+    - Cost tracking and observability
 
-    Uses Neo4j for graph storage and Ollama LLM for answer generation.
+    Uses Neo4j for graph storage and AegisLLMProxy for answer generation.
     """
 
     def __init__(
@@ -73,14 +83,14 @@ class DualLevelSearch:
         llm_model: str | None = None,
         ollama_base_url: str | None = None,
     ):
-        """Initialize dual-level search.
+        """Initialize dual-level search with AegisLLMProxy.
 
         Args:
             neo4j_uri: Neo4j connection URI
             neo4j_user: Neo4j username
             neo4j_password: Neo4j password
-            llm_model: Ollama LLM model for answer generation
-            ollama_base_url: Ollama server URL
+            llm_model: Preferred model for answer generation
+            ollama_base_url: Deprecated (kept for compatibility)
         """
         self.neo4j_uri = neo4j_uri or settings.neo4j_uri
         self.neo4j_user = neo4j_user or settings.neo4j_user
@@ -95,13 +105,13 @@ class DualLevelSearch:
             password=self.neo4j_password,
         )
 
-        # Initialize Ollama client
-        self.ollama_client = AsyncClient(host=self.ollama_base_url)
+        # Sprint 25: Use AegisLLMProxy for multi-cloud routing
+        self.proxy = get_aegis_llm_proxy()
 
         logger.info(
-            "dual_level_search_initialized",
+            "dual_level_search_initialized_with_proxy",
             neo4j_uri=self.neo4j_uri,
-            llm_model=self.llm_model,
+            preferred_model=self.llm_model,
         )
 
     @retry(
@@ -257,7 +267,9 @@ class DualLevelSearch:
         query: str,
         context: str,
     ) -> str:
-        """Generate answer from graph context using LLM.
+        """Generate answer from graph context using AegisLLMProxy.
+
+        Sprint 25: Migrated to AegisLLMProxy for multi-cloud routing.
 
         Args:
             query: User query
@@ -279,17 +291,28 @@ If the context doesn't contain enough information, say so.
 Answer:"""
 
         try:
-            response = await self.ollama_client.generate(
-                model=self.llm_model,
+            # Sprint 25: Use AegisLLMProxy for answer generation
+            task = LLMTask(
+                task_type=TaskType.ANSWER_GENERATION,
                 prompt=prompt,
-                options={
-                    "temperature": 0.3,
-                    "num_predict": 512,
-                },
+                quality_requirement=QualityRequirement.HIGH,
+                complexity=Complexity.MEDIUM,
+                max_tokens=512,
+                temperature=0.3,
+                model_local=self.llm_model,
             )
 
-            answer = response.get("response", "")
-            return str(answer).strip()
+            result = await self.proxy.generate(task)
+
+            logger.debug(
+                "answer_generated_via_proxy",
+                provider=result.provider,
+                model=result.model,
+                cost_usd=result.cost_usd,
+                latency_ms=result.latency_ms,
+            )
+
+            return result.content.strip()
 
         except Exception as e:
             logger.error("answer_generation_failed", error=str(e))

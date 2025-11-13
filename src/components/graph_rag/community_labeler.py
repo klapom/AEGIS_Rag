@@ -10,7 +10,6 @@ of each community based on entity names and descriptions.
 """
 
 import structlog
-from ollama import AsyncClient
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -19,6 +18,13 @@ from tenacity import (
 )
 
 from src.components.graph_rag.neo4j_client import Neo4jClient
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.core.models import Community, GraphEntity
 
@@ -26,13 +32,16 @@ logger = structlog.get_logger(__name__)
 
 
 class CommunityLabeler:
-    """Generate descriptive labels for communities using LLM.
+    """Generate descriptive labels for communities using multi-cloud LLM.
+
+    Sprint 25 Feature 25.10: Migrated to AegisLLMProxy for multi-cloud routing.
 
     Features:
     - LLM-based label generation from entity descriptions
     - Batch labeling of all communities
     - Label storage in Neo4j
-    - Configurable LLM model and temperature
+    - Multi-cloud routing: Local Ollama → Alibaba Cloud → OpenAI
+    - Cost tracking and observability
     """
 
     def __init__(
@@ -42,12 +51,12 @@ class CommunityLabeler:
         ollama_base_url: str | None = None,
         enabled: bool | None = None,
     ):
-        """Initialize community labeler.
+        """Initialize community labeler with AegisLLMProxy.
 
         Args:
             neo4j_client: Neo4j client instance (default: global singleton)
-            llm_model: Ollama LLM model for labeling
-            ollama_base_url: Ollama server URL
+            llm_model: Preferred model for labeling
+            ollama_base_url: Deprecated (kept for compatibility)
             enabled: Whether labeling is enabled (default: from settings)
         """
         self.neo4j_client = neo4j_client or Neo4jClient()
@@ -55,12 +64,12 @@ class CommunityLabeler:
         self.ollama_base_url = ollama_base_url or settings.ollama_base_url
         self.enabled = enabled if enabled is not None else settings.graph_community_labeling_enabled
 
-        # Initialize Ollama client
-        self.ollama_client = AsyncClient(host=self.ollama_base_url)
+        # Sprint 25: Use AegisLLMProxy for multi-cloud routing
+        self.proxy = get_aegis_llm_proxy()
 
         logger.info(
-            "community_labeler_initialized",
-            llm_model=self.llm_model,
+            "community_labeler_initialized_with_proxy",
+            preferred_model=self.llm_model,
             enabled=self.enabled,
         )
 
@@ -163,17 +172,27 @@ Label:"""
                 entities_count=len(community_entities),
             )
 
-            # Call LLM with low temperature for consistency
-            response = await self.ollama_client.generate(
-                model=self.llm_model,
+            # Sprint 25: Call LLM via AegisLLMProxy for multi-cloud routing
+            task = LLMTask(
+                task_type=TaskType.SUMMARIZATION,
                 prompt=prompt,
-                options={
-                    "temperature": 0.1,
-                    "num_predict": 50,  # Short response
-                },
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=Complexity.LOW,
+                max_tokens=50,  # Short response (2-5 words)
+                temperature=0.1,
+                model_local=self.llm_model,
             )
 
-            label = response.get("response", "").strip()
+            result = await self.proxy.generate(task)
+            label = result.content.strip()
+
+            logger.debug(
+                "community_label_generated_via_proxy",
+                provider=result.provider,
+                model=result.model,
+                cost_usd=result.cost_usd,
+                latency_ms=result.latency_ms,
+            )
 
             # Clean up label (remove quotes, extra whitespace)
             label = label.strip("\"'")

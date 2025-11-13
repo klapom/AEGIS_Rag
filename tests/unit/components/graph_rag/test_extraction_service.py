@@ -21,19 +21,26 @@ class TestExtractionService:
     @pytest.fixture
     def extraction_service(self):
         """Extraction service fixture."""
-        return ExtractionService(
-            llm_model="llama3.2:8b",
-            ollama_base_url="http://localhost:11434",
-            temperature=0.1,
-            max_tokens=4096,
-        )
+        with patch("src.components.graph_rag.extraction_service.AegisLLMProxy"):
+            return ExtractionService(
+                llm_model="llama3.2:8b",
+                temperature=0.1,
+                max_tokens=4096,
+            )
 
     @pytest.fixture
-    def mock_ollama_response(self):
-        """Mock Ollama API response generator."""
+    def mock_llm_response(self):
+        """Mock LLM proxy response generator."""
+        from src.components.llm_proxy.models import LLMResponse
 
         def _response(json_data):
-            return {"response": json.dumps(json_data)}
+            return LLMResponse(
+                content=json.dumps(json_data),
+                provider="local_ollama",
+                model="llama3.2:8b",
+                tokens_used=100,
+                cost_usd=0.0,
+            )
 
         return _response
 
@@ -72,7 +79,7 @@ class TestExtractionService:
         assert parsed == []
 
     @pytest.mark.asyncio
-    async def test_extract_entities_success(self, extraction_service, mock_ollama_response):
+    async def test_extract_entities_success(self, extraction_service, mock_llm_response):
         """Test successful entity extraction."""
         mock_entities = [
             {
@@ -88,9 +95,9 @@ class TestExtractionService:
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
-            new=AsyncMock(return_value=mock_ollama_response(mock_entities)),
+            new=AsyncMock(return_value=mock_llm_response(mock_entities)),
         ):
             text = "John Smith works at Google as a software engineer."
             entities = await extraction_service.extract_entities(text, "doc1")
@@ -104,18 +111,18 @@ class TestExtractionService:
             assert entities[1].type == "ORGANIZATION"
 
     @pytest.mark.asyncio
-    async def test_extract_entities_empty_text(self, extraction_service, mock_ollama_response):
+    async def test_extract_entities_empty_text(self, extraction_service, mock_llm_response):
         """Test entity extraction with empty text."""
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
-            new=AsyncMock(return_value=mock_ollama_response([])),
+            new=AsyncMock(return_value=mock_llm_response([])),
         ):
             entities = await extraction_service.extract_entities("", "doc1")
             assert entities == []
 
     @pytest.mark.asyncio
-    async def test_extract_entities_max_limit(self, extraction_service, mock_ollama_response):
+    async def test_extract_entities_max_limit(self, extraction_service, mock_llm_response):
         """Test entity extraction respects max entities limit."""
         # Generate more entities than MAX_ENTITIES_PER_DOC
         mock_entities = [
@@ -124,15 +131,15 @@ class TestExtractionService:
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
-            new=AsyncMock(return_value=mock_ollama_response(mock_entities)),
+            new=AsyncMock(return_value=mock_llm_response(mock_entities)),
         ):
             entities = await extraction_service.extract_entities("test text", "doc1")
             assert len(entities) <= 50  # Should be capped at MAX_ENTITIES_PER_DOC
 
     @pytest.mark.asyncio
-    async def test_extract_relationships_success(self, extraction_service, mock_ollama_response):
+    async def test_extract_relationships_success(self, extraction_service, mock_llm_response):
         """Test successful relationship extraction."""
         entities = [
             GraphEntity(
@@ -159,9 +166,9 @@ class TestExtractionService:
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
-            new=AsyncMock(return_value=mock_ollama_response(mock_relationships)),
+            new=AsyncMock(return_value=mock_llm_response(mock_relationships)),
         ):
             text = "John Smith works at Google."
             relationships = await extraction_service.extract_relationships(text, entities, "doc1")
@@ -180,7 +187,7 @@ class TestExtractionService:
         assert relationships == []
 
     @pytest.mark.asyncio
-    async def test_extract_and_store(self, extraction_service, mock_ollama_response):
+    async def test_extract_and_store(self, extraction_service, mock_llm_response):
         """Test combined entity and relationship extraction."""
         mock_entities = [
             {"name": "Alice", "type": "PERSON", "description": "Developer"},
@@ -198,12 +205,12 @@ class TestExtractionService:
 
         # Create a list of return values
         mock_responses = [
-            mock_ollama_response(mock_entities),
-            mock_ollama_response(mock_relationships),
+            mock_llm_response(mock_entities),
+            mock_llm_response(mock_relationships),
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
             new=AsyncMock(side_effect=mock_responses),
         ):
@@ -217,7 +224,7 @@ class TestExtractionService:
             assert result["relationship_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_extract_batch(self, extraction_service, mock_ollama_response):
+    async def test_extract_batch(self, extraction_service, mock_llm_response):
         """Test batch extraction from multiple documents."""
         documents = [
             {"id": "doc1", "text": "Document 1 text"},
@@ -229,14 +236,14 @@ class TestExtractionService:
 
         # Create a list of return values for the mock
         mock_responses = [
-            mock_ollama_response(mock_entities),  # doc1 entities
-            mock_ollama_response(mock_relationships),  # doc1 relationships
-            mock_ollama_response(mock_entities),  # doc2 entities
-            mock_ollama_response(mock_relationships),  # doc2 relationships
+            mock_llm_response(mock_entities),  # doc1 entities
+            mock_llm_response(mock_relationships),  # doc1 relationships
+            mock_llm_response(mock_entities),  # doc2 entities
+            mock_llm_response(mock_relationships),  # doc2 relationships
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
             new=AsyncMock(side_effect=mock_responses),
         ):
@@ -249,7 +256,7 @@ class TestExtractionService:
             assert len(result["results"]) == 2
 
     @pytest.mark.asyncio
-    async def test_extract_batch_with_failures(self, extraction_service, mock_ollama_response):
+    async def test_extract_batch_with_failures(self, extraction_service, mock_llm_response):
         """Test batch extraction handles failures gracefully."""
         documents = [
             {"id": "doc1", "text": "Document 1 text"},
@@ -260,13 +267,13 @@ class TestExtractionService:
 
         # Create a list of return values - first doc succeeds, second fails
         mock_responses = [
-            mock_ollama_response(mock_entities),  # doc1 entities - succeeds
-            mock_ollama_response([]),  # doc1 relationships - succeeds
+            mock_llm_response(mock_entities),  # doc1 entities - succeeds
+            mock_llm_response([]),  # doc1 relationships - succeeds
             Exception("Extraction failed"),  # doc2 entities - fails
         ]
 
         with patch.object(
-            extraction_service.client,
+            extraction_service.llm_proxy,
             "generate",
             new=AsyncMock(side_effect=mock_responses),
         ):

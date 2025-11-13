@@ -12,7 +12,6 @@ import uuid
 from typing import Any
 
 import structlog
-from ollama import AsyncClient
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -20,6 +19,13 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.core.models import GraphEntity, GraphRelationship
 from src.prompts.extraction_prompts import (
@@ -35,7 +41,7 @@ MAX_RELATIONSHIPS_PER_DOC = 100
 
 
 class ExtractionService:
-    """Entity and relationship extraction service using Ollama LLM.
+    """Entity and relationship extraction service using AegisLLMProxy.
 
     Provides methods for:
     - Entity extraction from text
@@ -54,25 +60,23 @@ class ExtractionService:
         """Initialize extraction service.
 
         Args:
-            llm_model: Ollama LLM model name (default: llama3.2:8b)
-            ollama_base_url: Ollama server URL
+            llm_model: LLM model name (default: llama3.2:8b)
+            ollama_base_url: DEPRECATED - kept for backward compatibility
             temperature: LLM temperature for extraction (default: 0.1 for consistency)
             max_tokens: Max tokens for LLM response
         """
         self.llm_model = llm_model or settings.lightrag_llm_model
-        self.ollama_base_url = ollama_base_url or settings.ollama_base_url
         self.temperature = (
             temperature if temperature is not None else settings.lightrag_llm_temperature
         )
         self.max_tokens = max_tokens or settings.lightrag_llm_max_tokens
 
-        # Initialize Ollama client
-        self.client = AsyncClient(host=self.ollama_base_url)
+        # Initialize AegisLLMProxy for multi-cloud routing
+        self.llm_proxy = AegisLLMProxy()
 
         logger.info(
             "extraction_service_initialized",
             llm_model=self.llm_model,
-            ollama_url=self.ollama_base_url,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
@@ -257,26 +261,32 @@ class ExtractionService:
         prompt = ENTITY_EXTRACTION_PROMPT.format(text=text)
 
         try:
-            # Call Ollama LLM
-            response = await self.client.generate(
-                model=self.llm_model,
+            # Create LLM task for entity extraction
+            task = LLMTask(
+                task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
                 prompt=prompt,
-                options={
-                    "temperature": self.temperature,
-                    "num_predict": self.max_tokens,
-                },
+                quality_requirement=QualityRequirement.HIGH,  # High quality for accurate extraction
+                complexity=Complexity.MEDIUM,  # Medium complexity for structured extraction
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                model_local=self.llm_model,
             )
 
-            llm_response = response.get("response", "")
+            # Call AegisLLMProxy
+            result = await self.llm_proxy.generate(task)
 
-            # 🔍 ENHANCED LOGGING: Log LLM response before parsing
+            llm_response = result.content
+
+            # ENHANCED LOGGING: Log LLM response before parsing
             logger.info(
                 "llm_entity_extraction_response",
-                model=self.llm_model,
+                model=result.model,
+                provider=result.provider,
                 temperature=self.temperature,
                 response_length=len(llm_response),
                 response_preview=llm_response[:500],
                 response_full=llm_response,  # Full response for debugging
+                cost_usd=result.cost_usd,
             )
 
             # Parse JSON response
@@ -374,17 +384,21 @@ class ExtractionService:
         )
 
         try:
-            # Call Ollama LLM
-            response = await self.client.generate(
-                model=self.llm_model,
+            # Create LLM task for relationship extraction
+            task = LLMTask(
+                task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
                 prompt=prompt,
-                options={
-                    "temperature": self.temperature,
-                    "num_predict": self.max_tokens,
-                },
+                quality_requirement=QualityRequirement.HIGH,
+                complexity=Complexity.MEDIUM,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                model_local=self.llm_model,
             )
 
-            llm_response = response.get("response", "")
+            # Call AegisLLMProxy
+            result = await self.llm_proxy.generate(task)
+
+            llm_response = result.content
 
             # Parse JSON response
             relationships_data = self._parse_json_response(llm_response, data_type="relationship")
@@ -424,6 +438,8 @@ class ExtractionService:
                 "relationships_extracted",
                 count=len(relationships),
                 document_id=document_id,
+                provider=result.provider,
+                cost_usd=result.cost_usd,
             )
 
             return relationships

@@ -28,6 +28,10 @@ class TaskType(str, Enum):
     CODE_GENERATION = "code_generation"  # Technical docs, API specs
     RESEARCH = "research"  # Multi-hop reasoning, complex queries
     VISION = "vision"  # Image description/analysis with VLM (prefer Alibaba Cloud Qwen3-VL)
+    # Sprint 25 Feature 25.10 additions:
+    MEMORY_CONSOLIDATION = "memory_consolidation"  # Graphiti memory operations
+    SUMMARIZATION = "summarization"  # Community labeling, text summarization
+    ANSWER_GENERATION = "answer_generation"  # Graph-based answer generation
 
 
 class DataClassification(str, Enum):

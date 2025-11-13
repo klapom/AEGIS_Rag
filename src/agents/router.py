@@ -11,7 +11,6 @@ from enum import Enum
 from typing import Any
 
 import structlog
-from ollama import AsyncClient
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -19,6 +18,13 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.prompts.router_prompts import CLASSIFICATION_PROMPT
 
@@ -36,7 +42,7 @@ class QueryIntent(str, Enum):
 
 
 class IntentClassifier:
-    """LLM-based intent classifier using Ollama."""
+    """LLM-based intent classifier using AegisLLMProxy."""
 
     def __init__(
         self,
@@ -50,27 +56,25 @@ class IntentClassifier:
         """Initialize intent classifier.
 
         Args:
-            model_name: Ollama model name (default: from settings)
-            base_url: Ollama server URL (default: from settings)
+            model_name: LLM model name (default: from settings)
+            base_url: DEPRECATED - kept for backward compatibility
             temperature: LLM temperature (default: from settings)
             max_tokens: Max tokens for response (default: from settings)
             max_retries: Max retry attempts (default: from settings)
             default_intent: Default intent on failure (default: from settings)
         """
         self.model_name = model_name or settings.ollama_model_router
-        self.base_url = base_url or settings.ollama_base_url
         self.temperature = temperature if temperature is not None else settings.router_temperature
         self.max_tokens = max_tokens or settings.router_max_tokens
         self.max_retries = max_retries or settings.router_max_retries
         self.default_intent = default_intent or settings.router_default_intent
 
-        # Initialize Ollama async client
-        self.client = AsyncClient(host=self.base_url)
+        # Initialize AegisLLMProxy for multi-cloud routing
+        self.llm_proxy = AegisLLMProxy()
 
         logger.info(
             "intent_classifier_initialized",
             model=self.model_name,
-            base_url=self.base_url,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
@@ -127,7 +131,7 @@ class IntentClassifier:
     async def classify_intent(self, query: str) -> QueryIntent:
         """Classify query intent using LLM.
 
-        Uses Ollama LLM to classify the query into one of the predefined intents.
+        Uses AegisLLMProxy to classify the query into one of the predefined intents.
         Falls back to default intent on failure after retries.
 
         Args:
@@ -149,18 +153,22 @@ class IntentClassifier:
                 model=self.model_name,
             )
 
-            # Call Ollama LLM
-            response = await self.client.generate(
-                model=self.model_name,
+            # Create LLM task for intent classification
+            task = LLMTask(
+                task_type=TaskType.GENERATION,  # Intent classification is a text generation task
                 prompt=prompt,
-                options={
-                    "temperature": self.temperature,
-                    "num_predict": self.max_tokens,
-                },
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=Complexity.LOW,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                model_local=self.model_name,  # Prefer local model for fast classification
             )
 
+            # Call AegisLLMProxy
+            result = await self.llm_proxy.generate(task)
+
             # Extract response text
-            llm_response = response.get("response", "")
+            llm_response = result.content
 
             # Parse intent
             intent = self._parse_intent(llm_response)
@@ -170,6 +178,8 @@ class IntentClassifier:
                 query=query[:100],
                 intent=intent.value,
                 llm_response=llm_response[:100],
+                provider=result.provider,
+                cost_usd=result.cost_usd,
             )
 
             return intent

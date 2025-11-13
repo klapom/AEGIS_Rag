@@ -94,16 +94,27 @@ def test_ollama_llm_client_init_custom_params():
 
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_success():
-    """Test OllamaLLMClient generates text response successfully."""
-    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
+    """Test OllamaLLMClient generates text response successfully via AegisLLMProxy."""
+    with (
+        patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class,
+        patch("src.components.memory.graphiti_wrapper.get_aegis_llm_proxy") as mock_get_proxy,
+    ):
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
-        # Given: LLM client with mocked Ollama
-        mock_client = AsyncMock()
-        mock_client.chat.return_value = {
-            "message": {"content": "Generated response"}
-        }
-        mock_async_client_class.return_value = mock_client
+        # Given: LLM client with mocked proxy
+        mock_async_client_class.return_value = AsyncMock()  # For embeddings
+
+        # Mock AegisLLMProxy
+        mock_proxy = AsyncMock()
+        mock_result = MagicMock()
+        mock_result.content = "Generated response"
+        mock_result.provider = "local_ollama"
+        mock_result.model = "llama3.2:3b"
+        mock_result.tokens_used = 50
+        mock_result.cost_usd = 0.0
+        mock_result.latency_ms = 100
+        mock_proxy.generate.return_value = mock_result
+        mock_get_proxy.return_value = mock_proxy
 
         client = OllamaLLMClient()
 
@@ -113,19 +124,24 @@ async def test_ollama_llm_client_generate_response_success():
 
         # Then: Verify response
         assert response == "Generated response"
-        mock_client.chat.assert_called_once()
+        mock_proxy.generate.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_invalid_response():
-    """Test OllamaLLMClient handles invalid Ollama response."""
-    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
+    """Test OllamaLLMClient handles LLM proxy errors."""
+    with (
+        patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class,
+        patch("src.components.memory.graphiti_wrapper.get_aegis_llm_proxy") as mock_get_proxy,
+    ):
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
-        # Given: LLM client with invalid response
-        mock_client = AsyncMock()
-        mock_client.chat.return_value = {"invalid": "structure"}  # Missing 'message'
-        mock_async_client_class.return_value = mock_client
+        # Given: LLM client with proxy error
+        mock_async_client_class.return_value = AsyncMock()
+
+        mock_proxy = AsyncMock()
+        mock_proxy.generate.side_effect = Exception("LLM proxy error")
+        mock_get_proxy.return_value = mock_proxy
 
         client = OllamaLLMClient()
 
@@ -134,19 +150,24 @@ async def test_ollama_llm_client_generate_response_invalid_response():
         with pytest.raises(LLMError) as exc_info:
             await client._generate_response(messages)
 
-        assert "Invalid response from Ollama" in str(exc_info.value)
+        assert "graphiti_memory_generation" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
 async def test_ollama_llm_client_generate_response_connection_error():
     """Test OllamaLLMClient handles connection errors."""
-    with patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class:
+    with (
+        patch("src.components.memory.graphiti_wrapper.AsyncClient") as mock_async_client_class,
+        patch("src.components.memory.graphiti_wrapper.get_aegis_llm_proxy") as mock_get_proxy,
+    ):
         from src.components.memory.graphiti_wrapper import OllamaLLMClient
 
         # Given: LLM client with connection error
-        mock_client = AsyncMock()
-        mock_client.chat.side_effect = ConnectionError("Ollama not available")
-        mock_async_client_class.return_value = mock_client
+        mock_async_client_class.return_value = AsyncMock()
+
+        mock_proxy = AsyncMock()
+        mock_proxy.generate.side_effect = ConnectionError("Provider not available")
+        mock_get_proxy.return_value = mock_proxy
 
         client = OllamaLLMClient()
 
@@ -155,7 +176,7 @@ async def test_ollama_llm_client_generate_response_connection_error():
         with pytest.raises(LLMError) as exc_info:
             await client._generate_response(messages)
 
-        assert "Ollama generation failed" in str(exc_info.value)
+        assert "graphiti_memory_generation" in str(exc_info.value)
 
 
 # ============================================================================
@@ -208,7 +229,7 @@ async def test_ollama_llm_client_generate_embeddings_invalid_response():
             with pytest.raises(LLMError) as exc_info:
                 await client.generate_embeddings(texts)
 
-            assert "Invalid embedding response" in str(exc_info.value)
+            assert "graphiti_embedding_generation" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -231,7 +252,7 @@ async def test_ollama_llm_client_generate_embeddings_connection_error():
             with pytest.raises(LLMError) as exc_info:
                 await client.generate_embeddings(texts)
 
-            assert "Embedding generation failed" in str(exc_info.value)
+            assert "graphiti_embedding_generation" in str(exc_info.value)
 
 
 # ============================================================================
@@ -304,7 +325,7 @@ def test_graphiti_wrapper_init_connection_error():
         with pytest.raises(MemoryError) as exc_info:
             GraphitiWrapper()
 
-        assert "Failed to initialize Graphiti" in str(exc_info.value)
+        assert "graphiti_initialization" in str(exc_info.value)
 
 
 # ============================================================================
@@ -406,7 +427,7 @@ async def test_add_episode_error():
         with pytest.raises(MemoryError) as exc_info:
             await wrapper.add_episode(content="Test", source="test")
 
-        assert "Failed to add episode" in str(exc_info.value)
+        assert "add_episode" in str(exc_info.value)
 
 
 # ============================================================================
@@ -510,7 +531,7 @@ async def test_search_error():
         with pytest.raises(MemoryError) as exc_info:
             await wrapper.search(query="test")
 
-        assert "Memory search failed" in str(exc_info.value)
+        assert "memory_search" in str(exc_info.value)
 
 
 # ============================================================================
@@ -609,7 +630,7 @@ async def test_add_entity_error():
         with pytest.raises(MemoryError) as exc_info:
             await wrapper.add_entity(name="Alice", entity_type="person")
 
-        assert "Failed to add entity" in str(exc_info.value)
+        assert "add_entity" in str(exc_info.value)
 
 
 # ============================================================================
@@ -714,7 +735,7 @@ async def test_add_edge_error():
                 relationship_type="knows",
             )
 
-        assert "Failed to add edge" in str(exc_info.value)
+        assert "add_edge" in str(exc_info.value)
 
 
 # ============================================================================
@@ -785,4 +806,4 @@ def test_get_graphiti_wrapper_disabled():
         with pytest.raises(MemoryError) as exc_info:
             get_graphiti_wrapper()
 
-        assert "Graphiti is disabled" in str(exc_info.value)
+        assert "get_graphiti_wrapper" in str(exc_info.value)

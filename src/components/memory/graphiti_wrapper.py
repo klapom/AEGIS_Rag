@@ -21,6 +21,13 @@ from graphiti_core.search.search_config import SearchConfig
 from ollama import AsyncClient
 
 from src.components.graph_rag.neo4j_client import get_neo4j_client
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.core.exceptions import LLMError, MemoryError
 
@@ -28,11 +35,15 @@ logger = structlog.get_logger(__name__)
 
 
 class OllamaLLMClient(LLMClient):
-    """Custom LLM client for Graphiti using Ollama.
+    """Custom LLM client for Graphiti using AegisLLMProxy.
 
-    Implements Graphiti's LLMClient interface to use Ollama for:
-    - Entity and relationship extraction
+    Sprint 25 Feature 25.10: Migrated from direct Ollama to multi-cloud routing.
+
+    Implements Graphiti's LLMClient interface to use AegisLLMProxy for:
+    - Entity and relationship extraction (memory consolidation)
     - Text generation for memory operations
+    - Multi-cloud routing: Local Ollama → Alibaba Cloud → OpenAI
+    - Cost tracking and observability
     """
 
     def __init__(
@@ -41,22 +52,26 @@ class OllamaLLMClient(LLMClient):
         model: str | None = None,
         temperature: float = 0.1,
     ):
-        """Initialize Ollama LLM client.
+        """Initialize LLM client with AegisLLMProxy.
 
         Args:
-            base_url: Ollama server URL (default: from settings)
-            model: Ollama model name (default: from settings)
+            base_url: Ollama server URL (deprecated, kept for compatibility)
+            model: Preferred model name (default: from settings)
             temperature: Generation temperature (default: 0.1 for consistency)
         """
         self.base_url = base_url or settings.graphiti_ollama_base_url
         self.model = model or settings.graphiti_llm_model
         self.temperature = temperature
+
+        # Sprint 25: Use AegisLLMProxy for multi-cloud routing
+        self.proxy = get_aegis_llm_proxy()
+
+        # Keep AsyncClient for embeddings (embeddings always local)
         self.client = AsyncClient(host=self.base_url)
 
         logger.info(
-            "Initialized OllamaLLMClient",
-            base_url=self.base_url,
-            model=self.model,
+            "Initialized OllamaLLMClient with AegisLLMProxy",
+            preferred_model=self.model,
             temperature=self.temperature,
         )
 
@@ -65,10 +80,11 @@ class OllamaLLMClient(LLMClient):
         messages: list[dict[str, str]],
         max_tokens: int = 4096,
     ) -> str:
-        """Generate text response from Ollama.
+        """Generate text response via AegisLLMProxy.
 
         Sprint 12: Renamed from generate_response() to _generate_response()
         to match updated Graphiti LLMClient abstract method.
+        Sprint 25: Migrated to AegisLLMProxy for multi-cloud routing.
 
         Args:
             messages: List of message dicts with 'role' and 'content'
@@ -81,31 +97,43 @@ class OllamaLLMClient(LLMClient):
             LLMError: If generation fails
         """
         try:
-            response = await self.client.chat(
-                model=self.model,
-                messages=messages,
-                options={
-                    "temperature": self.temperature,
-                    "num_predict": max_tokens,
-                },
+            # Convert messages to prompt (Graphiti uses chat format)
+            prompt_parts = []
+            for msg in messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                prompt_parts.append(f"{role}: {content}")
+            prompt = "\n\n".join(prompt_parts)
+
+            # Create LLM task for memory consolidation
+            task = LLMTask(
+                task_type=TaskType.MEMORY_CONSOLIDATION,
+                prompt=prompt,
+                quality_requirement=QualityRequirement.HIGH,
+                complexity=Complexity.MEDIUM,
+                max_tokens=max_tokens,
+                temperature=self.temperature,
+                model_local=self.model,  # Preferred local model
             )
 
-            if not response or "message" not in response:
-                raise LLMError("Invalid response from Ollama")
+            # Execute via proxy
+            result = await self.proxy.generate(task)
 
-            content = response["message"]["content"]
             logger.debug(
-                "Generated response",
-                model=self.model,
-                input_tokens=len(str(messages)),
-                output_length=len(content),
+                "Generated response via AegisLLMProxy",
+                provider=result.provider,
+                model=result.model,
+                tokens_used=result.tokens_used,
+                cost_usd=result.cost_usd,
+                latency_ms=result.latency_ms,
+                output_length=len(result.content),
             )
 
-            return content
+            return result.content
 
         except Exception as e:
-            logger.error("Ollama generation failed", error=str(e))
-            raise LLMError(f"Ollama generation failed: {e}") from e
+            logger.error("LLM generation failed", error=str(e))
+            raise LLMError(operation="graphiti_memory_generation", reason=str(e)) from e
 
     async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings using Ollama.
@@ -128,7 +156,10 @@ class OllamaLLMClient(LLMClient):
                 )
 
                 if not response or "embedding" not in response:
-                    raise LLMError(f"Invalid embedding response for text: {text[:50]}")
+                    raise LLMError(
+                        operation="graphiti_embedding_generation",
+                        reason=f"Invalid embedding response for text: {text[:50]}"
+                    )
 
                 embeddings.append(response["embedding"])
 
@@ -143,7 +174,7 @@ class OllamaLLMClient(LLMClient):
 
         except Exception as e:
             logger.error("Embedding generation failed", error=str(e))
-            raise LLMError(f"Embedding generation failed: {e}") from e
+            raise LLMError(operation="graphiti_embedding_generation", reason=str(e)) from e
 
 
 class GraphitiWrapper:
@@ -241,7 +272,7 @@ class GraphitiWrapper:
             )
         except Exception as e:
             logger.error("Failed to initialize Graphiti", error=str(e))
-            raise MemoryError(f"Failed to initialize Graphiti: {e}") from e
+            raise MemoryError(operation="graphiti_initialization", reason=str(e)) from e
 
     async def add_episode(
         self,
@@ -299,7 +330,7 @@ class GraphitiWrapper:
 
         except Exception as e:
             logger.error("Failed to add episode", error=str(e), source=source)
-            raise MemoryError(f"Failed to add episode: {e}") from e
+            raise MemoryError(operation="add_episode", reason=str(e)) from e
 
     async def search(
         self,
@@ -359,7 +390,7 @@ class GraphitiWrapper:
 
         except Exception as e:
             logger.error("Memory search failed", query=query[:100], error=str(e))
-            raise MemoryError(f"Memory search failed: {e}") from e
+            raise MemoryError(operation="memory_search", reason=str(e)) from e
 
     async def add_entity(
         self,
@@ -410,7 +441,7 @@ class GraphitiWrapper:
 
         except Exception as e:
             logger.error("Failed to add entity", name=name, error=str(e))
-            raise MemoryError(f"Failed to add entity: {e}") from e
+            raise MemoryError(operation="add_entity", reason=str(e)) from e
 
     async def add_edge(
         self,
@@ -470,7 +501,7 @@ class GraphitiWrapper:
                 type=relationship_type,
                 error=str(e),
             )
-            raise MemoryError(f"Failed to add edge: {e}") from e
+            raise MemoryError(operation="add_edge", reason=str(e)) from e
 
     async def close(self) -> None:
         """Close Graphiti and Neo4j connections.
@@ -508,6 +539,9 @@ def get_graphiti_wrapper() -> GraphitiWrapper:
     global _graphiti_wrapper
     if _graphiti_wrapper is None:
         if not settings.graphiti_enabled:
-            raise MemoryError("Graphiti is disabled in settings")
+            raise MemoryError(
+                operation="get_graphiti_wrapper",
+                reason="Graphiti is disabled in settings"
+            )
         _graphiti_wrapper = GraphitiWrapper()
     return _graphiti_wrapper

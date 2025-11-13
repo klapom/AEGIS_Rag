@@ -21,21 +21,24 @@ def mock_neo4j_client():
 
 
 @pytest.fixture
-def mock_ollama_client():
-    """Mock Ollama client."""
-    client = AsyncMock()
-    return client
+def mock_llm_proxy():
+    """Mock AegisLLMProxy."""
+    proxy = AsyncMock()
+    return proxy
 
 
 @pytest.fixture
-def labeler(mock_neo4j_client):
+def labeler(mock_neo4j_client, mock_llm_proxy):
     """Create CommunityLabeler instance with mocked clients."""
-    labeler = CommunityLabeler(
-        neo4j_client=mock_neo4j_client,
-        llm_model="llama3.2:3b",
-        enabled=True,
-    )
-    return labeler
+    with patch("src.components.graph_rag.community_labeler.get_aegis_llm_proxy") as mock_get_proxy:
+        mock_get_proxy.return_value = mock_llm_proxy
+        labeler = CommunityLabeler(
+            neo4j_client=mock_neo4j_client,
+            llm_model="llama3.2:3b",
+            enabled=True,
+        )
+        labeler.proxy = mock_llm_proxy  # Ensure proxy is set
+        return labeler
 
 
 @pytest.fixture
@@ -148,56 +151,55 @@ class TestGenerateLabel:
 
     @pytest.mark.asyncio
     async def test_generate_label_success(self, labeler, sample_entities):
-        """Test successful label generation."""
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Machine Learning Research"}
+        """Test successful label generation via AegisLLMProxy."""
+        # Mock proxy response
+        mock_result = MagicMock()
+        mock_result.content = "Machine Learning Research"
+        mock_result.provider = "local_ollama"
+        mock_result.model = "llama3.2:3b"
+        mock_result.cost_usd = 0.0
+        mock_result.latency_ms = 50
+        labeler.proxy.generate.return_value = mock_result
 
-            label = await labeler.generate_label(sample_entities)
+        label = await labeler.generate_label(sample_entities)
 
-            assert label == "Machine Learning Research"
-            mock_generate.assert_called_once()
+        assert label == "Machine Learning Research"
+        labeler.proxy.generate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_generate_label_with_quotes(self, labeler, sample_entities):
         """Test label generation with quotes in response."""
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": '"Software Engineering"'}
+        mock_result = MagicMock()
+        mock_result.content = '"Software Engineering"'
+        labeler.proxy.generate.return_value = mock_result
 
-            label = await labeler.generate_label(sample_entities)
+        label = await labeler.generate_label(sample_entities)
 
-            assert label == "Software Engineering"
+        assert label == "Software Engineering"
 
     @pytest.mark.asyncio
     async def test_generate_label_too_long(self, labeler, sample_entities):
         """Test label truncation when too long."""
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {
-                "response": "This Is A Very Long Label That Exceeds Five Words"
-            }
+        mock_result = MagicMock()
+        mock_result.content = "This Is A Very Long Label That Exceeds Five Words"
+        labeler.proxy.generate.return_value = mock_result
 
-            label = await labeler.generate_label(sample_entities)
+        label = await labeler.generate_label(sample_entities)
 
-            # Should be truncated to 5 words
-            assert len(label.split()) <= 5
+        # Should be truncated to 5 words
+        assert len(label.split()) <= 5
 
     @pytest.mark.asyncio
     async def test_generate_label_too_short(self, labeler, sample_entities):
         """Test label handling when too short."""
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "AI"}
+        mock_result = MagicMock()
+        mock_result.content = "AI"
+        labeler.proxy.generate.return_value = mock_result
 
-            label = await labeler.generate_label(sample_entities)
+        label = await labeler.generate_label(sample_entities)
 
-            # Should default to "Unlabeled Community" for single word
-            assert label == "Unlabeled Community"
+        # Should default to "Unlabeled Community" for single word
+        assert label == "Unlabeled Community"
 
     @pytest.mark.asyncio
     async def test_generate_label_empty_entities(self, labeler):
@@ -218,14 +220,11 @@ class TestGenerateLabel:
     @pytest.mark.asyncio
     async def test_generate_label_llm_error(self, labeler, sample_entities):
         """Test error handling during LLM call."""
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.side_effect = Exception("LLM error")
+        labeler.proxy.generate.side_effect = Exception("LLM proxy error")
 
-            label = await labeler.generate_label(sample_entities)
+        label = await labeler.generate_label(sample_entities)
 
-            assert label == "Unlabeled Community"
+        assert label == "Unlabeled Community"
 
 
 class TestLabelAllCommunities:
@@ -253,15 +252,14 @@ class TestLabelAllCommunities:
 
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 2}]
 
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Test Community"}
+        mock_result = MagicMock()
+        mock_result.content = "Test Community"
+        labeler.proxy.generate.return_value = mock_result
 
-            labeled = await labeler.label_all_communities(communities)
+        labeled = await labeler.label_all_communities(communities)
 
-            assert len(labeled) == 2
-            assert all(c.label != "" for c in labeled)
+        assert len(labeled) == 2
+        assert all(c.label != "" for c in labeled)
 
     @pytest.mark.asyncio
     async def test_label_all_disabled(self, mock_neo4j_client):
@@ -299,16 +297,15 @@ class TestLabelAllCommunities:
 
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 1}]
 
-        with patch.object(
-            labeler.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Test Label"}
+        mock_result = MagicMock()
+        mock_result.content = "Test Label"
+        labeler.proxy.generate.return_value = mock_result
 
-            labeled = await labeler.label_all_communities(communities)
+        labeled = await labeler.label_all_communities(communities)
 
-            assert len(labeled) == 2
-            # First should be labeled, second should be "Empty Community" (no entities found)
-            assert labeled[1].label == "Empty Community"
+        assert len(labeled) == 2
+        # First should be labeled, second should be "Empty Community" (no entities found)
+        assert labeled[1].label == "Empty Community"
 
 
 class TestUpdateCommunityLabel:
