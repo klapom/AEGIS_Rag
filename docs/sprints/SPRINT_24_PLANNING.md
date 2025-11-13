@@ -176,13 +176,26 @@ Make entire ingestion pipeline async. Refactor `ImageProcessor.process_image()` 
 
 ### Category 3: Architecture & Code Quality
 
-#### Feature 24.4: Code Linting and Type Safety Improvements (3 SP)
-**Priority:** P3 (Low)
-**Duration:** 0.5 day
-**Source:** General code quality (TODO comments in codebase)
+#### Feature 24.4: Code Linting and Type Safety Improvements (5 SP) ⭐ EXPANDED
+**Priority:** P1 (High) - **UPGRADED from P3 due to CI failures**
+**Duration:** 1 day
+**Source:** CI Ruff Linter failures (89 errors) + TODO comments in codebase
 
 **Problem:**
-Multiple TODO comments in code indicate incomplete implementations or workarounds.
+CI failing with 89 Ruff linter errors (primarily type annotations) + multiple TODO comments indicating incomplete implementations.
+
+**Ruff Linter Errors (89 total):**
+- **65 errors:** Type annotations (UP045: `Optional[X]` → `X | None`, UP035: `Dict/List/Tuple` → `dict/list/tuple`, UP006: Generic type hints)
+- **15 errors:** Unused imports (F401)
+- **5 errors:** Import sorting (I001)
+- **4 errors:** Style issues (SIM102, SIM105, UP017, UP015, etc.)
+
+**Affected Modules:**
+- `src/components/llm_proxy/*` (30 errors) - Sprint 23 code
+- `src/components/ingestion/*` (25 errors)
+- `src/api/*` (20 errors)
+- `src/core/*` (10 errors)
+- Others (4 errors)
 
 **TODO Items Found:**
 1. `scripts/benchmark_embeddings.py:293` - Implement NDCG@10, MRR, Precision@5
@@ -193,21 +206,26 @@ Multiple TODO comments in code indicate incomplete implementations or workaround
 6. `src/api/health/memory_health.py:180,181,251-260,284-293` - Health check implementations
 
 **Solution:**
-Systematic cleanup of TODO items, implement missing features or document deferral.
+1. **Fix all 89 Ruff linter errors** (modern type hints, remove unused imports, sort imports)
+2. Systematic cleanup of TODO items, implement high-priority or document deferral
 
 **Deliverables:**
+- [ ] Fix 89 Ruff linter errors (modern type annotations)
+- [ ] Remove unused imports (15 instances)
+- [ ] Sort imports (5 instances)
+- [ ] Fix style issues (4 instances)
 - [ ] Audit all TODO comments in src/
 - [ ] Implement high-priority TODOs (health checks, monitoring)
 - [ ] Document deferred TODOs with rationale
 - [ ] Run MyPy strict mode and fix type errors
-- [ ] Run Ruff linter and fix issues
 
 **Acceptance Criteria:**
+- ✅ Ruff linter passing (0 errors) - **CI blocker resolved**
 - ✅ All P0/P1 TODOs implemented
 - ✅ P2/P3 TODOs documented with tickets
 - ✅ MyPy strict mode passing
-- ✅ Ruff linter passing (0 errors)
 - ✅ Code quality score >90%
+- ✅ CI Code Quality job passing
 
 ---
 
