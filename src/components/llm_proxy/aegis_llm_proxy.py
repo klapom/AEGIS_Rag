@@ -379,10 +379,23 @@ class AegisLLMProxy:
         )
 
         # Convert ANY-LLM response to AegisRAG format
-        tokens_used = response.usage.total_tokens if hasattr(response, "usage") and response.usage else 0
+        # Extract token breakdown for accurate cost calculation
+        tokens_input = 0
+        tokens_output = 0
+        tokens_used = 0
 
-        # Track spending for cloud providers
-        cost = self._calculate_cost(provider, tokens_used)
+        if hasattr(response, "usage") and response.usage:
+            tokens_input = getattr(response.usage, "prompt_tokens", 0) or 0
+            tokens_output = getattr(response.usage, "completion_tokens", 0) or 0
+            tokens_used = getattr(response.usage, "total_tokens", 0) or 0
+
+        # Track spending for cloud providers with accurate input/output split
+        cost = self._calculate_cost(
+            provider=provider,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            tokens_total=tokens_used,
+        )
         if provider in self._monthly_spending:
             self._monthly_spending[provider] += cost
 
@@ -430,28 +443,60 @@ class AegisLLMProxy:
         }
         return default_models.get(provider, "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M")
 
-    def _calculate_cost(self, provider: str, tokens: int) -> float:
+    def _calculate_cost(
+        self,
+        provider: str,
+        tokens_input: int = 0,
+        tokens_output: int = 0,
+        tokens_total: int = 0,
+    ) -> float:
         """
-        Calculate cost for request (USD).
+        Calculate cost for request (USD) with accurate input/output split.
 
-        Pricing (as of 2025-11-13):
+        Pricing (as of 2025-11-13, International Singapore region):
             - Local Ollama: FREE
-            - Alibaba Cloud Qwen3-32B: ~$0.001 per 1,000 tokens
-            - OpenAI GPT-4o: ~$0.015 per 1,000 tokens (avg input+output)
+            - Alibaba Cloud qwen-turbo: $0.05/M input, $0.2/M output
+            - Alibaba Cloud qwen-plus: $0.4/M input, $1.2/M output
+            - Alibaba Cloud qwen-max: $1.6/M input, $6.4/M output
+            - OpenAI GPT-4o: $2.50/M input, $10.00/M output
 
         Args:
             provider: Provider name
-            tokens: Total tokens used (input + output)
+            tokens_input: Input tokens (prompt)
+            tokens_output: Output tokens (completion)
+            tokens_total: Total tokens (fallback if input/output unavailable)
 
         Returns:
             Cost in USD
         """
-        pricing = {
-            "local_ollama": 0.0,  # Free
-            "alibaba_cloud": 0.000001,  # $0.001 per 1k tokens (qwen-plus)
-            "openai": 0.000015,  # $0.015 per 1k tokens (avg)
-        }
-        cost = tokens * pricing.get(provider, 0.0)
+        # If input/output not available, use total tokens (old behavior)
+        if tokens_input == 0 and tokens_output == 0 and tokens_total > 0:
+            # Use legacy pricing (average input+output rate)
+            pricing_legacy = {
+                "local_ollama": 0.0,  # Free
+                "alibaba_cloud": 0.000125,  # avg of $0.05/$0.2 per 1M = $0.125/1M
+                "openai": 0.00625,  # avg of $2.50/$10.00 per 1M = $6.25/1M
+            }
+            cost = (tokens_total / 1_000_000) * pricing_legacy.get(provider, 0.0)
+        else:
+            # Use accurate input/output pricing
+            pricing = {
+                "local_ollama": {"input": 0.0, "output": 0.0},  # Free
+                "alibaba_cloud": {
+                    "input": 0.05,  # $0.05 per 1M tokens (qwen-turbo)
+                    "output": 0.2,  # $0.2 per 1M tokens (qwen-turbo)
+                },
+                "openai": {
+                    "input": 2.50,  # $2.50 per 1M tokens (gpt-4o)
+                    "output": 10.00,  # $10.00 per 1M tokens (gpt-4o)
+                },
+            }
+
+            provider_pricing = pricing.get(provider, {"input": 0.0, "output": 0.0})
+            cost = (
+                (tokens_input / 1_000_000) * provider_pricing["input"]
+                + (tokens_output / 1_000_000) * provider_pricing["output"]
+            )
 
         # Track total cost
         self._total_cost += cost
@@ -492,9 +537,20 @@ class AegisLLMProxy:
 
         # Persist to SQLite database (Sprint 23 - persistent cost tracking)
         try:
-            # Estimate 50/50 split for input/output tokens if not available
-            tokens_input = result.tokens_used // 2
-            tokens_output = result.tokens_used - tokens_input
+            # Parse token breakdown from ANY-LLM response (OpenAI-compatible format)
+            # response.usage contains: prompt_tokens, completion_tokens, total_tokens
+            tokens_input = 0
+            tokens_output = 0
+
+            if hasattr(response, "usage") and response.usage:
+                # Extract accurate token counts from usage object
+                tokens_input = getattr(response.usage, "prompt_tokens", 0) or 0
+                tokens_output = getattr(response.usage, "completion_tokens", 0) or 0
+
+            # Fallback: estimate 50/50 split if usage field missing or zero
+            if tokens_input == 0 and tokens_output == 0 and result.tokens_used > 0:
+                tokens_input = result.tokens_used // 2
+                tokens_output = result.tokens_used - tokens_input
 
             self.cost_tracker.track_request(
                 provider=provider,
@@ -511,11 +567,32 @@ class AegisLLMProxy:
         except Exception as e:
             logger.warning("Failed to persist cost tracking", error=str(e))
 
-        # TODO: Add Prometheus metrics when metrics module is available
-        # from src.core.metrics import llm_requests_total, llm_latency_seconds, llm_cost_usd
-        # llm_requests_total.labels(provider=provider, task_type=task.task_type).inc()
-        # llm_latency_seconds.labels(provider=provider).observe(result.latency_ms / 1000)
-        # llm_cost_usd.labels(provider=provider).inc(result.cost_usd)
+        # Prometheus metrics (Sprint 24 Feature 24.1)
+        try:
+            from src.core.metrics import track_llm_request, update_budget_metrics
+
+            # Track request metrics
+            track_llm_request(
+                provider=provider,
+                model=result.model,
+                task_type=task.task_type,
+                tokens_used=result.tokens_used,
+                cost_usd=result.cost_usd,
+                latency_seconds=result.latency_ms / 1000.0,
+                tokens_input=tokens_input,
+                tokens_output=tokens_output,
+            )
+
+            # Update budget metrics for cloud providers
+            if provider in ["alibaba_cloud", "openai"]:
+                budget_limit = self.config.get_budget_limit(provider)
+                monthly_spending = self._monthly_spending.get(provider, 0.0)
+                update_budget_metrics(provider, monthly_spending, budget_limit)
+
+        except ImportError:
+            logger.warning("Prometheus metrics not available (metrics module not found)")
+        except Exception as e:
+            logger.warning("Failed to track Prometheus metrics", error=str(e))
 
     def get_metrics_summary(self) -> dict:
         """
