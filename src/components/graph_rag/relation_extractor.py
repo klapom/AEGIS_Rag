@@ -1,13 +1,13 @@
-"""Gemma 3 4B Relation Extractor for Graph RAG.
+"""Relation Extractor for Graph RAG with Multi-Cloud LLM Support.
 
-Sprint 13 Feature 13.9: ADR-018
-Uses Gemma 3 4B Q4_K_M (via Ollama) for high-quality relation extraction
-between entities. This is Phase 3 of the 3-phase extraction pipeline.
-
-Sprint 14 Feature 14.5: Added retry logic and error handling.
+Sprint 13 Feature 13.9: ADR-018 - Initial implementation with Gemma 3 4B
+Sprint 14 Feature 14.5: Added retry logic and error handling
+Sprint 23 Feature 23.6: AegisLLMProxy Integration
+Migrated from Ollama Client to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
+Default model: Gemma 3 4B Q4_K_M (local), with automatic cloud fallback.
 
 Author: Claude Code
-Date: 2025-10-24, Updated: 2025-10-27
+Date: 2025-10-24, Updated: 2025-11-13
 """
 
 import json
@@ -15,13 +15,20 @@ import re
 from typing import Any
 
 import structlog
-from ollama import Client
 from tenacity import (
     before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+)
+
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
 )
 
 logger = structlog.get_logger(__name__)
@@ -82,19 +89,23 @@ Output (valid JSON only):
 """
 
 
-class GemmaRelationExtractor:
-    """Extract relations between entities using Gemma 3 4B.
+class RelationExtractor:
+    """Extract relations between entities using multi-cloud LLM routing.
 
-    Uses Ollama with Gemma 3 4B Q4_K_M quantization for high-quality
-    relation extraction. Operates on a pre-defined entity list to ensure
-    all relations reference valid entities.
+    Uses AegisLLMProxy for intelligent routing across providers:
+    - Local: Gemma 3 4B Q4_K_M (default, free)
+    - Alibaba Cloud: Qwen models (medium complexity)
+    - OpenAI: GPT-4o (critical quality + high complexity)
 
-    Architecture Decision: ADR-018 (Model Selection)
-    Performance: ~13-16s per document (200-300 words)
+    Operates on a pre-defined entity list to ensure all relations
+    reference valid entities.
+
+    Architecture Decision: ADR-018 (Model Selection), ADR-033 (Multi-Cloud Routing)
+    Performance: ~13-16s per document (200-300 words) local
     Quality: 123% relation accuracy (exceeds targets)
 
     Example:
-        >>> extractor = GemmaRelationExtractor()
+        >>> extractor = RelationExtractor()
         >>> entities = [
         ...     {"name": "Alex", "type": "PERSON"},
         ...     {"name": "TechCorp", "type": "ORGANIZATION"}
@@ -107,7 +118,6 @@ class GemmaRelationExtractor:
     def __init__(
         self,
         model: str = "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
-        ollama_client: Client = None,
         temperature: float = 0.1,
         num_predict: int = 2000,
         num_ctx: int = 16384,
@@ -118,9 +128,8 @@ class GemmaRelationExtractor:
         """Initialize Gemma relation extractor.
 
         Args:
-            model: Ollama model name
+            model: Preferred local model name
                   Default: Gemma 3 4B Q4_K_M (best performance from benchmarks)
-            ollama_client: Ollama client instance (or create new)
             temperature: LLM temperature (0.0-1.0, lower = more deterministic)
             num_predict: Max tokens to generate
             num_ctx: Context window size
@@ -129,7 +138,8 @@ class GemmaRelationExtractor:
             retry_max_wait: Max wait time between retries in seconds (Sprint 14)
         """
         self.model = model
-        self.client = ollama_client or Client()
+        # Sprint 23: Use AegisLLMProxy instead of direct Ollama client
+        self.proxy = get_aegis_llm_proxy()
         self.temperature = temperature
         self.num_predict = num_predict
         self.num_ctx = num_ctx
@@ -138,13 +148,14 @@ class GemmaRelationExtractor:
         self.retry_max_wait = retry_max_wait
 
         logger.info(
-            "gemma_relation_extractor_initialized",
+            "relation_extractor_initialized",
             model=model,
             temperature=temperature,
             num_predict=num_predict,
             num_ctx=num_ctx,
             max_retries=max_retries,
             retry_config=f"{retry_min_wait}-{retry_max_wait}s",
+            proxy="AegisLLMProxy",
         )
 
     async def extract(self, text: str, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -241,23 +252,23 @@ class GemmaRelationExtractor:
         )
         async def _call_llm():
             """Inner function with retry decorator."""
-            response = self.client.chat(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT_RELATION},
-                    {"role": "user", "content": user_prompt},
-                ],
-                options={
-                    "temperature": self.temperature,
-                    "num_predict": self.num_predict,
-                    "num_ctx": self.num_ctx,
-                },
-                format="json",
-                keep_alive="30m",  # Sprint 20.4: Keep model in VRAM for 30 minutes
+            # Sprint 23: Use AegisLLMProxy with combined system + user prompt
+            combined_prompt = f"{SYSTEM_PROMPT_RELATION}\n\n{user_prompt}"
+
+            task = LLMTask(
+                task_type=TaskType.EXTRACTION,
+                prompt=combined_prompt,
+                quality_requirement=QualityRequirement.HIGH,
+                complexity=Complexity.MEDIUM,
+                temperature=self.temperature,
+                max_tokens=self.num_predict,
+                model_local=self.model,
             )
 
+            response = await self.proxy.generate(task)
+
             # Parse JSON response
-            content = response["message"]["content"]
+            content = response.content
             relation_data = self._parse_json_response(content)
             return relation_data.get("relations", [])
 
@@ -296,37 +307,30 @@ class GemmaRelationExtractor:
             return {"relations": []}
 
 
-def create_relation_extractor_from_config(config) -> GemmaRelationExtractor:
+def create_relation_extractor_from_config(config) -> RelationExtractor:
     """Factory function to create relation extractor from app config.
 
     Args:
         config: Application config object with attributes:
-               - GEMMA_MODEL (str): Ollama model name
+               - GEMMA_MODEL (str): Preferred local model name
                - GEMMA_TEMPERATURE (float): LLM temperature
                - GEMMA_NUM_PREDICT (int): Max tokens
                - GEMMA_NUM_CTX (int): Context window
-               - OLLAMA_BASE_URL (str): Ollama server URL
                - EXTRACTION_MAX_RETRIES (int): Max retries (Sprint 14)
                - EXTRACTION_RETRY_MIN_WAIT (float): Min retry wait (Sprint 14)
                - EXTRACTION_RETRY_MAX_WAIT (float): Max retry wait (Sprint 14)
 
     Returns:
-        GemmaRelationExtractor instance with retry logic (Sprint 14)
+        RelationExtractor instance with retry logic (Sprint 14) and AegisLLMProxy (Sprint 23)
 
     Example:
         >>> from src.core.config import get_settings
         >>> settings = get_settings()
         >>> extractor = create_relation_extractor_from_config(settings)
     """
-    # Create Ollama client with configured base URL
-    from ollama import Client
-
-    ollama_base_url = getattr(config, "ollama_base_url", "http://localhost:11434")
-    ollama_client = Client(host=ollama_base_url)
-
-    return GemmaRelationExtractor(
+    # Sprint 23: No longer need Ollama client - AegisLLMProxy handles routing
+    return RelationExtractor(
         model=getattr(config, "gemma_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"),
-        ollama_client=ollama_client,
         temperature=getattr(config, "gemma_temperature", 0.1),
         num_predict=getattr(config, "gemma_num_predict", 2000),
         num_ctx=getattr(config, "gemma_num_ctx", 16384),

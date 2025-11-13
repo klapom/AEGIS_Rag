@@ -1,13 +1,14 @@
 """LightRAG wrapper for graph-based knowledge retrieval.
 
 This module wraps the LightRAG library to provide:
-- Ollama LLM integration
+- Multi-cloud LLM integration via AegisLLMProxy (Sprint 23)
 - Neo4j backend storage
 - Async support
 - Error handling and retry logic
 
 Sprint 5: Feature 5.1 - LightRAG Core Integration
 Sprint 14: Feature 14.1 - Three-Phase Pipeline Integration with Graph-based Provenance
+Sprint 23: Feature 23.6 - AegisLLMProxy Integration
 """
 
 import time
@@ -99,22 +100,35 @@ class LightRAGWrapper:
             os.environ["NEO4J_USERNAME"] = self.neo4j_user
             os.environ["NEO4J_PASSWORD"] = self.neo4j_password
 
-            # Configure Ollama LLM function
-            async def ollama_llm_complete(
+            # Sprint 23: Configure multi-cloud LLM function via AegisLLMProxy
+            from src.components.llm_proxy import get_aegis_llm_proxy
+            from src.components.llm_proxy.models import (
+                Complexity,
+                LLMTask,
+                QualityRequirement,
+                TaskType,
+            )
+
+            proxy = get_aegis_llm_proxy()
+
+            async def aegis_llm_complete(
                 prompt: str,
                 system_prompt: str | None = None,
                 model: str = self.llm_model,
                 **kwargs: Any,
             ) -> str:
-                """Ollama LLM completion function for LightRAG.
+                """Multi-cloud LLM completion function for LightRAG.
 
-                Uses Ollama Chat API to properly support system prompts.
+                Sprint 23: Uses AegisLLMProxy for intelligent routing.
                 LightRAG sends entity extraction instructions in system_prompt
                 and the actual task in prompt.
                 """
-                from ollama import AsyncClient
+                # Combine system prompt and user prompt
+                combined_prompt = prompt
+                if system_prompt:
+                    combined_prompt = f"{system_prompt}\n\n{prompt}"
 
-                # 🔍 DETAILED LOGGING: Log prompts being sent to LLM
+                # Log prompts being sent to LLM
                 logger.info(
                     "lightrag_llm_request",
                     model=model,
@@ -126,35 +140,30 @@ class LightRAGWrapper:
                     user_prompt_full=prompt,  # Full user prompt
                 )
 
-                client = AsyncClient(host=settings.ollama_base_url)
-
-                # Build messages for Chat API
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
-
-                # Use Chat API instead of Generate for proper system prompt support
-                response = await client.chat(
-                    model=model,
-                    messages=messages,
-                    options={
-                        "temperature": settings.lightrag_llm_temperature,
-                        "num_predict": settings.lightrag_llm_max_tokens,
-                        "num_ctx": 32768,  # Sprint 13 TD-31: llama3.2:3b supports 32k standard (128k via RoPE)
-                    },
+                # Sprint 23: Use AegisLLMProxy for generation
+                task = LLMTask(
+                    task_type=TaskType.EXTRACTION,
+                    prompt=combined_prompt,
+                    quality_requirement=QualityRequirement.MEDIUM,
+                    complexity=Complexity.MEDIUM,
+                    temperature=settings.lightrag_llm_temperature,
+                    max_tokens=settings.lightrag_llm_max_tokens,
+                    model_local=model,
                 )
 
-                # Extract message content from chat response
-                result: str = response.get("message", {}).get("content", "")
+                response = await proxy.generate(task)
+                result: str = response.content
 
-                # 🔍 DETAILED LOGGING: Log response from LLM
+                # Log response from LLM
                 logger.info(
                     "lightrag_llm_response",
-                    model=model,
+                    provider=response.provider,
+                    model=response.model,
                     response_length=len(result),
                     response_preview=result[:500],  # First 500 chars
                     response_full=result,  # Full response for debugging
+                    cost_usd=response.cost_usd,
+                    latency_ms=response.latency_ms,
                 )
 
                 return result
@@ -194,9 +203,10 @@ class LightRAGWrapper:
             # Initialize LightRAG with Neo4j backend (uses env vars)
             # Sprint 13 TD-31 Fix: Optimize for llama3.2:3b (8k context, small model)
             # Sprint 16 Feature 16.6: Disable internal chunking (use ChunkingService instead)
+            # Sprint 23: Use AegisLLMProxy for multi-cloud routing
             self.rag = LightRAG(
                 working_dir=str(self.working_dir),
-                llm_model_func=ollama_llm_complete,
+                llm_model_func=aegis_llm_complete,  # Sprint 23: Multi-cloud routing
                 embedding_func=embedding_func,
                 graph_storage="Neo4JStorage",  # Storage type name as string
                 llm_model_max_async=2,  # Reduce from 4 to 2 workers (halves memory usage)

@@ -20,7 +20,7 @@ from typing import Any
 
 import structlog
 
-from src.components.graph_rag.gemma_relation_extractor import (
+from src.components.graph_rag.relation_extractor import (
     create_relation_extractor_from_config,
 )
 from src.components.graph_rag.semantic_deduplicator import (

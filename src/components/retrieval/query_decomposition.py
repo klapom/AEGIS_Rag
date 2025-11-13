@@ -1,8 +1,10 @@
 """Query decomposition for handling complex multi-part questions.
 
-This module uses LLM prompting (via Ollama) to classify and decompose
-complex queries into simpler sub-queries that can be executed in parallel
-or sequentially.
+Sprint 23 Feature 23.6: AegisLLMProxy Integration
+Migrated from Ollama AsyncClient to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
+
+This module uses LLM prompting to classify and decompose complex queries
+into simpler sub-queries that can be executed in parallel or sequentially.
 
 Query Types:
 - SIMPLE: Single, direct question (e.g., "What is RAG?")
@@ -21,9 +23,15 @@ import asyncio
 from enum import Enum
 
 import structlog
-from ollama import AsyncClient
 from pydantic import BaseModel, Field
 
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
@@ -98,32 +106,32 @@ Sub-queries:
 
 
 class QueryDecomposer:
-    """Query decomposer using Ollama LLM.
+    """Query decomposer using multi-cloud LLM routing.
 
     Uses prompt-based query classification and decomposition to handle
     complex questions by breaking them into simpler sub-queries.
 
+    Sprint 23: Uses AegisLLMProxy for intelligent routing across providers.
+
     Attributes:
-        ollama_client: Async Ollama client
-        model_name: LLM model for decomposition (default: llama3.2)
+        proxy: AegisLLMProxy instance
+        model_name: Preferred local model name (default: llama3.2)
         classification_threshold: Minimum confidence for complex queries
     """
 
     def __init__(
         self,
-        ollama_base_url: str | None = None,
         model_name: str = "llama3.2",
         classification_threshold: float = 0.7,
     ):
         """Initialize query decomposer.
 
         Args:
-            ollama_base_url: Ollama API base URL (default: from settings)
-            model_name: Ollama model name (default: llama3.2)
+            model_name: Preferred local model name (default: llama3.2)
             classification_threshold: Confidence threshold for complex queries
         """
-        self.ollama_base_url = ollama_base_url or settings.ollama_base_url
-        self.ollama_client = AsyncClient(host=self.ollama_base_url)
+        # Sprint 23: Use AegisLLMProxy for multi-cloud routing
+        self.proxy = get_aegis_llm_proxy()
         self.model_name = model_name
         self.classification_threshold = classification_threshold
 
@@ -131,6 +139,7 @@ class QueryDecomposer:
             "query_decomposer_initialized",
             model=self.model_name,
             threshold=self.classification_threshold,
+            proxy="AegisLLMProxy",
         )
 
     async def classify_query(self, query: str) -> QueryClassification:
@@ -145,17 +154,19 @@ class QueryDecomposer:
         prompt = CLASSIFICATION_PROMPT.format(query=query)
 
         try:
-            response = await self.ollama_client.generate(
-                model=self.model_name,
+            # Sprint 23: Use AegisLLMProxy for classification
+            task = LLMTask(
+                task_type=TaskType.GENERATION,
                 prompt=prompt,
-                options={
-                    "temperature": 0.1,  # Low temp for consistent classification
-                    "top_p": 0.9,
-                    "num_predict": 10,  # Only need 1 word
-                },
+                quality_requirement=QualityRequirement.LOW,  # Simple classification
+                complexity=Complexity.LOW,
+                temperature=0.1,
+                max_tokens=10,  # Only need 1 word
+                model_local=self.model_name,
             )
 
-            classification_text = response["response"].strip().upper()
+            response = await self.proxy.generate(task)
+            classification_text = response.content.strip().upper()
 
             # Parse response
             if "COMPOUND" in classification_text:
@@ -172,6 +183,7 @@ class QueryDecomposer:
                 "query_classified",
                 query_type=query_type.value,
                 confidence=confidence,
+                provider=response.provider,
             )
 
             return QueryClassification(
@@ -211,17 +223,19 @@ class QueryDecomposer:
         )
 
         try:
-            response = await self.ollama_client.generate(
-                model=self.model_name,
+            # Sprint 23: Use AegisLLMProxy for decomposition
+            task = LLMTask(
+                task_type=TaskType.GENERATION,
                 prompt=prompt,
-                options={
-                    "temperature": 0.3,  # Moderate creativity
-                    "top_p": 0.9,
-                    "num_predict": 200,  # Enough for 2-3 sub-queries
-                },
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=Complexity.MEDIUM,
+                temperature=0.3,
+                max_tokens=200,  # Enough for 2-3 sub-queries
+                model_local=self.model_name,
             )
 
-            decomposition_text = response["response"].strip()
+            response = await self.proxy.generate(task)
+            decomposition_text = response.content.strip()
 
             # Parse sub-queries from numbered list
             sub_queries = []

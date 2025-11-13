@@ -1,14 +1,21 @@
 """LLM-based answer generation for RAG.
 
 Sprint 11: Feature 11.1 - LLM-Based Answer Generation
-Replaces simple_answer_node placeholder with proper LLM generation.
+Sprint 23: Feature 23.6 - AegisLLMProxy Integration
+Migrated from Ollama to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
 """
 
 from typing import Any
 
 import structlog
-from langchain_ollama import ChatOllama
 
+from src.components.llm_proxy import get_aegis_llm_proxy
+from src.components.llm_proxy.models import (
+    Complexity,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
+)
 from src.core.config import settings
 from src.prompts.answer_prompts import (
     ANSWER_GENERATION_PROMPT,
@@ -26,27 +33,27 @@ class AnswerGenerator:
     - Source citation support
     - Multi-hop reasoning mode
     - Graceful fallback on errors
+    - Multi-cloud routing (Local → Alibaba Cloud → OpenAI) via AegisLLMProxy (Sprint 23)
     """
 
     def __init__(self, model_name: str | None = None, temperature: float = 0.0):
         """Initialize answer generator.
 
         Args:
-            model_name: Ollama model name (default: llama3.2:3b from ollama_model_query)
+            model_name: Preferred local model name (default: llama3.2:3b from ollama_model_query)
             temperature: LLM temperature for answer generation (0.0 = deterministic)
         """
         self.model_name = model_name or settings.ollama_model_query
         self.temperature = temperature
-        self.llm = ChatOllama(
-            model=self.model_name,
-            temperature=self.temperature,
-            base_url=settings.ollama_base_url,
-        )
+
+        # Sprint 23: Use AegisLLMProxy for multi-cloud routing
+        self.proxy = get_aegis_llm_proxy()
 
         logger.info(
             "answer_generator_initialized",
             model=self.model_name,
             temperature=self.temperature,
+            proxy="AegisLLMProxy",
         )
 
     async def generate_answer(
@@ -74,14 +81,26 @@ class AnswerGenerator:
         # Select prompt based on mode
         if mode == "multi_hop":
             prompt = MULTI_HOP_REASONING_PROMPT.format(contexts=context_text, query=query)
+            complexity = Complexity.HIGH  # Multi-hop requires complex reasoning
         else:
             prompt = ANSWER_GENERATION_PROMPT.format(context=context_text, query=query)
+            complexity = Complexity.MEDIUM  # Simple synthesis
 
         # Generate answer
         logger.debug("generating_answer", query=query[:100], contexts_count=len(contexts))
 
         try:
-            response = await self.llm.ainvoke(prompt)
+            # Sprint 23: Use AegisLLMProxy for generation
+            task = LLMTask(
+                task_type=TaskType.GENERATION,
+                prompt=prompt,
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=complexity,
+                temperature=self.temperature,
+                model_local=self.model_name,
+            )
+
+            response = await self.proxy.generate(task)
             answer = response.content.strip()
 
             logger.info(
@@ -89,6 +108,9 @@ class AnswerGenerator:
                 query=query[:100],
                 answer_length=len(answer),
                 contexts_used=len(contexts),
+                provider=response.provider,
+                cost_usd=response.cost_usd,
+                latency_ms=response.latency_ms,
             )
 
             return answer
