@@ -8,21 +8,22 @@ providers:
     base_url: "${OLLAMA_BASE_URL:-http://localhost:11434}"
     timeout: 60
     models:
-      - gemma-3-4b-it-Q8_0  # Default extraction model (8-bit quantized)
-      - llama3.2:8b          # Alternative generation model
+      - hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M  # Default extraction/generation model
       - bge-m3               # Embeddings (always local)
+      - llava:7b-v1.6-mistral-q2_K  # Vision model
 
-  ollama_cloud:
-    base_url: "${OLLAMA_CLOUD_BASE_URL:-https://ollama.cloud}"
-    api_key: "${OLLAMA_CLOUD_API_KEY}"
+  alibaba_cloud:
+    base_url: "${ALIBABA_CLOUD_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}"
+    api_key: "${ALIBABA_CLOUD_API_KEY:-}"  # Optional - leave empty if not using
     timeout: 120
     models:
-      - llama3-70b   # High-quality extraction (70B params)
-      - llava-13b    # Vision language model
-      - mistral-7b   # Alternative for reasoning
+      - qwen-turbo          # Fast and cost-effective
+      - qwen-plus           # High quality
+      - qwen-max            # Best quality (largest model)
+      - qwen3-vl-30b-a3b-thinking  # Vision language model (VLM for image-to-text)
 
   openai:
-    api_key: "${OPENAI_API_KEY}"
+    api_key: "${OPENAI_API_KEY:-}"  # Optional - leave empty if not using
     organization: "${OPENAI_ORGANIZATION:-}"
     timeout: 60
     models:
@@ -33,7 +34,7 @@ providers:
 # Budget management (monthly limits in USD)
 budgets:
   monthly_limits:
-    ollama_cloud: 120.0  # $120/month (60% of total budget)
+    alibaba_cloud: 120.0  # $120/month (60% of total budget)
     openai: 80.0         # $80/month (40% of total budget)
   alert_threshold: 0.8   # Alert at 80% budget utilization
   reset_day: 1           # Reset on 1st of each month
@@ -42,7 +43,7 @@ budgets:
 routing:
   default_provider: local_ollama
   quality_critical_provider: openai
-  batch_processing_provider: ollama_cloud
+  batch_processing_provider: alibaba_cloud
 
   # Data classification overrides (GDPR/HIPAA compliance)
   # These classifications ALWAYS route to local (non-negotiable)
@@ -60,20 +61,20 @@ routing:
     openai_required:
       quality: critical
       complexity: high
-    ollama_cloud_preferred:
+    alibaba_cloud_preferred:
       quality: high
       complexity: medium
 
 # Model selection per provider (defaults)
 model_defaults:
   local_ollama:
-    extraction: gemma-3-4b-it-Q8_0
-    generation: llama3.2:8b
+    extraction: hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M
+    generation: hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M
     embedding: bge-m3
-  ollama_cloud:
-    extraction: llama3-70b
-    generation: llama3-70b
-    vision: llava-13b
+  alibaba_cloud:
+    extraction: qwen3-32b      # High quality extraction (32B params)
+    generation: qwen3-32b      # High quality generation (32B params)
+    vision: qwen3-vl-30b-a3b-thinking  # Vision language model (image-to-text)
   openai:
     extraction: gpt-4o
     generation: gpt-4o
@@ -85,7 +86,7 @@ fallback:
   enabled: true
   chain:
     - openai         # Try OpenAI first (if selected)
-    - ollama_cloud   # Fallback to Ollama Cloud
+    - alibaba_cloud  # Fallback to Alibaba Cloud (Qwen)
     - local_ollama   # Always succeeds (local)
   max_retries: 3
   retry_delay_seconds: 2

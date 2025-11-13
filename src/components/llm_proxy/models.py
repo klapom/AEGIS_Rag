@@ -28,6 +28,7 @@ class TaskType(str, Enum):
     GENERATION = "generation"  # Text generation (queries, responses)
     CODE_GENERATION = "code_generation"  # Technical docs, API specs
     RESEARCH = "research"  # Multi-hop reasoning, complex queries
+    VISION = "vision"  # Image description/analysis with VLM (prefer Alibaba Cloud Qwen3-VL)
 
 
 class DataClassification(str, Enum):

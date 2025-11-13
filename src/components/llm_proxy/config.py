@@ -15,9 +15,13 @@ from typing import Any, Dict
 
 import structlog
 import yaml
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class LLMProxyConfig(BaseModel):
@@ -198,11 +202,15 @@ class LLMProxyConfig(BaseModel):
         if provider == "local_ollama":
             return "base_url" in provider_config
 
-        elif provider == "ollama_cloud":
-            return "base_url" in provider_config and "api_key" in provider_config
+        elif provider in ["alibaba_cloud", "ollama_cloud"]:
+            # Require non-empty api_key
+            api_key = provider_config.get("api_key", "")
+            return "base_url" in provider_config and api_key and api_key.strip()
 
         elif provider == "openai":
-            return "api_key" in provider_config
+            # Require non-empty api_key
+            api_key = provider_config.get("api_key", "")
+            return api_key and api_key.strip()
 
         return False
 

@@ -102,7 +102,7 @@ class AegisLLMProxy:
             raise ValueError("local_ollama provider is required but not configured")
 
         # Track budgets (simplified - no ANY-LLM BudgetManager needed)
-        self._monthly_spending = {"ollama_cloud": 0.0, "openai": 0.0}
+        self._monthly_spending = {"alibaba_cloud": 0.0, "openai": 0.0}
 
         # Track metrics
         self._request_count = 0
@@ -119,7 +119,7 @@ class AegisLLMProxy:
         Check if budget is exceeded for provider.
 
         Args:
-            provider: Provider name (ollama_cloud or openai)
+            provider: Provider name (alibaba_cloud or openai)
 
         Returns:
             True if budget exceeded
@@ -270,6 +270,13 @@ class AegisLLMProxy:
         if task.task_type == TaskType.EMBEDDING:
             return ("local_ollama", "embeddings_local_only")
 
+        # PRIORITY 2.5: Vision tasks (VLM) - Prefer Alibaba Cloud Qwen3-VL-30B
+        if task.task_type == TaskType.VISION:
+            if self.config.is_provider_enabled("alibaba_cloud"):
+                return ("alibaba_cloud", "vision_task_best_vlm")
+            # Fallback to local VLM if cloud unavailable
+            return ("local_ollama", "vision_task_local_fallback")
+
         # PRIORITY 3: TIER 3 (OpenAI) - Critical quality + High complexity
         if (
             self.config.is_provider_enabled("openai")
@@ -280,22 +287,22 @@ class AegisLLMProxy:
             if not self._is_budget_exceeded("openai"):
                 return ("openai", "critical_quality_high_complexity")
             else:
-                logger.warning("budget_exceeded", provider="openai", fallback="ollama_cloud_or_local")
+                logger.warning("budget_exceeded", provider="openai", fallback="alibaba_cloud_or_local")
 
-        # PRIORITY 4: TIER 2 (Ollama Cloud) - High quality OR batch processing
-        if self.config.is_provider_enabled("ollama_cloud"):
+        # PRIORITY 4: TIER 2 (Alibaba Cloud / Qwen) - High quality OR batch processing
+        if self.config.is_provider_enabled("alibaba_cloud"):
             # High quality + high complexity
             if (
                 task.quality_requirement == QualityRequirement.HIGH
                 and task.complexity == Complexity.HIGH
             ):
-                if not self._is_budget_exceeded("ollama_cloud"):
-                    return ("ollama_cloud", "high_quality_high_complexity")
+                if not self._is_budget_exceeded("alibaba_cloud"):
+                    return ("alibaba_cloud", "high_quality_high_complexity")
 
             # Batch processing (>10 documents)
             if task.batch_size and task.batch_size > 10:
-                if not self._is_budget_exceeded("ollama_cloud"):
-                    return ("ollama_cloud", "batch_processing")
+                if not self._is_budget_exceeded("alibaba_cloud"):
+                    return ("alibaba_cloud", "batch_processing")
 
         # DEFAULT: TIER 1 (Local) - 70% of tasks
         return ("local_ollama", "default_local")
@@ -315,7 +322,7 @@ class AegisLLMProxy:
             - Automatic retry on transient errors
 
         Args:
-            provider: Provider name (local_ollama, ollama_cloud, openai)
+            provider: Provider name (local_ollama, alibaba_cloud, openai)
             task: LLM task
             stream: Enable streaming
 
@@ -330,20 +337,21 @@ class AegisLLMProxy:
         # Map internal provider name to LLMProvider enum
         provider_map = {
             "local_ollama": LLMProvider.OLLAMA,
-            "ollama_cloud": LLMProvider.OLLAMA,  # Same enum, different api_base
+            "alibaba_cloud": LLMProvider.OPENAI,  # Alibaba DashScope uses OpenAI-compatible API
             "openai": LLMProvider.OPENAI,
         }
 
         # Get provider-specific configuration
         provider_config = self.config.providers.get(provider, {})
 
-        # Determine api_base for Ollama providers
+        # Determine api_base and api_key for providers
         api_base = None
         api_key = None
 
-        if provider in ["local_ollama", "ollama_cloud"]:
+        if provider == "local_ollama":
             api_base = provider_config.get("base_url")
-        if provider != "local_ollama":
+        elif provider in ["alibaba_cloud", "openai"]:
+            api_base = provider_config.get("base_url")
             api_key = provider_config.get("api_key")
 
         messages = [{"role": "user", "content": task.prompt}]
@@ -394,7 +402,7 @@ class AegisLLMProxy:
         # Check task-specific model preference
         if provider == "local_ollama" and task.model_local:
             return task.model_local
-        if provider == "ollama_cloud" and task.model_cloud:
+        if provider == "alibaba_cloud" and task.model_cloud:
             return task.model_cloud
         if provider == "openai" and task.model_openai:
             return task.model_openai
@@ -406,11 +414,11 @@ class AegisLLMProxy:
 
         # Fallback to hardcoded defaults
         default_models = {
-            "local_ollama": "gemma-3-4b-it-Q8_0",
-            "ollama_cloud": "llama3-70b",
+            "local_ollama": "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
+            "alibaba_cloud": "qwen3-32b",
             "openai": "gpt-4o",
         }
-        return default_models.get(provider, "gemma-3-4b-it-Q8_0")
+        return default_models.get(provider, "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M")
 
     def _calculate_cost(self, provider: str, tokens: int) -> float:
         """
@@ -418,7 +426,7 @@ class AegisLLMProxy:
 
         Pricing (as of 2025-11-13):
             - Local Ollama: FREE
-            - Ollama Cloud: ~$0.001 per 1,000 tokens
+            - Alibaba Cloud Qwen3-32B: ~$0.001 per 1,000 tokens
             - OpenAI GPT-4o: ~$0.015 per 1,000 tokens (avg input+output)
 
         Args:
@@ -430,7 +438,7 @@ class AegisLLMProxy:
         """
         pricing = {
             "local_ollama": 0.0,  # Free
-            "ollama_cloud": 0.000001,  # $0.001 per 1k tokens
+            "alibaba_cloud": 0.000001,  # $0.001 per 1k tokens (qwen-plus)
             "openai": 0.000015,  # $0.015 per 1k tokens (avg)
         }
         cost = tokens * pricing.get(provider, 0.0)
