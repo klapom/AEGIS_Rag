@@ -1,10 +1,11 @@
 # AEGIS RAG Monitoring Guide
 
-**Sprint 24 - Feature 24.1: Prometheus Metrics Implementation**
+**Sprint 24 - Feature 24.1: Prometheus Metrics Implementation (LLM metrics)**
+**Sprint 25 - Feature 25.1: Extended Metrics (System metrics)**
 **Related ADR:** ADR-033 (Multi-Cloud LLM Execution)
 **Last Updated:** 2025-11-13
 
-This guide covers monitoring LLM cost tracking, performance metrics, and observability for the AEGIS RAG system using Prometheus and Grafana.
+This guide covers monitoring LLM cost tracking, performance metrics, system health, and observability for the AEGIS RAG system using Prometheus and Grafana.
 
 ---
 
@@ -115,6 +116,30 @@ All metrics are available at `http://localhost:8000/metrics` (Prometheus format)
   monthly_spend_usd{provider="openai"} 6.78
   ```
 
+### 7. System Metrics (Sprint 25 - Feature 25.1)
+
+**`qdrant_points_count`** (Gauge)
+- **Description**: Number of points in Qdrant vector database collections
+- **Labels**: `collection`
+- **Example**:
+  ```
+  qdrant_points_count{collection="documents"} 15420
+  ```
+
+**`neo4j_entities_count`** (Gauge)
+- **Description**: Number of entities in Neo4j knowledge graph
+- **Example**:
+  ```
+  neo4j_entities_count 542
+  ```
+
+**`neo4j_relations_count`** (Gauge)
+- **Description**: Number of relationships in Neo4j knowledge graph
+- **Example**:
+  ```
+  neo4j_relations_count 1834
+  ```
+
 ---
 
 ## Setup Instructions
@@ -172,9 +197,11 @@ sum(increase(llm_requests_total[1h]))
 
 1. Open Grafana: http://localhost:3000 (admin/admin)
 2. Go to **Dashboards → Import**
-3. Upload `config/grafana/llm_cost_dashboard.json`
+3. Upload `dashboards/grafana/llm_monitoring.json` (Sprint 25 - Feature 25.1)
 4. Select **Prometheus** as data source
 5. Click **Import**
+
+**Note:** For Sprint 24 legacy dashboard, use `config/grafana/llm_cost_dashboard.json`
 
 ### Dashboard Panels
 
@@ -309,6 +336,21 @@ sum(rate(llm_errors_total[5m])) by (provider, error_type)
 **7. Budget Utilization Percentage**
 ```promql
 100 * (1 - (monthly_budget_remaining_usd / (monthly_spend_usd + monthly_budget_remaining_usd)))
+```
+
+**8. Total Qdrant Points (Sprint 25)**
+```promql
+sum(qdrant_points_count)
+```
+
+**9. Knowledge Graph Size (Sprint 25)**
+```promql
+neo4j_entities_count + neo4j_relations_count
+```
+
+**10. Entity-to-Relationship Ratio (Sprint 25)**
+```promql
+neo4j_relations_count / neo4j_entities_count
 ```
 
 ---

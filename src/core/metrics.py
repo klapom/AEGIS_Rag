@@ -1,10 +1,11 @@
-"""Prometheus Metrics for LLM Cost Tracking.
+"""Prometheus Metrics for AegisRAG System Monitoring.
 
-Sprint 24 - Feature 24.1: Prometheus Metrics Implementation
+Sprint 24 - Feature 24.1: Prometheus Metrics Implementation (LLM metrics)
+Sprint 25 - Feature 25.1: Extended Metrics (System metrics)
 Related ADR: ADR-033 (Multi-Cloud LLM Execution)
 
 This module provides Prometheus metrics for monitoring LLM usage, cost tracking,
-and performance across multiple providers (Local Ollama, Alibaba Cloud, OpenAI).
+performance, and system health across multiple providers (Local Ollama, Alibaba Cloud, OpenAI).
 
 Metrics Exported:
 - llm_requests_total: Total number of LLM requests (counter)
@@ -14,12 +15,17 @@ Metrics Exported:
 - llm_errors_total: Total number of errors (counter)
 - monthly_budget_remaining_usd: Budget remaining for current month (gauge)
 - monthly_spend_usd: Total spend for current month (gauge)
+- qdrant_points_count: Number of points in Qdrant collections (gauge)
+- neo4j_entities_count: Number of entities in Neo4j (gauge)
+- neo4j_relations_count: Number of relationships in Neo4j (gauge)
 
 Usage:
     from src.core.metrics import (
         track_llm_request,
         track_llm_error,
         update_budget_metrics,
+        update_qdrant_metrics,
+        update_neo4j_metrics,
     )
 
     # Track successful request
@@ -36,7 +42,11 @@ Usage:
     track_llm_error(provider="openai", task_type="generation", error_type="timeout")
 
     # Update budget metrics (call periodically)
-    update_budget_metrics(cost_tracker)
+    update_budget_metrics("alibaba_cloud", 5.25, 10.0)
+
+    # Update system metrics (call periodically)
+    update_qdrant_metrics("documents", 15420)
+    update_neo4j_metrics(542, 1834)
 """
 
 
@@ -212,3 +222,54 @@ def update_budget_metrics(
     else:
         # Unlimited budget - set to -1.0 as sentinel
         monthly_budget_remaining_usd.labels(provider=provider).set(-1.0)
+
+
+# ============================================================================
+# SYSTEM METRICS (Sprint 25 - Feature 25.1)
+# ============================================================================
+
+# Qdrant vector database points count
+qdrant_points_count = Gauge(
+    "qdrant_points_count",
+    "Number of points in Qdrant collection",
+    ["collection"],
+)
+
+# Neo4j entity count
+neo4j_entities_count = Gauge(
+    "neo4j_entities_count",
+    "Number of entities in Neo4j knowledge graph",
+)
+
+# Neo4j relationship count
+neo4j_relations_count = Gauge(
+    "neo4j_relations_count",
+    "Number of relationships in Neo4j knowledge graph",
+)
+
+
+def update_qdrant_metrics(collection: str, points_count: int) -> None:
+    """Update Qdrant collection metrics.
+
+    Args:
+        collection: Collection name
+        points_count: Number of points in collection
+
+    Example:
+        update_qdrant_metrics("documents", 15420)
+    """
+    qdrant_points_count.labels(collection=collection).set(points_count)
+
+
+def update_neo4j_metrics(entities_count: int, relations_count: int) -> None:
+    """Update Neo4j knowledge graph metrics.
+
+    Args:
+        entities_count: Number of entities in graph
+        relations_count: Number of relationships in graph
+
+    Example:
+        update_neo4j_metrics(entities_count=542, relations_count=1834)
+    """
+    neo4j_entities_count.set(entities_count)
+    neo4j_relations_count.set(relations_count)
