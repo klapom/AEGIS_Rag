@@ -44,6 +44,9 @@ qdrant-client = "~1.11.0"  # Pin to 1.11.x (compatible with Qdrant server v1.11.
 # Updated to >=0.6.0 for langchain-ollama 1.0.0 compatibility
 ollama = ">=0.6.0,<1.0.0"
 
+# Multi-Cloud LLM Abstraction (Sprint 23: Mozilla ANY-LLM)
+any-llm-sdk = {extras = ["openai", "ollama"], version = "~1.2.0"}  # Multi-provider LLM abstraction (ADR-033)
+
 # Hybrid Search (Sprint 2: BM25)
 rank-bm25 = "^0.2.2"
 

@@ -1,0 +1,98 @@
+# LLM Proxy Configuration
+# Sprint 23 (Feature 23.4 - Mozilla ANY-LLM Integration)
+# Related ADR: ADR-033
+
+# Provider configuration
+providers:
+  local_ollama:
+    base_url: "${OLLAMA_BASE_URL:-http://localhost:11434}"
+    timeout: 60
+    models:
+      - gemma-3-4b-it-Q8_0  # Default extraction model (8-bit quantized)
+      - llama3.2:8b          # Alternative generation model
+      - bge-m3               # Embeddings (always local)
+
+  ollama_cloud:
+    base_url: "${OLLAMA_CLOUD_BASE_URL:-https://ollama.cloud}"
+    api_key: "${OLLAMA_CLOUD_API_KEY}"
+    timeout: 120
+    models:
+      - llama3-70b   # High-quality extraction (70B params)
+      - llava-13b    # Vision language model
+      - mistral-7b   # Alternative for reasoning
+
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    organization: "${OPENAI_ORGANIZATION:-}"
+    timeout: 60
+    models:
+      - gpt-4o       # Best quality (critical tasks)
+      - gpt-4o-mini  # Cost-effective for testing
+      - gpt-4        # Alternative high-quality model
+
+# Budget management (monthly limits in USD)
+budgets:
+  monthly_limits:
+    ollama_cloud: 120.0  # $120/month (60% of total budget)
+    openai: 80.0         # $80/month (40% of total budget)
+  alert_threshold: 0.8   # Alert at 80% budget utilization
+  reset_day: 1           # Reset on 1st of each month
+
+# Routing configuration
+routing:
+  default_provider: local_ollama
+  quality_critical_provider: openai
+  batch_processing_provider: ollama_cloud
+
+  # Data classification overrides (GDPR/HIPAA compliance)
+  # These classifications ALWAYS route to local (non-negotiable)
+  data_classification_overrides:
+    pii: local_ollama         # Personal Identifiable Information (GDPR)
+    hipaa: local_ollama       # Protected Health Information (HIPAA)
+    confidential: local_ollama  # Business secrets
+
+  # Task type overrides
+  task_type_overrides:
+    embedding: local_ollama  # BGE-M3 excellent locally, no cloud benefit
+
+  # Quality thresholds for provider selection
+  quality_thresholds:
+    openai_required:
+      quality: critical
+      complexity: high
+    ollama_cloud_preferred:
+      quality: high
+      complexity: medium
+
+# Model selection per provider (defaults)
+model_defaults:
+  local_ollama:
+    extraction: gemma-3-4b-it-Q8_0
+    generation: llama3.2:8b
+    embedding: bge-m3
+  ollama_cloud:
+    extraction: llama3-70b
+    generation: llama3-70b
+    vision: llava-13b
+  openai:
+    extraction: gpt-4o
+    generation: gpt-4o
+    code_generation: gpt-4o
+    research: gpt-4o
+
+# Fallback chain (if primary provider fails)
+fallback:
+  enabled: true
+  chain:
+    - openai         # Try OpenAI first (if selected)
+    - ollama_cloud   # Fallback to Ollama Cloud
+    - local_ollama   # Always succeeds (local)
+  max_retries: 3
+  retry_delay_seconds: 2
+
+# Monitoring & observability
+monitoring:
+  enable_metrics: true  # Prometheus metrics
+  enable_tracing: true  # LangSmith tracing
+  log_routing_decisions: true  # Log why each provider was chosen
+  log_costs: true  # Log per-request costs
