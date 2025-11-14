@@ -64,11 +64,6 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
   };
 
   // Sprint 17 Feature 17.3: Title editing handlers
-  const handleTitleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsEditing(true);
-  };
-
   const handleTitleSave = async () => {
     if (!editedTitle.trim() || editedTitle === displayTitle) {
       setIsEditing(false);

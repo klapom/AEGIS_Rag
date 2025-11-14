@@ -32,7 +32,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
     }
   };
 
-  const isGraphSource = source.retrieval_modes?.includes('graph');
+  const isGraphSource = source.retrieval_modes?.includes('graph') ?? false;
 
   // Sprint 19: Extract readable document name from metadata
   const getDocumentName = () => {

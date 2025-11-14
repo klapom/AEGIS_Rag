@@ -73,6 +73,7 @@ export interface SessionInfo {
   updated_at?: string;
   last_message?: string;
   title?: string; // Sprint 17 Feature 17.3: Auto-generated or user-edited title
+  messages?: ConversationMessage[]; // Sprint 19: Full message history for title extraction
 }
 
 export interface SessionListResponse {
