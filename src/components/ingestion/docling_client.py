@@ -73,8 +73,10 @@ class DoclingParsedDocument(BaseModel):
     md_content: str = Field(default="", description="Markdown with embedded base64 images")
 
 
-class DoclingContainerClient:
+class DoclingClient:
     """HTTP client for Docling CUDA Docker container.
+
+    Sprint 25 Feature 25.9: Renamed from DoclingContainerClient to DoclingClient for consistency.
 
     This client manages the lifecycle of the Docling container and provides
     methods for parsing documents via HTTP API.
@@ -637,16 +639,23 @@ async def parse_document_with_docling(
         >>> parsed = await parse_document_with_docling(Path("report.pdf"))
         >>>
         >>> # Manual management (for batch processing)
-        >>> client = DoclingContainerClient()
+        >>> client = DoclingClient()
         >>> await client.start_container()
         >>> parsed1 = await parse_document_with_docling(Path("doc1.pdf"), auto_manage_container=False)
         >>> parsed2 = await parse_document_with_docling(Path("doc2.pdf"), auto_manage_container=False)
         >>> await client.stop_container()
     """
-    client = DoclingContainerClient(base_url=base_url)
+    client = DoclingClient(base_url=base_url)
 
     if auto_manage_container:
         async with client:
             return await client.parse_document(file_path)
     else:
         return await client.parse_document(file_path)
+
+
+# ============================================================================
+# Backward Compatibility Alias (Sprint 25 Feature 25.9)
+# ============================================================================
+# Deprecation period: Sprint 25-26
+DoclingContainerClient = DoclingClient

@@ -34,8 +34,11 @@ from src.core.exceptions import DatabaseConnectionError, VectorSearchError
 logger = structlog.get_logger(__name__)
 
 
-class QdrantClientWrapper:
-    """Production-ready Qdrant client with connection pooling and error handling."""
+class QdrantClient:
+    """Production-ready Qdrant client with connection pooling and error handling.
+
+    Sprint 25 Feature 25.9: Renamed from QdrantClientWrapper to QdrantClient for consistency.
+    """
 
     def __init__(
         self,
@@ -347,18 +350,18 @@ class QdrantClientWrapper:
 
 
 # Global client instance (singleton pattern)
-_qdrant_client: QdrantClientWrapper | None = None
+_qdrant_client: QdrantClient | None = None
 
 
-def get_qdrant_client() -> QdrantClientWrapper:
+def get_qdrant_client() -> QdrantClient:
     """Get global Qdrant client instance (singleton).
 
     Returns:
-        QdrantClientWrapper instance
+        QdrantClient instance (renamed from QdrantClientWrapper in Sprint 25)
     """
     global _qdrant_client
     if _qdrant_client is None:
-        _qdrant_client = QdrantClientWrapper()
+        _qdrant_client = QdrantClient()
     return _qdrant_client
 
 
@@ -376,3 +379,11 @@ async def get_qdrant_client_async():
     finally:
         # Connection is pooled, no need to close here
         pass
+
+
+# ============================================================================
+# Backward Compatibility Alias (Sprint 25 Feature 25.9)
+# ============================================================================
+# Deprecation period: Sprint 25-26
+# Remove after all references are updated
+QdrantClientWrapper = QdrantClient

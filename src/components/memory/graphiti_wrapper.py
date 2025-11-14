@@ -177,8 +177,10 @@ class OllamaLLMClient(LLMClient):
             raise LLMError(operation="graphiti_embedding_generation", reason=str(e)) from e
 
 
-class GraphitiWrapper:
+class GraphitiClient:
     """Wrapper for Graphiti episodic memory with Ollama and Neo4j backend.
+
+    Sprint 25 Feature 25.9: Renamed from GraphitiWrapper to GraphitiClient for consistency.
 
     Provides high-level interface for:
     - Adding episodes (conversations, events)
@@ -527,21 +529,29 @@ class GraphitiWrapper:
 
 
 # Global instance (singleton pattern)
-_graphiti_wrapper: GraphitiWrapper | None = None
+_graphiti_client: GraphitiClient | None = None
 
 
-def get_graphiti_wrapper() -> GraphitiWrapper:
-    """Get global Graphiti wrapper instance (singleton).
+def get_graphiti_client() -> GraphitiClient:
+    """Get global Graphiti client instance (singleton).
 
     Returns:
-        GraphitiWrapper instance
+        GraphitiClient instance (renamed from GraphitiWrapper in Sprint 25)
     """
-    global _graphiti_wrapper
-    if _graphiti_wrapper is None:
+    global _graphiti_client
+    if _graphiti_client is None:
         if not settings.graphiti_enabled:
             raise MemoryError(
-                operation="get_graphiti_wrapper",
+                operation="get_graphiti_client",
                 reason="Graphiti is disabled in settings"
             )
-        _graphiti_wrapper = GraphitiWrapper()
-    return _graphiti_wrapper
+        _graphiti_client = GraphitiClient()
+    return _graphiti_client
+
+
+# ============================================================================
+# Backward Compatibility Aliases (Sprint 25 Feature 25.9)
+# ============================================================================
+# Deprecation period: Sprint 25-26
+GraphitiWrapper = GraphitiClient
+get_graphiti_wrapper = get_graphiti_client
