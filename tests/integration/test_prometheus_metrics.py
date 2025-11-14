@@ -108,7 +108,7 @@ class TestLLMMetricsTracking:
         content = response.text
 
         # Verify cost metric exists for alibaba_cloud
-        assert 'llm_cost_usd{provider="alibaba_cloud"}' in content
+        assert 'llm_cost_usd_total{provider="alibaba_cloud"}' in content
 
     def test_track_llm_error(self, client):
         """Test error tracking."""
@@ -225,6 +225,24 @@ class TestMetricsIntegrationWithLLMProxy:
                 }
             },
             budgets={"monthly_limits": {}},
+            routing={
+                "default_provider": "local_ollama",
+                "task_routing": {},
+            },
+            model_defaults={
+                "local_ollama": {
+                    "generation": "test-model",
+                    "extraction": "test-model",
+                },
+            },
+            fallback={
+                "enabled": True,
+                "chain": ["local_ollama"],
+            },
+            monitoring={
+                "enabled": True,
+                "track_costs": True,
+            },
         )
 
         proxy = get_aegis_llm_proxy(config=config)
@@ -240,9 +258,9 @@ class TestMetricsIntegrationWithLLMProxy:
 
         # Create test task
         task = LLMTask(
-            task_type=TaskType.QUERY,
+            task_type=TaskType.GENERATION,
             prompt="Test query",
-            quality_requirement=QualityRequirement.STANDARD,
+            quality_requirement=QualityRequirement.MEDIUM,
         )
 
         # Mock acompletion to return our mock response
@@ -275,14 +293,32 @@ class TestMetricsIntegrationWithLLMProxy:
                 }
             },
             budgets={"monthly_limits": {}},
+            routing={
+                "default_provider": "local_ollama",
+                "task_routing": {},
+            },
+            model_defaults={
+                "local_ollama": {
+                    "generation": "test-model",
+                    "extraction": "test-model",
+                },
+            },
+            fallback={
+                "enabled": True,
+                "chain": ["local_ollama"],
+            },
+            monitoring={
+                "enabled": True,
+                "track_costs": True,
+            },
         )
 
         proxy = get_aegis_llm_proxy(config=config)
 
         task = LLMTask(
-            task_type=TaskType.QUERY,
+            task_type=TaskType.GENERATION,
             prompt="Test query",
-            quality_requirement=QualityRequirement.STANDARD,
+            quality_requirement=QualityRequirement.MEDIUM,
         )
 
         # Mock acompletion to raise an error (simulating both provider failures)
