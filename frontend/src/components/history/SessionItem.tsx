@@ -187,8 +187,9 @@ export function SessionItem({ session, onDelete, onTitleUpdate }: SessionItemPro
         ) : (
           <>
             <div
-              className="text-sm font-medium text-gray-900 line-clamp-2 mb-1"
+              className="text-sm font-medium text-gray-900 line-clamp-2 mb-1 cursor-text hover:bg-gray-100 px-1 rounded transition"
               title={displayTitle}
+              onClick={handleRenameClick}
             >
               {displayTitle}
             </div>
