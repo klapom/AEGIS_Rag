@@ -169,19 +169,40 @@ jobs:
             echo "dep_vulns=$VULNS" >> $GITHUB_OUTPUT
           fi
 
+      - name: Download coverage from main CI
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ci.yml
+          branch: main
+          name: unit-test-results
+          path: coverage-download/
+        continue-on-error: true  # Don't fail if no artifacts found (e.g., first run)
+
       - name: Test coverage trend
         id: coverage
         run: |
           echo "## Test Coverage" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Run tests with coverage
-          poetry run pytest tests/ --cov=src --cov-report=json --cov-report=term | tee coverage-output.txt
+          # Use coverage from main CI instead of re-running tests (saves ~8-10 minutes)
+          if [ -f coverage-download/coverage.json ]; then
+            echo "Using coverage data from main CI run..."
+            COVERAGE=$(jq '.totals.percent_covered' coverage-download/coverage.json)
+            echo "Current coverage: $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+            echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ No coverage data available from main CI. Running quick unit tests for coverage estimate..."
+            # Fallback: Run only unit tests (fast, no services needed)
+            poetry run pytest tests/unit/ tests/components/ tests/api/ \
+              --cov=src \
+              --cov-report=json \
+              --cov-report=term \
+              -m "not integration" | tee coverage-output.txt
 
-          # Extract coverage percentage
-          COVERAGE=$(jq '.totals.percent_covered' coverage.json)
-          echo "Current coverage: $COVERAGE%" >> $GITHUB_STEP_SUMMARY
-          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+            COVERAGE=$(jq '.totals.percent_covered' coverage.json)
+            echo "Current coverage (unit tests only): $COVERAGE%" >> $GITHUB_STEP_SUMMARY
+            echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          fi
 
       - name: Lines of code metrics
         id: loc

@@ -67,9 +67,7 @@ jobs:
         run: |
           echo "Running MyPy type checking in strict mode..."
           poetry run mypy src/ --config-file=pyproject.toml
-        # Sprint 25 Feature 25.5: Enforce strict type checking
-        # Set to continue-on-error during migration phase to identify issues
-        continue-on-error: true  # TODO: Remove after fixing all type errors
+        # Sprint 25 Feature 25.5: MyPy strict mode enforced (all type errors fixed)
 
       - name: Run Bandit Security Scanner
         run: |
@@ -713,55 +711,8 @@ jobs:
           path: openapi-generated.json
 
   # ============================================================
-  # JOB 11: DEPENDENCY AUDIT (Sprint 18)
-  # ============================================================
-  dependency-audit:
-    name: 📦 Dependency Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Frontend Dependency Audit
-        working-directory: frontend
-        run: |
-          echo "🔍 Auditing frontend dependencies..."
-          npm audit --audit-level=moderate || true
-          npm audit --json > ../frontend-audit.json || true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Backend Dependency Audit
-        run: |
-          echo "🔍 Auditing backend dependencies..."
-          pip install safety
-          poetry export -f requirements.txt --output requirements.txt
-          safety check --file requirements.txt --json > backend-audit.json || true
-
-      - name: Upload Audit Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-audit-reports
-          path: |
-            frontend-audit.json
-            backend-audit.json
-
-  # ============================================================
-  # JOB 12: SECURITY SCANNING (Dependencies)
+  # JOB 11: SECURITY SCANNING (Dependencies)
+  # Note: Consolidated from previous Jobs 11 & 12 (removed redundant dependency-audit)
   # ============================================================
   security-scan:
     name: 🔒 Security Scan
@@ -794,7 +745,7 @@ jobs:
           path: safety-report.json
 
   # ============================================================
-  # JOB 13: DOCKER BUILD TEST
+  # JOB 12: DOCKER BUILD TEST
   # ============================================================
   docker-build:
     name: 🐳 Docker Build
@@ -835,7 +786,7 @@ jobs:
           docker run --rm aegis-rag-api:test python -c "import src; print('Import successful')"
 
   # ============================================================
-  # JOB 14: DOCUMENTATION CHECK
+  # JOB 13: DOCUMENTATION CHECK
   # ============================================================
   documentation:
     name: 📖 Documentation
@@ -866,7 +817,7 @@ jobs:
         continue-on-error: true
 
   # ============================================================
-  # JOB 15: UNIFIED QUALITY GATE
+  # JOB 14: UNIFIED QUALITY GATE
   # ============================================================
   quality-gate:
     name: ✅ Unified Quality Gate
@@ -1001,7 +952,7 @@ jobs:
             });
 
   # ============================================================
-  # JOB 16: PERFORMANCE BENCHMARKS (Optional, nur bei Main)
+  # JOB 15: PERFORMANCE BENCHMARKS (Optional, nur bei Main)
   # ============================================================
   performance:
     name: ⚡ Performance Benchmarks
