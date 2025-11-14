@@ -23,7 +23,6 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
 from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
@@ -32,8 +31,10 @@ from src.core.models import GraphQueryResult
 logger = structlog.get_logger(__name__)
 
 
-class LightRAGWrapper:
+class LightRAGClient:
     """Async wrapper for LightRAG with Ollama and Neo4j backend.
+
+    Sprint 25 Feature 25.9: Renamed from LightRAGWrapper to LightRAGClient for consistency.
 
     Provides:
     - Document ingestion and graph construction
@@ -1216,29 +1217,38 @@ class LightRAGWrapper:
 
 
 # Global instance (singleton pattern)
-_lightrag_wrapper: LightRAGWrapper | None = None
+_lightrag_client: LightRAGClient | None = None
 
 
-def get_lightrag_wrapper() -> LightRAGWrapper:
-    """Get global LightRAG wrapper instance (singleton).
+def get_lightrag_client() -> LightRAGClient:
+    """Get global LightRAG client instance (singleton).
 
     Returns:
-        LightRAGWrapper instance
+        LightRAGClient instance (renamed from LightRAGWrapper in Sprint 25)
     """
-    global _lightrag_wrapper
-    if _lightrag_wrapper is None:
-        _lightrag_wrapper = LightRAGWrapper()
-    return _lightrag_wrapper
+    global _lightrag_client
+    if _lightrag_client is None:
+        _lightrag_client = LightRAGClient()
+    return _lightrag_client
 
 
-async def get_lightrag_wrapper_async() -> LightRAGWrapper:
-    """Get global LightRAG wrapper instance (singleton) - async version.
+async def get_lightrag_client_async() -> LightRAGClient:
+    """Get global LightRAG client instance (singleton) - async version.
 
     Ensures LightRAG is properly initialized before returning.
 
     Returns:
-        LightRAGWrapper instance
+        LightRAGClient instance (renamed from LightRAGWrapper in Sprint 25)
     """
-    wrapper = get_lightrag_wrapper()
-    await wrapper._ensure_initialized()
-    return wrapper
+    client = get_lightrag_client()
+    await client._ensure_initialized()
+    return client
+
+
+# ============================================================================
+# Backward Compatibility Aliases (Sprint 25 Feature 25.9)
+# ============================================================================
+# Deprecation period: Sprint 25-26
+LightRAGWrapper = LightRAGClient
+get_lightrag_wrapper = get_lightrag_client
+get_lightrag_wrapper_async = get_lightrag_client_async

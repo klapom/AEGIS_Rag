@@ -332,13 +332,14 @@ class Settings(BaseSettings):
     )
 
     # Entity/Relation Extraction Pipeline Selection (Sprint 14: Feature 14.2, Sprint 20+21)
-    extraction_pipeline: Literal["lightrag_default", "three_phase", "llm_extraction"] = Field(
+    # Sprint 25 Feature 25.7: Removed "three_phase" option (deprecated per ADR-026)
+    extraction_pipeline: Literal["lightrag_default", "llm_extraction"] = Field(
         default="llm_extraction",
         description=(
             "Entity/relation extraction pipeline to use:\n"
             "- 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT Sprint 21+\n"
-            "- 'three_phase': SpaCy + Dedup + Gemma (fast, ~15-17s/doc) - Production Sprint 20\n"
-            "- 'lightrag_default': Legacy LightRAG baseline (for comparison only)"
+            "- 'lightrag_default': Legacy LightRAG baseline (for comparison only)\n"
+            "Note: 'three_phase' removed in Sprint 25 (deprecated per ADR-026)"
         ),
     )
     enable_legacy_extraction: bool = Field(

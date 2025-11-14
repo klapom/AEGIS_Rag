@@ -27,7 +27,7 @@ from qdrant_client.models import PointStruct
 if TYPE_CHECKING:
     from llama_index.core import Document, SimpleDirectoryReader
 
-from src.components.vector_search.embeddings import EmbeddingService
+from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
@@ -43,7 +43,7 @@ class DocumentIngestionPipeline:
     def __init__(
         self,
         qdrant_client: QdrantClientWrapper | None = None,
-        embedding_service: EmbeddingService | None = None,
+        embedding_service: UnifiedEmbeddingService | None = None,
         collection_name: str | None = None,
         chunk_size: int = 512,
         chunk_overlap: int = 128,
@@ -61,8 +61,9 @@ class DocumentIngestionPipeline:
             allowed_base_path: Base directory for security validation (default: from settings)
             use_adaptive_chunking: Use adaptive chunking strategy (default: False)
         """
+        from src.components.shared.embedding_service import get_embedding_service
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
-        self.embedding_service = embedding_service or EmbeddingService()
+        self.embedding_service = embedding_service or get_embedding_service()
         self.collection_name = collection_name or settings.qdrant_collection
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
@@ -140,117 +141,8 @@ class DocumentIngestionPipeline:
             logger.error("Path validation failed", input_path=str(input_path), error=str(e))
             raise
 
-    async def load_documents(
-        self,
-        input_dir: str | Path,
-        required_exts: list[str] | None = None,
-        recursive: bool = True,
-    ) -> list["Document"]:  # Type hint uses string literal
-        """Load documents from directory using LlamaIndex.
-
-        ============================================================================
-        ⚠️ DEPRECATED: Sprint 21 - This method will be replaced by DoclingContainerClient
-        ============================================================================
-        REASON: LlamaIndex SimpleDirectoryReader lacks:
-          - OCR for scanned PDFs (80% of enterprise docs are scanned)
-          - Table extraction (tables lost in plain text conversion)
-          - Layout analysis (formatting/structure lost)
-          - GPU acceleration (CPU-only parsing is 10x slower)
-
-        REPLACEMENT: Feature 21.1 - DoclingContainerClient
-          from src.components.ingestion.docling_client import DoclingContainerClient
-
-          docling = DoclingContainerClient(base_url="http://localhost:8080")
-          await docling.start_container()  # Start CUDA container
-          parsed = await docling.parse_document(file_path)
-          await docling.stop_container()   # Free VRAM
-
-          # Returns: {
-          #   "text": "...",           # Full text with OCR
-          #   "metadata": {...},       # Rich metadata
-          #   "tables": [...],         # Structured tables
-          #   "images": [...],         # Image references
-          #   "layout": {...}          # Document structure
-          # }
-
-        MIGRATION STATUS: DO NOT USE for new code
-        REMOVAL: Sprint 22 (after full Docling migration)
-        ============================================================================
-
-        Args:
-            input_dir: Directory containing documents
-            required_exts: File extensions to load (default: [".pdf", ".txt", ".md"])
-            recursive: Search subdirectories (default: True)
-
-        Returns:
-            List of LlamaIndex Document objects
-
-        Raises:
-            VectorSearchError: If document loading fails
-            ValueError: If path validation fails (path traversal)
-            ImportError: If llama_index not installed
-        """
-        # ====================================================================
-        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
-        # ====================================================================
-        # Load llama_index only when this deprecated method is called.
-        # This allows the core application to run without llama_index.
-        # ====================================================================
-        try:
-            from llama_index.core import SimpleDirectoryReader
-        except ImportError as e:
-            error_msg = (
-                "llama_index is required for this deprecated method but is not installed.\n\n"
-                "INSTALLATION OPTIONS:\n"
-                "1. poetry install --with ingestion\n"
-                "2. poetry install --all-extras\n\n"
-                "RECOMMENDATION: Use DoclingContainerClient instead (no llama_index needed).\n"
-                "See src.components.ingestion.docling_client for modern ingestion pipeline."
-            )
-            logger.error(
-                "llamaindex_import_failed",
-                method="load_documents",
-                error=str(e),
-                install_command="poetry install --with ingestion",
-            )
-            raise ImportError(error_msg) from e
-
-        if required_exts is None:
-            # Sprint 16 Feature 16.5: Added .pptx support
-            required_exts = [".pdf", ".txt", ".md", ".docx", ".csv", ".pptx"]
-
-        try:
-            # Security: Validate path to prevent directory traversal
-            validated_path = self._validate_path(input_dir)
-
-            loader = SimpleDirectoryReader(
-                input_dir=str(validated_path),
-                required_exts=required_exts,
-                recursive=recursive,
-                filename_as_id=True,
-            )
-
-            documents = loader.load_data()
-
-            logger.info(
-                "Documents loaded",
-                input_dir=str(validated_path),
-                documents_count=len(documents),
-                extensions=required_exts,
-            )
-
-            return documents
-
-        except ValueError:
-            # Path validation error - re-raise as-is (security error)
-            raise
-        except Exception as e:
-            logger.error(
-                "Failed to load documents",
-                input_dir=str(input_dir),
-                error=str(e),
-            )
-            raise VectorSearchError(f"Failed to load documents: {e}") from e
+    # Sprint 25 Feature 25.7: load_documents() method removed (deprecated per ADR-028)
+    # Use DoclingContainerClient instead: src.components.ingestion.docling_client
 
     def _clean_metadata(self, metadata: dict) -> dict:
         """Clean metadata to reduce size, especially for PPTX files.
@@ -443,6 +335,18 @@ class DocumentIngestionPipeline:
     ) -> dict[str, Any]:
         """Complete ingestion pipeline: load, chunk, embed, index.
 
+        ============================================================================
+        ⚠️ DEPRECATED: Sprint 25 Feature 25.7 - This method is deprecated
+        ============================================================================
+        This method depends on load_documents() which was removed in Sprint 25.
+
+        REPLACEMENT: Use DoclingContainerClient + LangGraph pipeline
+          from src.components.ingestion.docling_client import DoclingContainerClient
+          from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
+
+          # See docs/sprints/SPRINT_21_PLAN_v2.md for full migration guide
+        ============================================================================
+
         Args:
             input_dir: Directory containing documents
             batch_size: Batch size for indexing (default: 100)
@@ -452,83 +356,14 @@ class DocumentIngestionPipeline:
             Dictionary with ingestion statistics
 
         Raises:
-            VectorSearchError: If ingestion pipeline fails
+            NotImplementedError: This method was removed in Sprint 25
         """
-        start_time = asyncio.get_event_loop().time()
-
-        try:
-            # Step 1: Ensure collection exists
-            await self.qdrant_client.create_collection(
-                collection_name=self.collection_name,
-                vector_size=self.embedding_service.get_embedding_dimension(),
-            )
-
-            # Step 2: Load documents
-            logger.info("Step 1/4: Loading documents", input_dir=str(input_dir))
-            documents = await self.load_documents(
-                input_dir=input_dir,
-                required_exts=required_exts,
-            )
-
-            if not documents:
-                logger.warning("No documents found", input_dir=str(input_dir))
-                return {
-                    "documents_loaded": 0,
-                    "chunks_created": 0,
-                    "embeddings_generated": 0,
-                    "points_indexed": 0,
-                    "duration_seconds": 0,
-                }
-
-            # Step 3: Chunk documents
-            logger.info("Step 2/4: Chunking documents")
-            chunks = await self.chunk_documents(documents)
-
-            # Step 4: Generate embeddings
-            logger.info("Step 3/4: Generating embeddings")
-            embeddings = await self.generate_embeddings(chunks)
-
-            # Step 5: Create Qdrant points using Chunk.to_qdrant_payload()
-            logger.info("Step 4/4: Indexing to Qdrant")
-            points = []
-            for chunk, embedding in zip(chunks, embeddings, strict=False):
-                point = PointStruct(
-                    id=chunk.chunk_id,  # Use chunk_id as Qdrant point ID
-                    vector=embedding,
-                    payload=chunk.to_qdrant_payload(),
-                )
-                points.append(point)
-
-            # Upload to Qdrant in batches
-            await self.qdrant_client.upsert_points(
-                collection_name=self.collection_name,
-                points=points,
-                batch_size=batch_size,
-            )
-
-            end_time = asyncio.get_event_loop().time()
-            duration = end_time - start_time
-
-            stats = {
-                "documents_loaded": len(documents),
-                "chunks_created": len(chunks),
-                "embeddings_generated": len(embeddings),
-                "points_indexed": len(points),
-                "duration_seconds": round(duration, 2),
-                "chunks_per_document": round(len(chunks) / len(documents), 2),
-                "collection_name": self.collection_name,
-            }
-
-            logger.info(
-                "Document ingestion completed",
-                **stats,
-            )
-
-            return stats
-
-        except Exception as e:
-            logger.error("Document ingestion failed", error=str(e))
-            raise VectorSearchError(f"Document ingestion failed: {e}") from e
+        raise NotImplementedError(
+            "index_documents() was deprecated in Sprint 25 (Feature 25.7). "
+            "Use DoclingContainerClient + LangGraph pipeline instead. "
+            "See src.components.ingestion.docling_client and "
+            "src.components.ingestion.langgraph_pipeline for replacements."
+        )
 
     async def get_collection_stats(self) -> dict[str, Any] | None:
         """Get statistics about the indexed collection.

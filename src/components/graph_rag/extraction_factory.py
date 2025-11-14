@@ -36,9 +36,10 @@ class ExtractionPipelineFactory:
     """Factory for creating extraction pipelines based on configuration.
 
     Supports:
-    - "three_phase": ThreePhaseExtractor (SpaCy + Dedup + Gemma) - Sprint 13
-    - "llm_extraction": Pure LLM extraction via ExtractionService (Sprint 20)
+    - "llm_extraction": Pure LLM extraction via ExtractionService (Sprint 20) - DEFAULT
     - "lightrag_default": Legacy LightRAG extraction (for comparison)
+
+    Sprint 25 Feature 25.7: Removed "three_phase" option (deprecated per ADR-026)
 
     Example:
         >>> from src.core.config import get_settings
@@ -60,7 +61,7 @@ class ExtractionPipelineFactory:
         Raises:
             ValueError: If unsupported pipeline type requested
         """
-        pipeline_type = getattr(config, "extraction_pipeline", "three_phase")
+        pipeline_type = getattr(config, "extraction_pipeline", "llm_extraction")
 
         logger.info(
             "extraction_factory_creating_pipeline",
@@ -68,41 +69,24 @@ class ExtractionPipelineFactory:
             enable_legacy=getattr(config, "enable_legacy_extraction", False),
         )
 
+        # Sprint 25 Feature 25.7: Removed three_phase option (deprecated per ADR-026)
         if pipeline_type == "three_phase":
-            return ExtractionPipelineFactory._create_three_phase(config)
-        elif pipeline_type == "llm_extraction":
+            logger.warning(
+                "three_phase_deprecated",
+                note="three_phase extraction was removed in Sprint 25 (ADR-026). "
+                "Falling back to llm_extraction.",
+            )
+            pipeline_type = "llm_extraction"
+
+        if pipeline_type == "llm_extraction":
             return ExtractionPipelineFactory._create_llm_extraction(config)
         elif pipeline_type == "lightrag_default":
             return ExtractionPipelineFactory._create_lightrag_legacy(config)
         else:
             raise ValueError(
                 f"Unsupported extraction pipeline: {pipeline_type}. "
-                f"Must be 'three_phase', 'llm_extraction', or 'lightrag_default'"
+                f"Must be 'llm_extraction' or 'lightrag_default'"
             )
-
-    @staticmethod
-    def _create_three_phase(config) -> ExtractionPipeline:
-        """Create ThreePhaseExtractor pipeline.
-
-        Returns:
-            ThreePhaseExtractor instance with retry logic
-        """
-        from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
-
-        extractor = ThreePhaseExtractor(
-            config=config,
-            spacy_model="en_core_web_trf",
-            enable_dedup=getattr(config, "enable_semantic_dedup", True),
-        )
-
-        logger.info(
-            "three_phase_pipeline_created",
-            spacy_model="en_core_web_trf",
-            enable_dedup=getattr(config, "enable_semantic_dedup", True),
-            max_retries=getattr(config, "extraction_max_retries", 3),
-        )
-
-        return extractor
 
     @staticmethod
     def _create_llm_extraction(config) -> ExtractionPipeline:
