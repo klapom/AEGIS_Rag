@@ -68,7 +68,7 @@ import structlog
 from src.components.retrieval.filters import MetadataFilterEngine, MetadataFilters
 from src.components.retrieval.reranker import CrossEncoderReranker
 from src.components.vector_search.bm25_search import BM25Search
-from src.components.vector_search.embeddings import EmbeddingService
+from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
@@ -83,7 +83,7 @@ class HybridSearch:
     def __init__(
         self,
         qdrant_client: QdrantClientWrapper | None = None,
-        embedding_service: EmbeddingService | None = None,
+        embedding_service: UnifiedEmbeddingService | None = None,
         bm25_search: BM25Search | None = None,
         reranker: CrossEncoderReranker | None = None,
         collection_name: str | None = None,
@@ -97,8 +97,9 @@ class HybridSearch:
             reranker: Cross-encoder reranker (optional, lazy-loaded if needed)
             collection_name: Qdrant collection name
         """
+        from src.components.shared.embedding_service import get_embedding_service
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
-        self.embedding_service = embedding_service or EmbeddingService()
+        self.embedding_service = embedding_service or get_embedding_service()
         self.bm25_search = bm25_search or BM25Search()
         self._reranker = reranker  # Lazy-loaded on first use
         self.collection_name = collection_name or settings.qdrant_collection
