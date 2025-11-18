@@ -13,12 +13,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { Network } from 'lucide-react';  // Sprint 29 Feature 29.2
 import { streamChat, generateConversationTitle, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
 import { SourceCardsScroll, type SourceCardsScrollRef } from './SourceCardsScroll';
 import { CopyButton } from './CopyButton';  // Sprint 27 Feature 27.6
 import { createCitationTextRenderer } from '../../utils/citations';  // Sprint 28 Feature 28.2
 import { FollowUpQuestions } from './FollowUpQuestions';  // Sprint 28 Feature 28.1
+import { GraphModal } from '../graph/GraphModal';  // Sprint 29 Feature 29.2
+import { extractEntitiesFromSources } from '../../utils/entityExtractor';  // Sprint 29 Feature 29.2
 
 interface StreamingAnswerProps {
   query: string;
@@ -37,6 +40,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<string>('');
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
+  const [showGraphModal, setShowGraphModal] = useState(false);  // Sprint 29 Feature 29.2
   const sourceCardsRef = useRef<SourceCardsScrollRef>(null);  // Sprint 28 Feature 28.2
 
   useEffect(() => {
@@ -239,6 +243,27 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
         <div className="flex items-center justify-end border-t border-gray-200 pt-3 mt-4">
           <CopyButton text={answer} format="markdown" />
         </div>
+      )}
+
+      {/* View Knowledge Graph Button - Sprint 29 Feature 29.2 */}
+      {sources.length > 0 && !isStreaming && (
+        <div className="mt-4">
+          <button
+            onClick={() => setShowGraphModal(true)}
+            className="flex items-center gap-2 px-4 py-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors"
+          >
+            <Network className="w-5 h-5" />
+            <span className="font-medium">View Knowledge Graph</span>
+          </button>
+        </div>
+      )}
+
+      {/* Graph Modal - Sprint 29 Feature 29.2 */}
+      {showGraphModal && (
+        <GraphModal
+          entityNames={extractEntitiesFromSources(sources)}
+          onClose={() => setShowGraphModal(false)}
+        />
       )}
 
       {/* Follow-up Questions - Sprint 28 Feature 28.1 */}
