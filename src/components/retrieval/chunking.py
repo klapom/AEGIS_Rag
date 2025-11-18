@@ -255,7 +255,7 @@ class AdaptiveChunker:
         # ====================================================================
         # Get llama_index classes (imports on first call, cached thereafter)
         llama_classes = _get_llama_index_classes()
-        SentenceSplitter = llama_classes["SentenceSplitter"]
+        SentenceSplitter = llama_classes["SentenceSplitter"]  # noqa: N806 (lazy-loaded class)
 
         # Fallback sentence splitter for when chunks are too large
         # This uses the lazy-loaded SentenceSplitter class
@@ -399,7 +399,7 @@ class AdaptiveChunker:
         """
         # Get cached llama_index classes (already imported in __init__)
         llama_classes = _get_llama_index_classes()
-        Document = llama_classes["Document"]
+        Document = llama_classes["Document"]  # noqa: N806 (lazy-loaded class)
 
         content = doc.get_content()
 
@@ -480,7 +480,7 @@ class AdaptiveChunker:
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
-        Document = llama_classes["Document"]
+        Document = llama_classes["Document"]  # noqa: N806 (lazy-loaded class)
 
         content = doc.get_content()
 
@@ -558,7 +558,7 @@ class AdaptiveChunker:
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
-        Document = llama_classes["Document"]
+        Document = llama_classes["Document"]  # noqa: N806 (lazy-loaded class)
 
         content = doc.get_content()
 
@@ -648,7 +648,7 @@ class AdaptiveChunker:
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
-        SentenceSplitter = llama_classes["SentenceSplitter"]
+        SentenceSplitter = llama_classes["SentenceSplitter"]  # noqa: N806 (lazy-loaded class)
 
         splitter = SentenceSplitter(
             chunk_size=chunk_size,
@@ -756,9 +756,9 @@ class AdaptiveChunker:
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
-        TextNode = llama_classes["TextNode"]
-        NodeRelationship = llama_classes["NodeRelationship"]
-        RelatedNodeInfo = llama_classes["RelatedNodeInfo"]
+        TextNode = llama_classes["TextNode"]  # noqa: N806 (lazy-loaded class)
+        NodeRelationship = llama_classes["NodeRelationship"]  # noqa: N806 (lazy-loaded class)
+        RelatedNodeInfo = llama_classes["RelatedNodeInfo"]  # noqa: N806 (lazy-loaded class)
 
         return TextNode(
             text=text,

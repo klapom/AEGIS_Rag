@@ -314,7 +314,8 @@ jobs:
           - 7687:7687
           - 7474:7474
         env:
-          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_AUTH: none  # Disable auth for CI tests
+          NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
           NEO4J_server_memory_heap_initial__size: 512m
           NEO4J_server_memory_heap_max__size: 1g
         options: >-
@@ -392,7 +393,7 @@ jobs:
           echo "🔍 Waiting for Neo4j Bolt to be fully ready (this may take up to 5 minutes)..."
           echo "  Initial 20s grace period for Neo4j startup..."
           sleep 20
-          timeout 300 bash -c 'count=0; until echo "RETURN 1 AS result" | cypher-shell -u neo4j -p testpassword -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "  Bolt attempt $((++count))/100: not ready yet..."; sleep 3; done'
+          timeout 300 bash -c 'count=0; until echo "RETURN 1 AS result" | cypher-shell -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "  Bolt attempt $((++count))/100: not ready yet..."; sleep 3; done'
           echo "✅ Neo4j Bolt ready"
 
           echo "🔍 Waiting for Redis..."
@@ -408,8 +409,8 @@ jobs:
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: testpassword
+          NEO4J_USER: ""  # No auth in CI
+          NEO4J_PASSWORD: ""  # No auth in CI
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           # NOTE: No Ollama in CI - tests auto-mocked via tests/integration/conftest.py
@@ -569,7 +570,8 @@ jobs:
           - 7687:7687
           - 7474:7474
         env:
-          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_AUTH: none  # Disable auth for CI tests
+          NEO4J_ACCEPT_LICENSE_AGREEMENT: "yes"
 
       redis:
         image: redis:7-alpine
@@ -634,8 +636,8 @@ jobs:
         env:
           QDRANT_HOST: localhost
           NEO4J_URI: bolt://localhost:7687
-          NEO4J_USER: neo4j
-          NEO4J_PASSWORD: testpassword
+          NEO4J_USER: ""  # No auth in CI
+          NEO4J_PASSWORD: ""  # No auth in CI
           REDIS_HOST: localhost
 
       - name: Install Frontend Dependencies
