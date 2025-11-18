@@ -2,14 +2,14 @@
 
 **Sprint:** 28 (Frontend Integration + Performance Testing)
 **Target Duration:** 3-4 days
-**Planned Story Points:** 18 SP
+**Planned Story Points:** 21 SP
 **Status:** 🔄 PLANNING
 
 ---
 
 ## Sprint Goal
 
-Complete the frontend integration for Sprint 27 backend features (Follow-up Questions, Source Citations) and establish production readiness through performance testing and settings management.
+Complete the frontend integration for Sprint 27 backend features (Follow-up Questions, Source Citations), fix legacy test failures, and establish production readiness through performance testing and settings management.
 
 ---
 
@@ -17,8 +17,9 @@ Complete the frontend integration for Sprint 27 backend features (Follow-up Ques
 
 1. **Frontend Integration (8 SP):** Complete UI for backend features from Sprint 27
 2. **Settings Management (5 SP):** Implement user settings page and preferences
-3. **Performance Testing (3 SP):** Load/stress testing and memory profiling
-4. **Documentation (2 SP):** ADRs, architecture updates, API docs refresh
+3. **Legacy Test Fixes (3 SP):** Fix 5 pre-Sprint 25 test failures (100% test pass rate)
+4. **Performance Testing (3 SP):** Load/stress testing and memory profiling
+5. **Documentation (2 SP):** ADRs, architecture updates, API docs refresh
 
 ---
 
@@ -311,6 +312,82 @@ Complete the frontend integration for Sprint 27 backend features (Follow-up Ques
 
 ---
 
+### Feature 28.6: Legacy Test Fixes 🔧 (3 SP)
+
+**Priority:** P1 (High - quality assurance)
+**Complexity:** Low
+**Dependencies:** None
+
+**Problem:** 5 test failures from pre-Sprint 25 (ollama_client → aegis_llm_proxy migration incomplete)
+
+**Failing Tests:**
+
+1. **CommunitySearch Tests (4 failures)**
+   - File: `tests/unit/components/graph_rag/test_community_search.py`
+   - Error: `AttributeError: 'CommunitySearch' object has no attribute 'ollama_client'`
+   - Root Cause: CommunitySearch still references `self.ollama_client` instead of `self.aegis_llm_proxy`
+   - Tests affected:
+     - `test_search_all_communities`
+     - `test_search_filtered_communities`
+     - `test_search_no_results`
+     - `test_search_multiple_communities`
+
+2. **LightRAG Test (1 failure)**
+   - File: `tests/unit/components/graph_rag/test_lightrag_wrapper.py`
+   - Test: `test_chunk_id_provenance_tracking`
+   - Error: `AssertionError: assert 'MATCH (e:base {entity_id: entity_id})' in Cypher query`
+   - Root Cause: Neo4j query format changed (MERGE vs MATCH pattern)
+
+**Scope:**
+- Fix CommunitySearch to use aegis_llm_proxy instead of ollama_client
+- Update test assertions for new Neo4j query patterns
+- Verify all 463 unit tests pass (currently 458/463)
+
+**Implementation:**
+
+1. **Fix CommunitySearch** (`src/components/graph_rag/community_search.py`)
+   ```python
+   # Replace:
+   self.ollama_client = ...
+
+   # With:
+   from src.components.llm_proxy import get_aegis_llm_proxy
+   self.aegis_llm_proxy = get_aegis_llm_proxy()
+   ```
+
+2. **Update DualLevelSearch** (`src/components/graph_rag/dual_level_search.py`)
+   - Verify parent class uses aegis_llm_proxy
+   - Update any remaining ollama_client references
+
+3. **Fix LightRAG Test** (`tests/unit/components/graph_rag/test_lightrag_wrapper.py`)
+   ```python
+   # Update assertion to match MERGE pattern:
+   assert 'MERGE (e:base' in cypher_query
+   # Instead of:
+   assert 'MATCH (e:base {entity_id: entity_id})' in cypher_query
+   ```
+
+**Acceptance Criteria:**
+- [ ] All 4 CommunitySearch tests pass
+- [ ] LightRAG provenance test passes
+- [ ] Full test suite: 463/463 passing (100%)
+- [ ] No ollama_client references in graph_rag components
+- [ ] MyPy strict mode: 0 errors
+
+**Testing:**
+- Run full test suite: `pytest tests/unit/ tests/components/`
+- Verify CommunitySearch: `pytest tests/unit/components/graph_rag/test_community_search.py -v`
+- Verify LightRAG: `pytest tests/unit/components/graph_rag/test_lightrag_wrapper.py::TestLightRAGWrapperSprint16::test_chunk_id_provenance_tracking -v`
+
+**Deliverables:**
+- CommunitySearch fixed (aegis_llm_proxy migration complete)
+- LightRAG test assertions updated
+- 100% test pass rate achieved (463/463)
+
+**Estimated Time:** 2 hours
+
+---
+
 ### Feature 28.5: Documentation Backfill 📝 (2 SP)
 
 **Priority:** P2 (Medium - team alignment)
@@ -383,8 +460,9 @@ Complete the frontend integration for Sprint 27 backend features (Follow-up Ques
 | P0 | Feature 28.2: Source Citations Frontend | 3 SP | Medium |
 | P1 | Feature 28.3: Settings Page | 5 SP | High |
 | P1 | Feature 28.4: Performance Testing | 3 SP | Medium |
+| P1 | Feature 28.6: Legacy Test Fixes | 3 SP | Low |
 | P2 | Feature 28.5: Documentation Backfill | 2 SP | Low |
-| **TOTAL** | | **18 SP** | |
+| **TOTAL** | | **21 SP** | |
 
 ### Quality Targets
 
@@ -409,8 +487,9 @@ Complete the frontend integration for Sprint 27 backend features (Follow-up Ques
 
 ## Sprint Timeline (3-4 days)
 
-### Day 1: Frontend Integration
-- Morning: Feature 28.1 (Follow-up Questions Frontend)
+### Day 1: Legacy Fixes & Frontend Integration
+- Morning: Feature 28.6 (Legacy Test Fixes - 2 hours, 100% test pass rate)
+- Late Morning: Feature 28.1 (Follow-up Questions Frontend)
 - Afternoon: Feature 28.2 (Source Citations Frontend)
 - Evening: E2E tests for both features
 
@@ -508,17 +587,19 @@ Sprint 28 is considered successful if:
    - Multi-device sync (backend required)
    - Custom prompt templates
 
-3. **Legacy Test Fixes** (3 SP)
-   - Fix 5 CommunitySearch/LightRAG test failures
-   - Complete ollama_client → aegis_llm_proxy migration
-   - Achieve 100% test pass rate (unit + integration)
-
-4. **Multi-Hop Query Implementation** (5 SP)
+3. **Multi-Hop Query Implementation** (5 SP)
    - Query decomposition UI
    - Sub-query visualization
    - Context aggregation display
 
+4. **Advanced Search Features** (3 SP)
+   - Temporal queries (date range filters)
+   - Entity-based search (find by entity type)
+   - Community-filtered search enhancements
+
 **Total:** ~16 SP
+
+**Note:** Legacy Test Fixes moved to Sprint 28 (Feature 28.6), achieving 100% test pass rate.
 
 ---
 
