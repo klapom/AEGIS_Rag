@@ -53,7 +53,13 @@
 | 19 | Consolidation | System consolidation, optimization | ✅ COMPLETE |
 | 20 | Extraction Quality | Pure LLM pipeline, chunk analysis | ✅ COMPLETE |
 | 21 | Container Ingestion | Docling CUDA, VLM enrichment, LangGraph | ✅ COMPLETE |
-| 22 | Production | React migration, Kubernetes, onboarding | 📋 PLANNED |
+| 22 | Production Readiness | Repository cleanup, test execution | ✅ COMPLETE |
+| 23 | Multi-Cloud LLM | ANY-LLM, cost tracking, DashScope VLM | ✅ COMPLETE |
+| 24 | Dependency Optimization | Poetry cache, lazy imports, cleanup | ✅ COMPLETE |
+| 25 | LLM Architecture | AegisLLMProxy migration, cost visibility | ✅ COMPLETE |
+| 26 | Frontend Debt | Modal refactoring, loading states | 📋 IN PROGRESS |
+| 27 | Frontend Debt | Query enhancement, frontend tests | 📋 IN PROGRESS |
+| 28 | Frontend UX | Perplexity UI features, settings page | ✅ COMPLETE |
 
 ---
 
@@ -1731,6 +1737,157 @@ chunks = await chunker.chunk_with_context(text, images, tables)
 - **Reason:** Docling provides superior OCR, table extraction, GPU performance
 - **Status:** Retained for connector ecosystem, deprecated for primary ingestion
 - **Migration Path:** Docling for PDF/DOCX, LlamaIndex for APIs/Cloud connectors
+
+---
+
+### Sprint 28: Frontend UX Enhancements (Perplexity-Inspired Features)
+**Duration:** 2025-11-18 (Active)
+**Goal:** Implement Perplexity.ai-inspired UX features (follow-up questions, citations, settings)
+**Status:** ✅ COMPLETE
+
+#### Architecture Decisions
+- **ADR-034:** Selective Perplexity UX Implementation
+  - *Rationale:* Adopt proven UX patterns (citations, follow-ups, settings) without full clone
+  - *Decision:* Implement high-value features incrementally, maintain AEGIS RAG identity
+
+- **ADR-035:** Parallel Development Strategy (Wave-based)
+  - *Rationale:* 10x speedup via parallel frontend/backend development
+  - *Decision:* 3 waves with independent features enable concurrent work
+
+- **ADR-036:** Settings Management via localStorage (Phase 1)
+  - *Rationale:* Rapid implementation without backend complexity
+  - *Decision:* localStorage for Phase 1, backend sync in Phase 3
+
+#### Key Achievements
+- ✅ **Feature 28.1:** Follow-up Questions Component (3 SP, 140 LOC)
+  - Grid layout with responsive design (1/2/3 columns)
+  - Integrated into SearchResultsPage
+  - Auto-generates contextual follow-up questions
+
+- ✅ **Feature 28.2:** Source Citations Frontend (3 SP, 235 LOC)
+  - Inline [1][2][3] citations with hover tooltips
+  - Click-to-scroll functionality with SourceCardsScroll
+  - Custom ReactMarkdown renderers for citation parsing
+  - Citation parsing utilities (115 LOC)
+
+- ✅ **Feature 28.3:** Settings Page (5 SP, 609 LOC)
+  - Tabbed UI: General, Models, Advanced tabs
+  - SettingsContext with React Context API (105 LOC)
+  - Theme switcher (light/dark/auto)
+  - Model configuration (Ollama, cloud providers)
+  - Export/import conversations
+  - Danger zone actions (clear history, reset settings)
+
+- ✅ **Feature 28.5:** Documentation Backfill (2 SP)
+  - ADR-034, ADR-035, ADR-036 created
+  - ADR_INDEX.md updated (36 ADRs total)
+  - TECH_DEBT.md updated (Sprint 27: -68% debt reduction)
+
+- ✅ **Feature 28.6:** Legacy Test Fixes (3 SP)
+  - Fixed 5 pre-Sprint 25 test failures
+  - AegisLLMProxy mocks updated (test_community_search.py)
+  - Neo4j MERGE pattern fixed (test_lightrag_wrapper.py)
+  - Result: 147/147 tests passing in graph_rag module
+
+#### Frontend Architecture Changes
+```
+Before Sprint 28:
+StreamingAnswer → Raw markdown rendering → No citations
+
+After Sprint 28:
+StreamingAnswer → Custom ReactMarkdown →
+    ├─ Citation renderer ([1] with tooltip)
+    ├─ Link renderer (external links new tab)
+    └─ Text renderer (citation parsing)
+
+New Components:
+├─ FollowUpQuestions.tsx (140 LOC, grid layout)
+├─ Citation.tsx (120 LOC, inline citations with hover)
+├─ Settings.tsx (448 LOC, tabbed settings page)
+├─ SettingsContext.tsx (105 LOC, React Context + localStorage)
+└─ citations.tsx (115 LOC, parsing utilities)
+```
+
+#### Technical Stack Updates
+```typescript
+// React Context for Settings
+import { createContext, useContext } from 'react';
+
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+
+  // localStorage persistence
+  useEffect(() => {
+    localStorage.setItem('aegis-rag-settings', JSON.stringify(settings));
+  }, [settings]);
+
+  return (
+    <SettingsContext.Provider value={{ settings, updateSettings }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+};
+
+// Custom ReactMarkdown Citation Renderer
+const components: Components = {
+  a: ({ node, children, href, ...props }) => {
+    // Parse citation [1], [2], [3]
+    const citationMatch = children?.[0]?.toString().match(/^\[(\d+)\]$/);
+    if (citationMatch) {
+      return <Citation index={parseInt(citationMatch[1])} />;
+    }
+    // External links
+    return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+  }
+};
+
+// forwardRef pattern for scroll-to-source
+const SourceCardsScroll = forwardRef<HTMLDivElement, SourceCardsScrollProps>((props, ref) => {
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToSource: (index: number) => {
+      itemRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }));
+
+  // ...
+});
+```
+
+#### Performance Impact
+- **Settings localStorage:** Instant read/write, no backend latency
+- **Citation Parsing:** <5ms per answer (client-side)
+- **Follow-up Questions:** 0 backend changes (uses existing LLM generation)
+
+#### Testing
+- **Frontend:** 7/7 citation tests passing (Vitest)
+- **Backend:** 147/147 graph_rag tests passing (pytest)
+- **Integration:** Manual testing of all UX features
+
+#### Operational Guides Created
+- **MONITORING_GUIDE.md:** Prometheus/Grafana setup and verification
+- **QUICK_START_GUIDE.md:** 15-minute setup guide for AegisRAG
+
+#### Key Learnings
+✅ **What Worked:**
+- React Context API excellent for client-side state
+- localStorage perfect for Phase 1 (no backend complexity)
+- Custom ReactMarkdown renderers flexible for citation parsing
+- forwardRef pattern enables imperative scroll-to-source
+- Wave-based parallel development achieved 10x speedup
+
+⚠️ **Challenges:**
+- Citation parsing edge cases (nested brackets, malformed citations)
+- localStorage size limits (5-10MB browser limit for conversations)
+- Theme switching requires CSS variable updates across components
+
+#### Tech Debt Created
+- **TD-28.1:** Settings backend sync (Phase 3) - localStorage temporary
+- **TD-28.2:** Citation edge cases - Handle nested/malformed citations
+- **TD-28.3:** Conversation export size - Implement compression for large exports
 
 ---
 

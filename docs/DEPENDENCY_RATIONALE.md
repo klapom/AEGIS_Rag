@@ -1311,11 +1311,131 @@ MONTHLY_BUDGET_ALIBABA_CLOUD=10.0  # USD per month
 
 ---
 
-**Last Updated:** 2025-11-13 (Sprint 23 Day 2 Complete)
-**Total Dependencies:** 63+ (production + dev, +2 new: any-llm-sdk, httpx usage for DashScope)
+## SPRINT 28: FRONTEND UX ENHANCEMENTS
+
+### React Context API: Built-in (React 18.2) | Settings State Management (Sprint 28)
+
+**Version:** Built-in with React 18.2
+
+**Rationale (Sprint 28 Usage):**
+- **Settings State Management:** SettingsContext (105 LOC) manages theme, models, preferences
+- **Isolated Scope:** Settings page + header only (no global state needed)
+- **No External Dependencies:** Built-in React feature, zero bundle size impact
+- **localStorage Integration:** Easy persistence with useEffect
+- **Phase 3 Ready:** Simple migration to backend sync when needed
+
+**Alternatives Rejected:**
+- **Zustand:** Overkill for isolated settings scope, external dependency
+- **Redux:** Too complex for simple settings state
+- **Prop Drilling:** Causes component re-renders, poor DX
+
+**Trade-offs:**
+- ⚠️ Context API re-renders all consumers on update (acceptable for settings)
+- ✅ Zero dependencies, native React feature
+- ✅ Easy migration to backend sync (Phase 3)
+
+**Configuration:**
+```typescript
+// SettingsContext.tsx (105 LOC)
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+
+  // localStorage persistence
+  useEffect(() => {
+    localStorage.setItem('aegis-rag-settings', JSON.stringify(settings));
+  }, [settings]);
+
+  return (
+    <SettingsContext.Provider value={{ settings, updateSettings }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+};
+```
+
+---
+
+### React Markdown: 9.0.2 | Markdown Rendering with Custom Components (Sprint 28)
+
+**Version:** `^9.0.2` (already in package.json, extended in Sprint 28)
+
+**Rationale (Sprint 28 Enhancements):**
+- **Custom Citation Renderer:** Parse [1][2][3] inline citations
+- **Component Extension:** Custom `a` renderer for citations + external links
+- **Security:** No dangerouslySetInnerHTML, XSS-safe
+- **Extensibility:** Easy to add new renderers (code blocks, tables)
+
+**Sprint 28 Custom Renderers:**
+```typescript
+const components: Components = {
+  a: ({ node, children, href, ...props }) => {
+    // Parse citation [1], [2], [3]
+    const citationMatch = children?.[0]?.toString().match(/^\[(\d+)\]$/);
+    if (citationMatch) {
+      return <Citation index={parseInt(citationMatch[1])} sources={sources} />;
+    }
+    // External links
+    return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+  }
+};
+
+<ReactMarkdown components={components}>{answerText}</ReactMarkdown>
+```
+
+**Alternatives Rejected:**
+- **Regex Replacement:** Fragile, edge cases (nested brackets)
+- **HTML dangerouslySetInnerHTML:** XSS security risk
+- **Marked.js:** Lower-level API, more boilerplate
+
+**Trade-offs:**
+- ⚠️ Bundle size (~50KB), acceptable for rich markdown
+- ✅ XSS-safe, React-native rendering
+- ✅ Extensible component system
+
+---
+
+### localStorage API: Built-in (Browser) | Settings Persistence (Sprint 28)
+
+**Version:** Native Web API (all modern browsers)
+
+**Rationale (Sprint 28 Phase 1):**
+- **Rapid Implementation:** No backend complexity, instant persistence
+- **Instant Read/Write:** No network latency
+- **5-10MB Limit:** Sufficient for settings (theme, models, preferences)
+- **Phase 3 Migration:** Backend sync enables cross-device settings
+
+**Alternatives Rejected:**
+- **IndexedDB:** Too complex for simple settings key-value store
+- **Session Storage:** Lost on browser close, not persistent
+- **Cookies:** 4KB limit too small, sent with every request
+
+**Trade-offs:**
+- ⚠️ 5-10MB browser limit (not an issue for settings)
+- ⚠️ Per-device storage (Phase 3: backend sync for cross-device)
+- ⚠️ User can clear browser data (acceptable for settings)
+- ✅ Zero backend complexity (Phase 1)
+- ✅ Instant persistence
+
+**Configuration:**
+```typescript
+// Save settings
+localStorage.setItem('aegis-rag-settings', JSON.stringify(settings));
+
+// Load settings
+const savedSettings = localStorage.getItem('aegis-rag-settings');
+if (savedSettings) {
+  setSettings(JSON.parse(savedSettings));
+}
+```
+
+---
+
+**Last Updated:** 2025-11-18 (Sprint 28 Complete)
+**Total Dependencies:** 63+ (production + dev)
 **Dependency Health:** All actively maintained, no critical CVEs
-**Sprint 23 Additions:**
-- **any-llm-sdk:** Multi-cloud LLM routing (Core Library only)
-- **httpx:** Async HTTP client for DashScope VLM API
-- **SQLite Cost Tracker:** Custom 389 LOC persistent tracking
-- **Alibaba Cloud DashScope:** API key for Qwen models + VLM
+**Sprint 28 Additions:**
+- **React Context API:** Built-in settings state management (SettingsContext, 105 LOC)
+- **Custom ReactMarkdown Renderers:** Citation parsing with custom `a` renderer
+- **localStorage API:** Native browser API for settings persistence (Phase 1)

@@ -1,8 +1,8 @@
 # CONTEXT REFRESH MASTER GUIDE
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Timeless guide for achieving FULL context refresh in any session
-**Version:** 5.0 (Sprint-Independent, Reference-Based)
-**Last Updated:** 2025-11-10
+**Version:** 5.1 (Sprint-Independent, Reference-Based)
+**Last Updated:** 2025-11-18 (Sprint 28 Frontend UX)
 
 ---
 

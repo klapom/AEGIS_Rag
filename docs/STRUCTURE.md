@@ -1,6 +1,6 @@
 # AEGIS RAG - Repository Structure
 
-**Last Updated:** 2025-11-11 (Sprint 22 Feature 22.5 - 30-Format Support)
+**Last Updated:** 2025-11-18 (Sprint 28 - Frontend UX Enhancements)
 **Purpose:** Complete overview of repository organization
 
 ---

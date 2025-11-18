@@ -286,7 +286,35 @@
 
 ---
 
-**Last Updated:** 2025-11-13 (Sprint 23 Day 2 Complete)
-**Total Decisions Documented:** 49+
-**Current Sprint:** Sprint 23 (In Progress: Day 2 Complete)
-**Next Sprint:** Sprint 24 (Planned)
+## SPRINT 28: FRONTEND UX ENHANCEMENTS (PERPLEXITY-INSPIRED FEATURES)
+
+### 2025-11-18 | Selective Perplexity UX Implementation (ADR-034)
+**Decision:** Adopt proven UX patterns (citations, follow-ups, settings) from Perplexity.ai without full clone.
+**Rationale:** High-value features (citations [1][2][3], follow-up questions, settings page) improve user experience while maintaining AEGIS RAG identity. Selective adoption faster than building from scratch. Proven patterns reduce UX risk.
+
+### 2025-11-18 | Parallel Development Strategy - Wave-based (ADR-035)
+**Decision:** Use wave-based parallel development with 3 waves of independent features.
+**Rationale:** Enables 10x speedup vs. sequential development. Wave 1 (citations, follow-ups) independent of Wave 2 (settings, backend sync). Parallel frontend/backend work maximizes team velocity. Critical for rapid UX iteration.
+
+### 2025-11-18 | Settings Management via localStorage (Phase 1) (ADR-036)
+**Decision:** Use localStorage for settings in Phase 1, defer backend sync to Phase 3.
+**Rationale:** Rapid implementation without backend complexity. localStorage provides instant read/write (no network latency). Phase 3 backend sync enables cross-device settings. Trade-off: localStorage 5-10MB limit acceptable for settings (conversations separate).
+
+### 2025-11-18 | Custom ReactMarkdown Citation Renderers
+**Decision:** Implement custom ReactMarkdown components for inline citation parsing.
+**Rationale:** ReactMarkdown extensible component system perfect for [1][2][3] citations. Custom renderers handle citation parsing (115 LOC utilities), hover tooltips, click-to-scroll. Alternative: Regex replacement (fragile), HTML dangerouslySetInnerHTML (XSS risk).
+
+### 2025-11-18 | React Context API for Settings State
+**Decision:** Use React Context API for settings state management instead of Zustand.
+**Rationale:** Settings isolated to Settings page + header. Context API simpler than Redux/Zustand for this scope. No external dependencies. Easy migration to backend sync (Phase 3). SettingsContext (105 LOC) manages theme, models, preferences.
+
+### 2025-11-18 | forwardRef Pattern for Scroll-to-Source
+**Decision:** Use React forwardRef + useImperativeHandle for SourceCardsScroll scroll-to-source.
+**Rationale:** Imperative handle enables parent (StreamingAnswer) to trigger child (SourceCardsScroll) scroll. Alternative: State prop (causes re-render), Ref callback (complex). Pattern: Citation onClick → scrollToSource(index) → smooth scroll.
+
+---
+
+**Last Updated:** 2025-11-18 (Sprint 28 Complete)
+**Total Decisions Documented:** 55+
+**Current Sprint:** Sprint 28 (Complete)
+**Next Sprint:** Sprint 29 (Planned)

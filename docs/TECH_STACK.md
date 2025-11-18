@@ -381,7 +381,7 @@ result = await pipeline.run({
 ---
 
 ### Sprint 23: Multi-Cloud LLM Execution & VLM Integration
-**Status:** 🚧 IN PROGRESS (2025-11-11 - Present)
+**Status:** ✅ COMPLETE (2025-11-11 - 2025-11-13)
 
 **Technologies Added:**
 
@@ -461,7 +461,89 @@ description, metadata = await client.generate_with_fallback(
 
 ---
 
-### Cumulative Technology Additions (Sprints 12-21)
+### Sprint 28: Frontend UX Enhancements (Perplexity-Inspired Features)
+**Status:** ✅ COMPLETE (2025-11-18, 1 day)
+
+**Technologies Added:**
+
+**Frontend Components:**
+- **FollowUpQuestions.tsx** (140 LOC): Grid layout with responsive design (1/2/3 columns)
+- **Citation.tsx** (120 LOC): Inline [1][2][3] citations with hover tooltips
+- **Settings.tsx** (448 LOC): Tabbed settings page (General, Models, Advanced)
+- **SettingsContext.tsx** (105 LOC): React Context API for settings state
+- **citations.tsx** (115 LOC): Citation parsing utilities
+
+**Frontend Patterns:**
+- **React Context API:** Settings state management (SettingsContext, zero dependencies)
+- **localStorage:** Client-side settings persistence (Phase 1, 5-10MB limit)
+- **Custom ReactMarkdown Renderers:** Citation parsing with custom `a` renderer
+- **forwardRef Pattern:** Scroll-to-source with useImperativeHandle
+
+**Architecture Decisions:**
+- ADR-034: Selective Perplexity UX Implementation (ACCEPTED 2025-11-18)
+- ADR-035: Parallel Development Strategy (Wave-based, 10x speedup)
+- ADR-036: Settings Management via localStorage (Phase 1)
+
+**Achievements:**
+- ✅ Follow-up questions with responsive grid layout
+- ✅ Inline citations [1][2][3] with hover tooltips and click-to-scroll
+- ✅ Settings page with theme switcher, model configuration, export/import
+- ✅ SettingsContext with localStorage persistence
+- ✅ Custom ReactMarkdown renderers for citation parsing
+- ✅ 7/7 frontend citation tests passing (Vitest)
+- ✅ 147/147 backend graph_rag tests passing (pytest)
+- ✅ ADR-034, ADR-035, ADR-036 created
+- ✅ MONITORING_GUIDE.md and QUICK_START_GUIDE.md operational guides
+
+**Technical Stack:**
+```typescript
+// React Context for Settings
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+
+export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+
+  // localStorage persistence
+  useEffect(() => {
+    localStorage.setItem('aegis-rag-settings', JSON.stringify(settings));
+  }, [settings]);
+
+  return (
+    <SettingsContext.Provider value={{ settings, updateSettings }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+};
+
+// Custom ReactMarkdown Citation Renderer
+const components: Components = {
+  a: ({ node, children, href, ...props }) => {
+    const citationMatch = children?.[0]?.toString().match(/^\[(\d+)\]$/);
+    if (citationMatch) {
+      return <Citation index={parseInt(citationMatch[1])} sources={sources} />;
+    }
+    return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+  }
+};
+
+// forwardRef for scroll-to-source
+const SourceCardsScroll = forwardRef<HTMLDivElement, SourceCardsScrollProps>((props, ref) => {
+  useImperativeHandle(ref, () => ({
+    scrollToSource: (index: number) => {
+      itemRefs.current[index]?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }));
+});
+```
+
+**Tech Debt Created:**
+- TD-28.1: Settings backend sync (Phase 3) - localStorage temporary
+- TD-28.2: Citation edge cases - Handle nested/malformed citations
+- TD-28.3: Conversation export size - Implement compression for large exports
+
+---
+
+### Cumulative Technology Additions (Sprints 12-28)
 
 | Sprint | Category | Technology | Version | Purpose |
 |--------|----------|------------|---------|---------|
@@ -503,6 +585,15 @@ description, metadata = await client.generate_with_fallback(
 | 23 | VLM | qwen3-vl-30b-a3b-instruct | DashScope | Primary VLM (cheaper) |
 | 23 | VLM | qwen3-vl-30b-a3b-thinking | DashScope | Fallback VLM (on 403) |
 | 23 | HTTP Client | httpx | 0.27.0 | Async HTTP (DashScope API) |
+| 28 | Frontend | FollowUpQuestions.tsx | Custom | Grid layout, responsive (1/2/3 col) |
+| 28 | Frontend | Citation.tsx | Custom | Inline citations [1][2][3] + tooltips |
+| 28 | Frontend | Settings.tsx | Custom | Tabbed settings (General/Models/Advanced) |
+| 28 | Frontend | SettingsContext.tsx | React Context | Settings state + localStorage |
+| 28 | Frontend | citations.tsx | Custom | Citation parsing utilities (115 LOC) |
+| 28 | State Management | React Context API | React 18.2 | Settings state (zero deps) |
+| 28 | Persistence | localStorage API | Browser | Client-side settings (Phase 1) |
+| 28 | Markdown | ReactMarkdown Custom Renderers | 9.0.2 | Citation + link renderers |
+| 28 | Pattern | forwardRef + useImperativeHandle | React 18.2 | Scroll-to-source imperative API |
 
 ### Embedding Model Evolution
 

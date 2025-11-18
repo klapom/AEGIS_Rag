@@ -1,7 +1,7 @@
 # COMPONENT INTERACTION MAP
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete data flow documentation - how components communicate
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
+**Last Updated:** 2025-11-18 (Sprint 28 - Frontend UX Enhancements)
 
 ---
 
@@ -23,12 +23,19 @@
 │                         AEGIS RAG System                            │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  ┌──────────────┐                                                  │
-│  │   Gradio UI  │  (Port 7860)                                     │
-│  │  (Sprint 10) │                                                  │
-│  └──────┬───────┘                                                  │
-│         │ HTTP POST /api/v1/chat                                   │
-│         ▼                                                          │
+│  ┌──────────────────────────────────────────────────────┐          │
+│  │   React Frontend (Port 5173)                        │          │
+│  │   (Sprint 15 SSE, Sprint 28 Perplexity UX)          │          │
+│  │   Components:                                        │          │
+│  │   - SearchResultsPage (SSE streaming)               │          │
+│  │   - StreamingAnswer (custom ReactMarkdown)          │          │
+│  │   - Citation (inline [1][2][3] with tooltips)       │          │
+│  │   - FollowUpQuestions (grid layout, responsive)     │          │
+│  │   - Settings (tabbed UI, localStorage)              │          │
+│  │   - SettingsContext (React Context API)             │          │
+│  └──────────────┬───────────────────────────────────────┘          │
+│                 │ HTTP POST /api/v1/chat (SSE)                     │
+│                 ▼                                                  │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │              FastAPI Backend (Port 8000)                      │  │
 │  │  ┌────────────┐  ┌──────────────┐  ┌──────────────┐         │  │
