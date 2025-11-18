@@ -15,12 +15,16 @@ Typical usage:
 
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 from pydantic import BaseModel, Field
-from sentence_transformers import CrossEncoder
 
 from src.core.config import settings
+
+# Sprint 24 Feature 24.15: Lazy import for optional reranking dependency
+if TYPE_CHECKING:
+    from sentence_transformers import CrossEncoder
 
 logger = structlog.get_logger(__name__)
 
@@ -86,7 +90,7 @@ class CrossEncoderReranker:
         self.cache_dir = Path(cache_dir or settings.reranker_cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        self._model: CrossEncoder | None = None
+        self._model: "CrossEncoder | None" = None
 
         logger.info(
             "initialized_reranker",
@@ -96,7 +100,7 @@ class CrossEncoderReranker:
         )
 
     @property
-    def model(self) -> CrossEncoder:
+    def model(self) -> "CrossEncoder":
         """Lazy-load cross-encoder model.
 
         Returns:
@@ -105,8 +109,20 @@ class CrossEncoderReranker:
         Note:
             First access will download model (~80MB) and may take 10-30s.
             Subsequent accesses use cached model.
+
+        Raises:
+            ImportError: If sentence-transformers not installed (optional reranking dependency)
         """
         if self._model is None:
+            # Lazy import: Only load sentence_transformers when actually using reranker
+            try:
+                from sentence_transformers import CrossEncoder
+            except ImportError as e:
+                raise ImportError(
+                    "sentence-transformers is required for reranking. "
+                    "Install with: poetry install --with reranking"
+                ) from e
+
             logger.info("loading_cross_encoder_model", model=self.model_name)
             # Note: sentence-transformers 3.4+ uses cache_dir instead of cache_folder
             try:

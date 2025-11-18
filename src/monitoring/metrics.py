@@ -165,7 +165,9 @@ def record_deduplication_reduction(reduction_ratio: float) -> None:
     deduplication_reduction_ratio.observe(reduction_ratio)
 
 
-def update_gpu_memory(gpu_id: int, used_bytes: int, allocated_bytes: int, utilization: float) -> None:
+def update_gpu_memory(
+    gpu_id: int, used_bytes: int, allocated_bytes: int, utilization: float
+) -> None:
     """Update GPU memory metrics.
 
     Args:
