@@ -236,7 +236,7 @@ class ConnectionManager:
         """
         return list(self.client.connections.values())
 
-    async def health_check(self) -> dict[str, any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on all connections.
 
         Returns:

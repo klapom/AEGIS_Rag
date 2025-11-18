@@ -288,7 +288,7 @@ class CostTracker:
         self,
         days: int = 30,
         provider: str | None = None,
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Get aggregated statistics for recent requests.
 
         Args:

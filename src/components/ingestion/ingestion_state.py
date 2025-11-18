@@ -30,7 +30,7 @@ Example:
     >>> # ... etc
 """
 
-from typing import Any, Literal, TypedDict, List
+from typing import Any, Dict, List, Literal, TypedDict
 
 from src.core.chunk import Chunk
 
