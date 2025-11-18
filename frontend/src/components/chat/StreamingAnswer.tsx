@@ -15,6 +15,7 @@ import ReactMarkdown from 'react-markdown';
 import { streamChat, generateConversationTitle, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
 import { SourceCardsScroll } from './SourceCardsScroll';
+import { CopyButton } from './CopyButton';  // Sprint 27 Feature 27.6
 
 interface StreamingAnswerProps {
   query: string;
@@ -206,6 +207,13 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
           </div>
         )}
       </div>
+
+      {/* Action Toolbar - Sprint 27 Feature 27.6 */}
+      {answer && !isStreaming && (
+        <div className="flex items-center justify-end border-t border-gray-200 pt-3 mt-4">
+          <CopyButton text={answer} format="markdown" />
+        </div>
+      )}
 
       {/* Metadata */}
       {metadata && !isStreaming && (
