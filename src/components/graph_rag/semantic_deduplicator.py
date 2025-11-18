@@ -19,15 +19,21 @@ Author: Claude Code
 Date: 2025-10-24, Updated: 2025-10-30
 """
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
+# Sprint 24 Feature 24.15: Lazy import for optional reranking dependency
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
+
 logger = structlog.get_logger(__name__)
 
-# Conditional imports
+# Runtime conditional imports
 try:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer  # noqa: F811
     from sklearn.metrics.pairwise import cosine_similarity
 
     DEPENDENCIES_AVAILABLE = True
