@@ -289,7 +289,7 @@ class DocumentIngestionPipeline:
 
         except Exception as e:
             logger.error("Failed to chunk documents", error=str(e))
-            raise VectorSearchError(f"Failed to chunk documents: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to chunk documents: {e}") from e
 
     async def generate_embeddings(
         self,
@@ -325,7 +325,7 @@ class DocumentIngestionPipeline:
 
         except Exception as e:
             logger.error("Failed to generate embeddings", error=str(e))
-            raise VectorSearchError(f"Failed to generate embeddings: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to generate embeddings: {e}") from e
 
     async def index_documents(
         self,

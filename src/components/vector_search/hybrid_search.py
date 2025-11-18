@@ -199,7 +199,7 @@ class HybridSearch:
 
         except Exception as e:
             logger.error("Vector search failed", error=str(e))
-            raise VectorSearchError(f"Vector search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"Vector search failed: {e}") from e
 
     async def keyword_search(
         self,
@@ -243,7 +243,7 @@ class HybridSearch:
 
         except Exception as e:
             logger.error("BM25 search failed", error=str(e))
-            raise VectorSearchError(f"BM25 search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"BM25 search failed: {e}") from e
 
     async def hybrid_search(
         self,
@@ -286,7 +286,7 @@ class HybridSearch:
             if filters is not None and not filters.is_empty():
                 is_valid, error_msg = self.filter_engine.validate_filter(filters)
                 if not is_valid:
-                    raise VectorSearchError(f"Invalid filters: {error_msg}")
+                    raise VectorSearchError(query=query, reason=f"Invalid filters: {error_msg}")
                 logger.info(
                     "hybrid_search_with_filters",
                     active_filters=filters.get_active_filters(),
@@ -399,7 +399,7 @@ class HybridSearch:
 
         except Exception as e:
             logger.error("Hybrid search failed", error=str(e))
-            raise VectorSearchError(f"Hybrid search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
 
     async def prepare_bm25_index(self) -> Dict[str, Any]:
         """Prepare BM25 index from Qdrant collection.
@@ -486,8 +486,11 @@ class HybridSearch:
             # Safety check for empty collection
             if not documents:
                 raise VectorSearchError(
-                    f"No documents found in collection '{self.collection_name}'. "
-                    "Please ingest documents first."
+                    query="",
+                    reason=(
+                        f"No documents found in collection '{self.collection_name}'. "
+                        "Please ingest documents first."
+                    ),
                 )
 
             # Fit BM25 model
@@ -505,4 +508,4 @@ class HybridSearch:
 
         except Exception as e:
             logger.error("Failed to prepare BM25 index", error=str(e))
-            raise VectorSearchError(f"Failed to prepare BM25 index: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to prepare BM25 index: {e}") from e

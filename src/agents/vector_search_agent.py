@@ -183,7 +183,7 @@ class VectorSearchAgent(BaseAgent):
                 error=str(e),
                 query_length=len(query),
             )
-            raise VectorSearchError(query, f"Hybrid search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
 
     def _convert_results(self, results: list[Dict[str, Any]]) -> list[RetrievedContext]:
         """Convert HybridSearch results to RetrievedContext format.

@@ -109,7 +109,7 @@ class ConversationArchiver:
             logger.error(
                 "collection_creation_failed", collection=self.collection_name, error=str(e)
             )
-            raise VectorSearchError(f"Failed to ensure collection exists: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to ensure collection exists: {e}") from e
 
     async def archive_conversation(
         self,
@@ -207,7 +207,7 @@ class ConversationArchiver:
             raise
         except Exception as e:
             logger.error("conversation_archiving_failed", session_id=session_id, error=str(e))
-            raise VectorSearchError(f"Failed to archive conversation: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to archive conversation: {e}") from e
 
     async def search_archived_conversations(
         self, request: ConversationSearchRequest, user_id: str = "default_user"
@@ -293,7 +293,7 @@ class ConversationArchiver:
 
         except Exception as e:
             logger.error("conversation_search_failed", query=request.query, error=str(e))
-            raise VectorSearchError(f"Failed to search archived conversations: {e}") from e
+            raise VectorSearchError(query=request.query, reason=f"Failed to search archived conversations: {e}") from e
 
     async def archive_old_conversations(self, max_conversations: int = 100) -> Dict[str, Any]:
         """Background job: Archive conversations older than configured threshold.

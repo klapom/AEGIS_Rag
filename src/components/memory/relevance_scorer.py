@@ -216,7 +216,7 @@ class RelevanceScorer:
 
     def calculate_score_from_metadata(
         self,
-        metadata: dict,
+        metadata: dict[str, Any],
         current_time: datetime | None = None,
     ) -> RelevanceScore:
         """Calculate score from memory metadata dictionary.

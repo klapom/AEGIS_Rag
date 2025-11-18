@@ -66,7 +66,8 @@ class ResultParser:
 
         # Try to convert to dict
         if hasattr(raw_result, "__dict__"):
-            return vars(raw_result)
+            result_dict: dict[str, Any] = vars(raw_result)
+            return result_dict
 
         return {"value": raw_result}
 
@@ -149,7 +150,8 @@ class ResultParser:
 
         # Try to convert to dict
         if hasattr(raw_result, "__dict__"):
-            return vars(raw_result)
+            result_dict: dict[str, Any] = vars(raw_result)
+            return result_dict
 
         # Default to raw
         return ResultParser._parse_raw(raw_result)

@@ -79,13 +79,13 @@ async def reindex_progress_stream(
 
         # Discover documents
         if not input_dir.exists():
-            raise VectorSearchError(f"Input directory does not exist: {input_dir}")
+            raise VectorSearchError(query="", reason=f"Input directory does not exist: {input_dir}")
 
         document_files = list(input_dir.glob("*.pdf")) + list(input_dir.glob("*.txt"))
         total_docs = len(document_files)
 
         if total_docs == 0:
-            raise VectorSearchError(f"No documents found in {input_dir}")
+            raise VectorSearchError(query="", reason=f"No documents found in {input_dir}")
 
         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 5, 'message': f'Found {total_docs} documents to index'})}\n\n"
 
@@ -173,7 +173,7 @@ async def reindex_progress_stream(
                         error=str(e),
                         install_command="poetry install --with ingestion",
                     )
-                    raise VectorSearchError(error_msg) from e
+                    raise VectorSearchError(query="", reason=error_msg) from e
 
                 lightrag_wrapper = await get_lightrag_wrapper_async()
 
@@ -231,7 +231,7 @@ async def reindex_progress_stream(
                     "qdrant_validation_complete", collection=collection_name, points=point_count
                 )
             else:
-                raise VectorSearchError(f"Collection {collection_name} not found after re-indexing")
+                raise VectorSearchError(query="", reason=f"Collection {collection_name} not found after re-indexing")
 
             # Validate Neo4j graph
             try:

@@ -113,14 +113,14 @@ class LLMProxyConfig(BaseModel):
             ValueError: If required variable is not set
         """
 
-        def replace_env_var(match: re.Match) -> str:
+        def replace_env_var(match: re.Match[str]) -> str:
             """Replace single environment variable."""
             var_expr = match.group(1)
 
             # Check for default value syntax: VAR:-default
             if ":-" in var_expr:
                 var_name, default = var_expr.split(":-", 1)
-                return os.environ.get(var_name, default)  # type: ignore[no-any-return]
+                return str(os.environ.get(var_name, default))
             else:
                 var_name = var_expr
                 if var_name not in os.environ:
@@ -166,7 +166,7 @@ class LLMProxyConfig(BaseModel):
         """
         if provider == "local_ollama":
             return 0.0  # Local is free
-        return self.budgets.get("monthly_limits", {}).get(provider, 0.0)  # type: ignore[no-any-return]
+        return float(self.budgets.get("monthly_limits", {}).get(provider, 0.0))
 
     def get_default_model(self, provider: str, task_type: str) -> str | None:
         """
@@ -179,7 +179,8 @@ class LLMProxyConfig(BaseModel):
         Returns:
             Model name or None if not configured
         """
-        return self.model_defaults.get(provider, {}).get(task_type)  # type: ignore[no-any-return]
+        result = self.model_defaults.get(provider, {}).get(task_type)
+        return str(result) if result is not None else None
 
     def is_provider_enabled(self, provider: str) -> bool:
         """
@@ -203,12 +204,12 @@ class LLMProxyConfig(BaseModel):
         elif provider in ["alibaba_cloud", "ollama_cloud"]:
             # Require non-empty api_key
             api_key = provider_config.get("api_key", "")
-            return "base_url" in provider_config and api_key and api_key.strip()
+            return bool("base_url" in provider_config and api_key and api_key.strip())
 
         elif provider == "openai":
             # Require non-empty api_key
             api_key = provider_config.get("api_key", "")
-            return api_key and api_key.strip()
+            return bool(api_key and api_key.strip())
 
         return False
 

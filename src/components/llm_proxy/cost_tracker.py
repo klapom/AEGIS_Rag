@@ -170,6 +170,9 @@ class CostTracker:
             row_id = cursor.lastrowid
             conn.commit()
 
+        # Assert row_id is not None (SQLite INSERT always returns lastrowid)
+        assert row_id is not None, "SQLite INSERT failed to return row ID"
+
         logger.debug(
             "Request tracked",
             row_id=row_id,

@@ -195,7 +195,7 @@ class QdrantClient:
                 collection_name=collection_name,
                 error=str(e),
             )
-            raise VectorSearchError(f"Failed to create collection: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to create collection: {e}") from e
 
     async def upsert_points(
         self,
@@ -239,7 +239,7 @@ class QdrantClient:
                 collection_name=collection_name,
                 error=str(e),
             )
-            raise VectorSearchError(f"Failed to upsert points: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to upsert points: {e}") from e
 
     async def search(
         self,
@@ -297,7 +297,7 @@ class QdrantClient:
                 collection_name=collection_name,
                 error=str(e),
             )
-            raise VectorSearchError(f"Vector search failed: {e}") from e
+            raise VectorSearchError(query="", reason=f"Vector search failed: {e}") from e
 
     async def get_collection_info(self, collection_name: str) -> CollectionInfo | None:
         """Get information about a collection.

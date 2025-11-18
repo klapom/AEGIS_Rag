@@ -103,8 +103,11 @@ class BM25Search:
             # Safety check: Ensure we have tokenized content
             if not any(tokenized_corpus):
                 raise VectorSearchError(
-                    "All documents resulted in empty tokenization. "
-                    "Check that documents have non-empty text content."
+                    query="",
+                    reason=(
+                        "All documents resulted in empty tokenization. "
+                        "Check that documents have non-empty text content."
+                    ),
                 )
 
             # Fit BM25
@@ -122,7 +125,7 @@ class BM25Search:
 
         except Exception as e:
             logger.error("Failed to fit BM25 model", error=str(e))
-            raise VectorSearchError(f"Failed to fit BM25 model: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to fit BM25 model: {e}") from e
 
     def search(
         self,
@@ -142,7 +145,7 @@ class BM25Search:
             VectorSearchError: If search fails or model not fitted
         """
         if not self._is_fitted or self._bm25 is None:
-            raise VectorSearchError("BM25 model not fitted. Call fit() first.")
+            raise VectorSearchError(query=query, reason="BM25 model not fitted. Call fit() first.")
 
         try:
             # Tokenize query
@@ -177,7 +180,7 @@ class BM25Search:
 
         except Exception as e:
             logger.error("BM25 search failed", error=str(e))
-            raise VectorSearchError(f"BM25 search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"BM25 search failed: {e}") from e
 
     def get_corpus_size(self) -> int:
         """Get size of fitted corpus.
@@ -266,7 +269,7 @@ class BM25Search:
 
         except Exception as e:
             logger.error("Failed to load BM25 index from disk", error=str(e))
-            raise VectorSearchError(f"Failed to load BM25 index: {e}") from e
+            raise VectorSearchError(query="", reason=f"Failed to load BM25 index: {e}") from e
 
     def clear(self) -> None:
         """Clear corpus and reset model."""
