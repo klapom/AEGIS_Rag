@@ -41,6 +41,8 @@
 │  │  ┌────────────┐  ┌──────────────┐  ┌──────────────┐         │  │
 │  │  │ Health API │  │ Retrieval API│  │ Graph Viz API│         │  │
 │  │  │ (Sprint 2) │  │  (Sprint 2)  │  │ (Sprint 12)  │         │  │
+│  │  │            │  │              │  │ Frontend:    │         │  │
+│  │  │            │  │              │  │ Sprint 29 🚧 │         │  │
 │  │  └────────────┘  └──────┬───────┘  └──────────────┘         │  │
 │  └─────────────────────────┼──────────────────────────────────────┘  │
 │                            │                                         │
@@ -1107,6 +1109,141 @@ vector_size = 1024  # bge-m3 (Sprint 16)
 
 ---
 
+## 🚀 PLANNED: Graph Visualization Frontend (Sprint 29)
+
+**Status:** 📋 PLANNED (36 SP, 7-9 days estimated)
+**Sprint:** Sprint 29
+**Plan Document:** [SPRINT_29_PLAN.md](sprints/SPRINT_29_PLAN.md)
+
+### Overview
+
+Sprint 29 will deliver comprehensive graph visualization frontend for AegisRAG's knowledge graph, enabling end users to explore query results visually and admins to analyze the entire knowledge graph with community detection.
+
+**Technology Stack:**
+- **Library:** `react-force-graph` (2D mode with WebGL)
+- **API:** Existing Graph Viz API from Sprint 12 (`/api/v1/graph/viz/*`)
+- **Styling:** Tailwind CSS + Lucide Icons
+
+### Planned Features (7 Use Cases)
+
+#### 1. Query Result Graph (End User)
+**Feature 29.2 (3 SP):** View entities and relationships from query results
+- "View Graph" button in StreamingAnswer component
+- Modal with interactive graph of entities from retrieved context
+- Highlights entities mentioned in answer
+- Example: Query "How are transformers related to attention?" → Shows Transformer → USES → Attention Mechanism
+
+#### 2. Admin Graph Analytics
+**Feature 29.3 (5 SP):** Admin-only page at `/admin/graph`
+- Full knowledge graph visualization (up to 500 nodes)
+- Advanced filters: Entity types, minimum degree, max nodes
+- Community highlighting
+- Graph statistics: Node count, edge count, avg degree
+
+#### 3. Knowledge Graph Dashboard
+**Feature 29.4 (5 SP):** Graph metrics and insights
+- Quick stats: Total nodes, edges, communities, avg degree
+- Entity type distribution (pie chart)
+- Graph growth timeline (line chart, last 30 days)
+- Top 10 communities by size
+- Health metrics: Orphaned nodes, disconnected components
+
+#### 4. Graph Explorer with Search
+**Feature 29.5 (5 SP):** Interactive navigation tools
+- Node search: Type entity name → graph centers on node with zoom
+- Filter by entity type: Show only PERSON, ORGANIZATION, etc.
+- Community highlighting: Select community → highlight all members
+- Degree filter: Show only highly connected nodes
+
+#### 5. Pan, Zoom, Node Interactions
+**Feature 29.1 (5 SP):** Base graph viewer component
+- Pan: Click + drag background
+- Zoom: Mouse wheel (zoom in/out)
+- Node hover: Tooltip with entity name, type, degree
+- Node click: Highlight node + connected edges + open details panel
+- Performance: 60 FPS with 100+ nodes (WebGL rendering)
+
+#### 6. Embedding-based Document Search
+**Feature 29.6 (8 SP):** Find documents from graph nodes
+- Click node → Side panel shows "Related Documents"
+- Backend: Embed entity name (BGE-M3) → Qdrant vector search
+- Display: Top 10 documents with similarity scores
+- Click document → Opens document preview
+- API: `POST /api/v1/graph/viz/node-documents`
+
+#### 7. Community Document Browser
+**Feature 29.7 (5 SP):** Browse documents by community
+- Select community → "View Community Documents" button
+- Modal shows all documents mentioning entities from community
+- Documents grouped by relevance
+- Highlights mentioned entities in excerpts
+- API: `GET /api/v1/graph/viz/communities/{id}/documents`
+
+### Component Architecture
+
+```
+frontend/src/
+├── pages/
+│   ├── GraphVisualizationPage.tsx        # Main graph page
+│   └── admin/
+│       └── GraphAnalyticsPage.tsx        # Admin-only page
+├── components/
+│   ├── graph/
+│   │   ├── GraphViewer.tsx               # Core 2D graph (react-force-graph)
+│   │   ├── GraphControls.tsx             # Pan/Zoom/Reset controls
+│   │   ├── GraphSearch.tsx               # Node search
+│   │   ├── CommunityHighlight.tsx        # Community highlighting
+│   │   ├── NodeDetailsPanel.tsx          # Selected node info + docs
+│   │   ├── CommunityDocuments.tsx        # Community → Documents
+│   │   ├── GraphFilters.tsx              # Entity type, degree filters
+│   │   └── GraphExportButton.tsx         # Export JSON/GraphML/Cytoscape
+│   └── dashboard/
+│       ├── KnowledgeGraphDashboard.tsx   # Statistics dashboard
+│       ├── GraphStatistics.tsx           # Node/Edge/Community counts
+│       └── TopCommunities.tsx            # Top 10 communities
+├── api/
+│   └── graphViz.ts                       # API client for graph viz
+└── hooks/
+    ├── useGraphData.ts                   # Fetch graph data
+    ├── useGraphSearch.ts                 # Node search logic
+    └── useDocumentsByNode.ts             # Embedding-based doc search
+```
+
+### API Endpoints
+
+**Existing (Sprint 12):**
+- ✅ `POST /api/v1/graph/viz/export` - Export graph (JSON/GraphML/Cytoscape)
+- ✅ `GET /api/v1/graph/viz/export/formats` - Supported formats
+- ✅ `POST /api/v1/graph/viz/filter` - Filter by entity types/degree
+- ✅ `POST /api/v1/graph/viz/communities/highlight` - Highlight communities
+
+**New (Sprint 29):**
+- ❌ `POST /api/v1/graph/viz/query-subgraph` - Get entities from query results (Feature 29.2)
+- ❌ `GET /api/v1/graph/viz/statistics` - Graph statistics (Feature 29.4)
+- ❌ `POST /api/v1/graph/viz/node-documents` - Documents by entity (Feature 29.6)
+- ❌ `GET /api/v1/graph/viz/communities/{id}/documents` - Community documents (Feature 29.7)
+
+### Performance Targets
+
+- **Graph Rendering:** <1s for 100 nodes, <3s for 500 nodes
+- **Search Latency:** <200ms for node search
+- **Document Lookup:** <500ms for embedding-based search
+- **Frame Rate:** 60 FPS with pan/zoom (WebGL rendering)
+
+### Success Criteria
+
+- [ ] All 7 features implemented and tested
+- [ ] GraphViewer renders 100+ nodes at 60 FPS
+- [ ] End users can view query result graphs
+- [ ] Admins can explore entire knowledge graph
+- [ ] Document search from graph nodes works
+- [ ] Community document browser functional
+- [ ] Unit test coverage >80%
+- [ ] E2E tests pass for all user flows
+- [ ] Documentation updated (API docs, user guide)
+
+---
+
 **Last Updated:** 2025-11-18 (Sprint 28 - Post Sprint 28 Architecture Alignment)
 **Status:** Active Development
 
@@ -1123,4 +1260,4 @@ vector_size = 1024  # bge-m3 (Sprint 16)
 - **Ingestion:** LangGraph pipeline (Docling primary, LlamaIndex fallback)
 - **Document Formats:** 30+ formats (FormatRouter Sprint 22.3)
 
-**Next:** Sprint 29 (Advanced Features & Performance Testing)
+**Next:** Sprint 29 (Graph Visualization Frontend - 36 SP, 7-9 days)
