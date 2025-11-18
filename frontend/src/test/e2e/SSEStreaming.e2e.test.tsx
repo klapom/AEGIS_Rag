@@ -166,7 +166,9 @@ describe('SSE Streaming E2E Tests', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/Quellen \(2\)/i)).toBeInTheDocument();
+          // Check for the source count in either the tab or the SourceCardsScroll header
+          const sourceTexts = screen.getAllByText(/Quellen \(2\)/i);
+          expect(sourceTexts.length).toBeGreaterThan(0);
         },
         { timeout: 3000 }
       );
@@ -243,7 +245,9 @@ describe('SSE Streaming E2E Tests', () => {
 
       await waitFor(
         () => {
-          expect(screen.getByText(/Quellen \(1\)/i)).toBeInTheDocument();
+          // Check for the source count in either the tab or the SourceCardsScroll header
+          const sourceTexts = screen.getAllByText(/Quellen \(1\)/i);
+          expect(sourceTexts.length).toBeGreaterThan(0);
         },
         { timeout: 3000 }
       );
@@ -399,8 +403,13 @@ describe('SSE Streaming E2E Tests', () => {
         </MemoryRouter>
       );
 
-      // Initially should show loading
-      expect(screen.getByText(/Suche läuft/i)).toBeInTheDocument();
+      // Initially should show loading (wait for it to appear)
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Suche läuft/i)).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
 
       // After completion, loading should be gone
       await waitFor(

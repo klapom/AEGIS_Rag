@@ -9,22 +9,26 @@ import { mockSSEStream, mockAPIResponses } from './fixtures';
 
 /**
  * Create a mock ReadableStream for SSE testing
+ * Uses start() instead of pull() to properly simulate SSE streaming
  */
 export function createMockSSEStream(chunks: ChatChunk[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  let index = 0;
 
   return new ReadableStream({
-    async pull(controller) {
-      if (index < chunks.length) {
-        const chunk = chunks[index];
-        const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
-        controller.enqueue(encoder.encode(sseMessage));
-        index++;
-      } else {
-        // Send [DONE] signal
+    async start(controller) {
+      try {
+        // Send each chunk with a small delay to simulate streaming
+        for (const chunk of chunks) {
+          const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
+          controller.enqueue(encoder.encode(sseMessage));
+          // Small delay to allow async iteration to work properly
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        // Send [DONE] signal and close
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
+      } catch (error) {
+        controller.error(error);
       }
     },
   });
@@ -47,33 +51,58 @@ export function createFullMockSSEStream(): ReadableStream<Uint8Array> {
  * Create a mock SSE stream that errors midway
  */
 export function createErrorMockSSEStream(): ReadableStream<Uint8Array> {
-  const chunks: ChatChunk[] = [
-    mockSSEStream.metadata,
-    mockSSEStream.tokens[0],
-    mockSSEStream.tokens[1],
-    mockSSEStream.error,
-  ];
-  return createMockSSEStream(chunks);
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        // Send metadata and tokens
+        const chunks: ChatChunk[] = [
+          mockSSEStream.metadata,
+          mockSSEStream.tokens[0],
+          mockSSEStream.tokens[1],
+        ];
+
+        for (const chunk of chunks) {
+          const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
+          controller.enqueue(encoder.encode(sseMessage));
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+
+        // Send error chunk
+        const errorMessage = `data: ${JSON.stringify(mockSSEStream.error)}\n\n`;
+        controller.enqueue(encoder.encode(errorMessage));
+
+        // Send [DONE] signal and close
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+  });
 }
 
 /**
  * Mock fetch for successful SSE streaming
+ * Creates a new stream for each call to avoid stream locking issues
  */
 export function mockFetchSSESuccess() {
-  return vi.fn().mockResolvedValue({
+  return vi.fn().mockImplementation(async () => ({
     ok: true,
     body: createFullMockSSEStream(),
-  });
+  }));
 }
 
 /**
  * Mock fetch for SSE streaming error
+ * Creates a new stream for each call to avoid stream locking issues
  */
 export function mockFetchSSEError() {
-  return vi.fn().mockResolvedValue({
+  return vi.fn().mockImplementation(async () => ({
     ok: true,
     body: createErrorMockSSEStream(),
-  });
+  }));
 }
 
 /**
@@ -328,28 +357,26 @@ export function createMockSSEStreamWithAbort(
   onAbort?: () => void
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  let index = 0;
 
   return new ReadableStream({
     async start(controller) {
-      // Simulate abort listening
-      const abortHandler = () => {
-        controller.close();
-        onAbort?.();
-      };
-
-      // In a real implementation, this would be tied to the abort signal
-      // For testing, we simulate the abort behavior
-    },
-    async pull(controller) {
-      if (index < chunks.length) {
-        const chunk = chunks[index];
-        const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
-        controller.enqueue(encoder.encode(sseMessage));
-        index++;
-      } else {
+      try {
+        // Send each chunk with a small delay to simulate streaming
+        for (const chunk of chunks) {
+          const sseMessage = `data: ${JSON.stringify(chunk)}\n\n`;
+          controller.enqueue(encoder.encode(sseMessage));
+          // Small delay to allow async iteration to work properly
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        // Send [DONE] signal and close
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
+      } catch (error) {
+        // Handle abort errors gracefully
+        if (onAbort) {
+          onAbort();
+        }
+        controller.error(error);
       }
     },
   });

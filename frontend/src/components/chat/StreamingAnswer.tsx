@@ -62,9 +62,19 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
         }
       } catch (err) {
         // Ignore AbortError (expected during cleanup)
-        if (isAborted || (err instanceof Error && err.name === 'AbortError')) {
+        if (isAborted) {
           return;
         }
+
+        // Check if error is an AbortError (DOMException or Error)
+        const isAbortError =
+          (err instanceof Error && err.name === 'AbortError') ||
+          (err instanceof DOMException && err.name === 'AbortError');
+
+        if (isAbortError) {
+          return;
+        }
+
         console.error('Streaming error:', err);
         setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
         setIsStreaming(false);
