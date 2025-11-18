@@ -41,6 +41,12 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 028 | Docling-First Hybrid Ingestion Strategy | Accepted | 2025-11-07 |
 | 029 | React Frontend Migration Deferral | Accepted | 2025-11-07 |
 | 030 | Sprint Extension from 12 to 21+ Sprints | Accepted | 2025-11-07 |
+| 031 | Ollama Cloud Hybrid Execution | Superseded | 2025-11-11 |
+| 032 | Multi-Cloud Execution Strategy | Superseded | 2025-11-11 |
+| 033 | Mozilla ANY-LLM Framework Integration | Accepted | 2025-11-13 |
+| 034 | Perplexity-Inspired UX Features | Accepted | 2025-11-16 |
+| 035 | Parallel Development Strategy | Accepted | 2025-11-16 |
+| 036 | Settings Management via localStorage | Accepted | 2025-11-16 |
 
 ---
 

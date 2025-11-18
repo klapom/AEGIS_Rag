@@ -1,26 +1,32 @@
 # Technical Debt Register
 
-**Last Updated:** 2025-11-15 (Sprint 26)
+**Last Updated:** 2025-11-16 (Sprint 28)
 **Project:** AegisRAG
-**Status:** ✅ **EXCELLENT** - Sprint 25 resolved 57% of technical debt
+**Status:** ✅ **EXCELLENT** - Sprint 27 resolved 25% of remaining technical debt
 
 ## Executive Summary
 
-### Sprint 25 Cleanup Success 🎉
+### Sprint 25-27 Cleanup Success 🎉
 
-Sprint 25 (45 SP in 1 day) **massively reduced** technical debt:
+Sprints 25-27 **dramatically reduced** technical debt:
 
 **Technical Debt Reduction:**
 - **Before (13.11.):** 28 Items, ~54 SP
-- **Sprint 25 Resolved:** -9 Items, -18 SP
-- **After (15.11.):** **12 Items, ~25 SP**
-- **Reduction:** **-57% Technical Debt** 🎉
+- **Sprint 25 Resolved:** -9 Items, -18 SP (Feature 25.7, 25.8, 25.9)
+- **Sprint 27 Resolved:** -3 Items, -9 SP (Feature 27.1 Monitoring)
+- **After (16.11.):** **9 Items, ~14 SP**
+- **Total Reduction:** **-68% Technical Debt** 🎉
 
-**Code Cleanup:**
+**Code Cleanup (Sprint 25):**
 - 🗑️ **1,626 Lines** removed (deprecated code, duplicates)
 - ✅ **549 Lines** deprecated code removed (Feature 25.7)
 - ✅ **300 Lines** duplicate code consolidated (Feature 25.8)
 - ✅ **4 Clients** renamed for consistency (Feature 25.9)
+
+**Quality Improvements (Sprint 27):**
+- ✅ **Test Coverage:** 65% → 80% (+15%, +69 tests)
+- ✅ **E2E Tests:** 174/184 → 184/184 (100% pass rate, +10 fixed)
+- ✅ **Monitoring:** Real health checks (TD-TODO-01, 02, 03 resolved)
 
 ---
 
@@ -432,15 +438,16 @@ context="",  # TODO: Get context used for generation
 
 ## 🚀 Next Steps
 
-1. **Sprint 26:** Complete monitoring improvements (Feature 26.4)
-2. **Sprint 27:** Test coverage to 80% (focus on Graph RAG, Agents)
-3. **Sprint 28+:** Architecture enhancements (BaseClient, ANY-LLM)
+1. **Sprint 28:** ✅ COMPLETE - Frontend integration (follow-up questions, citations, settings)
+2. **Sprint 29:** Encryption for API keys (Web Crypto API), Export/Import settings
+3. **Sprint 30+:** Architecture enhancements (BaseClient, ANY-LLM VLM routing, Backend sync)
 
 ---
 
 **Document History:**
 - **2025-11-13:** Created (Sprint 23)
 - **2025-11-15:** Updated (Sprint 26) - Marked Sprint 25 resolutions, reduced from 28 to 12 items
+- **2025-11-16:** Updated (Sprint 28) - Marked Sprint 27 resolutions, reduced from 12 to 9 items
 
 **Maintainer:** Claude Code
 **Status:** ✅ UP TO DATE (Sprint 26)

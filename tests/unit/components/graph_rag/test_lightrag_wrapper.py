@@ -511,15 +511,20 @@ class TestLightRAGWrapperSprint16:
         await wrapper._store_chunks_and_provenance_in_neo4j(chunks, entities)
 
         # Verify Neo4j operations
-        assert mock_session.run.call_count >= 2  # At least 2 calls (chunk + relationship)
+        assert mock_session.run.call_count >= 3  # At least 3 calls (chunk + entity + relationship)
 
         # Verify chunk node creation (first call)
         first_call_query = mock_session.run.call_args_list[0][0][0]
         assert "MERGE (c:chunk {chunk_id: $chunk_id})" in first_call_query
         assert "c.text = $text" in first_call_query
 
-        # Verify MENTIONED_IN relationship creation (second call)
+        # Verify entity node creation (second call)
         second_call_query = mock_session.run.call_args_list[1][0][0]
-        assert "MATCH (e:base {entity_id: entity_id})" in second_call_query
-        assert "MATCH (c:chunk {chunk_id: $chunk_id})" in second_call_query
-        assert "MERGE (e)-[r:MENTIONED_IN]->(c)" in second_call_query
+        assert "MERGE (e:base" in second_call_query
+        assert "e.entity_name = $entity_name" in second_call_query
+
+        # Verify MENTIONED_IN relationship creation (third call)
+        third_call_query = mock_session.run.call_args_list[2][0][0]
+        assert "MATCH (e:base {entity_id: entity_id})" in third_call_query
+        assert "MATCH (c:chunk {chunk_id: $chunk_id})" in third_call_query
+        assert "MERGE (e)-[r:MENTIONED_IN]->(c)" in third_call_query

@@ -21,17 +21,24 @@ def mock_neo4j_client():
 
 
 @pytest.fixture
-def mock_ollama_client():
-    """Mock Ollama client."""
-    client = AsyncMock()
-    return client
+def mock_aegis_llm_proxy():
+    """Mock AegisLLMProxy."""
+    proxy = AsyncMock()
+    return proxy
 
 
 @pytest.fixture
-def search(mock_neo4j_client):
+def search(mock_neo4j_client, mock_aegis_llm_proxy):
     """Create CommunitySearch instance with mocked clients."""
-    search = CommunitySearch(neo4j_client=mock_neo4j_client)
-    return search
+    from unittest.mock import patch
+
+    # Mock get_aegis_llm_proxy to return our mock
+    with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy") as mock_get_proxy:
+        mock_get_proxy.return_value = mock_aegis_llm_proxy
+        search_instance = CommunitySearch(neo4j_client=mock_neo4j_client)
+        # Store mock proxy for access in tests
+        search_instance._mock_proxy = mock_aegis_llm_proxy
+        yield search_instance
 
 
 class TestCommunitySearchInit:
@@ -49,6 +56,8 @@ class TestSearchByCommunity:
     @pytest.mark.asyncio
     async def test_search_all_communities(self, search, mock_neo4j_client):
         """Test search across all communities."""
+        from src.components.llm_proxy.models import LLMResponse
+
         mock_neo4j_client.execute_read.return_value = [
             {
                 "id": "e1",
@@ -74,22 +83,29 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(
-            search.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Test answer"}
+        # Mock proxy.generate to return LLMResponse
+        search._mock_proxy.generate.return_value = LLMResponse(
+            content="Test answer",
+            provider="mock",
+            model="mock-model",
+            tokens_used=50,
+            cost_usd=0.0,
+            latency_ms=100
+        )
 
-            result = await search.search_by_community(query="neural networks", top_k=5)
+        result = await search.search_by_community(query="neural networks", top_k=5)
 
-            assert isinstance(result, CommunitySearchResult)
-            assert len(result.entities) == 2
-            assert len(result.communities) == 1
-            assert result.communities[0].id == "comm_1"
-            assert result.answer == "Test answer"
+        assert isinstance(result, CommunitySearchResult)
+        assert len(result.entities) == 2
+        assert len(result.communities) == 1
+        assert result.communities[0].id == "comm_1"
+        assert result.answer == "Test answer"
 
     @pytest.mark.asyncio
     async def test_search_filtered_communities(self, search, mock_neo4j_client):
         """Test search filtered by specific communities."""
+        from src.components.llm_proxy.models import LLMResponse
+
         mock_neo4j_client.execute_read.return_value = [
             {
                 "id": "e1",
@@ -104,38 +120,52 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(
-            search.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Test answer"}
+        # Mock proxy.generate to return LLMResponse
+        search._mock_proxy.generate.return_value = LLMResponse(
+            content="Test answer",
+            provider="mock",
+            model="mock-model",
+            tokens_used=50,
+            cost_usd=0.0,
+            latency_ms=100
+        )
 
-            result = await search.search_by_community(
-                query="test",
-                community_ids=["comm_1"],
-                top_k=5,
-            )
+        result = await search.search_by_community(
+            query="test",
+            community_ids=["comm_1"],
+            top_k=5,
+        )
 
-            assert result.metadata["filtered_by_communities"] is True
-            assert len(result.entities) == 1
+        assert result.metadata["filtered_by_communities"] is True
+        assert len(result.entities) == 1
 
     @pytest.mark.asyncio
     async def test_search_no_results(self, search, mock_neo4j_client):
         """Test search with no results."""
+        from src.components.llm_proxy.models import LLMResponse
+
         mock_neo4j_client.execute_read.return_value = []
 
-        with patch.object(
-            search.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "No results found"}
+        # Mock proxy.generate to return LLMResponse
+        search._mock_proxy.generate.return_value = LLMResponse(
+            content="No results found",
+            provider="mock",
+            model="mock-model",
+            tokens_used=50,
+            cost_usd=0.0,
+            latency_ms=100
+        )
 
-            result = await search.search_by_community(query="nonexistent", top_k=5)
+        result = await search.search_by_community(query="nonexistent", top_k=5)
 
-            assert len(result.entities) == 0
-            assert len(result.communities) == 0
+        assert len(result.entities) == 0
+        assert len(result.communities) == 0
 
     @pytest.mark.asyncio
     async def test_search_multiple_communities(self, search, mock_neo4j_client):
         """Test search returning entities from multiple communities."""
+        from src.components.llm_proxy.models import LLMResponse
+
         mock_neo4j_client.execute_read.return_value = [
             {
                 "id": "e1",
@@ -161,16 +191,21 @@ class TestSearchByCommunity:
             },
         ]
 
-        with patch.object(
-            search.ollama_client, "generate", new_callable=AsyncMock
-        ) as mock_generate:
-            mock_generate.return_value = {"response": "Test answer"}
+        # Mock proxy.generate to return LLMResponse
+        search._mock_proxy.generate.return_value = LLMResponse(
+            content="Test answer",
+            provider="mock",
+            model="mock-model",
+            tokens_used=50,
+            cost_usd=0.0,
+            latency_ms=100
+        )
 
-            result = await search.search_by_community(query="test", top_k=5)
+        result = await search.search_by_community(query="test", top_k=5)
 
-            assert len(result.communities) == 2
-            assert result.communities[0].id == "comm_1"
-            assert result.communities[1].id == "comm_2"
+        assert len(result.communities) == 2
+        assert result.communities[0].id == "comm_1"
+        assert result.communities[1].id == "comm_2"
 
 
 class TestFindRelatedCommunities:
