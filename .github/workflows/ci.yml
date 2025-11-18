@@ -398,9 +398,11 @@ jobs:
           timeout 120 bash -c 'count=0; until (echo > /dev/tcp/localhost/7687) >/dev/null 2>&1; do echo "  Bolt port check attempt $((++count))/40..."; sleep 3; done'
           echo "✅ Neo4j Bolt port ready"
 
-          echo "🔍 Waiting for Redis..."
-          timeout 90 bash -c 'count=0; until redis-cli ping 2>/dev/null; do echo "  Redis attempt $((++count))..."; sleep 2; done'
-          echo "✅ Redis ready"
+          echo "🔍 Waiting for Redis port (6379) to be ready..."
+          echo "  Initial 5s grace period for Redis startup..."
+          sleep 5
+          timeout 60 bash -c 'count=0; until (echo > /dev/tcp/localhost/6379) >/dev/null 2>&1; do echo "  Redis port check attempt $((++count))/30..."; sleep 2; done'
+          echo "✅ Redis port ready"
 
           echo "🎉 All services ready for integration tests"
 
@@ -627,8 +629,9 @@ jobs:
           timeout 180 bash -c 'until curl -f http://localhost:7474/ 2>/dev/null; do sleep 2; done'
           echo "✅ Neo4j ready"
 
-          timeout 90 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
-          echo "✅ Redis ready"
+          sleep 5  # Grace period for Redis startup
+          timeout 60 bash -c 'until (echo > /dev/tcp/localhost/6379) >/dev/null 2>&1; do sleep 2; done'
+          echo "✅ Redis port ready"
 
       - name: Start Backend Server
         run: |
