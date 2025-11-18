@@ -9,9 +9,9 @@ This module provides importance calculation for memory items based on:
 import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any
 
 import structlog
-from typing import Dict
 
 logger = structlog.get_logger(__name__)
 

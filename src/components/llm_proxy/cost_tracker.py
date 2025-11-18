@@ -16,6 +16,7 @@ Features:
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import structlog
 

@@ -26,10 +26,51 @@ Responsibilities:
         - Automatic fallback (provider → provider → local)
 """
 
+from __future__ import annotations
+
 import time
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from any_llm import LLMProvider, acompletion
+
+# Lazy import for optional ANY-LLM dependency
+# ANY-LLM is planned for future integration (ADR-033) but not yet installed
+if TYPE_CHECKING:
+    from any_llm import LLMProvider, acompletion  # type: ignore[import-not-found]
+
+# Runtime: Create stubs if any_llm not available
+try:
+    from any_llm import LLMProvider, acompletion  # type: ignore[import-not-found,no-redef]
+
+    ANY_LLM_AVAILABLE = True
+except ImportError:
+    ANY_LLM_AVAILABLE = False
+
+    # Stub LLMProvider enum
+    class LLMProvider(str, Enum):  # type: ignore[no-redef]
+        """Stub LLMProvider enum (ANY-LLM not installed)."""
+
+        OLLAMA = "ollama"
+        OPENAI = "openai"
+        ANTHROPIC = "anthropic"
+
+    # Stub acompletion function
+    async def acompletion(**kwargs: Any) -> Any:  # type: ignore[no-redef]
+        """Stub acompletion (ANY-LLM not installed).
+
+        ANY-LLM integration is planned (ADR-033) but not yet implemented.
+        For now, this raises NotImplementedError with installation instructions.
+
+        Raises:
+            NotImplementedError: ANY-LLM not installed
+        """
+        raise NotImplementedError(
+            "ANY-LLM integration not yet implemented. "
+            "ADR-033 defines the architecture but any-llm package is not installed. "
+            "To enable: Install any-llm or implement direct provider calls."
+        )
+
 
 from src.components.llm_proxy.config import LLMProxyConfig, get_llm_proxy_config
 from src.components.llm_proxy.cost_tracker import CostTracker
