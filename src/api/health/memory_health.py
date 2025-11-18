@@ -242,24 +242,57 @@ async def check_redis_health() -> dict[str, Any]:
 async def check_qdrant_health() -> dict[str, Any]:
     """Internal function to check Qdrant health.
 
+    Sprint 27 Feature 27.1: Implement real Qdrant health checks.
+
     Returns:
         Dictionary with Qdrant health status
     """
     start_time = time.time()
 
     try:
-        # TODO: Implement Qdrant health check when client is available
-        # For now, return placeholder status
+        from src.components.vector_search.qdrant_client import get_qdrant_client
+
+        qdrant = get_qdrant_client()
+
+        # Get all collections
+        collections = await qdrant.async_client.get_collections()
+        collection_count = len(collections.collections) if collections else 0
+
+        # Get total vector count across all collections
+        total_vectors = 0
+        collection_details = []
+
+        for collection in (collections.collections if collections else []):
+            info = await qdrant.get_collection_info(collection.name)
+            if info:
+                vectors_count = info.vectors_count if hasattr(info, "vectors_count") else 0
+                total_vectors += vectors_count
+                collection_details.append(
+                    {"name": collection.name, "vectors": vectors_count}
+                )
+
+        # Estimate capacity (assuming 10M vectors is 100% capacity)
+        # TODO: Make this configurable via settings
+        MAX_VECTORS = 10_000_000
+        capacity = min(1.0, total_vectors / MAX_VECTORS) if MAX_VECTORS > 0 else 0.0
+
+        # Determine health status based on capacity
+        if capacity >= 0.9:
+            status_value = "unhealthy"  # Critical capacity
+        elif capacity >= 0.8:
+            status_value = "degraded"  # High capacity
+        else:
+            status_value = "healthy"
 
         elapsed_ms = (time.time() - start_time) * 1000
 
         return {
-            "status": "healthy",
-            "collections": 0,  # TODO: Get actual collection count
-            "vectors": 0,  # TODO: Get actual vector count
-            "capacity": 0.0,  # TODO: Get actual capacity
+            "status": status_value,
+            "collections": collection_count,
+            "vectors": total_vectors,
+            "capacity": round(capacity, 3),
             "latency_ms": round(elapsed_ms, 2),
-            "note": "Placeholder - Qdrant client not yet integrated",
+            "collection_details": collection_details[:5],  # Max 5 for brevity
         }
 
     except Exception as e:
@@ -275,24 +308,59 @@ async def check_qdrant_health() -> dict[str, Any]:
 async def check_graphiti_health() -> dict[str, Any]:
     """Internal function to check Graphiti health.
 
+    Sprint 27 Feature 27.1: Implement real Graphiti health checks via Neo4j.
+
     Returns:
         Dictionary with Graphiti health status
     """
     start_time = time.time()
 
     try:
-        # TODO: Implement Graphiti health check when client is available
-        # For now, return placeholder status
+        from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+        neo4j = get_neo4j_client()
+
+        # Query Neo4j for node and relationship counts
+        async with neo4j.get_session() as session:
+            # Count nodes (entities)
+            node_result = await session.run("MATCH (n) RETURN count(n) as node_count")
+            node_record = await node_result.single()
+            node_count = node_record["node_count"] if node_record else 0
+
+            # Count relationships (edges)
+            edge_result = await session.run("MATCH ()-[r]->() RETURN count(r) as edge_count")
+            edge_record = await edge_result.single()
+            edge_count = edge_record["edge_count"] if edge_record else 0
+
+            # Count episodes (Graphiti-specific)
+            episode_result = await session.run(
+                "MATCH (e:Episode) RETURN count(e) as episode_count"
+            )
+            episode_record = await episode_result.single()
+            episode_count = episode_record["episode_count"] if episode_record else 0
+
+        # Estimate capacity (assuming 100K nodes is 100% capacity)
+        # TODO: Make this configurable via settings
+        MAX_NODES = 100_000
+        capacity = min(1.0, node_count / MAX_NODES) if MAX_NODES > 0 else 0.0
+
+        # Determine health status based on capacity
+        if capacity >= 0.9:
+            status_value = "unhealthy"  # Critical capacity
+        elif capacity >= 0.8:
+            status_value = "degraded"  # High capacity
+        else:
+            status_value = "healthy"
 
         elapsed_ms = (time.time() - start_time) * 1000
 
         return {
-            "status": "healthy",
-            "nodes": 0,  # TODO: Get actual node count
-            "edges": 0,  # TODO: Get actual edge count
-            "capacity": 0.0,  # TODO: Get actual capacity
+            "status": status_value,
+            "nodes": node_count,
+            "edges": edge_count,
+            "episodes": episode_count,
+            "capacity": round(capacity, 3),
             "latency_ms": round(elapsed_ms, 2),
-            "note": "Placeholder - Graphiti client not yet integrated",
         }
 
     except Exception as e:

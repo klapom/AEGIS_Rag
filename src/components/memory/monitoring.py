@@ -194,6 +194,8 @@ class MemoryMonitoring:
     async def collect_qdrant_metrics(self, qdrant_client) -> dict[str, Any]:
         """Collect metrics from Qdrant layer.
 
+        Sprint 27 Feature 27.1: Implement real Qdrant metrics collection.
+
         Args:
             qdrant_client: QdrantClient instance
 
@@ -203,31 +205,37 @@ class MemoryMonitoring:
         try:
             start_time = time.time()
 
-            # Get collection info (if available)
-            # Note: Actual implementation depends on Qdrant client API
-            # This is a placeholder that can be extended when Qdrant client is available
+            # Get all collections and count vectors
+            collections = await qdrant_client.async_client.get_collections()
+            total_vectors = 0
 
-            # For now, set placeholder values
-            capacity = 0.0  # TODO: Get from Qdrant API
-            entries = 0  # TODO: Get collection size
+            for collection in (collections.collections if collections else []):
+                info = await qdrant_client.get_collection_info(collection.name)
+                if info:
+                    vectors_count = info.vectors_count if hasattr(info, "vectors_count") else 0
+                    total_vectors += vectors_count
+
+            # Calculate capacity (assuming 10M vectors is 100%)
+            MAX_VECTORS = 10_000_000
+            capacity = min(1.0, total_vectors / MAX_VECTORS) if MAX_VECTORS > 0 else 0.0
 
             self.qdrant_capacity.set(capacity)
-            self.qdrant_entries.set(entries)
+            self.qdrant_entries.set(total_vectors)
             self.layer_health.labels(layer="qdrant").set(1)
 
             elapsed = time.time() - start_time
 
             logger.debug(
                 "Qdrant metrics collected",
-                capacity=capacity,
-                entries=entries,
+                capacity=round(capacity, 3),
+                entries=total_vectors,
                 collection_time_ms=round(elapsed * 1000, 2),
             )
 
             return {
                 "layer": "qdrant",
                 "capacity": capacity,
-                "entries": entries,
+                "entries": total_vectors,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
@@ -242,6 +250,8 @@ class MemoryMonitoring:
     async def collect_graphiti_metrics(self, graphiti_client) -> dict[str, Any]:
         """Collect metrics from Graphiti layer.
 
+        Sprint 27 Feature 27.1: Implement real Graphiti metrics collection via Neo4j.
+
         Args:
             graphiti_client: GraphitiClient instance
 
@@ -249,33 +259,39 @@ class MemoryMonitoring:
             Dictionary with collected metrics
         """
         try:
+            from src.components.graph_rag.neo4j_client import get_neo4j_client
+
             start_time = time.time()
 
-            # Get graph stats (if available)
-            # Note: Actual implementation depends on Graphiti client API
-            # This is a placeholder that can be extended when Graphiti client is available
+            neo4j = get_neo4j_client()
 
-            # For now, set placeholder values
-            capacity = 0.0  # TODO: Get from Graphiti API
-            entries = 0  # TODO: Get node count
+            # Query Neo4j for node count
+            async with neo4j.get_session() as session:
+                node_result = await session.run("MATCH (n) RETURN count(n) as node_count")
+                node_record = await node_result.single()
+                node_count = node_record["node_count"] if node_record else 0
+
+            # Calculate capacity (assuming 100K nodes is 100%)
+            MAX_NODES = 100_000
+            capacity = min(1.0, node_count / MAX_NODES) if MAX_NODES > 0 else 0.0
 
             self.graphiti_capacity.set(capacity)
-            self.graphiti_entries.set(entries)
+            self.graphiti_entries.set(node_count)
             self.layer_health.labels(layer="graphiti").set(1)
 
             elapsed = time.time() - start_time
 
             logger.debug(
                 "Graphiti metrics collected",
-                capacity=capacity,
-                entries=entries,
+                capacity=round(capacity, 3),
+                entries=node_count,
                 collection_time_ms=round(elapsed * 1000, 2),
             )
 
             return {
                 "layer": "graphiti",
                 "capacity": capacity,
-                "entries": entries,
+                "entries": node_count,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 

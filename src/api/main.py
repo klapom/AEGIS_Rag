@@ -99,13 +99,57 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Can be initialized via /api/v1/retrieval/prepare-bm25",
         )
 
-    # TODO: Initialize database connections, load models, etc.
+    # Sprint 27 Feature 27.1: Initialize database connections
+    try:
+        from src.components.graph_rag.neo4j_client import get_neo4j_client
+        from src.components.vector_search.qdrant_client import get_qdrant_client
+
+        logger.info("Initializing database connections...")
+
+        # Initialize Neo4j connection
+        neo4j_client = get_neo4j_client()
+        await neo4j_client.health_check()
+        logger.info("Neo4j connection initialized", status="healthy")
+
+        # Initialize Qdrant connection (lazy initialization on first use)
+        qdrant_client = get_qdrant_client()
+        logger.info("Qdrant client initialized", status="ready")
+
+        logger.info("All database connections initialized successfully")
+
+    except Exception as e:
+        logger.warning(
+            "Failed to initialize some database connections",
+            error=str(e),
+            note="Services will initialize on first use",
+        )
 
     yield
 
     # Shutdown
     logger.info("application_shutting_down")
-    # TODO: Close database connections, cleanup resources
+
+    # Sprint 27 Feature 27.1: Close database connections gracefully
+    try:
+        from src.components.graph_rag.neo4j_client import get_neo4j_client
+        from src.components.vector_search.qdrant_client import get_qdrant_client
+
+        logger.info("Closing database connections...")
+
+        # Close Neo4j connection
+        neo4j_client = get_neo4j_client()
+        await neo4j_client.close()
+        logger.info("Neo4j connection closed")
+
+        # Close Qdrant connection
+        qdrant_client = get_qdrant_client()
+        await qdrant_client.close()
+        logger.info("Qdrant connection closed")
+
+        logger.info("All database connections closed successfully")
+
+    except Exception as e:
+        logger.error("Error during shutdown", error=str(e))
 
 
 # Create FastAPI app
