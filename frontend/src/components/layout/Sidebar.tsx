@@ -2,10 +2,12 @@
  * Sidebar Component
  * Sprint 15 Feature 15.2: Perplexity-style Sidebar (ADR-021)
  * Sprint 27 Feature 27.9: Quick Actions Bar integration
+ * Sprint 28 Feature 28.3: Settings navigation
  *
  * Vertical sidebar with logo, quick actions, history, and health status
  */
 
+import { useNavigate } from 'react-router-dom';
 import { QuickActionsBar } from './QuickActionsBar';
 
 interface SidebarProps {
@@ -14,9 +16,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen }: SidebarProps) {
+  const navigate = useNavigate();
+
   const handleNewChat = () => {
     // Sprint 27 Feature 27.9: Navigate to new chat
-    window.location.href = '/';
+    navigate('/');
   };
 
   const handleClearHistory = () => {
@@ -26,8 +30,8 @@ export function Sidebar({ isOpen }: SidebarProps) {
   };
 
   const handleSettings = () => {
-    // Sprint 27 Feature 27.9: Placeholder for settings
-    console.log('Settings clicked (placeholder)');
+    // Sprint 28 Feature 28.3: Navigate to settings page
+    navigate('/settings');
   };
   return (
     <aside
