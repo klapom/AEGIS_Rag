@@ -14,7 +14,7 @@ Provides:
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request, status
@@ -82,7 +82,7 @@ class MemorySearchResult(BaseModel):
     layer: str = Field(description="Memory layer the result came from")
     content: str = Field(description="Result content or text")
     score: float | None = Field(default=None, description="Relevance score if available")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Result metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Result metadata")
 
 
 class MemorySearchResponse(BaseModel):
@@ -94,7 +94,7 @@ class MemorySearchResponse(BaseModel):
     )
     total_results: int
     layers_searched: list[str]
-    search_metadata: dict[str, Any] = Field(
+    search_metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Search execution metadata"
     )
 
@@ -129,7 +129,7 @@ class PointInTimeQueryResponse(BaseModel):
 
     query: str
     timestamp: datetime
-    results: list[dict[str, Any]] = Field(description="Entity states at the specified time")
+    results: list[Dict[str, Any]] = Field(description="Entity states at the specified time")
     total_results: int
 
 
@@ -139,7 +139,7 @@ class SessionContextResponse(BaseModel):
     session_id: str
     messages: list[dict[str, str]] = Field(description="Conversation messages in the session")
     message_count: int
-    summary: dict[str, Any] = Field(
+    summary: Dict[str, Any] = Field(
         default_factory=dict, description="Session summary across layers"
     )
 
@@ -170,11 +170,11 @@ class ConsolidationResponse(BaseModel):
     status: str
     started_at: str
     completed_at: str | None = None
-    qdrant_consolidation: dict[str, Any] | None = Field(
+    qdrant_consolidation: Dict[str, Any] | None = Field(
         default=None,
         description="Statistics for Redis → Qdrant consolidation",
     )
-    conversation_consolidations: list[dict[str, Any]] = Field(
+    conversation_consolidations: list[Dict[str, Any]] = Field(
         default_factory=list,
         description="Results for each conversation consolidation",
     )
@@ -183,10 +183,10 @@ class ConsolidationResponse(BaseModel):
 class MemoryStatsResponse(BaseModel):
     """Response model for memory system statistics."""
 
-    short_term: dict[str, Any] = Field(description="Redis working memory statistics")
-    long_term: dict[str, Any] = Field(description="Qdrant vector store statistics")
-    episodic: dict[str, Any] = Field(description="Graphiti episodic memory statistics")
-    consolidation: dict[str, Any] = Field(description="Memory consolidation statistics")
+    short_term: Dict[str, Any] = Field(description="Redis working memory statistics")
+    long_term: Dict[str, Any] = Field(description="Qdrant vector store statistics")
+    episodic: Dict[str, Any] = Field(description="Graphiti episodic memory statistics")
+    consolidation: Dict[str, Any] = Field(description="Memory consolidation statistics")
 
 
 class SessionDeleteResponse(BaseModel):

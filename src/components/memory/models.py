@@ -6,8 +6,8 @@ This module provides data models for the 3-layer memory architecture:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 
 @dataclass
@@ -29,7 +29,7 @@ class MemoryEntry:
     ttl_seconds: int = 3600  # Default 1 hour
     tags: list[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     namespace: str = "memory"
 
     def __post_init__(self) -> None:
@@ -50,7 +50,7 @@ class MemoryEntry:
         """
         return f"{self.namespace}:{self.key}"
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert MemoryEntry to dictionary for serialization.
 
         Returns:
@@ -67,7 +67,7 @@ class MemoryEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "MemoryEntry":
+    def from_dict(cls, data: Dict[str, Any]) -> "MemoryEntry":
         """Create MemoryEntry from dictionary.
 
         Args:
@@ -85,7 +85,7 @@ class MemoryEntry:
             value=data["value"],
             ttl_seconds=data.get("ttl_seconds", 3600),
             tags=data.get("tags", []),
-            created_at=created_at or datetime.utcnow(),
+            created_at=created_at or datetime.now(timezone.utc),
             metadata=data.get("metadata", {}),
             namespace=data.get("namespace", "memory"),
         )
@@ -114,7 +114,7 @@ class MemorySearchResult:
         if self.retrieval_time_ms < 0:
             raise ValueError("Retrieval time must be non-negative")
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization.
 
         Returns:

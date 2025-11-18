@@ -7,7 +7,7 @@ Sprint 5: Feature 5.5 - Graph Query Agent
 Integrates with Sprint 4 Router and Sprint 5 DualLevelSearch.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -144,7 +144,7 @@ class GraphQueryAgent(BaseAgent):
         self,
         name: str = "graph_query_agent",
         dual_level_search: DualLevelSearch | None = None,
-    ):
+    ) -> None:
         """Initialize Graph Query Agent.
 
         Args:
@@ -160,7 +160,7 @@ class GraphQueryAgent(BaseAgent):
         )
 
     @retry_on_failure(max_attempts=3, min_wait=1.0, max_wait=10.0)
-    async def process(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process graph query and update state.
 
         Main processing method that:
@@ -361,7 +361,7 @@ class GraphQueryAgent(BaseAgent):
 # ============================================================================
 
 
-async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
+async def graph_query_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """LangGraph node function for graph query processing.
 
     This is the node function that gets added to the LangGraph StateGraph.

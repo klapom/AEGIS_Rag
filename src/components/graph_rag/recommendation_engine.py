@@ -25,7 +25,7 @@ RecommendationMethod = Literal["collaborative", "community", "relationships", "a
 class RecommendationEngine:
     """Entity recommendation engine."""
 
-    def __init__(self, neo4j_client: Neo4jClient | None = None):
+    def __init__(self, neo4j_client: Neo4jClient | None = None) -> None:
         """Initialize the recommendation engine.
 
         Args:

@@ -9,6 +9,7 @@ import logging
 
 from .client import MCPClient, MCPConnectionError
 from .models import MCPServer, MCPServerConnection, MCPTool, ServerStatus
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class ConnectionManager:
         auto_reconnect: bool = True,
         reconnect_interval: int = 30,
         max_reconnect_attempts: int = 5,
-    ):
+    ) -> None:
         """Initialize the connection manager.
 
         Args:

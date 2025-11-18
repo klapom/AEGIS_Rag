@@ -351,7 +351,7 @@ class ImageProcessor:
         >>> print(description)
     """
 
-    def __init__(self, config: ImageProcessorConfig | None = None):
+    def __init__(self, config: ImageProcessorConfig | None = None) -> None:
         """Initialize image processor.
 
         Args:
@@ -468,7 +468,7 @@ class ImageProcessor:
             )
             return None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up temporary files and directory."""
         # First, clean up tracked temp files
         files_deleted = 0

@@ -5,7 +5,7 @@ Sprint 23: Feature 23.6 - AegisLLMProxy Integration
 Migrated from Ollama to multi-cloud LLM proxy (Local → Alibaba Cloud → OpenAI).
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -36,7 +36,7 @@ class AnswerGenerator:
     - Multi-cloud routing (Local → Alibaba Cloud → OpenAI) via AegisLLMProxy (Sprint 23)
     """
 
-    def __init__(self, model_name: str | None = None, temperature: float = 0.0):
+    def __init__(self, model_name: str | None = None, temperature: float = 0.0) -> None:
         """Initialize answer generator.
 
         Args:
@@ -59,7 +59,7 @@ class AnswerGenerator:
     async def generate_answer(
         self,
         query: str,
-        contexts: list[dict[str, Any]],
+        contexts: list[Dict[str, Any]],
         mode: str = "simple",
     ) -> str:
         """Generate answer from query and retrieved contexts.
@@ -119,7 +119,7 @@ class AnswerGenerator:
             logger.error("answer_generation_failed", query=query[:100], error=str(e))
             return self._fallback_answer(query, contexts)
 
-    def _format_contexts(self, contexts: list[dict[str, Any]]) -> str:
+    def _format_contexts(self, contexts: list[Dict[str, Any]]) -> str:
         """Format contexts for prompt.
 
         Args:
@@ -149,7 +149,7 @@ class AnswerGenerator:
             "Please try rephrasing your question or providing more context."
         )
 
-    def _fallback_answer(self, query: str, contexts: list[dict[str, Any]]) -> str:
+    def _fallback_answer(self, query: str, contexts: list[Dict[str, Any]]) -> str:
         """Fallback answer if LLM generation fails.
 
         Args:

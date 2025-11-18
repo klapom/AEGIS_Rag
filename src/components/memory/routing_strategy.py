@@ -8,9 +8,9 @@ This module provides routing strategies for intelligent memory layer selection:
 
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -29,7 +29,7 @@ class RoutingStrategy(ABC):
     """Abstract base class for memory routing strategies."""
 
     @abstractmethod
-    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
         """Select appropriate memory layers for a query.
 
         Args:
@@ -55,7 +55,7 @@ class RecencyBasedStrategy(RoutingStrategy):
         self,
         recent_threshold_hours: float = 1.0,
         medium_threshold_hours: float = 24.0,
-    ):
+    ) -> None:
         """Initialize recency-based strategy.
 
         Args:
@@ -71,7 +71,7 @@ class RecencyBasedStrategy(RoutingStrategy):
             medium_threshold_hours=medium_threshold_hours,
         )
 
-    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
         """Select layers based on query recency.
 
         Args:
@@ -86,14 +86,14 @@ class RecencyBasedStrategy(RoutingStrategy):
         if isinstance(query_time, str):
             query_time = datetime.fromisoformat(query_time)
         elif not isinstance(query_time, datetime):
-            query_time = datetime.utcnow()
+            query_time = datetime.now(timezone.utc)
 
         session_start = metadata.get("session_start_time")
         if isinstance(session_start, str):
             session_start = datetime.fromisoformat(session_start)
 
         # Calculate time delta
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         reference_time = session_start if session_start else query_time
         time_delta = now - reference_time
 
@@ -138,7 +138,7 @@ class QueryTypeStrategy(RoutingStrategy):
     - Ambiguous → All layers
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize query-type-based strategy."""
         # Patterns for query type classification
         self.factual_patterns = [
@@ -172,7 +172,7 @@ class QueryTypeStrategy(RoutingStrategy):
 
         logger.info("Initialized QueryTypeStrategy")
 
-    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
         """Select layers based on query type.
 
         Args:
@@ -243,7 +243,7 @@ class HybridStrategy(RoutingStrategy):
         self,
         recent_threshold_hours: float = 1.0,
         medium_threshold_hours: float = 24.0,
-    ):
+    ) -> None:
         """Initialize hybrid strategy.
 
         Args:
@@ -255,7 +255,7 @@ class HybridStrategy(RoutingStrategy):
 
         logger.info("Initialized HybridStrategy")
 
-    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
         """Select layers using both recency and query type.
 
         Args:
@@ -303,7 +303,7 @@ class FallbackAllStrategy(RoutingStrategy):
     Guarantees comprehensive results at the cost of performance.
     """
 
-    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
         """Always return all layers.
 
         Args:

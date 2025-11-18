@@ -7,7 +7,7 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from typing import Any, Protocol
+from typing import Any, Protocol, Dict
 
 import structlog
 
@@ -19,7 +19,7 @@ class ExtractionPipeline(Protocol):
 
     async def extract(
         self, text: str, document_id: str = None
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
         """Extract entities and relations from text.
 
         Args:
@@ -137,7 +137,7 @@ class ExtractionPipelineFactory:
 
             async def extract(
                 self, text: str, document_id: str = None
-            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+            ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
                 """Extract entities and relations using LLM.
 
                 Args:
@@ -231,7 +231,7 @@ class ExtractionPipelineFactory:
 
             async def extract(
                 self, text: str, document_id: str = None
-            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+            ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
                 """Extract using legacy LightRAG pipeline."""
                 logger.warning(
                     "legacy_extraction_invoked",

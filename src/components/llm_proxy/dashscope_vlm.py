@@ -34,7 +34,7 @@ class DashScopeVLMClient:
         self,
         api_key: str | None = None,
         base_url: str | None = None,
-    ):
+    ) -> None:
         """Initialize DashScope VLM client.
 
         Args:
@@ -260,7 +260,7 @@ class DashScopeVLMClient:
                 # Other HTTP errors - re-raise
                 raise
 
-    async def close(self):
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.client.aclose()
 

@@ -8,8 +8,8 @@ This module provides:
 """
 
 import time
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 from prometheus_client import Counter, Gauge, Histogram
@@ -36,7 +36,7 @@ class MemoryMonitoring:
     - Entry Count: Number of entries per layer
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Prometheus metrics."""
         # ============= Capacity Metrics =============
         self.redis_capacity = Gauge(
@@ -147,7 +147,7 @@ class MemoryMonitoring:
 
     # ============= Redis Metrics Collection =============
 
-    async def collect_redis_metrics(self, redis_manager) -> dict[str, Any]:
+    async def collect_redis_metrics(self, redis_manager) -> Dict[str, Any]:
         """Collect metrics from Redis layer.
 
         Args:
@@ -184,7 +184,7 @@ class MemoryMonitoring:
                 "layer": "redis",
                 "capacity": capacity,
                 "entries": total_entries,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -195,7 +195,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "redis", "error": str(e)}
 
-    async def collect_qdrant_metrics(self, qdrant_client) -> dict[str, Any]:
+    async def collect_qdrant_metrics(self, qdrant_client) -> Dict[str, Any]:
         """Collect metrics from Qdrant layer.
 
         Sprint 27 Feature 27.1: Implement real Qdrant metrics collection.
@@ -239,7 +239,7 @@ class MemoryMonitoring:
                 "layer": "qdrant",
                 "capacity": capacity,
                 "entries": total_vectors,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -250,7 +250,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "qdrant", "error": str(e)}
 
-    async def collect_graphiti_metrics(self, graphiti_client) -> dict[str, Any]:
+    async def collect_graphiti_metrics(self, graphiti_client) -> Dict[str, Any]:
         """Collect metrics from Graphiti layer.
 
         Sprint 27 Feature 27.1: Implement real Graphiti metrics collection via Neo4j.
@@ -294,7 +294,7 @@ class MemoryMonitoring:
                 "layer": "graphiti",
                 "capacity": capacity,
                 "entries": node_count,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -310,7 +310,7 @@ class MemoryMonitoring:
         redis_manager=None,
         qdrant_client=None,
         graphiti_client=None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Collect metrics from all memory layers.
 
         Args:
@@ -322,7 +322,7 @@ class MemoryMonitoring:
             Dictionary with all collected metrics
         """
         metrics = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "layers": {},
         }
 

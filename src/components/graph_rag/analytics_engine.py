@@ -13,7 +13,7 @@ Features:
 """
 
 import time
-from typing import Any, Literal
+from typing import Any, Literal, Dict
 
 import networkx as nx
 import structlog
@@ -32,7 +32,7 @@ CentralityMetric = Literal["degree", "betweenness", "closeness", "eigenvector"]
 class GraphAnalyticsEngine:
     """Graph analytics engine with GDS and NetworkX support."""
 
-    def __init__(self, neo4j_client: Neo4jClient | None = None):
+    def __init__(self, neo4j_client: Neo4jClient | None = None) -> None:
         """Initialize the analytics engine.
 
         Args:
@@ -166,7 +166,7 @@ class GraphAnalyticsEngine:
         RETURN count(DISTINCT connected) AS degree
         """
         result = await self.neo4j_client.execute_query(query, {"entity_id": entity_id})
-        return float(result[0].get("degree", 0)) if result else 0.0
+        return float(result[0].get("degree", 0)) if result else 0.0  # type: ignore[no-any-return]
 
     async def _calculate_betweenness_centrality(self, entity_id: str) -> float:
         """Calculate betweenness centrality using GDS or NetworkX.
@@ -189,14 +189,14 @@ class GraphAnalyticsEngine:
                 """
                 result = await self.neo4j_client.execute_query(query, {"entity_id": entity_id})
                 if result:
-                    return float(result[0].get("score", 0.0))
+                    return float(result[0].get("score", 0.0))  # type: ignore[no-any-return]
             except Exception as e:
                 logger.warning("GDS betweenness failed, using NetworkX", error=str(e))
 
         # Fallback to NetworkX
         graph = await self._build_networkx_graph()
         betweenness = nx.betweenness_centrality(graph)
-        return betweenness.get(entity_id, 0.0)
+        return betweenness.get(entity_id, 0.0)  # type: ignore[no-any-return]
 
     async def _calculate_closeness_centrality(self, entity_id: str) -> float:
         """Calculate closeness centrality using NetworkX.
@@ -209,7 +209,7 @@ class GraphAnalyticsEngine:
         """
         graph = await self._build_networkx_graph()
         closeness = nx.closeness_centrality(graph)
-        return closeness.get(entity_id, 0.0)
+        return closeness.get(entity_id, 0.0)  # type: ignore[no-any-return]
 
     async def _calculate_eigenvector_centrality(self, entity_id: str) -> float:
         """Calculate eigenvector centrality using NetworkX.
@@ -223,12 +223,12 @@ class GraphAnalyticsEngine:
         graph = await self._build_networkx_graph()
         try:
             eigenvector = nx.eigenvector_centrality(graph, max_iter=100)
-            return eigenvector.get(entity_id, 0.0)
+            return eigenvector.get(entity_id, 0.0)  # type: ignore[no-any-return]
         except nx.PowerIterationFailedConvergence:
             logger.warning("Eigenvector centrality failed to converge", entity_id=entity_id)
             return 0.0
 
-    async def calculate_pagerank(self, entity_ids: list[str] | None = None) -> list[dict[str, Any]]:
+    async def calculate_pagerank(self, entity_ids: list[str] | None = None) -> list[Dict[str, Any]]:
         """Calculate PageRank scores for entities.
 
         Args:
@@ -284,7 +284,7 @@ class GraphAnalyticsEngine:
             logger.error("Failed to calculate PageRank", error=str(e))
             raise DatabaseConnectionError("Neo4j", f"PageRank calculation failed: {e}") from e
 
-    async def find_influential_entities(self, top_k: int = 10) -> list[dict[str, Any]]:
+    async def find_influential_entities(self, top_k: int = 10) -> list[Dict[str, Any]]:
         """Find the most influential entities by PageRank.
 
         Args:
@@ -304,7 +304,7 @@ class GraphAnalyticsEngine:
         logger.info("Found influential entities", count=len(top_entities))
         return top_entities
 
-    async def detect_knowledge_gaps(self) -> dict[str, Any]:
+    async def detect_knowledge_gaps(self) -> Dict[str, Any]:
         """Detect knowledge gaps in the graph (orphans, sparse areas).
 
         Returns:

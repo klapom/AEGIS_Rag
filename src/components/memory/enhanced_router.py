@@ -14,7 +14,7 @@ Features:
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -47,7 +47,7 @@ class EnhancedMemoryRouter:
         strategy: RoutingStrategy | None = None,
         session_id: str | None = None,
         enable_graphiti: bool = True,
-    ):
+    ) -> None:
         """Initialize enhanced memory router.
 
         Args:
@@ -82,7 +82,7 @@ class EnhancedMemoryRouter:
     async def route_query(
         self,
         query: str,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> list[MemoryLayer]:
         """Determine which memory layers to query (routing decision).
 
@@ -128,7 +128,7 @@ class EnhancedMemoryRouter:
     async def search_memory(
         self,
         query: str,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
         limit_per_layer: int = 10,
     ) -> dict[str, list[MemorySearchResult]]:
         """Search across multiple memory layers in parallel.
@@ -197,7 +197,7 @@ class EnhancedMemoryRouter:
 
         # Check if all searches failed
         if all(isinstance(r, Exception) for r in results_list):
-            raise MemoryError("All memory layer searches failed")
+            raise MemoryError(operation="operation", reason="All memory layer searches failed")
 
         return results
 
@@ -452,7 +452,7 @@ class EnhancedMemoryRouter:
 
         return results
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> Dict[str, Any]:
         """Get statistics for all memory layers.
 
         Returns:

@@ -11,7 +11,7 @@ from YAML files and environment variables.
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 import yaml
@@ -32,16 +32,16 @@ class LLMProxyConfig(BaseModel):
     and environment variables.
     """
 
-    providers: dict[str, dict[str, Any]] = Field(
+    providers: dict[str, Dict[str, Any]] = Field(
         ...,
         description="Provider configuration (local_ollama, ollama_cloud, openai)",
     )
-    budgets: dict[str, Any] = Field(..., description="Budget limits and thresholds")
-    routing: dict[str, Any] = Field(..., description="Routing configuration")
+    budgets: Dict[str, Any] = Field(..., description="Budget limits and thresholds")
+    routing: Dict[str, Any] = Field(..., description="Routing configuration")
     model_defaults: dict[str, dict[str, str]] = Field(
         ..., description="Default models per provider"
     )
-    fallback: dict[str, Any] = Field(..., description="Fallback configuration")
+    fallback: Dict[str, Any] = Field(..., description="Fallback configuration")
     monitoring: dict[str, bool] = Field(..., description="Monitoring flags")
 
     @classmethod
@@ -120,7 +120,7 @@ class LLMProxyConfig(BaseModel):
             # Check for default value syntax: VAR:-default
             if ":-" in var_expr:
                 var_name, default = var_expr.split(":-", 1)
-                return os.environ.get(var_name, default)
+                return os.environ.get(var_name, default)  # type: ignore[no-any-return]
             else:
                 var_name = var_expr
                 if var_name not in os.environ:
@@ -134,7 +134,7 @@ class LLMProxyConfig(BaseModel):
         pattern = r"\$\{([^}]+)\}"
         return re.sub(pattern, replace_env_var, config_str)
 
-    def get_provider_config(self, provider: str) -> dict[str, Any]:
+    def get_provider_config(self, provider: str) -> Dict[str, Any]:
         """
         Get configuration for specific provider.
 
@@ -166,7 +166,7 @@ class LLMProxyConfig(BaseModel):
         """
         if provider == "local_ollama":
             return 0.0  # Local is free
-        return self.budgets.get("monthly_limits", {}).get(provider, 0.0)
+        return self.budgets.get("monthly_limits", {}).get(provider, 0.0)  # type: ignore[no-any-return]
 
     def get_default_model(self, provider: str, task_type: str) -> str | None:
         """
@@ -179,7 +179,7 @@ class LLMProxyConfig(BaseModel):
         Returns:
             Model name or None if not configured
         """
-        return self.model_defaults.get(provider, {}).get(task_type)
+        return self.model_defaults.get(provider, {}).get(task_type)  # type: ignore[no-any-return]
 
     def is_provider_enabled(self, provider: str) -> bool:
         """

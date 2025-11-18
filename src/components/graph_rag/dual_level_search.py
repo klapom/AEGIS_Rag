@@ -12,7 +12,7 @@ Implementation uses LightRAG's built-in retrieval modes for efficient graph quer
 
 import time
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from pydantic import BaseModel, Field
@@ -51,13 +51,13 @@ class GraphSearchResult(BaseModel):
     query: str = Field(..., description="Original query")
     mode: SearchMode = Field(..., description="Search mode used")
     answer: str = Field(default="", description="LLM-generated answer")
-    entities: list[dict[str, Any]] = Field(default_factory=list, description="Retrieved entities")
-    relationships: list[dict[str, Any]] = Field(
+    entities: list[Dict[str, Any]] = Field(default_factory=list, description="Retrieved entities")
+    relationships: list[Dict[str, Any]] = Field(
         default_factory=list, description="Retrieved relationships"
     )
     context: str = Field(default="", description="Graph context used")
     topics: list[str] = Field(default_factory=list, description="Topics/communities")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
 
 class DualLevelSearch:
@@ -82,7 +82,7 @@ class DualLevelSearch:
         neo4j_password: str | None = None,
         llm_model: str | None = None,
         ollama_base_url: str | None = None,
-    ):
+    ) -> None:
         """Initialize dual-level search with AegisLLMProxy.
 
         Args:

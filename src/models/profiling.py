@@ -3,7 +3,7 @@
 Sprint 17 Feature 17.4: Implicit User Profiling - Conversation Archiving Pipeline (Phase 1)
 """
 
-from typing import Any
+from typing import Any, Dict
 
 from pydantic import BaseModel, Field
 
@@ -22,10 +22,10 @@ class ArchivedConversation(BaseModel):
     archived_at: str = Field(..., description="Archiving timestamp (ISO 8601)")
     message_count: int = Field(..., description="Number of messages in conversation")
     full_text: str = Field(..., description="Concatenated conversation text for embedding")
-    messages: list[dict[str, Any]] = Field(
+    messages: list[Dict[str, Any]] = Field(
         default_factory=list, description="Full conversation messages"
     )
-    metadata: dict[str, Any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata (intents, sources, etc.)"
     )
 
@@ -61,7 +61,7 @@ class ConversationSearchResult(BaseModel):
     message_count: int = Field(..., description="Number of messages")
     relevance_score: float = Field(..., description="Semantic similarity score")
     snippet: str = Field(..., description="Relevant conversation snippet (first 300 chars)")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class ConversationSearchResponse(BaseModel):

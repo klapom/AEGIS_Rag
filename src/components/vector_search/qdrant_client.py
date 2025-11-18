@@ -9,7 +9,7 @@ This module provides a production-ready wrapper around the Qdrant client with:
 """
 
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from qdrant_client import AsyncQdrantClient, QdrantClient
@@ -47,7 +47,7 @@ class QdrantClient:
         grpc_port: int | None = None,
         prefer_grpc: bool = True,
         timeout: int = 30,
-    ):
+    ) -> None:
         """Initialize Qdrant client wrapper.
 
         Args:
@@ -248,7 +248,7 @@ class QdrantClient:
         limit: int = 10,
         score_threshold: float | None = None,
         query_filter: Filter | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search for similar vectors in collection.
 
         Args:
@@ -339,7 +339,7 @@ class QdrantClient:
             )
             return False
 
-    async def close(self):
+    async def close(self) -> None:
         """Close client connections."""
         if self._async_client:
             await self._async_client.close()
@@ -366,7 +366,7 @@ def get_qdrant_client() -> QdrantClient:
 
 
 @asynccontextmanager
-async def get_qdrant_client_async():
+async def get_qdrant_client_async() -> None:
     """Async context manager for Qdrant client.
 
     Usage:

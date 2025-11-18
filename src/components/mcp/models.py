@@ -6,7 +6,7 @@ Follows MCP Spec 2025-06-18.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 
 class TransportType(Enum):
@@ -45,7 +45,7 @@ class MCPServer:
     description: str = ""
     timeout: int = 30
     retry_attempts: int = 3
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate server configuration."""
@@ -74,10 +74,10 @@ class MCPTool:
 
     name: str
     description: str
-    parameters: dict[str, Any]
+    parameters: Dict[str, Any]
     server: str
     version: str = "1.0.0"
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool definition."""
@@ -99,9 +99,9 @@ class MCPToolCall:
     """
 
     tool_name: str
-    arguments: dict[str, Any]
+    arguments: Dict[str, Any]
     timeout: int = 60
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool call."""
@@ -129,7 +129,7 @@ class MCPToolResult:
     result: Any | None = None
     error: str | None = None
     execution_time: float = 0.0
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool result."""
@@ -160,7 +160,7 @@ class MCPServerConnection:
     connection_time: str | None = None
     tools: list[MCPTool] = field(default_factory=list)
     error: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

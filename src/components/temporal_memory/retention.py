@@ -11,7 +11,7 @@ from src.core.config import settings
 logger = structlog.get_logger(__name__)
 
 
-async def purge_old_temporal_versions():
+async def purge_old_temporal_versions() -> None:
     """Purge temporal versions older than retention policy."""
     if settings.temporal_retention_days == 0:
         logger.info("temporal_purge_skipped", reason="infinite_retention")
@@ -36,7 +36,7 @@ async def purge_old_temporal_versions():
 
 
 # Background task scheduler
-async def start_retention_scheduler():
+async def start_retention_scheduler() -> None:
     """Start background scheduler for temporal retention."""
     if not settings.temporal_auto_purge:
         logger.info("temporal_scheduler_disabled")

@@ -41,7 +41,7 @@ INSTALLATION:
 import re
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import structlog
 
@@ -71,10 +71,10 @@ logger = structlog.get_logger(__name__)
 # Performance:
 # - First call: ~50-100ms (import llama_index)
 # - Subsequent calls: <1ms (cache hit)
-_LLAMA_INDEX_CACHE: dict[str, Any] = {}
+_LLAMA_INDEX_CACHE: Dict[str, Any] = {}
 
 
-def _get_llama_index_classes() -> dict[str, Any]:
+def _get_llama_index_classes() -> Dict[str, Any]:
     """Lazy import all llama_index classes needed for chunking.
 
     This function implements the LAZY IMPORT pattern for optional dependencies.
@@ -225,7 +225,7 @@ class AdaptiveChunker:
         markdown_chunk_size: int | None = None,
         text_chunk_size: int | None = None,
         chunk_overlap: int | None = None,
-    ):
+    ) -> None:
         """Initialize adaptive chunker with type-specific sizes.
 
         LAZY IMPORT TRIGGER (Sprint 24):
@@ -772,7 +772,7 @@ class AdaptiveChunker:
             },
         )
 
-    def get_chunker_info(self) -> dict[str, Any]:
+    def get_chunker_info(self) -> Dict[str, Any]:
         """Get information about chunker configuration.
 
         Returns:

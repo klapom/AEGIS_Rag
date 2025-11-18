@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -41,7 +41,7 @@ class DocumentChunk(BaseModel):
 
     id: str = Field(..., description="Unique chunk ID")
     content: str = Field(..., description="Chunk text content")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
     score: float | None = Field(None, description="Relevance score", ge=0.0, le=1.0)
 
 
@@ -108,7 +108,7 @@ class QueryResponse(BaseModel):
     query_intent: QueryIntent = Field(..., description="Detected query intent")
     processing_time_ms: float = Field(..., description="Query processing time in milliseconds")
     conversation_id: str | None = Field(None, description="Conversation ID")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class HealthStatus(str, Enum):
@@ -211,7 +211,7 @@ class ErrorDetail(BaseModel):
 
     code: str = Field(..., description="Machine-readable error code")
     message: str = Field(..., description="Human-readable error message")
-    details: dict[str, Any] | None = Field(None, description="Additional error context")
+    details: Dict[str, Any] | None = Field(None, description="Additional error context")
     request_id: str = Field(..., description="Request ID for log correlation")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
     path: str = Field(..., description="API endpoint that generated error")
@@ -253,7 +253,7 @@ class GraphEntity(BaseModel):
     name: str = Field(..., description="Entity name")
     type: str = Field(..., description="Entity type (PERSON, ORGANIZATION, etc.)")
     description: str = Field(default="", description="Entity description")
-    properties: dict[str, Any] = Field(
+    properties: Dict[str, Any] = Field(
         default_factory=dict, description="Additional entity properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
@@ -295,7 +295,7 @@ class GraphRelationship(BaseModel):
     target: str = Field(..., description="Target entity name or ID")
     type: str = Field(..., description="Relationship type (WORKS_AT, KNOWS, etc.)")
     description: str = Field(default="", description="Relationship description")
-    properties: dict[str, Any] = Field(
+    properties: Dict[str, Any] = Field(
         default_factory=dict, description="Additional relationship properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
@@ -357,7 +357,7 @@ class GraphQueryResult(BaseModel):
     )
     context: str = Field(default="", description="Graph context used for answer generation")
     mode: str = Field(default="local", description="Search mode (local/global/hybrid)")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Query metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Query metadata")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -412,7 +412,7 @@ class Community(BaseModel):
     created_at: datetime = Field(
         default_factory=datetime.utcnow, description="Community creation timestamp"
     )
-    metadata: dict[str, Any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional community metadata"
     )
 
@@ -440,7 +440,7 @@ class CommunitySearchResult(BaseModel):
         default_factory=list, description="Entities from matched communities"
     )
     answer: str = Field(default="", description="LLM-generated answer")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
     model_config = ConfigDict(
         json_schema_extra={

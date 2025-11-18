@@ -13,7 +13,7 @@ Sprint 23: Feature 23.6 - AegisLLMProxy Integration
 
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from tenacity import (
@@ -63,7 +63,7 @@ class LightRAGClient:
         neo4j_uri: str | None = None,
         neo4j_user: str | None = None,
         neo4j_password: str | None = None,
-    ):
+    ) -> None:
         """Initialize LightRAG wrapper.
 
         Args:
@@ -205,7 +205,7 @@ class LightRAGClient:
                     return await self.unified_service.embed_batch(texts)
 
                 @property
-                def async_func(self):
+                def async_func(self) -> None:
                     """Return self to indicate this is an async function."""
                     return self
 
@@ -262,7 +262,7 @@ class LightRAGClient:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def insert_documents(self, documents: list[dict[str, Any]]) -> dict[str, Any]:
+    async def insert_documents(self, documents: list[Dict[str, Any]]) -> Dict[str, Any]:
         """Insert multiple documents into knowledge graph.
 
         Args:
@@ -448,7 +448,7 @@ class LightRAGClient:
             )
             raise
 
-    async def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> Dict[str, Any]:
         """Get graph statistics (entity count, relationship count).
 
         Returns:
@@ -529,7 +529,7 @@ class LightRAGClient:
         document_id: str,
         chunk_token_size: int = 600,
         chunk_overlap_token_size: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Chunk text using unified ChunkingService.
 
         Sprint 16 Feature 16.1: Now uses unified ChunkingService with "fixed" strategy (tiktoken-based)
@@ -587,7 +587,7 @@ class LightRAGClient:
         self,
         document_text: str,
         document_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Extract entities and relations per-chunk using Three-Phase Pipeline.
 
         Sprint 14 Feature 14.1 - Phase 2: Per-Chunk Extraction
@@ -732,8 +732,8 @@ class LightRAGClient:
 
     def _convert_entities_to_lightrag_format(
         self,
-        entities: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        entities: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
         """Convert Three-Phase entities to LightRAG format.
 
         Sprint 14 Feature 14.1 - Phase 3: Entity Format Conversion
@@ -797,8 +797,8 @@ class LightRAGClient:
 
     def _convert_relations_to_lightrag_format(
         self,
-        relations: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+        relations: list[Dict[str, Any]],
+    ) -> list[Dict[str, Any]]:
         """Convert Three-Phase relations to LightRAG format.
 
         Sprint 14 Feature 14.1 - Phase 4: Relation Format Conversion
@@ -867,8 +867,8 @@ class LightRAGClient:
 
     async def _store_chunks_and_provenance_in_neo4j(
         self,
-        chunks: list[dict[str, Any]],
-        entities: list[dict[str, Any]],
+        chunks: list[Dict[str, Any]],
+        entities: list[Dict[str, Any]],
     ) -> None:
         """Store chunk nodes and MENTIONED_IN relationships in Neo4j.
 
@@ -1026,8 +1026,8 @@ class LightRAGClient:
     )
     async def insert_documents_optimized(
         self,
-        documents: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+        documents: list[Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """Insert documents using Three-Phase Pipeline with Graph-based Provenance.
 
         Sprint 14 Feature 14.1 - Phase 7: Main Integration Method

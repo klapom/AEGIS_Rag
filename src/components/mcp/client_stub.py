@@ -6,7 +6,7 @@ MCP client from Subagent 3 is not yet available.
 Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
-from typing import Any
+from typing import Any, Dict
 
 from src.components.mcp.types import MCPServer, MCPTool
 
@@ -22,7 +22,7 @@ class MCPClientStub:
     def __init__(self) -> None:
         """Initialize stub client."""
         self.servers: dict[str, MCPServer] = {}
-        self.connections: dict[str, Any] = {}
+        self.connections: Dict[str, Any] = {}
         self._tools: list[MCPTool] = []
 
     async def connect(self, server: MCPServer) -> bool:
@@ -140,7 +140,7 @@ class MockConnection:
         self.server = server
         self.transport = server.transport
 
-    async def call_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
         """Mock tool call.
 
         Args:

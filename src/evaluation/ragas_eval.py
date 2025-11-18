@@ -14,9 +14,9 @@ when RAGAS evaluation fails.
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Dict
 
 import structlog
 from pydantic import BaseModel, Field
@@ -46,7 +46,7 @@ class EvaluationDataset(BaseModel):
     ground_truth: str = Field(..., description="Expected/reference answer")
     contexts: list[str] = Field(..., description="Retrieved document contexts")
     answer: str = Field(default="", description="Generated answer (optional)")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class EvaluationResult(BaseModel):
@@ -69,9 +69,9 @@ class EvaluationResult(BaseModel):
     num_samples: int = Field(..., description="Number of evaluation samples")
     duration_seconds: float = Field(..., description="Evaluation duration")
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(), description="Evaluation timestamp"
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Evaluation timestamp"
     )
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class RAGASEvaluator:
@@ -97,7 +97,7 @@ class RAGASEvaluator:
         llm_model: str | None = None,
         llm_base_url: str | None = None,
         metrics: list[str] | None = None,
-    ):
+    ) -> None:
         """Initialize RAGAS evaluator.
 
         Args:
@@ -116,7 +116,7 @@ class RAGASEvaluator:
             metrics=self.metrics_list,
         )
 
-    def _get_langchain_llm(self):
+    def _get_langchain_llm(self) -> None:
         """Get LangChain LLM wrapper for RAGAS.
 
         Returns:
@@ -232,7 +232,7 @@ class RAGASEvaluator:
         """
         logger.info("starting_ragas_evaluation", scenario=scenario, num_samples=len(dataset))
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Convert to RAGAS 0.3 EvaluationDataset format
         # RAGAS 0.3 uses SingleTurnSample instead of raw dicts
@@ -271,7 +271,7 @@ class RAGASEvaluator:
             ),
         )
 
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Extract scores
@@ -353,7 +353,7 @@ class RAGASEvaluator:
             num_samples=len(dataset),
         )
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         # Initialize custom evaluator
         custom_evaluator = CustomMetricsEvaluator(
@@ -384,7 +384,7 @@ class RAGASEvaluator:
             recall_scores.append(results.context_recall)
             faithfulness_scores.append(results.faithfulness)
 
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
         duration = (end_time - start_time).total_seconds()
 
         # Calculate averages
@@ -509,7 +509,7 @@ class RAGASEvaluator:
     def _generate_json_report(self, results: dict[str, EvaluationResult]) -> str:
         """Generate JSON report."""
         report_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "scenarios": {scenario: result.model_dump() for scenario, result in results.items()},
             "summary": {
                 "best_context_precision": max(r.context_precision for r in results.values()),
@@ -524,7 +524,7 @@ class RAGASEvaluator:
         lines = [
             "# RAGAS Evaluation Report",
             "",
-            f"**Timestamp**: {datetime.utcnow().isoformat()}",
+            f"**Timestamp**: {datetime.now(timezone.utc).isoformat()}",
             "",
             "## Results by Scenario",
             "",
@@ -638,7 +638,7 @@ class RAGASEvaluator:
 <body>
     <div class="container">
         <h1>RAGAS Evaluation Report</h1>
-        <p class="timestamp">Generated: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+        <p class="timestamp">Generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
 
         <h2>Results by Scenario</h2>
         <table>

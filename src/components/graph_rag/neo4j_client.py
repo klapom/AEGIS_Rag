@@ -9,7 +9,7 @@ This module provides a production-ready wrapper around the Neo4j driver with:
 """
 
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from neo4j import AsyncDriver, AsyncGraphDatabase
@@ -43,7 +43,7 @@ class Neo4jClient:
         database: str | None = None,
         max_connection_pool_size: int = DEFAULT_POOL_SIZE,
         connection_timeout: int = DEFAULT_CONNECTION_TIMEOUT,
-    ):
+    ) -> None:
         """Initialize Neo4j client wrapper.
 
         Args:
@@ -134,9 +134,9 @@ class Neo4jClient:
     async def execute_query(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Execute a Cypher query and return results.
 
         Args:
@@ -173,9 +173,9 @@ class Neo4jClient:
     async def execute_read(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Execute a read-only Cypher query and return results.
 
         Alias for execute_query for consistency with Neo4j terminology.
@@ -201,9 +201,9 @@ class Neo4jClient:
     async def execute_write(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Execute a write transaction.
 
         Args:
@@ -313,7 +313,7 @@ def get_neo4j_client() -> Neo4jClient:
 
 
 @asynccontextmanager
-async def get_neo4j_client_async():
+async def get_neo4j_client_async() -> None:
     """Async context manager for Neo4j client.
 
     Usage:

@@ -8,7 +8,7 @@ Sprint 11 Feature 11.5: Redis LangGraph Checkpointer
 Sprint 12 Feature 12.3: Complete Redis Async Cleanup
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import redis.asyncio
 import structlog
@@ -55,7 +55,7 @@ def create_checkpointer() -> MemorySaver:
     return checkpointer
 
 
-def create_thread_config(session_id: str) -> dict[str, Any]:
+def create_thread_config(session_id: str) -> Dict[str, Any]:
     """Create LangGraph thread configuration for conversation tracking.
 
     The thread_id is used to identify and restore conversation state.
@@ -82,7 +82,7 @@ def create_thread_config(session_id: str) -> dict[str, Any]:
 def get_conversation_history(
     checkpointer: MemorySaver,
     session_id: str,
-) -> list[dict[str, Any]]:
+) -> list[Dict[str, Any]]:
     """Retrieve conversation history for a session.
 
     Args:
@@ -156,7 +156,7 @@ def clear_conversation_history(
         return False
 
 
-def get_redis_checkpointer():
+def get_redis_checkpointer() -> None:
     """Get Redis-based LangGraph checkpointer.
 
     Sprint 11 Feature 11.5: Implements Redis-based persistence for conversation state.
@@ -196,7 +196,7 @@ def get_redis_checkpointer():
     return checkpointer
 
 
-def get_checkpointer():
+def get_checkpointer() -> None:
     """Get LangGraph checkpointer based on configuration.
 
     Sprint 11 Feature 11.5: Now supports Redis checkpointer for persistence.
@@ -227,7 +227,7 @@ class RedisCheckpointSaver(BaseCheckpointSaver):
     def __init__(self, redis_client: redis.asyncio.Redis):
         self.redis_client = redis_client
 
-    async def aclose(self):
+    async def aclose(self) -> None:
         """Close Redis connection gracefully.
 
         Sprint 12: Ensures all tasks complete before connection closed.

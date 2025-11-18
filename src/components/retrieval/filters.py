@@ -15,6 +15,7 @@ Typical usage:
 """
 
 from datetime import datetime
+from typing import List
 
 import structlog
 from pydantic import BaseModel, Field, field_validator
@@ -118,7 +119,7 @@ class MetadataFilterEngine:
     - tags: List of tags (list[str])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize filter engine."""
         logger.info("metadata_filter_engine_initialized")
 

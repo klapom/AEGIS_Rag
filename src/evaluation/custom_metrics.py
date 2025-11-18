@@ -12,7 +12,7 @@ Sprint 8: Alternative to RAGAS library for E2E testing
 """
 
 import asyncio
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from pydantic import BaseModel, Field
@@ -37,7 +37,7 @@ class MetricResult(BaseModel):
     """
 
     score: float = Field(..., ge=0.0, le=1.0, description="Metric score")
-    details: dict[str, Any] = Field(default_factory=dict, description="Evaluation details")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Evaluation details")
 
 
 class EvaluationResults(BaseModel):
@@ -53,7 +53,7 @@ class EvaluationResults(BaseModel):
     context_precision: float = Field(..., ge=0.0, le=1.0)
     context_recall: float = Field(..., ge=0.0, le=1.0)
     faithfulness: float = Field(..., ge=0.0, le=1.0)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class CustomMetricsEvaluator:
@@ -77,7 +77,7 @@ class CustomMetricsEvaluator:
         self,
         model: str = "qwen3:0.6b",
         temperature: float = 0.0,
-    ):
+    ) -> None:
         """Initialize Custom Metrics Evaluator.
 
         Args:

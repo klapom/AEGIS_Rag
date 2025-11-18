@@ -6,7 +6,7 @@ This module provides global exception handlers that convert all errors into
 a standardized ErrorResponse format with request IDs for log correlation.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 from fastapi import Request, status
@@ -48,7 +48,7 @@ async def aegis_exception_handler(request: Request, exc: AegisRAGException) -> J
             message=exc.message,
             details=exc.details,
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             path=request.url.path,
         )
     )
@@ -102,7 +102,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
             code=error_code,
             message=str(exc.detail),
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             path=request.url.path,
         )
     )
@@ -151,7 +151,7 @@ async def validation_exception_handler(
             message="Request validation failed",
             details={"validation_errors": validation_errors},
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             path=request.url.path,
         )
     )
@@ -202,7 +202,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
             message="An unexpected error occurred",
             details=error_details,
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             path=request.url.path,
         )
     )

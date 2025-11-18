@@ -10,8 +10,8 @@ Sprint 29: Added 4 new endpoints for frontend graph visualization:
 - GET /communities/{community_id}/documents (Feature 29.7)
 """
 
-from datetime import datetime
-from typing import Any, Literal
+from datetime import datetime, timezone
+from typing import Any, Literal, Dict
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -159,7 +159,7 @@ class CommunityDocumentsResponse(BaseModel):
 
 
 @router.post("/export")
-async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
+async def export_graph(request: GraphExportRequest) -> Dict[str, Any]:
     """Export graph in specified format.
 
     Sprint 12: Supports JSON, GraphML, and Cytoscape formats.
@@ -227,7 +227,7 @@ async def get_export_formats() -> dict[str, list[str]]:
 
 
 @router.post("/filter")
-async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
+async def filter_graph(request: GraphFilterRequest) -> Dict[str, Any]:
     """Filter graph by entity types and properties.
 
     Sprint 12: Advanced filtering with degree and community support.
@@ -280,7 +280,7 @@ async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
 @router.post("/communities/highlight")
 async def highlight_communities(
     request: CommunityHighlightRequest,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Highlight specific communities in graph.
 
     Sprint 12: Community-based subgraph extraction.
@@ -334,7 +334,7 @@ async def highlight_communities(
 
 
 @router.post("/query-subgraph")
-async def get_query_subgraph(request: QuerySubgraphRequest) -> dict[str, Any]:
+async def get_query_subgraph(request: QuerySubgraphRequest) -> Dict[str, Any]:
     """Get subgraph for specific entities from query results.
 
     Sprint 29 Feature 29.2: Extract subgraph containing entities and their
@@ -433,7 +433,7 @@ async def get_graph_statistics() -> GraphStatistics:
             avg_degree=avg_degree,
             entity_type_distribution=entity_types,
             orphaned_nodes=orphaned_nodes,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
     except Exception as e:
@@ -534,7 +534,7 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
         qdrant = QdrantClient()
         embedding_service = UnifiedEmbeddingService()
         documents: list[CommunityDocument] = []
-        seen_doc_ids: set[str] = set()
+        seen_doc_ids: Set[str] = set()
 
         # Sample first 10 entities to avoid excessive queries
         for entity_name in entity_names[:10]:
@@ -599,7 +599,7 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
 # ============================================================================
 
 
-def _export_json(records: list[dict], include_communities: bool = True) -> dict[str, Any]:
+def _export_json(records: list[dict], include_communities: bool = True) -> Dict[str, Any]:
     """Export graph as JSON format."""
     nodes = {}
     edges = []
@@ -655,7 +655,7 @@ def _export_graphml(records: list[dict]) -> dict[str, str]:
     return {"format": "graphml", "data": graphml}
 
 
-def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
+def _export_cytoscape(records: list[dict]) -> Dict[str, Any]:
     """Export graph as Cytoscape.js format."""
     elements = []
 

@@ -7,7 +7,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict
 
 
 @dataclass
@@ -25,8 +25,8 @@ class MCPTool:
     name: str
     description: str
     server: str
-    parameters: dict[str, Any]
-    metadata: dict[str, Any] | None = None
+    parameters: Dict[str, Any]
+    metadata: Dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values."""
@@ -39,9 +39,9 @@ class MCPTool:
         Returns:
             List of required parameter names
         """
-        return self.parameters.get("required", [])
+        return self.parameters.get("required", [])  # type: ignore[no-any-return]
 
-    def validate_parameters(self, params: dict[str, Any]) -> tuple[bool, str | None]:
+    def validate_parameters(self, params: Dict[str, Any]) -> tuple[bool, str | None]:
         """Validate parameters against tool schema.
 
         Args:
@@ -101,11 +101,11 @@ class ToolExecutionResult:
     """
 
     success: bool
-    result: dict[str, Any]
+    result: Dict[str, Any]
     tool_name: str
     execution_time_ms: float
     error: str | None = None
-    metadata: dict[str, Any] | None = None
+    metadata: Dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values."""

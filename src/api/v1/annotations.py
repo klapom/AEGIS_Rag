@@ -4,7 +4,7 @@ FastAPI endpoints for retrieving image annotations with BBox coordinates
 for PDF rendering (on-demand, not in search results).
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -144,7 +144,7 @@ async def get_document_annotations(
         collection_name = settings.qdrant_collection
 
         # Build Qdrant filter
-        filter_conditions: list[dict[str, Any]] = [
+        filter_conditions: list[Dict[str, Any]] = [
             {"key": "document_id", "match": {"value": document_id}}
         ]
 

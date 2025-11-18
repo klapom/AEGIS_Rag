@@ -49,7 +49,7 @@ Sprint 22 Context:
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Set
 
 import structlog
 
@@ -79,7 +79,7 @@ class ParserType(str, Enum):
 
 # Docling-optimized formats (14 formats)
 # These formats benefit from Docling's GPU acceleration and advanced parsing
-DOCLING_FORMATS: set[str] = {
+DOCLING_FORMATS: Set[str] = {
     # Documents (native layout preservation)
     ".pdf",  # 95% OCR accuracy with EasyOCR, GPU-accelerated
     ".docx",  # Native layout preservation, table detection
@@ -102,7 +102,7 @@ DOCLING_FORMATS: set[str] = {
 
 # LlamaIndex-exclusive formats (9 formats)
 # These formats are ONLY supported by LlamaIndex connectors
-LLAMAINDEX_EXCLUSIVE: set[str] = {
+LLAMAINDEX_EXCLUSIVE: Set[str] = {
     ".epub",  # E-books (LlamaIndex EPUBReader)
     ".rtf",  # Rich Text Format (LlamaIndex RTFReader)
     ".tex",  # LaTeX documents (LlamaIndex LaTeXReader)
@@ -116,7 +116,7 @@ LLAMAINDEX_EXCLUSIVE: set[str] = {
 
 # Shared formats (7 formats)
 # Both Docling and LlamaIndex support these, Docling preferred for performance
-SHARED_FORMATS: set[str] = {
+SHARED_FORMATS: Set[str] = {
     ".txt",  # Plain text (both support, Docling faster)
     ".doc",  # Legacy Word (LlamaIndex more reliable for old format)
     ".xls",  # Legacy Excel (LlamaIndex more reliable)
@@ -128,7 +128,7 @@ SHARED_FORMATS: set[str] = {
 
 # Total supported formats: 30
 # = 14 (Docling) + 9 (LlamaIndex exclusive) + 7 (shared)
-ALL_FORMATS: set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
+ALL_FORMATS: Set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
 
 
 # =============================================================================
@@ -183,7 +183,7 @@ class FormatRouter:
         docling_available: Whether Docling container is available and healthy
     """
 
-    def __init__(self, docling_available: bool = True):
+    def __init__(self, docling_available: bool = True) -> None:
         """Initialize format router.
 
         Args:
@@ -341,7 +341,7 @@ class FormatRouter:
         file_extension = file_path.suffix.lower()
         return file_extension in ALL_FORMATS
 
-    def get_supported_formats(self, parser: ParserType | None = None) -> set[str]:
+    def get_supported_formats(self, parser: ParserType | None = None) -> Set[str]:
         """Get supported formats for a specific parser or all parsers.
 
         Args:

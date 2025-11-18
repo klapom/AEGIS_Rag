@@ -9,7 +9,7 @@ This module provides efficient batch query execution with:
 """
 
 import asyncio
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -34,12 +34,12 @@ class BatchQueryResult:
     def __init__(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         success: bool = False,
         result: Any = None,
         error: str | None = None,
         execution_time: float = 0.0,
-    ):
+    ) -> None:
         """Initialize batch query result."""
         self.query = query
         self.parameters = parameters or {}
@@ -48,7 +48,7 @@ class BatchQueryResult:
         self.error = error
         self.execution_time = execution_time
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary."""
         return {
             "query": self.query[:100],  # Truncate for logging
@@ -79,7 +79,7 @@ class BatchQueryExecutor:
         client: Neo4jClient | None = None,
         max_concurrent: int | None = None,
         timeout_seconds: int | None = None,
-    ):
+    ) -> None:
         """Initialize batch query executor.
 
         Args:
@@ -103,7 +103,7 @@ class BatchQueryExecutor:
     async def _execute_single_query(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         index: int = 0,
     ) -> tuple[int, BatchQueryResult]:
         """Execute a single query with error handling.
@@ -182,7 +182,7 @@ class BatchQueryExecutor:
             )
 
     async def execute_batch(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
+        self, queries: list[tuple[str, Dict[str, Any] | None]]
     ) -> list[BatchQueryResult]:
         """Execute multiple queries in parallel.
 
@@ -241,7 +241,7 @@ class BatchQueryExecutor:
     async def _execute_single_write_query(
         self,
         query: str,
-        parameters: dict[str, Any] | None = None,
+        parameters: Dict[str, Any] | None = None,
         index: int = 0,
     ) -> tuple[int, BatchQueryResult]:
         """Execute a single write query with error handling.
@@ -324,7 +324,7 @@ class BatchQueryExecutor:
             )
 
     async def execute_batch_write(
-        self, queries: list[tuple[str, dict[str, Any] | None]]
+        self, queries: list[tuple[str, Dict[str, Any] | None]]
     ) -> list[BatchQueryResult]:
         """Execute multiple write queries in parallel.
 

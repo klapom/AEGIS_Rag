@@ -32,7 +32,7 @@ Example:
     ...     return {"results": [...]}
 """
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 import structlog
 from fastapi import Request
@@ -134,7 +134,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
     )
 
 
-async def log_request_middleware(request: Request, call_next):
+async def log_request_middleware(request: Request, call_next) -> None:
     """Log all incoming requests.
 
     Args:

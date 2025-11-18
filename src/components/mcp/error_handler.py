@@ -31,7 +31,7 @@ class MCPError(Exception):
         message: str,
         error_type: ErrorType,
         original_error: Exception | None = None,
-    ):
+    ) -> None:
         """Initialize MCP error.
 
         Args:

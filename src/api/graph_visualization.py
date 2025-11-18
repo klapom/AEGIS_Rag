@@ -8,7 +8,7 @@ This module provides FastAPI endpoints for graph visualization:
 Supports multiple output formats (D3.js, Cytoscape.js, vis.js).
 """
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Dict
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -29,8 +29,8 @@ router = APIRouter(prefix="/graph", tags=["visualization"])
 class VisualizationResponse(BaseModel):
     """Graph visualization response."""
 
-    data: dict[str, Any] = Field(..., description="Visualization data in requested format")
-    metadata: dict[str, Any] = Field(..., description="Metadata (node_count, edge_count, etc.)")
+    data: Dict[str, Any] = Field(..., description="Visualization data in requested format")
+    metadata: Dict[str, Any] = Field(..., description="Metadata (node_count, edge_count, etc.)")
 
 
 # Endpoints

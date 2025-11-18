@@ -8,7 +8,7 @@ Sprint 4 Feature 4.2: Query Router & Intent Classification
 
 import re
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from tenacity import (
@@ -52,7 +52,7 @@ class IntentClassifier:
         max_tokens: int | None = None,
         max_retries: int | None = None,
         default_intent: str | None = None,
-    ):
+    ) -> None:
         """Initialize intent classifier.
 
         Args:
@@ -211,7 +211,7 @@ def get_classifier() -> IntentClassifier:
     return _classifier
 
 
-async def route_query(state: dict[str, Any]) -> dict[str, Any]:
+async def route_query(state: Dict[str, Any]) -> Dict[str, Any]:
     """Route query node for LangGraph.
 
     This node classifies the query intent and updates the state.

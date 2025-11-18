@@ -8,8 +8,8 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import httpx
 
@@ -52,7 +52,7 @@ class MCPClient:
     automatic tool discovery, and tool execution with timeout and retries.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the MCP client."""
         self.servers: dict[str, MCPServer] = {}
         self.connections: dict[str, MCPServerConnection] = {}
@@ -91,7 +91,7 @@ class MCPClient:
 
                 self.servers[server.name] = server
                 connection.status = ServerStatus.CONNECTED
-                connection.connection_time = datetime.utcnow().isoformat()
+                connection.connection_time = datetime.now(timezone.utc).isoformat()
                 self._stats.total_servers += 1
                 self._stats.connected_servers += 1
 
@@ -296,7 +296,7 @@ class MCPClient:
             List of tools
         """
         if server_name:
-            return self.tools.get(server_name, [])
+            return self.tools.get(server_name, [])  # type: ignore[no-any-return]
         else:
             # Return tools from all servers
             all_tools = []
@@ -413,9 +413,9 @@ class MCPClient:
             )
 
         if "error" in response:
-            return MCPToolResult(tool_name=tool.name, success=False, error=str(response["error"]))
+            return MCPToolResult(tool_name=tool.name, success=False, error=str(response["error"]))  # type: ignore[no-any-return]
 
-        return MCPToolResult(tool_name=tool.name, success=True, result=response.get("result"))
+        return MCPToolResult(tool_name=tool.name, success=True, result=response.get("result"))  # type: ignore[no-any-return]
 
     async def _execute_tool_http(self, tool: MCPTool, tool_call: MCPToolCall) -> MCPToolResult:
         """Execute tool via HTTP transport.
@@ -501,7 +501,7 @@ class MCPClient:
         """
         return self.connections.copy()
 
-    async def _send_stdio_request(self, server_name: str, request: dict[str, Any]) -> None:
+    async def _send_stdio_request(self, server_name: str, request: Dict[str, Any]) -> None:
         """Send JSON-RPC request via stdio.
 
         Args:
@@ -513,7 +513,7 @@ class MCPClient:
         process.stdin.write(request_json.encode())
         await process.stdin.drain()
 
-    async def _read_stdio_response(self, server_name: str) -> dict[str, Any]:
+    async def _read_stdio_response(self, server_name: str) -> Dict[str, Any]:
         """Read JSON-RPC response via stdio.
 
         Args:
@@ -524,4 +524,4 @@ class MCPClient:
         """
         process = self._processes[server_name]
         response_line = await process.stdout.readline()
-        return json.loads(response_line.decode())
+        return json.loads(response_line.decode())  # type: ignore[no-any-return]

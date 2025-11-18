@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 import structlog
 from pydantic import BaseModel, Field
@@ -78,7 +78,7 @@ class CrossEncoderReranker:
         model_name: str | None = None,
         batch_size: int = 32,
         cache_dir: str | None = None,
-    ):
+    ) -> None:
         """Initialize reranker.
 
         Args:

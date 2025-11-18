@@ -9,6 +9,7 @@ Sprint 9 Feature 9.8: Action Agent (LangGraph Integration)
 from src.components.mcp.client import MCPClient
 from src.components.mcp.models import MCPTool
 from src.core.logging import get_logger
+from typing import List
 
 logger = get_logger(__name__)
 
@@ -20,7 +21,7 @@ class ToolSelector:
     Can be extended to use LLM-based selection for more complex scenarios.
     """
 
-    def __init__(self, mcp_client: MCPClient):
+    def __init__(self, mcp_client: MCPClient) -> None:
         """Initialize tool selector.
 
         Args:

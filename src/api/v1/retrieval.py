@@ -7,7 +7,7 @@ Sprint 22 Feature 22.2.2: Using standardized error responses with custom excepti
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from fastapi import (
@@ -81,7 +81,7 @@ class SearchRequest(BaseModel):
         le=100,
     )
     # Sprint 3: Metadata filters
-    filters: dict[str, Any] | None = Field(
+    filters: Dict[str, Any] | None = Field(
         None,
         description="Metadata filters for targeted search (Sprint 3)",
         examples=[
@@ -125,7 +125,7 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
     total_results: int
     search_type: str
-    search_metadata: dict[str, Any] | None = None
+    search_metadata: Dict[str, Any] | None = None
 
 
 class IngestionRequest(BaseModel):
@@ -540,7 +540,7 @@ async def upload_file(
 
 
 @router.get("/formats")
-async def get_supported_formats():
+async def get_supported_formats() -> None:
     """Get list of all supported document formats.
 
     Returns format information including:
@@ -640,7 +640,7 @@ async def prepare_bm25(
 
 
 @router.get("/stats")
-async def get_stats():
+async def get_stats() -> None:
     """Get retrieval system statistics.
 
     Returns:
@@ -694,7 +694,7 @@ class TokenResponse(BaseModel):
 async def login(
     request: Request,
     credentials: TokenRequest,
-):
+) -> None:
     """Authenticate and get JWT access token.
 
     Args:

@@ -17,7 +17,7 @@ Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import structlog
 
@@ -48,7 +48,7 @@ class DocumentIngestionPipeline:
         chunk_overlap: int = 128,
         allowed_base_path: str | Path | None = None,
         use_adaptive_chunking: bool = False,
-    ):
+    ) -> None:
         """Initialize document ingestion pipeline.
 
         Args:
@@ -332,7 +332,7 @@ class DocumentIngestionPipeline:
         input_dir: str | Path,
         batch_size: int = 100,
         required_exts: list[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Complete ingestion pipeline: load, chunk, embed, index.
 
         ============================================================================
@@ -365,7 +365,7 @@ class DocumentIngestionPipeline:
             "src.components.ingestion.langgraph_pipeline for replacements."
         )
 
-    async def get_collection_stats(self) -> dict[str, Any] | None:
+    async def get_collection_stats(self) -> Dict[str, Any] | None:
         """Get statistics about the indexed collection.
 
         Returns:
@@ -397,7 +397,7 @@ async def ingest_documents(
     chunk_size: int = 512,
     chunk_overlap: int = 128,
     use_adaptive_chunking: bool = False,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Quick document ingestion helper function.
 
     Args:

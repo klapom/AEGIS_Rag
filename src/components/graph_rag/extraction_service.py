@@ -9,7 +9,7 @@ Uses Ollama's llama3.2:8b model with structured prompts for reliable JSON output
 import json
 import re
 import uuid
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from tenacity import (
@@ -56,7 +56,7 @@ class ExtractionService:
         ollama_base_url: str | None = None,
         temperature: float | None = None,
         max_tokens: int | None = None,
-    ):
+    ) -> None:
         """Initialize extraction service.
 
         Args:
@@ -83,7 +83,7 @@ class ExtractionService:
 
     def _parse_json_response(
         self, response: str, data_type: str = "entity"
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Parse JSON from LLM response with multiple fallback strategies.
 
         Sprint 13 Enhancement: Robust parsing for llama3.2:3b output variations.
@@ -456,7 +456,7 @@ class ExtractionService:
         self,
         text: str,
         document_id: str,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Extract entities and relationships from a document.
 
         This is the main extraction method that combines entity and relationship extraction.
@@ -500,8 +500,8 @@ class ExtractionService:
 
     async def extract_batch(
         self,
-        documents: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+        documents: list[Dict[str, Any]],
+    ) -> Dict[str, Any]:
         """Batch extraction from multiple documents.
 
         Args:

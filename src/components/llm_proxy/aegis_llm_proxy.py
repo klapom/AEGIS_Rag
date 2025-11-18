@@ -83,7 +83,7 @@ class AegisLLMProxy:
         print(f"Provider: {response.provider}, Cost: ${response.cost_usd}")
     """
 
-    def __init__(self, config: LLMProxyConfig | None = None):
+    def __init__(self, config: LLMProxyConfig | None = None) -> None:
         """
         Initialize AegisLLMProxy with configuration.
 
@@ -482,7 +482,7 @@ class AegisLLMProxy:
             "alibaba_cloud": "qwen3-32b",
             "openai": "gpt-4o",
         }
-        return default_models.get(provider, "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M")
+        return default_models.get(provider, "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M")  # type: ignore[no-any-return]
 
     def _calculate_cost(
         self,
@@ -543,7 +543,7 @@ class AegisLLMProxy:
 
         return cost
 
-    def _track_metrics(self, provider: str, task: LLMTask, result: LLMResponse):
+    def _track_metrics(self, provider: str, task: LLMTask, result: LLMResponse) -> None:
         """
         Track metrics for observability (Prometheus, LangSmith, SQLite).
 

@@ -27,6 +27,7 @@ from src.components.llm_proxy.models import (
 )
 from src.core.config import settings
 from src.core.models import Community, GraphEntity
+from typing import List
 
 logger = structlog.get_logger(__name__)
 
@@ -50,7 +51,7 @@ class CommunityLabeler:
         llm_model: str | None = None,
         ollama_base_url: str | None = None,
         enabled: bool | None = None,
-    ):
+    ) -> None:
         """Initialize community labeler with AegisLLMProxy.
 
         Args:
@@ -341,7 +342,7 @@ Label:"""
             )
 
             if result:
-                return result[0].get("label")
+                return result[0].get("label")  # type: ignore[no-any-return]
 
             return None
 

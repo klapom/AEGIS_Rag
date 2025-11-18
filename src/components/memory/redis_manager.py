@@ -9,8 +9,8 @@ This module provides Redis-based working memory with:
 
 import json
 import time
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 from redis.asyncio import Redis
@@ -46,10 +46,10 @@ class RedisMemoryManager:
         redis_url: str | None = None,
         default_ttl_seconds: int | None = None,
         cluster_mode: bool = False,
-        cluster_nodes: list[dict[str, Any]] | None = None,
+        cluster_nodes: list[Dict[str, Any]] | None = None,
         eviction_threshold: float = 0.8,
         max_memory_bytes: int | None = None,
-    ):
+    ) -> None:
         """Initialize Redis memory manager.
 
         Args:
@@ -68,7 +68,7 @@ class RedisMemoryManager:
         self.max_memory_bytes = max_memory_bytes
 
         self._client: Redis | RedisCluster | None = None
-        self._capacity_cache: dict[str, Any] = {}
+        self._capacity_cache: Dict[str, Any] = {}
         self._capacity_cache_ttl = 10  # Cache capacity info for 10 seconds
 
         logger.info(
@@ -109,7 +109,7 @@ class RedisMemoryManager:
 
         except Exception as e:
             logger.error("Failed to connect to Redis", error=str(e))
-            raise MemoryError(f"Failed to connect to Redis: {e}") from e
+            raise MemoryError(f"Failed to connect to Redis: {e}", reason="connection_failed") from e
 
     async def close(self) -> None:
         """Close Redis connection."""
@@ -160,6 +160,8 @@ class RedisMemoryManager:
             serialized = json.dumps(data)
 
             # Store with TTL
+            if self._client is None:
+                raise MemoryError("Redis client not initialized", reason="client_not_initialized")
             await self._client.setex(entry.namespaced_key, entry.ttl_seconds, serialized)
 
             # Store tags for searchability
@@ -179,7 +181,7 @@ class RedisMemoryManager:
 
         except Exception as e:
             logger.error("Failed to store memory entry", key=entry.key, error=str(e))
-            raise MemoryError(f"Failed to store memory entry: {e}") from e
+            raise MemoryError(operation="store", reason=str(e)) from e
 
     async def retrieve(
         self, key: str, namespace: str = "memory", track_access: bool = True
@@ -217,7 +219,7 @@ class RedisMemoryManager:
             # Update access tracking
             if track_access:
                 data["access_count"] = data.get("access_count", 0) + 1
-                data["last_accessed_at"] = datetime.utcnow().isoformat()
+                data["last_accessed_at"] = datetime.now(timezone.utc).isoformat()
 
                 # Update with same TTL
                 ttl = await self._client.ttl(namespaced_key)
@@ -247,7 +249,7 @@ class RedisMemoryManager:
 
         except RedisError as e:
             logger.error("Failed to retrieve memory entry", key=key, error=str(e))
-            raise MemoryError(f"Failed to retrieve memory entry: {e}") from e
+            raise MemoryError(operation="Failed to retrieve memory entry", reason=str(e)) from e
 
     async def search(
         self, tags: list[str], namespace: str = "memory", limit: int = 100
@@ -317,7 +319,7 @@ class RedisMemoryManager:
             # Check cache
             now = time.time()
             if self._capacity_cache.get("timestamp", 0) + self._capacity_cache_ttl > now:
-                return self._capacity_cache.get("capacity", 0.0)
+                return self._capacity_cache.get("capacity", 0.0)  # type: ignore[no-any-return]
 
             await self.initialize()
 
@@ -449,7 +451,7 @@ class RedisMemoryManager:
             logger.error("Failed to delete memory entry", key=key, error=str(e))
             return False
 
-    async def get_stats(self, namespace: str = "memory") -> dict[str, Any]:
+    async def get_stats(self, namespace: str = "memory") -> Dict[str, Any]:
         """Get statistics for memory usage.
 
         Args:
@@ -546,7 +548,7 @@ class RedisMemoryManager:
             logger.error("Failed to clear entries", error=str(e))
             return 0
 
-    async def get_capacity_info(self) -> dict[str, Any]:
+    async def get_capacity_info(self) -> Dict[str, Any]:
         """Get detailed capacity information."""
         try:
             await self.initialize()
@@ -563,7 +565,7 @@ class RedisMemoryManager:
             logger.error("Failed to get capacity info", error=str(e))
             return {"used_mb": 0, "max_mb": 0, "usage_percent": 0}
 
-    async def evict_if_needed(self, namespace: str = "memory") -> dict[str, Any]:
+    async def evict_if_needed(self, namespace: str = "memory") -> Dict[str, Any]:
         """Manually trigger eviction if needed."""
         try:
             capacity = await self.get_capacity()

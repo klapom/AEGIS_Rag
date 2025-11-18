@@ -79,7 +79,7 @@ class ChunkingService:
         3
     """
 
-    def __init__(self, strategy: ChunkStrategy | None = None):
+    def __init__(self, strategy: ChunkStrategy | None = None) -> None:
         """Initialize chunking service with strategy.
 
         Args:

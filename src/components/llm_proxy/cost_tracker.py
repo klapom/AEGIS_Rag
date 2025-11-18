@@ -25,7 +25,7 @@ logger = structlog.get_logger(__name__)
 class CostTracker:
     """Persistent cost tracking for LLM requests."""
 
-    def __init__(self, db_path: Path | None = None):
+    def __init__(self, db_path: Path | None = None) -> None:
         """Initialize cost tracker.
 
         Args:
@@ -43,7 +43,7 @@ class CostTracker:
 
         logger.info("CostTracker initialized", db_path=str(self.db_path))
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         """Create database tables if they don't exist."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -398,7 +398,7 @@ class CostTracker:
 
         return stats
 
-    def export_to_csv(self, output_path: Path, days: int | None = None):
+    def export_to_csv(self, output_path: Path, days: int | None = None) -> None:
         """Export cost data to CSV.
 
         Args:

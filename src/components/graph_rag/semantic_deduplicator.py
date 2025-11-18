@@ -21,7 +21,7 @@ Date: 2025-10-24, Updated: 2025-10-30
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import structlog
 
@@ -140,7 +140,7 @@ class SemanticDeduplicator:
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         threshold: float = 0.93,
         device: str = "cpu",  # Sprint 20.5: Default to CPU
-    ):
+    ) -> None:
         """Initialize semantic deduplicator.
 
         Sprint 20 Changes:
@@ -181,7 +181,7 @@ class SemanticDeduplicator:
             note="Using singleton SentenceTransformer (Sprint 20.3)",
         )
 
-    def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def deduplicate(self, entities: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
         """Deduplicate entities using semantic similarity.
 
         Strategy:
@@ -253,8 +253,8 @@ class SemanticDeduplicator:
         return deduplicated
 
     def _deduplicate_group(
-        self, entities: list[dict[str, Any]], entity_type: str
-    ) -> list[dict[str, Any]]:
+        self, entities: list[Dict[str, Any]], entity_type: str
+    ) -> list[Dict[str, Any]]:
         """Deduplicate entities of the same type.
 
         Args:

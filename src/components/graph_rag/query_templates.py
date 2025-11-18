@@ -13,6 +13,7 @@ This module provides 15+ parameterized query templates for:
 import structlog
 
 from src.components.graph_rag.query_builder import CypherQueryBuilder
+from typing import List
 
 logger = structlog.get_logger(__name__)
 
@@ -30,7 +31,7 @@ class GraphQueryTemplates:
         >>> print(query_dict["parameters"])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize query templates."""
         logger.debug("GraphQueryTemplates initialized")
 

@@ -40,7 +40,7 @@ import asyncio
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import httpx
 import structlog
@@ -64,12 +64,12 @@ class DoclingParsedDocument(BaseModel):
     """
 
     text: str = Field(description="Full document text with OCR")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Document metadata")
-    tables: list[dict[str, Any]] = Field(default_factory=list, description="Extracted tables")
-    images: list[dict[str, Any]] = Field(default_factory=list, description="Image references")
-    layout: dict[str, Any] = Field(default_factory=dict, description="Layout structure")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Document metadata")
+    tables: list[Dict[str, Any]] = Field(default_factory=list, description="Extracted tables")
+    images: list[Dict[str, Any]] = Field(default_factory=list, description="Image references")
+    layout: Dict[str, Any] = Field(default_factory=dict, description="Layout structure")
     parse_time_ms: float = Field(description="Parsing duration")
-    json_content: dict[str, Any] = Field(
+    json_content: Dict[str, Any] = Field(
         default_factory=dict, description="Full Docling JSON response"
     )
     md_content: str = Field(default="", description="Markdown with embedded base64 images")
@@ -105,7 +105,7 @@ class DoclingClient:
         timeout_seconds: int = 300,
         max_retries: int = 3,
         health_check_interval_seconds: int = 2,
-    ):
+    ) -> None:
         """Initialize Docling container client.
 
         Args:
@@ -618,12 +618,12 @@ class DoclingClient:
 
         return results
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> None:
         """Async context manager entry: start container."""
         await self.start_container()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit: stop container."""
         await self.stop_container()
 

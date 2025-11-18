@@ -3,8 +3,8 @@
 This module tracks entity changes, detects drift, and provides change analytics.
 """
 
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
 import structlog
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ class ChangeEvent(BaseModel):
 class EvolutionTracker:
     """Tracks and analyzes entity evolution and changes."""
 
-    def __init__(self, neo4j_client: Neo4jClient | None = None):
+    def __init__(self, neo4j_client: Neo4jClient | None = None) -> None:
         """Initialize evolution tracker.
 
         Args:
@@ -42,8 +42,8 @@ class EvolutionTracker:
     async def track_changes(
         self,
         entity_id: str,
-        old_version: dict[str, Any] | None,
-        new_version: dict[str, Any],
+        old_version: Dict[str, Any] | None,
+        new_version: Dict[str, Any],
     ) -> ChangeEvent:
         """Record change event for an entity.
 
@@ -87,7 +87,7 @@ class EvolutionTracker:
             entity_id=entity_id,
             version_from=version_from,
             version_to=new_version.get("version_number", 1),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             changed_fields=changed_fields,
             change_type=change_type,
             changed_by=new_version.get("changed_by", "system"),
@@ -136,7 +136,7 @@ class EvolutionTracker:
         self,
         entity_id: str,
         limit: int = 50,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Get change history for an entity.
 
         Args:
@@ -166,7 +166,7 @@ class EvolutionTracker:
         logger.debug("Retrieved change log", entity_id=entity_id, count=len(changes))
         return changes
 
-    async def get_change_statistics(self, entity_id: str) -> dict[str, Any]:
+    async def get_change_statistics(self, entity_id: str) -> Dict[str, Any]:
         """Get change statistics for an entity.
 
         Args:
@@ -243,7 +243,7 @@ class EvolutionTracker:
         logger.debug("Retrieved change statistics", entity_id=entity_id, total=total_changes)
         return result
 
-    async def detect_drift(self, entity_id: str, days: int = 30) -> dict[str, Any]:
+    async def detect_drift(self, entity_id: str, days: int = 30) -> Dict[str, Any]:
         """Detect rapid changes (drift) in an entity.
 
         Args:
@@ -253,7 +253,7 @@ class EvolutionTracker:
         Returns:
             Drift analysis with change rate and alert status
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         query = """
         MATCH (c:ChangeEvent {entity_id: $entity_id})
@@ -324,7 +324,7 @@ class EvolutionTracker:
         self,
         min_age_days: int = 30,
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Find entities with no recent changes (stable entities).
 
         Args:
@@ -334,7 +334,7 @@ class EvolutionTracker:
         Returns:
             List of stable entity IDs with metadata
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=min_age_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=min_age_days)
 
         query = """
         MATCH (e:Entity)
@@ -389,7 +389,7 @@ class EvolutionTracker:
         days: int = 7,
         min_changes: int = 3,
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Find entities with frequent recent changes (active entities).
 
         Args:
@@ -400,7 +400,7 @@ class EvolutionTracker:
         Returns:
             List of active entity IDs with change counts
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         query = """
         MATCH (c:ChangeEvent)

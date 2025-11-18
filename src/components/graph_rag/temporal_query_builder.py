@@ -5,7 +5,7 @@ Implements bi-temporal model: valid_time (real-world) + transaction_time (databa
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -15,12 +15,12 @@ logger = structlog.get_logger(__name__)
 class CypherQueryBuilder:
     """Base class for building Cypher queries."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize query builder."""
         self._match: list[str] = []
         self._where: list[str] = []
         self._return: list[str] = []
-        self._params: dict[str, Any] = {}
+        self._params: Dict[str, Any] = {}
         self._order_by: list[str] = []
         self._limit: int | None = None
         self._skip: int | None = None
@@ -110,7 +110,7 @@ class CypherQueryBuilder:
         self._params[key] = value
         return self
 
-    def build(self) -> tuple[str, dict[str, Any]]:
+    def build(self) -> tuple[str, Dict[str, Any]]:
         """Build the Cypher query.
 
         Returns:
@@ -159,7 +159,7 @@ class CypherQueryBuilder:
 class TemporalQueryBuilder(CypherQueryBuilder):
     """Builder for temporal Cypher queries with bi-temporal model support."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize temporal query builder."""
         super().__init__()
         self._temporal_filters: list[str] = []
@@ -325,7 +325,7 @@ class TemporalQueryBuilder(CypherQueryBuilder):
         logger.debug("Added at_transaction_time temporal filter", timestamp=timestamp.isoformat())
         return self
 
-    def build(self) -> tuple[str, dict[str, Any]]:
+    def build(self) -> tuple[str, Dict[str, Any]]:
         """Build the temporal Cypher query.
 
         Returns:

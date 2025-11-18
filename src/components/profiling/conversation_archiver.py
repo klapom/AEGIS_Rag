@@ -10,7 +10,7 @@ This module provides:
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct
@@ -48,7 +48,7 @@ class ConversationArchiver:
         self,
         collection_name: str = ARCHIVED_CONVERSATIONS_COLLECTION,
         auto_archive_days: int = 7,
-    ):
+    ) -> None:
         """Initialize conversation archiver.
 
         Args:
@@ -141,7 +141,7 @@ class ConversationArchiver:
             )
 
             if not conversation_data:
-                raise MemoryError(f"Conversation '{session_id}' not found in Redis")
+                raise MemoryError(operation="operation", reason="Conversation '{session_id}' not found in Redis")
 
             # Extract value from Redis wrapper
             if isinstance(conversation_data, dict) and "value" in conversation_data:
@@ -149,7 +149,7 @@ class ConversationArchiver:
 
             messages = conversation_data.get("messages", [])
             if not messages:
-                raise MemoryError(f"Conversation '{session_id}' has no messages")
+                raise MemoryError(operation="operation", reason="Conversation '{session_id}' has no messages")
 
             # Generate full conversation text for embedding
             full_text = self._concatenate_messages(messages)
@@ -295,7 +295,7 @@ class ConversationArchiver:
             logger.error("conversation_search_failed", query=request.query, error=str(e))
             raise VectorSearchError(f"Failed to search archived conversations: {e}") from e
 
-    async def archive_old_conversations(self, max_conversations: int = 100) -> dict[str, Any]:
+    async def archive_old_conversations(self, max_conversations: int = 100) -> Dict[str, Any]:
         """Background job: Archive conversations older than configured threshold.
 
         Args:
@@ -395,7 +395,7 @@ class ConversationArchiver:
                 "error": str(e),
             }
 
-    def _concatenate_messages(self, messages: list[dict[str, Any]]) -> str:
+    def _concatenate_messages(self, messages: list[Dict[str, Any]]) -> str:
         """Concatenate all messages into a single text for embedding.
 
         Args:
@@ -412,7 +412,7 @@ class ConversationArchiver:
 
         return "\n".join(text_parts)
 
-    def _generate_summary(self, messages: list[dict[str, Any]]) -> str:
+    def _generate_summary(self, messages: list[Dict[str, Any]]) -> str:
         """Generate simple summary from conversation messages.
 
         Args:
@@ -434,7 +434,7 @@ class ConversationArchiver:
 
         return f"Conversation with {len(messages)} messages"
 
-    def _extract_topics(self, messages: list[dict[str, Any]]) -> list[str]:
+    def _extract_topics(self, messages: list[Dict[str, Any]]) -> list[str]:
         """Extract simple topics from conversation.
 
         Args:

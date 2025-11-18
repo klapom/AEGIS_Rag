@@ -9,8 +9,8 @@ This module provides automatic consolidation between memory layers:
 """
 
 import asyncio
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
 import numpy as np
 import structlog
@@ -29,7 +29,7 @@ logger = structlog.get_logger(__name__)
 class ConsolidationPolicy:
     """Base class for consolidation policies."""
 
-    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
         """Determine if item should be consolidated.
 
         Args:
@@ -44,7 +44,7 @@ class ConsolidationPolicy:
 class AccessCountPolicy(ConsolidationPolicy):
     """Consolidate based on access count threshold."""
 
-    def __init__(self, min_access_count: int = 3):
+    def __init__(self, min_access_count: int = 3) -> None:
         """Initialize access count policy.
 
         Args:
@@ -52,7 +52,7 @@ class AccessCountPolicy(ConsolidationPolicy):
         """
         self.min_access_count = min_access_count
 
-    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
         """Check if access count meets threshold.
 
         Args:
@@ -61,13 +61,13 @@ class AccessCountPolicy(ConsolidationPolicy):
         Returns:
             True if access count >= threshold
         """
-        return metadata.get("access_count", 0) >= self.min_access_count
+        return metadata.get("access_count", 0) >= self.min_access_count  # type: ignore[no-any-return]
 
 
 class TimeBasedPolicy(ConsolidationPolicy):
     """Consolidate based on age threshold."""
 
-    def __init__(self, min_age_hours: int = 1):
+    def __init__(self, min_age_hours: int = 1) -> None:
         """Initialize time-based policy.
 
         Args:
@@ -75,7 +75,7 @@ class TimeBasedPolicy(ConsolidationPolicy):
         """
         self.min_age_hours = min_age_hours
 
-    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
         """Check if item is old enough.
 
         Args:
@@ -90,7 +90,7 @@ class TimeBasedPolicy(ConsolidationPolicy):
 
         try:
             stored_time = datetime.fromisoformat(stored_at)
-            age = datetime.utcnow() - stored_time
+            age = datetime.now(timezone.utc) - stored_time
             return age >= timedelta(hours=self.min_age_hours)
         except Exception:
             return False
@@ -110,7 +110,7 @@ class MemoryConsolidationPipeline:
         time_threshold_hours: int = 1,
         relevance_scorer: RelevanceScorer | None = None,
         deduplication_threshold: float = 0.95,
-    ):
+    ) -> None:
         """Initialize consolidation pipeline.
 
         Args:
@@ -230,7 +230,7 @@ class MemoryConsolidationPipeline:
 
         except Exception as e:
             logger.error("Redis → Qdrant consolidation failed", error=str(e))
-            raise MemoryError(f"Redis → Qdrant consolidation failed: {e}") from e
+            raise MemoryError(operation="Redis → Qdrant consolidation failed", reason=str(e)) from e
 
     def _calculate_cosine_similarity(self, vec1: list[float], vec2: list[float]) -> float:
         """Calculate cosine similarity between two vectors.
@@ -262,9 +262,9 @@ class MemoryConsolidationPipeline:
 
     async def _deduplicate_memories(
         self,
-        items: list[dict[str, Any]],
+        items: list[Dict[str, Any]],
         embeddings: list[list[float]] | None = None,
-    ) -> tuple[list[dict[str, Any]], int]:
+    ) -> tuple[list[Dict[str, Any]], int]:
         """Deduplicate memories based on embedding similarity.
 
         Args:
@@ -334,7 +334,7 @@ class MemoryConsolidationPipeline:
         namespace: str = "memory",
         batch_size: int = 100,
         top_percentile: float = 0.2,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Enhanced consolidation with relevance scoring and deduplication.
 
         Selects top N% of memories based on importance score.
@@ -446,7 +446,7 @@ class MemoryConsolidationPipeline:
 
         except Exception as e:
             logger.error("Relevance-based consolidation failed", error=str(e))
-            raise MemoryError(f"Relevance-based consolidation failed: {e}") from e
+            raise MemoryError(operation="Relevance-based consolidation failed", reason=str(e)) from e
 
     def start_cron_scheduler(self, cron_schedule: str = "0 2 * * *") -> None:
         """Start cron-based consolidation scheduler using APScheduler.
@@ -511,7 +511,7 @@ class MemoryConsolidationPipeline:
         self,
         session_id: str,
         namespace: str = "context",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Consolidate conversation context to Graphiti episodic memory.
 
         Args:
@@ -552,7 +552,7 @@ class MemoryConsolidationPipeline:
                 metadata={
                     "session_id": session_id,
                     "message_count": len(context),
-                    "consolidated_at": datetime.utcnow().isoformat(),
+                    "consolidated_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
@@ -577,14 +577,14 @@ class MemoryConsolidationPipeline:
                 session_id=session_id,
                 error=str(e),
             )
-            raise MemoryError(f"Conversation → Graphiti consolidation failed: {e}") from e
+            raise MemoryError(operation="Conversation → Graphiti consolidation failed", reason=str(e)) from e
 
     async def run_consolidation_cycle(
         self,
         consolidate_to_qdrant: bool = True,
         consolidate_conversations: bool = True,
         active_sessions: list[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Run a full consolidation cycle across all layers.
 
         Args:
@@ -596,7 +596,7 @@ class MemoryConsolidationPipeline:
             Dictionary with consolidation results for all operations
         """
         results = {
-            "started_at": datetime.utcnow().isoformat(),
+            "started_at": datetime.now(timezone.utc).isoformat(),
             "qdrant_consolidation": None,
             "conversation_consolidations": [],
         }
@@ -629,7 +629,7 @@ class MemoryConsolidationPipeline:
                         {"session_id": session_id, "error": str(e)}
                     )
 
-        results["completed_at"] = datetime.utcnow().isoformat()
+        results["completed_at"] = datetime.now(timezone.utc).isoformat()
 
         logger.info(
             "Completed consolidation cycle",

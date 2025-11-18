@@ -3,7 +3,7 @@
 Sprint 22 Feature 22.2.2: Standardized error responses with error codes.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 
 class AegisRAGException(Exception):  # noqa: N818
@@ -20,7 +20,7 @@ class AegisRAGException(Exception):  # noqa: N818
         message: str,
         error_code: str,
         status_code: int = 500,
-        details: dict[str, Any] | None = None,
+        details: Dict[str, Any] | None = None,
     ) -> None:
         """
         Initialize exception.
@@ -41,7 +41,7 @@ class AegisRAGException(Exception):  # noqa: N818
 class ConfigurationError(AegisRAGException):
     """Raised when there is a configuration error."""
 
-    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+    def __init__(self, message: str, details: Dict[str, Any] | None = None) -> None:
         from src.core.models import ErrorCode
 
         super().__init__(
@@ -114,7 +114,7 @@ class LLMExecutionError(AegisRAGException):
     Sprint 23: Used by AegisLLMProxy when all providers (OpenAI, Ollama Cloud, Local) fail.
     """
 
-    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+    def __init__(self, message: str, details: Dict[str, Any] | None = None) -> None:
         from src.core.models import ErrorCode
 
         super().__init__(

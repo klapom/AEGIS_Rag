@@ -13,7 +13,7 @@ The generator:
 """
 
 import json
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -32,7 +32,7 @@ logger = structlog.get_logger(__name__)
 async def generate_followup_questions(
     query: str,
     answer: str,
-    sources: list[dict[str, Any]] | None = None,
+    sources: list[Dict[str, Any]] | None = None,
     max_questions: int = 5,
 ) -> list[str]:
     """Generate 3-5 follow-up questions based on Q&A context.

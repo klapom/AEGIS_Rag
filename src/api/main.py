@@ -214,7 +214,7 @@ logger.info(
 
 # Middleware for request tracking
 @app.middleware("http")
-async def track_requests(request: Request, call_next):
+async def track_requests(request: Request, call_next) -> None:
     """Track request metrics."""
     import time
 

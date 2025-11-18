@@ -3,7 +3,7 @@
 Provides comprehensive health checks for all system dependencies.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from fastapi import APIRouter
@@ -32,7 +32,7 @@ class DependencyHealth(BaseModel):
     name: str
     status: str  # "up", "down", "degraded"
     latency_ms: float
-    details: dict[str, Any]
+    details: Dict[str, Any]
 
 
 class DetailedHealthResponse(BaseModel):
@@ -45,7 +45,7 @@ class DetailedHealthResponse(BaseModel):
 
 
 @router.get("/", response_model=HealthStatus, status_code=http_status.HTTP_200_OK)
-async def health_check():
+async def health_check() -> None:
     """Basic health check - lightweight endpoint for load balancers.
 
     Returns:
@@ -64,7 +64,7 @@ async def health_check():
 
 
 @router.get("/detailed", response_model=DetailedHealthResponse)
-async def detailed_health_check():
+async def detailed_health_check() -> None:
     """Detailed health check with dependency status.
 
     Checks connectivity to:
@@ -156,7 +156,7 @@ async def detailed_health_check():
 
 
 @router.get("/ready")
-async def readiness_check():
+async def readiness_check() -> None:
     """Readiness check - indicates if service can handle requests.
 
     Returns 200 if all critical dependencies are available, 503 otherwise.
@@ -183,7 +183,7 @@ async def readiness_check():
 
 
 @router.get("/live")
-async def liveness_check():
+async def liveness_check() -> None:
     """Liveness check - indicates if service is alive.
 
     Always returns 200 unless application is completely broken.

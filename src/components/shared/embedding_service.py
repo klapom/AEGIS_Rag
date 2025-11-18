@@ -8,7 +8,7 @@ Shared by:
 
 import hashlib
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from ollama import AsyncClient
@@ -58,7 +58,7 @@ class LRUCache:
         total = self._hits + self._misses
         return self._hits / total if total > 0 else 0.0
 
-    def stats(self) -> dict[str, Any]:
+    def stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         return {
             "size": len(self.cache),
@@ -134,7 +134,7 @@ class UnifiedEmbeddingService:
         model_name: str | None = None,
         embedding_dim: int = 1024,
         cache_max_size: int = 10000,
-    ):
+    ) -> None:
         """Initialize unified embedding service.
 
         Args:
@@ -247,7 +247,7 @@ class UnifiedEmbeddingService:
 
         return embeddings
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """Get embedding service statistics."""
         return {
             "model": self.model_name,

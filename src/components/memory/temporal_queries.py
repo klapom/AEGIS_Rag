@@ -8,8 +8,8 @@ This module provides bi-temporal querying capabilities for episodic memory:
 - Entity history tracking
 """
 
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 
@@ -28,7 +28,7 @@ class TemporalMemoryQuery:
     - transaction_from/transaction_to: Database transaction period
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize temporal query handler."""
         self.neo4j_client = get_neo4j_client()
 
@@ -54,7 +54,7 @@ class TemporalMemoryQuery:
         entity_name: str,
         valid_time: datetime,
         transaction_time: datetime | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Query entity state at a specific point in time.
 
         Args:
@@ -69,7 +69,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            transaction_time = transaction_time or datetime.utcnow()
+            transaction_time = transaction_time or datetime.now(timezone.utc)
 
             # Cypher query for bi-temporal point-in-time retrieval
             query = """
@@ -125,7 +125,7 @@ class TemporalMemoryQuery:
                 entity_name=entity_name,
                 error=str(e),
             )
-            raise MemoryError(f"Point-in-time query failed: {e}") from e
+            raise MemoryError(operation="Point-in-time query failed", reason=str(e)) from e
 
     async def query_time_range(
         self,
@@ -133,7 +133,7 @@ class TemporalMemoryQuery:
         valid_start: datetime,
         valid_end: datetime,
         transaction_time: datetime | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Query entity states over a time range.
 
         Returns all versions of the entity that were valid during
@@ -152,7 +152,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            transaction_time = transaction_time or datetime.utcnow()
+            transaction_time = transaction_time or datetime.now(timezone.utc)
 
             # Query for entities valid during any part of the range
             query = """
@@ -203,13 +203,13 @@ class TemporalMemoryQuery:
                 entity_name=entity_name,
                 error=str(e),
             )
-            raise MemoryError(f"Time range query failed: {e}") from e
+            raise MemoryError(operation="Time range query failed", reason=str(e)) from e
 
     async def get_entity_history(
         self,
         entity_name: str,
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Get complete history of entity changes.
 
         Returns all versions of an entity ordered by transaction time.
@@ -281,7 +281,7 @@ class TemporalMemoryQuery:
                 entity_name=entity_name,
                 error=str(e),
             )
-            raise MemoryError(f"Entity history query failed: {e}") from e
+            raise MemoryError(operation="Entity history query failed", reason=str(e)) from e
 
     async def query_entities_by_relationship(
         self,
@@ -289,7 +289,7 @@ class TemporalMemoryQuery:
         relationship_type: str,
         valid_time: datetime | None = None,
         direction: str = "outgoing",
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Query entities connected by relationship at a point in time.
 
         Args:
@@ -305,7 +305,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            valid_time = valid_time or datetime.utcnow()
+            valid_time = valid_time or datetime.now(timezone.utc)
 
             # Build direction pattern
             if direction == "outgoing":
@@ -369,7 +369,7 @@ class TemporalMemoryQuery:
                 entity_name=entity_name,
                 error=str(e),
             )
-            raise MemoryError(f"Relationship query failed: {e}") from e
+            raise MemoryError(operation="Relationship query failed", reason=str(e)) from e
 
 
 # Global instance (singleton pattern)

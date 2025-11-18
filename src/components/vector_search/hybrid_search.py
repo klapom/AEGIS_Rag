@@ -61,7 +61,7 @@ See Also:
 """
 
 import asyncio
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -87,7 +87,7 @@ class HybridSearch:
         bm25_search: BM25Search | None = None,
         reranker: CrossEncoderReranker | None = None,
         collection_name: str | None = None,
-    ):
+    ) -> None:
         """Initialize hybrid search.
 
         Args:
@@ -137,7 +137,7 @@ class HybridSearch:
         top_k: int = 20,
         score_threshold: float | None = None,
         filters: MetadataFilters | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Perform vector-based semantic search.
 
         Args:
@@ -205,7 +205,7 @@ class HybridSearch:
         self,
         query: str,
         top_k: int = 20,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Perform BM25 keyword search.
 
         Args:
@@ -256,7 +256,7 @@ class HybridSearch:
         use_reranking: bool = True,
         rerank_top_k: int | None = None,
         filters: MetadataFilters | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
 
         Args:
@@ -401,7 +401,7 @@ class HybridSearch:
             logger.error("Hybrid search failed", error=str(e))
             raise VectorSearchError(f"Hybrid search failed: {e}") from e
 
-    async def prepare_bm25_index(self) -> dict[str, Any]:
+    async def prepare_bm25_index(self) -> Dict[str, Any]:
         """Prepare BM25 index from Qdrant collection.
 
         This loads all documents from Qdrant and fits the BM25 model.

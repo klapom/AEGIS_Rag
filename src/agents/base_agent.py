@@ -8,7 +8,7 @@ All agents inherit from this class and implement async processing.
 
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Dict
 
 from src.core.logging import get_logger
 
@@ -24,7 +24,7 @@ class BaseAgent(ABC):
     All agents are async by design to support concurrent operations.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         """Initialize base agent.
 
         Args:
@@ -34,7 +34,7 @@ class BaseAgent(ABC):
         self.logger = logger.bind(agent=name)
 
     @abstractmethod
-    async def process(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process the state and return updated state.
 
         This is the main method that each agent must implement.
@@ -60,8 +60,8 @@ class BaseAgent(ABC):
         return self.name
 
     async def handle_error(
-        self, state: dict[str, Any], error: Exception, context: str
-    ) -> dict[str, Any]:
+        self, state: Dict[str, Any], error: Exception, context: str
+    ) -> Dict[str, Any]:
         """Handle error during agent processing.
 
         Args:
@@ -76,7 +76,7 @@ class BaseAgent(ABC):
         self._set_error(state, error, context)
         return state
 
-    def _add_trace(self, state: dict[str, Any], action: str) -> None:
+    def _add_trace(self, state: Dict[str, Any], action: str) -> None:
         """Add trace entry to state.
 
         Args:
@@ -95,7 +95,7 @@ class BaseAgent(ABC):
         ):
             state["metadata"]["agent_path"].append(trace_entry)
 
-    def _measure_latency(self) -> dict[str, Any]:
+    def _measure_latency(self) -> Dict[str, Any]:
         """Start measuring execution latency.
 
         Returns:
@@ -103,7 +103,7 @@ class BaseAgent(ABC):
         """
         return {"start_time": time.perf_counter()}
 
-    def _calculate_latency_ms(self, timing: dict[str, Any]) -> float:
+    def _calculate_latency_ms(self, timing: Dict[str, Any]) -> float:
         """Calculate latency in milliseconds.
 
         Args:
@@ -112,7 +112,7 @@ class BaseAgent(ABC):
         Returns:
             Latency in milliseconds
         """
-        return (time.perf_counter() - timing["start_time"]) * 1000
+        return (time.perf_counter() - timing["start_time"]) * 1000  # type: ignore[no-any-return]
 
     def _log_success(self, operation: str, **kwargs: Any) -> None:
         """Log successful operation.
@@ -135,7 +135,7 @@ class BaseAgent(ABC):
             f"{operation}_failed", error=str(error), error_type=type(error).__name__, **kwargs
         )
 
-    def _set_error(self, state: dict[str, Any], error: Exception, context: str) -> None:
+    def _set_error(self, state: Dict[str, Any], error: Exception, context: str) -> None:
         """Set error in state.
 
         Args:

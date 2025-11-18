@@ -23,7 +23,7 @@ Usage:
 import asyncio
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import httpx
 import pandas as pd
@@ -54,7 +54,7 @@ class GradioApp:
     This class manages the Gradio UI and integrates with the FastAPI backend.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Gradio app."""
         self.session_id = str(uuid.uuid4())
         # Increased timeout for document upload (embedding generation can take 60+ seconds)
@@ -226,7 +226,7 @@ class GradioApp:
                 )
 
                 # Start async task for progress simulation within this file's progress range
-                async def simulate_progress(file_idx: int):
+                async def simulate_progress(file_idx: int) -> None:
                     """Simulate progress for long-running embedding generation."""
                     base_progress = (file_idx - 1) / len(files)
                     file_progress_range = 1.0 / len(files)
@@ -348,7 +348,7 @@ class GradioApp:
 
         return []  # Empty chatbot
 
-    async def get_health_stats(self) -> dict[str, Any]:
+    async def get_health_stats(self) -> Dict[str, Any]:
         """Get system health statistics.
 
         Returns:
@@ -763,7 +763,7 @@ class GradioApp:
         demo.launch(server_name=server_name, server_port=server_port, share=share)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import logging
 

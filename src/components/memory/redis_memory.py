@@ -8,8 +8,8 @@ This module provides Redis-based working memory for:
 """
 
 import json
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 from redis.asyncio import Redis
@@ -35,7 +35,7 @@ class RedisMemoryManager:
         self,
         redis_url: str | None = None,
         default_ttl_seconds: int | None = None,
-    ):
+    ) -> None:
         """Initialize Redis memory manager.
 
         Args:
@@ -75,7 +75,7 @@ class RedisMemoryManager:
                 logger.info("Redis client initialized and connected")
             except Exception as e:
                 logger.error("Failed to connect to Redis", error=str(e))
-                raise MemoryError(f"Failed to connect to Redis: {e}") from e
+                raise MemoryError(operation="Failed to connect to Redis", reason=str(e)) from e
 
         return self._client
 
@@ -108,7 +108,7 @@ class RedisMemoryManager:
             serialized = json.dumps(
                 {
                     "value": value,
-                    "stored_at": datetime.utcnow().isoformat(),
+                    "stored_at": datetime.now(timezone.utc).isoformat(),
                     "access_count": 0,
                 }
             )
@@ -126,7 +126,7 @@ class RedisMemoryManager:
 
         except Exception as e:
             logger.error("Failed to store in working memory", key=key, error=str(e))
-            raise MemoryError(f"Failed to store in working memory: {e}") from e
+            raise MemoryError(operation="Failed to store in working memory", reason=str(e)) from e
 
     async def retrieve(
         self,
@@ -162,7 +162,7 @@ class RedisMemoryManager:
 
             if track_access:
                 data["access_count"] = data.get("access_count", 0) + 1
-                data["last_accessed_at"] = datetime.utcnow().isoformat()
+                data["last_accessed_at"] = datetime.now(timezone.utc).isoformat()
 
                 # Update with same TTL
                 ttl = await redis_client.ttl(namespaced_key)
@@ -183,13 +183,13 @@ class RedisMemoryManager:
 
         except RedisError as e:
             logger.error("Failed to retrieve from working memory", key=key, error=str(e))
-            raise MemoryError(f"Failed to retrieve from working memory: {e}") from e
+            raise MemoryError(operation="Failed to retrieve from working memory", reason=str(e)) from e
 
     async def get_metadata(
         self,
         key: str,
         namespace: str = "memory",
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Get metadata about a stored value (without incrementing access count).
 
         Args:
@@ -260,7 +260,7 @@ class RedisMemoryManager:
         min_access_count: int = 3,
         namespace: str = "memory",
         limit: int = 100,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Get frequently accessed items for consolidation.
 
         Args:

@@ -10,7 +10,7 @@ Features:
 - Depth-based traversal
 """
 
-from typing import Any, Literal
+from typing import Any, Literal, Dict
 
 import structlog
 
@@ -27,7 +27,7 @@ VisualizationFormat = Literal["d3", "cytoscape", "visjs"]
 class GraphVisualizationExporter:
     """Export graph data for frontend visualization."""
 
-    def __init__(self, neo4j_client: Neo4jClient | None = None):
+    def __init__(self, neo4j_client: Neo4jClient | None = None) -> None:
         """Initialize the exporter.
 
         Args:
@@ -51,7 +51,7 @@ class GraphVisualizationExporter:
         depth: int = 1,
         max_nodes: int | None = None,
         format: VisualizationFormat = "d3",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Export a subgraph starting from given entity IDs.
 
         Args:
@@ -110,7 +110,7 @@ class GraphVisualizationExporter:
 
     async def _fetch_subgraph(
         self, entity_ids: list[str], depth: int, max_nodes: int
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
         """Fetch subgraph from Neo4j using variable-length path traversal.
 
         Args:
@@ -177,8 +177,8 @@ class GraphVisualizationExporter:
             raise DatabaseConnectionError("Neo4j", f"Failed to fetch subgraph: {e}") from e
 
     def export_for_d3js(
-        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Export graph data in D3.js force-directed graph format.
 
         D3.js format:
@@ -231,8 +231,8 @@ class GraphVisualizationExporter:
         return {"nodes": d3_nodes, "links": d3_links}
 
     def export_for_cytoscape(
-        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Export graph data in Cytoscape.js format.
 
         Cytoscape.js format:
@@ -281,8 +281,8 @@ class GraphVisualizationExporter:
         return {"elements": {"nodes": cyto_nodes, "edges": cyto_edges}}
 
     def export_for_visjs(
-        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Export graph data in vis.js network format.
 
         vis.js format:

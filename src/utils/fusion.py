@@ -8,7 +8,7 @@ and individual Rank Learning Methods"
 """
 
 from collections import defaultdict
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -16,10 +16,10 @@ logger = structlog.get_logger(__name__)
 
 
 def reciprocal_rank_fusion(
-    rankings: list[list[dict[str, Any]]],
+    rankings: list[list[Dict[str, Any]]],
     k: int = 60,
     id_field: str = "id",
-) -> list[dict[str, Any]]:
+) -> list[Dict[str, Any]]:
     """Combine multiple rankings using Reciprocal Rank Fusion.
 
     Args:
@@ -43,7 +43,7 @@ def reciprocal_rank_fusion(
 
     # Calculate RRF scores
     rrf_scores: dict[str, float] = defaultdict(float)
-    doc_data: dict[str, dict[str, Any]] = {}  # Store original document data
+    doc_data: dict[str, Dict[str, Any]] = {}  # Store original document data
 
     for _ranking_idx, ranking in enumerate(rankings):
         for rank, doc in enumerate(ranking, start=1):
@@ -84,11 +84,11 @@ def reciprocal_rank_fusion(
 
 
 def weighted_reciprocal_rank_fusion(
-    rankings: list[list[dict[str, Any]]],
+    rankings: list[list[Dict[str, Any]]],
     weights: list[float] | None = None,
     k: int = 60,
     id_field: str = "id",
-) -> list[dict[str, Any]]:
+) -> list[Dict[str, Any]]:
     """Weighted version of RRF for different ranking importance.
 
     Args:
@@ -120,7 +120,7 @@ def weighted_reciprocal_rank_fusion(
 
     # Calculate weighted RRF scores
     rrf_scores: dict[str, float] = defaultdict(float)
-    doc_data: dict[str, dict[str, Any]] = {}
+    doc_data: dict[str, Dict[str, Any]] = {}
 
     for _ranking_idx, (ranking, weight) in enumerate(
         zip(rankings, normalized_weights, strict=False)
@@ -161,10 +161,10 @@ def weighted_reciprocal_rank_fusion(
 
 
 def analyze_ranking_diversity(
-    rankings: list[list[dict[str, Any]]],
+    rankings: list[list[Dict[str, Any]]],
     top_k: int = 10,
     id_field: str = "id",
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Analyze diversity and overlap between multiple rankings.
 
     Args:

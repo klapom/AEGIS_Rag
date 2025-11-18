@@ -12,7 +12,7 @@ Date: 2025-10-24, Updated: 2025-11-13
 
 import json
 import re
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from tenacity import (
@@ -124,7 +124,7 @@ class RelationExtractor:
         max_retries: int = 3,
         retry_min_wait: float = 2.0,
         retry_max_wait: float = 10.0,
-    ):
+    ) -> None:
         """Initialize Gemma relation extractor.
 
         Args:
@@ -158,7 +158,7 @@ class RelationExtractor:
             proxy="AegisLLMProxy",
         )
 
-    async def extract(self, text: str, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    async def extract(self, text: str, entities: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
         """Extract relations between entities from text.
 
         Sprint 14: Added automatic retry logic for transient failures.
@@ -220,8 +220,8 @@ class RelationExtractor:
             return []
 
     async def _extract_with_retry(
-        self, user_prompt: str, text: str, entities: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+        self, user_prompt: str, text: str, entities: list[Dict[str, Any]]
+    ) -> list[Dict[str, Any]]:
         """Call Gemma LLM with automatic retry on transient failures.
 
         Sprint 14 Feature 14.5: Retry Logic
@@ -250,7 +250,7 @@ class RelationExtractor:
             before_sleep=before_sleep_log(logger, "WARNING"),
             reraise=True,
         )
-        async def _call_llm():
+        async def _call_llm() -> None:
             """Inner function with retry decorator."""
             # Sprint 23: Use AegisLLMProxy with combined system + user prompt
             combined_prompt = f"{SYSTEM_PROMPT_RELATION}\n\n{user_prompt}"
@@ -270,7 +270,7 @@ class RelationExtractor:
             # Parse JSON response
             content = response.content
             relation_data = self._parse_json_response(content)
-            return relation_data.get("relations", [])
+            return relation_data.get("relations", [])  # type: ignore[no-any-return]
 
         return await _call_llm()
 
@@ -293,13 +293,13 @@ class RelationExtractor:
 
         # Try direct parsing
         try:
-            return json.loads(cleaned)
+            return json.loads(cleaned)  # type: ignore[no-any-return]
         except json.JSONDecodeError:
             # Try to extract JSON from text (regex fallback)
             json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
             if json_match:
                 try:
-                    return json.loads(json_match.group(0))
+                    return json.loads(json_match.group(0))  # type: ignore[no-any-return]
                 except json.JSONDecodeError:
                     pass
 

@@ -29,7 +29,7 @@ See Also:
     - src/api/v1/auth.py: Login endpoint implementation
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import structlog
 from fastapi import HTTPException, status
@@ -61,7 +61,7 @@ class TokenData(BaseModel):
         ...     user_id="user_001",
         ...     username="john_doe",
         ...     role="user",
-        ...     exp=datetime.utcnow() + timedelta(hours=1)
+        ...     exp=datetime.now(timezone.utc) + timedelta(hours=1)
         ... )
     """
 
@@ -112,7 +112,7 @@ class User(BaseModel):
             >>> user.is_admin()
             False
         """
-        return self.role in ["admin", "superadmin"]
+        return self.role in ["admin", "superadmin"]  # type: ignore[no-any-return]
 
 
 class Token(BaseModel):
@@ -169,7 +169,7 @@ def create_access_token(user_id: str, username: str, role: str = "user") -> Toke
         - Tokens are stateless - cannot be revoked without additional infrastructure
         - Token expiration is hardcoded to JWT_EXPIRATION_MINUTES
     """
-    expires = datetime.utcnow() + timedelta(minutes=JWT_EXPIRATION_MINUTES)
+    expires = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRATION_MINUTES)
 
     # Create payload with Unix timestamp for expiration
     payload = {

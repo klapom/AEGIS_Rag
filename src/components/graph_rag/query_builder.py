@@ -8,7 +8,7 @@ This module provides a fluent API for building parameterized Cypher queries with
 - Method chaining for readability
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -45,7 +45,7 @@ class CypherQueryBuilder:
         self._delete_clauses: list[str] = []
         self._limit_value: int | None = None
         self._skip_value: int | None = None
-        self._parameters: dict[str, Any] = {}
+        self._parameters: Dict[str, Any] = {}
 
         logger.debug("CypherQueryBuilder initialized")
 
@@ -369,7 +369,7 @@ class CypherQueryBuilder:
         logger.debug("Added parameter", name=name)
         return self
 
-    def build(self) -> dict[str, Any]:
+    def build(self) -> Dict[str, Any]:
         """Build the final query and parameters.
 
         Returns:

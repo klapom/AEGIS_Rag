@@ -7,8 +7,8 @@ This module provides a wrapper around Graphiti episodic memory system with:
 - Episode management and search capabilities
 """
 
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 from graphiti_core import Graphiti
@@ -51,7 +51,7 @@ class OllamaLLMClient(LLMClient):
         base_url: str | None = None,
         model: str | None = None,
         temperature: float = 0.1,
-    ):
+    ) -> None:
         """Initialize LLM client with AegisLLMProxy.
 
         Args:
@@ -195,7 +195,7 @@ class GraphitiClient:
         neo4j_uri: str | None = None,
         neo4j_user: str | None = None,
         neo4j_password: str | None = None,
-    ):
+    ) -> None:
         """Initialize Graphiti wrapper.
 
         Args:
@@ -280,9 +280,9 @@ class GraphitiClient:
         self,
         content: str,
         source: str = "user_conversation",
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Add an episode to episodic memory.
 
         Extracts entities and relationships from content and stores them
@@ -301,7 +301,7 @@ class GraphitiClient:
             MemoryError: If episode addition fails
         """
         try:
-            timestamp = timestamp or datetime.utcnow()
+            timestamp = timestamp or datetime.now(timezone.utc)
             metadata = metadata or {}
 
             # Add episode to Graphiti
@@ -340,7 +340,7 @@ class GraphitiClient:
         limit: int = 10,
         score_threshold: float = 0.7,
         time_window_hours: int | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search episodic memory.
 
         Args:
@@ -363,7 +363,7 @@ class GraphitiClient:
 
             # Apply time window filter if specified
             if time_window_hours:
-                cutoff_time = datetime.utcnow().timestamp() - (time_window_hours * 3600)
+                cutoff_time = datetime.now(timezone.utc).timestamp() - (time_window_hours * 3600)
                 search_config.time_filter = {"after": cutoff_time}
 
             results = await self.graphiti.search(
@@ -398,9 +398,9 @@ class GraphitiClient:
         self,
         name: str,
         entity_type: str,
-        properties: dict[str, Any] | None = None,
+        properties: Dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Add entity to episodic memory graph.
 
         Args:
@@ -416,7 +416,7 @@ class GraphitiClient:
             MemoryError: If entity addition fails
         """
         try:
-            timestamp = timestamp or datetime.utcnow()
+            timestamp = timestamp or datetime.now(timezone.utc)
             properties = properties or {}
 
             entity = await self.graphiti.add_entity(
@@ -450,9 +450,9 @@ class GraphitiClient:
         source_entity_id: str,
         target_entity_id: str,
         relationship_type: str,
-        properties: dict[str, Any] | None = None,
+        properties: Dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Add relationship edge between entities.
 
         Args:
@@ -469,7 +469,7 @@ class GraphitiClient:
             MemoryError: If edge addition fails
         """
         try:
-            timestamp = timestamp or datetime.utcnow()
+            timestamp = timestamp or datetime.now(timezone.utc)
             properties = properties or {}
 
             edge = await self.graphiti.add_edge(

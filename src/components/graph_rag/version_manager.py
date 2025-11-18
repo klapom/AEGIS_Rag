@@ -5,8 +5,8 @@ Implements version retention, comparison, and rollback functionality.
 """
 
 import uuid
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Any, Dict
 
 import structlog
 
@@ -23,7 +23,7 @@ class VersionManager:
         self,
         neo4j_client: Neo4jClient | None = None,
         retention_count: int | None = None,
-    ):
+    ) -> None:
         """Initialize version manager.
 
         Args:
@@ -41,10 +41,10 @@ class VersionManager:
 
     async def create_version(
         self,
-        entity: dict[str, Any],
+        entity: Dict[str, Any],
         changed_by: str = "system",
         change_reason: str = "",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Create new version of an entity.
 
         Closes the current version (sets valid_to and transaction_to) and creates
@@ -65,7 +65,7 @@ class VersionManager:
         if not entity_id:
             raise ValueError("Entity must have 'id' or 'name' field")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
 
         # Get current version
@@ -144,7 +144,7 @@ class VersionManager:
         entity_id: str,
         limit: int | None = None,
         include_deleted: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Get all versions of an entity.
 
         Args:
@@ -192,7 +192,7 @@ class VersionManager:
         self,
         entity_id: str,
         timestamp: datetime,
-    ) -> dict[str, Any] | None:
+    ) -> Dict[str, Any] | None:
         """Get specific version of entity at a given timestamp.
 
         Args:
@@ -244,7 +244,7 @@ class VersionManager:
         entity_id: str,
         version1: int,
         version2: int,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Compare two versions of an entity.
 
         Args:
@@ -322,7 +322,7 @@ class VersionManager:
         logger.debug("Compared versions", entity_id=entity_id, changes=len(changed_fields))
         return result
 
-    async def get_evolution(self, entity_id: str) -> dict[str, Any]:
+    async def get_evolution(self, entity_id: str) -> Dict[str, Any]:
         """Get change timeline for an entity.
 
         Args:
@@ -404,7 +404,7 @@ class VersionManager:
         version_id: str,
         changed_by: str = "system",
         change_reason: str = "Reverted to previous version",
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Revert entity to a previous version.
 
         Creates a new version with the data from the specified version.
@@ -480,7 +480,7 @@ class VersionManager:
         if self.retention_count <= 0:
             return 0  # No retention limit
 
-        now_iso = datetime.utcnow().isoformat()
+        now_iso = datetime.now(timezone.utc).isoformat()
 
         # Soft delete versions beyond retention limit
         query = """

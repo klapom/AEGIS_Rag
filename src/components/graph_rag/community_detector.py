@@ -21,7 +21,7 @@ import asyncio
 import hashlib
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 
 import networkx as nx
@@ -38,6 +38,7 @@ from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.core.config import settings
 from src.core.exceptions import DatabaseConnectionError
 from src.core.models import Community
+from typing import List
 
 logger = structlog.get_logger(__name__)
 
@@ -147,7 +148,7 @@ class CommunityDetector:
         resolution: float | None = None,
         min_size: int | None = None,
         use_gds: bool | None = None,
-    ):
+    ) -> None:
         """Initialize community detector.
 
         Args:
@@ -333,7 +334,7 @@ class CommunityDetector:
                     entity_ids=entity_ids,
                     size=len(entity_ids),
                     density=0.0,  # Calculate separately if needed
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     metadata={
                         "algorithm": algorithm,
                         "resolution": resolution,
@@ -435,7 +436,7 @@ class CommunityDetector:
                     entity_ids=entity_ids,
                     size=len(entity_ids),
                     density=self._calculate_density(graph, entity_ids),
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     metadata={
                         "algorithm": "louvain",  # NetworkX uses Louvain
                         "resolution": resolution,
@@ -539,7 +540,7 @@ class CommunityDetector:
                 entity_ids=entity_ids,
                 size=len(entity_ids),
                 density=0.0,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 metadata={},
             )
 
@@ -561,7 +562,7 @@ class CommunityDetector:
             result = await self.neo4j_client.execute_read(cypher, {"entity_id": entity_id})
 
             if result and result[0].get("community_id"):
-                return result[0]["community_id"]
+                return result[0]["community_id"]  # type: ignore[no-any-return]
 
             return None
 
@@ -601,7 +602,7 @@ class CommunityDetector:
                     entity_ids=record["entity_ids"],
                     size=record["size"],
                     density=0.0,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     metadata={},
                 )
                 communities.append(community)

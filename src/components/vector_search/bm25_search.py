@@ -9,7 +9,7 @@ re-indexing on every backend restart.
 
 import pickle
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from rank_bm25 import BM25Okapi
@@ -22,14 +22,14 @@ logger = structlog.get_logger(__name__)
 class BM25Search:
     """BM25 keyword search for hybrid retrieval with disk persistence."""
 
-    def __init__(self, cache_dir: str = "data/cache"):
+    def __init__(self, cache_dir: str = "data/cache") -> None:
         """Initialize BM25 search.
 
         Args:
             cache_dir: Directory to store BM25 index cache (default: data/cache)
         """
         self._corpus: list[str] = []
-        self._metadata: list[dict[str, Any]] = []
+        self._metadata: list[Dict[str, Any]] = []
         self._bm25: BM25Okapi | None = None
         self._is_fitted = False
 
@@ -53,7 +53,7 @@ class BM25Search:
 
     def fit(
         self,
-        documents: list[dict[str, Any]],
+        documents: list[Dict[str, Any]],
         text_field: str = "text",
     ) -> None:
         """Fit BM25 model on document corpus.
@@ -128,7 +128,7 @@ class BM25Search:
         self,
         query: str,
         top_k: int = 10,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search documents using BM25.
 
         Args:
@@ -155,7 +155,7 @@ class BM25Search:
             top_indices = scores.argsort()[-top_k:][::-1]
 
             # Build results
-            results: list[dict[str, Any]] = []
+            results: list[Dict[str, Any]] = []
             for idx in top_indices:
                 if idx < len(self._corpus):
                     result = {

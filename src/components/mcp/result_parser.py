@@ -8,14 +8,14 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 
 import base64
 import json
-from typing import Any
+from typing import Any, Dict
 
 
 class ResultParser:
     """Parse tool execution results into normalized format."""
 
     @staticmethod
-    def parse(raw_result: Any, expected_format: str = "json") -> dict[str, Any]:
+    def parse(raw_result: Any, expected_format: str = "json") -> Dict[str, Any]:
         """Parse tool result based on expected format.
 
         Args:
@@ -45,7 +45,7 @@ class ResultParser:
         return parser(raw_result)
 
     @staticmethod
-    def _parse_json(raw_result: Any) -> dict[str, Any]:
+    def _parse_json(raw_result: Any) -> Dict[str, Any]:
         """Parse JSON result.
 
         Args:
@@ -59,7 +59,7 @@ class ResultParser:
 
         if isinstance(raw_result, str):
             try:
-                parsed: dict[str, Any] = json.loads(raw_result)
+                parsed: Dict[str, Any] = json.loads(raw_result)
                 return parsed
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON: {str(e)}") from e
@@ -71,7 +71,7 @@ class ResultParser:
         return {"value": raw_result}
 
     @staticmethod
-    def _parse_text(raw_result: Any) -> dict[str, Any]:
+    def _parse_text(raw_result: Any) -> Dict[str, Any]:
         """Parse text result.
 
         Args:
@@ -83,7 +83,7 @@ class ResultParser:
         return {"content": str(raw_result), "format": "text"}
 
     @staticmethod
-    def _parse_binary(raw_result: Any) -> dict[str, Any]:
+    def _parse_binary(raw_result: Any) -> Dict[str, Any]:
         """Parse binary result.
 
         Args:
@@ -109,7 +109,7 @@ class ResultParser:
             raise ValueError(f"Cannot convert to binary: {str(e)}") from e
 
     @staticmethod
-    def _parse_raw(raw_result: Any) -> dict[str, Any]:
+    def _parse_raw(raw_result: Any) -> Dict[str, Any]:
         """Return raw result as-is.
 
         Args:
@@ -121,7 +121,7 @@ class ResultParser:
         return {"raw": raw_result, "format": "raw"}
 
     @staticmethod
-    def _auto_detect_and_parse(raw_result: Any) -> dict[str, Any]:
+    def _auto_detect_and_parse(raw_result: Any) -> Dict[str, Any]:
         """Auto-detect format and parse accordingly.
 
         Args:
@@ -137,7 +137,7 @@ class ResultParser:
         if isinstance(raw_result, str):
             # Try parsing as JSON
             try:
-                parsed: dict[str, Any] = json.loads(raw_result)
+                parsed: Dict[str, Any] = json.loads(raw_result)
                 return parsed
             except json.JSONDecodeError:
                 # Not JSON, treat as text
@@ -155,7 +155,7 @@ class ResultParser:
         return ResultParser._parse_raw(raw_result)
 
     @staticmethod
-    def validate_result(result: dict[str, Any]) -> bool:
+    def validate_result(result: Dict[str, Any]) -> bool:
         """Validate that a parsed result is well-formed.
 
         Args:
@@ -180,7 +180,7 @@ class ResultParser:
         return True
 
     @staticmethod
-    def extract_content(result: dict[str, Any]) -> Any:
+    def extract_content(result: Dict[str, Any]) -> Any:
         """Extract the main content from a parsed result.
 
         Args:

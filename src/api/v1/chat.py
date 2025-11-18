@@ -13,7 +13,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
@@ -174,7 +174,7 @@ class SourceDocument(BaseModel):
     title: str | None = Field(default=None, description="Document title")
     source: str | None = Field(default=None, description="Source file path")
     score: float | None = Field(default=None, description="Relevance score")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class ToolCallInfo(BaseModel):
@@ -182,7 +182,7 @@ class ToolCallInfo(BaseModel):
 
     tool_name: str = Field(..., description="Name of the MCP tool called")
     server: str = Field(..., description="MCP server name")
-    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool call arguments")
+    arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool call arguments")
     result: Any | None = Field(default=None, description="Tool call result")
     duration_ms: float = Field(..., description="Tool call duration in milliseconds")
     success: bool = Field(..., description="Whether tool call succeeded")
@@ -202,7 +202,7 @@ class ChatResponse(BaseModel):
     tool_calls: list[ToolCallInfo] = Field(
         default_factory=list, description="MCP tool calls made during query processing"
     )
-    metadata: dict[str, Any] = Field(
+    metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Execution metadata (latency, agent_path, etc.)"
     )
 
@@ -245,7 +245,7 @@ class ConversationHistoryResponse(BaseModel):
     """Conversation history response."""
 
     session_id: str
-    messages: list[dict[str, Any]]
+    messages: list[Dict[str, Any]]
     message_count: int
 
 
@@ -933,7 +933,7 @@ async def update_conversation_title(session_id: str, request: UpdateTitleRequest
 # Helper functions
 
 
-def _extract_answer(result: dict[str, Any]) -> str:
+def _extract_answer(result: Dict[str, Any]) -> str:
     """Extract answer from coordinator result.
 
     Args:
@@ -945,7 +945,7 @@ def _extract_answer(result: dict[str, Any]) -> str:
     # Try different possible locations for answer
     # 1. Check direct "answer" field first (most reliable)
     if "answer" in result:
-        return result["answer"]
+        return result["answer"]  # type: ignore[no-any-return]
 
     # 2. Check messages (LangGraph format)
     messages = result.get("messages", [])
@@ -953,7 +953,7 @@ def _extract_answer(result: dict[str, Any]) -> str:
         # Last message is typically the answer
         last_message = messages[-1]
         if isinstance(last_message, dict):
-            return last_message.get("content", "No answer generated")
+            return last_message.get("content", "No answer generated")  # type: ignore[no-any-return]
         # Handle LangChain message objects
         if hasattr(last_message, "content"):
             return last_message.content
@@ -961,14 +961,14 @@ def _extract_answer(result: dict[str, Any]) -> str:
 
     # 3. Check "response" field (alternative naming)
     if "response" in result:
-        return result["response"]
+        return result["response"]  # type: ignore[no-any-return]
 
     # 4. Fallback
     logger.warning("no_answer_found_in_result", result_keys=list(result.keys()))
     return "I'm sorry, I couldn't generate an answer. Please try rephrasing your question."
 
 
-def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
+def _extract_sources(result: Dict[str, Any]) -> list[SourceDocument]:
     """Extract source documents from coordinator result.
 
     Args:
@@ -997,7 +997,7 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
     return sources[:5]  # Return top 5 sources
 
 
-def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
+def _extract_tool_calls(result: Dict[str, Any]) -> list[ToolCallInfo]:
     """Extract MCP tool call information from coordinator result.
 
     Args:
@@ -1029,7 +1029,7 @@ def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
     return tool_calls
 
 
-def _format_sse_message(data: dict[str, Any]) -> str:
+def _format_sse_message(data: Dict[str, Any]) -> str:
     """Format data as Server-Sent Events (SSE) message.
 
     SSE Format:
@@ -1254,7 +1254,7 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
 
 
 @router.post("/sessions/{session_id}/archive", status_code=status.HTTP_200_OK)
-async def archive_conversation(session_id: str) -> dict[str, Any]:
+async def archive_conversation(session_id: str) -> Dict[str, Any]:
     """Archive a conversation to Qdrant for semantic search.
 
     Sprint 17 Feature 17.4 Phase 1: Manual Archive Trigger

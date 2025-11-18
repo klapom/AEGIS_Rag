@@ -11,6 +11,7 @@ import os
 import structlog
 
 from src.core.config import settings
+from typing import Set
 
 logger = structlog.get_logger(__name__)
 
@@ -114,7 +115,7 @@ def is_tracing_enabled() -> bool:
         >>> if is_tracing_enabled():
         ...     print("Traces will be sent to LangSmith")
     """
-    return os.environ.get("LANGCHAIN_TRACING_V2") == "true"
+    return os.environ.get("LANGCHAIN_TRACING_V2") == "true"  # type: ignore[no-any-return]
 
 
 def get_trace_url(run_id: str) -> str:

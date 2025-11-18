@@ -13,7 +13,7 @@ import hashlib
 import json
 import time
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -57,7 +57,7 @@ class GraphQueryCache:
         self.enabled = enabled if enabled is not None else settings.graph_query_cache_enabled
 
         # Cache storage: OrderedDict maintains insertion order for LRU
-        self._cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
         self._lock = asyncio.Lock()
 
         # Statistics
@@ -73,7 +73,7 @@ class GraphQueryCache:
             enabled=self.enabled,
         )
 
-    def _generate_cache_key(self, query: str, parameters: dict[str, Any] | None = None) -> str:
+    def _generate_cache_key(self, query: str, parameters: Dict[str, Any] | None = None) -> str:
         """Generate cache key from query and parameters.
 
         Args:
@@ -94,7 +94,7 @@ class GraphQueryCache:
 
         return cache_key
 
-    def _is_expired(self, entry: dict[str, Any]) -> bool:
+    def _is_expired(self, entry: Dict[str, Any]) -> bool:
         """Check if cache entry is expired.
 
         Args:
@@ -109,7 +109,7 @@ class GraphQueryCache:
         age_seconds = time.time() - entry["timestamp"]
         return age_seconds > self.ttl_seconds
 
-    async def get(self, query: str, parameters: dict[str, Any] | None = None) -> Any | None:
+    async def get(self, query: str, parameters: Dict[str, Any] | None = None) -> Any | None:
         """Get cached query result.
 
         Args:
@@ -145,10 +145,10 @@ class GraphQueryCache:
             self._hits += 1
 
             logger.debug("Cache hit", query=query[:50])
-            return entry["result"]
+            return entry["result"]  # type: ignore[no-any-return]
 
     async def set(
-        self, query: str, parameters: dict[str, Any] | None = None, result: Any = None
+        self, query: str, parameters: Dict[str, Any] | None = None, result: Any = None
     ) -> None:
         """Set cached query result.
 
@@ -180,7 +180,7 @@ class GraphQueryCache:
 
             logger.debug("Cache set", query=query[:50], cache_size=len(self._cache))
 
-    async def invalidate(self, query: str, parameters: dict[str, Any] | None = None) -> bool:
+    async def invalidate(self, query: str, parameters: Dict[str, Any] | None = None) -> bool:
         """Invalidate a specific cache entry.
 
         Args:
@@ -216,7 +216,7 @@ class GraphQueryCache:
             logger.info("Cache cleared", entries_removed=count)
             return count
 
-    async def stats(self) -> dict[str, Any]:
+    async def stats(self) -> Dict[str, Any]:
         """Get cache statistics.
 
         Returns:

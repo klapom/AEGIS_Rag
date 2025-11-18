@@ -1,7 +1,7 @@
 """Health check endpoints."""
 
 import time
-from typing import Any
+from typing import Any, Dict
 
 import httpx
 from fastapi import APIRouter, status
@@ -169,7 +169,7 @@ async def liveness() -> dict[str, str]:
     summary="Readiness probe",
     description="Readiness check for Kubernetes",
 )
-async def readiness() -> dict[str, Any]:
+async def readiness() -> Dict[str, Any]:
     """
     Readiness probe for Kubernetes.
 
@@ -187,7 +187,7 @@ async def readiness() -> dict[str, Any]:
             qdrant_health.status == HealthStatus.HEALTHY
             and ollama_health.status == HealthStatus.HEALTHY
         ):
-            return {"status": "ready", "services": ["qdrant", "ollama"]}
+            return {"status": "ready", "services": ["qdrant", "ollama"]}  # type: ignore[no-any-return]
         else:
             return {"status": "not_ready", "reason": "Critical services unavailable"}
     except Exception as e:

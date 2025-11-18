@@ -88,6 +88,7 @@ Example with Error Handling:
 """
 
 from pathlib import Path
+from typing import List
 
 import structlog
 from langgraph.graph import END, StateGraph
@@ -119,7 +120,7 @@ _format_router = None
 # =============================================================================
 
 
-async def initialize_pipeline_router():
+async def initialize_pipeline_router() -> None:
     """Initialize global format router during application startup.
 
     This function should be called during FastAPI lifespan initialization
@@ -347,7 +348,7 @@ async def run_ingestion_pipeline_streaming(
     batch_index: int = 0,
     total_documents: int = 1,
     max_retries: int = 3,
-):
+) -> None:
     """Run ingestion pipeline with streaming progress updates (for SSE).
 
     This generator yields state updates after each node completes,
@@ -478,7 +479,7 @@ async def run_batch_ingestion(
     document_paths: list[str],
     batch_id: str,
     max_retries: int = 3,
-):
+) -> None:
     """Run ingestion pipeline for multiple documents (batch processing).
 
     This is a PREVIEW for Feature 21.3 (Batch Processing).

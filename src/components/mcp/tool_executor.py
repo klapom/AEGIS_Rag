@@ -8,7 +8,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Dict
 
 from src.components.mcp.client import MCPClient
 from src.components.mcp.error_handler import ErrorHandler
@@ -30,7 +30,7 @@ class ToolExecutor:
     - Execution metrics and logging
     """
 
-    def __init__(self, mcp_client: MCPClient, timeout: int = 30):
+    def __init__(self, mcp_client: MCPClient, timeout: int = 30) -> None:
         """Initialize tool executor.
 
         Args:
@@ -46,7 +46,7 @@ class ToolExecutor:
     async def execute(
         self,
         tool_name: str,
-        parameters: dict[str, Any],
+        parameters: Dict[str, Any],
         server_name: str | None = None,
         expected_format: str = "json",
     ) -> MCPToolResult:

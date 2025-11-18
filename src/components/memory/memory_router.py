@@ -8,7 +8,7 @@ This module implements intelligent memory routing across three layers:
 
 import re
 from enum import Enum
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -40,7 +40,7 @@ class MemoryRouter:
     def __init__(
         self,
         session_id: str | None = None,
-    ):
+    ) -> None:
         """Initialize memory router.
 
         Args:
@@ -160,7 +160,7 @@ class MemoryRouter:
         session_id: str | None = None,
         limit: int = 10,
         time_window_hours: int | None = None,
-    ) -> dict[str, list[dict[str, Any]]]:
+    ) -> dict[str, list[Dict[str, Any]]]:
         """Search across multiple memory layers.
 
         Args:
@@ -216,7 +216,7 @@ class MemoryRouter:
         self,
         query: str,
         session_id: str | None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search Redis working memory.
 
         Args:
@@ -264,7 +264,7 @@ class MemoryRouter:
         self,
         query: str,
         limit: int,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search Qdrant vector store.
 
         Args:
@@ -295,7 +295,7 @@ class MemoryRouter:
         query: str,
         limit: int,
         time_window_hours: int | None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Search Graphiti episodic memory.
 
         Args:
@@ -336,7 +336,7 @@ class MemoryRouter:
         user_message: str,
         assistant_message: str,
         session_id: str | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> dict[str, bool]:
         """Store a conversation turn across appropriate memory layers.
 
@@ -397,7 +397,7 @@ class MemoryRouter:
     async def get_session_summary(
         self,
         session_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Get summary of session memory across all layers.
 
         Args:

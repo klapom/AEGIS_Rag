@@ -13,7 +13,7 @@ Integrates with existing graph search to provide:
 """
 
 import time
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -39,7 +39,7 @@ class CommunitySearch(DualLevelSearch):
         neo4j_client: Neo4jClient | None = None,
         llm_model: str | None = None,
         ollama_base_url: str | None = None,
-    ):
+    ) -> None:
         """Initialize community search.
 
         Args:
@@ -126,7 +126,7 @@ class CommunitySearch(DualLevelSearch):
 
             # Convert to GraphEntity objects and collect communities
             entities = []
-            community_map: dict[str, dict[str, Any]] = {}
+            community_map: dict[str, Dict[str, Any]] = {}
 
             for record in results:
                 entity = GraphEntity(
@@ -263,7 +263,7 @@ class CommunitySearch(DualLevelSearch):
             )
             return []
 
-    async def get_community_statistics(self, community_id: str) -> dict[str, Any]:
+    async def get_community_statistics(self, community_id: str) -> Dict[str, Any]:
         """Get statistics for a specific community.
 
         Args:

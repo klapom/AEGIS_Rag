@@ -8,7 +8,7 @@ Sprint 4 Feature 4.4: Coordinator Agent with State Persistence
 """
 
 import time
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 from langgraph.checkpoint.memory import MemorySaver
@@ -41,7 +41,7 @@ class CoordinatorAgent:
         self,
         use_persistence: bool = True,
         recursion_limit: int | None = None,
-    ):
+    ) -> None:
         """Initialize Coordinator Agent.
 
         Args:
@@ -72,7 +72,7 @@ class CoordinatorAgent:
         query: str,
         session_id: str | None = None,
         intent: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Process a user query through the multi-agent system.
 
         This is the main entry point for query processing. It:
@@ -202,7 +202,7 @@ class CoordinatorAgent:
         self,
         queries: list[str],
         session_id: str,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Dict[str, Any]]:
         """Process multiple queries in the same conversation session.
 
         All queries share the same session_id, allowing the system to
@@ -269,7 +269,7 @@ class CoordinatorAgent:
 
         return results
 
-    def get_session_history(self, session_id: str) -> list[dict[str, Any]]:
+    def get_session_history(self, session_id: str) -> list[Dict[str, Any]]:
         """Retrieve conversation history for a session.
 
         Args:

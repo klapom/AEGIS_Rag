@@ -7,7 +7,7 @@ utilities for graceful degradation.
 Sprint 4 Feature 4.6: Error Handling & Retry Logic
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -30,7 +30,7 @@ class AgentExecutionError(Exception):
         self,
         message: str,
         agent_name: str | None = None,
-        context: dict[str, Any] | None = None,
+        context: Dict[str, Any] | None = None,
         original_error: Exception | None = None,
     ) -> None:
         """Initialize agent execution error.
@@ -129,10 +129,10 @@ class TimeoutError(AgentExecutionError):
 
 def handle_agent_error(
     error: Exception,
-    state: dict[str, Any],
+    state: Dict[str, Any],
     agent_name: str,
     context: str | None = None,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Handle agent execution error and update state.
 
     This function provides centralized error handling for all agents.
@@ -244,7 +244,7 @@ def _is_retryable_error(error: Exception) -> bool:
     return any(pattern in error_message for pattern in retryable_patterns)
 
 
-def get_error_summary(state: dict[str, Any]) -> dict[str, Any] | None:
+def get_error_summary(state: Dict[str, Any]) -> Dict[str, Any] | None:
     """Get summary of errors from state.
 
     Args:
@@ -267,7 +267,7 @@ def get_error_summary(state: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def clear_errors(state: dict[str, Any]) -> dict[str, Any]:
+def clear_errors(state: Dict[str, Any]) -> Dict[str, Any]:
     """Clear error information from state.
 
     Useful when retrying operations or starting new queries.

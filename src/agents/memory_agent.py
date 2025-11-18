@@ -7,7 +7,7 @@ Sprint 7: Feature 7.4 - Memory Agent (LangGraph Integration)
 Integrates with Sprint 4 Router and Sprint 7.3 Memory Router.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 import structlog
 
@@ -27,7 +27,7 @@ except ImportError:
             query: str,
             layers: list | None = None,
             top_k: int = 5,
-        ) -> dict[str, list[dict[str, Any]]]:
+        ) -> dict[str, list[Dict[str, Any]]]:
             """Placeholder search_memory method."""
             return {}
 
@@ -60,7 +60,7 @@ class MemoryAgent(BaseAgent):
         self,
         name: str = "memory_agent",
         memory_router: MemoryRouter | None = None,
-    ):
+    ) -> None:
         """Initialize Memory Agent.
 
         Args:
@@ -76,7 +76,7 @@ class MemoryAgent(BaseAgent):
         )
 
     @retry_on_failure(max_attempts=3, min_wait=1.0, max_wait=10.0)
-    async def process(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Process memory query and update state.
 
         Main processing method that:
@@ -238,7 +238,7 @@ class MemoryAgent(BaseAgent):
 # ============================================================================
 
 
-async def memory_node(state: dict[str, Any]) -> dict[str, Any]:
+async def memory_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """LangGraph node function for memory query processing.
 
     This is the node function that gets added to the LangGraph StateGraph.

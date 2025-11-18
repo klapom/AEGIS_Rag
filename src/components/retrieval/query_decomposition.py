@@ -1,3 +1,4 @@
+from typing import List
 """Query decomposition for handling complex multi-part questions.
 
 Sprint 23 Feature 23.6: AegisLLMProxy Integration
@@ -122,7 +123,7 @@ class QueryDecomposer:
         self,
         model_name: str = "llama3.2",
         classification_threshold: float = 0.7,
-    ):
+    ) -> None:
         """Initialize query decomposer.
 
         Args:

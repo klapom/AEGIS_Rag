@@ -4,7 +4,7 @@ This module provides JWT token generation and validation for securing API endpoi
 Authentication can be disabled via settings.api_auth_enabled for testing.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import structlog
 from fastapi import Depends, HTTPException, status
@@ -46,9 +46,9 @@ def create_access_token(
 
     # Set expiration
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
 

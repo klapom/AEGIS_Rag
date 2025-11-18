@@ -8,9 +8,10 @@ This module provides importance calculation for memory items based on:
 
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
+from typing import Dict
 
 logger = structlog.get_logger(__name__)
 
@@ -31,7 +32,7 @@ class RelevanceScore:
     user_feedback: float
     total_score: float
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate score ranges."""
         for field in ["frequency_score", "recency_score", "user_feedback", "total_score"]:
             value = getattr(self, field)
@@ -60,7 +61,7 @@ class RelevanceScorer:
         feedback_weight: float = 0.3,
         max_access_count: int = 100,
         decay_half_life_days: float = 30.0,
-    ):
+    ) -> None:
         """Initialize relevance scorer.
 
         Args:
@@ -173,7 +174,7 @@ class RelevanceScorer:
             raise ValueError(f"stored_at must be str or datetime, got {type(stored_at)}")
 
         # Calculate age in days
-        now = current_time or datetime.utcnow()
+        now = current_time or datetime.now(timezone.utc)
         age_delta = now - stored_time
         days_old = age_delta.total_seconds() / 86400.0  # 86400 seconds in a day
 
