@@ -10,6 +10,8 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
+from typing import Any
+
 import structlog
 from prometheus_client import Counter, Gauge, Histogram, Info
 
