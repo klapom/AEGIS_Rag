@@ -21,6 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents.coordinator import CoordinatorAgent
+from src.agents.followup_generator import generate_followup_questions
 from src.components.memory import get_unified_memory_api
 from src.core.exceptions import AegisRAGException
 from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
@@ -1050,6 +1051,203 @@ def _get_iso_timestamp() -> str:
         ISO 8601 timestamp string
     """
     return datetime.now(datetime.UTC).isoformat()
+
+
+# Sprint 27 Feature 27.5: Follow-up Question Suggestions
+
+
+class FollowUpQuestionsResponse(BaseModel):
+    """Follow-up questions response model."""
+
+    session_id: str = Field(..., description="Session ID")
+    followup_questions: list[str] = Field(
+        default_factory=list, description="List of follow-up questions (3-5)"
+    )
+    generated_at: str = Field(..., description="Timestamp when questions were generated")
+    from_cache: bool = Field(default=False, description="Whether questions were from cache")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "session_id": "user-123-session",
+                "followup_questions": [
+                    "How does vector search work in AEGIS RAG?",
+                    "What are the key components of the system?",
+                    "How does it compare to traditional RAG?",
+                ],
+                "generated_at": "2025-11-18T10:30:00Z",
+                "from_cache": False,
+            }
+        }
+    )
+
+
+@router.get("/sessions/{session_id}/followup-questions", response_model=FollowUpQuestionsResponse)
+async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
+    """Get follow-up question suggestions for the last answer.
+
+    Sprint 27 Feature 27.5: Follow-up Question Suggestions
+
+    This endpoint:
+    1. Retrieves the last Q&A exchange from the conversation
+    2. Generates 3-5 insightful follow-up questions using LLM
+    3. Caches the questions in Redis for 5 minutes
+    4. Returns questions to encourage deeper exploration
+
+    Args:
+        session_id: Session ID to generate follow-up questions for
+
+    Returns:
+        FollowUpQuestionsResponse with 3-5 follow-up questions
+
+    Raises:
+        HTTPException: If session not found or generation fails
+
+    Example Response:
+        {
+            "session_id": "session-123",
+            "followup_questions": [
+                "How does hybrid search combine vector and keyword search?",
+                "What role does the graph database play in retrieval?",
+                "Can you explain the memory consolidation process?"
+            ],
+            "generated_at": "2025-11-18T10:30:00Z",
+            "from_cache": false
+        }
+    """
+    logger.info("followup_questions_requested", session_id=session_id)
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Check cache first (5min TTL)
+        cache_key = f"{session_id}:followup"
+        cached_questions = await redis_memory.retrieve(key=cache_key, namespace="cache")
+
+        if cached_questions:
+            # Extract value from Redis wrapper
+            if isinstance(cached_questions, dict) and "value" in cached_questions:
+                cached_questions = cached_questions["value"]
+
+            questions = cached_questions.get("questions", [])
+            if questions:
+                logger.info(
+                    "followup_questions_from_cache",
+                    session_id=session_id,
+                    count=len(questions),
+                )
+                return FollowUpQuestionsResponse(
+                    session_id=session_id,
+                    followup_questions=questions,
+                    generated_at=_get_iso_timestamp(),
+                    from_cache=True,
+                )
+
+        # Load conversation from Redis
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+        if not conversation or (isinstance(conversation, dict) and "value" not in conversation):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session '{session_id}' not found",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(conversation, dict) and "value" in conversation:
+            conversation = conversation["value"]
+
+        messages = conversation.get("messages", [])
+
+        # Need at least one Q&A pair
+        if len(messages) < 2:
+            logger.info(
+                "followup_questions_insufficient_messages",
+                session_id=session_id,
+                message_count=len(messages),
+            )
+            return FollowUpQuestionsResponse(
+                session_id=session_id,
+                followup_questions=[],
+                generated_at=_get_iso_timestamp(),
+                from_cache=False,
+            )
+
+        # Get last user query and assistant response
+        last_user_msg = None
+        last_assistant_msg = None
+
+        for msg in reversed(messages):
+            if msg.get("role") == "assistant" and not last_assistant_msg:
+                last_assistant_msg = msg
+            elif msg.get("role") == "user" and not last_user_msg:
+                last_user_msg = msg
+
+            if last_user_msg and last_assistant_msg:
+                break
+
+        if not last_user_msg or not last_assistant_msg:
+            logger.warning(
+                "followup_questions_no_qa_pair",
+                session_id=session_id,
+                has_user=bool(last_user_msg),
+                has_assistant=bool(last_assistant_msg),
+            )
+            return FollowUpQuestionsResponse(
+                session_id=session_id,
+                followup_questions=[],
+                generated_at=_get_iso_timestamp(),
+                from_cache=False,
+            )
+
+        # Extract sources from assistant message (if available)
+        sources = []
+        if "sources" in last_assistant_msg:
+            sources = last_assistant_msg["sources"]
+
+        # Generate follow-up questions
+        questions = await generate_followup_questions(
+            query=last_user_msg.get("content", ""),
+            answer=last_assistant_msg.get("content", ""),
+            sources=sources,
+        )
+
+        # Cache questions in Redis (5min TTL)
+        if questions:
+            await redis_memory.store(
+                key=cache_key,
+                value={"questions": questions},
+                namespace="cache",
+                ttl_seconds=300,  # 5 minutes
+            )
+
+        logger.info(
+            "followup_questions_generated",
+            session_id=session_id,
+            count=len(questions),
+        )
+
+        return FollowUpQuestionsResponse(
+            session_id=session_id,
+            followup_questions=questions,
+            generated_at=_get_iso_timestamp(),
+            from_cache=False,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "followup_questions_failed",
+            session_id=session_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate follow-up questions: {str(e)}",
+        ) from e
 
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
