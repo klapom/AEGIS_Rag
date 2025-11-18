@@ -19,7 +19,7 @@ class MCPClientStub:
     be developed and tested independently.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize stub client."""
         self.servers: dict[str, MCPServer] = {}
         self.connections: dict[str, Any] = {}
@@ -131,7 +131,7 @@ class MCPClientStub:
 class MockConnection:
     """Mock connection object for stub testing."""
 
-    def __init__(self, server: MCPServer):
+    def __init__(self, server: MCPServer) -> None:
         """Initialize mock connection.
 
         Args:

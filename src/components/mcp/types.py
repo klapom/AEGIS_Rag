@@ -28,7 +28,7 @@ class MCPTool:
     parameters: dict[str, Any]
     metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values."""
         if self.metadata is None:
             self.metadata = {}
@@ -79,7 +79,7 @@ class MCPServer:
     env: dict[str, str] | None = None
     tools: list[MCPTool] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values."""
         if self.env is None:
             self.env = {}
@@ -107,7 +107,7 @@ class ToolExecutionResult:
     error: str | None = None
     metadata: dict[str, Any] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize default values."""
         if self.metadata is None:
             self.metadata = {}

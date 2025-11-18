@@ -59,7 +59,8 @@ class ResultParser:
 
         if isinstance(raw_result, str):
             try:
-                return json.loads(raw_result)
+                parsed: dict[str, Any] = json.loads(raw_result)
+                return parsed
             except json.JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON: {str(e)}") from e
 
@@ -136,7 +137,8 @@ class ResultParser:
         if isinstance(raw_result, str):
             # Try parsing as JSON
             try:
-                return json.loads(raw_result)
+                parsed: dict[str, Any] = json.loads(raw_result)
+                return parsed
             except json.JSONDecodeError:
                 # Not JSON, treat as text
                 return ResultParser._parse_text(raw_result)

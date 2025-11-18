@@ -107,24 +107,24 @@ active_connections = Gauge(
 # ============================================================================
 
 
-def record_extraction_duration(phase: str, pipeline_type: str, duration: float):
+def record_extraction_duration(phase: str, pipeline_type: str, duration: float) -> None:
     """Record extraction phase duration."""
     extraction_duration.labels(phase=phase, pipeline_type=pipeline_type).observe(duration)
 
 
-def record_extraction_entities(entity_type: str, pipeline_type: str, count: int):
+def record_extraction_entities(entity_type: str, pipeline_type: str, count: int) -> None:
     """Record extracted entities."""
     extraction_entities_total.labels(entity_type=entity_type, pipeline_type=pipeline_type).inc(
         count
     )
 
 
-def record_extraction_relations(pipeline_type: str, count: int):
+def record_extraction_relations(pipeline_type: str, count: int) -> None:
     """Record extracted relations."""
     extraction_relations_total.labels(pipeline_type=pipeline_type).inc(count)
 
 
-def record_extraction_document(pipeline_type: str, status: str):
+def record_extraction_document(pipeline_type: str, status: str) -> None:
     """Record document processing status.
 
     Args:
@@ -134,7 +134,7 @@ def record_extraction_document(pipeline_type: str, status: str):
     extraction_documents_total.labels(pipeline_type=pipeline_type, status=status).inc()
 
 
-def record_extraction_error(phase: str, error_type: str):
+def record_extraction_error(phase: str, error_type: str) -> None:
     """Record extraction error.
 
     Args:
@@ -144,7 +144,7 @@ def record_extraction_error(phase: str, error_type: str):
     extraction_errors_total.labels(phase=phase, error_type=error_type).inc()
 
 
-def record_extraction_retry(phase: str, success: bool):
+def record_extraction_retry(phase: str, success: bool) -> None:
     """Record retry attempt.
 
     Args:
@@ -154,7 +154,7 @@ def record_extraction_retry(phase: str, success: bool):
     extraction_retries_total.labels(phase=phase, success=str(success).lower()).inc()
 
 
-def record_deduplication_reduction(reduction_ratio: float):
+def record_deduplication_reduction(reduction_ratio: float) -> None:
     """Record deduplication reduction ratio.
 
     Args:
@@ -163,7 +163,7 @@ def record_deduplication_reduction(reduction_ratio: float):
     deduplication_reduction_ratio.observe(reduction_ratio)
 
 
-def update_gpu_memory(gpu_id: int, used_bytes: int, allocated_bytes: int, utilization: float):
+def update_gpu_memory(gpu_id: int, used_bytes: int, allocated_bytes: int, utilization: float) -> None:
     """Update GPU memory metrics.
 
     Args:
@@ -177,7 +177,7 @@ def update_gpu_memory(gpu_id: int, used_bytes: int, allocated_bytes: int, utiliz
     gpu_utilization_percent.labels(gpu_id=str(gpu_id)).set(utilization)
 
 
-def record_query_duration(query_type: str, mode: str, duration: float):
+def record_query_duration(query_type: str, mode: str, duration: float) -> None:
     """Record query duration.
 
     Args:
@@ -188,7 +188,7 @@ def record_query_duration(query_type: str, mode: str, duration: float):
     query_duration.labels(query_type=query_type, mode=mode).observe(duration)
 
 
-def update_active_connections(connection_type: str, count: int):
+def update_active_connections(connection_type: str, count: int) -> None:
     """Update active connection count.
 
     Args:
@@ -198,7 +198,7 @@ def update_active_connections(connection_type: str, count: int):
     active_connections.labels(connection_type=connection_type).set(count)
 
 
-def initialize_system_info(config):
+def initialize_system_info(config: Any) -> None:
     """Initialize system information metric.
 
     Args:

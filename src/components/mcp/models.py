@@ -47,7 +47,7 @@ class MCPServer:
     retry_attempts: int = 3
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate server configuration."""
         if not self.name:
             raise ValueError("Server name cannot be empty")
@@ -79,7 +79,7 @@ class MCPTool:
     version: str = "1.0.0"
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate tool definition."""
         if not self.name:
             raise ValueError("Tool name cannot be empty")
@@ -103,7 +103,7 @@ class MCPToolCall:
     timeout: int = 60
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate tool call."""
         if not self.tool_name:
             raise ValueError("Tool name cannot be empty")
@@ -131,7 +131,7 @@ class MCPToolResult:
     execution_time: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate tool result."""
         if not self.tool_name:
             raise ValueError("Tool name cannot be empty")

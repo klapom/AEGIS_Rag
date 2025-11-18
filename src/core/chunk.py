@@ -10,7 +10,7 @@ across all ingestion pipelines (Qdrant, BM25, LightRAG).
 import hashlib
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class ChunkStrategy(BaseModel):
@@ -42,7 +42,7 @@ class ChunkStrategy(BaseModel):
 
     @field_validator("overlap")
     @classmethod
-    def validate_overlap(cls, v: int, info) -> int:
+    def validate_overlap(cls, v: int, info: ValidationInfo) -> int:
         """Ensure overlap is less than chunk_size."""
         chunk_size = info.data.get("chunk_size", 512)
         if v >= chunk_size:
@@ -116,7 +116,7 @@ class Chunk(BaseModel):
 
     @field_validator("end_char")
     @classmethod
-    def validate_end_char(cls, v: int, info) -> int:
+    def validate_end_char(cls, v: int, info: ValidationInfo) -> int:
         """Ensure end_char >= start_char."""
         start_char = info.data.get("start_char", 0)
         if v < start_char:

@@ -132,18 +132,18 @@ class IngestionState(TypedDict, total=False):
     # NODE 2: DOCLING PARSING (Feature 21.6)
     # ============================================================
     document: Any  # DoclingDocument object (main object for VLM enrichment)
-    page_dimensions: dict[int, dict]  # {page_no: {width, height, unit, dpi}}
+    page_dimensions: dict[int, dict[str, Any]]  # {page_no: {width, height, unit, dpi}}
     parsed_content: str  # Full document text
-    parsed_metadata: dict  # Document metadata
-    parsed_tables: list[dict]  # Extracted tables
-    parsed_images: list[dict]  # Image references
-    parsed_layout: dict  # Document layout structure
+    parsed_metadata: dict[str, Any]  # Document metadata
+    parsed_tables: list[dict[str, Any]]  # Extracted tables
+    parsed_images: list[dict[str, Any]]  # Image references
+    parsed_layout: dict[str, Any]  # Document layout structure
     docling_status: Literal["pending", "running", "completed", "failed"]
 
     # ============================================================
     # NODE 2.5: VLM IMAGE ENRICHMENT (Feature 21.6)
     # ============================================================
-    vlm_metadata: list[dict]  # List of VLM metadata with BBox
+    vlm_metadata: list[dict[str, Any]]  # List of VLM metadata with BBox
     enrichment_status: Literal["pending", "running", "completed", "failed"]
 
     # ============================================================
@@ -169,7 +169,7 @@ class IngestionState(TypedDict, total=False):
     # PROGRESS & ERROR TRACKING
     # ============================================================
     overall_progress: float  # 0.0 to 1.0
-    errors: list[dict]  # Error messages with context
+    errors: list[dict[str, Any]]  # Error messages with context
     retry_count: int  # Number of retries
     max_retries: int  # Maximum retries (default: 3)
 
