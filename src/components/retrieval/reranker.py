@@ -13,6 +13,8 @@ Typical usage:
     )
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -90,7 +92,7 @@ class CrossEncoderReranker:
         self.cache_dir = Path(cache_dir or settings.reranker_cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        self._model: "CrossEncoder | None" = None
+        self._model: CrossEncoder | None = None
 
         logger.info(
             "initialized_reranker",
@@ -100,7 +102,7 @@ class CrossEncoderReranker:
         )
 
     @property
-    def model(self) -> "CrossEncoder":
+    def model(self) -> CrossEncoder:
         """Lazy-load cross-encoder model.
 
         Returns:
