@@ -16,16 +16,13 @@ This module handles document loading, chunking, and indexing into Qdrant.
 Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 """
 
-import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
-from qdrant_client.models import PointStruct
 
-# TYPE_CHECKING imports - only for type checkers, not runtime
-if TYPE_CHECKING:
-    from llama_index.core import Document, SimpleDirectoryReader
+# Note: llama_index imports are deprecated (ADR-028)
+# Use DoclingContainerClient for new ingestion pipelines
 
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper

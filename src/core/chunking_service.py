@@ -22,7 +22,6 @@ Dependencies:
 
 import re
 import time
-from typing import TYPE_CHECKING
 
 import structlog
 import tiktoken
@@ -30,11 +29,8 @@ from prometheus_client import Counter, Gauge, Histogram
 
 from src.core.chunk import Chunk, ChunkStrategy
 
-# TYPE_CHECKING imports - only for type checkers, not runtime
-if TYPE_CHECKING:
-    from llama_index.core import Document
-    from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.core.schema import TextNode
+# Note: llama_index types are lazy-loaded at runtime in methods that need them
+# No TYPE_CHECKING imports needed since we use string literals for type hints
 
 logger = structlog.get_logger(__name__)
 

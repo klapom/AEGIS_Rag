@@ -67,8 +67,8 @@ import structlog
 
 from src.components.retrieval.filters import MetadataFilterEngine, MetadataFilters
 from src.components.retrieval.reranker import CrossEncoderReranker
-from src.components.vector_search.bm25_search import BM25Search
 from src.components.shared.embedding_service import UnifiedEmbeddingService
+from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError

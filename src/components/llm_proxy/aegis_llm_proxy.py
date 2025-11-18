@@ -384,7 +384,6 @@ class AegisLLMProxy:
         tokens_input = 0
         tokens_output = 0
         tokens_used = 0
-        estimation_used = False
 
         # Parse usage field if available (contains prompt_tokens, completion_tokens, total_tokens)
         if hasattr(response, "usage") and response.usage:
