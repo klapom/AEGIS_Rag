@@ -16,16 +16,33 @@ Architecture:
 - Error handling with retry logic
 """
 
+from __future__ import annotations
+
 import os
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
-from PIL import Image
+
+# Sprint 24 Feature 24.15: Lazy import for optional ingestion dependency
+if TYPE_CHECKING:
+    from PIL import Image
 
 from src.core.config import get_settings
 
 logger = structlog.get_logger(__name__)
+
+# Runtime conditional import for PIL (Pillow)
+try:
+    from PIL import Image  # noqa: F811
+
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    logger.warning(
+        "PIL (Pillow) not available. Install with: poetry install --with ingestion"
+    )
 
 # Sprint 23: Import DashScope VLM Client for cloud VLM routing
 try:
