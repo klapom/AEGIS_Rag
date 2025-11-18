@@ -1,9 +1,12 @@
 /**
  * Sidebar Component
  * Sprint 15 Feature 15.2: Perplexity-style Sidebar (ADR-021)
+ * Sprint 27 Feature 27.9: Quick Actions Bar integration
  *
- * Vertical sidebar with logo, new chat button, history, and health status
+ * Vertical sidebar with logo, quick actions, history, and health status
  */
+
+import { QuickActionsBar } from './QuickActionsBar';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +14,21 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen }: SidebarProps) {
+  const handleNewChat = () => {
+    // Sprint 27 Feature 27.9: Navigate to new chat
+    window.location.href = '/';
+  };
+
+  const handleClearHistory = () => {
+    // Sprint 27 Feature 27.9: Clear conversation history
+    localStorage.removeItem('aegis-chat-history');
+    console.log('Chat history cleared');
+  };
+
+  const handleSettings = () => {
+    // Sprint 27 Feature 27.9: Placeholder for settings
+    console.log('Settings clicked (placeholder)');
+  };
   return (
     <aside
       className={`
@@ -33,17 +51,12 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </div>
         </div>
 
-        {/* New Chat Button */}
-        <button
-          className="w-full py-2 px-4 bg-primary text-white rounded-lg
-                     hover:bg-primary-hover transition-colors mb-6
-                     flex items-center justify-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Neuer Chat</span>
-        </button>
+        {/* Quick Actions Bar - Sprint 27 Feature 27.9 */}
+        <QuickActionsBar
+          onNewChat={handleNewChat}
+          onClearHistory={handleClearHistory}
+          onSettings={handleSettings}
+        />
 
         {/* History Section */}
         <div className="flex-1 overflow-y-auto">
