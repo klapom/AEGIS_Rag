@@ -831,9 +831,7 @@ jobs:
       - integration-tests
       - frontend-build
       - frontend-unit-tests
-      - frontend-e2e-tests
       - api-contract-tests
-      - dependency-audit
       - security-scan
       - docker-build
     if: always()
@@ -883,17 +881,9 @@ jobs:
             echo "⚠️  Frontend Unit Tests failed (non-blocking)"
           fi
 
-          if [[ "${{ needs.frontend-e2e-tests.result }}" == "failure" ]]; then
-            echo "⚠️  Frontend E2E Tests failed (non-blocking)"
-          fi
-
           if [[ "${{ needs.api-contract-tests.result }}" != "success" ]]; then
             echo "❌ API Contract Tests failed"
             ALL_PASSED=false
-          fi
-
-          if [[ "${{ needs.dependency-audit.result }}" != "success" ]]; then
-            echo "⚠️  Dependency Audit has warnings (non-blocking)"
           fi
 
           if [[ "${{ needs.security-scan.result }}" != "success" ]]; then
