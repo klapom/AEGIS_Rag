@@ -1,21 +1,24 @@
 /**
  * StreamingAnswer Component
  * Sprint 15 Feature 15.4: Display streaming answer with source cards
+ * Sprint 28 Feature 28.2: Inline citations with hover previews
  *
  * Features:
  * - Token-by-token streaming display
  * - Source cards (horizontal scroll)
- * - Markdown rendering
+ * - Markdown rendering with inline citations
  * - Loading states
  * - Error handling
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { streamChat, generateConversationTitle, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
-import { SourceCardsScroll } from './SourceCardsScroll';
+import { SourceCardsScroll, type SourceCardsScrollRef } from './SourceCardsScroll';
 import { CopyButton } from './CopyButton';  // Sprint 27 Feature 27.6
+import { createCitationTextRenderer } from '../../utils/citations';  // Sprint 28 Feature 28.2
+import { FollowUpQuestions } from './FollowUpQuestions';  // Sprint 28 Feature 28.1
 
 interface StreamingAnswerProps {
   query: string;
@@ -23,9 +26,10 @@ interface StreamingAnswerProps {
   sessionId?: string;
   onSessionIdReceived?: (sessionId: string) => void;
   onTitleGenerated?: (title: string) => void;  // Sprint 17 Feature 17.3
+  onFollowUpQuestion?: (question: string) => void;  // Sprint 28 Feature 28.1
 }
 
-export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated }: StreamingAnswerProps) {
+export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated, onFollowUpQuestion }: StreamingAnswerProps) {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
@@ -33,6 +37,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
   const [error, setError] = useState<string | null>(null);
   const [intent, setIntent] = useState<string>('');
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
+  const sourceCardsRef = useRef<SourceCardsScrollRef>(null);  // Sprint 28 Feature 28.2
 
   useEffect(() => {
     // Sprint 17 Feature 17.5: Fix duplicate streaming caused by React StrictMode
@@ -90,6 +95,13 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
       abortController.abort();
     };
   }, [query, mode, sessionId]);
+
+  // Sprint 28 Feature 28.2: Scroll to source card when citation is clicked
+  const handleCitationClick = (sourceId: string) => {
+    if (sourceCardsRef.current) {
+      sourceCardsRef.current.scrollToSource(sourceId);
+    }
+  };
 
   // Sprint 17 Feature 17.3: Auto-trigger title generation after first answer
   useEffect(() => {
@@ -189,14 +201,28 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
 
       {/* Source Cards */}
       {sources.length > 0 && (
-        <SourceCardsScroll sources={sources} />
+        <SourceCardsScroll ref={sourceCardsRef} sources={sources} />
       )}
 
-      {/* Answer Content */}
+      {/* Answer Content with Citations - Sprint 28 Feature 28.2 */}
       <div className="prose prose-lg max-w-none">
         {answer ? (
           <>
-            <ReactMarkdown>{answer}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                // Custom text renderer to process inline citations
+                // react-markdown passes props object with children
+                text: ({ children }) => {
+                  if (typeof children === 'string') {
+                    const textRenderer = createCitationTextRenderer(sources, handleCitationClick);
+                    return <>{textRenderer(children)}</>;
+                  }
+                  return <>{children}</>;
+                }
+              }}
+            >
+              {answer}
+            </ReactMarkdown>
             {isStreaming && <span className="animate-pulse text-primary">▊</span>}
           </>
         ) : (
@@ -213,6 +239,18 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
         <div className="flex items-center justify-end border-t border-gray-200 pt-3 mt-4">
           <CopyButton text={answer} format="markdown" />
         </div>
+      )}
+
+      {/* Follow-up Questions - Sprint 28 Feature 28.1 */}
+      {!isStreaming && currentSessionId && (
+        <FollowUpQuestions
+          sessionId={currentSessionId}
+          onQuestionClick={(question) => {
+            if (onFollowUpQuestion) {
+              onFollowUpQuestion(question);
+            }
+          }}
+        />
       )}
 
       {/* Metadata */}

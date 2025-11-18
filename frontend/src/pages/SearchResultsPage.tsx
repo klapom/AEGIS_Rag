@@ -69,6 +69,11 @@ export function SearchResultsPage() {
     }
   };
 
+  // Sprint 28 Feature 28.1: Handle follow-up question clicks
+  const handleFollowUpQuestion = (question: string) => {
+    handleNewSearch(question, mode);
+  };
+
   // Sprint 19: Show conversation history if no query but has session_id
   if (!query && initialSessionId) {
     return (
@@ -156,6 +161,7 @@ export function SearchResultsPage() {
           mode={mode}
           sessionId={activeSessionId}
           onSessionIdReceived={handleSessionIdReceived}
+          onFollowUpQuestion={handleFollowUpQuestion}
         />
       </div>
     </div>

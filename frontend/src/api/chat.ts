@@ -230,3 +230,33 @@ export async function updateConversationTitle(sessionId: string, title: string):
 
   return response.json();
 }
+
+// Sprint 28 Feature 28.1: Follow-up Questions
+
+export interface FollowUpQuestionsResponse {
+  followup_questions: string[];
+}
+
+/**
+ * Get follow-up questions for a session
+ * Sprint 28 Feature 28.1
+ *
+ * @param sessionId Session ID to get follow-up questions for
+ * @returns Array of follow-up questions
+ */
+export async function getFollowUpQuestions(sessionId: string): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/followup-questions`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  const data: FollowUpQuestionsResponse = await response.json();
+  return data.followup_questions;
+}
