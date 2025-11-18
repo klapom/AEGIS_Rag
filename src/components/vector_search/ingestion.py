@@ -17,12 +17,14 @@ Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
-# Note: llama_index imports are deprecated (ADR-028)
-# Use DoclingContainerClient for new ingestion pipelines
+# TYPE_CHECKING imports - needed for type hints in deprecated methods
+# Note: llama_index is deprecated (ADR-028), use DoclingContainerClient for new pipelines
+if TYPE_CHECKING:
+    from llama_index.core import Document
 
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
