@@ -165,7 +165,11 @@ app = FastAPI(
 # Sprint 22 Feature 22.2.1: Request ID Tracking Middleware
 # IMPORTANT: Must be registered FIRST to ensure all logs have request IDs
 app.add_middleware(RequestIDMiddleware)
-logger.info("middleware_registered", middleware="RequestIDMiddleware", note="First in chain for proper logging")
+logger.info(
+    "middleware_registered",
+    middleware="RequestIDMiddleware",
+    note="First in chain for proper logging",
+)
 
 # Register rate limiter (Sprint 22 Feature 22.2.3)
 app.state.limiter = limiter
@@ -258,7 +262,12 @@ logger.info(
 
 # Authentication API router (Sprint 22 Feature 22.2.4: JWT Authentication)
 app.include_router(auth_router)
-logger.info("router_registered", router="auth_router", prefix="/api/v1/auth", note="Sprint 22: JWT authentication endpoints")
+logger.info(
+    "router_registered",
+    router="auth_router",
+    prefix="/api/v1/auth",
+    note="Sprint 22: JWT authentication endpoints",
+)
 
 # Chat API router (Sprint 10: Feature 10.1)
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"])

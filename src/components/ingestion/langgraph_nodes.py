@@ -144,7 +144,7 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
         if ram_available_mb < 2000:  # Less than 2GB RAM available
             raise IngestionError(
                 document_id=state["document_id"],
-                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 2GB)"
+                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 2GB)",
             )
 
         # Mark check as passed
@@ -928,8 +928,16 @@ async def embedding_node(state: IngestionState) -> IngestionState:
             chunk_ids.append(chunk_id)
 
             # Feature 21.6: Create payload with full provenance
-            page_no = chunk.meta.page_no if hasattr(chunk, "meta") and hasattr(chunk.meta, "page_no") else None
-            headings = chunk.meta.headings if hasattr(chunk, "meta") and hasattr(chunk.meta, "headings") else []
+            page_no = (
+                chunk.meta.page_no
+                if hasattr(chunk, "meta") and hasattr(chunk.meta, "page_no")
+                else None
+            )
+            headings = (
+                chunk.meta.headings
+                if hasattr(chunk, "meta") and hasattr(chunk.meta, "headings")
+                else []
+            )
 
             payload = {
                 # Content
@@ -949,9 +957,15 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                     {
                         "description": img["description"],
                         "vlm_model": img["vlm_model"],
-                        "bbox_absolute": img["bbox_full"]["bbox_absolute"] if img["bbox_full"] else None,
-                        "page_context": img["bbox_full"]["page_context"] if img["bbox_full"] else None,
-                        "bbox_normalized": img["bbox_full"]["bbox_normalized"] if img["bbox_full"] else None,
+                        "bbox_absolute": (
+                            img["bbox_full"]["bbox_absolute"] if img["bbox_full"] else None
+                        ),
+                        "page_context": (
+                            img["bbox_full"]["page_context"] if img["bbox_full"] else None
+                        ),
+                        "bbox_normalized": (
+                            img["bbox_full"]["bbox_normalized"] if img["bbox_full"] else None
+                        ),
                     }
                     for img in image_bboxes
                 ],
@@ -1070,20 +1084,26 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             # Feature 21.6: Add minimal provenance to metadata
             metadata = {}
             if hasattr(chunk, "metadata"):
-                metadata = chunk.metadata.copy() if hasattr(chunk.metadata, "copy") else dict(chunk.metadata)
+                metadata = (
+                    chunk.metadata.copy()
+                    if hasattr(chunk.metadata, "copy")
+                    else dict(chunk.metadata)
+                )
 
             # Add Qdrant reference + image flags (NO full BBox!)
             metadata.update(
                 {
                     "qdrant_point_id": chunk_id,  # Reference to Qdrant for full BBox
                     "has_image_annotation": len(image_bboxes) > 0,
-                    "image_page_nos": [
-                        bbox["bbox_full"]["page_context"]["page_no"]
-                        for bbox in image_bboxes
-                        if bbox.get("bbox_full") and bbox["bbox_full"].get("page_context")
-                    ]
-                    if image_bboxes
-                    else [],
+                    "image_page_nos": (
+                        [
+                            bbox["bbox_full"]["page_context"]["page_no"]
+                            for bbox in image_bboxes
+                            if bbox.get("bbox_full") and bbox["bbox_full"].get("page_context")
+                        ]
+                        if image_bboxes
+                        else []
+                    ),
                 }
             )
 
@@ -1112,7 +1132,9 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             total_entities=graph_stats.get("total_entities", 0),
             total_relations=graph_stats.get("total_relations", 0),
             total_chunks=graph_stats.get("total_chunks", 0),
-            chunks_with_images=sum(1 for doc in lightrag_docs if doc["metadata"].get("has_image_annotation")),
+            chunks_with_images=sum(
+                1 for doc in lightrag_docs if doc["metadata"].get("has_image_annotation")
+            ),
             duration_seconds=round(state["graph_end_time"] - state["graph_start_time"], 2),
         )
 

@@ -84,9 +84,7 @@ class LLMProxyConfig(BaseModel):
         required_providers = ["local_ollama"]
         for provider in required_providers:
             if provider not in config_data.get("providers", {}):
-                raise ValueError(
-                    f"Required provider '{provider}' not found in configuration"
-                )
+                raise ValueError(f"Required provider '{provider}' not found in configuration")
 
         logger.info(
             "llm_config_loaded",

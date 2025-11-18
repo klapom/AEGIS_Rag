@@ -49,7 +49,8 @@ class CostTracker:
             cursor = conn.cursor()
 
             # Main requests table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS llm_requests (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     timestamp TEXT NOT NULL,
@@ -66,21 +67,27 @@ class CostTracker:
                     fallback_used BOOLEAN DEFAULT 0,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Index for fast queries
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_provider_timestamp
                 ON llm_requests(provider, timestamp)
-            """)
+            """
+            )
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_task_type
                 ON llm_requests(task_type)
-            """)
+            """
+            )
 
             # Monthly summary table (pre-aggregated for performance)
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS monthly_summary (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     year_month TEXT NOT NULL UNIQUE,
@@ -91,11 +98,14 @@ class CostTracker:
                     avg_latency_ms REAL,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             conn.commit()
 
-        logger.info("Cost tracking database initialized", tables=["llm_requests", "monthly_summary"])
+        logger.info(
+            "Cost tracking database initialized", tables=["llm_requests", "monthly_summary"]
+        )
 
     def track_request(
         self,
@@ -411,10 +421,12 @@ class CostTracker:
                     (start_date.isoformat(),),
                 )
             else:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT * FROM llm_requests
                     ORDER BY timestamp DESC
-                """)
+                """
+                )
 
             rows = cursor.fetchall()
             columns = [desc[0] for desc in cursor.description]

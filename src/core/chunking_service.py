@@ -95,7 +95,9 @@ class ChunkingService:
             overlap=self.strategy.overlap,
         )
 
-    def _init_chunker(self) -> "SentenceSplitter | tiktoken.Encoding | None":  # String literal for type hint
+    def _init_chunker(
+        self,
+    ) -> "SentenceSplitter | tiktoken.Encoding | None":  # String literal for type hint
         """Initialize chunker based on strategy.
 
         Sprint 24 Feature 24.15: Lazy import for adaptive/paragraph strategies.

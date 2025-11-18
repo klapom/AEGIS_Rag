@@ -15,9 +15,9 @@ class NamingChecker:
     # Naming patterns
     PATTERNS = {
         'class': re.compile(r'^[A-Z][A-Za-z0-9]*(?:Service|Repository|Controller|Model|Config|Agent|Processor|Handler|Manager|Builder|Factory|Adapter|Strategy|Validator|Error|Exception|Evaluator)?$'),
-        'function': re.compile(r'^[a-z]+(?:_[a-z]+)*$'),
-        'constant': re.compile(r'^[A-Z]+(?:_[A-Z]+)*$'),
-        'variable': re.compile(r'^[a-z]+(?:_[a-z]+)*$'),
+        'function': re.compile(r'^[a-z0-9]+(?:_[a-z0-9]+)*_?$'),  # Allow trailing _ for keyword avoidance, numbers for acronyms
+        'constant': re.compile(r'^[A-Z0-9]+(?:_[A-Z0-9]+)*$'),  # Allow numbers in constants
+        'variable': re.compile(r'^[a-z0-9]+(?:_[a-z0-9]+)*$'),  # Allow numbers in variables
     }
 
     # File naming patterns
@@ -67,8 +67,8 @@ class NamingChecker:
             if pattern.match(name):
                 return True
 
-        # Generic snake_case check
-        if re.match(r'^[a-z]+(?:_[a-z]+)*\.py$', name):
+        # Generic snake_case check (allow numbers and digits for acronyms like bm25, neo4j)
+        if re.match(r'^[a-z0-9]+(?:_[a-z0-9]+)*\.py$', name):
             return True
 
         return False

@@ -122,9 +122,11 @@ jobs:
       - name: Validate All Python Imports
         run: |
           echo "🔍 Checking all Python files for import errors..."
+          echo "Note: Excluding optional dependency directories (ui, evaluation)"
           failed_files=""
 
-          for file in $(find src -name "*.py" -type f); do
+          # Exclude src/ui and src/evaluation (optional dependencies: gradio, ragas)
+          for file in $(find src -name "*.py" -type f ! -path "*/ui/*" ! -path "*/evaluation/*"); do
             echo "Checking $file..."
             # Convert file path to module path (keep src. prefix)
             module_path=$(echo $file | sed 's/\//./g' | sed 's/\.py$//')
@@ -390,11 +392,11 @@ jobs:
           timeout 180 bash -c 'count=0; until curl -f http://localhost:7474/ 2>/dev/null; do echo "  Neo4j HTTP attempt $((++count))/90..."; sleep 2; done'
           echo "✅ Neo4j HTTP ready"
 
-          echo "🔍 Waiting for Neo4j Bolt to be fully ready (this may take up to 5 minutes)..."
-          echo "  Initial 20s grace period for Neo4j startup..."
-          sleep 20
-          timeout 300 bash -c 'count=0; until echo "RETURN 1 AS result" | cypher-shell -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "  Bolt attempt $((++count))/100: not ready yet..."; sleep 3; done'
-          echo "✅ Neo4j Bolt ready"
+          echo "🔍 Waiting for Neo4j Bolt port (7687) to be ready..."
+          echo "  Initial 10s grace period for Neo4j startup..."
+          sleep 10
+          timeout 120 bash -c 'count=0; until (echo > /dev/tcp/localhost/7687) >/dev/null 2>&1; do echo "  Bolt port check attempt $((++count))/40..."; sleep 3; done'
+          echo "✅ Neo4j Bolt port ready"
 
           echo "🔍 Waiting for Redis..."
           timeout 90 bash -c 'count=0; until redis-cli ping 2>/dev/null; do echo "  Redis attempt $((++count))..."; sleep 2; done'

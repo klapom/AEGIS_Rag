@@ -295,7 +295,9 @@ class AegisLLMProxy:
             if not self._is_budget_exceeded("openai"):
                 return ("openai", "critical_quality_high_complexity")
             else:
-                logger.warning("budget_exceeded", provider="openai", fallback="alibaba_cloud_or_local")
+                logger.warning(
+                    "budget_exceeded", provider="openai", fallback="alibaba_cloud_or_local"
+                )
 
         # PRIORITY 4: TIER 2 (Alibaba Cloud / Qwen) - High quality OR batch processing
         if self.config.is_provider_enabled("alibaba_cloud"):
@@ -403,7 +405,7 @@ class AegisLLMProxy:
             )
         else:
             # Fallback: Try to get total tokens and estimate split
-            tokens_used = getattr(response, 'tokens_used', 0)
+            tokens_used = getattr(response, "tokens_used", 0)
             if tokens_used > 0:
                 tokens_input = tokens_used // 2
                 tokens_output = tokens_used - tokens_input
@@ -532,10 +534,9 @@ class AegisLLMProxy:
             }
 
             provider_pricing = pricing.get(provider, {"input": 0.0, "output": 0.0})
-            cost = (
-                (tokens_input / 1_000_000) * provider_pricing["input"]
-                + (tokens_output / 1_000_000) * provider_pricing["output"]
-            )
+            cost = (tokens_input / 1_000_000) * provider_pricing["input"] + (
+                tokens_output / 1_000_000
+            ) * provider_pricing["output"]
 
         # Track total cost
         self._total_cost += cost
@@ -583,7 +584,7 @@ class AegisLLMProxy:
             estimation_used = False
 
             # Check if we stored token breakdown in response metadata
-            if hasattr(result, 'tokens_input') and hasattr(result, 'tokens_output'):
+            if hasattr(result, "tokens_input") and hasattr(result, "tokens_output"):
                 tokens_input = result.tokens_input
                 tokens_output = result.tokens_output
             else:

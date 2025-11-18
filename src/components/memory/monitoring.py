@@ -213,7 +213,7 @@ class MemoryMonitoring:
             collections = await qdrant_client.async_client.get_collections()
             total_vectors = 0
 
-            for collection in (collections.collections if collections else []):
+            for collection in collections.collections if collections else []:
                 info = await qdrant_client.get_collection_info(collection.name)
                 if info:
                     vectors_count = info.vectors_count if hasattr(info, "vectors_count") else 0

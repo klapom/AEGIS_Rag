@@ -98,6 +98,7 @@ class HybridSearch:
             collection_name: Qdrant collection name
         """
         from src.components.shared.embedding_service import get_embedding_service
+
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or get_embedding_service()
         self.bm25_search = bm25_search or BM25Search()

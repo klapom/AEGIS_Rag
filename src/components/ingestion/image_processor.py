@@ -30,6 +30,7 @@ logger = structlog.get_logger(__name__)
 # Sprint 23: Import DashScope VLM Client for cloud VLM routing
 try:
     from src.components.llm_proxy.dashscope_vlm import get_dashscope_vlm_client
+
     DASHSCOPE_VLM_AVAILABLE = True
 except ImportError:
     DASHSCOPE_VLM_AVAILABLE = False
@@ -44,6 +45,7 @@ try:
         QualityRequirement,
         TaskType,
     )
+
     AEGIS_LLM_PROXY_AVAILABLE = True
 except ImportError:
     AEGIS_LLM_PROXY_AVAILABLE = False
@@ -53,6 +55,7 @@ except ImportError:
 # =============================================================================
 # Configuration
 # =============================================================================
+
 
 class ImageProcessorConfig:
     """Configuration for image processing.
@@ -93,6 +96,7 @@ class ImageProcessorConfig:
 # =============================================================================
 # Image Filtering
 # =============================================================================
+
 
 def should_process_image(
     image: Image.Image,
@@ -140,6 +144,7 @@ def should_process_image(
 # =============================================================================
 # VLM Description Generation
 # =============================================================================
+
 
 async def generate_vlm_description_with_dashscope(
     image_path: Path,
@@ -311,6 +316,7 @@ async def generate_vlm_description_with_proxy(
 # =============================================================================
 # Image Processor Class
 # =============================================================================
+
 
 class ImageProcessor:
     """Image processor for VLM-enhanced document ingestion.
@@ -492,6 +498,7 @@ class ImageProcessor:
 # =============================================================================
 # Convenience Function
 # =============================================================================
+
 
 async def process_image_with_vlm(
     image: Image.Image,

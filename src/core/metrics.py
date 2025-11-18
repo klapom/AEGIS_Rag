@@ -49,7 +49,6 @@ Usage:
     update_neo4j_metrics(542, 1834)
 """
 
-
 from prometheus_client import Counter, Gauge, Histogram
 
 # LLM Request Counter

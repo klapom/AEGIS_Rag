@@ -266,14 +266,12 @@ async def check_qdrant_health() -> dict[str, Any]:
         total_vectors = 0
         collection_details = []
 
-        for collection in (collections.collections if collections else []):
+        for collection in collections.collections if collections else []:
             info = await qdrant.get_collection_info(collection.name)
             if info:
                 vectors_count = info.vectors_count if hasattr(info, "vectors_count") else 0
                 total_vectors += vectors_count
-                collection_details.append(
-                    {"name": collection.name, "vectors": vectors_count}
-                )
+                collection_details.append({"name": collection.name, "vectors": vectors_count})
 
         # Estimate capacity (assuming 10M vectors is 100% capacity)
         capacity = min(1.0, total_vectors / MAX_VECTORS) if MAX_VECTORS > 0 else 0.0
@@ -335,9 +333,7 @@ async def check_graphiti_health() -> dict[str, Any]:
             edge_count = edge_record["edge_count"] if edge_record else 0
 
             # Count episodes (Graphiti-specific)
-            episode_result = await session.run(
-                "MATCH (e:Episode) RETURN count(e) as episode_count"
-            )
+            episode_result = await session.run("MATCH (e:Episode) RETURN count(e) as episode_count")
             episode_record = await episode_result.single()
             episode_count = episode_record["episode_count"] if episode_record else 0
 

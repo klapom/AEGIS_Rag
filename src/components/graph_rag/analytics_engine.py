@@ -453,7 +453,9 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to calculate graph statistics", error=str(e))
-            raise DatabaseConnectionError("Neo4j", f"Graph statistics calculation failed: {e}") from e
+            raise DatabaseConnectionError(
+                "Neo4j", f"Graph statistics calculation failed: {e}"
+            ) from e
 
     async def _build_networkx_graph(self) -> nx.DiGraph:
         """Build a NetworkX graph from Neo4j data for fallback algorithms.
@@ -495,7 +497,9 @@ class GraphAnalyticsEngine:
 
         except Exception as e:
             logger.error("Failed to build NetworkX graph", error=str(e))
-            raise DatabaseConnectionError("Neo4j", f"NetworkX graph construction failed: {e}") from e
+            raise DatabaseConnectionError(
+                "Neo4j", f"NetworkX graph construction failed: {e}"
+            ) from e
 
 
 # Singleton instance

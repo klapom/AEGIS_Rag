@@ -104,9 +104,7 @@ class GraphStatistics(BaseModel):
     edge_count: int = Field(description="Total number of edges")
     community_count: int = Field(description="Total number of communities")
     avg_degree: float = Field(description="Average node degree")
-    entity_type_distribution: dict[str, int] = Field(
-        description="Node count by entity type"
-    )
+    entity_type_distribution: dict[str, int] = Field(description="Node count by entity type")
     orphaned_nodes: int = Field(description="Number of orphaned nodes (degree=0)")
     timestamp: str = Field(description="Timestamp of statistics")
 
@@ -114,12 +112,8 @@ class GraphStatistics(BaseModel):
 class NodeDocumentsRequest(BaseModel):
     """Request model for node documents search (Feature 29.6)."""
 
-    entity_name: str = Field(
-        description="Entity name to search for", min_length=1
-    )
-    top_k: int = Field(
-        default=10, ge=1, le=100, description="Number of top documents to return"
-    )
+    entity_name: str = Field(description="Entity name to search for", min_length=1)
+    top_k: int = Field(default=10, ge=1, le=100, description="Number of top documents to return")
 
 
 class RelatedDocument(BaseModel):
@@ -415,9 +409,7 @@ async def get_graph_statistics() -> GraphStatistics:
                 "MATCH (n:Entity) RETURN n.entity_type as type, count(*) as count"
             )
             type_records = await type_result.data()
-            entity_types = {
-                record["type"]: record["count"] for record in type_records
-            }
+            entity_types = {record["type"]: record["count"] for record in type_records}
 
             # Orphaned nodes (degree = 0)
             orphan_result = await session.run(
@@ -504,17 +496,11 @@ async def get_documents_by_node(request: NodeDocumentsRequest) -> NodeDocumentsR
 
     except Exception as e:
         logger.error("node_documents_failed", error=str(e), entity=request.entity_name)
-        raise HTTPException(
-            status_code=500, detail=f"Node documents search failed: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Node documents search failed: {e}") from e
 
 
-@router.get(
-    "/communities/{community_id}/documents", response_model=CommunityDocumentsResponse
-)
-async def get_community_documents(
-    community_id: str, limit: int = 50
-) -> CommunityDocumentsResponse:
+@router.get("/communities/{community_id}/documents", response_model=CommunityDocumentsResponse)
+async def get_community_documents(community_id: str, limit: int = 50) -> CommunityDocumentsResponse:
     """Get all documents mentioning entities from a community.
 
     Sprint 29 Feature 29.7: Find documents that mention entities belonging to
@@ -542,9 +528,7 @@ async def get_community_documents(
 
         if not entity_names:
             logger.warning("community_not_found", community_id=community_id)
-            raise HTTPException(
-                status_code=404, detail=f"Community {community_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Community {community_id} not found")
 
         # 2. Find documents mentioning these entities
         qdrant = QdrantClient()

@@ -42,14 +42,18 @@ class DashScopeVLMClient:
             base_url: DashScope base URL (defaults to env var)
         """
         # Load from environment variables directly
-        self.api_key = api_key or os.getenv("ALIBABA_CLOUD_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or ""
+        self.api_key = (
+            api_key or os.getenv("ALIBABA_CLOUD_API_KEY") or os.getenv("DASHSCOPE_API_KEY") or ""
+        )
         self.base_url = base_url or os.getenv(
             "ALIBABA_CLOUD_BASE_URL",
             "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
         )
 
         if not self.api_key:
-            raise ValueError("DashScope API key not configured. Set ALIBABA_CLOUD_API_KEY or DASHSCOPE_API_KEY env var.")
+            raise ValueError(
+                "DashScope API key not configured. Set ALIBABA_CLOUD_API_KEY or DASHSCOPE_API_KEY env var."
+            )
 
         self.client = httpx.AsyncClient(timeout=120.0)
 
@@ -116,9 +120,7 @@ class DashScopeVLMClient:
                     "content": [
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{image_base64}"
-                            },
+                            "image_url": {"url": f"data:{mime_type};base64,{image_base64}"},
                         },
                         {"type": "text", "text": prompt},
                     ],

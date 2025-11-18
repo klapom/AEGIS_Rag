@@ -92,7 +92,9 @@ class Neo4jClient:
                 logger.info("Neo4j driver initialized")
             except Exception as e:
                 logger.error("Failed to initialize Neo4j driver", error=str(e))
-                raise DatabaseConnectionError("Neo4j", f"Failed to initialize Neo4j driver: {e}") from e
+                raise DatabaseConnectionError(
+                    "Neo4j", f"Failed to initialize Neo4j driver: {e}"
+                ) from e
         return self._driver
 
     @retry(

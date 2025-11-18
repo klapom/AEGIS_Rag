@@ -32,7 +32,10 @@ from src.core.models import GraphQueryResult
 # TODO Sprint 30: Migrate to ExtractionService and remove this import
 try:
     import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "archive" / "deprecated" / "sprint-21"))
+
+    sys.path.insert(
+        0, str(Path(__file__).parent.parent.parent.parent / "archive" / "deprecated" / "sprint-21")
+    )
     from three_phase_extractor_deprecated import ThreePhaseExtractor  # noqa: F401
 except ImportError:
     ThreePhaseExtractor = None  # Graceful fallback

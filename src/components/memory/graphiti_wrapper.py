@@ -158,7 +158,7 @@ class OllamaLLMClient(LLMClient):
                 if not response or "embedding" not in response:
                     raise LLMError(
                         operation="graphiti_embedding_generation",
-                        reason=f"Invalid embedding response for text: {text[:50]}"
+                        reason=f"Invalid embedding response for text: {text[:50]}",
                     )
 
                 embeddings.append(response["embedding"])
@@ -542,8 +542,7 @@ def get_graphiti_client() -> GraphitiClient:
     if _graphiti_client is None:
         if not settings.graphiti_enabled:
             raise MemoryError(
-                operation="get_graphiti_client",
-                reason="Graphiti is disabled in settings"
+                operation="get_graphiti_client", reason="Graphiti is disabled in settings"
             )
         _graphiti_client = GraphitiClient()
     return _graphiti_client

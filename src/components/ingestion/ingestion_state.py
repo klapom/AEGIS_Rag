@@ -338,7 +338,9 @@ def calculate_progress(state: IngestionState) -> float:
     return min(progress, 1.0)  # Cap at 1.0
 
 
-def add_error(state: IngestionState, node_name: str, error_message: str, error_type: str = "error") -> None:
+def add_error(
+    state: IngestionState, node_name: str, error_message: str, error_type: str = "error"
+) -> None:
     """Add error to state error list.
 
     Args:

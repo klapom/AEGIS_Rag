@@ -106,7 +106,9 @@ class ExtractionPipelineFactory:
 
         logger.info(
             "llm_extraction_pipeline_creating",
-            llm_model=getattr(config, "lightrag_llm_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"),
+            llm_model=getattr(
+                config, "lightrag_llm_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"
+            ),
             temperature=0.1,
             note="Using ExtractionService with Few-Shot prompts for high-quality extraction",
         )
@@ -178,7 +180,8 @@ class ExtractionPipelineFactory:
                         {
                             "source": rel.source,
                             "target": rel.target,
-                            "description": rel.description or f"{rel.source} {rel.type} {rel.target}",
+                            "description": rel.description
+                            or f"{rel.source} {rel.type} {rel.target}",
                             "strength": 8,  # Default strength (LightRAG uses 1-10)
                         }
                     )

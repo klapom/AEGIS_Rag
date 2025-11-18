@@ -58,9 +58,7 @@ class ImageAnnotation(BaseModel):
     vlm_model: str = Field(..., description="VLM model used (e.g., qwen3-vl:4b-instruct)")
     bbox_absolute: BBoxAbsolute | None = Field(None, description="Absolute BBox in points")
     page_context: PageContext | None = Field(None, description="Page context for BBox")
-    bbox_normalized: BBoxNormalized | None = Field(
-        None, description="Normalized BBox (0.0-1.0)"
-    )
+    bbox_normalized: BBoxNormalized | None = Field(None, description="Normalized BBox (0.0-1.0)")
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -146,7 +144,9 @@ async def get_document_annotations(
         collection_name = settings.qdrant_collection
 
         # Build Qdrant filter
-        filter_conditions: list[dict[str, Any]] = [{"key": "document_id", "match": {"value": document_id}}]
+        filter_conditions: list[dict[str, Any]] = [
+            {"key": "document_id", "match": {"value": document_id}}
+        ]
 
         if chunk_ids:
             # Filter by specific chunk IDs
@@ -315,9 +315,17 @@ async def get_chunk_annotations(
 
         annotations = []
         for img_data in image_annotations_data:
-            bbox_abs = BBoxAbsolute(**img_data["bbox_absolute"]) if img_data.get("bbox_absolute") else None
-            page_ctx = PageContext(**img_data["page_context"]) if img_data.get("page_context") else None
-            bbox_norm = BBoxNormalized(**img_data["bbox_normalized"]) if img_data.get("bbox_normalized") else None
+            bbox_abs = (
+                BBoxAbsolute(**img_data["bbox_absolute"]) if img_data.get("bbox_absolute") else None
+            )
+            page_ctx = (
+                PageContext(**img_data["page_context"]) if img_data.get("page_context") else None
+            )
+            bbox_norm = (
+                BBoxNormalized(**img_data["bbox_normalized"])
+                if img_data.get("bbox_normalized")
+                else None
+            )
 
             annotation = ImageAnnotation(
                 description=img_data.get("description", ""),
