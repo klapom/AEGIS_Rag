@@ -12,7 +12,7 @@ Includes Server-Sent Events (SSE) streaming for real-time token-by-token respons
 import json
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -86,14 +86,14 @@ async def save_conversation_turn(
         else:
             # New conversation
             messages = []
-            created_at = datetime.now(datetime.UTC).isoformat()
+            created_at = datetime.now(timezone.utc).isoformat()
 
         # Add new messages
         messages.append(
             {
                 "role": "user",
                 "content": user_message,
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -101,7 +101,7 @@ async def save_conversation_turn(
             {
                 "role": "assistant",
                 "content": assistant_message,
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "intent": intent,
                 "source_count": len(sources) if sources else 0,
             }
@@ -111,7 +111,7 @@ async def save_conversation_turn(
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
-            "updated_at": datetime.now(datetime.UTC).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "message_count": len(messages),
         }
 
@@ -1050,7 +1050,7 @@ def _get_iso_timestamp() -> str:
     Returns:
         ISO 8601 timestamp string
     """
-    return datetime.now(datetime.UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 # Sprint 27 Feature 27.5: Follow-up Question Suggestions
