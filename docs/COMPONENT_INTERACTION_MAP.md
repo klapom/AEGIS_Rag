@@ -1,7 +1,7 @@
 # COMPONENT INTERACTION MAP
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete data flow documentation - how components communicate
-**Last Updated:** 2025-11-18 (Sprint 28 - Frontend UX Enhancements)
+**Last Updated:** 2025-11-18 (Sprint 28 - Post Sprint 28 Architecture Alignment)
 
 ---
 
@@ -61,12 +61,12 @@
 │                                 ▼                                  │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │                   Storage Layer                               │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐         │  │
-│  │  │  Redis  │  │ Qdrant  │  │ Neo4j   │  │ Ollama  │         │  │
-│  │  │(Memory) │  │(Vector) │  │ (Graph) │  │  (LLM)  │         │  │
-│  │  │Port 6379│  │Port 6333│  │Port 7687│  │Port     │         │  │
-│  │  │         │  │         │  │         │  │ 11434   │         │  │
-│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘         │  │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────┐     │  │
+│  │  │  Redis  │  │ Qdrant  │  │ Neo4j   │  │AegisLLMProxy│     │  │
+│  │  │(Memory) │  │(Vector) │  │ (Graph) │  │ Multi-Cloud │     │  │
+│  │  │Port 6379│  │Port 6333│  │Port 7687│  │ LLM Routing │     │  │
+│  │  │         │  │ BGE-M3  │  │         │  │ (ADR-033)   │     │  │
+│  │  └─────────┘  └─────────┘  └─────────┘  └─────────────┘     │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -86,7 +86,8 @@
 | Memory Agent | Redis | Redis Protocol | JSON | Short-term memory |
 | Memory Agent | Qdrant | gRPC/HTTP | Protobuf/JSON | Semantic memory |
 | Memory Agent | Graphiti | Python Call | Python objects | Episodic memory |
-| All Agents | Ollama | HTTP | JSON | LLM inference |
+| All Agents | AegisLLMProxy | Python Call | Pydantic | Multi-cloud LLM routing (Sprint 25) |
+| AegisLLMProxy | Ollama/Cloud | HTTP | JSON | LLM inference (local → Alibaba → OpenAI) |
 
 ---
 
@@ -129,13 +130,14 @@
 │  5. Router Agent (Node: route_query)                               │
 │     └─> Classify query type                                       │
 │         - Input: "What is RAG?"                                    │
-│         - LLM Call: Ollama llama3.2:3b                             │
-│           POST http://localhost:11434/api/generate                 │
-│           Body: {                                                  │
-│             "model": "llama3.2:3b",                                │
-│             "prompt": "Classify: What is RAG?",                    │
-│             "stream": false                                        │
-│           }                                                        │
+│         - LLM Call: AegisLLMProxy (Sprint 25 Feature 25.10)       │
+│           proxy = get_aegis_llm_proxy()                            │
+│           response = await proxy.complete(                         │
+│             prompt="Classify: What is RAG?",                       │
+│             quality=QualityRequirement.LOW,  # Router task         │
+│             task_type=TaskType.QUERY_UNDERSTANDING                 │
+│           )                                                        │
+│           # Multi-cloud routing: Local Ollama → Alibaba → OpenAI  │
 │         - Response: {"type": "SIMPLE", "intent": "definition"}     │
 │         - Decision: Route to Vector Agent (rag_mode=hybrid)        │
 │                                                                     │
@@ -143,15 +145,15 @@
 │     └─> Parallel Execution: Vector + BM25                         │
 │                                                                     │
 │         A. Embedding Generation                                    │
-│            └─> EmbeddingService.get_embedding("What is RAG?")     │
+│            └─> UnifiedEmbeddingService.embed("What is RAG?")      │
 │                - LRU Cache Check: MISS                             │
-│                - Ollama Call: nomic-embed-text                     │
+│                - Ollama Call: bge-m3 (Sprint 16)                   │
 │                  POST http://localhost:11434/api/embeddings        │
 │                  Body: {                                           │
-│                    "model": "nomic-embed-text",                    │
+│                    "model": "bge-m3",                              │
 │                    "prompt": "What is RAG?"                        │
 │                  }                                                 │
-│                - Response: [0.123, -0.456, ..., 0.789] (768d)      │
+│                - Response: [0.123, -0.456, ..., 0.789] (1024d)     │
 │                - Cache Store: LRU[hash("What is RAG?")] = vector   │
 │                                                                     │
 │         B. Vector Search (Qdrant)                                  │
@@ -227,14 +229,15 @@
 │     └─> Synthesize final answer                                   │
 │         - Input: Top 5 reranked documents                          │
 │         - Context: "RAG is Retrieval-Augmented Generation..."      │
-│         - LLM Call: Ollama llama3.2:8b                             │
-│           POST http://localhost:11434/api/generate                 │
-│           Body: {                                                  │
-│             "model": "llama3.2:8b",                                │
-│             "prompt": "Answer based on context:\n[context]\n\n     │
-│                        Question: What is RAG?",                    │
-│             "stream": false                                        │
-│           }                                                        │
+│         - LLM Call: AegisLLMProxy (Sprint 25)                      │
+│           proxy = get_aegis_llm_proxy()                            │
+│           response = await proxy.complete(                         │
+│             prompt="Answer based on context:\n[context]\n\n        │
+│                     Question: What is RAG?",                       │
+│             quality=QualityRequirement.MEDIUM,  # Generation task  │
+│             task_type=TaskType.GENERATION                          │
+│           )                                                        │
+│           # Routes to local Ollama (llama3.2:8b) if available      │
 │         - Response: {                                              │
 │             "answer": "RAG (Retrieval-Augmented Generation)...",   │
 │             "sources": ["doc1", "doc2"],                           │
@@ -300,15 +303,16 @@ Total Latency: ~450ms (with GPU)
 │     └─> LightRAG Dual-Level Retrieval                             │
 │                                                                     │
 │         A. Entity Extraction from Query                            │
-│            └─> LLM Call: Ollama qwen3:0.6b                        │
-│                POST http://localhost:11434/api/generate            │
-│                Body: {                                             │
-│                  "model": "qwen3:0.6b",                            │
-│                  "prompt": "Extract entities:\n                    │
-│                             'How are transformers related to       │
-│                              attention mechanisms?'",              │
-│                  "stream": false                                   │
-│                }                                                   │
+│            └─> LLM Call: AegisLLMProxy (Sprint 25)                │
+│                proxy = get_aegis_llm_proxy()                       │
+│                response = await proxy.complete(                    │
+│                  prompt="Extract entities:\n                       │
+│                          'How are transformers related to          │
+│                           attention mechanisms?'",                 │
+│                  quality=QualityRequirement.MEDIUM,                │
+│                  task_type=TaskType.ENTITY_EXTRACTION              │
+│                )                                                   │
+│                # Uses extraction-optimized model (gemma-3-4b-it)   │
 │                Response: {                                         │
 │                  "entities": [                                     │
 │                    {"text": "transformers", "type": "MODEL"},      │
@@ -378,7 +382,7 @@ Total Latency: ~450ms (with GPU)
 │                                                                     │
 │  7. Aggregator Node (Node: aggregate_results)                      │
 │     └─> Synthesize answer with graph context                      │
-│         - LLM Call: Ollama llama3.2:8b                             │
+│         - LLM Call: AegisLLMProxy (Sprint 25)                      │
 │         - Context: Graph relationships + community summary         │
 │         - Response: "Transformers are fundamentally built on       │
 │                      attention mechanisms..."                      │
@@ -431,8 +435,8 @@ Total Latency: ~800ms (with GPU)
 │                                                                     │
 │         B. Layer 2: Qdrant (Semantic Long-Term Memory)             │
 │            └─> Embed query: "What did we discuss about RAG?"      │
-│                EmbeddingService → Ollama nomic-embed-text          │
-│                Vector: [0.234, -0.567, ...]                        │
+│                UnifiedEmbeddingService → Ollama bge-m3 (Sprint 16) │
+│                Vector: [0.234, -0.567, ...] (1024d)                │
 │                                                                     │
 │                QdrantClient.search(                                │
 │                  collection="conversation-history",                │
@@ -536,174 +540,100 @@ Total Latency: ~350ms
 │         - Validate: PDF, <10MB                                     │
 │         - Security: Path traversal check                           │
 │                                                                     │
-│  4. Unified Ingestion Pipeline (Parallel)                          │
-│     └─> UnifiedIngestionPipeline.ingest(file_path, mode="all")   │
+│  4. LangGraph Ingestion Pipeline (Sprint 21-22)                    │
+│     └─> create_ingestion_graph().ainvoke(initial_state)          │
 │                                                                     │
 │         ┌─────────────────────────────────────────────────────┐   │
-│         │   Parallel Execution (asyncio.gather)               │   │
+│         │   Sequential Execution (LangGraph StateGraph)       │   │
+│         │   (Memory-optimized: 4.4GB RAM, 6GB VRAM)           │   │
 │         ├─────────────────────────────────────────────────────┤   │
 │         │                                                     │   │
-│         │  ┌──────────────────────────────────────────────┐  │   │
-│         │  │  Task 1: Qdrant Indexing                     │  │   │
-│         │  └──────────────────────────────────────────────┘  │   │
-│         │       │                                            │   │
-│         │       ▼                                            │   │
-│         │  A. Load Document (LlamaIndex)                     │   │
-│         │     └─> SimpleDirectoryReader.load_data()         │   │
-│         │         PDF Parser: pypdf                          │   │
-│         │         Pages: 12                                  │   │
-│         │         Text: "Attention Is All You Need..."       │   │
+│         │  Node 1: memory_check_node (5% progress)           │   │
+│         │     └─> Check document already indexed             │   │
+│         │         Neo4j query: MATCH (d:Document {hash: ...}) │   │
+│         │         Decision: Skip if duplicate                 │   │
 │         │                                                     │   │
-│         │  B. Chunk Text (Adaptive Chunking)                 │   │
-│         │     └─> AdaptiveChunker.chunk(                    │   │
-│         │           text=doc_text,                           │   │
-│         │           strategy="paragraph"  # PDF detected     │   │
+│         │  Node 2: format_routing_node (10% progress)        │   │
+│         │     └─> FormatRouter.route(document_path)          │   │
+│         │         Decision: Docling vs LlamaIndex            │   │
+│         │         30+ formats supported (Sprint 22.3)         │   │
+│         │         - Docling: 14 formats (PDF, DOCX, PPTX...) │   │
+│         │         - LlamaIndex: 9 formats (CSV, Markdown...) │   │
+│         │         - Shared: 7 formats (fallback logic)       │   │
+│         │                                                     │   │
+│         │  Node 3a: docling_parse_node (30% progress)        │   │
+│         │     └─> DoclingContainerClient.parse(pdf)          │   │
+│         │         GPU-accelerated OCR (EasyOCR)              │   │
+│         │         Table structure preservation (92% accuracy) │   │
+│         │         Performance: 420s → 120s (3.5x speedup)    │   │
+│         │         Raw text: "Attention Is All You Need..."    │   │
+│         │                                                     │   │
+│         │  Node 3b: llamaindex_parse_node (fallback)         │   │
+│         │     └─> LlamaIndexParser.parse(csv)                │   │
+│         │         SimpleDirectoryReader.load_data()           │   │
+│         │         Connector library (300+ sources)            │   │
+│         │                                                     │   │
+│         │  Node 4: chunking_node (45% progress)              │   │
+│         │     └─> ChunkingService.chunk(                    │   │
+│         │           text=parsed_text,                        │   │
+│         │           strategy="adaptive"  # Document-aware    │   │
 │         │         )                                          │   │
-│         │         Chunks: [                                  │   │
-│         │           "Abstract: The dominant...",             │   │
-│         │           "Introduction: Recurrent...",            │   │
-│         │           ...                                      │   │
-│         │         ]  # 45 chunks                             │   │
+│         │         Unified chunks with SHA-256 IDs (Sprint 16) │   │
+│         │         Chunks: [Chunk(id="a3f2e1d9", text=...)]   │   │
+│         │         # 45 chunks created                        │   │
 │         │                                                     │   │
-│         │  C. Generate Embeddings (Batch)                    │   │
-│         │     └─> For each chunk (parallel batches):        │   │
-│         │         EmbeddingService.get_embeddings_batch([    │   │
+│         │  Node 5: embedding_node (75% progress)             │   │
+│         │     └─> UnifiedEmbeddingService.embed_batch([     │   │
 │         │           "Abstract: The dominant...",             │   │
 │         │           "Introduction: Recurrent...",            │   │
-│         │           ...                                      │   │
+│         │           ...  # batch of 32 (Sprint 16)           │   │
 │         │         ])                                         │   │
 │         │                                                     │   │
 │         │         Ollama API Call:                           │   │
 │         │         POST http://localhost:11434/api/embeddings │   │
 │         │         Body: {                                    │   │
-│         │           "model": "nomic-embed-text",             │   │
-│         │           "texts": [...]  # batch of 10            │   │
+│         │           "model": "bge-m3",  # 1024-dim (Sprint 16) │   │
+│         │           "inputs": [...]  # batch of 32           │   │
 │         │         }                                          │   │
 │         │                                                     │   │
 │         │         Response: [                                │   │
-│         │           [0.123, -0.456, ...],  # 768d            │   │
+│         │           [0.123, -0.456, ...],  # 1024d           │   │
 │         │           [0.234, -0.567, ...],                    │   │
 │         │           ...                                      │   │
 │         │         ]                                          │   │
 │         │         Cache: Store in LRU cache                  │   │
 │         │                                                     │   │
-│         │  D. Upload to Qdrant                               │   │
-│         │     └─> QdrantClient.upsert(                      │   │
+│         │         Upload to Qdrant + BM25:                   │   │
+│         │         QdrantClient.upsert(                       │   │
 │         │           collection="aegis-rag-documents",        │   │
-│         │           points=[                                 │   │
-│         │             {                                      │   │
-│         │               "id": "doc1_chunk1",                 │   │
-│         │               "vector": [0.123, -0.456, ...],      │   │
-│         │               "payload": {                         │   │
-│         │                 "text": "Abstract: The...",        │   │
-│         │                 "source": "transformer_paper.pdf", │   │
-│         │                 "chunk_id": 1,                     │   │
-│         │                 "doc_hash": "sha256..."            │   │
-│         │               }                                    │   │
-│         │             },                                     │   │
-│         │             ...  # 45 points                       │   │
-│         │           ]                                        │   │
+│         │           points=[{id, vector, payload}, ...]      │   │
 │         │         )                                          │   │
-│         │         gRPC Call: localhost:6334                  │   │
+│         │         BM25Search.add_documents([...])            │   │
 │         │         Latency: ~2s for 45 chunks                 │   │
 │         │                                                     │   │
-│         │  ┌──────────────────────────────────────────────┐  │   │
-│         │  │  Task 2: BM25 Indexing                       │  │   │
-│         │  └──────────────────────────────────────────────┘  │   │
-│         │       │                                            │   │
-│         │       ▼                                            │   │
-│         │  A. Tokenize Chunks                                │   │
-│         │     └─> For each chunk:                           │   │
-│         │         tokens = tokenize(chunk.text)              │   │
-│         │         ["attention", "all", "need", ...]          │   │
+│         │  Node 6: graph_extraction_node (100% progress)     │   │
+│         │     └─> LightRAG Entity Extraction                │   │
+│         │         For each chunk:                            │   │
+│         │         AegisLLMProxy.complete(                    │   │
+│         │           prompt="Extract entities from chunk...", │   │
+│         │           quality=QualityRequirement.MEDIUM,       │   │
+│         │           task_type=TaskType.ENTITY_EXTRACTION     │   │
+│         │         )                                          │   │
+│         │         # Uses gemma-3-4b-it (extraction-optimized) │   │
 │         │                                                     │   │
-│         │  B. Update BM25 Index                              │   │
-│         │     └─> BM25Search.add_documents([                │   │
-│         │           {                                        │   │
-│         │             "id": "doc1_chunk1",                   │   │
-│         │             "tokens": ["attention", "all", ...],   │   │
-│         │             "text": "Abstract: The..."             │   │
-│         │           },                                       │   │
-│         │           ...  # 45 chunks                         │   │
-│         │         ])                                         │   │
-│         │                                                     │   │
-│         │  C. Save Index to Disk                             │   │
-│         │     └─> pickle.dump(bm25_index,                   │   │
-│         │                      "data/bm25/bm25_index.pkl")   │   │
-│         │         Latency: ~500ms for 45 chunks              │   │
-│         │                                                     │   │
-│         │  ┌──────────────────────────────────────────────┐  │   │
-│         │  │  Task 3: LightRAG Indexing                   │  │   │
-│         │  └──────────────────────────────────────────────┘  │   │
-│         │       │                                            │   │
-│         │       ▼                                            │   │
-│         │  A. Entity Extraction (per chunk)                  │   │
-│         │     └─> For each chunk:                           │   │
-│         │         LLM Call: Ollama llama3.2:3b               │   │
-│         │         POST http://localhost:11434/api/generate   │   │
-│         │         Body: {                                    │   │
-│         │           "model": "llama3.2:3b",                  │   │
-│         │           "prompt": "Extract entities from:\n      │   │
-│         │                      'Abstract: The dominant...'", │   │
-│         │           "stream": false                          │   │
-│         │         }                                          │   │
-│         │                                                     │   │
-│         │         Response: {                                │   │
-│         │           "entities": [                            │   │
-│         │             {                                      │   │
-│         │               "text": "Transformer",               │   │
-│         │               "type": "MODEL"                      │   │
-│         │             },                                     │   │
-│         │             {                                      │   │
-│         │               "text": "Attention Mechanism",       │   │
-│         │               "type": "TECHNIQUE"                  │   │
-│         │             }                                      │   │
-│         │           ],                                       │   │
-│         │           "relationships": [                       │   │
-│         │             {                                      │   │
-│         │               "source": "Transformer",             │   │
-│         │               "rel": "USES",                       │   │
-│         │               "target": "Attention Mechanism"      │   │
-│         │             }                                      │   │
-│         │           ]                                        │   │
-│         │         }                                          │   │
-│         │         Latency: ~500ms per chunk × 45 chunks      │   │
-│         │                  = 22.5s (parallel batches → 8s)   │   │
-│         │                                                     │   │
-│         │  B. Store in Neo4j                                 │   │
-│         │     └─> For each entity:                          │   │
-│         │         Neo4j Cypher:                              │   │
-│         │           MERGE (e:Entity {name: "Transformer"})   │   │
-│         │           SET e.type = "MODEL",                    │   │
-│         │               e.source = "transformer_paper.pdf"   │   │
-│         │                                                     │   │
-│         │         For each relationship:                     │   │
-│         │           MATCH (s:Entity {name: "Transformer"})   │   │
-│         │           MATCH (t:Entity {name: "Attention..."})  │   │
-│         │           MERGE (s)-[r:USES]->(t)                  │   │
-│         │           SET r.weight = 0.9                       │   │
-│         │                                                     │   │
-│         │         Bolt Connection: localhost:7687            │   │
-│         │         Latency: ~3s for 45 chunks                 │   │
-│         │                                                     │   │
-│         │  C. Community Detection (Post-Indexing)            │   │
-│         │     └─> Run Leiden Algorithm (graspologic)        │   │
-│         │         Neo4j Cypher:                              │   │
-│         │           CALL gds.graph.project(...)              │   │
-│         │           CALL gds.leiden.stream(...)              │   │
-│         │                                                     │   │
-│         │         Communities: [                             │   │
-│         │           {                                        │   │
-│         │             "id": "community1",                    │   │
-│         │             "topic": "Transformer Architecture",   │   │
-│         │             "members": [                           │   │
-│         │               "Transformer",                       │   │
-│         │               "Attention Mechanism",               │   │
-│         │               "Multi-Head Attention"               │   │
-│         │             ]                                      │   │
-│         │           }                                        │   │
+│         │         Entities extracted: [                      │   │
+│         │           {"text": "Transformer", "type": "MODEL"} │   │
+│         │           {"text": "Attention Mechanism", ...}     │   │
 │         │         ]                                          │   │
-│         │         Latency: ~2s                               │   │
+│         │                                                     │   │
+│         │         Store in Neo4j:                            │   │
+│         │         MERGE (e:Entity {name: "Transformer"})     │   │
+│         │         MERGE (s)-[r:USES]->(t)                    │   │
+│         │         SET r.weight = 0.9                         │   │
+│         │                                                     │   │
+│         │         Community Detection:                       │   │
+│         │         CALL gds.leiden.stream(...)                │   │
+│         │         Latency: ~8s for 45 chunks                 │   │
 │         │                                                     │   │
 │         └─────────────────────────────────────────────────────┘   │
 │                                                                     │
@@ -711,11 +641,10 @@ Total Latency: ~350ms
 │     └─> WebSocket updates to UI:                                  │
 │         {                                                          │
 │           "status": "indexing",                                    │
-│           "progress": {                                            │
-│             "qdrant": "45/45 chunks",                              │
-│             "bm25": "45/45 chunks",                                │
-│             "lightrag": "30/45 chunks"                             │
-│           }                                                        │
+│           "overall_progress": 0.75,  # 75% complete               │
+│           "current_node": "embedding_node",                        │
+│           "chunks_processed": 45,                                  │
+│           "entities_extracted": 0  # Not yet reached graph node    │
 │         }                                                          │
 │                                                                     │
 │  6. Completion Response                                             │
@@ -735,14 +664,21 @@ Total Latency: ~350ms
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 
-Total Latency: ~10s (parallel indexing)
-- Qdrant: ~2s
-- BM25: ~500ms (parallel)
-- LightRAG: ~8s (parallel entity extraction)
-- Community Detection: ~2s (runs after indexing)
+Total Latency: ~12s (Sequential LangGraph Pipeline, Sprint 21-22)
+- Memory Check: ~100ms (Neo4j query)
+- Format Routing: ~50ms (rule-based decision)
+- Docling Parse: ~3s (GPU-accelerated OCR)
+- Chunking: ~500ms (adaptive strategy)
+- Embedding: ~2s (BGE-M3, batch of 32)
+- Qdrant + BM25: ~1s (parallel upload)
+- Graph Extraction: ~5s (LLM entity extraction + Neo4j)
+- Community Detection: ~500ms (Leiden algorithm)
 
-Sequential would be: ~22.5s
-Speedup: 2.25x
+Sprint 21 Improvements:
+- 3.5x faster parsing (Docling vs LlamaIndex: 120s vs 420s)
+- 95% OCR accuracy (EasyOCR GPU vs 70% LlamaIndex)
+- 92% table structure preservation
+- 30+ format support (FormatRouter Sprint 22.3)
 ```
 
 ---
@@ -998,7 +934,7 @@ TTL: 3600 seconds (1 hour)
 
 # Embedding Cache (LRU)
 KEY: "embedding:{sha256(text)}"
-VALUE: [0.123, -0.456, ..., 0.789]  # 768d vector
+VALUE: [0.123, -0.456, ..., 0.789]  # 1024d vector (BGE-M3, Sprint 16)
 TTL: 604800 seconds (7 days)
 ```
 
@@ -1007,13 +943,13 @@ TTL: 604800 seconds (7 days)
 ```python
 # Vector Collection
 collection_name = "aegis-rag-documents"
-vector_size = 768  # nomic-embed-text
+vector_size = 1024  # bge-m3 (Sprint 16)
 distance = "Cosine"
 
 # Point Structure
 {
     "id": "doc1_chunk1",
-    "vector": [0.123, -0.456, ...],  # 768 dimensions
+    "vector": [0.123, -0.456, ...],  # 1024 dimensions (BGE-M3)
     "payload": {
         "text": "RAG is Retrieval-Augmented Generation...",
         "source": "rag_overview.md",
@@ -1029,12 +965,12 @@ distance = "Cosine"
 
 # Conversation History Collection
 collection_name = "conversation-history"
-vector_size = 768
+vector_size = 1024  # bge-m3 (Sprint 16)
 
 # Point Structure
 {
     "id": "conv1",
-    "vector": [0.234, -0.567, ...],
+    "vector": [0.234, -0.567, ...],  # 1024 dimensions (BGE-M3)
     "payload": {
         "session_id": "abc123",
         "summary": "Discussed RAG definition and use cases",
@@ -1171,7 +1107,20 @@ vector_size = 768
 
 ---
 
-**Last Updated:** 2025-10-28 (Sprint 16)
+**Last Updated:** 2025-11-18 (Sprint 28 - Post Sprint 28 Architecture Alignment)
 **Status:** Active Development
-**Sprint 16 Changes:** Unified chunking, BGE-M3 standardization, admin re-indexing
-**Next:** Sprint 17 (TBD)
+
+**Architecture Changes Since Sprint 16:**
+- **Sprint 21-22:** LangGraph ingestion pipeline with Docling CUDA + Format Router
+- **Sprint 23:** AegisLLMProxy multi-cloud LLM routing (ADR-033)
+- **Sprint 25:** Complete migration to AegisLLMProxy (Feature 25.10)
+- **Sprint 28:** Frontend UX enhancements (Perplexity-style interface)
+
+**Current Architecture (Sprint 28):**
+- **Embeddings:** BGE-M3 (1024-dim, Sprint 16) - Local & Cost-Free
+- **LLM Routing:** AegisLLMProxy (Local Ollama → Alibaba Cloud → OpenAI)
+- **Search Strategy:** Hybrid (Vector BGE-M3 + BM25 Keyword + RRF Fusion)
+- **Ingestion:** LangGraph pipeline (Docling primary, LlamaIndex fallback)
+- **Document Formats:** 30+ formats (FormatRouter Sprint 22.3)
+
+**Next:** Sprint 29 (Advanced Features & Performance Testing)
