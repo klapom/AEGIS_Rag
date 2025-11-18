@@ -408,7 +408,6 @@ class AegisLLMProxy:
             if tokens_used > 0:
                 tokens_input = tokens_used // 2
                 tokens_output = tokens_used - tokens_input
-                estimation_used = True
                 logger.warning(
                     "token_usage_estimated",
                     provider=provider,

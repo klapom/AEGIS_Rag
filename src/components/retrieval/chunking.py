@@ -57,8 +57,7 @@ from src.core.config import settings
 # to be installed for basic imports.
 if TYPE_CHECKING:
     from llama_index.core import Document
-    from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.core.schema import NodeRelationship, RelatedNodeInfo, TextNode
+    from llama_index.core.schema import TextNode
 
 logger = structlog.get_logger(__name__)
 

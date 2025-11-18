@@ -16,6 +16,10 @@ from prometheus_client import Counter, Gauge, Histogram
 
 logger = structlog.get_logger(__name__)
 
+# Capacity calculation constants
+MAX_VECTORS = 10_000_000  # Qdrant: 10M vectors = 100% capacity
+MAX_NODES = 100_000  # Graphiti: 100K nodes = 100% capacity
+
 
 class MemoryMonitoring:
     """Prometheus metrics collector for memory system health.
@@ -216,7 +220,6 @@ class MemoryMonitoring:
                     total_vectors += vectors_count
 
             # Calculate capacity (assuming 10M vectors is 100%)
-            MAX_VECTORS = 10_000_000
             capacity = min(1.0, total_vectors / MAX_VECTORS) if MAX_VECTORS > 0 else 0.0
 
             self.qdrant_capacity.set(capacity)
@@ -272,7 +275,6 @@ class MemoryMonitoring:
                 node_count = node_record["node_count"] if node_record else 0
 
             # Calculate capacity (assuming 100K nodes is 100%)
-            MAX_NODES = 100_000
             capacity = min(1.0, node_count / MAX_NODES) if MAX_NODES > 0 else 0.0
 
             self.graphiti_capacity.set(capacity)

@@ -18,6 +18,10 @@ from src.components.memory.redis_manager import get_redis_manager
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/health/memory", tags=["health", "memory"])
 
+# Capacity calculation constants (same as in monitoring.py)
+MAX_VECTORS = 10_000_000  # Qdrant: 10M vectors = 100% capacity
+MAX_NODES = 100_000  # Graphiti: 100K nodes = 100% capacity
+
 
 @router.get(
     "/",
@@ -272,8 +276,6 @@ async def check_qdrant_health() -> dict[str, Any]:
                 )
 
         # Estimate capacity (assuming 10M vectors is 100% capacity)
-        # TODO: Make this configurable via settings
-        MAX_VECTORS = 10_000_000
         capacity = min(1.0, total_vectors / MAX_VECTORS) if MAX_VECTORS > 0 else 0.0
 
         # Determine health status based on capacity
@@ -340,8 +342,6 @@ async def check_graphiti_health() -> dict[str, Any]:
             episode_count = episode_record["episode_count"] if episode_record else 0
 
         # Estimate capacity (assuming 100K nodes is 100% capacity)
-        # TODO: Make this configurable via settings
-        MAX_NODES = 100_000
         capacity = min(1.0, node_count / MAX_NODES) if MAX_NODES > 0 else 0.0
 
         # Determine health status based on capacity

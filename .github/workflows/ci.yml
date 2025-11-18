@@ -115,9 +115,9 @@ jobs:
           pip install poetry
           poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies (Core + Ingestion for Import Validation)
+      - name: Install Dependencies (Core + Ingestion + Reranking for Import Validation)
         run: |
-          poetry install --with ingestion --no-interaction
+          poetry install --with ingestion,reranking --no-interaction
 
       - name: Validate All Python Imports
         run: |
@@ -382,21 +382,21 @@ jobs:
       - name: Wait for Services
         run: |
           echo "🔍 Waiting for Qdrant..."
-          timeout 60 bash -c 'count=0; until curl -f http://localhost:6333/ 2>/dev/null; do echo "  Qdrant attempt $((++count))..."; sleep 2; done'
+          timeout 90 bash -c 'count=0; until curl -f http://localhost:6333/ 2>/dev/null; do echo "  Qdrant attempt $((++count))..."; sleep 2; done'
           echo "✅ Qdrant ready"
 
           echo "🔍 Waiting for Neo4j HTTP endpoint..."
-          timeout 120 bash -c 'count=0; until curl -f http://localhost:7474/ 2>/dev/null; do echo "  Neo4j HTTP attempt $((++count))/60..."; sleep 2; done'
+          timeout 180 bash -c 'count=0; until curl -f http://localhost:7474/ 2>/dev/null; do echo "  Neo4j HTTP attempt $((++count))/90..."; sleep 2; done'
           echo "✅ Neo4j HTTP ready"
 
-          echo "🔍 Waiting for Neo4j Bolt to be fully ready (this may take up to 3 minutes)..."
-          echo "  Initial 15s grace period for Neo4j startup..."
-          sleep 15
-          timeout 180 bash -c 'count=0; until echo "RETURN 1 AS result" | cypher-shell -u neo4j -p testpassword -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "  Bolt attempt $((++count))/60: not ready yet..."; sleep 3; done'
+          echo "🔍 Waiting for Neo4j Bolt to be fully ready (this may take up to 5 minutes)..."
+          echo "  Initial 20s grace period for Neo4j startup..."
+          sleep 20
+          timeout 300 bash -c 'count=0; until echo "RETURN 1 AS result" | cypher-shell -u neo4j -p testpassword -a bolt://localhost:7687 --format plain 2>/dev/null | grep -q "1"; do echo "  Bolt attempt $((++count))/100: not ready yet..."; sleep 3; done'
           echo "✅ Neo4j Bolt ready"
 
           echo "🔍 Waiting for Redis..."
-          timeout 60 bash -c 'count=0; until redis-cli ping 2>/dev/null; do echo "  Redis attempt $((++count))..."; sleep 2; done'
+          timeout 90 bash -c 'count=0; until redis-cli ping 2>/dev/null; do echo "  Redis attempt $((++count))..."; sleep 2; done'
           echo "✅ Redis ready"
 
           echo "🎉 All services ready for integration tests"
@@ -617,13 +617,13 @@ jobs:
 
       - name: Wait for Services
         run: |
-          timeout 60 bash -c 'until curl -f http://localhost:6333/ 2>/dev/null; do sleep 2; done'
+          timeout 90 bash -c 'until curl -f http://localhost:6333/ 2>/dev/null; do sleep 2; done'
           echo "✅ Qdrant ready"
 
-          timeout 120 bash -c 'until curl -f http://localhost:7474/ 2>/dev/null; do sleep 2; done'
+          timeout 180 bash -c 'until curl -f http://localhost:7474/ 2>/dev/null; do sleep 2; done'
           echo "✅ Neo4j ready"
 
-          timeout 60 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
+          timeout 90 bash -c 'until redis-cli ping 2>/dev/null; do sleep 2; done'
           echo "✅ Redis ready"
 
       - name: Start Backend Server

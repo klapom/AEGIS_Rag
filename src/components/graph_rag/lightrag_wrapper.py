@@ -28,6 +28,15 @@ from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.models import GraphQueryResult
 
+# Import deprecated ThreePhaseExtractor (still used in _extract_per_chunk_with_three_phase)
+# TODO Sprint 30: Migrate to ExtractionService and remove this import
+try:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "archive" / "deprecated" / "sprint-21"))
+    from three_phase_extractor_deprecated import ThreePhaseExtractor  # noqa: F401
+except ImportError:
+    ThreePhaseExtractor = None  # Graceful fallback
+
 logger = structlog.get_logger(__name__)
 
 
