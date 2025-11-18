@@ -185,7 +185,8 @@ jobs:
       - name: Check Naming Conventions
         run: |
           echo "Checking naming conventions..."
-          python scripts/check_naming.py src/**/*.py
+          # Use find to avoid bash glob expansion issues in CI
+          find src -name "*.py" -type f -exec python scripts/check_naming.py {} +
 
   # ============================================================
   # JOB 4: ADR VALIDATION
@@ -248,6 +249,13 @@ jobs:
       - name: Install Dependencies (Core + Dev)
         run: |
           poetry install --with dev --no-interaction --no-ansi
+
+      - name: Clear Python Bytecode Cache
+        run: |
+          echo "Clearing Python bytecode cache to prevent stale .pyc issues..."
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.pyc" -delete 2>/dev/null || true
+          echo "Cache cleared"
 
       - name: Run Unit Tests
         run: |
@@ -396,6 +404,7 @@ jobs:
       - name: Run Integration Tests
         timeout-minutes: 20  # Increased from default 10 to 20
         env:
+          CI: true  # Enable LLM auto-mocking via conftest.py
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           NEO4J_URI: bolt://localhost:7687
@@ -403,7 +412,7 @@ jobs:
           NEO4J_PASSWORD: testpassword
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          # NOTE: No Ollama in CI - tests should mock or skip LLM calls
+          # NOTE: No Ollama in CI - tests auto-mocked via tests/integration/conftest.py
         run: |
           echo "Running integration tests..."
           poetry run pytest tests/integration/ \
