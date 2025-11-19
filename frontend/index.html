@@ -13,7 +13,19 @@
         Scene: class {},
         PerspectiveCamera: class {},
         WebGLRenderer: class {},
-        Vector3: class {},
+        Vector2: class {
+          constructor(x, y) {
+            this.x = x || 0;
+            this.y = y || 0;
+          }
+        },
+        Vector3: class {
+          constructor(x, y, z) {
+            this.x = x || 0;
+            this.y = y || 0;
+            this.z = z || 0;
+          }
+        },
         Color: class {},
         Object3D: class {},
         Group: class {},
