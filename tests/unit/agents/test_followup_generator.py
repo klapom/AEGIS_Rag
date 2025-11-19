@@ -42,6 +42,7 @@ async def test_generate_followup_questions_success():
         prompt_tokens=150,
         completion_tokens=80,
         total_tokens=230,
+        tokens_used=230,
         cost_usd=0.0,
         latency_ms=450.0,
     )
@@ -91,6 +92,7 @@ async def test_generate_followup_questions_with_source_objects():
         prompt_tokens=120,
         completion_tokens=50,
         total_tokens=170,
+        tokens_used=170,
         cost_usd=0.0,
         latency_ms=380.0,
     )
@@ -123,6 +125,7 @@ async def test_generate_followup_questions_no_sources():
         prompt_tokens=100,
         completion_tokens=40,
         total_tokens=140,
+        tokens_used=140,
         cost_usd=0.0,
         latency_ms=320.0,
     )
@@ -157,6 +160,7 @@ async def test_generate_followup_questions_markdown_wrapped_json():
         prompt_tokens=100,
         completion_tokens=60,
         total_tokens=160,
+        tokens_used=160,
         cost_usd=0.0,
         latency_ms=400.0,
     )
@@ -186,6 +190,7 @@ async def test_generate_followup_questions_invalid_json():
         prompt_tokens=100,
         completion_tokens=20,
         total_tokens=120,
+        tokens_used=120,
         cost_usd=0.0,
         latency_ms=300.0,
     )
@@ -215,6 +220,7 @@ async def test_generate_followup_questions_non_list_response():
         prompt_tokens=100,
         completion_tokens=30,
         total_tokens=130,
+        tokens_used=130,
         cost_usd=0.0,
         latency_ms=350.0,
     )
@@ -251,6 +257,7 @@ async def test_generate_followup_questions_filters_short_questions():
         prompt_tokens=100,
         completion_tokens=70,
         total_tokens=170,
+        tokens_used=170,
         cost_usd=0.0,
         latency_ms=420.0,
     )
@@ -282,6 +289,7 @@ async def test_generate_followup_questions_limits_to_max():
         prompt_tokens=100,
         completion_tokens=100,
         total_tokens=200,
+        tokens_used=200,
         cost_usd=0.0,
         latency_ms=500.0,
     )
@@ -332,6 +340,7 @@ async def test_generate_followup_questions_truncates_long_inputs():
         prompt_tokens=150,
         completion_tokens=50,
         total_tokens=200,
+        tokens_used=200,
         cost_usd=0.0,
         latency_ms=400.0,
     )
@@ -367,6 +376,7 @@ async def test_generate_followup_questions_empty_strings():
         prompt_tokens=80,
         completion_tokens=40,
         total_tokens=120,
+        tokens_used=120,
         cost_usd=0.0,
         latency_ms=300.0,
     )
