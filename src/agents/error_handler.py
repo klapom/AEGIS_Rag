@@ -7,7 +7,7 @@ utilities for graceful degradation.
 Sprint 4 Feature 4.6: Error Handling & Retry Logic
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -30,7 +30,7 @@ class AgentExecutionError(Exception):
         self,
         message: str,
         agent_name: str | None = None,
-        context: Dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
         original_error: Exception | None = None,
     ) -> None:
         """Initialize agent execution error.
@@ -129,10 +129,10 @@ class TimeoutError(AgentExecutionError):
 
 def handle_agent_error(
     error: Exception,
-    state: Dict[str, Any],
+    state: dict[str, Any],
     agent_name: str,
     context: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Handle agent execution error and update state.
 
     This function provides centralized error handling for all agents.

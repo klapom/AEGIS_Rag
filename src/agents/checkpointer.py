@@ -8,7 +8,7 @@ Sprint 11 Feature 11.5: Redis LangGraph Checkpointer
 Sprint 12 Feature 12.3: Complete Redis Async Cleanup
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import redis.asyncio
 import structlog
@@ -55,7 +55,7 @@ def create_checkpointer() -> MemorySaver:
     return checkpointer
 
 
-def create_thread_config(session_id: str) -> Dict[str, Any]:
+def create_thread_config(session_id: str) -> dict[str, Any]:
     """Create LangGraph thread configuration for conversation tracking.
 
     The thread_id is used to identify and restore conversation state.
@@ -82,7 +82,7 @@ def create_thread_config(session_id: str) -> Dict[str, Any]:
 def get_conversation_history(
     checkpointer: MemorySaver,
     session_id: str,
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Retrieve conversation history for a session.
 
     Args:
