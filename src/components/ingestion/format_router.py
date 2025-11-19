@@ -417,21 +417,13 @@ async def check_docling_availability() -> bool:
         - Container start is idempotent (safe to call if already running)
     """
     try:
-        from src.components.ingestion.docling_client import DoclingContainerClient
-        from src.core.config import settings
-
-        # Sprint 30: Use config for Docling URL
-        client = DoclingContainerClient(
-            base_url=settings.docling_base_url,
-            timeout_seconds=settings.docling_timeout_seconds,
-            max_retries=settings.docling_max_retries,
-        )
-
         # Simple health check: verify container is accessible
         # Note: We don't actually start the container here (format router just checks availability)
         # The container should already be running externally
         # Sprint 30: Increased timeout to 15s to handle busy containers
         import httpx
+
+        from src.core.config import settings
         async with httpx.AsyncClient(timeout=15.0) as http_client:
             response = await http_client.get(f"{settings.docling_base_url}/health")
             response.raise_for_status()

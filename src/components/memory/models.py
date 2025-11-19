@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+
 @dataclass
 class MemoryEntry:
     """Memory entry for Redis working memory storage.

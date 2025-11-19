@@ -10,6 +10,7 @@ import base64
 import json
 from typing import Any
 
+
 class ResultParser:
     """Parse tool execution results into normalized format."""
 

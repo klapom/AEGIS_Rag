@@ -10,6 +10,7 @@ from typing import Any
 
 from src.components.mcp.types import MCPServer, MCPTool
 
+
 class MCPClientStub:
     """Stub MCP client for testing.
 

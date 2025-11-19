@@ -5,6 +5,7 @@ Sprint 22 Feature 22.2.2: Standardized error responses with error codes.
 
 from typing import Any
 
+
 class AegisRAGException(Exception):  # noqa: N818
     """Base exception for all AEGIS RAG errors.
 

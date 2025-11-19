@@ -9,6 +9,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 from dataclasses import dataclass
 from typing import Any
 
+
 @dataclass
 class MCPTool:
     """Represents an MCP tool available for execution.

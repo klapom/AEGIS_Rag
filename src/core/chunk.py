@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
+
 class ChunkStrategy(BaseModel):
     """Configuration for chunking strategy.
 
