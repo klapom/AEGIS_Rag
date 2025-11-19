@@ -141,9 +141,7 @@ class Chunk(BaseModel):
         input_str = f"{document_id}:{chunk_index}:{content}"
         hash_hex = hashlib.sha256(input_str.encode("utf-8")).hexdigest()[:32]
         # Format as UUID4: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-        return (
-            f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"
-        )
+        return f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"  # noqa: E501
 
     def to_qdrant_payload(self) -> dict[str, Any]:
         """Convert chunk to Qdrant point payload.
@@ -200,7 +198,10 @@ class Chunk(BaseModel):
                     "chunk_id": "a1b2c3d4e5f6g7h8",
                     "document_id": "doc_001",
                     "chunk_index": 0,
-                    "content": "AegisRAG is a hybrid RAG system combining vector search, graph reasoning, and temporal memory.",
+                    "content": (
+                        "AegisRAG is a hybrid RAG system combining vector search, "
+                        "graph reasoning, and temporal memory."
+                    ),
                     "start_char": 0,
                     "end_char": 92,
                     "metadata": {"source": "README.md", "section": "Overview"},

@@ -14,6 +14,7 @@ import pytest
 from src.agents.answer_generator import AnswerGenerator
 from src.components.llm_proxy.models import LLMResponse
 
+
 # Skip all citation tests until feature is implemented
 pytestmark = pytest.mark.skip(reason="Feature 27.10 (generate_with_citations) not yet implemented")
 
@@ -39,7 +40,10 @@ def sample_contexts():
     """Sample context documents for testing."""
     return [
         {
-            "text": "AEGIS RAG is an agentic enterprise RAG system with vector search and graph reasoning.",
+            "text": (
+                "AEGIS RAG is an agentic enterprise RAG system "
+                "with vector search and graph reasoning."
+            ),
             "source": "docs/CLAUDE.md",
             "title": "CLAUDE.md",
             "score": 0.95,
@@ -59,7 +63,9 @@ class TestAnswerGeneratorCitations:
     """Test suite for citation generation functionality."""
 
     @pytest.mark.asyncio
-    async def test_generate_with_citations_basic(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_generate_with_citations_basic(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test basic citation generation."""
         # Mock LLM response with citations
         mock_response = LLMResponse(
@@ -111,7 +117,9 @@ class TestAnswerGeneratorCitations:
         mock_llm_proxy.generate.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_generate_with_citations_multiple_citations(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_generate_with_citations_multiple_citations(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test answer with multiple citations for same sentence."""
         # Mock LLM response with multiple citations
         mock_response = LLMResponse(
@@ -195,7 +203,9 @@ class TestAnswerGeneratorCitations:
         assert len(citation_map) == 10
 
     @pytest.mark.asyncio
-    async def test_generate_with_citations_llm_failure_fallback(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_generate_with_citations_llm_failure_fallback(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test fallback behavior when LLM generation fails."""
         # Mock LLM to raise exception
         mock_llm_proxy.generate.side_effect = Exception("LLM service unavailable")
@@ -211,7 +221,9 @@ class TestAnswerGeneratorCitations:
         assert len(citation_map) == 2
 
     @pytest.mark.asyncio
-    async def test_citation_extraction_from_answer(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_citation_extraction_from_answer(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test that cited sources are extracted correctly for logging."""
         mock_response = LLMResponse(
             content="AEGIS RAG is a system [1] with features [3]. It does not use [2].",
@@ -234,7 +246,9 @@ class TestAnswerGeneratorCitations:
         assert "3" in cited_sources
 
     @pytest.mark.asyncio
-    async def test_citation_map_metadata_fields(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_citation_map_metadata_fields(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test that citation map includes all required metadata fields."""
         mock_response = LLMResponse(
             content="Test answer [1].",
@@ -268,7 +282,9 @@ class TestAnswerGeneratorPrompt:
     """Test prompt formatting for citations."""
 
     @pytest.mark.asyncio
-    async def test_prompt_includes_source_ids(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_prompt_includes_source_ids(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test that prompt includes [Source N] markers."""
         mock_response = LLMResponse(
             content="Test answer.",
@@ -279,7 +295,9 @@ class TestAnswerGeneratorPrompt:
         )
         mock_llm_proxy.generate.return_value = mock_response
 
-        await answer_generator.generate_with_citations(query="Test query", contexts=sample_contexts)
+        await answer_generator.generate_with_citations(
+            query="Test query", contexts=sample_contexts
+        )
 
         # Verify LLM was called
         assert mock_llm_proxy.generate.called

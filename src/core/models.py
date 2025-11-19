@@ -256,7 +256,9 @@ class GraphEntity(BaseModel):
     transaction_from: datetime | None = Field(
         None, description="Transaction time start (database time)"
     )
-    transaction_to: datetime | None = Field(None, description="Transaction time end (None=current)")
+    transaction_to: datetime | None = Field(
+        None, description="Transaction time end (None=current)"
+    )
     changed_by: str = Field(default="system", description="User/system that made the change")
     change_reason: str = Field(default="", description="Reason for the change")
 
@@ -348,7 +350,10 @@ class GraphQueryResult(BaseModel):
         json_schema_extra={
             "example": {
                 "query": "What companies has John Smith worked for?",
-                "answer": "John Smith has worked for Google (2020-present) and Microsoft (2015-2020).",
+                "answer": (
+                    "John Smith has worked for Google (2020-present) "
+                    "and Microsoft (2015-2020)."
+                ),
                 "entities": [
                     {
                         "id": "e1",
