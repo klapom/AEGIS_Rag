@@ -9,7 +9,7 @@ This module provides FastAPI endpoints for graph analytics:
 - Graph statistics
 """
 
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 
@@ -80,13 +80,13 @@ async def get_entity_centrality(
 
 @router.get(
     "/pagerank",
-    response_model=list[Dict[str, Any]],
+    response_model=list[dict[str, Any]],
     summary="Get PageRank scores",
     description="Calculate PageRank scores for top entities",
 )
 async def get_pagerank_scores(
     top_k: Annotated[int, Query(ge=1, le=100, description="Number of top entities")] = 10,
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Get PageRank scores for top entities.
 
     Args:
@@ -121,13 +121,13 @@ async def get_pagerank_scores(
 
 @router.get(
     "/influential",
-    response_model=list[Dict[str, Any]],
+    response_model=list[dict[str, Any]],
     summary="Get most influential entities",
     description="Find the most influential entities by PageRank",
 )
 async def get_influential_entities(
     top_k: Annotated[int, Query(ge=1, le=100, description="Number of top entities")] = 10,
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Get most influential entities.
 
     Args:
@@ -162,11 +162,11 @@ async def get_influential_entities(
 
 @router.get(
     "/gaps",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Detect knowledge gaps",
     description="Identify knowledge gaps (orphan entities, sparse areas, isolated components)",
 )
-async def detect_knowledge_gaps() -> Dict[str, Any]:
+async def detect_knowledge_gaps() -> dict[str, Any]:
     """Detect knowledge gaps in the graph.
 
     Returns:

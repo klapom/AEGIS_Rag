@@ -4,7 +4,7 @@ Integrates existing HybridSearch from Sprint 2-3 into LangGraph orchestration.
 Performs vector + BM25 search with optional reranking.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from tenacity import (
     retry,
@@ -58,7 +58,7 @@ class VectorSearchAgent(BaseAgent):
             max_retries=self.max_retries,
         )
 
-    async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, state: dict[str, Any]) -> dict[str, Any]:
         """Process state and perform hybrid search.
 
         Args:
@@ -159,7 +159,7 @@ class VectorSearchAgent(BaseAgent):
         retry=retry_if_exception_type(VectorSearchError),
         reraise=True,
     )
-    async def _search_with_retry(self, query: str) -> Dict[str, Any]:
+    async def _search_with_retry(self, query: str) -> dict[str, Any]:
         """Perform hybrid search with retry logic.
 
         Args:
@@ -185,7 +185,7 @@ class VectorSearchAgent(BaseAgent):
             )
             raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
 
-    def _convert_results(self, results: list[Dict[str, Any]]) -> list[RetrievedContext]:
+    def _convert_results(self, results: list[dict[str, Any]]) -> list[RetrievedContext]:
         """Convert HybridSearch results to RetrievedContext format.
 
         Args:
@@ -240,7 +240,7 @@ class VectorSearchAgent(BaseAgent):
 # ============================================================================
 
 
-async def vector_search_node(state: Dict[str, Any]) -> Dict[str, Any]:
+async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
     """LangGraph node function for vector search.
 
     This function is called by LangGraph when the graph executes.

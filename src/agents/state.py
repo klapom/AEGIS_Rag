@@ -8,7 +8,7 @@ Uses MessagesState as the base to integrate with LangChain message history.
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ class RetrievedContext(BaseModel):
     search_type: Literal["vector", "bm25", "hybrid", "graph"] = Field(
         default="hybrid", description="Search type used"
     )
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class SearchMetadata(BaseModel):
@@ -67,7 +67,7 @@ class AgentState(MessagesState):
         default="hybrid",
         description="Detected query intent (vector, graph, hybrid, direct)",
     )
-    retrieved_contexts: list[Dict[str, Any]] = Field(
+    retrieved_contexts: list[dict[str, Any]] = Field(
         default_factory=list,
         description="Retrieved document contexts from search",
     )
@@ -75,15 +75,15 @@ class AgentState(MessagesState):
         default="hybrid",
         description="Search mode to use for retrieval",
     )
-    graph_query_result: Dict[str, Any] | None = Field(
+    graph_query_result: dict[str, Any] | None = Field(
         default=None,
         description="Results from graph RAG query (Sprint 5)",
     )
-    memory_results: Dict[str, Any] | None = Field(
+    memory_results: dict[str, Any] | None = Field(
         default=None,
         description="Results from memory retrieval (Sprint 7)",
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata for execution tracking",
     )
@@ -124,7 +124,7 @@ class QueryMetadata(BaseModel):
     )
 
 
-def create_initial_state(query: str, intent: str = "hybrid") -> Dict[str, Any]:
+def create_initial_state(query: str, intent: str = "hybrid") -> dict[str, Any]:
     """Create initial agent state from user query.
 
     Args:
@@ -148,10 +148,10 @@ def create_initial_state(query: str, intent: str = "hybrid") -> Dict[str, Any]:
 
 
 def update_state_metadata(
-    state: Dict[str, Any],
+    state: dict[str, Any],
     agent_name: str,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Update state metadata with agent execution info.
 
     Args:

@@ -361,7 +361,7 @@ class GraphQueryAgent(BaseAgent):
 # ============================================================================
 
 
-async def graph_query_node(state: Dict[str, Any]) -> Dict[str, Any]:
+async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
     """LangGraph node function for graph query processing.
 
     This is the node function that gets added to the LangGraph StateGraph.
