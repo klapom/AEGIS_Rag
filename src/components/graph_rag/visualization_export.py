@@ -10,7 +10,7 @@ Features:
 - Depth-based traversal
 """
 
-from typing import Any, Literal, Dict
+from typing import Any, Dict, Literal
 
 import structlog
 

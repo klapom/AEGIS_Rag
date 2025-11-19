@@ -10,10 +10,21 @@ Tests cover:
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from PIL import Image
+
+# Conditional import for PIL (Pillow)
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.langgraph_nodes import image_enrichment_node
+
+# Skip all tests in this module if PIL is not available
+pytestmark = pytest.mark.skipif(
+    not PIL_AVAILABLE, reason="PIL (Pillow) not installed - install with ingestion extras"
+)
 
 
 # =============================================================================

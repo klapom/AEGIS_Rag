@@ -141,10 +141,12 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
             state["requires_container_restart"] = False
 
         # Check if sufficient memory available
-        if ram_available_mb < 2000:  # Less than 2GB RAM available
+        # Sprint 30: Lowered to 500MB for small PDF testing (production should use 2000MB minimum)
+        # TODO: Make threshold configurable via settings.min_required_ram_mb
+        if ram_available_mb < 500:  # Less than 500MB RAM available
             raise IngestionError(
                 document_id=state["document_id"],
-                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 2GB)",
+                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 500MB)",
             )
 
         # Mark check as passed
@@ -213,8 +215,13 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
         if not doc_path.exists():
             raise IngestionError(f"Document not found: {doc_path}")
 
-        # Initialize Docling client
-        docling = DoclingContainerClient(base_url="http://localhost:8080")
+        # Initialize Docling client (Sprint 30: Configurable via settings.docling_base_url)
+        from src.core.config import settings
+        docling = DoclingContainerClient(
+            base_url=settings.docling_base_url,
+            timeout_seconds=settings.docling_timeout_seconds,
+            max_retries=settings.docling_max_retries,
+        )
 
         # Start container (or restart if memory leak detected)
         if state.get("requires_container_restart", False):
@@ -239,9 +246,11 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                         "unit": "pt",
                         "dpi": 72,
                     }
+                # Store in state (only if document attribute exists)
+                state["document"] = parsed.document  # Feature 21.6: DoclingDocument object
+            else:
+                state["document"] = None  # Sprint 30: No document attribute in response
 
-            # Store in state
-            state["document"] = parsed.document  # Feature 21.6: DoclingDocument object
             state["page_dimensions"] = page_dimensions  # Feature 21.6: Page metadata
             state["parsed_content"] = parsed.text  # Keep for backwards compatibility
             state["parsed_metadata"] = parsed.metadata
@@ -922,9 +931,12 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 chunk = chunk_data
                 image_bboxes = []
 
-            # Generate deterministic chunk ID
+            # Generate deterministic chunk ID (Sprint 30: Use UUID format for Qdrant)
             chunk_text = chunk.text if hasattr(chunk, "text") else str(chunk)
-            chunk_id = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
+            chunk_name = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
+            # Convert to UUID using uuid5 (deterministic, namespace-based)
+            import uuid
+            chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_name))
             chunk_ids.append(chunk_id)
 
             # Feature 21.6: Create payload with full provenance

@@ -12,9 +12,24 @@ Tests cover:
 """
 
 import pytest
-from llama_index.core import Document
+
+# Conditional import for llama_index
+try:
+    from llama_index.core import Document
+    LLAMA_INDEX_AVAILABLE = True
+except ImportError:
+    LLAMA_INDEX_AVAILABLE = False
+    # Create a mock Document class for type checking
+    class Document:  # type: ignore
+        """Mock Document for when llama_index is not available."""
+        pass
 
 from src.components.retrieval.chunking import AdaptiveChunker, ChunkingStrategy
+
+# Skip all tests in this module if llama_index is not available
+pytestmark = pytest.mark.skipif(
+    not LLAMA_INDEX_AVAILABLE, reason="llama_index not installed - install with ingestion extras"
+)
 
 # ============================================================================
 # Fixtures

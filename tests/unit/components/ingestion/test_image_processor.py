@@ -12,12 +12,23 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from PIL import Image
+
+# Conditional import for PIL (Pillow)
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 from src.components.ingestion.image_processor import (
     ImageProcessor,
     ImageProcessorConfig,
     should_process_image,
+)
+
+# Skip all tests in this module if PIL is not available
+pytestmark = pytest.mark.skipif(
+    not PIL_AVAILABLE, reason="PIL (Pillow) not installed - install with ingestion extras"
 )
 
 
