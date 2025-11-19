@@ -7,7 +7,7 @@ Sprint 9 Feature 9.8: Action Agent (LangGraph Integration)
 """
 
 import operator
-from typing import Annotated, Any, List, Dict, Set, Any
+from typing import Annotated, Any
 
 from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
@@ -33,9 +33,9 @@ class ActionAgentState(TypedDict):
     """
 
     action: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     selected_tool: str
-    tool_result: Dict[str, Any]
+    tool_result: dict[str, Any]
     error: str
     messages: Annotated[list[str], operator.add]
 
@@ -190,8 +190,8 @@ class ActionAgent:
         return state
 
     async def execute(
-        self, action: str, parameters: Dict[str, Any] | None = None
-    ) -> Dict[str, Any]:
+        self, action: str, parameters: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Execute an action using MCP tools.
 
         Args:
@@ -260,7 +260,7 @@ class ActionAgent:
         tools = self.client.list_tools()
         return [tool.name for tool in tools]
 
-    def get_tool_info(self, tool_name: str) -> Dict[str, Any] | None:
+    def get_tool_info(self, tool_name: str) -> dict[str, Any] | None:
         """Get information about a specific tool.
 
         Args:
