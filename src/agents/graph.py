@@ -8,7 +8,7 @@ Sprint 5 Feature 5.5: Graph Query Agent Integration
 Implements the foundational graph with optional checkpointing for conversation history.
 """
 
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -22,7 +22,7 @@ from src.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-async def router_node(state: Dict[str, Any]) -> Dict[str, Any]:
+async def router_node(state: dict[str, Any]) -> dict[str, Any]:
     """Route queries based on intent.
 
     This is a placeholder router that will be enhanced in Feature 4.2.
@@ -54,7 +54,7 @@ async def router_node(state: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
-async def llm_answer_node(state: Dict[str, Any]) -> Dict[str, Any]:
+async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     """Generate LLM-based answer from retrieved contexts.
 
     Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
