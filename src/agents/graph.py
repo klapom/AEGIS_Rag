@@ -91,7 +91,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-def route_query(state: Dict[str, Any]) -> Literal["vector_search", "graph", "memory", "end"]:
+def route_query(state: dict[str, Any]) -> Literal["vector_search", "graph", "memory", "end"]:
     """Determine the next node based on intent.
 
     This is a conditional edge function that determines routing.
@@ -234,8 +234,8 @@ async def invoke_graph(
     query: str,
     intent: str = "hybrid",
     checkpointer: MemorySaver | None = None,
-    config: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Execute the graph with a query.
 
     This is a convenience function for invoking the graph.

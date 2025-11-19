@@ -244,7 +244,7 @@ def _is_retryable_error(error: Exception) -> bool:
     return any(pattern in error_message for pattern in retryable_patterns)
 
 
-def get_error_summary(state: Dict[str, Any]) -> Dict[str, Any] | None:
+def get_error_summary(state: dict[str, Any]) -> dict[str, Any] | None:
     """Get summary of errors from state.
 
     Args:
@@ -267,7 +267,7 @@ def get_error_summary(state: Dict[str, Any]) -> Dict[str, Any] | None:
     }
 
 
-def clear_errors(state: Dict[str, Any]) -> Dict[str, Any]:
+def clear_errors(state: dict[str, Any]) -> dict[str, Any]:
     """Clear error information from state.
 
     Useful when retrying operations or starting new queries.
