@@ -47,6 +47,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 034 | Perplexity-Inspired UX Features | Accepted | 2025-11-16 |
 | 035 | Parallel Development Strategy | Accepted | 2025-11-16 |
 | 036 | Settings Management via localStorage | Accepted | 2025-11-16 |
+| 037 | Alibaba Cloud Extraction (Complexity.HIGH Routing) | Accepted | 2025-11-19 |
+| 038 | DashScope Custom Parameters via OpenAI SDK extra_body | Accepted | 2025-11-19 |
 
 ---
 

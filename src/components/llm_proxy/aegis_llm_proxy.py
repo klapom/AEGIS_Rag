@@ -410,17 +410,50 @@ class AegisLLMProxy:
 
         messages = [{"role": "user", "content": task.prompt}]
 
+        # Prepare acompletion kwargs
+        completion_kwargs = {
+            "model": model,
+            "messages": messages,
+            "provider": provider_map[provider],
+            "api_base": api_base,
+            "api_key": api_key,
+            "max_tokens": task.max_tokens,
+            "temperature": task.temperature,
+            "stream": stream,
+        }
+
+        # Alibaba Cloud (DashScope) specific parameters via extra_body
+        # Sprint 30 Feature 30.6: Fix DashScope enable_thinking parameter
+        #
+        # Background:
+        #   - DashScope API requires enable_thinking parameter for non-streaming calls
+        #   - OpenAI Python SDK only accepts custom parameters via extra_body
+        #   - ANY-LLM passes **kwargs to OpenAI SDK, but SDK filters unknown parameters
+        #
+        # Root Cause Analysis (2025-11-19):
+        #   1. ANY-LLM correctly forwards **kwargs (no filtering)
+        #   2. OpenAI SDK's create() method only accepts known parameters + extra_body
+        #   3. Custom parameters MUST be passed via extra_body={} for OpenAI-compatible APIs
+        #
+        # Solution:
+        #   - Non-thinking models (qwen3-32b): extra_body={"enable_thinking": False}
+        #   - Thinking models (qwen3-vl-30b-a3b-thinking): extra_body={"enable_thinking": True}
+        #
+        # See: docs/adr/ADR-038-dashscope-extra-body-parameters.md
+        if provider == "alibaba_cloud" and not stream:
+            extra_body = {}
+            if "thinking" in model:
+                # Thinking models need enable_thinking=true for reasoning mode
+                extra_body["enable_thinking"] = True
+            else:
+                # Non-thinking models need enable_thinking=false (DashScope requirement)
+                extra_body["enable_thinking"] = False
+
+            # Pass via extra_body (OpenAI SDK mechanism for provider-specific parameters)
+            completion_kwargs["extra_body"] = extra_body
+
         # Call ANY-LLM acompletion function
-        response = await acompletion(
-            model=model,
-            messages=messages,
-            provider=provider_map[provider],
-            api_base=api_base,
-            api_key=api_key,
-            max_tokens=task.max_tokens,
-            temperature=task.temperature,
-            stream=stream,
-        )
+        response = await acompletion(**completion_kwargs)
 
         # Convert ANY-LLM response to AegisRAG format
         # Sprint 25 Feature 25.3: Extract detailed token breakdown for accurate cost calculation

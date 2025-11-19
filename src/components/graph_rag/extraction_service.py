@@ -266,7 +266,7 @@ class ExtractionService:
                 task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
                 prompt=prompt,
                 quality_requirement=QualityRequirement.HIGH,  # High quality for accurate extraction
-                complexity=Complexity.MEDIUM,  # Medium complexity for structured extraction
+                complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 model_local=self.llm_model,
@@ -389,7 +389,7 @@ class ExtractionService:
                 task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
                 prompt=prompt,
                 quality_requirement=QualityRequirement.HIGH,
-                complexity=Complexity.MEDIUM,
+                complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 model_local=self.llm_model,
