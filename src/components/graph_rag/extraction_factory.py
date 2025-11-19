@@ -7,7 +7,7 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from typing import Any, Protocol, Dict
+from typing import Any, Dict, Protocol
 
 import structlog
 

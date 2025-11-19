@@ -1,4 +1,3 @@
-from typing import List
 """Query decomposition for handling complex multi-part questions.
 
 Sprint 23 Feature 23.6: AegisLLMProxy Integration

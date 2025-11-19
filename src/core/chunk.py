@@ -8,7 +8,7 @@ across all ingestion pipelines (Qdrant, BM25, LightRAG).
 """
 
 import hashlib
-from typing import Any, Literal, Dict
+from typing import Any, Dict, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 

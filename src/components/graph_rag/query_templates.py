@@ -13,7 +13,6 @@ This module provides 15+ parameterized query templates for:
 import structlog
 
 from src.components.graph_rag.query_builder import CypherQueryBuilder
-from typing import List
 
 logger = structlog.get_logger(__name__)
 

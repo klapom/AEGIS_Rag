@@ -88,7 +88,6 @@ Example with Error Handling:
 """
 
 from pathlib import Path
-from typing import List
 
 import structlog
 from langgraph.graph import END, StateGraph

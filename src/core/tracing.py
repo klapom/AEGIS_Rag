@@ -11,7 +11,6 @@ import os
 import structlog
 
 from src.core.config import settings
-from typing import Set
 
 logger = structlog.get_logger(__name__)
 

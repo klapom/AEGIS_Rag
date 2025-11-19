@@ -15,7 +15,6 @@ Typical usage:
 """
 
 from datetime import datetime
-from typing import List
 
 import structlog
 from pydantic import BaseModel, Field, field_validator
