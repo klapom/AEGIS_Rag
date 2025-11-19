@@ -67,19 +67,28 @@ describe('Feature 17.3: Auto-Generated Titles E2E Tests', () => {
         },
       });
 
-      // Mock fetch to return stream first, then title generation response
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({ ok: true, body: streamResponse })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              session_id: mockSessionId,
-              title: 'Knowledge Graphs in RAG',
-              generated_at: '2025-10-29T10:00:00Z',
-            }),
-        });
+      // Mock fetch to return stream first, then handle follow-up questions and title generation
+      const mockFetch = vi.fn((url: string) => {
+        if (url.includes('/stream')) {
+          return Promise.resolve({ ok: true, body: streamResponse });
+        } else if (url.includes('generate-title')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                session_id: mockSessionId,
+                title: 'Knowledge Graphs in RAG',
+                generated_at: '2025-10-29T10:00:00Z',
+              }),
+          });
+        } else if (url.includes('followup-questions')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ followup_questions: [] }),
+          });
+        }
+        return Promise.reject(new Error('Unexpected fetch URL: ' + url));
+      });
 
       setupGlobalFetchMock(mockFetch);
 
@@ -186,7 +195,12 @@ describe('Feature 17.3: Auto-Generated Titles E2E Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Title generation should NOT be called for short answers
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // Note: mockFetch might be called 1-2 times (stream + follow-up questions)
+      // but should NOT include a call to generate-title endpoint
+      const titleGenerationCalls = (mockFetch as any).mock.calls.filter(
+        (call: any[]) => call[0]?.includes('generate-title')
+      );
+      expect(titleGenerationCalls.length).toBe(0);
       expect(onTitleGenerated).not.toHaveBeenCalled();
     });
 

@@ -33,7 +33,7 @@ export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuesti
 
       try {
         const fetchedQuestions = await getFollowUpQuestions(sessionId);
-        setQuestions(fetchedQuestions);
+        setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
       } catch (err) {
         console.error('Failed to fetch follow-up questions:', err);
         setError('Keine Fragen verfugbar');
@@ -48,7 +48,7 @@ export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuesti
   }, [sessionId]);
 
   // Don't render if no questions and not loading
-  if (!isLoading && questions.length === 0) {
+  if (!isLoading && (!questions || questions.length === 0)) {
     return null;
   }
 
@@ -77,7 +77,7 @@ export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuesti
       )}
 
       {/* Questions Grid */}
-      {!isLoading && questions.length > 0 && (
+      {!isLoading && questions && questions.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {questions.map((question, index) => (
             <QuestionCard

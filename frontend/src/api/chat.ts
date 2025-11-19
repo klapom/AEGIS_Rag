@@ -258,5 +258,5 @@ export async function getFollowUpQuestions(sessionId: string): Promise<string[]>
   }
 
   const data: FollowUpQuestionsResponse = await response.json();
-  return data.followup_questions;
+  return data.followup_questions || [];
 }

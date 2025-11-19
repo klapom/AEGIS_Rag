@@ -204,10 +204,24 @@ describe('Feature 17.2: Conversation Persistence E2E Tests', () => {
         },
       });
 
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({ ok: true, body: initialStream })
-        .mockResolvedValueOnce({ ok: true, body: followUpStream });
+      // Use a smarter mock that handles multiple calls including follow-up questions
+      let streamCallCount = 0;
+      const mockFetch = vi.fn((url: string) => {
+        if (url.includes('/stream')) {
+          streamCallCount++;
+          if (streamCallCount === 1) {
+            return Promise.resolve({ ok: true, body: initialStream });
+          } else {
+            return Promise.resolve({ ok: true, body: followUpStream });
+          }
+        } else if (url.includes('followup-questions')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ followup_questions: [] }),
+          });
+        }
+        return Promise.reject(new Error('Unexpected fetch URL: ' + url));
+      });
 
       setupGlobalFetchMock(mockFetch);
 
@@ -241,12 +255,15 @@ describe('Feature 17.2: Conversation Persistence E2E Tests', () => {
       // Assert: Follow-up should include session_id
       await waitFor(() => {
         expect(screen.getByText(/Follow-up answer/i)).toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
 
-      // Verify second fetch included session_id
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      const secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body);
-      expect(secondCallBody.session_id).toBe(mockSessionId);
+      // Verify second stream call included session_id
+      const streamCalls = (mockFetch as any).mock.calls.filter(
+        (call: any[]) => call[0]?.includes('/stream')
+      );
+      expect(streamCalls.length).toBe(2);
+      const secondStreamCallBody = JSON.parse(streamCalls[1][1].body);
+      expect(secondStreamCallBody.session_id).toBe(mockSessionId);
     });
   });
 
