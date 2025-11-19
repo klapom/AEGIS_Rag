@@ -34,8 +34,21 @@ from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from docling_core.types.doc import DoclingDocument
-from docling_core.types.doc.document import TableItem
+
+# Skip entire module if docling_core not available (optional dependency)
+try:
+    from docling_core.types.doc import DoclingDocument
+    from docling_core.types.doc.document import TableItem
+    DOCLING_AVAILABLE = True
+except ImportError:
+    # Create placeholder for type hints if import fails
+    DoclingDocument = type('DoclingDocument', (), {})  # type: ignore
+    TableItem = type('TableItem', (), {})  # type: ignore
+    DOCLING_AVAILABLE = False
+
+# Skip all tests in this module if docling not available
+if not DOCLING_AVAILABLE:
+    pytestmark = pytest.mark.skip(reason="docling_core not installed (optional dependency for ingestion tests)")
 
 from src.components.ingestion.ingestion_state import IngestionState, create_initial_state
 from src.components.ingestion.langgraph_nodes import (

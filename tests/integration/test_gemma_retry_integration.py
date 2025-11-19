@@ -20,8 +20,8 @@ import time
 import pytest
 from ollama import Client
 
-from src.components.graph_rag.gemma_relation_extractor import (
-    GemmaRelationExtractor,
+from src.components.graph_rag.relation_extractor import (
+    RelationExtractor,
     create_relation_extractor_from_config,
 )
 from src.core.config import get_settings
@@ -108,7 +108,7 @@ async def test_extractor_retry_config_from_settings():
     settings = get_settings()
 
     # Create extractor with custom retry settings
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         max_retries=2,
         retry_min_wait=0.5,
         retry_max_wait=2.0,
@@ -327,7 +327,7 @@ async def test_e2e_graceful_degradation_on_service_issues():
     settings = get_settings()
 
     # Create extractor with very short retry settings
-    extractor = GemmaRelationExtractor(
+    extractor = RelationExtractor(
         max_retries=1,
         retry_min_wait=0.1,
         retry_max_wait=0.2,

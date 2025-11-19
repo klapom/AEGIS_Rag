@@ -16,8 +16,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Any
 
 from langgraph.graph import StateGraph
-from src.agents.router import RouterAgent, IntentType
-from src.core.models import Document
+from src.agents.router import IntentClassifier, QueryIntent
+from src.core.models import DocumentChunk
+
+# Alias for test compatibility
+Document = DocumentChunk
 
 
 @pytest.fixture
@@ -66,9 +69,9 @@ def mock_memory_agent():
 
 
 @pytest.fixture
-def router_agent():
-    """RouterAgent instance for testing."""
-    return RouterAgent()
+def intent_classifier():
+    """IntentClassifier instance for testing."""
+    return IntentClassifier()
 
 
 # ============================================================================
@@ -76,34 +79,34 @@ def router_agent():
 # ============================================================================
 
 @pytest.mark.asyncio
-async def test_coordinator_route_to_vector_agent(router_agent):
+async def test_coordinator_route_to_vector_agent(intent_classifier):
     """Test routing simple query to vector agent."""
     query = "What is vector search?"
 
-    intent = await router_agent.classify_intent(query)
+    intent = await intent_classifier.classify(query)
 
-    assert intent == IntentType.VECTOR_SEARCH
+    assert intent == QueryIntent.VECTOR
 
 
 @pytest.mark.asyncio
-async def test_coordinator_route_to_graph_agent(router_agent):
+async def test_coordinator_route_to_graph_agent(intent_classifier):
     """Test routing complex query to graph agent."""
     query = "How does LightRAG connect to Neo4j and what entities does it extract?"
 
-    intent = await router_agent.classify_intent(query)
+    intent = await intent_classifier.classify(query)
 
-    assert intent == IntentType.GRAPH_REASONING
+    assert intent == QueryIntent.GRAPH
 
 
 @pytest.mark.asyncio
-async def test_coordinator_route_hybrid_query(router_agent):
+async def test_coordinator_route_hybrid_query(intent_classifier):
     """Test routing query requiring both vector and graph."""
     query = "Explain hybrid search and how it integrates with graph reasoning"
 
-    intent = await router_agent.classify_intent(query)
+    intent = await intent_classifier.classify(query)
 
     # Should route to hybrid or both agents
-    assert intent in [IntentType.HYBRID, IntentType.VECTOR_SEARCH, IntentType.GRAPH_REASONING]
+    assert intent in [QueryIntent.HYBRID, QueryIntent.VECTOR, QueryIntent.GRAPH]
 
 
 # ============================================================================
