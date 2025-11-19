@@ -2,6 +2,7 @@
 Debug version of indexing script with extensive logging for Three-Phase Pipeline.
 Indexes Performance Tuning.pptx with detailed entity extraction logging.
 """
+
 import asyncio
 import shutil
 import sys
@@ -24,9 +25,9 @@ logger = structlog.get_logger(__name__)
 
 
 async def main():
-    print("="*80)
+    print("=" * 80)
     print("DEBUG: Indexing Performance Tuning with Extended Logging")
-    print("="*80)
+    print("=" * 80)
 
     # Configuration
     collection_name = settings.qdrant_collection
@@ -128,12 +129,11 @@ async def main():
 
             # Enable verbose logging by setting environment variable
             import os
+
             os.environ["LIGHTRAG_DEBUG"] = "1"
 
             # Call the optimized insertion
-            graph_stats = await lightrag_wrapper.insert_documents_optimized(
-                lightrag_docs
-            )
+            graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
 
             print(f"\n   [OK] Neo4j indexing complete")
             print(f"       Chunks stored: {graph_stats.get('chunks_stored', 0)}")
@@ -153,13 +153,15 @@ async def main():
                         return await result.data()
 
                 # Count entities with names
-                entities_with_names = await run_query("""
+                entities_with_names = await run_query(
+                    """
                     MATCH (e)
                     WHERE ANY(label IN labels(e) WHERE label STARTS WITH 'base:')
                     RETURN COUNT(e) as total,
                            SUM(CASE WHEN e.entity_name IS NOT NULL THEN 1 ELSE 0 END) as with_names,
                            SUM(CASE WHEN e.entity_name IS NULL THEN 1 ELSE 0 END) as without_names
-                """)
+                """
+                )
 
                 if entities_with_names:
                     result = entities_with_names[0]
@@ -168,28 +170,32 @@ async def main():
                     print(f"       Without names (BUG!): {result['without_names']}")
 
                 # Sample entities
-                sample_entities = await run_query("""
+                sample_entities = await run_query(
+                    """
                     MATCH (e)
                     WHERE ANY(label IN labels(e) WHERE label STARTS WITH 'base:')
                     RETURN labels(e) as labels,
                            e.entity_name as name,
                            e.entity_id as id
                     LIMIT 5
-                """)
+                """
+                )
 
                 print(f"\n       Sample entities:")
                 for i, ent in enumerate(sample_entities, 1):
-                    label = ":".join(ent['labels'])
-                    name = ent.get('name', 'UNNAMED!')
-                    ent_id = ent.get('id', 'no-id')
+                    label = ":".join(ent["labels"])
+                    name = ent.get("name", "UNNAMED!")
+                    ent_id = ent.get("id", "no-id")
                     print(f"         {i}. [{label}] name='{name}' id={ent_id}")
 
                 # Check relations
-                rel_stats = await run_query("""
+                rel_stats = await run_query(
+                    """
                     MATCH ()-[r:MENTIONED_IN]->(c:chunk)
                     RETURN COUNT(DISTINCT c.chunk_index) as unique_chunks,
                            COUNT(r) as total_relations
-                """)
+                """
+                )
 
                 if rel_stats:
                     result = rel_stats[0]
@@ -199,14 +205,15 @@ async def main():
         else:
             print("   [WARNING] No documents to index")
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("INDEXING COMPLETE - Check output above for issues")
-        print("="*80)
+        print("=" * 80)
 
     except Exception as e:
         logger.exception("indexing_failed", error=str(e))
         print(f"\n[ERROR] Indexing failed: {e}")
         import traceback
+
         traceback.print_exc()
         raise
 

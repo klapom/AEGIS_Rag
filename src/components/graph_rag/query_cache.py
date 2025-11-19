@@ -21,6 +21,7 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class GraphQueryCache:
     """LRU cache for graph query results with TTL expiration.
 
@@ -273,9 +274,11 @@ class GraphQueryCache:
         cache_key = self._generate_cache_key(query, None)
         return cache_key in self._cache
 
+
 # Global cache instance (singleton pattern)
 _query_cache: GraphQueryCache | None = None
 _cache_lock = asyncio.Lock()
+
 
 async def get_query_cache() -> GraphQueryCache:
     """Get global query cache instance (singleton).
@@ -292,6 +295,7 @@ async def get_query_cache() -> GraphQueryCache:
                 _query_cache = GraphQueryCache()
 
     return _query_cache
+
 
 def get_query_cache_sync() -> GraphQueryCache:
     """Get global query cache instance (synchronous, for testing).

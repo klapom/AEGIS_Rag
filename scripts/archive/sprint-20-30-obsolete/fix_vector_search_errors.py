@@ -39,7 +39,9 @@ def fix_file(file_path: Path) -> int:
 
     if content != original_content:
         file_path.write_text(content, encoding="utf-8")
-        fixes = content.count("VectorSearchError(query=") - original_content.count("VectorSearchError(query=")
+        fixes = content.count("VectorSearchError(query=") - original_content.count(
+            "VectorSearchError(query="
+        )
         return fixes
     return 0
 

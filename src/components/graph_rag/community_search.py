@@ -23,6 +23,7 @@ from src.core.models import Community, CommunitySearchResult, GraphEntity
 
 logger = structlog.get_logger(__name__)
 
+
 class CommunitySearch(DualLevelSearch):
     """Community-aware graph search extending DualLevelSearch.
 
@@ -336,8 +337,10 @@ class CommunitySearch(DualLevelSearch):
                 "error": str(e),
             }
 
+
 # Singleton instance
 _community_search: CommunitySearch | None = None
+
 
 def get_community_search() -> CommunitySearch:
     """Get global CommunitySearch instance (singleton).

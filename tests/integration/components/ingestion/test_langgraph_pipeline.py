@@ -39,16 +39,19 @@ import pytest
 try:
     from docling_core.types.doc import DoclingDocument
     from docling_core.types.doc.document import TableItem
+
     DOCLING_AVAILABLE = True
 except ImportError:
     # Create placeholder for type hints if import fails
-    DoclingDocument = type('DoclingDocument', (), {})  # type: ignore
-    TableItem = type('TableItem', (), {})  # type: ignore
+    DoclingDocument = type("DoclingDocument", (), {})  # type: ignore
+    TableItem = type("TableItem", (), {})  # type: ignore
     DOCLING_AVAILABLE = False
 
 # Skip all tests in this module if docling not available
 if not DOCLING_AVAILABLE:
-    pytestmark = pytest.mark.skip(reason="docling_core not installed (optional dependency for ingestion tests)")
+    pytestmark = pytest.mark.skip(
+        reason="docling_core not installed (optional dependency for ingestion tests)"
+    )
 
 from src.components.ingestion.ingestion_state import IngestionState, create_initial_state
 from src.components.ingestion.langgraph_nodes import (
@@ -123,7 +126,9 @@ def mock_docling_document() -> DoclingDocument:
 @pytest.fixture
 def mock_docling_client():
     """Mock DoclingContainerClient for testing."""
-    with patch("src.components.ingestion.langgraph_nodes.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+    ) as mock_client_class:
         mock_instance = AsyncMock()
         mock_client_class.return_value = mock_instance
 
@@ -149,7 +154,9 @@ def mock_docling_client():
 @pytest.fixture
 def mock_embedding_service():
     """Mock EmbeddingService for testing."""
-    with patch("src.components.ingestion.langgraph_nodes.get_embedding_service") as mock_get_service:
+    with patch(
+        "src.components.ingestion.langgraph_nodes.get_embedding_service"
+    ) as mock_get_service:
         mock_service = AsyncMock()
         mock_service.embed_batch.return_value = [
             [0.1] * 1024,  # BGE-M3 dimension
@@ -176,7 +183,9 @@ def mock_qdrant_client():
 @pytest.fixture
 def mock_lightrag_wrapper():
     """Mock LightRAGWrapper for testing."""
-    with patch("src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async") as mock_get_wrapper:
+    with patch(
+        "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
+    ) as mock_get_wrapper:
         mock_wrapper = AsyncMock()
         mock_wrapper.insert_documents_optimized.return_value = {
             "total_entities": 15,
@@ -320,7 +329,9 @@ async def test_memory_check_node_insufficient_ram(mock_nvidia_smi):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_docling_parse_node_success(mock_docling_client, mock_psutil, mock_nvidia_smi, sample_pdf_path):
+async def test_docling_parse_node_success(
+    mock_docling_client, mock_psutil, mock_nvidia_smi, sample_pdf_path
+):
     """Test Docling parse node successfully parses document."""
     state = create_initial_state(
         document_path=str(sample_pdf_path),
@@ -621,7 +632,9 @@ async def test_end_to_end_pipeline_success(
 ):
     """Test complete pipeline execution from PDF to Qdrant + Neo4j."""
     # Initialize format router
-    with patch("src.components.ingestion.langgraph_pipeline.initialize_format_router") as mock_init_router:
+    with patch(
+        "src.components.ingestion.langgraph_pipeline.initialize_format_router"
+    ) as mock_init_router:
         from src.components.ingestion.format_router import ParserType, RoutingDecision
 
         mock_router = Mock()
@@ -676,7 +689,9 @@ async def test_pipeline_streaming_yields_progress(
 ):
     """Test streaming pipeline yields progress updates after each node."""
     # Initialize format router
-    with patch("src.components.ingestion.langgraph_pipeline.initialize_format_router") as mock_init_router:
+    with patch(
+        "src.components.ingestion.langgraph_pipeline.initialize_format_router"
+    ) as mock_init_router:
         from src.components.ingestion.format_router import ParserType, RoutingDecision
 
         mock_router = Mock()
@@ -729,7 +744,9 @@ async def test_pipeline_error_accumulation(
 ):
     """Test pipeline accumulates errors from failed nodes."""
     # Mock Docling to fail
-    with patch("src.components.ingestion.langgraph_nodes.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+    ) as mock_client_class:
         mock_instance = AsyncMock()
         mock_instance.start_container.side_effect = Exception("Container failed to start")
         mock_client_class.return_value = mock_instance
@@ -776,7 +793,9 @@ async def test_batch_processing_sequential_execution(
         doc_paths.append(str(doc_path))
 
     # Initialize format router
-    with patch("src.components.ingestion.langgraph_pipeline.initialize_format_router") as mock_init_router:
+    with patch(
+        "src.components.ingestion.langgraph_pipeline.initialize_format_router"
+    ) as mock_init_router:
         from src.components.ingestion.format_router import ParserType, RoutingDecision
 
         mock_router = Mock()

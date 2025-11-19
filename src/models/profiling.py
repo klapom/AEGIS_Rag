@@ -29,6 +29,7 @@ class ArchivedConversation(BaseModel):
         default_factory=dict, description="Additional metadata (intents, sources, etc.)"
     )
 
+
 class ConversationSearchRequest(BaseModel):
     """Request model for semantic conversation search."""
 
@@ -47,6 +48,7 @@ class ConversationSearchRequest(BaseModel):
         default=None, description="Filter conversations created before this date (ISO 8601)"
     )
 
+
 class ConversationSearchResult(BaseModel):
     """Single conversation search result."""
 
@@ -61,6 +63,7 @@ class ConversationSearchResult(BaseModel):
     snippet: str = Field(..., description="Relevant conversation snippet (first 300 chars)")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
+
 class ConversationSearchResponse(BaseModel):
     """Response model for semantic conversation search."""
 
@@ -71,12 +74,14 @@ class ConversationSearchResponse(BaseModel):
     total_count: int = Field(..., description="Total number of results")
     search_timestamp: str = Field(..., description="Search execution timestamp")
 
+
 class ArchiveConversationRequest(BaseModel):
     """Request model for manual conversation archiving."""
 
     reason: str | None = Field(
         default=None, max_length=200, description="Optional reason for archiving"
     )
+
 
 class ArchiveConversationResponse(BaseModel):
     """Response model for conversation archiving."""
@@ -86,6 +91,7 @@ class ArchiveConversationResponse(BaseModel):
     message: str = Field(..., description="Status message")
     archived_at: str = Field(..., description="Archiving timestamp")
     qdrant_point_id: str = Field(..., description="Qdrant vector point ID")
+
 
 class ArchiveJobStatus(BaseModel):
     """Status of background archiving job."""

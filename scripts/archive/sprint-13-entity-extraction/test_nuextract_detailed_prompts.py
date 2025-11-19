@@ -319,7 +319,7 @@ TEST_CASES = [
         "text": SPORTS_TEXT,
         "expected_entities": 10,
         "expected_relations": 8,
-    }
+    },
 ]
 
 
@@ -328,70 +328,99 @@ def convert_json_to_lightrag(json_data: dict) -> str:
     lines = []
 
     # Convert entities
-    for entity in json_data.get('entities', []):
-        name = str(entity.get('name', '')).strip() if entity.get('name') is not None else ''
-        etype = str(entity.get('type', 'OTHER')).strip().upper() if entity.get('type') is not None else 'OTHER'
-        desc = str(entity.get('description', '')).strip() if entity.get('description') is not None else ''
+    for entity in json_data.get("entities", []):
+        name = str(entity.get("name", "")).strip() if entity.get("name") is not None else ""
+        etype = (
+            str(entity.get("type", "OTHER")).strip().upper()
+            if entity.get("type") is not None
+            else "OTHER"
+        )
+        desc = (
+            str(entity.get("description", "")).strip()
+            if entity.get("description") is not None
+            else ""
+        )
 
         if name:
             line = f"entity{TUPLE_DELIMITER}{name}{TUPLE_DELIMITER}{etype}{TUPLE_DELIMITER}{desc}"
             lines.append(line)
 
     # Convert relations
-    for relation in json_data.get('relations', []):
-        source = str(relation.get('source', '')).strip() if relation.get('source') is not None else ''
-        target = str(relation.get('target', '')).strip() if relation.get('target') is not None else ''
-        desc = str(relation.get('description', '')).strip() if relation.get('description') is not None else ''
-        strength = str(relation.get('strength', '5')).strip() if relation.get('strength') is not None else '5'
+    for relation in json_data.get("relations", []):
+        source = (
+            str(relation.get("source", "")).strip() if relation.get("source") is not None else ""
+        )
+        target = (
+            str(relation.get("target", "")).strip() if relation.get("target") is not None else ""
+        )
+        desc = (
+            str(relation.get("description", "")).strip()
+            if relation.get("description") is not None
+            else ""
+        )
+        strength = (
+            str(relation.get("strength", "5")).strip()
+            if relation.get("strength") is not None
+            else "5"
+        )
 
         if source and target:
             line = f"relation{TUPLE_DELIMITER}{source}{TUPLE_DELIMITER}{target}{TUPLE_DELIMITER}{desc}{TUPLE_DELIMITER}{strength}"
             lines.append(line)
 
     lines.append(COMPLETION_DELIMITER)
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def validate_json_and_convert(response: str) -> dict:
     """Validate JSON response and convert to LightRAG format."""
     result = {
-        'json_valid': False,
-        'json_data': None,
-        'lightrag_format': '',
-        'entity_count': 0,
-        'relation_count': 0,
-        'errors': []
+        "json_valid": False,
+        "json_data": None,
+        "lightrag_format": "",
+        "entity_count": 0,
+        "relation_count": 0,
+        "errors": [],
     }
 
     try:
         # Remove markdown code blocks if present
         cleaned = response.strip()
-        if cleaned.startswith('```'):
-            lines = cleaned.split('\n')
-            cleaned = '\n'.join(lines[1:-1]) if len(lines) > 2 else cleaned
-            cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            cleaned = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
         json_data = json.loads(cleaned)
-        result['json_valid'] = True
-        result['json_data'] = json_data
+        result["json_valid"] = True
+        result["json_data"] = json_data
 
-        result['entity_count'] = len(json_data.get('entities', []))
-        result['relation_count'] = len(json_data.get('relations', []))
+        result["entity_count"] = len(json_data.get("entities", []))
+        result["relation_count"] = len(json_data.get("relations", []))
 
         # Convert to LightRAG format
-        result['lightrag_format'] = convert_json_to_lightrag(json_data)
+        result["lightrag_format"] = convert_json_to_lightrag(json_data)
 
     except json.JSONDecodeError as e:
-        result['errors'].append(f"JSON parsing error: {e}")
+        result["errors"].append(f"JSON parsing error: {e}")
     except Exception as e:
-        result['errors'].append(f"Conversion error: {e}")
+        result["errors"].append(f"Conversion error: {e}")
 
     return result
 
 
-def append_to_log(log_path: Path, test_case: dict, system_prompt: str, user_prompt: str,
-                  raw_response: str, validation: dict, start_time: datetime,
-                  end_time: datetime, duration: float, prompt_type: str):
+def append_to_log(
+    log_path: Path,
+    test_case: dict,
+    system_prompt: str,
+    user_prompt: str,
+    raw_response: str,
+    validation: dict,
+    start_time: datetime,
+    end_time: datetime,
+    duration: float,
+    prompt_type: str,
+):
     """Append test execution to model's log file."""
     log_content = f"""
 {'='*80}
@@ -435,17 +464,24 @@ CONVERTED LIGHTRAG FORMAT:
 
 """
 
-    with open(log_path, 'a', encoding='utf-8') as f:
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(log_content)
 
 
-def test_model(model: str, test_case: dict, client: Client, log_path: Path,
-               system_prompt: str, user_prompt_template: str, prompt_type: str,
-               use_think_false: bool = False) -> dict:
+def test_model(
+    model: str,
+    test_case: dict,
+    client: Client,
+    log_path: Path,
+    system_prompt: str,
+    user_prompt_template: str,
+    prompt_type: str,
+    use_think_false: bool = False,
+) -> dict:
     """Test a model with specified prompts."""
     mode = "think=False" if use_think_false else "default"
 
-    user_prompt = user_prompt_template.format(text=test_case['text'])
+    user_prompt = user_prompt_template.format(text=test_case["text"])
 
     start_time = datetime.now()
     start = time.perf_counter()
@@ -455,14 +491,10 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "options": {
-                "temperature": 0.1,
-                "num_predict": 2000,
-                "num_ctx": 16384
-            },
-            "format": "json"
+            "options": {"temperature": 0.1, "num_predict": 2000, "num_ctx": 16384},
+            "format": "json",
         }
 
         if use_think_false:
@@ -485,7 +517,7 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             start_time=start_time,
             end_time=end_time,
             duration=elapsed,
-            prompt_type=prompt_type
+            prompt_type=prompt_type,
         )
 
         return {
@@ -495,15 +527,25 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "test_id": test_case["id"],
             "test_name": test_case["name"],
             "time": elapsed,
-            "json_valid": validation['json_valid'],
-            "entities_found": validation['entity_count'],
-            "relations_found": validation['relation_count'],
+            "json_valid": validation["json_valid"],
+            "entities_found": validation["entity_count"],
+            "relations_found": validation["relation_count"],
             "entities_expected": test_case["expected_entities"],
             "relations_expected": test_case["expected_relations"],
-            "entity_accuracy": 100 * validation['entity_count'] / test_case["expected_entities"] if test_case["expected_entities"] > 0 else 0,
-            "relation_accuracy": 100 * validation['relation_count'] / test_case["expected_relations"] if test_case["expected_relations"] > 0 else 0,
-            "errors": validation['errors'],
-            "status": "PASS" if validation['json_valid'] and validation['entity_count'] > 0 else "FAIL"
+            "entity_accuracy": (
+                100 * validation["entity_count"] / test_case["expected_entities"]
+                if test_case["expected_entities"] > 0
+                else 0
+            ),
+            "relation_accuracy": (
+                100 * validation["relation_count"] / test_case["expected_relations"]
+                if test_case["expected_relations"] > 0
+                else 0
+            ),
+            "errors": validation["errors"],
+            "status": (
+                "PASS" if validation["json_valid"] and validation["entity_count"] > 0 else "FAIL"
+            ),
         }
 
     except Exception as e:
@@ -516,14 +558,19 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             log_path=log_path,
             test_case=test_case,
             system_prompt=system_prompt,
-            user_prompt=user_prompt_template.format(text=test_case['text']),
+            user_prompt=user_prompt_template.format(text=test_case["text"]),
             raw_response=f"ERROR: {error_msg}",
-            validation={'json_valid': False, 'entity_count': 0, 'relation_count': 0,
-                       'errors': [error_msg], 'lightrag_format': ''},
+            validation={
+                "json_valid": False,
+                "entity_count": 0,
+                "relation_count": 0,
+                "errors": [error_msg],
+                "lightrag_format": "",
+            },
             start_time=start_time,
             end_time=end_time,
             duration=elapsed,
-            prompt_type=prompt_type
+            prompt_type=prompt_type,
         )
 
         return {
@@ -541,13 +588,14 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "entity_accuracy": 0,
             "relation_accuracy": 0,
             "errors": [error_msg],
-            "status": "ERROR"
+            "status": "ERROR",
         }
 
 
 def main():
     """Main test execution."""
-    print(f"""{'='*80}
+    print(
+        f"""{'='*80}
      NuExtract: Prompt Strategy Comparison
 {'='*80}
 
@@ -558,7 +606,8 @@ Comparing three prompt strategies:
 
 All output JSON format, converted to LightRAG delimiter-separated format.
 Context Window: 16384 (LightRAG default)
-    """)
+    """
+    )
 
     client = Client()
 
@@ -572,7 +621,7 @@ Context Window: 16384 (LightRAG default)
     log_dir.mkdir(parents=True, exist_ok=True)
 
     for model, supports_think in models_to_test:
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"MODEL: {model_short}")
@@ -585,9 +634,9 @@ Context Window: 16384 (LightRAG default)
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Hello"}
+                    {"role": "user", "content": "Hello"},
                 ],
-                options={"num_ctx": 16384}
+                options={"num_ctx": 16384},
             )
             print("OK")
         except Exception as e:
@@ -597,7 +646,7 @@ Context Window: 16384 (LightRAG default)
         for prompt_type, sys_prompt, user_template in [
             ("simple", SYSTEM_PROMPT_SIMPLE, USER_PROMPT_TEMPLATE_SIMPLE),
             ("detailed", SYSTEM_PROMPT_DETAILED, USER_PROMPT_TEMPLATE_DETAILED),
-            ("enhanced", SYSTEM_PROMPT_ENHANCED, USER_PROMPT_TEMPLATE_ENHANCED)
+            ("enhanced", SYSTEM_PROMPT_ENHANCED, USER_PROMPT_TEMPLATE_ENHANCED),
         ]:
             print(f"\n  --- Testing {prompt_type.upper()} prompts ---")
 
@@ -606,8 +655,9 @@ Context Window: 16384 (LightRAG default)
             log_path = log_dir / log_filename
 
             # Write log header
-            with open(log_path, 'w', encoding='utf-8') as f:
-                f.write(f"""{'='*80}
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(
+                    f"""{'='*80}
 NuExtract PROMPT COMPARISON TEST LOG
 {'='*80}
 
@@ -619,19 +669,29 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+                )
 
             for test_case in TEST_CASES:
                 print(f"  [{test_case['id']}/3] {test_case['name']}...", end=" ", flush=True)
-                result = test_model(model, test_case, client, log_path,
-                                   sys_prompt, user_template, prompt_type,
-                                   use_think_false=False)
+                result = test_model(
+                    model,
+                    test_case,
+                    client,
+                    log_path,
+                    sys_prompt,
+                    user_template,
+                    prompt_type,
+                    use_think_false=False,
+                )
                 results.append(result)
 
-                status = "OK" if result['status'] == "PASS" else "FAIL"
-                print(f"{result['entities_found']}E/{result['relations_found']}R "
-                      f"({result['entity_accuracy']:.0f}%/{result['relation_accuracy']:.0f}%) "
-                      f"in {result['time']:.1f}s [{status}]")
+                status = "OK" if result["status"] == "PASS" else "FAIL"
+                print(
+                    f"{result['entities_found']}E/{result['relations_found']}R "
+                    f"({result['entity_accuracy']:.0f}%/{result['relation_accuracy']:.0f}%) "
+                    f"in {result['time']:.1f}s [{status}]"
+                )
 
     # ========================================================================
     # SUMMARY & COMPARISON
@@ -640,16 +700,22 @@ Start Time: {datetime.now().isoformat()}
     print("SUMMARY: PROMPT COMPARISON")
     print(f"{'='*80}\n")
 
-    print(f"{'Prompt':<10} {'Test':<30} {'JSON':<8} {'Entities':<15} {'Relations':<15} {'Time':<8} {'Status':<8}")
+    print(
+        f"{'Prompt':<10} {'Test':<30} {'JSON':<8} {'Entities':<15} {'Relations':<15} {'Time':<8} {'Status':<8}"
+    )
     print(f"{'-'*10} {'-'*30} {'-'*8} {'-'*15} {'-'*15} {'-'*8} {'-'*8}")
 
     for r in results:
-        json_status = "VALID" if r['json_valid'] else "INVALID"
+        json_status = "VALID" if r["json_valid"] else "INVALID"
         entity_str = f"{r['entities_found']}/{r['entities_expected']} ({r['entity_accuracy']:.0f}%)"
-        relation_str = f"{r['relations_found']}/{r['relations_expected']} ({r['relation_accuracy']:.0f}%)"
+        relation_str = (
+            f"{r['relations_found']}/{r['relations_expected']} ({r['relation_accuracy']:.0f}%)"
+        )
         time_str = f"{r['time']:.1f}s"
 
-        print(f"{r['prompt_type']:<10} {r['test_name']:<30} {json_status:<8} {entity_str:<15} {relation_str:<15} {time_str:<8} {r['status']:<8}")
+        print(
+            f"{r['prompt_type']:<10} {r['test_name']:<30} {json_status:<8} {entity_str:<15} {relation_str:<15} {time_str:<8} {r['status']:<8}"
+        )
 
     # Calculate averages
     print(f"\n{'='*80}")
@@ -657,12 +723,16 @@ Start Time: {datetime.now().isoformat()}
     print(f"{'='*80}\n")
 
     for prompt_type in ["simple", "detailed", "enhanced"]:
-        prompt_results = [r for r in results if r['prompt_type'] == prompt_type]
+        prompt_results = [r for r in results if r["prompt_type"] == prompt_type]
         if prompt_results:
-            avg_time = sum(r['time'] for r in prompt_results) / len(prompt_results)
-            avg_entity_acc = sum(r['entity_accuracy'] for r in prompt_results) / len(prompt_results)
-            avg_relation_acc = sum(r['relation_accuracy'] for r in prompt_results) / len(prompt_results)
-            success_rate = 100 * sum(1 for r in prompt_results if r['status'] == 'PASS') / len(prompt_results)
+            avg_time = sum(r["time"] for r in prompt_results) / len(prompt_results)
+            avg_entity_acc = sum(r["entity_accuracy"] for r in prompt_results) / len(prompt_results)
+            avg_relation_acc = sum(r["relation_accuracy"] for r in prompt_results) / len(
+                prompt_results
+            )
+            success_rate = (
+                100 * sum(1 for r in prompt_results if r["status"] == "PASS") / len(prompt_results)
+            )
 
             print(f"{prompt_type.upper()} PROMPT:")
             print(f"  Average Time: {avg_time:.1f}s")
@@ -673,7 +743,7 @@ Start Time: {datetime.now().isoformat()}
 
     # Save results
     output_file = Path("nuextract_prompt_comparison.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"{'='*80}")

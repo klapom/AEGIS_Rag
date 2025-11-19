@@ -30,7 +30,9 @@ async def main():
     embedding_service = get_embedding_service()
     qdrant_client = get_qdrant_client()
     collection_name = settings.qdrant_collection
-    print(f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})")
+    print(
+        f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
+    )
     print(f"  [OK] Qdrant Client ready")
     print(f"  [OK] Collection: {collection_name}")
     print()
@@ -56,10 +58,7 @@ async def main():
     print("[3/4] Processing file...")
 
     # Load file
-    reader = SimpleDirectoryReader(
-        input_files=[str(file_path.resolve())],
-        recursive=False
-    )
+    reader = SimpleDirectoryReader(input_files=[str(file_path.resolve())], recursive=False)
     documents = reader.load_data()
     print(f"  [OK] Loaded {len(documents)} document parts")
 
@@ -75,9 +74,7 @@ async def main():
             continue
 
         chunks = chunking_service.chunk_document(
-            document_id=str(file_path.name),
-            content=content,
-            metadata={"file_name": file_path.name}
+            document_id=str(file_path.name), content=content, metadata={"file_name": file_path.name}
         )
         all_chunks.extend(chunks)
 
@@ -110,14 +107,11 @@ async def main():
         point = PointStruct(
             id=chunk.chunk_id,  # This should now be UUID4 format
             vector=embedding,
-            payload=chunk.to_qdrant_payload()
+            payload=chunk.to_qdrant_payload(),
         )
         points.append(point)
 
-    await qdrant_client.upsert_points(
-        collection_name=collection_name,
-        points=points
-    )
+    await qdrant_client.upsert_points(collection_name=collection_name, points=points)
 
     print(f"  [OK] Uploaded {len(points)} points to Qdrant")
     print()

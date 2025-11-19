@@ -14,21 +14,25 @@ class NamingChecker:
 
     # Naming patterns
     PATTERNS = {
-        'class': re.compile(r'^[A-Z][A-Za-z0-9]*(?:Service|Repository|Controller|Model|Config|Agent|Processor|Handler|Manager|Builder|Factory|Adapter|Strategy|Validator|Error|Exception|Evaluator)?$'),
-        'function': re.compile(r'^[a-z0-9]+(?:_[a-z0-9]+)*_?$'),  # Allow trailing _ for keyword avoidance, numbers for acronyms
-        'constant': re.compile(r'^[A-Z0-9]+(?:_[A-Z0-9]+)*$'),  # Allow numbers in constants
-        'variable': re.compile(r'^[a-z0-9]+(?:_[a-z0-9]+)*$'),  # Allow numbers in variables
+        "class": re.compile(
+            r"^[A-Z][A-Za-z0-9]*(?:Service|Repository|Controller|Model|Config|Agent|Processor|Handler|Manager|Builder|Factory|Adapter|Strategy|Validator|Error|Exception|Evaluator)?$"
+        ),
+        "function": re.compile(
+            r"^[a-z0-9]+(?:_[a-z0-9]+)*_?$"
+        ),  # Allow trailing _ for keyword avoidance, numbers for acronyms
+        "constant": re.compile(r"^[A-Z0-9]+(?:_[A-Z0-9]+)*$"),  # Allow numbers in constants
+        "variable": re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$"),  # Allow numbers in variables
     }
 
     # File naming patterns
     FILE_PATTERNS = {
-        'service': re.compile(r'^[a-z]+(?:_[a-z]+)*_service\.py$'),
-        'repository': re.compile(r'^[a-z]+(?:_[a-z]+)*_repository\.py$'),
-        'controller': re.compile(r'^[a-z]+(?:_[a-z]+)*_controller\.py$'),
-        'model': re.compile(r'^[a-z]+(?:_[a-z]+)*(?:_model)?\.py$'),
-        'test': re.compile(r'^test_[a-z]+(?:_[a-z]+)*\.py$'),
-        'config': re.compile(r'^[a-z]+(?:_[a-z]+)*_config\.py$'),
-        'util': re.compile(r'^[a-z]+(?:_[a-z]+)*_utils?\.py$'),
+        "service": re.compile(r"^[a-z]+(?:_[a-z]+)*_service\.py$"),
+        "repository": re.compile(r"^[a-z]+(?:_[a-z]+)*_repository\.py$"),
+        "controller": re.compile(r"^[a-z]+(?:_[a-z]+)*_controller\.py$"),
+        "model": re.compile(r"^[a-z]+(?:_[a-z]+)*(?:_model)?\.py$"),
+        "test": re.compile(r"^test_[a-z]+(?:_[a-z]+)*\.py$"),
+        "config": re.compile(r"^[a-z]+(?:_[a-z]+)*_config\.py$"),
+        "util": re.compile(r"^[a-z]+(?:_[a-z]+)*_utils?\.py$"),
     }
 
     def __init__(self):
@@ -36,7 +40,7 @@ class NamingChecker:
 
     def check_file(self, filepath: Path) -> bool:
         """Check a single Python file for naming violations."""
-        if not filepath.suffix == '.py':
+        if not filepath.suffix == ".py":
             return True
 
         # Check filename
@@ -45,7 +49,7 @@ class NamingChecker:
 
         # Check content
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 self._check_content(filepath, lines)
         except Exception as e:
@@ -59,7 +63,7 @@ class NamingChecker:
         name = filepath.name
 
         # Skip __init__.py and __main__.py
-        if name.startswith('__') and name.endswith('__.py'):
+        if name.startswith("__") and name.endswith("__.py"):
             return True
 
         # Check against known patterns
@@ -68,7 +72,7 @@ class NamingChecker:
                 return True
 
         # Generic snake_case check (allow numbers and digits for acronyms like bm25, neo4j)
-        if re.match(r'^[a-z0-9]+(?:_[a-z0-9]+)*\.py$', name):
+        if re.match(r"^[a-z0-9]+(?:_[a-z0-9]+)*\.py$", name):
             return True
 
         return False
@@ -79,44 +83,50 @@ class NamingChecker:
             line = line.strip()
 
             # Check class definitions
-            if line.startswith('class '):
-                match = re.match(r'class\s+(\w+)', line)
+            if line.startswith("class "):
+                match = re.match(r"class\s+(\w+)", line)
                 if match:
                     class_name = match.group(1)
-                    if not self.PATTERNS['class'].match(class_name):
-                        self.errors.append((
-                            str(filepath),
-                            line_no,
-                            f"Class name '{class_name}' doesn't follow PascalCase convention"
-                        ))
+                    if not self.PATTERNS["class"].match(class_name):
+                        self.errors.append(
+                            (
+                                str(filepath),
+                                line_no,
+                                f"Class name '{class_name}' doesn't follow PascalCase convention",
+                            )
+                        )
 
             # Check function definitions
-            elif line.startswith('def '):
+            elif line.startswith("def "):
                 # Skip if line has noqa comment
-                if '# noqa' in line or '#noqa' in line:
+                if "# noqa" in line or "#noqa" in line:
                     continue
 
-                match = re.match(r'def\s+(\w+)', line)
+                match = re.match(r"def\s+(\w+)", line)
                 if match:
                     func_name = match.group(1)
                     # Skip magic methods and private methods
-                    if not func_name.startswith('_'):
-                        if not self.PATTERNS['function'].match(func_name):
-                            self.errors.append((
-                                str(filepath),
-                                line_no,
-                                f"Function name '{func_name}' doesn't follow snake_case convention"
-                            ))
+                    if not func_name.startswith("_"):
+                        if not self.PATTERNS["function"].match(func_name):
+                            self.errors.append(
+                                (
+                                    str(filepath),
+                                    line_no,
+                                    f"Function name '{func_name}' doesn't follow snake_case convention",
+                                )
+                            )
 
             # Check constants (heuristic: all caps assignments at module level)
-            elif '=' in line and line.split('=')[0].strip().isupper():
-                const_name = line.split('=')[0].strip()
-                if not self.PATTERNS['constant'].match(const_name):
-                    self.errors.append((
-                        str(filepath),
-                        line_no,
-                        f"Constant name '{const_name}' doesn't follow UPPER_SNAKE_CASE convention"
-                    ))
+            elif "=" in line and line.split("=")[0].strip().isupper():
+                const_name = line.split("=")[0].strip()
+                if not self.PATTERNS["constant"].match(const_name):
+                    self.errors.append(
+                        (
+                            str(filepath),
+                            line_no,
+                            f"Constant name '{const_name}' doesn't follow UPPER_SNAKE_CASE convention",
+                        )
+                    )
 
     def print_errors(self):
         """Print all collected errors."""
@@ -150,7 +160,7 @@ def main():
             if not checker.check_file(path):
                 all_ok = False
         elif path.is_dir():
-            for py_file in path.rglob('*.py'):
+            for py_file in path.rglob("*.py"):
                 if not checker.check_file(py_file):
                     all_ok = False
         else:
@@ -165,5 +175,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

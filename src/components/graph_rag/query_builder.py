@@ -14,6 +14,7 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+
 class CypherQueryBuilder:
     """Fluent API for building parameterized Cypher queries.
 

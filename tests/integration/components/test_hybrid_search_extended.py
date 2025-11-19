@@ -32,7 +32,7 @@ def mock_vector_results():
             "source": "docs.md",
             "document_id": "doc1",
             "rank": 1,
-            "search_type": "vector"
+            "search_type": "vector",
         },
         {
             "id": "doc2",
@@ -41,7 +41,7 @@ def mock_vector_results():
             "source": "tech.md",
             "document_id": "doc2",
             "rank": 2,
-            "search_type": "vector"
+            "search_type": "vector",
         },
         {
             "id": "doc3",
@@ -50,8 +50,8 @@ def mock_vector_results():
             "source": "arch.md",
             "document_id": "doc3",
             "rank": 3,
-            "search_type": "vector"
-        }
+            "search_type": "vector",
+        },
     ]
 
 
@@ -66,7 +66,7 @@ def mock_bm25_results():
             "source": "tech.md",
             "document_id": "doc2",
             "rank": 1,
-            "search_type": "bm25"
+            "search_type": "bm25",
         },
         {
             "id": "doc4",  # Unique to BM25
@@ -75,7 +75,7 @@ def mock_bm25_results():
             "source": "guide.md",
             "document_id": "doc4",
             "rank": 2,
-            "search_type": "bm25"
+            "search_type": "bm25",
         },
         {
             "id": "doc5",  # Unique to BM25
@@ -84,8 +84,8 @@ def mock_bm25_results():
             "source": "api.md",
             "document_id": "doc5",
             "rank": 3,
-            "search_type": "bm25"
-        }
+            "search_type": "bm25",
+        },
     ]
 
 
@@ -95,7 +95,7 @@ async def hybrid_search_instance(mock_qdrant_client, mock_embedding_service, moc
     search = HybridSearch(
         qdrant_client=mock_qdrant_client,
         embedding_service=mock_embedding_service,
-        bm25_search=mock_bm25_search
+        bm25_search=mock_bm25_search,
     )
     return search
 
@@ -104,6 +104,7 @@ async def hybrid_search_instance(mock_qdrant_client, mock_embedding_service, moc
 # RRF Algorithm Tests
 # ============================================================================
 
+
 def test_reciprocal_rank_fusion():
     """Test RRF algorithm with overlapping results."""
     from src.utils.fusion import reciprocal_rank_fusion
@@ -111,20 +112,16 @@ def test_reciprocal_rank_fusion():
     vector_results = [
         {"id": "doc1", "score": 0.95},
         {"id": "doc2", "score": 0.87},
-        {"id": "doc3", "score": 0.75}
+        {"id": "doc3", "score": 0.75},
     ]
 
     bm25_results = [
         {"id": "doc2", "score": 8.5},  # Overlaps with vector
         {"id": "doc4", "score": 7.2},
-        {"id": "doc5", "score": 6.1}
+        {"id": "doc5", "score": 6.1},
     ]
 
-    fused = reciprocal_rank_fusion(
-        rankings=[vector_results, bm25_results],
-        k=60,
-        id_field="id"
-    )
+    fused = reciprocal_rank_fusion(rankings=[vector_results, bm25_results], k=60, id_field="id")
 
     # doc2 should rank highest (appears in both)
     assert fused[0]["id"] == "doc2"
@@ -135,21 +132,11 @@ def test_reciprocal_rank_fusion_no_overlap():
     """Test RRF with completely disjoint result sets."""
     from src.utils.fusion import reciprocal_rank_fusion
 
-    vector_results = [
-        {"id": "doc1", "score": 0.9},
-        {"id": "doc2", "score": 0.8}
-    ]
+    vector_results = [{"id": "doc1", "score": 0.9}, {"id": "doc2", "score": 0.8}]
 
-    bm25_results = [
-        {"id": "doc3", "score": 7.0},
-        {"id": "doc4", "score": 6.0}
-    ]
+    bm25_results = [{"id": "doc3", "score": 7.0}, {"id": "doc4", "score": 6.0}]
 
-    fused = reciprocal_rank_fusion(
-        rankings=[vector_results, bm25_results],
-        k=60,
-        id_field="id"
-    )
+    fused = reciprocal_rank_fusion(rankings=[vector_results, bm25_results], k=60, id_field="id")
 
     # All documents should be present
     assert len(fused) == 4
@@ -161,16 +148,9 @@ def test_reciprocal_rank_fusion_single_ranking():
     """Test RRF with only one ranking (edge case)."""
     from src.utils.fusion import reciprocal_rank_fusion
 
-    results = [
-        {"id": "doc1", "score": 0.9},
-        {"id": "doc2", "score": 0.8}
-    ]
+    results = [{"id": "doc1", "score": 0.9}, {"id": "doc2", "score": 0.8}]
 
-    fused = reciprocal_rank_fusion(
-        rankings=[results],
-        k=60,
-        id_field="id"
-    )
+    fused = reciprocal_rank_fusion(rankings=[results], k=60, id_field="id")
 
     # Should preserve original order
     assert fused[0]["id"] == "doc1"
@@ -180,6 +160,7 @@ def test_reciprocal_rank_fusion_single_ranking():
 # ============================================================================
 # Hybrid Search Integration Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_hybrid_search_empty_results(hybrid_search_instance):
@@ -220,7 +201,9 @@ async def test_hybrid_search_bm25_only(hybrid_search_instance, mock_bm25_results
 
 
 @pytest.mark.asyncio
-async def test_hybrid_search_performance(hybrid_search_instance, mock_vector_results, mock_bm25_results):
+async def test_hybrid_search_performance(
+    hybrid_search_instance, mock_vector_results, mock_bm25_results
+):
     """Test hybrid search latency within acceptable bounds."""
     import time
 
@@ -240,8 +223,7 @@ async def test_hybrid_search_performance(hybrid_search_instance, mock_vector_res
 async def test_hybrid_search_with_filters(hybrid_search_instance):
     """Test hybrid search with metadata filters."""
     filters = MetadataFilters(
-        source=["docs.md", "tech.md"],
-        date_range={"start": "2025-01-01", "end": "2025-12-31"}
+        source=["docs.md", "tech.md"], date_range={"start": "2025-01-01", "end": "2025-12-31"}
     )
 
     # Mock filtered results
@@ -252,16 +234,16 @@ async def test_hybrid_search_with_filters(hybrid_search_instance):
     hybrid_search_instance.keyword_search = AsyncMock(return_value=[])
 
     result = await hybrid_search_instance.hybrid_search(
-        "test query",
-        filters=filters,
-        use_reranking=False
+        "test query", filters=filters, use_reranking=False
     )
 
     assert result["returned_results"] > 0
 
 
 @pytest.mark.asyncio
-async def test_hybrid_search_diversity_analysis(hybrid_search_instance, mock_vector_results, mock_bm25_results):
+async def test_hybrid_search_diversity_analysis(
+    hybrid_search_instance, mock_vector_results, mock_bm25_results
+):
     """Test diversity analysis between vector and BM25 results."""
     hybrid_search_instance.vector_search = AsyncMock(return_value=mock_vector_results)
     hybrid_search_instance.keyword_search = AsyncMock(return_value=mock_bm25_results)
@@ -278,6 +260,7 @@ async def test_hybrid_search_diversity_analysis(hybrid_search_instance, mock_vec
 # ============================================================================
 # Error Handling Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_hybrid_search_vector_failure(hybrid_search_instance, mock_bm25_results):
@@ -306,14 +289,8 @@ async def test_hybrid_search_bm25_failure(hybrid_search_instance, mock_vector_re
 @pytest.mark.asyncio
 async def test_hybrid_search_invalid_filters(hybrid_search_instance):
     """Test error handling for invalid metadata filters."""
-    invalid_filters = MetadataFilters(
-        source=None,
-        date_range={"start": "invalid-date"}
-    )
+    invalid_filters = MetadataFilters(source=None, date_range={"start": "invalid-date"})
 
     # Should raise validation error
     with pytest.raises(VectorSearchError):
-        await hybrid_search_instance.hybrid_search(
-            "test query",
-            filters=invalid_filters
-        )
+        await hybrid_search_instance.hybrid_search("test query", filters=invalid_filters)

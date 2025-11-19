@@ -93,7 +93,9 @@ async def test_vision_fallback_to_local():
     )
 
     assert provider == "local_ollama", f"Expected local_ollama, got {provider}"
-    assert reason == "vision_task_local_fallback", f"Expected vision_task_local_fallback, got {reason}"
+    assert (
+        reason == "vision_task_local_fallback"
+    ), f"Expected vision_task_local_fallback, got {reason}"
 
     # Restore config
     proxy.config.providers["alibaba_cloud"] = original_config

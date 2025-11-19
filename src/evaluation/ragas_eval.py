@@ -31,6 +31,7 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class EvaluationDataset(BaseModel):
     """Single evaluation example.
 
@@ -46,6 +47,7 @@ class EvaluationDataset(BaseModel):
     contexts: list[str] = Field(..., description="Retrieved document contexts")
     answer: str = Field(default="", description="Generated answer (optional)")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
 
 class EvaluationResult(BaseModel):
     """RAGAS evaluation result.
@@ -70,6 +72,7 @@ class EvaluationResult(BaseModel):
         default_factory=lambda: datetime.now(UTC).isoformat(), description="Evaluation timestamp"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
 
 class RAGASEvaluator:
     """RAGAS evaluator for RAG system quality assessment.

@@ -232,7 +232,9 @@ async def test_all_retries_fail_logs_error(extractor, sample_text, sample_entiti
         relations = await extractor.extract(sample_text, sample_entities)
 
     # Should log failure
-    assert any("relation_extraction_failed_all_retries" in record.message for record in caplog.records)
+    assert any(
+        "relation_extraction_failed_all_retries" in record.message for record in caplog.records
+    )
     assert relations == []
 
 
@@ -319,9 +321,9 @@ def test_parse_json_response_with_markdown():
     """Test _parse_json_response handles markdown code blocks."""
     extractor = RelationExtractor()
 
-    response = '''```json
+    response = """```json
 {"relations": [{"source": "A", "target": "B", "description": "test", "strength": 5}]}
-```'''
+```"""
 
     parsed = extractor._parse_json_response(response)
 

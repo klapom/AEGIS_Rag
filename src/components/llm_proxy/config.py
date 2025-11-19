@@ -23,6 +23,7 @@ logger = structlog.get_logger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
+
 class LLMProxyConfig(BaseModel):
     """
     Configuration for AegisLLMProxy.
@@ -217,8 +218,10 @@ class LLMProxyConfig(BaseModel):
 
         arbitrary_types_allowed = True
 
+
 # Convenience function for getting singleton config
 _config_instance: LLMProxyConfig | None = None
+
 
 def get_llm_proxy_config() -> LLMProxyConfig:
     """

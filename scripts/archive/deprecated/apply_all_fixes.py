@@ -48,7 +48,7 @@ def apply_timeout_fixes():
         # Also update the comment
         content2_new = content2_new.replace(
             "# Verify: Performance <10s per classification",
-            "# Verify: Performance <65s per classification (relaxed for qwen3:0.6b + 7 queries)"
+            "# Verify: Performance <65s per classification (relaxed for qwen3:0.6b + 7 queries)",
         )
 
         file2.write_text(content2_new)
@@ -68,10 +68,7 @@ def apply_timeout_fixes():
         content3_new = content3.replace(old, new)
 
         # Update the assertion message
-        content3_new = content3_new.replace(
-            '(expected <100s)"',
-            '(expected <120s)"'
-        )
+        content3_new = content3_new.replace('(expected <100s)"', '(expected <120s)"')
 
         file3.write_text(content3_new)
         print("✅ Fix 3/4: Sprint 5 entity extraction timeout APPLIED (100s → 120s)")
@@ -127,14 +124,14 @@ def add_graph_routing_logging():
     if 'state["graph_query_result"] = {' in content:
         # Add logging before setting
         old_block = '# Update state with graph results\n            state["graph_query_result"] = {'
-        new_block = '''# Update state with graph results
+        new_block = """# Update state with graph results
             self.logger.info(
                 "graph_query_setting_result",
                 query=query[:50],
                 mode=search_mode.value,
             )
             print(f"[DEBUG] Setting graph_query_result in state for query: {query[:50]}")
-            state["graph_query_result"] = {'''
+            state["graph_query_result"] = {"""
 
         content_new = content.replace(old_block, new_block)
 

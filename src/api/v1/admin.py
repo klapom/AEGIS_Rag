@@ -231,7 +231,9 @@ async def reindex_progress_stream(
                     "qdrant_validation_complete", collection=collection_name, points=point_count
                 )
             else:
-                raise VectorSearchError(query="", reason=f"Collection {collection_name} not found after re-indexing")
+                raise VectorSearchError(
+                    query="", reason=f"Collection {collection_name} not found after re-indexing"
+                )
 
             # Validate Neo4j graph
             try:

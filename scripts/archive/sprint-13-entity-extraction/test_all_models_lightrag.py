@@ -2,6 +2,7 @@
 Comprehensive test script to evaluate all available Ollama models for LightRAG compatibility.
 Tests each model with the correct LightRAG delimiter format (<|#|>).
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -81,7 +82,7 @@ async def test_model(model_name: str, client: ollama.AsyncClient) -> Dict[str, A
         "has_completion_marker": False,
         "generation_time_seconds": 0,
         "error": None,
-        "output_preview": ""
+        "output_preview": "",
     }
 
     prompt = LIGHTRAG_PROMPT_TEMPLATE.format(text=TEST_TEXT.strip())
@@ -133,7 +134,9 @@ async def main():
 
     # Get list of available models
     models_response = await client.list()
-    available_models = [m.get("name", m.get("model", "unknown")) for m in models_response.get("models", [])]
+    available_models = [
+        m.get("name", m.get("model", "unknown")) for m in models_response.get("models", [])
+    ]
 
     # Filter to LLM models (exclude embedding models)
     llm_models = [m for m in available_models if "embed" not in m.lower()]
@@ -152,24 +155,32 @@ async def main():
         results.append(result)
 
         if result["success"]:
-            print(f"[OK] SUCCESS ({result['entities_found']} entities, {result['relationships_found']} relations, {result['generation_time_seconds']}s)")
+            print(
+                f"[OK] SUCCESS ({result['entities_found']} entities, {result['relationships_found']} relations, {result['generation_time_seconds']}s)"
+            )
         elif result["error"]:
             print(f"[ERROR]: {result['error'][:80]}")
         else:
-            print(f"[FAIL] (delimiter: {result['uses_correct_delimiter']}, entities: {result['entities_found']})")
+            print(
+                f"[FAIL] (delimiter: {result['uses_correct_delimiter']}, entities: {result['entities_found']})"
+            )
 
     # Print summary table
     print("\n" + "=" * 100)
     print("RESULTS SUMMARY")
     print("=" * 100)
-    print(f"{'Model':<40} {'Status':<10} {'Entities':<10} {'Relations':<10} {'Delimiter':<12} {'Time (s)':<10}")
+    print(
+        f"{'Model':<40} {'Status':<10} {'Entities':<10} {'Relations':<10} {'Delimiter':<12} {'Time (s)':<10}"
+    )
     print("-" * 100)
 
     for r in results:
         status = "[OK]" if r["success"] else ("[ERROR]" if r["error"] else "[FAIL]")
         delimiter = "[OK] <|#|>" if r["uses_correct_delimiter"] else "[X] Wrong"
 
-        print(f"{r['model']:<40} {status:<10} {r['entities_found']:<10} {r['relationships_found']:<10} {delimiter:<12} {r['generation_time_seconds']:<10}")
+        print(
+            f"{r['model']:<40} {status:<10} {r['entities_found']:<10} {r['relationships_found']:<10} {delimiter:<12} {r['generation_time_seconds']:<10}"
+        )
 
     # Find best candidates
     successful_models = [r for r in results if r["success"]]
@@ -184,7 +195,9 @@ async def main():
 
         for i, r in enumerate(successful_models[:5], 1):
             print(f"\n{i}. {r['model']}")
-            print(f"   - Entities: {r['entities_found']}, Relationships: {r['relationships_found']}")
+            print(
+                f"   - Entities: {r['entities_found']}, Relationships: {r['relationships_found']}"
+            )
             print(f"   - Generation time: {r['generation_time_seconds']}s")
             print(f"   - Completion marker: {'[OK]' if r['has_completion_marker'] else '[X]'}")
             print(f"   - Output preview:")
@@ -193,8 +206,12 @@ async def main():
         print("\n" + "=" * 100)
         print("⚠ NO COMPATIBLE MODELS FOUND")
         print("=" * 100)
-        print("\nNone of the tested models successfully produced entities with the correct <|#|> delimiter.")
-        print("This suggests that LightRAG may require specific prompt engineering or model selection.")
+        print(
+            "\nNone of the tested models successfully produced entities with the correct <|#|> delimiter."
+        )
+        print(
+            "This suggests that LightRAG may require specific prompt engineering or model selection."
+        )
 
     # Print detailed failure analysis
     failed_models = [r for r in results if not r["success"] and not r["error"]]

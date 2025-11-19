@@ -37,6 +37,7 @@ class AegisRAGException(Exception):  # noqa: N818
         self.status_code = status_code
         self.details = details or {}
 
+
 class ConfigurationError(AegisRAGException):
     """Raised when there is a configuration error."""
 
@@ -49,6 +50,7 @@ class ConfigurationError(AegisRAGException):
             status_code=500,
             details=details,
         )
+
 
 class DatabaseConnectionError(AegisRAGException):
     """Raised when database connection fails."""
@@ -63,6 +65,7 @@ class DatabaseConnectionError(AegisRAGException):
             details={"database": database, "reason": reason},
         )
 
+
 class VectorSearchError(AegisRAGException):
     """Raised when vector search fails."""
 
@@ -75,6 +78,7 @@ class VectorSearchError(AegisRAGException):
             status_code=500,
             details={"query": query, "reason": reason},
         )
+
 
 class GraphQueryError(AegisRAGException):
     """Raised when graph query fails."""
@@ -89,6 +93,7 @@ class GraphQueryError(AegisRAGException):
             details={"query": query, "reason": reason},
         )
 
+
 class LLMError(AegisRAGException):
     """Raised when LLM operation fails."""
 
@@ -101,6 +106,7 @@ class LLMError(AegisRAGException):
             status_code=500,
             details={"operation": operation, "reason": reason},
         )
+
 
 class LLMExecutionError(AegisRAGException):
     """Raised when LLM execution fails across all providers.
@@ -118,6 +124,7 @@ class LLMExecutionError(AegisRAGException):
             details=details or {},
         )
 
+
 class MemoryError(AegisRAGException):
     """Raised when memory operation fails."""
 
@@ -130,6 +137,7 @@ class MemoryError(AegisRAGException):
             status_code=500,
             details={"operation": operation, "reason": reason},
         )
+
 
 class ValidationError(AegisRAGException):
     """Raised when input validation fails."""
@@ -144,6 +152,7 @@ class ValidationError(AegisRAGException):
             details={"field": field, "issue": issue},
         )
 
+
 class RateLimitError(AegisRAGException):
     """Raised when rate limit is exceeded."""
 
@@ -156,6 +165,7 @@ class RateLimitError(AegisRAGException):
             status_code=429,
             details={"limit": limit, "window": window},
         )
+
 
 class AuthenticationError(AegisRAGException):
     """Raised when authentication fails."""
@@ -170,6 +180,7 @@ class AuthenticationError(AegisRAGException):
             details={"reason": reason},
         )
 
+
 class AuthorizationError(AegisRAGException):
     """Raised when authorization fails."""
 
@@ -182,6 +193,7 @@ class AuthorizationError(AegisRAGException):
             status_code=403,
             details={"resource": resource, "action": action},
         )
+
 
 class IngestionError(AegisRAGException):
     """Raised when document ingestion fails.
@@ -199,9 +211,11 @@ class IngestionError(AegisRAGException):
             details={"document_id": document_id, "reason": reason},
         )
 
+
 # ============================================================================
 # Sprint 22 Feature 22.2.2: Business-specific exceptions
 # ============================================================================
+
 
 class FileNotFoundError(AegisRAGException):  # noqa: A001
     """Raised when a requested file does not exist."""
@@ -216,6 +230,7 @@ class FileNotFoundError(AegisRAGException):  # noqa: A001
             details={"file_id": file_id},
         )
 
+
 class InvalidFileFormatError(AegisRAGException):
     """Raised when file format is not supported."""
 
@@ -228,6 +243,7 @@ class InvalidFileFormatError(AegisRAGException):
             status_code=400,
             details={"filename": filename, "expected_formats": expected_formats},
         )
+
 
 class FileTooLargeError(AegisRAGException):
     """Raised when file size exceeds maximum allowed."""

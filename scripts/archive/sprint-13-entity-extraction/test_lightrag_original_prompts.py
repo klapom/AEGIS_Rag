@@ -81,12 +81,13 @@ TEST_CASES = [
         "text": "At the World Athletics Championship in Tokyo, Noah Carter broke the 100m sprint record using cutting-edge carbon-fiber spikes.",
         "expected_entities": 5,
         "expected_relations": 3,
-    }
+    },
 ]
+
 
 def validate_format(response: str) -> dict:
     """Validate if response follows LightRAG format."""
-    lines = response.strip().split('\n')
+    lines = response.strip().split("\n")
 
     entities = []
     relations = []
@@ -104,40 +105,42 @@ def validate_format(response: str) -> dict:
 
         parts = line.split(TUPLE_DELIMITER)
 
-        if parts[0] == 'entity':
+        if parts[0] == "entity":
             if len(parts) != 4:
                 errors.append(f"Line {i}: Entity has {len(parts)} fields, expected 4")
             else:
-                entities.append({
-                    'name': parts[1],
-                    'type': parts[2],
-                    'description': parts[3]
-                })
-        elif parts[0] == 'relation':
+                entities.append({"name": parts[1], "type": parts[2], "description": parts[3]})
+        elif parts[0] == "relation":
             if len(parts) != 5:
                 errors.append(f"Line {i}: Relation has {len(parts)} fields, expected 5")
             else:
-                relations.append({
-                    'source': parts[1],
-                    'target': parts[2],
-                    'keywords': parts[3],
-                    'description': parts[4]
-                })
+                relations.append(
+                    {
+                        "source": parts[1],
+                        "target": parts[2],
+                        "keywords": parts[3],
+                        "description": parts[4],
+                    }
+                )
         else:
             # Check if it's JSON or markdown
-            if line.startswith('[') or line.startswith('{') or line.startswith('```'):
-                errors.append(f"Line {i}: Wrong format (JSON/markdown instead of delimiter-separated)")
+            if line.startswith("[") or line.startswith("{") or line.startswith("```"):
+                errors.append(
+                    f"Line {i}: Wrong format (JSON/markdown instead of delimiter-separated)"
+                )
             else:
-                errors.append(f"Line {i}: Unknown line type '{parts[0]}' (expected 'entity' or 'relation')")
+                errors.append(
+                    f"Line {i}: Unknown line type '{parts[0]}' (expected 'entity' or 'relation')"
+                )
 
     return {
-        'valid': len(errors) == 0 and has_completion,
-        'entities': entities,
-        'relations': relations,
-        'has_completion': has_completion,
-        'errors': errors,
-        'entity_count': len(entities),
-        'relation_count': len(relations)
+        "valid": len(errors) == 0 and has_completion,
+        "entities": entities,
+        "relations": relations,
+        "has_completion": has_completion,
+        "errors": errors,
+        "entity_count": len(entities),
+        "relation_count": len(relations),
     }
 
 
@@ -151,9 +154,9 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "model": model,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": USER_PROMPT_TEMPLATE.format(text=test_case['text'])}
+                {"role": "user", "content": USER_PROMPT_TEMPLATE.format(text=test_case["text"])},
             ],
-            "options": {"temperature": 0.1, "num_predict": 1000, "num_ctx": 8192}
+            "options": {"temperature": 0.1, "num_predict": 1000, "num_ctx": 8192},
         }
 
         if use_think_false:
@@ -171,17 +174,17 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "test_id": test_case["id"],
             "test_name": test_case["name"],
             "time": elapsed,
-            "valid_format": validation['valid'],
-            "entity_count": validation['entity_count'],
-            "relation_count": validation['relation_count'],
-            "expected_entities": test_case['expected_entities'],
-            "expected_relations": test_case['expected_relations'],
-            "has_completion": validation['has_completion'],
-            "errors": validation['errors'],
-            "entities": validation['entities'],
-            "relations": validation['relations'],
+            "valid_format": validation["valid"],
+            "entity_count": validation["entity_count"],
+            "relation_count": validation["relation_count"],
+            "expected_entities": test_case["expected_entities"],
+            "expected_relations": test_case["expected_relations"],
+            "has_completion": validation["has_completion"],
+            "errors": validation["errors"],
+            "entities": validation["entities"],
+            "relations": validation["relations"],
             "response": content,
-            "success": validation['valid'] and validation['entity_count'] > 0
+            "success": validation["valid"] and validation["entity_count"] > 0,
         }
 
     except Exception as e:
@@ -198,16 +201,17 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "valid_format": False,
             "entity_count": 0,
             "relation_count": 0,
-            "expected_entities": test_case['expected_entities'],
-            "expected_relations": test_case['expected_relations'],
+            "expected_entities": test_case["expected_entities"],
+            "expected_relations": test_case["expected_relations"],
             "error": error_msg,
             "supports_think": supports_think,
-            "success": False
+            "success": False,
         }
 
 
 def main():
-    print("""
+    print(
+        """
 ================================================================================
      LightRAG ORIGINAL FORMAT TEST - Delimiter-Separated Output
 ================================================================================
@@ -216,7 +220,8 @@ Testing models with LightRAG's original prompt format:
 - Expected: entity<|#|>name<|#|>type<|#|>description
 - Expected: relation<|#|>source<|#|>target<|#|>keywords<|#|>description
 - Expected: <|COMPLETE|> at the end
-    """)
+    """
+    )
 
     client = Client()
 
@@ -231,7 +236,7 @@ Testing models with LightRAG's original prompt format:
     results = []
 
     for model, supports_think in models_to_test:
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"MODEL: {model_short}")
@@ -239,31 +244,41 @@ Testing models with LightRAG's original prompt format:
 
         for test_case in TEST_CASES:
             # Test default mode
-            print(f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True)
+            print(
+                f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True
+            )
             result = test_model(model, test_case, client, use_think_false=False)
             results.append(result)
 
-            status = "OK" if result['success'] else "FAIL"
-            format_ok = "FORMAT_OK" if result['valid_format'] else "FORMAT_ERROR"
-            print(f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]")
+            status = "OK" if result["success"] else "FAIL"
+            format_ok = "FORMAT_OK" if result["valid_format"] else "FORMAT_ERROR"
+            print(
+                f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]"
+            )
 
-            if result.get('errors'):
-                for err in result['errors'][:2]:  # Show first 2 errors
+            if result.get("errors"):
+                for err in result["errors"][:2]:  # Show first 2 errors
                     print(f"    ERROR: {err}")
 
             # Test think=False if supported
             if supports_think:
                 time.sleep(0.2)
-                print(f"  [{test_case['id']}/3] {test_case['name']} [think=False]...", end=" ", flush=True)
+                print(
+                    f"  [{test_case['id']}/3] {test_case['name']} [think=False]...",
+                    end=" ",
+                    flush=True,
+                )
                 result = test_model(model, test_case, client, use_think_false=True)
                 results.append(result)
 
-                status = "OK" if result['success'] else "FAIL"
-                format_ok = "FORMAT_OK" if result['valid_format'] else "FORMAT_ERROR"
-                print(f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]")
+                status = "OK" if result["success"] else "FAIL"
+                format_ok = "FORMAT_OK" if result["valid_format"] else "FORMAT_ERROR"
+                print(
+                    f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]"
+                )
 
-                if result.get('errors'):
-                    for err in result['errors'][:2]:
+                if result.get("errors"):
+                    for err in result["errors"][:2]:
                         print(f"    ERROR: {err}")
 
     # SUMMARY
@@ -271,38 +286,46 @@ Testing models with LightRAG's original prompt format:
     print("SUMMARY: FORMAT COMPLIANCE")
     print(f"{'='*80}\n")
 
-    print(f"{'Model':<35} {'Mode':<15} {'Test':<20} {'Format':<12} {'Entities':<10} {'Relations':<10} {'Status'}")
+    print(
+        f"{'Model':<35} {'Mode':<15} {'Test':<20} {'Format':<12} {'Entities':<10} {'Relations':<10} {'Status'}"
+    )
     print(f"{'-'*35} {'-'*15} {'-'*20} {'-'*12} {'-'*10} {'-'*10} {'-'*8}")
 
     for r in results:
-        if 'error' in r:
+        if "error" in r:
             continue
 
-        model_short = r['model'].split('/')[-1] if '/' in r['model'] else r['model']
-        format_status = "VALID" if r['valid_format'] else "INVALID"
-        status = "OK" if r['success'] else "FAIL"
+        model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
+        format_status = "VALID" if r["valid_format"] else "INVALID"
+        status = "OK" if r["success"] else "FAIL"
 
-        print(f"{model_short:<35} {r['mode']:<15} {r['test_name']:<20} {format_status:<12} "
-              f"{r['entity_count']}/{r['expected_entities']:<8} {r['relation_count']}/{r['expected_relations']:<8} {status}")
+        print(
+            f"{model_short:<35} {r['mode']:<15} {r['test_name']:<20} {format_status:<12} "
+            f"{r['entity_count']}/{r['expected_entities']:<8} {r['relation_count']}/{r['expected_relations']:<8} {status}"
+        )
 
     # BEST PERFORMERS
     print(f"\n{'='*80}")
     print("BEST FORMAT COMPLIANCE")
     print(f"{'='*80}\n")
 
-    successful = [r for r in results if r.get('success')]
+    successful = [r for r in results if r.get("success")]
     if successful:
         # Best by entities + relations
-        best = max(successful, key=lambda r: r['entity_count'] + r['relation_count'])
-        print(f"Best Extraction: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}")
+        best = max(successful, key=lambda r: r["entity_count"] + r["relation_count"])
+        print(
+            f"Best Extraction: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}"
+        )
         print(f"  Mode: {best['mode']}")
         print(f"  Test: {best['test_name']}")
         print(f"  Entities: {best['entity_count']}, Relations: {best['relation_count']}")
         print(f"  Time: {best['time']:.2f}s")
 
         # Fastest valid
-        fastest = min(successful, key=lambda r: r['time'])
-        print(f"\nFastest Valid: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}")
+        fastest = min(successful, key=lambda r: r["time"])
+        print(
+            f"\nFastest Valid: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}"
+        )
         print(f"  Mode: {fastest['mode']}")
         print(f"  Time: {fastest['time']:.2f}s")
         print(f"  Entities: {fastest['entity_count']}, Relations: {fastest['relation_count']}")
@@ -314,17 +337,19 @@ Testing models with LightRAG's original prompt format:
 
     error_types = {}
     for r in results:
-        if r.get('errors'):
-            for error in r['errors']:
+        if r.get("errors"):
+            for error in r["errors"]:
                 # Categorize errors
-                if 'JSON' in error or 'markdown' in error:
-                    error_types['Wrong Format (JSON/Markdown)'] = error_types.get('Wrong Format (JSON/Markdown)', 0) + 1
-                elif 'fields' in error:
-                    error_types['Wrong Field Count'] = error_types.get('Wrong Field Count', 0) + 1
-                elif 'Unknown line type' in error:
-                    error_types['Unknown Line Type'] = error_types.get('Unknown Line Type', 0) + 1
+                if "JSON" in error or "markdown" in error:
+                    error_types["Wrong Format (JSON/Markdown)"] = (
+                        error_types.get("Wrong Format (JSON/Markdown)", 0) + 1
+                    )
+                elif "fields" in error:
+                    error_types["Wrong Field Count"] = error_types.get("Wrong Field Count", 0) + 1
+                elif "Unknown line type" in error:
+                    error_types["Unknown Line Type"] = error_types.get("Unknown Line Type", 0) + 1
                 else:
-                    error_types['Other'] = error_types.get('Other', 0) + 1
+                    error_types["Other"] = error_types.get("Other", 0) + 1
 
     for error_type, count in sorted(error_types.items(), key=lambda x: -x[1]):
         print(f"  {error_type}: {count} occurrences")

@@ -16,6 +16,7 @@ import pytest
 # Conditional import for PIL (Pillow)
 try:
     from PIL import Image
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -220,7 +221,7 @@ async def test_process_image__valid_image__returns_description(sample_image):
     # Mock DashScope VLM response
     with patch(
         "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
-        new_callable=AsyncMock
+        new_callable=AsyncMock,
     ) as mock_vlm:
         mock_vlm.return_value = "A red square image with dimensions 200x200 pixels."
 
@@ -251,7 +252,7 @@ async def test_process_image__creates_temp_file(sample_image):
     """Test that temporary file is created during processing (ASYNC - Sprint 25 Feature 25.4)."""
     with patch(
         "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
-        new_callable=AsyncMock
+        new_callable=AsyncMock,
     ) as mock_vlm:
         mock_vlm.return_value = "Test description"
 
@@ -275,7 +276,7 @@ async def test_process_image__vlm_error__returns_none(sample_image):
     """Test error handling when VLM fails (ASYNC - Sprint 25 Feature 25.4)."""
     with patch(
         "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
-        new_callable=AsyncMock
+        new_callable=AsyncMock,
     ) as mock_vlm:
         mock_vlm.side_effect = Exception("VLM connection error")
 

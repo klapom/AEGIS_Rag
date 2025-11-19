@@ -12,6 +12,7 @@ from pathlib import Path
 # Fix Windows console encoding for Unicode
 if sys.platform == "win32":
     import codecs
+
     sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, "strict")
     sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer, "strict")
 
@@ -25,9 +26,9 @@ from src.core.config import settings
 
 async def test_chunking():
     """Test 1: Chunking with metadata."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TEST 1: Chunking with metadata")
-    print("="*80)
+    print("=" * 80)
 
     wrapper = LightRAGWrapper()
 
@@ -50,17 +51,17 @@ async def test_chunking():
     print(f"  - Tokens per chunk: {[c['tokens'] for c in chunks]}")
 
     assert len(chunks) > 0, "Should create chunks"
-    assert all('chunk_id' in c for c in chunks), "All chunks should have chunk_id"
-    assert all('document_id' in c for c in chunks), "All chunks should have document_id"
+    assert all("chunk_id" in c for c in chunks), "All chunks should have chunk_id"
+    assert all("document_id" in c for c in chunks), "All chunks should have document_id"
 
     print("✓ TEST 1 PASSED\n")
 
 
 async def test_insert_and_provenance():
     """Test 2: Full integration with provenance."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TEST 2: Full integration with provenance tracking")
-    print("="*80)
+    print("=" * 80)
 
     wrapper = LightRAGWrapper()
     await wrapper._ensure_initialized()
@@ -76,7 +77,7 @@ async def test_insert_and_provenance():
         Klaus Pommer developed AEGIS RAG system.
         AEGIS RAG uses Ollama for local LLM inference.
         The system integrates LightRAG with Neo4j for graph reasoning.
-        """
+        """,
     }
 
     print(f"Inserting test document: {test_doc['id']}")
@@ -106,15 +107,14 @@ async def test_insert_and_provenance():
     print("\n✓ Verifying Neo4j schema...")
 
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
         # Check :chunk nodes
         chunk_result = await session.run(
             "MATCH (c:chunk {document_id: $doc_id}) RETURN count(c) as count",
-            doc_id="quick_test_001"
+            doc_id="quick_test_001",
         )
         chunk_record = await chunk_result.single()
         chunk_count = chunk_record["count"]
@@ -122,9 +122,7 @@ async def test_insert_and_provenance():
         assert chunk_count > 0, "Should have chunk nodes"
 
         # Check :base entities
-        entity_result = await session.run(
-            "MATCH (e:base) RETURN count(e) as count"
-        )
+        entity_result = await session.run("MATCH (e:base) RETURN count(e) as count")
         entity_record = await entity_result.single()
         entity_count = entity_record["count"]
         print(f"  - :base entities: {entity_count}")
@@ -136,7 +134,7 @@ async def test_insert_and_provenance():
             MATCH (e:base)-[r:MENTIONED_IN]->(c:chunk {document_id: $doc_id})
             RETURN count(r) as count
             """,
-            doc_id="quick_test_001"
+            doc_id="quick_test_001",
         )
         mention_record = await mention_result.single()
         mention_count = mention_record["count"]
@@ -150,20 +148,17 @@ async def test_insert_and_provenance():
 
 async def test_provenance_query():
     """Test 3: Provenance query."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TEST 3: Provenance query - Find chunks mentioning entity")
-    print("="*80)
+    print("=" * 80)
 
     driver = AsyncGraphDatabase.driver(
-        settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
+        settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value())
     )
 
     async with driver.session() as session:
         # Find an entity
-        entity_result = await session.run(
-            "MATCH (e:base) RETURN e.entity_id as name LIMIT 1"
-        )
+        entity_result = await session.run("MATCH (e:base) RETURN e.entity_id as name LIMIT 1")
         entity_record = await entity_result.single()
 
         if not entity_record:
@@ -183,7 +178,7 @@ async def test_provenance_query():
                    c.tokens as tokens,
                    c.document_id as document_id
             """,
-            entity_id=entity_id
+            entity_id=entity_id,
         )
 
         records = await provenance_result.fetch(10)
@@ -197,8 +192,9 @@ async def test_provenance_query():
             print(f"    - Text Preview: {record['chunk_text'][:100]}...")
 
             # Verify entity is actually in the text
-            assert entity_id in record["chunk_text"], \
-                f"Entity '{entity_id}' should be in chunk text"
+            assert (
+                entity_id in record["chunk_text"]
+            ), f"Entity '{entity_id}' should be in chunk text"
 
     await driver.close()
 
@@ -207,22 +203,23 @@ async def test_provenance_query():
 
 async def main():
     """Run all tests."""
-    print("\n" + "#"*80)
+    print("\n" + "#" * 80)
     print("# Sprint 14 Feature 14.1 - LightRAG Provenance Quick Test")
-    print("#"*80)
+    print("#" * 80)
 
     try:
         await test_chunking()
         await test_insert_and_provenance()
         await test_provenance_query()
 
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("✓ ALL TESTS PASSED!")
-        print("="*80 + "\n")
+        print("=" * 80 + "\n")
 
     except Exception as e:
         print(f"\n❌ TEST FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

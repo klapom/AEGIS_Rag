@@ -15,6 +15,7 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class VersionManager:
     """Manages entity versions with bi-temporal tracking."""
 
@@ -512,8 +513,10 @@ class VersionManager:
 
         return deleted
 
+
 # Singleton instance
 _version_manager: VersionManager | None = None
+
 
 def get_version_manager() -> VersionManager:
     """Get global version manager instance (singleton).

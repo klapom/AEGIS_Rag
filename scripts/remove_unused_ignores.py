@@ -47,7 +47,7 @@ def remove_unused_ignores(mypy_output_file: str, dry_run: bool = False) -> None:
 def fix_file(file_path: str, line_numbers: list[int], dry_run: bool) -> None:
     """Remove type:ignore comments from specific lines."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
     except FileNotFoundError:
         print(f"Skipping {file_path} (not found)")
@@ -59,14 +59,14 @@ def fix_file(file_path: str, line_numbers: list[int], dry_run: bool) -> None:
         if idx < len(lines):
             original = lines[idx]
             # Remove # type: ignore[...] or  # type: ignore
-            cleaned = re.sub(r'\s*#\s*type:\s*ignore(?:\[[^\]]+\])?', '', original)
+            cleaned = re.sub(r"\s*#\s*type:\s*ignore(?:\[[^\]]+\])?", "", original)
             if cleaned != original:
                 lines[idx] = cleaned
                 modified = True
                 print(f"  Line {line_num}: Removed type:ignore")
 
     if modified and not dry_run:
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
         print(f"✓ Fixed {file_path}")
     elif modified:

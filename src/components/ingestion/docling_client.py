@@ -50,6 +50,7 @@ from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
 
+
 class DoclingParsedDocument(BaseModel):
     """Parsed document from Docling container.
 
@@ -72,6 +73,7 @@ class DoclingParsedDocument(BaseModel):
         default_factory=dict, description="Full Docling JSON response"
     )
     md_content: str = Field(default="", description="Markdown with embedded base64 images")
+
 
 class DoclingClient:
     """HTTP client for Docling CUDA Docker container.
@@ -625,9 +627,11 @@ class DoclingClient:
         """Async context manager exit: stop container."""
         await self.stop_container()
 
+
 # =============================================================================
 # CONVENIENCE FUNCTIONS
 # =============================================================================
+
 
 async def parse_document_with_docling(
     file_path: Path,
@@ -662,6 +666,7 @@ async def parse_document_with_docling(
             return await client.parse_document(file_path)
     else:
         return await client.parse_document(file_path)
+
 
 # ============================================================================
 # Backward Compatibility Alias (Sprint 25 Feature 25.9)

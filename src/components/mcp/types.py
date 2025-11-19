@@ -58,6 +58,7 @@ class MCPTool:
 
         return True, None
 
+
 @dataclass
 class MCPServer:
     """Represents an MCP server configuration.
@@ -84,6 +85,7 @@ class MCPServer:
             self.env = {}
         if self.tools is None:
             self.tools = []
+
 
 @dataclass
 class ToolExecutionResult:

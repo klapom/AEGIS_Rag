@@ -122,9 +122,7 @@ class EmbeddingBenchmark:
 
     def __init__(self, config: BenchmarkConfig):
         self.config = config
-        self.qdrant_client = QdrantClient(
-            host=config.qdrant_host, port=config.qdrant_port
-        )
+        self.qdrant_client = QdrantClient(host=config.qdrant_host, port=config.qdrant_port)
         self.results: Dict[str, EmbeddingMetrics] = {}
 
     async def run(self) -> Dict[str, EmbeddingMetrics]:
@@ -305,9 +303,7 @@ class EmbeddingBenchmark:
         corpus_path = Path(self.config.test_corpus_path)
 
         if not corpus_path.exists():
-            logger.warning(
-                f"Test corpus not found at {corpus_path}, generating synthetic corpus"
-            )
+            logger.warning(f"Test corpus not found at {corpus_path}, generating synthetic corpus")
             return self._generate_synthetic_corpus()
 
         with open(corpus_path, "r", encoding="utf-8") as f:
@@ -334,9 +330,7 @@ class EmbeddingBenchmark:
         output_path = Path(self.config.output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        results_dict = {
-            model_name: asdict(metrics) for model_name, metrics in self.results.items()
-        }
+        results_dict = {model_name: asdict(metrics) for model_name, metrics in self.results.items()}
 
         with open(output_path, "w") as f:
             json.dump(results_dict, f, indent=2)
@@ -357,9 +351,7 @@ class EmbeddingBenchmark:
             print(f"  P95 Latency: {metrics.p95_latency_ms:.2f}ms")
             print(f"  P99 Latency: {metrics.p99_latency_ms:.2f}ms")
             print(f"  Model Size: {metrics.model_size_mb:.0f}MB")
-            print(
-                f"  Collection Size (100 docs): {metrics.collection_size_mb:.2f}MB"
-            )
+            print(f"  Collection Size (100 docs): {metrics.collection_size_mb:.2f}MB")
             print(
                 f"  Cross-Layer Similarity: {'✅ Possible' if metrics.cross_layer_similarity_possible else '❌ Not Possible'}"
             )
@@ -378,9 +370,7 @@ class EmbeddingBenchmark:
                 / m1.single_embedding_latency_ms
                 * 100
             )
-            memory_diff = (
-                (m2.model_size_mb - m1.model_size_mb) / m1.model_size_mb * 100
-            )
+            memory_diff = (m2.model_size_mb - m1.model_size_mb) / m1.model_size_mb * 100
 
             print(
                 f"Latency: {models[1]} is {abs(latency_diff):.1f}% {'slower' if latency_diff > 0 else 'faster'} than {models[0]}"

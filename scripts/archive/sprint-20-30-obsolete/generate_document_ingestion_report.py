@@ -67,9 +67,7 @@ def render_table_html(table_data: dict, json_content: dict) -> str:
         for row_idx, row in enumerate(grid):
             html += "<tr>"
             for cell in row:
-                cell_text = (
-                    cell.get("text", "") if isinstance(cell, dict) else str(cell)
-                )
+                cell_text = cell.get("text", "") if isinstance(cell, dict) else str(cell)
 
                 if row_idx == 0:
                     html += (
@@ -79,8 +77,7 @@ def render_table_html(table_data: dict, json_content: dict) -> str:
                     )
                 else:
                     html += (
-                        f'<td style="border: 1px solid #ddd; padding: 8px;">'
-                        f"{cell_text}</td>"
+                        f'<td style="border: 1px solid #ddd; padding: 8px;">' f"{cell_text}</td>"
                     )
 
             html += "</tr>"
@@ -148,7 +145,7 @@ def get_metrics_html(doc_metrics: Dict) -> str:
         provider_html += (
             f'<div style="display: flex; justify-content: space-between;'
             f' margin: 5px 0;"><span>{provider}:</span>'
-            f' <strong>{count} calls</strong></div>'
+            f" <strong>{count} calls</strong></div>"
         )
 
     metrics_section = f"""
@@ -185,7 +182,8 @@ def generate_html_report(
 ):
     """Generate comprehensive HTML report with metrics and cost tracking."""
 
-    html = """<!DOCTYPE html>
+    html = (
+        """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -425,10 +423,13 @@ def generate_html_report(
         <h1>Document Ingestion Analysis Report</h1>
         <div class="subtitle">
             Sprint 23 Enhanced - Multi-Cloud LLM with Cost Tracking<br>
-            Generated: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """
+            Generated: """
+        + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        + """
         </div>
     </div>
 """
+    )
 
     for doc_data in parsed_docs:
         parsed = doc_data["parsed"]
@@ -562,9 +563,13 @@ def generate_html_report(
                     cost = vlm_data.get("cost", 0.0)
 
                     provider_badge = (
-                        'cloud' if 'alibaba' in provider.lower() or 'dashscope' in provider.lower() else ''
+                        "cloud"
+                        if "alibaba" in provider.lower() or "dashscope" in provider.lower()
+                        else ""
                     )
-                    provider_label = "Alibaba Cloud" if "alibaba" in provider.lower() else "Local Ollama"
+                    provider_label = (
+                        "Alibaba Cloud" if "alibaba" in provider.lower() else "Local Ollama"
+                    )
 
                     vlm_html = f"""
             <div class="vlm-description">
@@ -601,14 +606,18 @@ def generate_html_report(
         else:
             html += '<p class="no-content">No images found in this document.</p>'
 
-        html += """
+        html += (
+            """
         <button class="collapsible" onclick="toggleContent(this)">Show Full Text (First 2000 chars)</button>
         <div class="content">
-            <div class="text-sample">""" + parsed.text[:2000].replace('<', '&lt;').replace('>', '&gt;') + """
+            <div class="text-sample">"""
+            + parsed.text[:2000].replace("<", "&lt;").replace(">", "&gt;")
+            + """
 ... (truncated)</div>
         </div>
     </div>
 """
+        )
 
     html += """
     <div style="text-align: center; padding: 30px; color: #999;">
@@ -693,7 +702,7 @@ async def analyze_documents(pdf_path: Path, use_cloud_vlm: bool = False):
             from PIL import Image
 
             # Pattern: ![alt](data:image/png;base64,iVBORw0KGgo...)
-            pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)'
+            pattern = r"!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)"
             base64_images = re.findall(pattern, parsed.md_content)
 
             logger.info("Extracting images from markdown", count=len(base64_images))
@@ -764,8 +773,8 @@ async def analyze_documents(pdf_path: Path, use_cloud_vlm: bool = False):
                             "provider": "error",
                             "latency_ms": 0,
                             "cost": 0.0,
-                            "alt_text": alt_text if 'alt_text' in locals() else "",
-                            "format": img_format if 'img_format' in locals() else "",
+                            "alt_text": alt_text if "alt_text" in locals() else "",
+                            "format": img_format if "img_format" in locals() else "",
                         }
 
                 if latencies:

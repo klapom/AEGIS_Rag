@@ -285,7 +285,9 @@ def _complexity_analysis(complexity: str) -> str:
         elif count <= 20:
             return f"🟠 **Warning.** {count} high-complexity functions. Refactoring recommended."
         else:
-            return f"🔴 **Critical.** {count} high-complexity functions. Immediate refactoring needed."
+            return (
+                f"🔴 **Critical.** {count} high-complexity functions. Immediate refactoring needed."
+            )
     except (ValueError, TypeError):
         return "ℹ️ Data not available."
 
@@ -415,13 +417,17 @@ def _generate_critical_actions(args) -> str:
 
     try:
         if int(args.security_high or 0) > 0:
-            actions.append(f"- [ ] Fix {args.security_high} high-severity security issues (run `bandit -r src/` for details)")
+            actions.append(
+                f"- [ ] Fix {args.security_high} high-severity security issues (run `bandit -r src/` for details)"
+            )
 
         if float(args.coverage or 0) < 70:
             actions.append(f"- [ ] Increase test coverage from {args.coverage}% to >80%")
 
         if int(args.complexity or 0) > 30:
-            actions.append(f"- [ ] Refactor {args.complexity} high-complexity functions (target: ≤20)")
+            actions.append(
+                f"- [ ] Refactor {args.complexity} high-complexity functions (target: ≤20)"
+            )
 
     except (ValueError, TypeError):
         pass
@@ -438,7 +444,9 @@ def _generate_high_priority_actions(args) -> str:
             actions.append(f"- [ ] Fix {args.security_medium} medium-severity security issues")
 
         if int(args.dep_vulns or 0) > 0:
-            actions.append(f"- [ ] Update {args.dep_vulns} vulnerable dependencies (run `pip-audit` for details)")
+            actions.append(
+                f"- [ ] Update {args.dep_vulns} vulnerable dependencies (run `pip-audit` for details)"
+            )
 
         if float(args.coverage or 0) < 80:
             actions.append(f"- [ ] Add tests to reach 80% coverage (currently {args.coverage}%)")

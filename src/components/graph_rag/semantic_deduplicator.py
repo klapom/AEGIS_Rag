@@ -51,6 +51,7 @@ except ImportError:
 _sentence_transformer_instance: SentenceTransformer | None = None
 _singleton_lock = None  # Will be threading.Lock() if needed
 
+
 def get_sentence_transformer_singleton(
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     device: str = "cpu",  # Sprint 20.5: Force CPU to free VRAM
@@ -108,6 +109,7 @@ def get_sentence_transformer_singleton(
             )
 
         return _sentence_transformer_instance
+
 
 class SemanticDeduplicator:
     """Deduplicate entities using semantic similarity.
@@ -311,6 +313,7 @@ class SemanticDeduplicator:
             deduplicated.append(representative)
 
         return deduplicated
+
 
 def create_deduplicator_from_config(config) -> SemanticDeduplicator:
     """Factory function to create deduplicator from app config.

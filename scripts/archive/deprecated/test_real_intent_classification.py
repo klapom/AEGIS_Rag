@@ -11,9 +11,9 @@ from src.agents.router import IntentClassifier, QueryIntent
 
 async def main():
     """Test intent classification with real LLM."""
-    print("="*70)
+    print("=" * 70)
     print("Testing Intent Classification with Real Ollama LLM")
-    print("="*70)
+    print("=" * 70)
     print(f"Model: llama3.2:3b")
     print(f"Base URL: http://localhost:11434")
     print(f"Temperature: 0.0 (deterministic)")
@@ -50,26 +50,30 @@ async def main():
             print(f"Result: {intent.value.upper()}")
             print(f"Latency: {latency_ms:.2f}ms")
 
-            results.append({
-                "query": query,
-                "intent": intent.value,
-                "latency_ms": latency_ms,
-                "success": True,
-            })
+            results.append(
+                {
+                    "query": query,
+                    "intent": intent.value,
+                    "latency_ms": latency_ms,
+                    "success": True,
+                }
+            )
         except Exception as e:
             print(f"ERROR: {e}")
-            results.append({
-                "query": query,
-                "error": str(e),
-                "success": False,
-            })
+            results.append(
+                {
+                    "query": query,
+                    "error": str(e),
+                    "success": False,
+                }
+            )
 
         print()
 
     # Summary
-    print("="*70)
+    print("=" * 70)
     print("Summary")
-    print("="*70)
+    print("=" * 70)
     successful = sum(1 for r in results if r.get("success", False))
     print(f"Successful: {successful}/{len(results)}")
 
@@ -84,7 +88,7 @@ async def main():
             else:
                 print(f"  [ERROR] {r['query'][:40]:40} -> ERROR: {r.get('error', 'Unknown')}")
 
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

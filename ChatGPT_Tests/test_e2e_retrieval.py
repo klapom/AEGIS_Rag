@@ -24,7 +24,10 @@ def _wait_for_api(timeout_sec: int = 180) -> None:
 
 def _get_token(password: Optional[str] = None) -> str:
     url = f"{BASE_URL}/api/v1/retrieval/auth/token"
-    payload = {"username": "admin", "password": password or os.environ.get("AEGIS_ADMIN_PASSWORD", "admin123")}
+    payload = {
+        "username": "admin",
+        "password": password or os.environ.get("AEGIS_ADMIN_PASSWORD", "admin123"),
+    }
     r = requests.post(url, json=payload, timeout=60)
     r.raise_for_status()
     data = r.json()
@@ -59,7 +62,9 @@ def test_full_retrieval_flow():
         print(f"[retrieval][warn] Ingest failed status={r.status_code} body={r.text[:500]}")
     else:
         data = r.json()
-        print(f"[retrieval] Ingest status={data.get('status')} points_indexed={data.get('points_indexed')} chunks={data.get('chunks_created')}")
+        print(
+            f"[retrieval] Ingest status={data.get('status')} points_indexed={data.get('points_indexed')} chunks={data.get('chunks_created')}"
+        )
 
     print("[retrieval] Step 4/6: Prepare BM25 index from Qdrant ...")
     bm25_url = f"{BASE_URL}/api/v1/retrieval/prepare-bm25"
@@ -71,7 +76,9 @@ def test_full_retrieval_flow():
     r = requests.get(stats_url, timeout=60)
     r.raise_for_status()
     stats = r.json()
-    print(f"[retrieval] Stats: bm25_fitted={stats.get('bm25_fitted')} bm25_corpus_size={stats.get('bm25_corpus_size')} qdrant={stats.get('qdrant_stats')}")
+    print(
+        f"[retrieval] Stats: bm25_fitted={stats.get('bm25_fitted')} bm25_corpus_size={stats.get('bm25_corpus_size')} qdrant={stats.get('qdrant_stats')}"
+    )
     assert stats.get("status") == "success"
     # qdrant may be empty if documents were not parsed; still assert presence of keys
     assert "qdrant_stats" in stats

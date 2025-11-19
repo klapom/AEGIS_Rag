@@ -3,8 +3,11 @@
 
 from pathlib import Path
 
-BASE_DIR = Path("C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag")
+BASE_DIR = Path(
+    "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag"
+)
 SRC_DIR = BASE_DIR / "src"
+
 
 def fix_file(file_path: Path) -> bool:
     """Fix escaped triple quotes in a single file."""

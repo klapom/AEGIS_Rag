@@ -43,7 +43,9 @@ class TestDualLevelSearch:
     @pytest.fixture
     def dual_level_search(self, mock_neo4j_client, mock_llm_proxy):
         """DualLevelSearch instance with mocked dependencies."""
-        with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy") as mock_get_proxy:
+        with patch(
+            "src.components.graph_rag.dual_level_search.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
             mock_get_proxy.return_value = mock_llm_proxy
             search = DualLevelSearch(
                 neo4j_uri="bolt://localhost:7687",

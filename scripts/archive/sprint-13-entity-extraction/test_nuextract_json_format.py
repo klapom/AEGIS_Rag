@@ -98,7 +98,7 @@ TEST_CASES = [
         "text": SPORTS_TEXT,
         "expected_entities": 10,
         "expected_relations": 8,
-    }
+    },
 ]
 
 
@@ -114,21 +114,21 @@ def convert_json_to_lightrag(json_data: dict) -> str:
     lines = []
 
     # Convert entities
-    for entity in json_data.get('entities', []):
-        name = entity.get('name', '').strip()
-        etype = entity.get('type', 'OTHER').strip().upper()
-        desc = entity.get('description', '').strip()
+    for entity in json_data.get("entities", []):
+        name = entity.get("name", "").strip()
+        etype = entity.get("type", "OTHER").strip().upper()
+        desc = entity.get("description", "").strip()
 
         if name:  # Only add if we have a name
             line = f"entity{TUPLE_DELIMITER}{name}{TUPLE_DELIMITER}{etype}{TUPLE_DELIMITER}{desc}"
             lines.append(line)
 
     # Convert relations
-    for relation in json_data.get('relations', []):
-        source = relation.get('source', '').strip()
-        target = relation.get('target', '').strip()
-        keywords = relation.get('keywords', '').strip()
-        desc = relation.get('description', '').strip()
+    for relation in json_data.get("relations", []):
+        source = relation.get("source", "").strip()
+        target = relation.get("target", "").strip()
+        keywords = relation.get("keywords", "").strip()
+        desc = relation.get("description", "").strip()
 
         if source and target:  # Only add if we have source and target
             line = f"relation{TUPLE_DELIMITER}{source}{TUPLE_DELIMITER}{target}{TUPLE_DELIMITER}{keywords}{TUPLE_DELIMITER}{desc}"
@@ -137,7 +137,7 @@ def convert_json_to_lightrag(json_data: dict) -> str:
     # Add completion marker
     lines.append(COMPLETION_DELIMITER)
 
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def validate_json_and_convert(response: str) -> dict:
@@ -147,46 +147,54 @@ def validate_json_and_convert(response: str) -> dict:
         Dictionary with validation results and converted format
     """
     result = {
-        'json_valid': False,
-        'json_data': None,
-        'lightrag_format': '',
-        'entity_count': 0,
-        'relation_count': 0,
-        'errors': []
+        "json_valid": False,
+        "json_data": None,
+        "lightrag_format": "",
+        "entity_count": 0,
+        "relation_count": 0,
+        "errors": [],
     }
 
     # Try to parse JSON
     try:
         # Remove markdown code blocks if present
         cleaned = response.strip()
-        if cleaned.startswith('```'):
+        if cleaned.startswith("```"):
             # Extract JSON from code block
-            lines = cleaned.split('\n')
-            cleaned = '\n'.join(lines[1:-1]) if len(lines) > 2 else cleaned
-            cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+            lines = cleaned.split("\n")
+            cleaned = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned
+            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
         json_data = json.loads(cleaned)
-        result['json_valid'] = True
-        result['json_data'] = json_data
+        result["json_valid"] = True
+        result["json_data"] = json_data
 
         # Count entities and relations
-        result['entity_count'] = len(json_data.get('entities', []))
-        result['relation_count'] = len(json_data.get('relations', []))
+        result["entity_count"] = len(json_data.get("entities", []))
+        result["relation_count"] = len(json_data.get("relations", []))
 
         # Convert to LightRAG format
-        result['lightrag_format'] = convert_json_to_lightrag(json_data)
+        result["lightrag_format"] = convert_json_to_lightrag(json_data)
 
     except json.JSONDecodeError as e:
-        result['errors'].append(f"JSON parsing error: {e}")
+        result["errors"].append(f"JSON parsing error: {e}")
     except Exception as e:
-        result['errors'].append(f"Conversion error: {e}")
+        result["errors"].append(f"Conversion error: {e}")
 
     return result
 
 
-def append_to_log(log_path: Path, test_case: dict, system_prompt: str, user_prompt: str,
-                  raw_response: str, validation: dict, start_time: datetime,
-                  end_time: datetime, duration: float):
+def append_to_log(
+    log_path: Path,
+    test_case: dict,
+    system_prompt: str,
+    user_prompt: str,
+    raw_response: str,
+    validation: dict,
+    start_time: datetime,
+    end_time: datetime,
+    duration: float,
+):
     """Append test execution to model's log file."""
     log_content = f"""
 {'='*80}
@@ -228,17 +236,18 @@ CONVERTED LIGHTRAG FORMAT:
 
 """
 
-    with open(log_path, 'a', encoding='utf-8') as f:
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(log_content)
 
 
-def test_model(model: str, test_case: dict, client: Client, log_path: Path,
-               use_think_false: bool = False) -> dict:
+def test_model(
+    model: str, test_case: dict, client: Client, log_path: Path, use_think_false: bool = False
+) -> dict:
     """Test a model with JSON format and convert to LightRAG."""
     mode = "think=False" if use_think_false else "default"
 
     # Prepare prompts
-    user_prompt = USER_PROMPT_TEMPLATE_JSON.format(text=test_case['text'])
+    user_prompt = USER_PROMPT_TEMPLATE_JSON.format(text=test_case["text"])
 
     # Record start time
     start_time = datetime.now()
@@ -249,14 +258,14 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "model": model,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT_JSON},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             "options": {
                 "temperature": 0.1,
                 "num_predict": 2000,
-                "num_ctx": 16384  # LightRAG's context window size
+                "num_ctx": 16384,  # LightRAG's context window size
             },
-            "format": "json"  # Request JSON format from Ollama
+            "format": "json",  # Request JSON format from Ollama
         }
 
         if use_think_false:
@@ -279,7 +288,7 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             validation=validation,
             start_time=start_time,
             end_time=end_time,
-            duration=elapsed
+            duration=elapsed,
         )
 
         return {
@@ -288,13 +297,15 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "test_id": test_case["id"],
             "test_name": test_case["name"],
             "time": elapsed,
-            "json_valid": validation['json_valid'],
-            "entities_found": validation['entity_count'],
-            "relations_found": validation['relation_count'],
+            "json_valid": validation["json_valid"],
+            "entities_found": validation["entity_count"],
+            "relations_found": validation["relation_count"],
             "entities_expected": test_case["expected_entities"],
             "relations_expected": test_case["expected_relations"],
-            "errors": validation['errors'],
-            "status": "PASS" if validation['json_valid'] and validation['entity_count'] > 0 else "FAIL"
+            "errors": validation["errors"],
+            "status": (
+                "PASS" if validation["json_valid"] and validation["entity_count"] > 0 else "FAIL"
+            ),
         }
 
     except Exception as e:
@@ -310,11 +321,16 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             system_prompt=SYSTEM_PROMPT_JSON,
             user_prompt=user_prompt,
             raw_response=f"ERROR: {error_msg}",
-            validation={'json_valid': False, 'entity_count': 0, 'relation_count': 0,
-                       'errors': [error_msg], 'lightrag_format': ''},
+            validation={
+                "json_valid": False,
+                "entity_count": 0,
+                "relation_count": 0,
+                "errors": [error_msg],
+                "lightrag_format": "",
+            },
             start_time=start_time,
             end_time=end_time,
-            duration=elapsed
+            duration=elapsed,
         )
 
         return {
@@ -329,13 +345,14 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path,
             "entities_expected": test_case["expected_entities"],
             "relations_expected": test_case["expected_relations"],
             "errors": [error_msg],
-            "status": "ERROR"
+            "status": "ERROR",
         }
 
 
 def main():
     """Main test execution."""
-    print(f"""{'='*80}
+    print(
+        f"""{'='*80}
      NuExtract JSON Format Test - Convert to LightRAG
 {'='*80}
 
@@ -349,7 +366,8 @@ Expected JSON format:
 
 Converts to LightRAG format:
 entity<|#|>X<|#|>Y<|#|>Z
-    """)
+    """
+    )
 
     client = Client()
 
@@ -365,7 +383,7 @@ entity<|#|>X<|#|>Y<|#|>Z
     log_dir.mkdir(parents=True, exist_ok=True)
 
     for model, supports_think in models_to_test:
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"MODEL: {model_short}")
@@ -380,9 +398,9 @@ entity<|#|>X<|#|>Y<|#|>Z
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Hello"}
+                    {"role": "user", "content": "Hello"},
                 ],
-                options={"num_ctx": 16384}
+                options={"num_ctx": 16384},
             )
             print("OK")
         except Exception as e:
@@ -395,8 +413,9 @@ entity<|#|>X<|#|>Y<|#|>Z
         log_path = log_dir / log_filename
 
         # Write log header
-        with open(log_path, 'w', encoding='utf-8') as f:
-            f.write(f"""{'='*80}
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(
+                f"""{'='*80}
 NuExtract JSON FORMAT TEST LOG
 {'='*80}
 
@@ -408,17 +427,22 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+            )
 
         for test_case in TEST_CASES:
-            print(f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True)
+            print(
+                f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True
+            )
             result = test_model(model, test_case, client, log_path, use_think_false=False)
             results.append(result)
 
-            status = "OK" if result['status'] == "PASS" else "FAIL"
-            print(f"{result['entities_found']}E/{result['relations_found']}R in {result['time']:.1f}s [{status}]")
-            if result['errors']:
-                for error in result['errors'][:2]:  # Show first 2 errors
+            status = "OK" if result["status"] == "PASS" else "FAIL"
+            print(
+                f"{result['entities_found']}E/{result['relations_found']}R in {result['time']:.1f}s [{status}]"
+            )
+            if result["errors"]:
+                for error in result["errors"][:2]:  # Show first 2 errors
                     print(f"    ERROR: {error}")
 
         # Test with think=False if supported
@@ -429,8 +453,9 @@ Start Time: {datetime.now().isoformat()}
             log_path = log_dir / log_filename
 
             # Write log header
-            with open(log_path, 'w', encoding='utf-8') as f:
-                f.write(f"""{'='*80}
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(
+                    f"""{'='*80}
 NuExtract JSON FORMAT TEST LOG
 {'='*80}
 
@@ -442,17 +467,24 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+                )
 
             for test_case in TEST_CASES:
-                print(f"  [{test_case['id']}/3] {test_case['name']} [think=False]...", end=" ", flush=True)
+                print(
+                    f"  [{test_case['id']}/3] {test_case['name']} [think=False]...",
+                    end=" ",
+                    flush=True,
+                )
                 result = test_model(model, test_case, client, log_path, use_think_false=True)
                 results.append(result)
 
-                status = "OK" if result['status'] == "PASS" else "FAIL"
-                print(f"{result['entities_found']}E/{result['relations_found']}R in {result['time']:.1f}s [{status}]")
-                if result['errors']:
-                    for error in result['errors'][:2]:
+                status = "OK" if result["status"] == "PASS" else "FAIL"
+                print(
+                    f"{result['entities_found']}E/{result['relations_found']}R in {result['time']:.1f}s [{status}]"
+                )
+                if result["errors"]:
+                    for error in result["errors"][:2]:
                         print(f"    ERROR: {error}")
 
     # ========================================================================
@@ -463,20 +495,24 @@ Start Time: {datetime.now().isoformat()}
     print(f"{'='*80}\n")
 
     # Summary table
-    print(f"{'Model':<35} {'Mode':<15} {'Test':<30} {'JSON':<8} {'Entities':<12} {'Relations':<12} {'Status':<8}")
+    print(
+        f"{'Model':<35} {'Mode':<15} {'Test':<30} {'JSON':<8} {'Entities':<12} {'Relations':<12} {'Status':<8}"
+    )
     print(f"{'-'*35} {'-'*15} {'-'*30} {'-'*8} {'-'*12} {'-'*12} {'-'*8}")
 
     for r in results:
-        model_short = r['model'].split('/')[-1] if '/' in r['model'] else r['model']
-        json_status = "VALID" if r['json_valid'] else "INVALID"
+        model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
+        json_status = "VALID" if r["json_valid"] else "INVALID"
         entity_str = f"{r['entities_found']}/{r['entities_expected']}"
         relation_str = f"{r['relations_found']}/{r['relations_expected']}"
 
-        print(f"{model_short:<35} {r['mode']:<15} {r['test_name']:<30} {json_status:<8} {entity_str:<12} {relation_str:<12} {r['status']:<8}")
+        print(
+            f"{model_short:<35} {r['mode']:<15} {r['test_name']:<30} {json_status:<8} {entity_str:<12} {relation_str:<12} {r['status']:<8}"
+        )
 
     # Save results
     output_file = Path("nuextract_json_format_test.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"\n{'='*80}")

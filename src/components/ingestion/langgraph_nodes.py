@@ -217,6 +217,7 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
 
         # Initialize Docling client (Sprint 30: Configurable via settings.docling_base_url)
         from src.core.config import settings
+
         docling = DoclingContainerClient(
             base_url=settings.docling_base_url,
             timeout_seconds=settings.docling_timeout_seconds,
@@ -936,6 +937,7 @@ async def embedding_node(state: IngestionState) -> IngestionState:
             chunk_name = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
             # Convert to UUID using uuid5 (deterministic, namespace-based)
             import uuid
+
             chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_name))
             chunk_ids.append(chunk_id)
 

@@ -19,6 +19,7 @@ Bug Fixes Applied:
 
 ⚠️ WARNING: This script will be replaced in Sprint 21
 """
+
 import asyncio
 import shutil
 import sys
@@ -132,9 +133,7 @@ async def main():
 
         if lightrag_docs:
             # Use the optimized insert method (includes start_token fix from d8e52c0)
-            graph_stats = await lightrag_wrapper.insert_documents_optimized(
-                lightrag_docs
-            )
+            graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
             print(f"   [OK] Neo4j indexing complete")
             print(f"       Chunks stored: {graph_stats.get('chunks_stored', 0)}")
             print(f"       Entities extracted: {graph_stats.get('entities_extracted', 0)}")
@@ -146,9 +145,7 @@ async def main():
         print(f"\n[6/7] Verifying Qdrant...")
         qdrant_info = await qdrant_client.get_collection_info(collection_name)
         if qdrant_info:
-            print(
-                f"   Collection '{collection_name}' has {qdrant_info.points_count} points"
-            )
+            print(f"   Collection '{collection_name}' has {qdrant_info.points_count} points")
         else:
             print(f"   [WARNING] Could not verify Qdrant collection")
 
@@ -167,9 +164,7 @@ async def main():
         print(
             f"   - Neo4j: {graph_stats.get('total_entities', 0)} entities, {graph_stats.get('total_relations', 0)} relations"
         )
-        print(
-            f"\n   Bug Fixes Applied:"
-        )
+        print(f"\n   Bug Fixes Applied:")
         print(f"   ✅ Path traversal fix (79abe52): allowed_base_path={temp_path}")
         print(f"   ✅ start_token fix (d8e52c0): handled in lightrag_wrapper.py:883-907")
 

@@ -177,8 +177,14 @@ async def benchmark_answer_generation(runs: int = 10) -> dict[str, Any]:
 
     contexts = [
         {"text": "LangGraph provides state management for multi-agent systems.", "source": "doc1"},
-        {"text": "AEGIS RAG uses LangGraph for orchestration of retrieval agents.", "source": "doc2"},
-        {"text": "The system supports hybrid search across vector and graph databases.", "source": "doc3"},
+        {
+            "text": "AEGIS RAG uses LangGraph for orchestration of retrieval agents.",
+            "source": "doc2",
+        },
+        {
+            "text": "The system supports hybrid search across vector and graph databases.",
+            "source": "doc3",
+        },
     ]
 
     query = "What framework does AEGIS RAG use for orchestration?"

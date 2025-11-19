@@ -56,7 +56,9 @@ def mock_acompletion_json_response():
     """Mock JSON response for relation extraction."""
     response = MagicMock()
     response.choices = [MagicMock()]
-    response.choices[0].message.content = """
+    response.choices[
+        0
+    ].message.content = """
 {
     "relations": [
         {
@@ -112,9 +114,7 @@ def sample_entities():
 class TestAnswerGeneratorIntegration:
     """Integration tests for AnswerGenerator with AegisLLMProxy."""
 
-    async def test_generate_answer_simple_mode(
-        self, mock_acompletion_response, sample_contexts
-    ):
+    async def test_generate_answer_simple_mode(self, mock_acompletion_response, sample_contexts):
         """Test answer generation with MEDIUM complexity (simple mode)."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_acompletion_response
@@ -134,9 +134,7 @@ class TestAnswerGeneratorIntegration:
             call_args = mock_acomp.call_args
             assert call_args is not None
 
-    async def test_generate_answer_multi_hop_mode(
-        self, mock_acompletion_response, sample_contexts
-    ):
+    async def test_generate_answer_multi_hop_mode(self, mock_acompletion_response, sample_contexts):
         """Test answer generation with HIGH complexity (multi-hop mode)."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_acompletion_response
@@ -228,9 +226,7 @@ class TestAnswerGeneratorIntegration:
 class TestRelationExtractorIntegration:
     """Integration tests for RelationExtractor with AegisLLMProxy."""
 
-    async def test_extract_relations_success(
-        self, mock_acompletion_json_response, sample_entities
-    ):
+    async def test_extract_relations_success(self, mock_acompletion_json_response, sample_entities):
         """Test relation extraction with valid entities."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_acompletion_json_response
@@ -302,7 +298,9 @@ class TestRelationExtractorIntegration:
             # Test markdown code block removal
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[0].message.content = """```json
+            response.choices[
+                0
+            ].message.content = """```json
 {
     "relations": [
         {"source": "Alex", "target": "TechCorp", "description": "works at", "strength": 9}
@@ -429,7 +427,9 @@ class TestQueryDecomposerIntegration:
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[0].message.content = """1. What is vector search?
+            response.choices[
+                0
+            ].message.content = """1. What is vector search?
 2. How does BM25 work?"""
             response.usage = MagicMock()
             response.usage.total_tokens = 50
@@ -454,7 +454,9 @@ class TestQueryDecomposerIntegration:
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             response = MagicMock()
             response.choices = [MagicMock()]
-            response.choices[0].message.content = """1. What algorithm is used in Qdrant?
+            response.choices[
+                0
+            ].message.content = """1. What algorithm is used in Qdrant?
 2. Who developed that algorithm?"""
             response.usage = MagicMock()
             response.usage.total_tokens = 60
@@ -484,7 +486,9 @@ class TestQueryDecomposerIntegration:
             # Mock decomposition response
             decompose_response = MagicMock()
             decompose_response.choices = [MagicMock()]
-            decompose_response.choices[0].message.content = """1. What is vector search?
+            decompose_response.choices[
+                0
+            ].message.content = """1. What is vector search?
 2. How does BM25 work?"""
             decompose_response.usage = MagicMock()
             decompose_response.usage.total_tokens = 50
@@ -642,9 +646,7 @@ class TestProviderRouting:
 class TestCostTracking:
     """Test cost tracking across all LLM proxy calls."""
 
-    async def test_cost_tracking_in_database(
-        self, mock_acompletion_response, sample_contexts
-    ):
+    async def test_cost_tracking_in_database(self, mock_acompletion_response, sample_contexts):
         """Test that costs are tracked in SQLite database."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_acompletion_response

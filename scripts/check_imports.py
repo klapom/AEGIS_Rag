@@ -32,7 +32,7 @@ def check_python_imports(file_path: str) -> Tuple[bool, List[str]]:
 
     try:
         # Read file
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             source = f.read()
 
         # Parse AST to find imports
@@ -59,21 +59,21 @@ def check_python_imports(file_path: str) -> Tuple[bool, List[str]]:
                 if isinstance(node.annotation, ast.Subscript):
                     # Check for list[Foo] vs list["Foo"]
                     if isinstance(node.annotation.value, ast.Name):
-                        if node.annotation.value.id in ('list', 'dict', 'set', 'tuple'):
+                        if node.annotation.value.id in ("list", "dict", "set", "tuple"):
                             # Check if slice is a Name (not string)
                             if isinstance(node.annotation.slice, ast.Name):
                                 type_name = node.annotation.slice.id
                                 # Check if this type is imported
-                                if type_name not in ('str', 'int', 'float', 'bool'):
+                                if type_name not in ("str", "int", "float", "bool"):
                                     # Look for import
                                     found = any(
-                                        type_name in imp or imp.endswith(f'.{type_name}')
+                                        type_name in imp or imp.endswith(f".{type_name}")
                                         for imp in imports
                                     )
                                     if not found:
                                         errors.append(
                                             f"Line {node.lineno}: Forward reference '{type_name}' "
-                                            f"not imported. Use quotes: list[\"{type_name}\"]"
+                                            f'not imported. Use quotes: list["{type_name}"]'
                                         )
 
         # Check for common import errors
@@ -111,15 +111,15 @@ def main(filenames: List[str]) -> int:
 
     for filename in filenames:
         # Skip __init__.py and test files (different rules)
-        if filename.endswith('__init__.py'):
+        if filename.endswith("__init__.py"):
             continue
 
         # Only check Python files
-        if not filename.endswith('.py'):
+        if not filename.endswith(".py"):
             continue
 
         # Skip virtual env, cache dirs
-        if any(skip in filename for skip in ['.venv', '__pycache__', '.pytest_cache']):
+        if any(skip in filename for skip in [".venv", "__pycache__", ".pytest_cache"]):
             continue
 
         success, errors = check_python_imports(filename)
@@ -138,11 +138,11 @@ def main(filenames: List[str]) -> int:
         print("\n[FAIL] Import validation failed. Fix errors above.")
         print("\nCommon fixes:")
         print("  - Add missing imports")
-        print("  - Use forward references with quotes: list[\"Foo\"] not list[Foo]")
+        print('  - Use forward references with quotes: list["Foo"] not list[Foo]')
         print("  - Check circular import dependencies")
 
     return exit_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

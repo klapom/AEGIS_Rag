@@ -41,7 +41,8 @@ TEST_SCENARIOS = {
             The system integrates Ollama for local LLM inference, eliminating API costs.
             Neo4j stores the knowledge graph with entity relationships and temporal data.
             The Three-Phase Pipeline uses SpaCy NER, semantic deduplication, and Gemma 3 4B.
-        """ * 10  # ~300 words
+        """
+        * 10,  # ~300 words
     },
     "medium": {
         "name": "Medium Documents (500-2000 words)",
@@ -64,7 +65,8 @@ TEST_SCENARIOS = {
             Transformer NER for fast entity extraction (~0.5s), semantic deduplication using
             sentence transformers (~0.5-1.5s), and Gemma 3 4B relation extraction (~13-16s).
             This achieves a 20x performance improvement over baseline LightRAG with llama3.2:3b.
-        """ * 15  # ~1200 words
+        """
+        * 15,  # ~1200 words
     },
     "large": {
         "name": "Large Documents (2000-5000 words)",
@@ -91,8 +93,9 @@ TEST_SCENARIOS = {
             error handling with automatic retry logic, graceful degradation when
             components fail, comprehensive monitoring and observability, and CI/CD
             pipeline stability for reliable releases.
-        """ * 20  # ~3500 words
-    }
+        """
+        * 20,  # ~3500 words
+    },
 }
 
 
@@ -100,7 +103,7 @@ async def benchmark_scenario(
     extractor: ThreePhaseExtractor,
     scenario_name: str,
     scenario_config: Dict[str, Any],
-    iterations: int = 3
+    iterations: int = 3,
 ) -> Dict[str, Any]:
     """Benchmark a specific test scenario.
 
@@ -132,18 +135,17 @@ async def benchmark_scenario(
         print(f"\nRun {i+1}/{iterations}...")
 
         start = time.perf_counter()
-        entities, relations = await extractor.extract(
-            text,
-            document_id=f"{scenario_name}_{i}"
-        )
+        entities, relations = await extractor.extract(text, document_id=f"{scenario_name}_{i}")
         elapsed = time.perf_counter() - start
 
-        results.append({
-            "elapsed": elapsed,
-            "entities": len(entities),
-            "relations": len(relations),
-            "words": word_count,
-        })
+        results.append(
+            {
+                "elapsed": elapsed,
+                "entities": len(entities),
+                "relations": len(relations),
+                "words": word_count,
+            }
+        )
 
         print(f"  Time: {elapsed:.2f}s")
         print(f"  Entities: {len(entities)}")
@@ -180,9 +182,7 @@ async def benchmark_scenario(
 
 
 async def benchmark_batch_processing(
-    extractor: ThreePhaseExtractor,
-    batch_size: int = 10,
-    doc_size: str = "small"
+    extractor: ThreePhaseExtractor, batch_size: int = 10, doc_size: str = "small"
 ) -> Dict[str, Any]:
     """Benchmark batch document processing.
 
@@ -202,10 +202,7 @@ async def benchmark_batch_processing(
 
     # Generate batch of documents
     documents = [
-        {
-            "id": f"batch_{i:03d}",
-            "text": text_template.replace("Klaus Pommer", f"Developer_{i}")
-        }
+        {"id": f"batch_{i:03d}", "text": text_template.replace("Klaus Pommer", f"Developer_{i}")}
         for i in range(batch_size)
     ]
 
@@ -216,11 +213,9 @@ async def benchmark_batch_processing(
     results_list = []
     for doc in documents:
         entities, relations = await extractor.extract(doc["text"], document_id=doc["id"])
-        results_list.append({
-            "doc_id": doc["id"],
-            "entities": len(entities),
-            "relations": len(relations)
-        })
+        results_list.append(
+            {"doc_id": doc["id"], "entities": len(entities), "relations": len(relations)}
+        )
 
     elapsed = time.perf_counter() - start
 
@@ -247,9 +242,9 @@ async def benchmark_batch_processing(
 
 async def main():
     """Run all benchmark scenarios."""
-    print("\n" + "#"*80)
+    print("\n" + "#" * 80)
     print("# Sprint 14 Feature 14.3: Production Benchmarking Suite")
-    print("#"*80)
+    print("#" * 80)
     print(f"\nTimestamp: {datetime.now().isoformat()}")
 
     settings = get_settings()
@@ -265,9 +260,9 @@ async def main():
     all_results = {
         "timestamp": datetime.now().isoformat(),
         "config": {
-            "extraction_pipeline": getattr(settings, 'extraction_pipeline', 'three_phase'),
-            "enable_dedup": getattr(settings, 'enable_semantic_dedup', True),
-            "max_retries": getattr(settings, 'extraction_max_retries', 3),
+            "extraction_pipeline": getattr(settings, "extraction_pipeline", "three_phase"),
+            "enable_dedup": getattr(settings, "enable_semantic_dedup", True),
+            "max_retries": getattr(settings, "extraction_max_retries", 3),
         },
         "scenarios": [],
         "batch_tests": [],
@@ -277,10 +272,7 @@ async def main():
         # Benchmark 1: Document size scenarios
         for scenario_name, scenario_config in TEST_SCENARIOS.items():
             result = await benchmark_scenario(
-                extractor,
-                scenario_name,
-                scenario_config,
-                iterations=3
+                extractor, scenario_name, scenario_config, iterations=3
             )
             all_results["scenarios"].append(result)
 
@@ -292,20 +284,20 @@ async def main():
 
         for batch_size, doc_size in batch_configs:
             result = await benchmark_batch_processing(
-                extractor,
-                batch_size=batch_size,
-                doc_size=doc_size
+                extractor, batch_size=batch_size, doc_size=doc_size
             )
             all_results["batch_tests"].append(result)
 
         # Summary
-        print("\n" + "#"*80)
+        print("\n" + "#" * 80)
         print("# BENCHMARK SUMMARY")
-        print("#"*80)
+        print("#" * 80)
 
         for scenario_result in all_results["scenarios"]:
             print(f"\n{scenario_result['name']}:")
-            print(f"  - Avg Time: {scenario_result['avg_time_sec']:.2f}s ± {scenario_result['std_time_sec']:.2f}s")
+            print(
+                f"  - Avg Time: {scenario_result['avg_time_sec']:.2f}s ± {scenario_result['std_time_sec']:.2f}s"
+            )
             print(f"  - Throughput: {scenario_result['throughput_docs_per_min']:.1f} docs/min")
             print(f"  - Avg Entities: {scenario_result['avg_entities']:.0f}")
             print(f"  - Avg Relations: {scenario_result['avg_relations']:.0f}")
@@ -325,12 +317,14 @@ async def main():
         print(f"📊 Results saved to: {output_file}")
 
         # Check against performance targets
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("PERFORMANCE TARGETS CHECK")
-        print("="*80)
+        print("=" * 80)
 
         small_result = next((r for r in all_results["scenarios"] if r["scenario"] == "small"), None)
-        medium_result = next((r for r in all_results["scenarios"] if r["scenario"] == "medium"), None)
+        medium_result = next(
+            (r for r in all_results["scenarios"] if r["scenario"] == "medium"), None
+        )
         large_result = next((r for r in all_results["scenarios"] if r["scenario"] == "large"), None)
 
         if small_result:
@@ -343,6 +337,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ Benchmark failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

@@ -39,8 +39,8 @@ OLLAMA_BASE_URL = "http://localhost:11434"
 # Default models for AEGIS RAG
 DEFAULT_MODELS = [
     "gemma-3-4b-it-Q8_0",  # Entity/Relation extraction (Phase 3)
-    "llama3.2:3b",         # Alternative chat model
-    "nomic-embed-text",    # Embeddings (Qdrant)
+    "llama3.2:3b",  # Alternative chat model
+    "nomic-embed-text",  # Embeddings (Qdrant)
 ]
 
 
@@ -97,7 +97,7 @@ async def preload_model(model_name: str, keep_alive: str = "30m") -> dict:
                     "prompt": "",  # Empty prompt just loads model
                     "stream": False,
                     "keep_alive": keep_alive,
-                }
+                },
             )
 
             load_time = time.perf_counter() - start_time
@@ -107,8 +107,7 @@ async def preload_model(model_name: str, keep_alive: str = "30m") -> dict:
 
                 # Get model info
                 info_response = await client.post(
-                    f"{OLLAMA_BASE_URL}/api/show",
-                    json={"name": model_name}
+                    f"{OLLAMA_BASE_URL}/api/show", json={"name": model_name}
                 )
 
                 model_info = {}
@@ -121,7 +120,9 @@ async def preload_model(model_name: str, keep_alive: str = "30m") -> dict:
 
                 console.print(f"[green]OK - Loaded in {load_time:.2f}s[/green]")
                 if model_info.get("size"):
-                    console.print(f"[dim]  Size: {model_info['size']:.1f} GB, Family: {model_info.get('family', 'N/A')}[/dim]")
+                    console.print(
+                        f"[dim]  Size: {model_info['size']:.1f} GB, Family: {model_info.get('family', 'N/A')}[/dim]"
+                    )
 
                 return {
                     "model": model_name,
@@ -214,7 +215,11 @@ def print_summary(results: List[dict]):
             table.add_row(
                 result["model"],
                 "[red]FAILED[/red]",
-                f"{result.get('load_time_seconds', 0):.2f}s" if "load_time_seconds" in result else "N/A",
+                (
+                    f"{result.get('load_time_seconds', 0):.2f}s"
+                    if "load_time_seconds" in result
+                    else "N/A"
+                ),
                 "N/A",
                 "N/A",
             )
@@ -238,27 +243,23 @@ async def main():
         "--models",
         nargs="+",
         default=DEFAULT_MODELS,
-        help="Models to preload (default: AEGIS RAG models)"
+        help="Models to preload (default: AEGIS RAG models)",
     )
     parser.add_argument(
-        "--keep-alive",
-        default="30m",
-        help="Duration to keep models in VRAM (default: 30m)"
+        "--keep-alive", default="30m", help="Duration to keep models in VRAM (default: 30m)"
     )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="List available models and exit"
-    )
+    parser.add_argument("--list", action="store_true", help="List available models and exit")
 
     args = parser.parse_args()
 
     # Print header
-    console.print(Panel.fit(
-        "[bold cyan]Sprint 20 Feature 20.4: Ollama Model Preloading[/bold cyan]\n"
-        "[dim]Eliminates cold start delays by preloading models into VRAM[/dim]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold cyan]Sprint 20 Feature 20.4: Ollama Model Preloading[/bold cyan]\n"
+            "[dim]Eliminates cold start delays by preloading models into VRAM[/dim]",
+            border_style="cyan",
+        )
+    )
 
     # Check Ollama is running
     console.print("\n[yellow]Checking Ollama server...[/yellow]")

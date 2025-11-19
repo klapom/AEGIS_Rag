@@ -67,9 +67,9 @@ async def test_stress_batch_100_documents():
     - Performance doesn't degrade significantly over time
     - Memory usage stays within reasonable bounds
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("STRESS TEST: 100 Document Batch Processing")
-    print("="*70)
+    print("=" * 70)
 
     # Setup
     pipeline = create_extraction_pipeline_from_config()
@@ -130,7 +130,9 @@ async def test_stress_batch_100_documents():
             if i % 10 == 0:
                 current_memory = get_memory_usage_mb()
                 memory_samples.append(current_memory)
-                print(f"[{i:3d}/100] Time: {doc_duration:5.2f}s | Memory: {current_memory:6.1f} MB | Entities: {len(entities):2d}")
+                print(
+                    f"[{i:3d}/100] Time: {doc_duration:5.2f}s | Memory: {current_memory:6.1f} MB | Entities: {len(entities):2d}"
+                )
 
         except Exception as e:
             print(f"[{i:3d}/100] ERROR: {type(e).__name__}: {str(e)[:50]}")
@@ -161,7 +163,9 @@ async def test_stress_batch_100_documents():
     print(f"{'='*70}\n")
 
     # Assertions
-    assert len(processing_times) >= 95, f"Should process at least 95/100 docs, got {len(processing_times)}"
+    assert (
+        len(processing_times) >= 95
+    ), f"Should process at least 95/100 docs, got {len(processing_times)}"
     assert memory_increase < 500, f"Memory increase too high: {memory_increase:.1f} MB"
 
     # Performance shouldn't degrade more than 50%
@@ -183,9 +187,9 @@ async def test_stress_memory_leak_detection():
     Processes the same document 50 times and monitors memory growth.
     Significant memory growth indicates a leak.
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("STRESS TEST: Memory Leak Detection")
-    print("="*70)
+    print("=" * 70)
 
     # Enable memory tracking
     tracemalloc.start()
@@ -240,7 +244,9 @@ async def test_stress_memory_leak_detection():
     print(f"{'='*70}\n")
 
     # Memory growth should be minimal (< 20%)
-    assert growth_percentage < 20, f"Possible memory leak: {growth_percentage:.1f}% growth over {iterations} iterations"
+    assert (
+        growth_percentage < 20
+    ), f"Possible memory leak: {growth_percentage:.1f}% growth over {iterations} iterations"
 
     print("✓ No significant memory leak detected")
 
@@ -258,9 +264,9 @@ async def test_stress_connection_pool_exhaustion():
 
     Simulates high concurrency by processing multiple documents simultaneously.
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("STRESS TEST: Connection Pool Exhaustion")
-    print("="*70)
+    print("=" * 70)
 
     pipeline = create_extraction_pipeline_from_config()
 
@@ -281,27 +287,33 @@ async def test_stress_connection_pool_exhaustion():
         conn_count_before = get_connection_count()
 
         try:
-            entities, relations = await pipeline.extract(document, document_id=f"concurrent_{doc_id}")
+            entities, relations = await pipeline.extract(
+                document, document_id=f"concurrent_{doc_id}"
+            )
             conn_count_after = get_connection_count()
 
-            connection_samples.append({
-                "doc_id": doc_id,
-                "before": conn_count_before,
-                "after": conn_count_after,
-                "success": True,
-            })
+            connection_samples.append(
+                {
+                    "doc_id": doc_id,
+                    "before": conn_count_before,
+                    "after": conn_count_after,
+                    "success": True,
+                }
+            )
 
             return {"entities": len(entities), "relations": len(relations), "success": True}
 
         except Exception as e:
             print(f"[Doc {doc_id:2d}] ERROR: {type(e).__name__}")
-            connection_samples.append({
-                "doc_id": doc_id,
-                "before": conn_count_before,
-                "after": get_connection_count(),
-                "success": False,
-                "error": str(e),
-            })
+            connection_samples.append(
+                {
+                    "doc_id": doc_id,
+                    "before": conn_count_before,
+                    "after": get_connection_count(),
+                    "success": False,
+                    "error": str(e),
+                }
+            )
             return {"success": False, "error": str(e)}
 
     # Launch concurrent tasks
@@ -329,7 +341,9 @@ async def test_stress_connection_pool_exhaustion():
     print(f"{'='*70}\n")
 
     # Assertions
-    assert successful >= concurrent_requests * 0.8, f"Too many failures: {failed}/{concurrent_requests}"
+    assert (
+        successful >= concurrent_requests * 0.8
+    ), f"Too many failures: {failed}/{concurrent_requests}"
     assert max_connections < 100, f"Connection count too high: {max_connections}"
 
     print("✓ Connection pool handled concurrent load")
@@ -349,9 +363,9 @@ async def test_stress_large_document_memory_profile():
     Tests memory efficiency when processing documents with hundreds
     of entities and complex relationships.
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("STRESS TEST: Large Document Memory Profiling")
-    print("="*70)
+    print("=" * 70)
 
     pipeline = create_extraction_pipeline_from_config()
 
@@ -437,9 +451,9 @@ async def test_stress_sustained_throughput():
     - Performance stability over time
     - Resource usage trends
     """
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("STRESS TEST: Sustained Throughput (5 min)")
-    print("="*70)
+    print("=" * 70)
 
     pipeline = create_extraction_pipeline_from_config()
 
@@ -473,14 +487,20 @@ async def test_stress_sustained_throughput():
 
         elapsed = time.time() - start_time
         if int(elapsed) % 15 == 0:  # Print every 15 seconds
-            print(f"[{elapsed:.0f}s] Processed: {doc_count} docs | Throughput: {docs_per_sec:.2f} docs/sec")
+            print(
+                f"[{elapsed:.0f}s] Processed: {doc_count} docs | Throughput: {docs_per_sec:.2f} docs/sec"
+            )
 
     total_time = time.time() - start_time
 
     # Calculate statistics
     avg_throughput = sum(throughput_samples) / len(throughput_samples)
-    first_half_avg = sum(throughput_samples[:len(throughput_samples)//2]) / (len(throughput_samples)//2)
-    second_half_avg = sum(throughput_samples[len(throughput_samples)//2:]) / (len(throughput_samples) - len(throughput_samples)//2)
+    first_half_avg = sum(throughput_samples[: len(throughput_samples) // 2]) / (
+        len(throughput_samples) // 2
+    )
+    second_half_avg = sum(throughput_samples[len(throughput_samples) // 2 :]) / (
+        len(throughput_samples) - len(throughput_samples) // 2
+    )
 
     print(f"\n{'='*70}")
     print("SUSTAINED LOAD RESULTS")
@@ -490,7 +510,9 @@ async def test_stress_sustained_throughput():
     print(f"Avg Throughput:        {avg_throughput:.2f} docs/sec")
     print(f"First Half Avg:        {first_half_avg:.2f} docs/sec")
     print(f"Second Half Avg:       {second_half_avg:.2f} docs/sec")
-    print(f"Throughput Change:     {((second_half_avg - first_half_avg) / first_half_avg * 100):.1f}%")
+    print(
+        f"Throughput Change:     {((second_half_avg - first_half_avg) / first_half_avg * 100):.1f}%"
+    )
     print(f"{'='*70}\n")
 
     # Assertions

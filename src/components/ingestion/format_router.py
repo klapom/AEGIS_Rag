@@ -60,6 +60,7 @@ logger = structlog.get_logger(__name__)
 # PARSER TYPE ENUM
 # =============================================================================
 
+
 class ParserType(str, Enum):
     """Parser types for document ingestion.
 
@@ -70,6 +71,7 @@ class ParserType(str, Enum):
 
     DOCLING = "docling"
     LLAMAINDEX = "llamaindex"
+
 
 # =============================================================================
 # FORMAT SET DEFINITIONS (30 TOTAL FORMATS)
@@ -132,6 +134,7 @@ ALL_FORMATS: set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
 # ROUTING DECISION DATA CLASS
 # =============================================================================
 
+
 @dataclass
 class RoutingDecision:
     """Format routing decision with reasoning.
@@ -153,9 +156,11 @@ class RoutingDecision:
     fallback_available: bool
     confidence: Literal["high", "medium", "low"]
 
+
 # =============================================================================
 # FORMAT ROUTER CLASS
 # =============================================================================
+
 
 class FormatRouter:
     """Intelligent router to select optimal parser for each document format.
@@ -387,9 +392,11 @@ class FormatRouter:
             )
             self.docling_available = available
 
+
 # =============================================================================
 # DOCLING AVAILABILITY HEALTH CHECK
 # =============================================================================
+
 
 async def check_docling_availability() -> bool:
     """Check if Docling container is available and healthy.
@@ -425,6 +432,7 @@ async def check_docling_availability() -> bool:
         import httpx
 
         from src.core.config import settings
+
         async with httpx.AsyncClient(timeout=15.0) as http_client:
             response = await http_client.get(f"{settings.docling_base_url}/health")
             response.raise_for_status()
@@ -440,6 +448,7 @@ async def check_docling_availability() -> bool:
             fallback="llamaindex",
         )
         return False
+
 
 async def initialize_format_router() -> FormatRouter:
     """Initialize format router with Docling availability check.
@@ -473,6 +482,7 @@ async def initialize_format_router() -> FormatRouter:
     )
 
     return router
+
 
 # =============================================================================
 # EXPORTS

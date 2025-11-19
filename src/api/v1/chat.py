@@ -33,6 +33,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 # Initialize coordinator (singleton pattern)
 _coordinator: CoordinatorAgent | None = None
 
+
 def get_coordinator() -> CoordinatorAgent:
     """Get or create singleton CoordinatorAgent instance."""
     global _coordinator
@@ -41,7 +42,9 @@ def get_coordinator() -> CoordinatorAgent:
         logger.info("coordinator_initialized_for_chat_api")
     return _coordinator
 
+
 # Sprint 17 Feature 17.2: Conversation persistence helpers
+
 
 async def save_conversation_turn(
     session_id: str,
@@ -132,7 +135,9 @@ async def save_conversation_turn(
         logger.error("conversation_save_failed", session_id=session_id, error=str(e))
         return False
 
+
 # Request/Response Models
+
 
 class ChatRequest(BaseModel):
     """Chat request model."""
@@ -161,6 +166,7 @@ class ChatRequest(BaseModel):
         }
     )
 
+
 class SourceDocument(BaseModel):
     """Source document metadata."""
 
@@ -169,6 +175,7 @@ class SourceDocument(BaseModel):
     source: str | None = Field(default=None, description="Source file path")
     score: float | None = Field(default=None, description="Relevance score")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
 
 class ToolCallInfo(BaseModel):
     """MCP tool call information."""
@@ -180,6 +187,7 @@ class ToolCallInfo(BaseModel):
     duration_ms: float = Field(..., description="Tool call duration in milliseconds")
     success: bool = Field(..., description="Whether tool call succeeded")
     error: str | None = Field(default=None, description="Error message if failed")
+
 
 class ChatResponse(BaseModel):
     """Chat response model."""
@@ -232,6 +240,7 @@ class ChatResponse(BaseModel):
         }
     )
 
+
 class ConversationHistoryResponse(BaseModel):
     """Conversation history response."""
 
@@ -239,12 +248,14 @@ class ConversationHistoryResponse(BaseModel):
     messages: list[dict[str, Any]]
     message_count: int
 
+
 class SessionDeleteResponse(BaseModel):
     """Session deletion response."""
 
     session_id: str
     status: str
     message: str
+
 
 class SessionInfo(BaseModel):
     """Session information."""
@@ -255,13 +266,16 @@ class SessionInfo(BaseModel):
     created_at: str | None = None
     title: str | None = None  # Sprint 17 Feature 17.3: Auto-generated title
 
+
 class SessionListResponse(BaseModel):
     """list of sessions response."""
 
     sessions: list[SessionInfo]
     total_count: int
 
+
 # API Endpoints
+
 
 @router.post("/", response_model=ChatResponse, status_code=status.HTTP_200_OK)
 async def chat(request: ChatRequest) -> ChatResponse:
@@ -366,6 +380,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Unexpected error processing query: {str(e)}",
         ) from e
+
 
 @router.post("/stream", status_code=status.HTTP_200_OK)
 async def chat_stream(request: ChatRequest) -> StreamingResponse:
@@ -516,6 +531,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         },
     )
 
+
 @router.get("/sessions", response_model=SessionListResponse)
 async def list_sessions() -> SessionListResponse:
     """list all active conversation sessions.
@@ -591,6 +607,7 @@ async def list_sessions() -> SessionListResponse:
             detail=f"Failed to list sessions: {str(e)}",
         ) from e
 
+
 @router.get("/history/{session_id}", response_model=ConversationHistoryResponse)
 async def get_conversation_history(session_id: str) -> ConversationHistoryResponse:
     """Retrieve conversation history for a session.
@@ -648,6 +665,7 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
             detail=f"Failed to retrieve conversation history: {str(e)}",
         ) from e
 
+
 @router.delete("/history/{session_id}", response_model=SessionDeleteResponse)
 async def delete_conversation_history(session_id: str) -> SessionDeleteResponse:
     """Delete conversation history for a session.
@@ -688,12 +706,15 @@ async def delete_conversation_history(session_id: str) -> SessionDeleteResponse:
             detail=f"Failed to delete conversation history: {str(e)}",
         ) from e
 
+
 # Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+
 
 class TitleGenerationRequest(BaseModel):
     """Request model for title generation."""
 
     session_id: str = Field(..., description="Session ID to generate title for")
+
 
 class TitleResponse(BaseModel):
     """Response model for title generation."""
@@ -702,10 +723,12 @@ class TitleResponse(BaseModel):
     title: str = Field(..., description="Generated conversation title")
     generated_at: str = Field(..., description="Timestamp when title was generated")
 
+
 class UpdateTitleRequest(BaseModel):
     """Request model for updating conversation title."""
 
     title: str = Field(..., min_length=1, max_length=100, description="New conversation title")
+
 
 @router.post("/sessions/{session_id}/generate-title", response_model=TitleResponse)
 async def generate_conversation_title(session_id: str) -> TitleResponse:
@@ -841,6 +864,7 @@ Title:"""
             detail=f"Failed to generate title: {str(e)}",
         ) from e
 
+
 @router.patch("/sessions/{session_id}", response_model=TitleResponse)
 async def update_conversation_title(session_id: str, request: UpdateTitleRequest) -> TitleResponse:
     """Update conversation title manually.
@@ -905,7 +929,9 @@ async def update_conversation_title(session_id: str, request: UpdateTitleRequest
             detail=f"Failed to update title: {str(e)}",
         ) from e
 
+
 # Helper functions
+
 
 def _extract_answer(result: dict[str, Any]) -> str:
     """Extract answer from coordinator result.
@@ -941,6 +967,7 @@ def _extract_answer(result: dict[str, Any]) -> str:
     logger.warning("no_answer_found_in_result", result_keys=list(result.keys()))
     return "I'm sorry, I couldn't generate an answer. Please try rephrasing your question."
 
+
 def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
     """Extract source documents from coordinator result.
 
@@ -968,6 +995,7 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
 
     logger.debug("sources_extracted", count=len(sources))
     return sources[:5]  # Return top 5 sources
+
 
 def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
     """Extract MCP tool call information from coordinator result.
@@ -1000,6 +1028,7 @@ def _extract_tool_calls(result: dict[str, Any]) -> list[ToolCallInfo]:
     logger.debug("tool_calls_extracted", count=len(tool_calls))
     return tool_calls
 
+
 def _format_sse_message(data: dict[str, Any]) -> str:
     """Format data as Server-Sent Events (SSE) message.
 
@@ -1014,6 +1043,7 @@ def _format_sse_message(data: dict[str, Any]) -> str:
     """
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
+
 def _get_iso_timestamp() -> str:
     """Get current timestamp in ISO 8601 format.
 
@@ -1022,7 +1052,9 @@ def _get_iso_timestamp() -> str:
     """
     return datetime.now(UTC).isoformat()
 
+
 # Sprint 27 Feature 27.5: Follow-up Question Suggestions
+
 
 class FollowUpQuestionsResponse(BaseModel):
     """Follow-up questions response model."""
@@ -1048,6 +1080,7 @@ class FollowUpQuestionsResponse(BaseModel):
             }
         }
     )
+
 
 @router.get("/sessions/{session_id}/followup-questions", response_model=FollowUpQuestionsResponse)
 async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
@@ -1216,7 +1249,9 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
             detail=f"Failed to generate follow-up questions: {str(e)}",
         ) from e
 
+
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
+
 
 @router.post("/sessions/{session_id}/archive", status_code=status.HTTP_200_OK)
 async def archive_conversation(session_id: str) -> dict[str, Any]:
@@ -1276,6 +1311,7 @@ async def archive_conversation(session_id: str) -> dict[str, Any]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to archive conversation: {str(e)}",
         ) from e
+
 
 @router.post("/search", status_code=status.HTTP_200_OK)
 async def search_archived_conversations(

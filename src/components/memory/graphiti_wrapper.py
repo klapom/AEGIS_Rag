@@ -33,6 +33,7 @@ from src.core.exceptions import LLMError, MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class OllamaLLMClient(LLMClient):
     """Custom LLM client for Graphiti using AegisLLMProxy.
 
@@ -174,6 +175,7 @@ class OllamaLLMClient(LLMClient):
         except Exception as e:
             logger.error("Embedding generation failed", error=str(e))
             raise LLMError(operation="graphiti_embedding_generation", reason=str(e)) from e
+
 
 class GraphitiClient:
     """Wrapper for Graphiti episodic memory with Ollama and Neo4j backend.
@@ -525,8 +527,10 @@ class GraphitiClient:
         except Exception as e:
             logger.warning("Error closing Graphiti", error=str(e))
 
+
 # Global instance (singleton pattern)
 _graphiti_client: GraphitiClient | None = None
+
 
 def get_graphiti_client() -> GraphitiClient:
     """Get global Graphiti client instance (singleton).
@@ -542,6 +546,7 @@ def get_graphiti_client() -> GraphitiClient:
             )
         _graphiti_client = GraphitiClient()
     return _graphiti_client
+
 
 # ============================================================================
 # Backward Compatibility Aliases (Sprint 25 Feature 25.9)

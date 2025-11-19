@@ -198,9 +198,7 @@ class RAGUser(HttpUser):
             - p95: ~20ms
             - p99: ~50ms
         """
-        with self.client.get(
-            "/health", catch_response=True, name="/health"
-        ) as response:
+        with self.client.get("/health", catch_response=True, name="/health") as response:
             if response.status_code == 200:
                 response.success()
             else:

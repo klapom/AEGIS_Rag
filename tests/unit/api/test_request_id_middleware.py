@@ -109,8 +109,9 @@ def test_request_id_passthrough__existing_header__reuses_id(client: TestClient):
     response = client.get("/test", headers={"X-Request-ID": custom_id})
 
     # Verify the same ID is returned
-    assert response.headers["X-Request-ID"] == custom_id, \
-        f"Expected {custom_id}, got {response.headers['X-Request-ID']}"
+    assert (
+        response.headers["X-Request-ID"] == custom_id
+    ), f"Expected {custom_id}, got {response.headers['X-Request-ID']}"
 
 
 def test_request_id_in_response_header__always__returns_id(client: TestClient):
@@ -152,8 +153,7 @@ def test_request_id_in_state__accessible_via_dependency(client: TestClient):
     # Verify request_id in body matches header
     header_id = response.headers["X-Request-ID"]
     body_id = data["request_id"]
-    assert header_id == body_id, \
-        f"Request ID mismatch: header={header_id}, body={body_id}"
+    assert header_id == body_id, f"Request ID mismatch: header={header_id}, body={body_id}"
 
 
 def test_request_id_format__generated__is_uuid4(client: TestClient):
@@ -195,7 +195,9 @@ def test_request_id_uniqueness__multiple_requests__different_ids(client: TestCli
     assert len(request_ids) == 10, f"Expected 10 unique IDs, got {len(request_ids)}"
 
 
-def test_middleware_exception_handling__error_in_handler__still_clears_context(app: FastAPI, client: TestClient):
+def test_middleware_exception_handling__error_in_handler__still_clears_context(
+    app: FastAPI, client: TestClient
+):
     """
     Verify middleware clears structlog context even if handler raises exception.
 
@@ -203,6 +205,7 @@ def test_middleware_exception_handling__error_in_handler__still_clears_context(a
     When: A request is made to the endpoint
     Then: structlog context is cleared to prevent leakage
     """
+
     @app.get("/error")
     async def error_endpoint():
         raise ValueError("Test error")
@@ -229,6 +232,7 @@ def test_get_request_id_dependency__no_middleware__returns_unknown(client: TestC
     @app_no_middleware.get("/test")
     async def test_endpoint(request: Request):
         from src.api.dependencies import get_request_id
+
         request_id = get_request_id(request)
         return {"request_id": request_id}
 
@@ -237,8 +241,7 @@ def test_get_request_id_dependency__no_middleware__returns_unknown(client: TestC
 
     # Should return "unknown" when middleware is missing
     data = response.json()
-    assert data["request_id"] == "unknown", \
-        f"Expected 'unknown', got {data['request_id']}"
+    assert data["request_id"] == "unknown", f"Expected 'unknown', got {data['request_id']}"
 
 
 def test_request_id_passthrough__uuid_format__validates_as_uuid(client: TestClient):
@@ -278,5 +281,4 @@ def test_middleware_performance__overhead__less_than_5ms(client: TestClient):
 
     # Middleware should add <5ms per request
     # (This is a loose bound; actual overhead is <1ms)
-    assert avg_per_request < 50, \
-        f"Average request time too high: {avg_per_request:.2f}ms"
+    assert avg_per_request < 50, f"Average request time too high: {avg_per_request:.2f}ms"

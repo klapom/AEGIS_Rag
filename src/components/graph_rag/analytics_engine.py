@@ -28,6 +28,7 @@ logger = structlog.get_logger(__name__)
 # Type alias for centrality metrics
 CentralityMetric = Literal["degree", "betweenness", "closeness", "eigenvector"]
 
+
 class GraphAnalyticsEngine:
     """Graph analytics engine with GDS and NetworkX support."""
 
@@ -500,8 +501,10 @@ class GraphAnalyticsEngine:
                 "Neo4j", f"NetworkX graph construction failed: {e}"
             ) from e
 
+
 # Singleton instance
 _analytics_engine: GraphAnalyticsEngine | None = None
+
 
 def get_analytics_engine() -> GraphAnalyticsEngine:
     """Get singleton GraphAnalyticsEngine instance.

@@ -20,11 +20,13 @@ from typing import Any
 def mock_query_decomposer():
     """Mock query decomposer."""
     decomposer = MagicMock()
-    decomposer.decompose = AsyncMock(return_value=[
-        {"query": "What is AEGIS RAG?", "hop": 1, "dependency": None},
-        {"query": "What components does it use?", "hop": 2, "dependency": 1},
-        {"query": "How do these components integrate?", "hop": 3, "dependency": 2}
-    ])
+    decomposer.decompose = AsyncMock(
+        return_value=[
+            {"query": "What is AEGIS RAG?", "hop": 1, "dependency": None},
+            {"query": "What components does it use?", "hop": 2, "dependency": 1},
+            {"query": "How do these components integrate?", "hop": 3, "dependency": 2},
+        ]
+    )
     return decomposer
 
 
@@ -32,29 +34,25 @@ def mock_query_decomposer():
 def mock_retrieval_agent():
     """Mock retrieval agent for sub-queries."""
     agent = MagicMock()
-    agent.retrieve = AsyncMock(side_effect=[
-        # Hop 1 results
-        {
-            "answer": "AEGIS RAG is a multi-agent RAG system",
-            "documents": [
-                {"id": "d1", "content": "AEGIS RAG overview", "score": 0.95}
-            ]
-        },
-        # Hop 2 results
-        {
-            "answer": "It uses vector search, graph reasoning, and memory",
-            "documents": [
-                {"id": "d2", "content": "Component details", "score": 0.92}
-            ]
-        },
-        # Hop 3 results
-        {
-            "answer": "Components integrate via LangGraph orchestration",
-            "documents": [
-                {"id": "d3", "content": "Integration architecture", "score": 0.89}
-            ]
-        }
-    ])
+    agent.retrieve = AsyncMock(
+        side_effect=[
+            # Hop 1 results
+            {
+                "answer": "AEGIS RAG is a multi-agent RAG system",
+                "documents": [{"id": "d1", "content": "AEGIS RAG overview", "score": 0.95}],
+            },
+            # Hop 2 results
+            {
+                "answer": "It uses vector search, graph reasoning, and memory",
+                "documents": [{"id": "d2", "content": "Component details", "score": 0.92}],
+            },
+            # Hop 3 results
+            {
+                "answer": "Components integrate via LangGraph orchestration",
+                "documents": [{"id": "d3", "content": "Integration architecture", "score": 0.89}],
+            },
+        ]
+    )
     return agent
 
 
@@ -62,21 +60,24 @@ def mock_retrieval_agent():
 def mock_context_aggregator():
     """Mock context aggregator."""
     aggregator = MagicMock()
-    aggregator.aggregate = AsyncMock(return_value={
-        "final_answer": "AEGIS RAG is a multi-agent system that uses vector search, graph reasoning, and memory, integrated via LangGraph.",
-        "supporting_contexts": [
-            {"hop": 1, "content": "AEGIS RAG overview"},
-            {"hop": 2, "content": "Component details"},
-            {"hop": 3, "content": "Integration architecture"}
-        ],
-        "confidence": 0.92
-    })
+    aggregator.aggregate = AsyncMock(
+        return_value={
+            "final_answer": "AEGIS RAG is a multi-agent system that uses vector search, graph reasoning, and memory, integrated via LangGraph.",
+            "supporting_contexts": [
+                {"hop": 1, "content": "AEGIS RAG overview"},
+                {"hop": 2, "content": "Component details"},
+                {"hop": 3, "content": "Integration architecture"},
+            ],
+            "confidence": 0.92,
+        }
+    )
     return aggregator
 
 
 # ============================================================================
 # Query Decomposition Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_query_decomposition(mock_query_decomposer):
@@ -99,9 +100,9 @@ async def test_query_decomposition_single_hop():
 
     # Mock decomposer that returns single hop
     decomposer = MagicMock()
-    decomposer.decompose = AsyncMock(return_value=[
-        {"query": "What is vector search?", "hop": 1, "dependency": None}
-    ])
+    decomposer.decompose = AsyncMock(
+        return_value=[{"query": "What is vector search?", "hop": 1, "dependency": None}]
+    )
 
     sub_queries = await decomposer.decompose(simple_query)
 
@@ -113,12 +114,13 @@ async def test_query_decomposition_single_hop():
 # Sub-Query Execution Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_sub_query_execution(mock_retrieval_agent):
     """Test executing sub-queries in sequence."""
     sub_queries = [
         {"query": "What is AEGIS RAG?", "hop": 1},
-        {"query": "What components?", "hop": 2}
+        {"query": "What components?", "hop": 2},
     ]
 
     results = []
@@ -138,10 +140,12 @@ async def test_sub_query_with_context_injection():
 
     # Mock agent that uses context
     agent = MagicMock()
-    agent.retrieve = AsyncMock(return_value={
-        "answer": f"Based on '{hop1_context}', the components are...",
-        "used_context": True
-    })
+    agent.retrieve = AsyncMock(
+        return_value={
+            "answer": f"Based on '{hop1_context}', the components are...",
+            "used_context": True,
+        }
+    )
 
     hop2_query = "What components does it use?"
     result = await agent.retrieve(hop2_query, context=hop1_context)
@@ -154,13 +158,14 @@ async def test_sub_query_with_context_injection():
 # Context Aggregation Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_context_aggregation(mock_context_aggregator):
     """Test aggregating contexts from multiple hops."""
     hop_results = [
         {"hop": 1, "answer": "Answer 1", "documents": []},
         {"hop": 2, "answer": "Answer 2", "documents": []},
-        {"hop": 3, "answer": "Answer 3", "documents": []}
+        {"hop": 3, "answer": "Answer 3", "documents": []},
     ]
 
     aggregated = await mock_context_aggregator.aggregate(hop_results)
@@ -176,7 +181,7 @@ async def test_context_synthesis():
     contexts = [
         "AEGIS RAG is a multi-agent system",
         "It uses vector search and graph reasoning",
-        "Components integrate via LangGraph"
+        "Components integrate via LangGraph",
     ]
 
     # Mock synthesis
@@ -189,6 +194,7 @@ async def test_context_synthesis():
 # ============================================================================
 # Entity Linking Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_entity_linking_across_hops():
@@ -221,15 +227,18 @@ async def test_entity_linking_across_hops():
 # Error Handling Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_sub_query_failure_propagation():
     """Test handling when a sub-query fails."""
     agent = MagicMock()
-    agent.retrieve = AsyncMock(side_effect=[
-        {"answer": "Hop 1 success"},
-        Exception("Hop 2 failed"),  # Hop 2 fails
-        {"answer": "Hop 3 would succeed but won't run"}
-    ])
+    agent.retrieve = AsyncMock(
+        side_effect=[
+            {"answer": "Hop 1 success"},
+            Exception("Hop 2 failed"),  # Hop 2 fails
+            {"answer": "Hop 3 would succeed but won't run"},
+        ]
+    )
 
     results = []
     for i in range(2):
@@ -263,8 +272,11 @@ async def test_partial_hop_completion():
 # Integration Test
 # ============================================================================
 
+
 @pytest.mark.asyncio
-async def test_full_multi_hop_pipeline(mock_query_decomposer, mock_retrieval_agent, mock_context_aggregator):
+async def test_full_multi_hop_pipeline(
+    mock_query_decomposer, mock_retrieval_agent, mock_context_aggregator
+):
     """Test complete multi-hop query pipeline."""
     complex_query = "What is AEGIS RAG and how do its components integrate?"
 

@@ -24,6 +24,7 @@ from src.core.exceptions import LLMError
 
 logger = structlog.get_logger(__name__)
 
+
 class LRUCache:
     """Least Recently Used (LRU) cache with size limit."""
 
@@ -66,6 +67,7 @@ class LRUCache:
             "misses": self._misses,
             "hit_rate": self.hit_rate(),
         }
+
 
 class UnifiedEmbeddingService:
     """Shared embedding service for all AEGIS RAG components.
@@ -253,8 +255,10 @@ class UnifiedEmbeddingService:
             "cache": self.cache.stats(),
         }
 
+
 # Global instance (singleton)
 _embedding_service: UnifiedEmbeddingService | None = None
+
 
 def get_embedding_service() -> UnifiedEmbeddingService:
     """Get global UnifiedEmbeddingService instance."""

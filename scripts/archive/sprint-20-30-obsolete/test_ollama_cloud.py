@@ -55,6 +55,7 @@ async def test_ollama_cloud():
     print("[2/3] Testing ANY-LLM SDK import...")
     try:
         from any_llm import LLMProvider, acompletion
+
         print("  SUCCESS: ANY-LLM SDK imported")
     except ImportError as e:
         print(f"  ERROR: Failed to import ANY-LLM SDK: {e}")

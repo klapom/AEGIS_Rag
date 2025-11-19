@@ -345,6 +345,7 @@ class TestLightRAGWrapperSprint16:
 
             # Mock sys.modules to provide lightrag module
             import sys
+
             mock_lightrag_module = MagicMock()
             mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
             mock_lightrag_module.LightRAG = mock_lightrag_class
@@ -353,10 +354,13 @@ class TestLightRAGWrapperSprint16:
             mock_storage_module = MagicMock()
             mock_storage_module.initialize_pipeline_status = AsyncMock()
 
-            with patch.dict(sys.modules, {
-                'lightrag': mock_lightrag_module,
-                'lightrag.kg.shared_storage': mock_storage_module
-            }):
+            with patch.dict(
+                sys.modules,
+                {
+                    "lightrag": mock_lightrag_module,
+                    "lightrag.kg.shared_storage": mock_storage_module,
+                },
+            ):
                 # Initialize wrapper (triggers _ensure_initialized)
                 await wrapper._ensure_initialized()
 
@@ -388,6 +392,7 @@ class TestLightRAGWrapperSprint16:
 
             # Mock sys.modules to provide lightrag module
             import sys
+
             mock_lightrag_module = MagicMock()
             mock_lightrag_class = MagicMock(return_value=mock_lightrag_instance)
             mock_lightrag_module.LightRAG = mock_lightrag_class
@@ -396,10 +401,13 @@ class TestLightRAGWrapperSprint16:
             mock_storage_module = MagicMock()
             mock_storage_module.initialize_pipeline_status = AsyncMock()
 
-            with patch.dict(sys.modules, {
-                'lightrag': mock_lightrag_module,
-                'lightrag.kg.shared_storage': mock_storage_module
-            }):
+            with patch.dict(
+                sys.modules,
+                {
+                    "lightrag": mock_lightrag_module,
+                    "lightrag.kg.shared_storage": mock_storage_module,
+                },
+            ):
                 await wrapper._ensure_initialized()
 
                 # Verify LightRAG was initialized with chunking disabled

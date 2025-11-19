@@ -79,9 +79,7 @@ def sample_parsed_response():
 def mock_subprocess():
     """Mock subprocess.run for docker compose commands."""
     with patch("src.components.ingestion.docling_client.subprocess.run") as mock:
-        mock.return_value = Mock(
-            returncode=0, stdout="Container started", stderr="", check=True
-        )
+        mock.return_value = Mock(returncode=0, stdout="Container started", stderr="", check=True)
         yield mock
 
 
@@ -152,7 +150,9 @@ async def test_start_container_success(docling_client, mock_subprocess, mock_htt
 
 
 @pytest.mark.asyncio
-async def test_start_container_health_check_timeout(docling_client, mock_subprocess, mock_httpx_client):
+async def test_start_container_health_check_timeout(
+    docling_client, mock_subprocess, mock_httpx_client
+):
     """Test container start fails if health check times out."""
     # Mock health check always fails
     mock_httpx_client.get.side_effect = httpx.ConnectError("Connection refused")
@@ -261,7 +261,9 @@ async def test_wait_for_ready_timeout(docling_client, mock_httpx_client):
 
 
 @pytest.mark.asyncio
-async def test_parse_document_success(docling_client, mock_httpx_client, sample_parsed_response, tmp_path):
+async def test_parse_document_success(
+    docling_client, mock_httpx_client, sample_parsed_response, tmp_path
+):
     """Test document parsing succeeds with valid response."""
     # Create temp file
     test_file = tmp_path / "test_document.pdf"
@@ -334,7 +336,9 @@ async def test_parse_document_timeout(docling_client, mock_httpx_client, tmp_pat
 
 
 @pytest.mark.asyncio
-async def test_parse_batch_success(docling_client, mock_httpx_client, sample_parsed_response, tmp_path):
+async def test_parse_batch_success(
+    docling_client, mock_httpx_client, sample_parsed_response, tmp_path
+):
     """Test batch parsing succeeds for multiple files."""
     # Create temp files
     files = [tmp_path / f"doc{i}.pdf" for i in range(3)]
@@ -356,7 +360,9 @@ async def test_parse_batch_success(docling_client, mock_httpx_client, sample_par
 
 
 @pytest.mark.asyncio
-async def test_parse_batch_partial_failure(docling_client, mock_httpx_client, sample_parsed_response, tmp_path):
+async def test_parse_batch_partial_failure(
+    docling_client, mock_httpx_client, sample_parsed_response, tmp_path
+):
     """Test batch processing continues on partial failures."""
     # Create temp files
     files = [tmp_path / f"doc{i}.pdf" for i in range(3)]
@@ -388,7 +394,9 @@ async def test_parse_batch_partial_failure(docling_client, mock_httpx_client, sa
 
 
 @pytest.mark.asyncio
-async def test_context_manager_success(mock_subprocess, mock_httpx_client, sample_parsed_response, tmp_path):
+async def test_context_manager_success(
+    mock_subprocess, mock_httpx_client, sample_parsed_response, tmp_path
+):
     """Test async context manager starts and stops container."""
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"PDF")

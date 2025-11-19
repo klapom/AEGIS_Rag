@@ -9,7 +9,13 @@ Related ADR: ADR-033 (Mozilla ANY-LLM Integration)
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from src.components.llm_proxy.models import LLMResponse, LLMTask, TaskType, QualityRequirement, Complexity
+from src.components.llm_proxy.models import (
+    LLMResponse,
+    LLMTask,
+    TaskType,
+    QualityRequirement,
+    Complexity,
+)
 from src.evaluation.custom_metrics import CustomMetricsEvaluator
 
 
@@ -18,7 +24,7 @@ async def test_custom_metrics_uses_proxy():
     """Verify CustomMetricsEvaluator uses AegisLLMProxy."""
     evaluator = CustomMetricsEvaluator(model="qwen3:0.6b", temperature=0.0)
 
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.return_value = LLMResponse(
             content="YES",
             provider="local_ollama",
@@ -58,7 +64,7 @@ async def test_custom_metrics_precision():
         ),
     ]
 
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.side_effect = responses
 
         result = await evaluator.evaluate_context_precision(

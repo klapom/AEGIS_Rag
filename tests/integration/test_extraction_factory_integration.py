@@ -101,7 +101,9 @@ async def test_pipeline_handles_long_text():
     entities, relations = await pipeline.extract(long_text, document_id="test_long")
 
     # Should extract multiple entities from longer text
-    assert len(entities) >= 3, f"Should extract at least 3 entities from long text, got {len(entities)}"
+    assert (
+        len(entities) >= 3
+    ), f"Should extract at least 3 entities from long text, got {len(entities)}"
 
 
 @pytest.mark.integration
@@ -126,7 +128,9 @@ async def test_pipeline_semantic_dedup_enabled():
 
     # Should not have 3 separate "apple" entities if dedup worked
     apple_count = sum(1 for name in entity_names if "apple" in name)
-    assert apple_count <= 2, f"Dedup should reduce duplicate entities, found {apple_count} 'apple' variants"
+    assert (
+        apple_count <= 2
+    ), f"Dedup should reduce duplicate entities, found {apple_count} 'apple' variants"
 
 
 @pytest.mark.integration
@@ -239,13 +243,15 @@ async def test_e2e_batch_document_processing():
 
     for doc in documents:
         entities, relations = await pipeline.extract(doc["text"], document_id=doc["id"])
-        results.append({
-            "document_id": doc["id"],
-            "entity_count": len(entities),
-            "relation_count": len(relations),
-            "entities": entities,
-            "relations": relations,
-        })
+        results.append(
+            {
+                "document_id": doc["id"],
+                "entity_count": len(entities),
+                "relation_count": len(relations),
+                "entities": entities,
+                "relations": relations,
+            }
+        )
 
     # Verify all documents processed
     assert len(results) == 3

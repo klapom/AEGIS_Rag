@@ -137,11 +137,22 @@ TEST_CASES = [
         "name": "Healthcare Innovation",
         "text": HEALTHCARE_TEXT,
         "entities": [
-            "Dr. Sarah Chen", "Metropolitan Hospital", "Boston", "atrial fibrillation",
-            "BioTech Solutions", "National Heart Foundation", "catheter ablation",
-            "AI-powered imaging", "Clinical trials", "January to September 2024",
-            "Dr. Marcus Williams", "Stanford Medical Center", "Dr. Priya Patel",
-            "Johns Hopkins University", "FDA", "December 2024"
+            "Dr. Sarah Chen",
+            "Metropolitan Hospital",
+            "Boston",
+            "atrial fibrillation",
+            "BioTech Solutions",
+            "National Heart Foundation",
+            "catheter ablation",
+            "AI-powered imaging",
+            "Clinical trials",
+            "January to September 2024",
+            "Dr. Marcus Williams",
+            "Stanford Medical Center",
+            "Dr. Priya Patel",
+            "Johns Hopkins University",
+            "FDA",
+            "December 2024",
         ],
         "expected_relations": 14,
     },
@@ -150,12 +161,25 @@ TEST_CASES = [
         "name": "Climate Policy",
         "text": CLIMATE_TEXT,
         "entities": [
-            "International Climate Summit", "Copenhagen", "45 nations",
-            "Green Energy Accord", "carbon emissions", "2030",
-            "Professor Emma Rodriguez", "MIT", "Arctic ice loss", "2020",
-            "Germany", "Japan", "Canada", "$500 billion",
-            "renewable energy infrastructure", "EarthFirst", "European Union",
-            "Paris", "2026"
+            "International Climate Summit",
+            "Copenhagen",
+            "45 nations",
+            "Green Energy Accord",
+            "carbon emissions",
+            "2030",
+            "Professor Emma Rodriguez",
+            "MIT",
+            "Arctic ice loss",
+            "2020",
+            "Germany",
+            "Japan",
+            "Canada",
+            "$500 billion",
+            "renewable energy infrastructure",
+            "EarthFirst",
+            "European Union",
+            "Paris",
+            "2026",
         ],
         "expected_relations": 12,
     },
@@ -164,15 +188,29 @@ TEST_CASES = [
         "name": "Automotive Industry",
         "text": AUTOMOTIVE_TEXT,
         "entities": [
-            "Tesla Motors", "Model Z sedan", "Detroit Auto Show", "Thursday",
-            "solid-state battery", "QuantumCell", "600 miles", "Jennifer Park",
-            "Gigafactory", "Austin", "Texas", "March 2025",
-            "Lucid Air", "BMW i7", "luxury EV segment",
-            "Robert Kim", "Morgan Stanley", "8% market share",
-            "50,000 units", "first week"
+            "Tesla Motors",
+            "Model Z sedan",
+            "Detroit Auto Show",
+            "Thursday",
+            "solid-state battery",
+            "QuantumCell",
+            "600 miles",
+            "Jennifer Park",
+            "Gigafactory",
+            "Austin",
+            "Texas",
+            "March 2025",
+            "Lucid Air",
+            "BMW i7",
+            "luxury EV segment",
+            "Robert Kim",
+            "Morgan Stanley",
+            "8% market share",
+            "50,000 units",
+            "first week",
         ],
         "expected_relations": 15,
-    }
+    },
 ]
 
 # ============================================================================
@@ -196,17 +234,17 @@ def parse_json_response(response: str) -> dict:
     cleaned = response.strip()
 
     # Remove markdown code blocks
-    if cleaned.startswith('```'):
-        lines = cleaned.split('\n')
-        cleaned = '\n'.join(lines[1:-1]) if len(lines) > 2 else cleaned
-        cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        cleaned = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned
+        cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
     # Try direct parsing first
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         # Try to extract JSON from text
-        json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         if json_match:
             try:
                 return json.loads(json_match.group(0))
@@ -229,16 +267,15 @@ def test_relation_extraction(model: str, test_case: dict, client: Client, log_pa
         "relations_expected": test_case["expected_relations"],
         "relation_accuracy": 0,
         "status": "FAIL",
-        "errors": []
+        "errors": [],
     }
 
     try:
         # Format entity list for prompt
-        entity_list_str = ", ".join(test_case['entities'])
+        entity_list_str = ", ".join(test_case["entities"])
 
         user_prompt_relation = USER_PROMPT_TEMPLATE_RELATION.format(
-            entity_list=entity_list_str,
-            text=test_case['text']
+            entity_list=entity_list_str, text=test_case["text"]
         )
 
         # Relation Extraction
@@ -247,29 +284,29 @@ def test_relation_extraction(model: str, test_case: dict, client: Client, log_pa
             model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT_RELATION},
-                {"role": "user", "content": user_prompt_relation}
+                {"role": "user", "content": user_prompt_relation},
             ],
-            options={
-                "temperature": 0.1,
-                "num_predict": 2000,
-                "num_ctx": 16384
-            },
-            format="json"
+            options={"temperature": 0.1, "num_predict": 2000, "num_ctx": 16384},
+            format="json",
         )
-        results['extraction_time'] = time.perf_counter() - start
+        results["extraction_time"] = time.perf_counter() - start
         raw_relation_response = response_relation["message"]["content"]
 
         # Parse response
         relation_data = parse_json_response(raw_relation_response)
-        relations = relation_data.get('relations', [])
+        relations = relation_data.get("relations", [])
 
         # Filter out relations with null targets
-        valid_relations = [r for r in relations if r.get('target') is not None]
-        results['relations_found'] = len(valid_relations)
+        valid_relations = [r for r in relations if r.get("target") is not None]
+        results["relations_found"] = len(valid_relations)
 
         # Calculate accuracy
-        results['relation_accuracy'] = 100 * results['relations_found'] / test_case['expected_relations'] if test_case['expected_relations'] > 0 else 0
-        results['status'] = "PASS" if results['relations_found'] > 0 else "FAIL"
+        results["relation_accuracy"] = (
+            100 * results["relations_found"] / test_case["expected_relations"]
+            if test_case["expected_relations"] > 0
+            else 0
+        )
+        results["status"] = "PASS" if results["relations_found"] > 0 else "FAIL"
 
         # Log Results
         log_content = f"""
@@ -299,19 +336,21 @@ PARSED RELATIONS ({len(valid_relations)} valid):
 {json.dumps(valid_relations, indent=2)}
 
 """
-        with open(log_path, 'a', encoding='utf-8') as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(log_content)
 
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
 
-        results['errors'].append(str(e))
-        results['status'] = "ERROR"
+        results["errors"].append(str(e))
+        results["status"] = "ERROR"
 
         # Log error
-        with open(log_path, 'a', encoding='utf-8') as f:
-            f.write(f"""
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(
+                f"""
 {'='*80}
 MODEL: {model} | TEST CASE {test_case['id']}: {test_case['name']} [ERROR]
 {'='*80}
@@ -320,14 +359,16 @@ Error: {e}
 Full Traceback:
 {error_details}
 {'='*80}
-""")
+"""
+            )
 
     return results
 
 
 def main():
     """Main benchmark execution."""
-    print(f"""{'='*80}
+    print(
+        f"""{'='*80}
      Relation Extraction Benchmark - All Models
 {'='*80}
 
@@ -338,7 +379,8 @@ Setup:
   - Warmup before each model
   - Context Window: 16384 tokens
   - Enhanced prompts with 4 examples
-    """)
+    """
+    )
 
     client = Client()
 
@@ -351,8 +393,9 @@ Setup:
     log_path = log_dir / log_filename
 
     # Write log header
-    with open(log_path, 'w', encoding='utf-8') as f:
-        f.write(f"""{'='*80}
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(
+            f"""{'='*80}
 RELATION EXTRACTION BENCHMARK - ALL MODELS
 {'='*80}
 
@@ -366,12 +409,13 @@ Models:
 
 {'='*80}
 
-""")
+"""
+        )
 
     all_results = []
 
     for model_idx, model in enumerate(MODELS_TO_TEST, 1):
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"[{model_idx}/{len(MODELS_TO_TEST)}] MODEL: {model_short}")
@@ -384,9 +428,9 @@ Models:
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Hello"}
+                    {"role": "user", "content": "Hello"},
                 ],
-                options={"num_ctx": 16384}
+                options={"num_ctx": 16384},
             )
             print("OK")
         except Exception as e:
@@ -399,7 +443,9 @@ Models:
             result = test_relation_extraction(model, test_case, client, log_path)
             all_results.append(result)
 
-            print(f"\n    Relations: {result['relations_found']}/{result['relations_expected']} ({result['relation_accuracy']:.0f}%)")
+            print(
+                f"\n    Relations: {result['relations_found']}/{result['relations_expected']} ({result['relation_accuracy']:.0f}%)"
+            )
             print(f"    Time: {result['extraction_time']:.1f}s")
             print(f"    Status: [{result['status']}]")
 
@@ -414,20 +460,24 @@ Models:
     print(f"{'-'*40} {'-'*15} {'-'*12} {'-'*8}")
 
     for model in MODELS_TO_TEST:
-        model_results = [r for r in all_results if r['model'] == model]
+        model_results = [r for r in all_results if r["model"] == model]
         if not model_results:
             continue
 
-        model_short = model.split('/')[-1] if '/' in model else model
-        avg_accuracy = sum(r['relation_accuracy'] for r in model_results) / len(model_results)
-        avg_time = sum(r['extraction_time'] for r in model_results) / len(model_results)
-        success_rate = 100 * sum(1 for r in model_results if r['status'] in ['PASS']) / len(model_results)
+        model_short = model.split("/")[-1] if "/" in model else model
+        avg_accuracy = sum(r["relation_accuracy"] for r in model_results) / len(model_results)
+        avg_time = sum(r["extraction_time"] for r in model_results) / len(model_results)
+        success_rate = (
+            100 * sum(1 for r in model_results if r["status"] in ["PASS"]) / len(model_results)
+        )
 
-        print(f"{model_short:<40} {avg_accuracy:>6.1f}%        {avg_time:>6.1f}s      {success_rate:>3.0f}%")
+        print(
+            f"{model_short:<40} {avg_accuracy:>6.1f}%        {avg_time:>6.1f}s      {success_rate:>3.0f}%"
+        )
 
     # Save results
     output_file = Path("relation_extraction_benchmark_results.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2)
 
     print(f"\n{'='*80}")

@@ -48,30 +48,78 @@ async def test_conversation_archiving():
         {
             "session_id": str(uuid.uuid4()),
             "messages": [
-                {"role": "user", "content": "What is RAG?", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "RAG stands for Retrieval-Augmented Generation. It's a technique that combines retrieval of relevant documents with LLM generation.", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "user", "content": "How does vector search work in RAG?", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "Vector search uses embeddings to find semantically similar documents. Qdrant stores these vectors for efficient similarity search.", "timestamp": datetime.now(timezone.utc).isoformat()},
+                {
+                    "role": "user",
+                    "content": "What is RAG?",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "RAG stands for Retrieval-Augmented Generation. It's a technique that combines retrieval of relevant documents with LLM generation.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "user",
+                    "content": "How does vector search work in RAG?",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Vector search uses embeddings to find semantically similar documents. Qdrant stores these vectors for efficient similarity search.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
             ],
             "title": "RAG and Vector Search",
         },
         {
             "session_id": str(uuid.uuid4()),
             "messages": [
-                {"role": "user", "content": "Tell me about Neo4j and graph databases", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "Neo4j is a graph database that stores data as nodes and relationships. It's excellent for modeling connected data and knowledge graphs.", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "user", "content": "How do you use Neo4j with LLMs?", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "You can use Neo4j to store entity relationships extracted by LLMs, creating a knowledge graph that can be queried for context retrieval.", "timestamp": datetime.now(timezone.utc).isoformat()},
+                {
+                    "role": "user",
+                    "content": "Tell me about Neo4j and graph databases",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Neo4j is a graph database that stores data as nodes and relationships. It's excellent for modeling connected data and knowledge graphs.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "user",
+                    "content": "How do you use Neo4j with LLMs?",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "You can use Neo4j to store entity relationships extracted by LLMs, creating a knowledge graph that can be queried for context retrieval.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
             ],
             "title": "Neo4j and Graph RAG",
         },
         {
             "session_id": str(uuid.uuid4()),
             "messages": [
-                {"role": "user", "content": "What are the best practices for chunking documents?", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "Good chunking strategies include semantic chunking (respecting document structure), overlapping chunks, and adaptive chunk sizes based on content type.", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "user", "content": "How do you handle code files?", "timestamp": datetime.now(timezone.utc).isoformat()},
-                {"role": "assistant", "content": "Code files should be chunked at function/class boundaries to preserve semantic meaning. Use language-specific parsers for better results.", "timestamp": datetime.now(timezone.utc).isoformat()},
+                {
+                    "role": "user",
+                    "content": "What are the best practices for chunking documents?",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Good chunking strategies include semantic chunking (respecting document structure), overlapping chunks, and adaptive chunk sizes based on content type.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "user",
+                    "content": "How do you handle code files?",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
+                {
+                    "role": "assistant",
+                    "content": "Code files should be chunked at function/class boundaries to preserve semantic meaning. Use language-specific parsers for better results.",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                },
             ],
             "title": "Document Chunking Strategies",
         },
@@ -227,8 +275,16 @@ async def test_conversation_archiving():
     old_session_id = str(uuid.uuid4())
     old_conversation_data = {
         "messages": [
-            {"role": "user", "content": "This is an old conversation", "timestamp": datetime.now(timezone.utc).isoformat()},
-            {"role": "assistant", "content": "Yes, this should be auto-archived", "timestamp": datetime.now(timezone.utc).isoformat()},
+            {
+                "role": "user",
+                "content": "This is an old conversation",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "role": "assistant",
+                "content": "Yes, this should be auto-archived",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
         ],
         "created_at": (datetime.now(timezone.utc) - timedelta(days=8)).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),

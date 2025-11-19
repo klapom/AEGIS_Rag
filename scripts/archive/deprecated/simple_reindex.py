@@ -29,7 +29,9 @@ async def main():
     embedding_service = get_embedding_service()
     qdrant_client = get_qdrant_client()
     collection_name = settings.qdrant_collection
-    print(f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})")
+    print(
+        f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
+    )
     print(f"  [OK] Qdrant Client ready")
     print(f"  [OK] Collection: {collection_name}")
     print()
@@ -97,6 +99,7 @@ async def main():
         print(f"Error: {e}")
         print("=" * 80)
         import traceback
+
         traceback.print_exc()
         return 1
 

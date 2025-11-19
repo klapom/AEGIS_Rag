@@ -295,9 +295,7 @@ class TestAnswerGeneratorPrompt:
         )
         mock_llm_proxy.generate.return_value = mock_response
 
-        await answer_generator.generate_with_citations(
-            query="Test query", contexts=sample_contexts
-        )
+        await answer_generator.generate_with_citations(query="Test query", contexts=sample_contexts)
 
         # Verify LLM was called
         assert mock_llm_proxy.generate.called

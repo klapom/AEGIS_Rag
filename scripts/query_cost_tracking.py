@@ -1,4 +1,5 @@
 """Query cost tracking database for Sprint 23 analysis."""
+
 import sqlite3
 from pathlib import Path
 
@@ -11,13 +12,14 @@ if not db_path.exists():
 conn = sqlite3.connect(str(db_path))
 cursor = conn.cursor()
 
-print("="*80)
+print("=" * 80)
 print("COST TRACKING SUMMARY (Sprint 23)")
-print("="*80)
+print("=" * 80)
 print()
 
 # Total by provider
-cursor.execute("""
+cursor.execute(
+    """
     SELECT
         provider,
         COUNT(*) as total_requests,
@@ -26,18 +28,22 @@ cursor.execute("""
     FROM llm_requests
     GROUP BY provider
     ORDER BY total_cost DESC
-""")
+"""
+)
 
 print("By Provider:")
 print("-" * 80)
 for row in cursor.fetchall():
     provider, requests, cost, latency = row
-    print(f"  {provider:20s} | Requests: {requests:4d} | Cost: ${cost:8.6f} | Avg Latency: {latency:6.2f}ms")
+    print(
+        f"  {provider:20s} | Requests: {requests:4d} | Cost: ${cost:8.6f} | Avg Latency: {latency:6.2f}ms"
+    )
 
 print()
 
 # Total by task type
-cursor.execute("""
+cursor.execute(
+    """
     SELECT
         task_type,
         COUNT(*) as total_requests,
@@ -45,7 +51,8 @@ cursor.execute("""
     FROM llm_requests
     GROUP BY task_type
     ORDER BY total_cost DESC
-""")
+"""
+)
 
 print("By Task Type:")
 print("-" * 80)
@@ -56,14 +63,16 @@ for row in cursor.fetchall():
 print()
 
 # Overall totals
-cursor.execute("""
+cursor.execute(
+    """
     SELECT
         COUNT(*) as total_requests,
         ROUND(SUM(cost_usd), 6) as total_cost,
         ROUND(SUM(tokens_input), 0) as total_tokens_input,
         ROUND(SUM(tokens_output), 0) as total_tokens_output
     FROM llm_requests
-""")
+"""
+)
 
 row = cursor.fetchone()
 total_requests, total_cost, tokens_in, tokens_out = row
@@ -77,7 +86,8 @@ print(f"  Tokens Total:    {int(tokens_in + tokens_out):,}")
 print()
 
 # Recent requests
-cursor.execute("""
+cursor.execute(
+    """
     SELECT
         timestamp,
         provider,
@@ -88,7 +98,8 @@ cursor.execute("""
     FROM llm_requests
     ORDER BY timestamp DESC
     LIMIT 10
-""")
+"""
+)
 
 print("Recent Requests (Last 10):")
 print("-" * 80)
@@ -99,6 +110,6 @@ for row in cursor.fetchall():
 conn.close()
 
 print()
-print("="*80)
+print("=" * 80)
 print(f"Database Location: {db_path}")
-print("="*80)
+print("=" * 80)

@@ -154,6 +154,7 @@ def main() -> None:
     # Parse error count from output
     if "Found" in output:
         import re
+
         match = re.search(r"Found (\d+) error", output)
         if match:
             error_count = int(match.group(1))
@@ -198,7 +199,9 @@ def main() -> None:
     else:
         success, output = run_command(
             [
-                "poetry", "run", "pytest",
+                "poetry",
+                "run",
+                "pytest",
                 "tests/unit/",
                 "-v",
                 "--tb=short",
@@ -220,7 +223,9 @@ def main() -> None:
     else:
         success, output = run_command(
             [
-                "poetry", "run", "pytest",
+                "poetry",
+                "run",
+                "pytest",
                 "tests/integration/",
                 "-v",
                 "--tb=short",

@@ -39,6 +39,7 @@ logger = structlog.get_logger(__name__)
 MAX_ENTITIES_PER_DOC = 50
 MAX_RELATIONSHIPS_PER_DOC = 100
 
+
 class ExtractionService:
     """Entity and relationship extraction service using AegisLLMProxy.
 
@@ -579,8 +580,10 @@ class ExtractionService:
             "results": results,
         }
 
+
 # Global instance (singleton pattern)
 _extraction_service: ExtractionService | None = None
+
 
 def get_extraction_service() -> ExtractionService:
     """Get global extraction service instance (singleton).

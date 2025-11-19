@@ -23,6 +23,7 @@ logger = structlog.get_logger(__name__)
 # Type alias for visualization formats
 VisualizationFormat = Literal["d3", "cytoscape", "visjs"]
 
+
 class GraphVisualizationExporter:
     """Export graph data for frontend visualization."""
 
@@ -324,8 +325,10 @@ class GraphVisualizationExporter:
 
         return {"nodes": vis_nodes, "edges": vis_edges}
 
+
 # Singleton instance
 _visualization_exporter: GraphVisualizationExporter | None = None
+
 
 def get_visualization_exporter() -> GraphVisualizationExporter:
     """Get singleton GraphVisualizationExporter instance.

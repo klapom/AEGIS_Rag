@@ -17,10 +17,7 @@ def add_logging_to_test_file(file_path: Path) -> None:
 
     # Add logging import after other imports (after pytest imports)
     if "import logging" not in content:
-        content = content.replace(
-            "import pytest",
-            "import logging\nimport pytest"
-        )
+        content = content.replace("import pytest", "import logging\nimport pytest")
         print(f"  + Added logging import to {file_path.name}")
 
     # Add logger setup after imports, before first test
@@ -29,7 +26,7 @@ def add_logging_to_test_file(file_path: Path) -> None:
         first_test_match = re.search(r"(@pytest\.mark)", content)
         if first_test_match:
             insert_pos = first_test_match.start()
-            logger_setup = '''
+            logger_setup = """
 # Setup detailed logging for E2E tests
 logging.basicConfig(
     level=logging.DEBUG,
@@ -38,7 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-'''
+"""
             content = content[:insert_pos] + logger_setup + content[insert_pos:]
             print(f"  + Added logger setup to {file_path.name}")
 

@@ -154,7 +154,7 @@ async def test_health_check_real_endpoint():
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not Path("data/sample_documents").exists(),
-    reason="Requires real PDF files in data/sample_documents/"
+    reason="Requires real PDF files in data/sample_documents/",
 )
 async def test_parse_real_pdf_document():
     """Test parsing a REAL PDF document from data/sample_documents/.
@@ -269,8 +269,7 @@ async def test_container_timeout_handling():
 @pytest.mark.asyncio
 @pytest.mark.slow
 @pytest.mark.skipif(
-    not Path("data/sample_documents").exists(),
-    reason="Requires PDF files for benchmarking"
+    not Path("data/sample_documents").exists(), reason="Requires PDF files for benchmarking"
 )
 async def test_performance_benchmark_pdf_parsing():
     """Benchmark: Measure parsing speed for different document types.
@@ -293,13 +292,15 @@ async def test_performance_benchmark_pdf_parsing():
             parsed = await client.parse_document(pdf_file)
             duration = time.time() - start
 
-            timings.append({
-                "file": pdf_file.name,
-                "size_kb": pdf_file.stat().st_size / 1024,
-                "duration_s": duration,
-                "text_length": len(parsed.text),
-                "tables": len(parsed.tables),
-            })
+            timings.append(
+                {
+                    "file": pdf_file.name,
+                    "size_kb": pdf_file.stat().st_size / 1024,
+                    "duration_s": duration,
+                    "text_length": len(parsed.text),
+                    "tables": len(parsed.tables),
+                }
+            )
 
             print(f"[BENCHMARK] {pdf_file.name}: {duration:.2f}s ({len(parsed.text)} chars)")
 
@@ -323,8 +324,7 @@ async def test_convenience_function_auto_manage(sample_documents):
     """Test convenience function with automatic container management."""
     # This should start and stop container automatically
     parsed = await parse_document_with_docling(
-        sample_documents["simple_txt"],
-        auto_manage_container=True
+        sample_documents["simple_txt"], auto_manage_container=True
     )
 
     # Verify result
@@ -411,6 +411,7 @@ async def test_container_restart_between_batches():
 
     print("[TEST] Container successfully restarted between batches")
 
+
 # =============================================================================
 # Integration Tests: Feature 21.5 - Table/Image/Layout Extraction
 # =============================================================================
@@ -432,7 +433,9 @@ async def test_extract_tables_images_layout_from_pdf():
     from pathlib import Path
 
     # Use OTByteArray.pdf: small (446KB), quick to parse for initial testing
-    test_pdf = Path("C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/data/sample_documents/OTByteArray.pdf")
+    test_pdf = Path(
+        "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/data/sample_documents/OTByteArray.pdf"
+    )
 
     assert test_pdf.exists(), f"Test PDF not found: {test_pdf}"
 

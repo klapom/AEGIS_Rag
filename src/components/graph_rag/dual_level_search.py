@@ -36,12 +36,14 @@ from src.core.models import GraphEntity, GraphQueryResult, GraphRelationship, To
 
 logger = structlog.get_logger(__name__)
 
+
 class SearchMode(str, Enum):
     """Search modes for dual-level retrieval."""
 
     LOCAL = "local"  # Entity-level: specific entities and relationships
     GLOBAL = "global"  # Topic-level: high-level summaries, communities
     HYBRID = "hybrid"  # Combined: local + global results fused
+
 
 class GraphSearchResult(BaseModel):
     """Result from graph search."""
@@ -56,6 +58,7 @@ class GraphSearchResult(BaseModel):
     context: str = Field(default="", description="Graph context used")
     topics: list[str] = Field(default_factory=list, description="Topics/communities")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
+
 
 class DualLevelSearch:
     """Dual-level graph search with local/global/hybrid modes.
@@ -482,8 +485,10 @@ Answer:"""
 
         return "\n".join(context_parts)
 
+
 # Singleton instance
 _dual_level_search: DualLevelSearch | None = None
+
 
 def get_dual_level_search() -> DualLevelSearch:
     """Get global DualLevelSearch instance (singleton).

@@ -166,9 +166,7 @@ def test_page_dimensions__valid_data__creates_successfully():
 def test_page_annotations__with_annotations__creates_successfully():
     """Test PageAnnotations model."""
     dims = PageDimensions(width=595.0, height=842.0)
-    annotation = ImageAnnotation(
-        description="Test", vlm_model="qwen3-vl:4b-instruct"
-    )
+    annotation = ImageAnnotation(description="Test", vlm_model="qwen3-vl:4b-instruct")
 
     page_annots = PageAnnotations(page_dimensions=dims, annotations=[annotation])
 
@@ -412,9 +410,7 @@ async def test_get_chunk_annotations__chunk_not_found__raises_404(
     mock_qdrant_class.return_value = client
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_chunk_annotations(
-            chunk_id="non-existent-chunk", _current_user=mock_current_user
-        )
+        await get_chunk_annotations(chunk_id="non-existent-chunk", _current_user=mock_current_user)
 
     assert exc_info.value.status_code == 404
     assert "Chunk not found" in exc_info.value.detail
@@ -458,9 +454,7 @@ async def test_get_chunk_annotations__qdrant_error__raises_http_exception(
     mock_qdrant_class.return_value = client
 
     with pytest.raises(HTTPException) as exc_info:
-        await get_chunk_annotations(
-            chunk_id="test-chunk-123", _current_user=mock_current_user
-        )
+        await get_chunk_annotations(chunk_id="test-chunk-123", _current_user=mock_current_user)
 
     assert exc_info.value.status_code == 500
 

@@ -32,6 +32,7 @@ from src.components.llm_proxy.config import LLMProxyConfig
 
 # Fixtures
 
+
 @pytest.fixture
 def mock_config():
     """Mock configuration with all 3 providers enabled."""
@@ -58,8 +59,12 @@ def mock_config():
     # Mock methods
     config.is_provider_enabled = Mock(side_effect=lambda p: p in config.providers)
     config.get_provider_config = Mock(side_effect=lambda p: config.providers[p])
-    config.get_budget_limit = Mock(side_effect=lambda p: config.budgets["monthly_limits"].get(p, 0.0))
-    config.get_default_model = Mock(side_effect=lambda p, t: config.model_defaults.get(p, {}).get(t))
+    config.get_budget_limit = Mock(
+        side_effect=lambda p: config.budgets["monthly_limits"].get(p, 0.0)
+    )
+    config.get_default_model = Mock(
+        side_effect=lambda p, t: config.model_defaults.get(p, {}).get(t)
+    )
 
     return config
 
@@ -82,6 +87,7 @@ def proxy_local_only(mock_config):
 
 
 # Test Category 1: Data Privacy Routing (GDPR/HIPAA compliance)
+
 
 def test_routing_pii_data_always_local(proxy_with_all_providers):
     """PII data must ALWAYS route to local (GDPR compliance)."""
@@ -132,6 +138,7 @@ def test_routing_confidential_data_always_local(proxy_with_all_providers):
 
 # Test Category 2: Task Type Routing
 
+
 def test_routing_embeddings_always_local(proxy_with_all_providers):
     """Embeddings should ALWAYS use local (BGE-M3 excellent, no cloud benefit)."""
     task = LLMTask(
@@ -147,6 +154,7 @@ def test_routing_embeddings_always_local(proxy_with_all_providers):
 
 
 # Test Category 3: Quality-Based Routing (OpenAI)
+
 
 def test_routing_critical_quality_high_complexity_routes_to_openai(proxy_with_all_providers):
     """Critical quality + high complexity → OpenAI."""
@@ -197,6 +205,7 @@ def test_routing_critical_quality_low_complexity_does_not_route_to_openai(proxy_
 
 # Test Category 4: Quality-Based Routing (Ollama Cloud)
 
+
 def test_routing_high_quality_high_complexity_routes_to_ollama_cloud(proxy_with_all_providers):
     """High quality + high complexity → Ollama Cloud (cost-effective)."""
     task = LLMTask(
@@ -228,6 +237,7 @@ def test_routing_high_quality_medium_complexity_does_not_route_to_ollama(proxy_w
 
 
 # Test Category 5: Batch Processing Routing
+
 
 def test_routing_batch_processing_large_routes_to_ollama_cloud(proxy_with_all_providers):
     """Batch processing (>10 docs) → Ollama Cloud (parallel processing)."""
@@ -261,6 +271,7 @@ def test_routing_batch_processing_small_does_not_route_to_ollama(proxy_with_all_
 
 # Test Category 6: Default Routing
 
+
 def test_routing_default_simple_query_routes_to_local(proxy_with_all_providers):
     """Simple query with default settings → Local."""
     task = LLMTask(
@@ -291,6 +302,7 @@ def test_routing_default_medium_quality_routes_to_local(proxy_with_all_providers
 
 
 # Test Category 7: Provider Availability
+
 
 def test_routing_openai_not_available_falls_back(proxy_local_only):
     """If OpenAI not available, fall back to local even for critical tasks."""
@@ -325,6 +337,7 @@ def test_routing_ollama_cloud_not_available_falls_back(proxy_local_only):
 
 
 # Test Category 8: Complex Scenarios
+
 
 def test_routing_public_legal_document_routes_to_openai(proxy_with_all_providers):
     """Public legal document (not confidential) → OpenAI for quality."""
@@ -375,6 +388,7 @@ def test_routing_code_generation_critical_routes_to_openai(proxy_with_all_provid
 
 # Test Category 9: Edge Cases
 
+
 def test_routing_no_batch_size_does_not_trigger_batch_routing(proxy_with_all_providers):
     """Task without batch_size should not trigger batch routing."""
     task = LLMTask(
@@ -421,6 +435,7 @@ def test_routing_batch_size_11_routes_to_ollama(proxy_with_all_providers):
 
 # Test Category 10: Comprehensive Coverage
 
+
 def test_routing_all_combinations_covered():
     """
     Meta-test: Verify all routing paths are tested.
@@ -440,6 +455,7 @@ def test_routing_all_combinations_covered():
 
 
 # Test Category 11: Model Selection
+
 
 def test_model_selection_uses_task_preference(proxy_with_all_providers):
     """Model selection should use task-specific model if provided."""
@@ -472,6 +488,7 @@ def test_model_selection_uses_config_default(proxy_with_all_providers, mock_conf
 
 
 # Test Category 12: Cost Calculation
+
 
 def test_cost_calculation_local_is_free(proxy_with_all_providers):
     """Local Ollama should have zero cost."""

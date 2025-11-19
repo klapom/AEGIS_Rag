@@ -33,11 +33,7 @@ def test_format_sse_message_simple():
 
 def test_format_sse_message_metadata():
     """Test SSE message formatting with metadata."""
-    data = {
-        "type": "metadata",
-        "session_id": "test-123",
-        "timestamp": "2025-01-01T00:00:00Z"
-    }
+    data = {"type": "metadata", "session_id": "test-123", "timestamp": "2025-01-01T00:00:00Z"}
     result = _format_sse_message(data)
 
     parsed = json.loads(result[6:-2])
@@ -58,13 +54,7 @@ def test_format_sse_message_nested_data():
     """Test SSE message formatting with nested data structures."""
     data = {
         "type": "source",
-        "source": {
-            "document_id": "doc-123",
-            "score": 0.95,
-            "metadata": {
-                "author": "Test Author"
-            }
-        }
+        "source": {"document_id": "doc-123", "score": 0.95, "metadata": {"author": "Test Author"}},
     }
     result = _format_sse_message(data)
 
@@ -79,11 +69,11 @@ def test_get_iso_timestamp_format():
     timestamp = _get_iso_timestamp()
 
     # Should be parseable as ISO format
-    parsed = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+    parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
     assert isinstance(parsed, datetime)
 
     # Should include timezone
-    assert '+' in timestamp or 'Z' in timestamp or timestamp.endswith('+00:00')
+    assert "+" in timestamp or "Z" in timestamp or timestamp.endswith("+00:00")
 
 
 def test_sse_message_multiple_messages():
@@ -92,7 +82,7 @@ def test_sse_message_multiple_messages():
         {"type": "metadata", "session_id": "123"},
         {"type": "token", "content": "Hello"},
         {"type": "token", "content": " World"},
-        {"type": "done"}
+        {"type": "done"},
     ]
 
     formatted = [_format_sse_message(msg) for msg in messages]
@@ -133,11 +123,7 @@ def test_sse_message_with_special_characters():
 
 def test_sse_error_message():
     """Test formatting of error messages."""
-    data = {
-        "type": "error",
-        "error": "Something went wrong",
-        "code": "INTERNAL_ERROR"
-    }
+    data = {"type": "error", "error": "Something went wrong", "code": "INTERNAL_ERROR"}
     result = _format_sse_message(data)
 
     parsed = json.loads(result[6:-2])

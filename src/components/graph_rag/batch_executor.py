@@ -18,6 +18,7 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class BatchQueryResult:
     """Result of a single query in a batch.
 
@@ -57,6 +58,7 @@ class BatchQueryResult:
             "error": self.error,
             "execution_time": round(self.execution_time, 3),
         }
+
 
 class BatchQueryExecutor:
     """Executor for parallel Neo4j query execution.

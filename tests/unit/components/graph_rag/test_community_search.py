@@ -90,7 +90,7 @@ class TestSearchByCommunity:
             model="mock-model",
             tokens_used=50,
             cost_usd=0.0,
-            latency_ms=100
+            latency_ms=100,
         )
 
         result = await search.search_by_community(query="neural networks", top_k=5)
@@ -127,7 +127,7 @@ class TestSearchByCommunity:
             model="mock-model",
             tokens_used=50,
             cost_usd=0.0,
-            latency_ms=100
+            latency_ms=100,
         )
 
         result = await search.search_by_community(
@@ -153,7 +153,7 @@ class TestSearchByCommunity:
             model="mock-model",
             tokens_used=50,
             cost_usd=0.0,
-            latency_ms=100
+            latency_ms=100,
         )
 
         result = await search.search_by_community(query="nonexistent", top_k=5)
@@ -198,7 +198,7 @@ class TestSearchByCommunity:
             model="mock-model",
             tokens_used=50,
             cost_usd=0.0,
-            latency_ms=100
+            latency_ms=100,
         )
 
         result = await search.search_by_community(query="test", top_k=5)

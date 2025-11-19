@@ -48,7 +48,7 @@ SAMPLING_CONFIGS = [
             "temperature": 0.7,
             "top_p": 0.9,
             "top_k": 40,
-        }
+        },
     },
     {
         "name": "mirostat_v2",
@@ -62,7 +62,7 @@ SAMPLING_CONFIGS = [
             "mirostat_mode": 2,
             "mirostat_tau": 5.0,
             "mirostat_eta": 0.1,
-        }
+        },
     },
     {
         "name": "typical_sampling",
@@ -74,7 +74,7 @@ SAMPLING_CONFIGS = [
         "extra_params": {
             "typical_p": 0.9,
             "min_p": 0.05,
-        }
+        },
     },
     {
         "name": "low_temp_precise",
@@ -86,7 +86,7 @@ SAMPLING_CONFIGS = [
         },
         "extra_params": {
             "min_p": 0.1,
-        }
+        },
     },
     {
         "name": "high_temp_creative",
@@ -95,7 +95,7 @@ SAMPLING_CONFIGS = [
             "temperature": 0.9,
             "top_p": 0.95,
             "top_k": 50,
-        }
+        },
     },
 ]
 
@@ -137,8 +137,12 @@ async def test_single_question(
     language = question_data["language"]
     tier = question_data["tier"]
 
-    console.print(f"\n[cyan]Question {question_num}/{total_questions} (Tier {tier}, {language.upper()})[/cyan]")
-    console.print(f"[dim]{question[:80]}...[/dim]" if len(question) > 80 else f"[dim]{question}[/dim]")
+    console.print(
+        f"\n[cyan]Question {question_num}/{total_questions} (Tier {tier}, {language.upper()})[/cyan]"
+    )
+    console.print(
+        f"[dim]{question[:80]}...[/dim]" if len(question) > 80 else f"[dim]{question}[/dim]"
+    )
     console.print(f"[yellow]Config: {config['name']}[/yellow]")
 
     # Build request payload
@@ -146,12 +150,9 @@ async def test_single_question(
         {
             "role": "system",
             "content": f"You are a helpful assistant specialized in VBScript and Automation. "
-                       f"Answer in {'German' if language == 'de' else 'English'}."
+            f"Answer in {'German' if language == 'de' else 'English'}.",
         },
-        {
-            "role": "user",
-            "content": question
-        }
+        {"role": "user", "content": question},
     ]
 
     request_payload = {
@@ -167,10 +168,7 @@ async def test_single_question(
         async with httpx.AsyncClient(timeout=120.0) as client:
             start_time = time.perf_counter()
 
-            response = await client.post(
-                f"{LM_STUDIO_API}/chat/completions",
-                json=request_payload
-            )
+            response = await client.post(f"{LM_STUDIO_API}/chat/completions", json=request_payload)
 
             elapsed_time = time.perf_counter() - start_time
 
@@ -196,7 +194,9 @@ async def test_single_question(
 
             tokens_per_sec = completion_tokens / elapsed_time if elapsed_time > 0 else 0
 
-            console.print(f"[green]OK - Generated ({completion_tokens} tokens, {tokens_per_sec:.1f} t/s, {elapsed_time:.2f}s)[/green]")
+            console.print(
+                f"[green]OK - Generated ({completion_tokens} tokens, {tokens_per_sec:.1f} t/s, {elapsed_time:.2f}s)[/green]"
+            )
 
             return {
                 "success": True,
@@ -242,7 +242,9 @@ async def evaluate_config(
 ) -> List[Dict]:
     """Evaluate a single configuration on all questions."""
     console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
-    console.print(f"[bold cyan]Configuration {config_num}/{total_configs}: {config['name']}[/bold cyan]")
+    console.print(
+        f"[bold cyan]Configuration {config_num}/{total_configs}: {config['name']}[/bold cyan]"
+    )
     console.print(f"[bold cyan]{config['description']}[/bold cyan]")
     console.print(f"[bold cyan]{'='*70}[/bold cyan]")
 
@@ -295,7 +297,9 @@ def print_comparison_table(all_results: Dict[str, List[Dict]]):
     console.print("[bold cyan]PARAMETER EVALUATION SUMMARY[/bold cyan]")
     console.print(f"[bold cyan]{'='*70}[/bold cyan]\n")
 
-    table = Table(show_header=True, header_style="bold magenta", title="LM Studio Parameter Comparison")
+    table = Table(
+        show_header=True, header_style="bold magenta", title="LM Studio Parameter Comparison"
+    )
     table.add_column("Configuration", style="cyan", width=20)
     table.add_column("Success", justify="right", width=8)
     table.add_column("Avg t/s", justify="right", width=10)
@@ -317,7 +321,7 @@ def print_comparison_table(all_results: Dict[str, List[Dict]]):
             f"{metrics['avg_tokens_per_sec']:.1f}",
             f"{metrics['avg_time_seconds']:.2f}s",
             f"{metrics['avg_completion_tokens']:.0f}",
-            str(metrics['total_completion_tokens']),
+            str(metrics["total_completion_tokens"]),
         )
 
     console.print(table)
@@ -329,8 +333,12 @@ def print_comparison_table(all_results: Dict[str, List[Dict]]):
         fastest = max(successful_configs.items(), key=lambda x: x[1]["avg_tokens_per_sec"])
         most_tokens = max(successful_configs.items(), key=lambda x: x[1]["avg_completion_tokens"])
 
-        console.print(f"\n[bold green]FASTEST Configuration:[/bold green] {fastest[0]} ({fastest[1]['avg_tokens_per_sec']:.1f} t/s)")
-        console.print(f"[bold green]MOST DETAILED Answers:[/bold green] {most_tokens[0]} ({most_tokens[1]['avg_completion_tokens']:.0f} tokens avg)")
+        console.print(
+            f"\n[bold green]FASTEST Configuration:[/bold green] {fastest[0]} ({fastest[1]['avg_tokens_per_sec']:.1f} t/s)"
+        )
+        console.print(
+            f"[bold green]MOST DETAILED Answers:[/bold green] {most_tokens[0]} ({most_tokens[1]['avg_completion_tokens']:.0f} tokens avg)"
+        )
 
     # Find configuration from SAMPLING_CONFIGS
     config_details = {c["name"]: c for c in SAMPLING_CONFIGS}
@@ -348,24 +356,26 @@ def print_comparison_table(all_results: Dict[str, List[Dict]]):
 
 def print_next_steps():
     """Print next steps after evaluation."""
-    console.print(Panel.fit(
-        "[bold yellow]Next Steps:[/bold yellow]\n\n"
-        "1. Review detailed results in:\n"
-        "   [cyan]docs/sprints/SPRINT_20_LM_STUDIO_PARAMS.json[/cyan]\n\n"
-        "2. Perform human evaluation:\n"
-        "   - Read answers for each configuration\n"
-        "   - Rate quality using rubric from test_questions.yaml\n"
-        "   - Consider: accuracy, fluency, completeness\n\n"
-        "3. A/B test best config vs Ollama:\n"
-        "   - Run evaluate_chat_models.py with Ollama\n"
-        "   - Compare quality + speed\n\n"
-        "4. Document findings:\n"
-        "   - Create SPRINT_20_LM_STUDIO_EVALUATION.md\n"
-        "   - Update LMSTUDIO_VS_OLLAMA_ANALYSIS.md\n"
-        "   - Decide: Use LM Studio params or stick with Ollama defaults",
-        title="Evaluation Complete",
-        border_style="green"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold yellow]Next Steps:[/bold yellow]\n\n"
+            "1. Review detailed results in:\n"
+            "   [cyan]docs/sprints/SPRINT_20_LM_STUDIO_PARAMS.json[/cyan]\n\n"
+            "2. Perform human evaluation:\n"
+            "   - Read answers for each configuration\n"
+            "   - Rate quality using rubric from test_questions.yaml\n"
+            "   - Consider: accuracy, fluency, completeness\n\n"
+            "3. A/B test best config vs Ollama:\n"
+            "   - Run evaluate_chat_models.py with Ollama\n"
+            "   - Compare quality + speed\n\n"
+            "4. Document findings:\n"
+            "   - Create SPRINT_20_LM_STUDIO_EVALUATION.md\n"
+            "   - Update LMSTUDIO_VS_OLLAMA_ANALYSIS.md\n"
+            "   - Decide: Use LM Studio params or stick with Ollama defaults",
+            title="Evaluation Complete",
+            border_style="green",
+        )
+    )
 
 
 async def verify_lm_studio() -> bool:
@@ -407,28 +417,26 @@ async def main():
         "--config",
         choices=[c["name"] for c in SAMPLING_CONFIGS] + ["all"],
         default="all",
-        help="Configuration to test (default: all)"
+        help="Configuration to test (default: all)",
     )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help="Quick test with only 2 questions"
-    )
+    parser.add_argument("--quick", action="store_true", help="Quick test with only 2 questions")
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("docs/sprints/SPRINT_20_LM_STUDIO_PARAMS.json"),
-        help="Output file for results"
+        help="Output file for results",
     )
 
     args = parser.parse_args()
 
     # Print header
-    console.print(Panel.fit(
-        "[bold cyan]Sprint 20 Feature 20.2: LM Studio Parameter Evaluation[/bold cyan]\n"
-        "[dim]Testing advanced parameters unavailable in Ollama[/dim]",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold cyan]Sprint 20 Feature 20.2: LM Studio Parameter Evaluation[/bold cyan]\n"
+            "[dim]Testing advanced parameters unavailable in Ollama[/dim]",
+            border_style="cyan",
+        )
+    )
 
     # Verify LM Studio is running
     console.print("\n[yellow]Verifying LM Studio...[/yellow]")
@@ -461,10 +469,7 @@ async def main():
 
     for i, config in enumerate(configs_to_test, 1):
         results = await evaluate_config(
-            config=config,
-            questions=questions,
-            config_num=i,
-            total_configs=len(configs_to_test)
+            config=config, questions=questions, config_num=i, total_configs=len(configs_to_test)
         )
         all_results[config["name"]] = results
 
@@ -493,7 +498,7 @@ async def main():
         "metrics": {
             config_name: calculate_config_metrics(results)
             for config_name, results in all_results.items()
-        }
+        },
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

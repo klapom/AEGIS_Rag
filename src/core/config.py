@@ -580,15 +580,14 @@ class Settings(BaseSettings):
     # Docling Container Configuration (Sprint 21: GPU-Accelerated OCR, Sprint 30: Port Config)
     docling_base_url: str = Field(
         default="http://localhost:8080",
-        description="Docling container HTTP endpoint (Docker maps 8080 -> 5001)"
+        description="Docling container HTTP endpoint (Docker maps 8080 -> 5001)",
     )
     docling_timeout_seconds: int = Field(
         default=900,
-        description="HTTP timeout for Docling requests (900s = 15min for complex PDFs, Sprint 30)"
+        description="HTTP timeout for Docling requests (900s = 15min for complex PDFs, Sprint 30)",
     )
     docling_max_retries: int = Field(
-        default=3,
-        description="Max retry count for Docling transient failures"
+        default=3, description="Max retry count for Docling transient failures"
     )
 
     # Graphiti Memory Configuration (Sprint 7: Episodic Memory)

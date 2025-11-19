@@ -2,6 +2,7 @@
 Index specific three documents for Sprint 19 UI testing.
 Uses BGE-M3 embeddings (1024 dimensions).
 """
+
 import asyncio
 import sys
 from pathlib import Path

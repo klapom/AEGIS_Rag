@@ -58,8 +58,9 @@ def test_docling_config_injection__custom_config__correct_initialization():
     # Assert: Config injected correctly
     assert client.base_url == custom_base_url, "base_url not injected"
     assert client.timeout_seconds == custom_timeout, "timeout_seconds not injected"
-    assert client.health_check_interval_seconds == custom_health_check_interval, \
-        "health_check_interval_seconds not injected"
+    assert (
+        client.health_check_interval_seconds == custom_health_check_interval
+    ), "health_check_interval_seconds not injected"
 
     # Assert: Client initialized
     assert client.client is None, "HTTP client should be lazy-initialized"
@@ -117,8 +118,9 @@ def test_embedding_service_config__bge_m3__correct_model_and_dimensions():
     assert service.enable_cache is True, "Cache not enabled"
 
     # Assert: Correct dimensions
-    assert service.get_embedding_dimension() == expected_dim, \
-        f"BGE-M3 should be {expected_dim}-dim, got {service.get_embedding_dimension()}"
+    assert (
+        service.get_embedding_dimension() == expected_dim
+    ), f"BGE-M3 should be {expected_dim}-dim, got {service.get_embedding_dimension()}"
 
 
 def test_embedding_service_config__custom_batch_size__applied_correctly():
@@ -141,8 +143,9 @@ def test_embedding_service_config__custom_batch_size__applied_correctly():
     )
 
     # Assert: Batch size set
-    assert service.batch_size == custom_batch_size, \
-        f"Expected batch_size={custom_batch_size}, got {service.batch_size}"
+    assert (
+        service.batch_size == custom_batch_size
+    ), f"Expected batch_size={custom_batch_size}, got {service.batch_size}"
 
 
 # =============================================================================
@@ -206,8 +209,9 @@ def test_chunking_config_validation__invalid_overlap__raises_error():
     # Assert: Clear error message (if validation exists)
     # Note: Pydantic might catch this at ChunkStrategy level
     error_msg = str(exc_info.value).lower()
-    assert "overlap" in error_msg or "chunk_size" in error_msg or "greater" in error_msg, \
-        f"Error message should mention overlap validation: {error_msg}"
+    assert (
+        "overlap" in error_msg or "chunk_size" in error_msg or "greater" in error_msg
+    ), f"Error message should mention overlap validation: {error_msg}"
 
 
 # =============================================================================
@@ -215,7 +219,9 @@ def test_chunking_config_validation__invalid_overlap__raises_error():
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Full pipeline mocking requires complex setup - integration tests cover this")
+@pytest.mark.skip(
+    reason="Full pipeline mocking requires complex setup - integration tests cover this"
+)
 @pytest.mark.asyncio
 async def test_dependency_injection__mock_all_components__pipeline_runs():
     """Verify all components can be mocked for unit testing.
@@ -276,15 +282,14 @@ def test_config_validation__invalid_extraction_pipeline__raises_error():
     """
     # Setup: Invalid extraction_pipeline value
     with pytest.raises((ValueError, AssertionError)) as exc_info:
-        settings = Settings(
-            extraction_pipeline="invalid_pipeline_type"  # Invalid value
-        )
+        settings = Settings(extraction_pipeline="invalid_pipeline_type")  # Invalid value
 
     # Assert: Validation error with clear message
     # Pydantic should catch this at Settings initialization
-    assert "extraction_pipeline" in str(exc_info.value).lower() or \
-           "invalid" in str(exc_info.value).lower(), \
-           f"Error message unclear: {exc_info.value}"
+    assert (
+        "extraction_pipeline" in str(exc_info.value).lower()
+        or "invalid" in str(exc_info.value).lower()
+    ), f"Error message unclear: {exc_info.value}"
 
 
 def test_config_validation__negative_vram__rejected():

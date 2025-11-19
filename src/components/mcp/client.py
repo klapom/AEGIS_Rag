@@ -26,20 +26,24 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+
 class MCPClientError(Exception):
     """Base exception for MCP client errors."""
 
     pass
+
 
 class MCPConnectionError(MCPClientError):
     """Exception raised when connection to MCP server fails."""
 
     pass
 
+
 class MCPToolError(MCPClientError):
     """Exception raised when tool execution fails."""
 
     pass
+
 
 class MCPClient:
     """MCP Client to connect to external MCP servers.

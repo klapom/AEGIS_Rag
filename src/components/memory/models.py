@@ -90,6 +90,7 @@ class MemoryEntry:
             namespace=data.get("namespace", "memory"),
         )
 
+
 @dataclass
 class MemorySearchResult:
     """Result from memory search operation.

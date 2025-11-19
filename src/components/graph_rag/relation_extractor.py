@@ -87,6 +87,7 @@ If entity list contains ["Alex", "Jordan", "TechCorp"] and text says "Alex and J
 Output (valid JSON only):
 """
 
+
 class RelationExtractor:
     """Extract relations between entities using multi-cloud LLM routing.
 
@@ -303,6 +304,7 @@ class RelationExtractor:
 
             logger.warning("relation_json_parse_failed", response_preview=cleaned[:200])
             return {"relations": []}
+
 
 def create_relation_extractor_from_config(config) -> RelationExtractor:
     """Factory function to create relation extractor from app config.

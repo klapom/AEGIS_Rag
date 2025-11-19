@@ -100,7 +100,9 @@ async def test_vlm_indexing():
             batch_progress = result["batch_progress"]
             success = result["success"]
 
-            print(f"\n[{batch_progress:.0%}] Document {batch_index + 1}/{len(doc_paths)}: {doc_name}")
+            print(
+                f"\n[{batch_progress:.0%}] Document {batch_index + 1}/{len(doc_paths)}: {doc_name}"
+            )
             print("-" * 80)
 
             if success and result.get("state"):
@@ -123,7 +125,9 @@ async def test_vlm_indexing():
                 # Show VLM metadata
                 if vlm_count > 0:
                     print(f"\n  VLM Image Details:")
-                    for i, vlm_meta in enumerate(state.get("vlm_metadata", [])[:3], 1):  # Show first 3
+                    for i, vlm_meta in enumerate(
+                        state.get("vlm_metadata", [])[:3], 1
+                    ):  # Show first 3
                         image_id = vlm_meta.get("image_id", "unknown")
                         description_preview = vlm_meta.get("description", "")[:80]
                         print(f"    {i}. {image_id}: {description_preview}...")

@@ -23,6 +23,7 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class RedisMemoryManager:
     """Redis-based working memory manager with cluster support and eviction policies.
 
@@ -576,8 +577,10 @@ class RedisMemoryManager:
             logger.error("Failed to evict", error=str(e))
             return {"evicted": False, "count": 0, "error": str(e)}
 
+
 # Global instance (singleton pattern)
 _redis_manager: RedisMemoryManager | None = None
+
 
 def get_redis_manager() -> RedisMemoryManager:
     """Get global Redis memory manager instance (singleton).

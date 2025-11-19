@@ -13,6 +13,7 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+
 class ExtractionPipeline(Protocol):
     """Protocol defining extraction pipeline interface."""
 
@@ -29,6 +30,7 @@ class ExtractionPipeline(Protocol):
             Tuple of (entities, relations)
         """
         ...
+
 
 class ExtractionPipelineFactory:
     """Factory for creating extraction pipelines based on configuration.
@@ -248,6 +250,7 @@ class ExtractionPipelineFactory:
                 )
 
         return LegacyLightRAGExtractor(config)
+
 
 def create_extraction_pipeline_from_config(config=None) -> ExtractionPipeline:
     """Convenience function to create extraction pipeline from config.

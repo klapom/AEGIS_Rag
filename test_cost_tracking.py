@@ -60,12 +60,14 @@ async def main():
     if db_path.exists():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT timestamp, provider, model, task_type, tokens_input, tokens_output, cost_usd
             FROM llm_requests
             ORDER BY timestamp DESC
             LIMIT 5
-        """)
+        """
+        )
         requests = cursor.fetchall()
         for req in requests:
             timestamp, provider, model, task_type, tokens_in, tokens_out, cost = req

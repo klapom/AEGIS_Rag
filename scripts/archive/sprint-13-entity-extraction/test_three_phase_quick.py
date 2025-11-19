@@ -16,9 +16,9 @@ TEST_TEXT = """Alex is a powerful person, but Jordan is smarter and more talente
 
 async def main():
     """Test the three-phase extraction pipeline."""
-    print("="*80)
+    print("=" * 80)
     print("THREE-PHASE EXTRACTION PIPELINE - QUICK TEST")
-    print("="*80)
+    print("=" * 80)
     print()
 
     # Initialize extractor
@@ -42,6 +42,7 @@ async def main():
     except Exception as e:
         print(f"      FAILED: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
@@ -62,9 +63,9 @@ async def main():
         print(f"  {i}. {r['source']} -> {r['target']}: {r['description'][:60]}...")
 
     print()
-    print("="*80)
+    print("=" * 80)
     print("TEST PASSED - ThreePhaseExtractor working correctly")
-    print("="*80)
+    print("=" * 80)
     return 0
 
 

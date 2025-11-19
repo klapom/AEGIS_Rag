@@ -20,6 +20,7 @@ logger = structlog.get_logger(__name__)
 MAX_VECTORS = 10_000_000  # Qdrant: 10M vectors = 100% capacity
 MAX_NODES = 100_000  # Graphiti: 100K nodes = 100% capacity
 
+
 class MemoryMonitoring:
     """Prometheus metrics collector for memory system health.
 
@@ -430,8 +431,10 @@ class MemoryMonitoring:
         # For now, return 0.0 as placeholder
         return 0.0
 
+
 # Global singleton instance
 _monitoring: MemoryMonitoring | None = None
+
 
 def get_monitoring() -> MemoryMonitoring:
     """Get global MemoryMonitoring instance (singleton).

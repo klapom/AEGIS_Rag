@@ -88,46 +88,46 @@ def create_ground_truth_template(output_path: Path):
             {
                 "id": "test_001",
                 "text": "VBScript is a scripting language developed by Microsoft. "
-                        "It is used for automation in Windows environments.",
+                "It is used for automation in Windows environments.",
                 "ground_truth_entities": [
                     {
                         "name": "VBScript",
                         "type": "PRODUCT",
-                        "description": "VBScript is a scripting language"
+                        "description": "VBScript is a scripting language",
                     },
                     {
                         "name": "Microsoft",
                         "type": "ORGANIZATION",
-                        "description": "Microsoft is a company"
+                        "description": "Microsoft is a company",
                     },
                     {
                         "name": "Windows",
                         "type": "PRODUCT",
-                        "description": "Windows is an operating system"
-                    }
+                        "description": "Windows is an operating system",
+                    },
                 ],
                 "ground_truth_relations": [
                     {
                         "source": "VBScript",
                         "target": "Microsoft",
                         "description": "VBScript was developed by Microsoft",
-                        "strength": 9
+                        "strength": 9,
                     },
                     {
                         "source": "VBScript",
                         "target": "Windows",
                         "description": "VBScript is used in Windows environments",
-                        "strength": 8
-                    }
-                ]
+                        "strength": 8,
+                    },
+                ],
             },
             {
                 "id": "test_002",
                 "text": "TODO: Add more test cases with your domain-specific text",
                 "ground_truth_entities": [],
-                "ground_truth_relations": []
-            }
-        ]
+                "ground_truth_relations": [],
+            },
+        ],
     }
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -158,9 +158,7 @@ async def extract_entities_relations(text: str, model: str) -> Tuple[List[Dict],
 
 
 def calculate_entity_metrics(
-    predicted: List[Dict],
-    ground_truth: List[Dict],
-    match_threshold: float = 0.8
+    predicted: List[Dict], ground_truth: List[Dict], match_threshold: float = 0.8
 ) -> Dict:
     """
     Calculate Precision, Recall, F1 for entity extraction.
@@ -195,7 +193,7 @@ def calculate_entity_metrics(
         pred_type = pred.get("type", "").upper()
         gt_type = gt.get("type", "").upper()
 
-        type_match = (gt_type == "" or pred_type == gt_type)
+        type_match = gt_type == "" or pred_type == gt_type
 
         return similarity >= match_threshold and type_match
 
@@ -233,9 +231,7 @@ def calculate_entity_metrics(
 
 
 def calculate_relation_metrics(
-    predicted: List[Dict],
-    ground_truth: List[Dict],
-    match_threshold: float = 0.7
+    predicted: List[Dict], ground_truth: List[Dict], match_threshold: float = 0.7
 ) -> Dict:
     """
     Calculate Precision, Recall, F1 for relation extraction.
@@ -266,10 +262,9 @@ def calculate_relation_metrics(
         gt_tgt = normalize(gt.get("target", ""))
 
         # Check entity matching (bidirectional)
-        entities_match = (
-            (pred_src == gt_src and pred_tgt == gt_tgt) or
-            (pred_src == gt_tgt and pred_tgt == gt_src)  # Reversed direction
-        )
+        entities_match = (pred_src == gt_src and pred_tgt == gt_tgt) or (
+            pred_src == gt_tgt and pred_tgt == gt_src
+        )  # Reversed direction
 
         return entities_match
 
@@ -320,7 +315,9 @@ async def evaluate_extraction(model: str) -> Dict:
     test_cases = ground_truth_data.get("test_cases", [])
 
     if not test_cases or not test_cases[0].get("ground_truth_entities"):
-        console.print("[yellow]No ground truth data available. Skipping extraction evaluation.[/yellow]")
+        console.print(
+            "[yellow]No ground truth data available. Skipping extraction evaluation.[/yellow]"
+        )
         return {"skipped": True, "reason": "no_ground_truth"}
 
     all_entity_metrics = []
@@ -348,31 +345,61 @@ async def evaluate_extraction(model: str) -> Dict:
         entity_metrics = calculate_entity_metrics(pred_entities, gt_entities)
         relation_metrics = calculate_relation_metrics(pred_relations, gt_relations)
 
-        console.print(f"[green]Entities: P={entity_metrics['precision']:.2f}, R={entity_metrics['recall']:.2f}, F1={entity_metrics['f1']:.2f}[/green]")
-        console.print(f"[green]Relations: P={relation_metrics['precision']:.2f}, R={relation_metrics['recall']:.2f}, F1={relation_metrics['f1']:.2f}[/green]")
+        console.print(
+            f"[green]Entities: P={entity_metrics['precision']:.2f}, R={entity_metrics['recall']:.2f}, F1={entity_metrics['f1']:.2f}[/green]"
+        )
+        console.print(
+            f"[green]Relations: P={relation_metrics['precision']:.2f}, R={relation_metrics['recall']:.2f}, F1={relation_metrics['f1']:.2f}[/green]"
+        )
         console.print(f"[dim]Time: {extraction_time:.2f}s[/dim]")
 
         all_entity_metrics.append(entity_metrics)
         all_relation_metrics.append(relation_metrics)
 
-        results_per_case.append({
-            "test_id": test_id,
-            "text": text,
-            "extraction_time_seconds": extraction_time,
-            "predicted_entities": pred_entities,
-            "predicted_relations": pred_relations,
-            "entity_metrics": entity_metrics,
-            "relation_metrics": relation_metrics,
-        })
+        results_per_case.append(
+            {
+                "test_id": test_id,
+                "text": text,
+                "extraction_time_seconds": extraction_time,
+                "predicted_entities": pred_entities,
+                "predicted_relations": pred_relations,
+                "entity_metrics": entity_metrics,
+                "relation_metrics": relation_metrics,
+            }
+        )
 
     # Aggregate metrics
-    avg_entity_precision = sum(m["precision"] for m in all_entity_metrics) / len(all_entity_metrics) if all_entity_metrics else 0.0
-    avg_entity_recall = sum(m["recall"] for m in all_entity_metrics) / len(all_entity_metrics) if all_entity_metrics else 0.0
-    avg_entity_f1 = sum(m["f1"] for m in all_entity_metrics) / len(all_entity_metrics) if all_entity_metrics else 0.0
+    avg_entity_precision = (
+        sum(m["precision"] for m in all_entity_metrics) / len(all_entity_metrics)
+        if all_entity_metrics
+        else 0.0
+    )
+    avg_entity_recall = (
+        sum(m["recall"] for m in all_entity_metrics) / len(all_entity_metrics)
+        if all_entity_metrics
+        else 0.0
+    )
+    avg_entity_f1 = (
+        sum(m["f1"] for m in all_entity_metrics) / len(all_entity_metrics)
+        if all_entity_metrics
+        else 0.0
+    )
 
-    avg_relation_precision = sum(m["precision"] for m in all_relation_metrics) / len(all_relation_metrics) if all_relation_metrics else 0.0
-    avg_relation_recall = sum(m["recall"] for m in all_relation_metrics) / len(all_relation_metrics) if all_relation_metrics else 0.0
-    avg_relation_f1 = sum(m["f1"] for m in all_relation_metrics) / len(all_relation_metrics) if all_relation_metrics else 0.0
+    avg_relation_precision = (
+        sum(m["precision"] for m in all_relation_metrics) / len(all_relation_metrics)
+        if all_relation_metrics
+        else 0.0
+    )
+    avg_relation_recall = (
+        sum(m["recall"] for m in all_relation_metrics) / len(all_relation_metrics)
+        if all_relation_metrics
+        else 0.0
+    )
+    avg_relation_f1 = (
+        sum(m["f1"] for m in all_relation_metrics) / len(all_relation_metrics)
+        if all_relation_metrics
+        else 0.0
+    )
 
     return {
         "model": model,
@@ -447,34 +474,30 @@ async def main():
 
     parser = argparse.ArgumentParser(description="Comprehensive Model Evaluation")
     parser.add_argument(
-        "--mode",
-        choices=["all", "extraction", "chat"],
-        default="all",
-        help="Evaluation mode"
+        "--mode", choices=["all", "extraction", "chat"], default="all", help="Evaluation mode"
     )
     parser.add_argument(
-        "--model",
-        choices=list(MODELS.keys()) + ["all"],
-        default="all",
-        help="Model to evaluate"
+        "--model", choices=list(MODELS.keys()) + ["all"], default="all", help="Model to evaluate"
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("docs/sprints/SPRINT_20_COMPREHENSIVE_EVAL.json"),
-        help="Output file"
+        help="Output file",
     )
 
     args = parser.parse_args()
 
     # Print header
-    console.print(Panel.fit(
-        "[bold cyan]Sprint 20 Feature 20.1 Extended[/bold cyan]\n"
-        "[dim]Comprehensive Model Evaluation[/dim]\n\n"
-        f"Mode: {args.mode}\n"
-        f"Model: {args.model}",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold cyan]Sprint 20 Feature 20.1 Extended[/bold cyan]\n"
+            "[dim]Comprehensive Model Evaluation[/dim]\n\n"
+            f"Mode: {args.mode}\n"
+            f"Model: {args.model}",
+            border_style="cyan",
+        )
+    )
 
     # Determine models to test
     if args.model == "all":
@@ -525,7 +548,11 @@ def print_summary_table(results: Dict, mode: str):
     console.print(f"[bold cyan]{'='*70}[/bold cyan]\n")
 
     if mode in ["all", "extraction"]:
-        table = Table(title="Entity & Relation Extraction Metrics", show_header=True, header_style="bold magenta")
+        table = Table(
+            title="Entity & Relation Extraction Metrics",
+            show_header=True,
+            header_style="bold magenta",
+        )
         table.add_column("Model", style="cyan")
         table.add_column("Entity P", justify="right")
         table.add_column("Entity R", justify="right")

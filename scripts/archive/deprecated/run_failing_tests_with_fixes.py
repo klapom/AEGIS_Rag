@@ -29,30 +29,45 @@ async def main():
     # List of failing tests from previous run
     failing_tests = [
         # Sprint 2
-        ("tests/integration/test_sprint2_critical_e2e.py::test_full_document_ingestion_pipeline_e2e",
-         "Performance timeout: 37.3s > 30s"),
-
+        (
+            "tests/integration/test_sprint2_critical_e2e.py::test_full_document_ingestion_pipeline_e2e",
+            "Performance timeout: 37.3s > 30s",
+        ),
         # Sprint 4
-        ("tests/integration/test_sprint4_critical_e2e.py::test_multi_turn_conversation_state_e2e",
-         "KeyError: 'graph_query_result'"),
-        ("tests/integration/test_sprint4_critical_e2e.py::test_router_intent_classification_e2e",
-         "Performance: 61.4s > 10s"),
-
+        (
+            "tests/integration/test_sprint4_critical_e2e.py::test_multi_turn_conversation_state_e2e",
+            "KeyError: 'graph_query_result'",
+        ),
+        (
+            "tests/integration/test_sprint4_critical_e2e.py::test_router_intent_classification_e2e",
+            "Performance: 61.4s > 10s",
+        ),
         # Sprint 5
-        ("tests/integration/test_sprint5_critical_e2e.py::test_entity_extraction_ollama_neo4j_e2e",
-         "Performance: 106.9s > 100s"),
-        ("tests/integration/test_sprint5_critical_e2e.py::test_graph_construction_full_pipeline_e2e",
-         "Expected 3+ entities, got 0"),
-        ("tests/integration/test_sprint5_critical_e2e.py::test_local_search_entity_level_e2e",
-         "No answer returned"),
-        ("tests/integration/test_sprint5_critical_e2e.py::test_global_search_topic_level_e2e",
-         "No answer returned"),
-        ("tests/integration/test_sprint5_critical_e2e.py::test_hybrid_search_local_global_e2e",
-         "No answer returned"),
-
+        (
+            "tests/integration/test_sprint5_critical_e2e.py::test_entity_extraction_ollama_neo4j_e2e",
+            "Performance: 106.9s > 100s",
+        ),
+        (
+            "tests/integration/test_sprint5_critical_e2e.py::test_graph_construction_full_pipeline_e2e",
+            "Expected 3+ entities, got 0",
+        ),
+        (
+            "tests/integration/test_sprint5_critical_e2e.py::test_local_search_entity_level_e2e",
+            "No answer returned",
+        ),
+        (
+            "tests/integration/test_sprint5_critical_e2e.py::test_global_search_topic_level_e2e",
+            "No answer returned",
+        ),
+        (
+            "tests/integration/test_sprint5_critical_e2e.py::test_hybrid_search_local_global_e2e",
+            "No answer returned",
+        ),
         # Sprint 6
-        ("tests/integration/test_sprint6_critical_e2e.py::test_query_optimization_cache_e2e",
-         "Cold query: 556ms > 300ms"),
+        (
+            "tests/integration/test_sprint6_critical_e2e.py::test_query_optimization_cache_e2e",
+            "Cold query: 556ms > 300ms",
+        ),
     ]
 
     print(f"Running {len(failing_tests)} previously failing tests:")
@@ -67,24 +82,15 @@ async def main():
         print()
 
         # Run test with verbose output
-        cmd = [
-            "poetry", "run", "pytest",
-            test_path,
-            "-v", "--tb=short", "-s"
-        ]
+        cmd = ["poetry", "run", "pytest", test_path, "-v", "--tb=short", "-s"]
 
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=project_root
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=project_root)
 
         results[test_name] = {
             "returncode": result.returncode,
             "stdout": result.stdout,
             "stderr": result.stderr,
-            "previous_issue": issue
+            "previous_issue": issue,
         }
 
         status = "✅ PASSED" if result.returncode == 0 else "❌ FAILED"

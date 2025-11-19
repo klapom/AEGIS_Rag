@@ -62,19 +62,14 @@ async def setup_demo_data(force: bool = False) -> dict:
         logger.info(
             "[OK] Demo data already exists, skipping indexing",
             collection=settings.qdrant_collection,
-            documents_count=doc_count
+            documents_count=doc_count,
         )
         logger.info("[INFO] Use --force flag to re-index")
-        return {
-            "status": "skipped",
-            "reason": "data_exists",
-            "existing_documents": doc_count
-        }
+        return {"status": "skipped", "reason": "data_exists", "existing_documents": doc_count}
 
     if force and doc_count > 0:
         logger.warning(
-            "[WARN] Force flag set, will re-index over existing data",
-            existing_documents=doc_count
+            "[WARN] Force flag set, will re-index over existing data", existing_documents=doc_count
         )
 
     # Find project root
@@ -87,7 +82,7 @@ async def setup_demo_data(force: bool = False) -> dict:
         allowed_base_path=project_root,  # Override security boundary
         chunk_size=512,
         chunk_overlap=128,
-        use_adaptive_chunking=False  # Use standard chunking for consistency
+        use_adaptive_chunking=False,  # Use standard chunking for consistency
     )
 
     logger.info("[INFO] Indexing all *.md documents in project...")
@@ -96,9 +91,7 @@ async def setup_demo_data(force: bool = False) -> dict:
     # Index documents - only *.md files
     try:
         stats = await pipeline.index_documents(
-            input_dir=project_root,
-            required_exts=[".md"],  # Only markdown files
-            batch_size=50
+            input_dir=project_root, required_exts=[".md"], batch_size=50  # Only markdown files
         )
 
         logger.info("=" * 60)
@@ -126,10 +119,7 @@ async def setup_demo_data(force: bool = False) -> dict:
 
     except Exception as e:
         logger.error("[ERROR] Demo data indexing failed", error=str(e))
-        return {
-            "status": "failed",
-            "error": str(e)
-        }
+        return {"status": "failed", "error": str(e)}
 
 
 async def get_collection_stats() -> None:
@@ -162,11 +152,12 @@ async def clear_collection() -> None:
 
         # Recreate collection
         from src.components.vector_search.embeddings import EmbeddingService
+
         embedding_service = EmbeddingService()
 
         await qdrant.create_collection(
             collection_name=settings.qdrant_collection,
-            vector_size=embedding_service.get_embedding_dimension()
+            vector_size=embedding_service.get_embedding_dimension(),
         )
         logger.info(f"[OK] Collection '{settings.qdrant_collection}' recreated")
 
@@ -182,19 +173,13 @@ def main():
         description="Setup AEGIS RAG demo data by indexing all *.md files"
     )
     parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Force re-indexing even if data exists"
+        "--force", action="store_true", help="Force re-indexing even if data exists"
     )
     parser.add_argument(
-        "--stats",
-        action="store_true",
-        help="Show current collection statistics and exit"
+        "--stats", action="store_true", help="Show current collection statistics and exit"
     )
     parser.add_argument(
-        "--clear",
-        action="store_true",
-        help="Clear the collection (DELETE all data)"
+        "--clear", action="store_true", help="Clear the collection (DELETE all data)"
     )
 
     args = parser.parse_args()
@@ -227,4 +212,5 @@ def main():
 
 if __name__ == "__main__":
     import logging
+
     main()

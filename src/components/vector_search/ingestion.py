@@ -35,6 +35,7 @@ from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
 
+
 class DocumentIngestionPipeline:
     """Document ingestion pipeline with LlamaIndex and Qdrant."""
 
@@ -387,6 +388,7 @@ class DocumentIngestionPipeline:
         except Exception as e:
             logger.error("Failed to get collection stats", error=str(e))
             return None
+
 
 # Convenience function for quick ingestion
 async def ingest_documents(

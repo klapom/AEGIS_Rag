@@ -205,7 +205,9 @@ async def test_benchmark_medium_document_scenario(mock_extractor):
     assert result["avg_entities"] >= 10, "Medium docs should have >= 10 entities"
     assert result["avg_relations"] >= 7, "Medium docs should have >= 7 relations"
 
-    print(f"[PASS] Medium scenario: {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations")
+    print(
+        f"[PASS] Medium scenario: {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations"
+    )
 
 
 @pytest.mark.unit
@@ -250,7 +252,9 @@ async def test_benchmark_batch_processing(mock_extractor):
     batch_size = 5
     doc_size = "small"
 
-    result = await benchmark_batch_processing(mock_extractor, batch_size=batch_size, doc_size=doc_size)
+    result = await benchmark_batch_processing(
+        mock_extractor, batch_size=batch_size, doc_size=doc_size
+    )
 
     # Verify result structure
     assert result["batch_size"] == batch_size
@@ -307,7 +311,9 @@ async def test_benchmark_calculates_throughput(mock_extractor):
     assert abs(result["throughput_docs_per_min"] - expected_docs_per_min) < 0.01
     assert abs(result["throughput_words_per_sec"] - expected_words_per_sec) < 0.01
 
-    print(f"[PASS] Throughput: {result['throughput_docs_per_min']:.1f} docs/min, {result['throughput_words_per_sec']:.1f} words/sec")
+    print(
+        f"[PASS] Throughput: {result['throughput_docs_per_min']:.1f} docs/min, {result['throughput_words_per_sec']:.1f} words/sec"
+    )
 
 
 @pytest.mark.unit
@@ -324,7 +330,9 @@ async def test_benchmark_tracks_entity_relation_counts(mock_extractor):
     scenario_config = TEST_SCENARIOS["small"]
     iterations = 3
 
-    result = await benchmark_scenario(mock_extractor, scenario_name, scenario_config, iterations=iterations)
+    result = await benchmark_scenario(
+        mock_extractor, scenario_name, scenario_config, iterations=iterations
+    )
 
     # Verify raw results have entity/relation counts
     for raw_result in result["raw_results"]:
@@ -343,7 +351,9 @@ async def test_benchmark_tracks_entity_relation_counts(mock_extractor):
     assert abs(result["avg_entities"] - expected_avg_entities) < 0.01
     assert abs(result["avg_relations"] - expected_avg_relations) < 0.01
 
-    print(f"[PASS] Entity/relation tracking: {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations")
+    print(
+        f"[PASS] Entity/relation tracking: {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations"
+    )
 
 
 @pytest.mark.unit
@@ -501,7 +511,9 @@ async def test_benchmark_with_mock_extractor(mock_extractor, mock_settings):
     json_str = json.dumps(all_results, indent=2)
     assert json_str is not None
 
-    print(f"[PASS] Full benchmark with mock extractor: {len(all_results['scenarios'])} scenarios, {len(all_results['batch_tests'])} batch tests")
+    print(
+        f"[PASS] Full benchmark with mock extractor: {len(all_results['scenarios'])} scenarios, {len(all_results['batch_tests'])} batch tests"
+    )
 
 
 # ============================================================================
@@ -532,9 +544,7 @@ async def test_benchmark_with_real_pipeline(ollama_client_real):
     scenario_name = "small"
     scenario_config = TEST_SCENARIOS["small"]
 
-    result = await benchmark_scenario(
-        extractor, scenario_name, scenario_config, iterations=2
-    )
+    result = await benchmark_scenario(extractor, scenario_name, scenario_config, iterations=2)
 
     # Verify realistic results
     assert result["avg_time_sec"] > 0, "Extraction should take measurable time"
@@ -545,9 +555,13 @@ async def test_benchmark_with_real_pipeline(ollama_client_real):
     assert result["avg_relations"] >= 2, "Should extract at least 2 relations"
 
     # Verify performance target (relaxed for integration test)
-    assert result["avg_time_sec"] < 30, f"Small docs should be < 30s (got {result['avg_time_sec']:.1f}s)"
+    assert (
+        result["avg_time_sec"] < 30
+    ), f"Small docs should be < 30s (got {result['avg_time_sec']:.1f}s)"
 
-    print(f"[PASS] Real pipeline integration: {result['avg_time_sec']:.1f}s, {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations")
+    print(
+        f"[PASS] Real pipeline integration: {result['avg_time_sec']:.1f}s, {result['avg_entities']:.0f} entities, {result['avg_relations']:.0f} relations"
+    )
 
 
 @pytest.mark.integration
@@ -567,9 +581,7 @@ async def test_benchmark_batch_with_real_pipeline(ollama_client_real):
     batch_size = 3
     doc_size = "small"
 
-    result = await benchmark_batch_processing(
-        extractor, batch_size=batch_size, doc_size=doc_size
-    )
+    result = await benchmark_batch_processing(extractor, batch_size=batch_size, doc_size=doc_size)
 
     # Verify batch processing
     assert result["total_time_sec"] > 0
@@ -601,6 +613,7 @@ async def test_benchmark_with_empty_text(mock_extractor):
     - No errors raised
     - Metrics still calculated
     """
+
     # Configure mock to return empty results for empty text
     async def mock_extract_empty(text: str, document_id: str = None):
         if not text.strip():
@@ -615,9 +628,7 @@ async def test_benchmark_with_empty_text(mock_extractor):
         "sample_text": "",
     }
 
-    result = await benchmark_scenario(
-        mock_extractor, "empty_test", scenario_config, iterations=1
-    )
+    result = await benchmark_scenario(mock_extractor, "empty_test", scenario_config, iterations=1)
 
     # Verify empty results
     assert result["avg_entities"] == 0
@@ -639,9 +650,7 @@ async def test_benchmark_with_single_iteration(mock_extractor):
     """
     scenario_config = TEST_SCENARIOS["small"]
 
-    result = await benchmark_scenario(
-        mock_extractor, "single_test", scenario_config, iterations=1
-    )
+    result = await benchmark_scenario(mock_extractor, "single_test", scenario_config, iterations=1)
 
     # Verify single iteration results
     assert result["iterations"] == 1
@@ -708,9 +717,7 @@ async def test_benchmark_calculates_min_max_correctly(mock_extractor):
     """
     scenario_config = TEST_SCENARIOS["small"]
 
-    result = await benchmark_scenario(
-        mock_extractor, "minmax_test", scenario_config, iterations=3
-    )
+    result = await benchmark_scenario(mock_extractor, "minmax_test", scenario_config, iterations=3)
 
     # Extract all elapsed times
     elapsed_times = [r["elapsed"] for r in result["raw_results"]]
@@ -720,7 +727,9 @@ async def test_benchmark_calculates_min_max_correctly(mock_extractor):
     assert result["max_time_sec"] == max(elapsed_times)
     assert result["min_time_sec"] <= result["avg_time_sec"] <= result["max_time_sec"]
 
-    print(f"[PASS] Min/max calculation: min={result['min_time_sec']:.3f}s, max={result['max_time_sec']:.3f}s")
+    print(
+        f"[PASS] Min/max calculation: min={result['min_time_sec']:.3f}s, max={result['max_time_sec']:.3f}s"
+    )
 
 
 @pytest.mark.unit
@@ -735,9 +744,7 @@ async def test_benchmark_calculates_std_dev_correctly(mock_extractor):
     """
     scenario_config = TEST_SCENARIOS["small"]
 
-    result = await benchmark_scenario(
-        mock_extractor, "stddev_test", scenario_config, iterations=3
-    )
+    result = await benchmark_scenario(mock_extractor, "stddev_test", scenario_config, iterations=3)
 
     # Extract elapsed times
     elapsed_times = [r["elapsed"] for r in result["raw_results"]]

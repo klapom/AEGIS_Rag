@@ -274,7 +274,9 @@ async def test_lightrag_legacy_extract_raises_not_implemented(mock_config_lightr
         pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
 
         # Legacy pipeline should raise NotImplementedError
-        with pytest.raises(NotImplementedError, match="Legacy LightRAG extraction not fully implemented"):
+        with pytest.raises(
+            NotImplementedError, match="Legacy LightRAG extraction not fully implemented"
+        ):
             await pipeline.extract("Test text", document_id="doc1")
 
 
@@ -303,7 +305,9 @@ def test_convenience_function_with_config():
 def test_convenience_function_without_config():
     """Test create_extraction_pipeline_from_config loads settings if no config."""
     with patch("src.core.config.get_settings") as mock_settings:
-        with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
+        with patch(
+            "src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor"
+        ) as mock_tpe:
             mock_config = Mock()
             mock_config.extraction_pipeline = "three_phase"
             mock_settings.return_value = mock_config
@@ -344,7 +348,9 @@ def test_factory_logs_legacy_warning(mock_config_lightrag, caplog):
             ExtractionPipelineFactory.create(mock_config_lightrag)
 
         # Check that legacy warning was logged
-        assert any("legacy_lightrag_pipeline_created" in record.message for record in caplog.records)
+        assert any(
+            "legacy_lightrag_pipeline_created" in record.message for record in caplog.records
+        )
 
 
 # ============================================================================

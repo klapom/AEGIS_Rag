@@ -33,6 +33,7 @@ from src.core.exceptions import DatabaseConnectionError, VectorSearchError
 
 logger = structlog.get_logger(__name__)
 
+
 class QdrantClient:
     """Production-ready Qdrant client with connection pooling and error handling.
 
@@ -347,8 +348,10 @@ class QdrantClient:
             self._client.close()
             logger.info("Qdrant sync client closed")
 
+
 # Global client instance (singleton pattern)
 _qdrant_client: QdrantClient | None = None
+
 
 def get_qdrant_client() -> QdrantClient:
     """Get global Qdrant client instance (singleton).
@@ -360,6 +363,7 @@ def get_qdrant_client() -> QdrantClient:
     if _qdrant_client is None:
         _qdrant_client = QdrantClient()
     return _qdrant_client
+
 
 @asynccontextmanager
 async def get_qdrant_client_async() -> None:
@@ -375,6 +379,7 @@ async def get_qdrant_client_async() -> None:
     finally:
         # Connection is pooled, no need to close here
         pass
+
 
 # ============================================================================
 # Backward Compatibility Alias (Sprint 25 Feature 25.9)

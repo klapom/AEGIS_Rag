@@ -126,9 +126,7 @@ class LatencyAnalyzer:
 
         return result
 
-    def analyze_endpoint_latency(
-        self, endpoint: str, time_range: str = "1h"
-    ) -> dict[str, Any]:
+    def analyze_endpoint_latency(self, endpoint: str, time_range: str = "1h") -> dict[str, Any]:
         """Analyze latency for a specific endpoint.
 
         Args:
@@ -368,9 +366,7 @@ def main() -> None:
         default="http://localhost:9090",
         help="Prometheus server URL (default: http://localhost:9090)",
     )
-    parser.add_argument(
-        "--duration", default="1h", help="Time range for analysis (default: 1h)"
-    )
+    parser.add_argument("--duration", default="1h", help="Time range for analysis (default: 1h)")
     parser.add_argument(
         "--output-dir",
         default="docs/performance",
@@ -379,9 +375,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    analyzer = LatencyAnalyzer(
-        prometheus_url=args.prometheus_url, output_dir=Path(args.output_dir)
-    )
+    analyzer = LatencyAnalyzer(prometheus_url=args.prometheus_url, output_dir=Path(args.output_dir))
 
     # Run analysis
     results = analyzer.analyze_all_endpoints(time_range=args.duration)

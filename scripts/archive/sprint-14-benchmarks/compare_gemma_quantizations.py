@@ -30,7 +30,7 @@ def test_model(model_name: str, client: Client) -> dict:
         response = client.chat(
             model=model_name,
             messages=[{"role": "user", "content": ENTITY_PROMPT.format(text=TEST_TEXT)}],
-            options={"temperature": 0.1, "num_predict": 500, "num_ctx": 8192}
+            options={"temperature": 0.1, "num_predict": 500, "num_ctx": 8192},
         )
         elapsed = time.perf_counter() - start
 
@@ -39,7 +39,8 @@ def test_model(model_name: str, client: Client) -> dict:
 
         # Try to parse JSON
         import re
-        json_match = re.search(r'\[.*\]', content, re.DOTALL)
+
+        json_match = re.search(r"\[.*\]", content, re.DOTALL)
         if json_match:
             entities = json.loads(json_match.group(0))
             entity_count = len(entities)
@@ -57,7 +58,7 @@ def test_model(model_name: str, client: Client) -> dict:
             "time": elapsed,
             "success": success,
             "entities": entities,
-            "response": content
+            "response": content,
         }
 
     except Exception as e:
@@ -68,24 +69,26 @@ def test_model(model_name: str, client: Client) -> dict:
             "entity_count": 0,
             "time": elapsed,
             "success": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 def main():
-    print("""
+    print(
+        """
 ================================================================================
            Gemma-3-4b Quantization Comparison - Q4_K_M vs Q8_0
 ================================================================================
 
 Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
-    """)
+    """
+    )
 
     client = Client()
 
     models = [
-        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",   # Reference (4.13 GB)
-        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M", # Production (2.49 GB)
+        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",  # Reference (4.13 GB)
+        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",  # Production (2.49 GB)
     ]
 
     results = []
@@ -105,21 +108,25 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
     q4_result = results[1]
 
     # Q8_0
-    status_q8 = "[OK]" if q8_result['success'] else "[ERROR]"
-    print(f"{'Q8_0':<15} {'4.13 GB':<12} {q8_result['entity_count']:<12} {q8_result['time']:<12.2f} {status_q8}")
+    status_q8 = "[OK]" if q8_result["success"] else "[ERROR]"
+    print(
+        f"{'Q8_0':<15} {'4.13 GB':<12} {q8_result['entity_count']:<12} {q8_result['time']:<12.2f} {status_q8}"
+    )
 
     # Q4_K_M
-    status_q4 = "[OK]" if q4_result['success'] else "[ERROR]"
-    print(f"{'Q4_K_M':<15} {'2.49 GB':<12} {q4_result['entity_count']:<12} {q4_result['time']:<12.2f} {status_q4}")
+    status_q4 = "[OK]" if q4_result["success"] else "[ERROR]"
+    print(
+        f"{'Q4_K_M':<15} {'2.49 GB':<12} {q4_result['entity_count']:<12} {q4_result['time']:<12.2f} {status_q4}"
+    )
 
     # Performance analysis
-    if q8_result['success'] and q4_result['success']:
+    if q8_result["success"] and q4_result["success"]:
         print(f"\n{'='*60}")
         print("PERFORMANCE ANALYSIS")
         print(f"{'='*60}")
 
         # Speed improvement
-        speedup = (q8_result['time'] - q4_result['time']) / q8_result['time'] * 100
+        speedup = (q8_result["time"] - q4_result["time"]) / q8_result["time"] * 100
         print(f"\nSpeed:")
         print(f"  Q4_K_M is {speedup:.1f}% faster than Q8_0")
         print(f"  ({q4_result['time']:.2f}s vs {q8_result['time']:.2f}s)")
@@ -132,10 +139,10 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
 
         # Quality comparison
         print(f"\nQuality:")
-        if q8_result['entity_count'] == q4_result['entity_count']:
+        if q8_result["entity_count"] == q4_result["entity_count"]:
             print(f"  [OK] Identical quality: {q4_result['entity_count']} entities")
         else:
-            diff = q8_result['entity_count'] - q4_result['entity_count']
+            diff = q8_result["entity_count"] - q4_result["entity_count"]
             print(f"  Q8_0: {q8_result['entity_count']} entities")
             print(f"  Q4_K_M: {q4_result['entity_count']} entities (diff: {diff:+d})")
 
@@ -144,7 +151,7 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
         print("RECOMMENDATION")
         print(f"{'='*60}")
 
-        if q4_result['entity_count'] >= q8_result['entity_count']:
+        if q4_result["entity_count"] >= q8_result["entity_count"]:
             print("\n[RECOMMENDED] Use Q4_K_M for production:")
             print(f"  + {speedup:.1f}% faster")
             print(f"  + {size_saving:.1f}% smaller")

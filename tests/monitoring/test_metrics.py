@@ -69,7 +69,9 @@ class TestPrometheusMetricsRegistration:
         assert isinstance(metrics.extraction_duration, Histogram)
 
         # Verify metric can be labeled
-        labeled = metrics.extraction_duration.labels(phase="phase1_spacy", pipeline_type="three_phase")
+        labeled = metrics.extraction_duration.labels(
+            phase="phase1_spacy", pipeline_type="three_phase"
+        )
         assert labeled is not None
 
     def test_extraction_entities_counter_registered(self):
@@ -79,8 +81,7 @@ class TestPrometheusMetricsRegistration:
 
         # Verify labels work
         labeled = metrics.extraction_entities_total.labels(
-            entity_type="PERSON",
-            pipeline_type="three_phase"
+            entity_type="PERSON", pipeline_type="three_phase"
         )
         assert labeled is not None
 
@@ -99,8 +100,7 @@ class TestPrometheusMetricsRegistration:
 
         # Verify status labels
         labeled = metrics.extraction_documents_total.labels(
-            pipeline_type="three_phase",
-            status="success"
+            pipeline_type="three_phase", status="success"
         )
         assert labeled is not None
 
@@ -109,10 +109,7 @@ class TestPrometheusMetricsRegistration:
         assert metrics.extraction_errors_total is not None
         assert isinstance(metrics.extraction_errors_total, Counter)
 
-        labeled = metrics.extraction_errors_total.labels(
-            phase="phase3_gemma",
-            error_type="timeout"
-        )
+        labeled = metrics.extraction_errors_total.labels(phase="phase3_gemma", error_type="timeout")
         assert labeled is not None
 
     def test_extraction_retries_counter_registered(self):
@@ -168,8 +165,7 @@ class TestCounterIncrements:
         """Test record_extraction_entities increments counter by specified count."""
         # Get initial value (may not be 0 if other tests ran)
         initial_metric = metrics.extraction_entities_total.labels(
-            entity_type="PERSON",
-            pipeline_type="test"
+            entity_type="PERSON", pipeline_type="test"
         )
 
         # Record entities
@@ -323,7 +319,7 @@ class TestGaugeUpdates:
             gpu_id=0,
             used_bytes=8_589_934_592,  # 8 GB
             allocated_bytes=6_442_450_944,  # 6 GB
-            utilization=75.5
+            utilization=75.5,
         )
 
         # Verify no exceptions
@@ -332,18 +328,12 @@ class TestGaugeUpdates:
         """Test updating GPU metrics for multiple GPUs independently."""
         # Update metrics for GPU 0
         metrics.update_gpu_memory(
-            gpu_id=0,
-            used_bytes=8_000_000_000,
-            allocated_bytes=6_000_000_000,
-            utilization=80.0
+            gpu_id=0, used_bytes=8_000_000_000, allocated_bytes=6_000_000_000, utilization=80.0
         )
 
         # Update metrics for GPU 1
         metrics.update_gpu_memory(
-            gpu_id=1,
-            used_bytes=4_000_000_000,
-            allocated_bytes=3_000_000_000,
-            utilization=45.0
+            gpu_id=1, used_bytes=4_000_000_000, allocated_bytes=3_000_000_000, utilization=45.0
         )
 
         # Verify no exceptions
@@ -354,7 +344,7 @@ class TestGaugeUpdates:
             gpu_id=0,
             used_bytes=1_073_741_824,  # 1 GB baseline
             allocated_bytes=536_870_912,  # 512 MB
-            utilization=0.0
+            utilization=0.0,
         )
 
         # Verify no exceptions
@@ -365,7 +355,7 @@ class TestGaugeUpdates:
             gpu_id=0,
             used_bytes=16_106_127_360,  # 15 GB (almost full)
             allocated_bytes=15_032_385_536,  # 14 GB
-            utilization=100.0
+            utilization=100.0,
         )
 
         # Verify no exceptions
@@ -484,7 +474,7 @@ class TestSystemInfoInitialization:
 
         # Verify no exceptions
 
-    @patch('src.monitoring.metrics.logger')
+    @patch("src.monitoring.metrics.logger")
     def test_initialize_system_info_logs_initialization(self, mock_logger, mock_config):
         """Test initialize_system_info logs initialization event."""
         metrics.initialize_system_info(mock_config)
@@ -506,6 +496,7 @@ class TestMetricsIntegration:
 
     def test_multiple_metrics_concurrent_access(self):
         """Test thread-safety of metrics with concurrent access."""
+
         def record_metrics(thread_id: int):
             """Record various metrics from a single thread."""
             for i in range(100):
@@ -590,6 +581,7 @@ class TestMetricsIntegration:
         # This ensures they're properly formatted for Prometheus
         try:
             from prometheus_client import generate_latest
+
             output = generate_latest(REGISTRY)
             assert output is not None
             assert len(output) > 0
@@ -634,7 +626,7 @@ class TestEdgeCases:
             gpu_id=0,
             used_bytes=85_899_345_920,  # 80 GB
             allocated_bytes=80_530_636_800,  # 75 GB
-            utilization=95.0
+            utilization=95.0,
         )
 
         # Verify no exceptions
@@ -679,7 +671,9 @@ class TestMetricsPerformance:
         elapsed = time.time() - start_time
 
         # Recording 3000 metrics should take less than 1 second
-        assert elapsed < 1.0, f"Metrics recording too slow: {elapsed:.3f}s for {iterations*3} operations"
+        assert (
+            elapsed < 1.0
+        ), f"Metrics recording too slow: {elapsed:.3f}s for {iterations*3} operations"
 
     def test_histogram_observation_performance(self):
         """Test histogram observation performance."""
@@ -718,9 +712,9 @@ class TestMetricsDocumentation:
     def test_metrics_have_descriptions(self):
         """Test that all metrics have help text/descriptions."""
         # Check a few key metrics have descriptions
-        assert hasattr(metrics.extraction_duration, '_documentation')
-        assert hasattr(metrics.extraction_entities_total, '_documentation')
-        assert hasattr(metrics.deduplication_reduction_ratio, '_documentation')
+        assert hasattr(metrics.extraction_duration, "_documentation")
+        assert hasattr(metrics.extraction_entities_total, "_documentation")
+        assert hasattr(metrics.deduplication_reduction_ratio, "_documentation")
 
     def test_histogram_buckets_are_reasonable(self):
         """Test that histogram buckets are configured appropriately."""

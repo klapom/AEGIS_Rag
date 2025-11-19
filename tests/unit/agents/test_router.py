@@ -111,6 +111,7 @@ class TestIntentClassifier:
         """Test classification of vector search queries."""
         # Mock LLM proxy response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="VECTOR",
             provider="local_ollama",
@@ -135,6 +136,7 @@ class TestIntentClassifier:
         """Test classification of graph search queries."""
         # Mock LLM proxy response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="GRAPH",
             provider="local_ollama",
@@ -159,6 +161,7 @@ class TestIntentClassifier:
         """Test classification of hybrid search queries."""
         # Mock LLM proxy response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="HYBRID",
             provider="local_ollama",
@@ -182,6 +185,7 @@ class TestIntentClassifier:
         """Test classification of memory search queries."""
         # Mock LLM proxy response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="MEMORY",
             provider="local_ollama",
@@ -218,6 +222,7 @@ class TestIntentClassifier:
         """Test classification with empty LLM response."""
         # Mock empty response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="",
             provider="local_ollama",
@@ -237,6 +242,7 @@ class TestIntentClassifier:
         """Test classification with malformed LLM response."""
         # Mock malformed response
         from src.components.llm_proxy.models import LLMResponse
+
         mock_llm_proxy.generate.return_value = LLMResponse(
             content="This is a random response without any intent",
             provider="local_ollama",

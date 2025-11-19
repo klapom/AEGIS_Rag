@@ -16,12 +16,14 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+
 class MemoryLayer(Enum):
     """Memory layer enumeration for routing decisions."""
 
     REDIS = "redis"  # Short-term, <1 hour, session-scoped
     QDRANT = "qdrant"  # Long-term, semantic facts, documents
     GRAPHITI = "graphiti"  # Episodic, temporal events, relationships
+
 
 class RoutingStrategy(ABC):
     """Abstract base class for memory routing strategies."""
@@ -38,6 +40,7 @@ class RoutingStrategy(ABC):
             Ordered list of memory layers to query
         """
         pass
+
 
 class RecencyBasedStrategy(RoutingStrategy):
     """Routing strategy based on temporal recency.
@@ -123,6 +126,7 @@ class RecencyBasedStrategy(RoutingStrategy):
             )
 
         return layers
+
 
 class QueryTypeStrategy(RoutingStrategy):
     """Routing strategy based on query type classification.
@@ -227,6 +231,7 @@ class QueryTypeStrategy(RoutingStrategy):
         """
         return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
 
+
 class HybridStrategy(RoutingStrategy):
     """Hybrid routing strategy combining recency and query type.
 
@@ -289,6 +294,7 @@ class HybridStrategy(RoutingStrategy):
         )
 
         return merged_layers
+
 
 class FallbackAllStrategy(RoutingStrategy):
     """Fallback strategy that always queries all layers.

@@ -67,7 +67,9 @@ async def test_dashscope_vlm_instruct():
         cost_per_1k_tokens = 0.001
         cost_usd = (metadata["tokens_total"] / 1000) * cost_per_1k_tokens
 
-        logger.info("Cost calculation", tokens=metadata["tokens_total"], cost_usd=f"${cost_usd:.6f}")
+        logger.info(
+            "Cost calculation", tokens=metadata["tokens_total"], cost_usd=f"${cost_usd:.6f}"
+        )
 
         assert len(description) > 0, "Description should not be empty"
         logger.info("PASS: TEST 1 - Instruct model working")

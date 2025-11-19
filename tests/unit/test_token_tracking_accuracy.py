@@ -114,9 +114,7 @@ def mock_response_partial_usage():
 class TestTokenParsing:
     """Test accurate token parsing from ANY-LLM response."""
 
-    async def test_parse_tokens_with_complete_usage(
-        self, mock_response_with_usage, temp_db_path
-    ):
+    async def test_parse_tokens_with_complete_usage(self, mock_response_with_usage, temp_db_path):
         """Test parsing tokens when usage object is complete."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage
@@ -187,9 +185,7 @@ class TestTokenParsing:
             assert result.tokens_used == 0
             assert result.cost_usd == 0.0
 
-    async def test_parse_tokens_with_none_values(
-        self, mock_response_partial_usage, temp_db_path
-    ):
+    async def test_parse_tokens_with_none_values(self, mock_response_partial_usage, temp_db_path):
         """Test handling of None values in usage object."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_partial_usage
@@ -449,9 +445,7 @@ class TestEdgeCases:
         assert abs(cost - expected) < 0.01
 
     @pytest.mark.asyncio
-    async def test_generate_preserves_token_accuracy(
-        self, mock_response_with_usage, temp_db_path
-    ):
+    async def test_generate_preserves_token_accuracy(self, mock_response_with_usage, temp_db_path):
         """Test that full generate() flow preserves token accuracy."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage

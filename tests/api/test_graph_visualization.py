@@ -210,9 +210,7 @@ class TestQuerySubgraphEndpoint:
             ]
         )
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.post(
@@ -228,9 +226,7 @@ class TestQuerySubgraphEndpoint:
     @patch("src.api.routers.graph_viz.get_neo4j_client")
     def test_query_subgraph_empty_entities(self, mock_get_neo4j, client):
         """Test query subgraph with empty entity list."""
-        response = client.post(
-            "/api/v1/graph/viz/query-subgraph", json={"entity_names": []}
-        )
+        response = client.post("/api/v1/graph/viz/query-subgraph", json={"entity_names": []})
 
         assert response.status_code == 422  # Validation error
 
@@ -240,9 +236,7 @@ class TestQuerySubgraphEndpoint:
         mock_neo4j = AsyncMock()
         mock_session = AsyncMock()
         mock_session.run = AsyncMock(side_effect=Exception("Database error"))
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.post(
@@ -303,9 +297,7 @@ class TestGraphStatisticsEndpoint:
                 return mock_orphan_result
 
         mock_session.run = AsyncMock(side_effect=run_side_effect)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/statistics")
@@ -331,9 +323,7 @@ class TestGraphStatisticsEndpoint:
         mock_result.data = AsyncMock(return_value=[])
 
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/statistics")
@@ -349,9 +339,7 @@ class TestNodeDocumentsEndpoint:
 
     @patch("src.api.routers.graph_viz.QdrantClient")
     @patch("src.api.routers.graph_viz.UnifiedEmbeddingService")
-    def test_node_documents_success(
-        self, mock_embedding_service, mock_qdrant_client, client
-    ):
+    def test_node_documents_success(self, mock_embedding_service, mock_qdrant_client, client):
         """Test successful node documents retrieval."""
         # Mock embedding service
         mock_embed_service = AsyncMock()
@@ -386,9 +374,7 @@ class TestNodeDocumentsEndpoint:
 
     @patch("src.api.routers.graph_viz.QdrantClient")
     @patch("src.api.routers.graph_viz.UnifiedEmbeddingService")
-    def test_node_documents_empty_results(
-        self, mock_embedding_service, mock_qdrant_client, client
-    ):
+    def test_node_documents_empty_results(self, mock_embedding_service, mock_qdrant_client, client):
         """Test node documents with no results."""
         mock_embed_service = AsyncMock()
         mock_embed_service.embed = AsyncMock(return_value=[0.1, 0.2, 0.3])
@@ -432,13 +418,9 @@ class TestCommunityDocumentsEndpoint:
         mock_neo4j = AsyncMock()
         mock_session = AsyncMock()
         mock_result = AsyncMock()
-        mock_result.single = AsyncMock(
-            return_value={"entity_names": ["Transformer", "Attention"]}
-        )
+        mock_result.single = AsyncMock(return_value={"entity_names": ["Transformer", "Attention"]})
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         # Mock embedding service
@@ -474,9 +456,7 @@ class TestCommunityDocumentsEndpoint:
         mock_result = AsyncMock()
         mock_result.single = AsyncMock(return_value=None)
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/communities/nonexistent/documents")
@@ -494,13 +474,9 @@ class TestCommunityDocumentsEndpoint:
         mock_neo4j = AsyncMock()
         mock_session = AsyncMock()
         mock_result = AsyncMock()
-        mock_result.single = AsyncMock(
-            return_value={"entity_names": ["Entity1", "Entity2"]}
-        )
+        mock_result.single = AsyncMock(return_value={"entity_names": ["Entity1", "Entity2"]})
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(
-            return_value=mock_session
-        )
+        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
         mock_get_neo4j.return_value = mock_neo4j
 
         # Mock embedding and search

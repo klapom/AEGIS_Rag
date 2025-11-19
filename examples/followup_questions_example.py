@@ -44,9 +44,7 @@ async def example_basic_usage():
     print(f"Answer: {answer[:100]}...")
     print("\nGenerating follow-up questions...")
 
-    questions = await generate_followup_questions(
-        query=query, answer=answer, sources=sources
-    )
+    questions = await generate_followup_questions(query=query, answer=answer, sources=sources)
 
     print(f"\nGenerated {len(questions)} follow-up questions:")
     for i, q in enumerate(questions, 1):
@@ -69,9 +67,7 @@ async def example_without_sources():
     print(f"Answer: {answer}")
     print("\nGenerating follow-up questions (no sources)...")
 
-    questions = await generate_followup_questions(
-        query=query, answer=answer, sources=None
-    )
+    questions = await generate_followup_questions(query=query, answer=answer, sources=None)
 
     print(f"\nGenerated {len(questions)} follow-up questions:")
     for i, q in enumerate(questions, 1):
@@ -123,7 +119,8 @@ async def example_api_usage():
     print("GET /api/v1/chat/sessions/{session_id}/followup-questions")
 
     print("\nExample Request:")
-    print("""
+    print(
+        """
     import requests
 
     session_id = "user-123-session"
@@ -138,10 +135,12 @@ async def example_api_usage():
         print(f"Questions: {data['followup_questions']}")
     else:
         print(f"Error: {response.status_code}")
-    """)
+    """
+    )
 
     print("\nExample Response:")
-    print("""
+    print(
+        """
     {
       "session_id": "user-123-session",
       "followup_questions": [
@@ -152,7 +151,8 @@ async def example_api_usage():
       "generated_at": "2025-11-18T10:30:00Z",
       "from_cache": false
     }
-    """)
+    """
+    )
 
 
 async def example_error_handling():
@@ -196,7 +196,9 @@ async def main():
     print("Next Steps:")
     print("1. Start the API server: uvicorn src.api.main:app --reload")
     print("2. Test the endpoint with curl or Postman")
-    print("3. Integrate into React frontend (see docs/sprints/SPRINT_27_FEATURE_27.5_FOLLOWUP_QUESTIONS.md)")
+    print(
+        "3. Integrate into React frontend (see docs/sprints/SPRINT_27_FEATURE_27.5_FOLLOWUP_QUESTIONS.md)"
+    )
     print("4. Monitor metrics: cache hit rate, question CTR, follow-up rate")
 
 

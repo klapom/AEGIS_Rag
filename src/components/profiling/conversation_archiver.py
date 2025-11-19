@@ -31,6 +31,7 @@ logger = structlog.get_logger(__name__)
 ARCHIVED_CONVERSATIONS_COLLECTION = "archived_conversations"
 VECTOR_DIMENSION = 1024  # BGE-M3 embedding dimension
 
+
 class ConversationArchiver:
     """Archive conversations from Redis to Qdrant for semantic search.
 
@@ -108,7 +109,9 @@ class ConversationArchiver:
             logger.error(
                 "collection_creation_failed", collection=self.collection_name, error=str(e)
             )
-            raise VectorSearchError(query="", reason=f"Failed to ensure collection exists: {e}") from e
+            raise VectorSearchError(
+                query="", reason=f"Failed to ensure collection exists: {e}"
+            ) from e
 
     async def archive_conversation(
         self,
@@ -140,7 +143,9 @@ class ConversationArchiver:
             )
 
             if not conversation_data:
-                raise MemoryError(operation="operation", reason="Conversation '{session_id}' not found in Redis")
+                raise MemoryError(
+                    operation="operation", reason="Conversation '{session_id}' not found in Redis"
+                )
 
             # Extract value from Redis wrapper
             if isinstance(conversation_data, dict) and "value" in conversation_data:
@@ -148,7 +153,9 @@ class ConversationArchiver:
 
             messages = conversation_data.get("messages", [])
             if not messages:
-                raise MemoryError(operation="operation", reason="Conversation '{session_id}' has no messages")
+                raise MemoryError(
+                    operation="operation", reason="Conversation '{session_id}' has no messages"
+                )
 
             # Generate full conversation text for embedding
             full_text = self._concatenate_messages(messages)
@@ -292,7 +299,9 @@ class ConversationArchiver:
 
         except Exception as e:
             logger.error("conversation_search_failed", query=request.query, error=str(e))
-            raise VectorSearchError(query=request.query, reason=f"Failed to search archived conversations: {e}") from e
+            raise VectorSearchError(
+                query=request.query, reason=f"Failed to search archived conversations: {e}"
+            ) from e
 
     async def archive_old_conversations(self, max_conversations: int = 100) -> dict[str, Any]:
         """Background job: Archive conversations older than configured threshold.
@@ -462,8 +471,10 @@ class ConversationArchiver:
         # Deduplicate and limit to 5 topics
         return list(set(topics))[:5]
 
+
 # Global instance (singleton)
 _conversation_archiver: ConversationArchiver | None = None
+
 
 def get_conversation_archiver() -> ConversationArchiver:
     """Get global ConversationArchiver instance (singleton).

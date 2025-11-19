@@ -35,9 +35,7 @@ class TestBenchmarkConfig:
 
     def test_default_config(self):
         """Test default configuration."""
-        config = BenchmarkConfig(
-            models=["nomic-embed-text"], test_corpus_path="data/test.json"
-        )
+        config = BenchmarkConfig(models=["nomic-embed-text"], test_corpus_path="data/test.json")
 
         assert config.models == ["nomic-embed-text"]
         assert config.test_corpus_path == "data/test.json"
@@ -132,9 +130,7 @@ class TestEmbeddingBenchmark:
         mock = Mock()
         mock.create_collection = Mock()
         mock.upsert = Mock()
-        mock.get_collection = Mock(
-            return_value=Mock(vectors_count=100, points_count=100)
-        )
+        mock.get_collection = Mock(return_value=Mock(vectors_count=100, points_count=100))
         mock.delete_collection = Mock()
         return mock
 
@@ -169,9 +165,7 @@ class TestEmbeddingBenchmark:
             assert all("text" in doc for doc in corpus)
             assert all(len(doc["text"]) > 50 for doc in corpus)
 
-    def test_load_test_corpus_fallback_to_synthetic(
-        self, benchmark_config, mock_qdrant_client
-    ):
+    def test_load_test_corpus_fallback_to_synthetic(self, benchmark_config, mock_qdrant_client):
         """Test loading corpus falls back to synthetic when file not found."""
         with patch("scripts.benchmark_embeddings.QdrantClient", return_value=mock_qdrant_client):
             benchmark = EmbeddingBenchmark(benchmark_config)
@@ -180,9 +174,7 @@ class TestEmbeddingBenchmark:
             assert len(corpus) == benchmark_config.num_documents
             assert corpus[0]["id"] == "doc_0"
 
-    def test_load_test_corpus_from_file(
-        self, benchmark_config, mock_qdrant_client, tmp_path
-    ):
+    def test_load_test_corpus_from_file(self, benchmark_config, mock_qdrant_client, tmp_path):
         """Test loading corpus from JSON file."""
         # Create test corpus file
         test_corpus = [
@@ -207,17 +199,13 @@ class TestEmbeddingBenchmark:
         """Test latency benchmarking."""
         mock_embedding_service = AsyncMock()
         mock_embedding_service.embed_text = AsyncMock(return_value=[0.1] * 768)
-        mock_embedding_service.embed_batch = AsyncMock(
-            return_value=[[0.1] * 768 for _ in range(5)]
-        )
+        mock_embedding_service.embed_batch = AsyncMock(return_value=[[0.1] * 768 for _ in range(5)])
 
         with patch("scripts.benchmark_embeddings.QdrantClient", return_value=mock_qdrant_client):
             benchmark = EmbeddingBenchmark(benchmark_config)
             texts = ["Test text 1", "Test text 2", "Test text 3", "Test text 4", "Test text 5"]
 
-            metrics = await benchmark._benchmark_latency(
-                mock_embedding_service, texts
-            )
+            metrics = await benchmark._benchmark_latency(mock_embedding_service, texts)
 
             assert "single_avg" in metrics
             assert "batch_avg" in metrics
@@ -285,9 +273,7 @@ class TestEmbeddingBenchmark:
             assert "nomic-embed-text" in saved_results
             assert saved_results["nomic-embed-text"]["embedding_dim"] == 768
 
-    def test_print_comparison_single_model(
-        self, benchmark_config, mock_qdrant_client, capsys
-    ):
+    def test_print_comparison_single_model(self, benchmark_config, mock_qdrant_client, capsys):
         """Test comparison printing for single model."""
         with patch("scripts.benchmark_embeddings.QdrantClient", return_value=mock_qdrant_client):
             benchmark = EmbeddingBenchmark(benchmark_config)
@@ -313,9 +299,7 @@ class TestEmbeddingBenchmark:
             assert "nomic-embed-text" in captured.out
             assert "768" in captured.out
 
-    def test_print_comparison_two_models(
-        self, benchmark_config, mock_qdrant_client, capsys
-    ):
+    def test_print_comparison_two_models(self, benchmark_config, mock_qdrant_client, capsys):
         """Test comparison printing for two models."""
         with patch("scripts.benchmark_embeddings.QdrantClient", return_value=mock_qdrant_client):
             benchmark = EmbeddingBenchmark(benchmark_config)

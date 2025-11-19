@@ -264,7 +264,9 @@ class TestMetricsIntegrationWithLLMProxy:
         )
 
         # Mock acompletion to return our mock response
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion", return_value=mock_response):
+        with patch(
+            "src.components.llm_proxy.aegis_llm_proxy.acompletion", return_value=mock_response
+        ):
             result = await proxy.generate(task)
 
             # Verify response

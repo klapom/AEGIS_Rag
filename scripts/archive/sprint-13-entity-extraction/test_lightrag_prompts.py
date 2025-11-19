@@ -2,6 +2,7 @@
 Test script to inspect LightRAG prompts and responses.
 Shows exactly what prompt is sent to the model and what comes back.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -99,7 +100,7 @@ output:
             options={
                 "temperature": 0.0,  # LightRAG default
                 "num_predict": 2000,  # LightRAG default max tokens
-                "num_ctx": 32768,     # 32K context window
+                "num_ctx": 32768,  # 32K context window
             },
         )
 
@@ -140,13 +141,13 @@ output:
             print(f"  Number of lines: {len(lines)}")
 
         # Check for entity format
-        if '("entity"' in output or "(\"entity\"" in output:
+        if '("entity"' in output or '("entity"' in output:
             print("✓ Found entity format markers")
         else:
             print("✗ Entity format markers NOT found")
 
         # Check for relationship format
-        if '("relationship"' in output or "(\"relationship\"" in output:
+        if '("relationship"' in output or '("relationship"' in output:
             print("✓ Found relationship format markers")
         else:
             print("✗ Relationship format markers NOT found")
@@ -162,6 +163,7 @@ output:
     except Exception as e:
         print(f"ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
 

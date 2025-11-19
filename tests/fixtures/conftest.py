@@ -64,18 +64,18 @@ def sample_image_with_text(fixtures_dir: Path) -> Path:
     # Create simple image with text
     from PIL import Image, ImageDraw, ImageFont
 
-    img = Image.new('RGB', (800, 400), color='white')
+    img = Image.new("RGB", (800, 400), color="white")
     draw = ImageDraw.Draw(img)
 
     # Draw some text
     text = "Sample Image\nContains: Blue Rectangle\nRed Circle"
-    draw.text((50, 50), text, fill='black')
+    draw.text((50, 50), text, fill="black")
 
     # Draw a blue rectangle
-    draw.rectangle([50, 150, 250, 250], outline='blue', width=3)
+    draw.rectangle([50, 150, 250, 250], outline="blue", width=3)
 
     # Draw a red circle
-    draw.ellipse([300, 150, 500, 350], outline='red', width=3)
+    draw.ellipse([300, 150, 500, 350], outline="red", width=3)
 
     # Save image
     image_path = fixtures_dir / "sample_image.png"
@@ -112,7 +112,7 @@ def sample_pdf_path(fixtures_dir: Path, sample_text: str) -> Path:
     c.drawString(inch, 10.5 * inch, "Sample Document - Page 1")
 
     c.setFont("Helvetica", 12)
-    text_lines = sample_text.split('\n')
+    text_lines = sample_text.split("\n")
     y = 10 * inch
     for line in text_lines[:20]:  # First 20 lines on page 1
         c.drawString(inch, y, line[:80])  # Truncate long lines
@@ -161,13 +161,13 @@ def sample_docx_path(fixtures_dir: Path, sample_text: str) -> Path:
     doc = Document()
 
     # Add title
-    doc.add_heading('Sample Document', 0)
+    doc.add_heading("Sample Document", 0)
 
     # Add paragraphs from sample text
-    for line in sample_text.split('\n'):
-        if line.startswith('# '):
+    for line in sample_text.split("\n"):
+        if line.startswith("# "):
             doc.add_heading(line[2:], level=1)
-        elif line.startswith('## '):
+        elif line.startswith("## "):
             doc.add_heading(line[3:], level=2)
         elif line.strip():
             doc.add_paragraph(line)

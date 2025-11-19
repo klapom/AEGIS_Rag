@@ -40,9 +40,7 @@ try:
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-    logger.warning(
-        "PIL (Pillow) not available. Install with: poetry install --with ingestion"
-    )
+    logger.warning("PIL (Pillow) not available. Install with: poetry install --with ingestion")
 
 # Sprint 23: Import DashScope VLM Client for cloud VLM routing
 try:

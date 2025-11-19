@@ -191,9 +191,7 @@ def test_semantic_deduplicator_init_missing_dependencies():
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_deduplicate_with_duplicates(
-    mock_get_singleton, mock_cosine_sim, sample_entities
-):
+def test_deduplicate_with_duplicates(mock_get_singleton, mock_cosine_sim, sample_entities):
     """Test deduplication removes duplicate entities (Sprint 20.3 Singleton)."""
     import numpy as np
 
@@ -299,9 +297,7 @@ def test_deduplicate_single_entity(mock_get_singleton):
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_deduplicate_groups_by_type(
-    mock_get_singleton, mock_cosine_sim, sample_entities
-):
+def test_deduplicate_groups_by_type(mock_get_singleton, mock_cosine_sim, sample_entities):
     """Test deduplication groups entities by type before comparing (Sprint 20.3 Singleton)."""
     import numpy as np
 
@@ -536,9 +532,7 @@ def test_create_deduplicator_from_config_disabled(mock_config):
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_create_deduplicator_from_config_auto_device(
-    mock_get_singleton, mock_config
-):
+def test_create_deduplicator_from_config_auto_device(mock_get_singleton, mock_config):
     """Test factory function handles 'auto' device setting (Sprint 20.3 Singleton)."""
     from src.components.graph_rag.semantic_deduplicator import (
         create_deduplicator_from_config,
@@ -558,9 +552,7 @@ def test_create_deduplicator_from_config_auto_device(
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_create_deduplicator_from_config_custom_model(
-    mock_get_singleton, mock_config
-):
+def test_create_deduplicator_from_config_custom_model(mock_get_singleton, mock_config):
     """Test factory function uses custom model from config (Sprint 20.3 Singleton)."""
     from src.components.graph_rag.semantic_deduplicator import (
         create_deduplicator_from_config,

@@ -199,8 +199,16 @@ def test_get_followup_questions_no_qa_pair(client, mock_redis_memory):
     # Mock conversation with messages but no assistant response
     no_qa_conv = {
         "messages": [
-            {"role": "user", "content": "Query 1", "timestamp": datetime.now(timezone.utc).isoformat()},
-            {"role": "user", "content": "Query 2", "timestamp": datetime.now(timezone.utc).isoformat()},
+            {
+                "role": "user",
+                "content": "Query 1",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "role": "user",
+                "content": "Query 2",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
         ],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "message_count": 2,
@@ -287,13 +295,21 @@ def test_get_followup_questions_multi_turn_conversation(client, mock_redis_memor
     # Mock conversation with multiple turns
     multi_turn_conv = {
         "messages": [
-            {"role": "user", "content": "First query", "timestamp": datetime.now(timezone.utc).isoformat()},
+            {
+                "role": "user",
+                "content": "First query",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
             {
                 "role": "assistant",
                 "content": "First answer",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             },
-            {"role": "user", "content": "Second query", "timestamp": datetime.now(timezone.utc).isoformat()},
+            {
+                "role": "user",
+                "content": "Second query",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
             {
                 "role": "assistant",
                 "content": "Second answer",
@@ -338,7 +354,11 @@ def test_get_followup_questions_no_sources(client, mock_redis_memory):
     # Mock conversation without sources
     no_sources_conv = {
         "messages": [
-            {"role": "user", "content": "Query", "timestamp": datetime.now(timezone.utc).isoformat()},
+            {
+                "role": "user",
+                "content": "Query",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
             {
                 "role": "assistant",
                 "content": "Answer without sources",

@@ -180,7 +180,9 @@ class TestChunkingServiceIntegration:
 
         # Verify strategies may produce different chunk counts (due to different boundaries)
         # This is expected - fixed uses tokens, adaptive uses sentences, sentence uses regex
-        print(f"Fixed: {len(fixed_chunks)}, Adaptive: {len(adaptive_chunks)}, Sentence: {len(sentence_chunks)}")
+        print(
+            f"Fixed: {len(fixed_chunks)}, Adaptive: {len(adaptive_chunks)}, Sentence: {len(sentence_chunks)}"
+        )
 
     def test_large_document_chunking_performance(self):
         """Test chunking large document completes in reasonable time."""

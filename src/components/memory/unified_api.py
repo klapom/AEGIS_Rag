@@ -28,6 +28,7 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class UnifiedMemoryAPI:
     """Unified API facade for all memory layers.
 
@@ -508,8 +509,10 @@ class UnifiedMemoryAPI:
 
         return health
 
+
 # Global instance (singleton pattern)
 _unified_memory_api: UnifiedMemoryAPI | None = None
+
 
 def get_unified_memory_api(session_id: str | None = None) -> UnifiedMemoryAPI:
     """Get unified memory API instance.

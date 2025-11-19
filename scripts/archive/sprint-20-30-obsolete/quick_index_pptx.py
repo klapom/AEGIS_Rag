@@ -1,4 +1,5 @@
 """Quick script to index the Performance Tuning PowerPoint file."""
+
 import asyncio
 import sys
 from pathlib import Path
@@ -49,6 +50,7 @@ async def main():
 
         # Read file content for LightRAG
         from llama_index.core import SimpleDirectoryReader
+
         docs = SimpleDirectoryReader(input_files=[str(pptx_file)]).load_data()
         full_text = "\n\n".join([doc.text for doc in docs])
 
@@ -65,6 +67,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
         import traceback
+
         traceback.print_exc()
 
 

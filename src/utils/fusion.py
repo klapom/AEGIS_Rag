@@ -14,6 +14,7 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+
 def reciprocal_rank_fusion(
     rankings: list[list[dict[str, Any]]],
     k: int = 60,
@@ -80,6 +81,7 @@ def reciprocal_rank_fusion(
     )
 
     return results
+
 
 def weighted_reciprocal_rank_fusion(
     rankings: list[list[dict[str, Any]]],
@@ -156,6 +158,7 @@ def weighted_reciprocal_rank_fusion(
     )
 
     return results
+
 
 def analyze_ranking_diversity(
     rankings: list[list[dict[str, Any]]],

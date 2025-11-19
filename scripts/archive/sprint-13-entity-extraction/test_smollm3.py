@@ -1,6 +1,7 @@
 """
 Test SmolLM3 model with LightRAG delimiter format.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -132,6 +133,7 @@ async def test_smollm3():
     except Exception as e:
         print(f"\n[ERROR] {e}")
         import traceback
+
         traceback.print_exc()
 
 

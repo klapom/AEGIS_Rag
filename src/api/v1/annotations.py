@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/v1/annotations", tags=["annotations"])
 
 settings = get_settings()
 
+
 # Response Models
 class BBoxAbsolute(BaseModel):
     """Absolute BBox coordinates in points."""
@@ -28,6 +29,7 @@ class BBoxAbsolute(BaseModel):
     top: float = Field(..., description="Top coordinate (pt)")
     right: float = Field(..., description="Right coordinate (pt)")
     bottom: float = Field(..., description="Bottom coordinate (pt)")
+
 
 class PageContext(BaseModel):
     """Page context for BBox."""
@@ -39,6 +41,7 @@ class PageContext(BaseModel):
     dpi: int = Field(default=72, description="DPI")
     coord_origin: str = Field(..., description="Coordinate origin (e.g., 'TOPLEFT')")
 
+
 class BBoxNormalized(BaseModel):
     """Normalized BBox coordinates (0.0-1.0)."""
 
@@ -46,6 +49,7 @@ class BBoxNormalized(BaseModel):
     top: float = Field(..., ge=0.0, le=1.0, description="Top (normalized)")
     right: float = Field(..., ge=0.0, le=1.0, description="Right (normalized)")
     bottom: float = Field(..., ge=0.0, le=1.0, description="Bottom (normalized)")
+
 
 class ImageAnnotation(BaseModel):
     """Single image annotation with VLM description + BBox."""
@@ -58,6 +62,7 @@ class ImageAnnotation(BaseModel):
 
     model_config = ConfigDict(str_strip_whitespace=True)
 
+
 class PageDimensions(BaseModel):
     """Page dimensions metadata."""
 
@@ -66,6 +71,7 @@ class PageDimensions(BaseModel):
     unit: str = Field(default="pt", description="Unit")
     dpi: int = Field(default=72, description="DPI")
 
+
 class PageAnnotations(BaseModel):
     """Annotations for a single page."""
 
@@ -73,6 +79,7 @@ class PageAnnotations(BaseModel):
     annotations: list[ImageAnnotation] = Field(
         default_factory=list, description="Image annotations on this page"
     )
+
 
 class DocumentAnnotationsResponse(BaseModel):
     """Response model for document annotations."""
@@ -85,6 +92,7 @@ class DocumentAnnotationsResponse(BaseModel):
     total_annotations: int = Field(..., description="Total number of annotations")
 
     model_config = ConfigDict(str_strip_whitespace=True)
+
 
 # API Endpoints
 @router.get(
@@ -253,6 +261,7 @@ async def get_document_annotations(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve annotations: {str(e)}",
         ) from e
+
 
 @router.get(
     "/chunk/{chunk_id}",

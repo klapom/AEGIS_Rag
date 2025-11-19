@@ -57,10 +57,16 @@ def mock_neo4j_driver():
 @pytest.fixture
 async def lightrag_client(mock_lightrag, mock_neo4j_driver):
     """LightRAG client with mocked dependencies."""
-    with patch('src.components.graph_rag.lightrag_wrapper.LightRAG', return_value=mock_lightrag):
-        with patch('src.components.graph_rag.lightrag_wrapper.AsyncGraphDatabase.driver', return_value=mock_neo4j_driver):
-            with patch('src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status', new_callable=AsyncMock):
-                with patch('src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy'):
+    with patch("src.components.graph_rag.lightrag_wrapper.LightRAG", return_value=mock_lightrag):
+        with patch(
+            "src.components.graph_rag.lightrag_wrapper.AsyncGraphDatabase.driver",
+            return_value=mock_neo4j_driver,
+        ):
+            with patch(
+                "src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status",
+                new_callable=AsyncMock,
+            ):
+                with patch("src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy"):
                     client = LightRAGClient()
                     await client._ensure_initialized()
                     return client
@@ -69,6 +75,7 @@ async def lightrag_client(mock_lightrag, mock_neo4j_driver):
 # ============================================================================
 # Document Insertion Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_lightrag_insert_document(lightrag_client):
@@ -133,6 +140,7 @@ async def test_lightrag_insert_document_failure(lightrag_client):
 # Query Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_lightrag_query_local_mode(lightrag_client):
     """Test local (entity-level) search mode."""
@@ -195,6 +203,7 @@ async def test_lightrag_query_failure_handling(lightrag_client):
 # Statistics and Health Check Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_lightrag_get_stats(lightrag_client, mock_neo4j_driver):
     """Test retrieving graph statistics."""
@@ -246,6 +255,7 @@ async def test_lightrag_health_check_failure(lightrag_client, mock_neo4j_driver)
 # Concurrent Operations Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_lightrag_concurrent_queries(lightrag_client):
     """Test concurrent query execution."""
@@ -257,9 +267,7 @@ async def test_lightrag_concurrent_queries(lightrag_client):
         "What is temporal memory?",
     ]
 
-    results = await asyncio.gather(*[
-        lightrag_client.query_graph(q, mode="local") for q in queries
-    ])
+    results = await asyncio.gather(*[lightrag_client.query_graph(q, mode="local") for q in queries])
 
     assert len(results) == 3
     assert all(isinstance(r, GraphQueryResult) for r in results)
@@ -271,14 +279,11 @@ async def test_lightrag_concurrent_insertions(lightrag_client):
     """Test concurrent document insertions."""
     import asyncio
 
-    doc_batches = [
-        [{"text": f"Document {i}", "id": f"doc{i}"}]
-        for i in range(3)
-    ]
+    doc_batches = [[{"text": f"Document {i}", "id": f"doc{i}"}] for i in range(3)]
 
-    results = await asyncio.gather(*[
-        lightrag_client.insert_documents(batch) for batch in doc_batches
-    ])
+    results = await asyncio.gather(
+        *[lightrag_client.insert_documents(batch) for batch in doc_batches]
+    )
 
     assert len(results) == 3
     assert all(r["success"] == 1 for r in results)
@@ -288,12 +293,16 @@ async def test_lightrag_concurrent_insertions(lightrag_client):
 # Initialization Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_lightrag_lazy_initialization():
     """Test lazy initialization of LightRAG."""
-    with patch('src.components.graph_rag.lightrag_wrapper.LightRAG') as mock_lightrag_cls:
-        with patch('src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status', new_callable=AsyncMock):
-            with patch('src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy'):
+    with patch("src.components.graph_rag.lightrag_wrapper.LightRAG") as mock_lightrag_cls:
+        with patch(
+            "src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status",
+            new_callable=AsyncMock,
+        ):
+            with patch("src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy"):
                 mock_instance = MagicMock()
                 mock_instance.initialize_storages = AsyncMock()
                 mock_lightrag_cls.return_value = mock_instance
@@ -309,7 +318,10 @@ async def test_lightrag_lazy_initialization():
 @pytest.mark.asyncio
 async def test_lightrag_initialization_failure():
     """Test handling of initialization failure."""
-    with patch('src.components.graph_rag.lightrag_wrapper.LightRAG', side_effect=ImportError("LightRAG not installed")):
+    with patch(
+        "src.components.graph_rag.lightrag_wrapper.LightRAG",
+        side_effect=ImportError("LightRAG not installed"),
+    ):
         client = LightRAGClient()
 
         with pytest.raises(ImportError, match="LightRAG not installed"):

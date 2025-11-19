@@ -305,9 +305,7 @@ class TestUpdateBudgetMetrics:
     def test_update_spend_gauge(self):
         """Verify monthly spend gauge updates."""
         # Update budget metrics
-        update_budget_metrics(
-            provider="alibaba_cloud", monthly_spending=5.25, budget_limit=10.0
-        )
+        update_budget_metrics(provider="alibaba_cloud", monthly_spending=5.25, budget_limit=10.0)
 
         # Verify gauge value
         spend = self._get_gauge_value("monthly_spend_usd", provider="alibaba_cloud")
@@ -319,9 +317,7 @@ class TestUpdateBudgetMetrics:
         update_budget_metrics(provider="openai", monthly_spending=12.50, budget_limit=20.0)
 
         # Verify remaining
-        remaining = self._get_gauge_value(
-            "monthly_budget_remaining_usd", provider="openai"
-        )
+        remaining = self._get_gauge_value("monthly_budget_remaining_usd", provider="openai")
         assert remaining == 7.50  # 20.0 - 12.50
 
     def test_update_budget_remaining_unlimited(self):
@@ -330,9 +326,7 @@ class TestUpdateBudgetMetrics:
         update_budget_metrics(provider="local_ollama", monthly_spending=0.0, budget_limit=0.0)
 
         # Verify unlimited sentinel
-        remaining = self._get_gauge_value(
-            "monthly_budget_remaining_usd", provider="local_ollama"
-        )
+        remaining = self._get_gauge_value("monthly_budget_remaining_usd", provider="local_ollama")
         assert remaining == -1.0  # Sentinel for unlimited
 
     def test_update_budget_exceeded(self):
@@ -341,9 +335,7 @@ class TestUpdateBudgetMetrics:
         update_budget_metrics(provider="alibaba_cloud", monthly_spending=15.0, budget_limit=10.0)
 
         # Verify remaining (should be 0.0, not negative)
-        remaining = self._get_gauge_value(
-            "monthly_budget_remaining_usd", provider="alibaba_cloud"
-        )
+        remaining = self._get_gauge_value("monthly_budget_remaining_usd", provider="alibaba_cloud")
         assert remaining == 0.0
 
     def _get_gauge_value(self, metric_name, **labels):

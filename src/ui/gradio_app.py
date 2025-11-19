@@ -47,6 +47,7 @@ API_BASE_URL = f"http://localhost:{settings.api_port}"
 CHAT_ENDPOINT = f"{API_BASE_URL}/api/v1/chat/"
 HEALTH_ENDPOINT = f"{API_BASE_URL}/health"  # Use main health endpoint instead
 
+
 class GradioApp:
     """Gradio Chat Application for AEGIS RAG.
 
@@ -761,6 +762,7 @@ class GradioApp:
 
         demo.launch(server_name=server_name, server_port=server_port, share=share)
 
+
 def main() -> None:
     """Main entry point."""
     import logging
@@ -778,6 +780,7 @@ def main() -> None:
     # Create and launch app
     app = GradioApp()
     app.launch()
+
 
 if __name__ == "__main__":
     main()

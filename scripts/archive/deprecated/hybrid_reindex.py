@@ -35,7 +35,9 @@ async def main():
     qdrant_client = get_qdrant_client()
     lightrag_wrapper = await get_lightrag_wrapper_async()
     collection_name = settings.qdrant_collection
-    print(f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})")
+    print(
+        f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
+    )
     print(f"  [OK] Qdrant Client ready")
     print(f"  [OK] LightRAG Wrapper ready")
     print(f"  [OK] Collection: {collection_name}")
@@ -106,10 +108,9 @@ async def main():
         for doc in documents:
             content = doc.get_content()
             if content and content.strip():
-                lightrag_docs.append({
-                    "text": content,
-                    "id": doc.doc_id or doc.metadata.get("file_name", "unknown")
-                })
+                lightrag_docs.append(
+                    {"text": content, "id": doc.doc_id or doc.metadata.get("file_name", "unknown")}
+                )
 
         print(f"  [OK] Loaded {len(lightrag_docs)} documents for graph indexing")
 
@@ -126,6 +127,7 @@ async def main():
     except Exception as e:
         print(f"  [ERROR] Neo4j indexing failed: {e}")
         import traceback
+
         traceback.print_exc()
         # Continue anyway - Qdrant indexing succeeded
 

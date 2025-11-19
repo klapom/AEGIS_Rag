@@ -15,6 +15,7 @@ class TransportType(Enum):
     STDIO = "stdio"
     HTTP = "http"
 
+
 class ServerStatus(Enum):
     """Status of an MCP server connection."""
 
@@ -22,6 +23,7 @@ class ServerStatus(Enum):
     CONNECTING = "connecting"
     CONNECTED = "connected"
     ERROR = "error"
+
 
 @dataclass
 class MCPServer:
@@ -56,6 +58,7 @@ class MCPServer:
         if self.retry_attempts < 0:
             raise ValueError("Retry attempts cannot be negative")
 
+
 @dataclass
 class MCPTool:
     """MCP tool definition.
@@ -83,6 +86,7 @@ class MCPTool:
         if not self.server:
             raise ValueError("Tool server cannot be empty")
 
+
 @dataclass
 class MCPToolCall:
     """Request to execute an MCP tool.
@@ -105,6 +109,7 @@ class MCPToolCall:
             raise ValueError("Tool name cannot be empty")
         if self.timeout <= 0:
             raise ValueError("Timeout must be positive")
+
 
 @dataclass
 class MCPToolResult:
@@ -136,6 +141,7 @@ class MCPToolResult:
         if not self.success and not self.error:
             raise ValueError("Failed execution must have an error message")
 
+
 @dataclass
 class MCPServerConnection:
     """Active connection to an MCP server.
@@ -155,6 +161,7 @@ class MCPServerConnection:
     tools: list[MCPTool] = field(default_factory=list)
     error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class MCPClientStats:

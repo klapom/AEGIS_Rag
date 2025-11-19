@@ -278,8 +278,7 @@ class TestHybridSearchE2E:
 
         # Build index using fit() method with proper document format
         docs_for_bm25 = [
-            {"id": doc["id"], "text": doc["text"], "metadata": doc["metadata"]}
-            for doc in documents
+            {"id": doc["id"], "text": doc["text"], "metadata": doc["metadata"]} for doc in documents
         ]
         bm25.fit(docs_for_bm25, text_field="text")
 
@@ -299,9 +298,7 @@ class TestHybridSearchE2E:
 
         logger.info(f"BM25 search returned {len(results)} results")
 
-    async def test_e2e_vector_search_with_real_qdrant(
-        self, qdrant_available, test_documents
-    ):
+    async def test_e2e_vector_search_with_real_qdrant(self, qdrant_available, test_documents):
         """Test vector search indexing and retrieval with real Qdrant.
 
         Verifies:
@@ -405,7 +402,9 @@ class TestHybridSearchE2E:
 
         # Verify results differ between queries
         all_results = [r for results in results_by_query.values() for r in results]
-        assert len(set(r["text"][:50] for r in all_results)) > 1, "Different queries should return different docs"
+        assert (
+            len(set(r["text"][:50] for r in all_results)) > 1
+        ), "Different queries should return different docs"
 
         logger.info(f"Multiple BM25 queries tested successfully")
 

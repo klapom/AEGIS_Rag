@@ -56,7 +56,9 @@ class ChunkLogger:
             f.write("CHUNK ANALYSIS & LLM CALL LOG\n")
             f.write("=" * 100 + "\n")
             f.write(f"Date: {datetime.now().isoformat()}\n")
-            f.write(f"Extraction Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}\n")
+            f.write(
+                f"Extraction Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}\n"
+            )
             f.write(f"Chunking Strategy: LightRAG's internal chunking (adaptive)\n")
             f.write("=" * 100 + "\n\n")
 
@@ -248,7 +250,9 @@ async def main():
                     }
                 )
 
-                print(f"   [{i:3d}/{len(documents)}] Logged chunk: {len(content):5d} chars, {count_tokens(content):4d} tokens")
+                print(
+                    f"   [{i:3d}/{len(documents)}] Logged chunk: {len(content):5d} chars, {count_tokens(content):4d} tokens"
+                )
 
         # Index with LightRAG (this will make LLM calls internally)
         print(f"\n   Starting extraction and indexing...")

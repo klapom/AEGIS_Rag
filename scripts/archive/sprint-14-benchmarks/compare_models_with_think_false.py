@@ -34,7 +34,7 @@ def test_model(model_name: str, client: Client, use_think_false: bool = False) -
         kwargs = {
             "model": model_name,
             "messages": [{"role": "user", "content": ENTITY_PROMPT.format(text=TEST_TEXT)}],
-            "options": {"temperature": 0.1, "num_predict": 500, "num_ctx": 8192}
+            "options": {"temperature": 0.1, "num_predict": 500, "num_ctx": 8192},
         }
 
         if use_think_false:
@@ -50,9 +50,10 @@ def test_model(model_name: str, client: Client, use_think_false: bool = False) -
 
         # Try to parse JSON
         import re
+
         entities = []
         success = False
-        json_match = re.search(r'\[.*\]', content, re.DOTALL)
+        json_match = re.search(r"\[.*\]", content, re.DOTALL)
         if json_match:
             try:
                 entities = json.loads(json_match.group(0))
@@ -71,7 +72,7 @@ def test_model(model_name: str, client: Client, use_think_false: bool = False) -
             "has_think_tags": has_think_tags,
             "supports_think_param": True,
             "entities": entities,
-            "response_preview": content[:200]
+            "response_preview": content[:200],
         }
 
     except Exception as e:
@@ -90,18 +91,20 @@ def test_model(model_name: str, client: Client, use_think_false: bool = False) -
             "time": elapsed,
             "success": False,
             "supports_think_param": supports_think,
-            "error": error_msg
+            "error": error_msg,
         }
 
 
 def main():
-    print("""
+    print(
+        """
 ================================================================================
         Model Comparison WITH and WITHOUT think=False
 ================================================================================
 
 Sprint 13 TD-31: Testing which models support thinking mode
-""")
+"""
+    )
 
     client = Client()
 
@@ -138,15 +141,19 @@ Sprint 13 TD-31: Testing which models support thinking mode
     print("COMPARISON RESULTS")
     print(f"{'='*80}\n")
 
-    print(f"{'Model':<40} {'Mode':<15} {'Entities':<12} {'Time (s)':<12} {'Think Tags':<12} {'Status'}")
+    print(
+        f"{'Model':<40} {'Mode':<15} {'Entities':<12} {'Time (s)':<12} {'Think Tags':<12} {'Status'}"
+    )
     print(f"{'-'*40} {'-'*15} {'-'*12} {'-'*12} {'-'*12} {'-'*10}")
 
     for r in results:
-        model_short = r['model'].split('/')[-1] if '/' in r['model'] else r['model']
-        think_tags = "YES" if r.get('has_think_tags') else "NO" if r.get('success') else "N/A"
-        status = "[OK]" if r['success'] else "[ERROR]"
+        model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
+        think_tags = "YES" if r.get("has_think_tags") else "NO" if r.get("success") else "N/A"
+        status = "[OK]" if r["success"] else "[ERROR]"
 
-        print(f"{model_short:<40} {r['mode']:<15} {r['entity_count']:<12} {r['time']:<12.2f} {think_tags:<12} {status}")
+        print(
+            f"{model_short:<40} {r['mode']:<15} {r['entity_count']:<12} {r['time']:<12.2f} {think_tags:<12} {status}"
+        )
 
     # ANALYSIS
     print(f"\n{'='*80}")
@@ -154,37 +161,43 @@ Sprint 13 TD-31: Testing which models support thinking mode
     print(f"{'='*80}\n")
 
     for model in models:
-        model_short = model.split('/')[-1] if '/' in model else model
-        model_results = [r for r in results if r['model'] == model]
+        model_short = model.split("/")[-1] if "/" in model else model
+        model_results = [r for r in results if r["model"] == model]
 
         if not model_results:
             continue
 
-        default_result = [r for r in model_results if r['mode'] == 'default'][0]
+        default_result = [r for r in model_results if r["mode"] == "default"][0]
 
         print(f"\n{model_short}:")
 
-        if not default_result.get('supports_think_param', True):
+        if not default_result.get("supports_think_param", True):
             print(f"  [INFO] Does NOT support think parameter")
             print(f"  Entities: {default_result['entity_count']}")
             print(f"  Time: {default_result['time']:.2f}s")
         else:
-            no_think_results = [r for r in model_results if r['mode'] == 'think=False']
+            no_think_results = [r for r in model_results if r["mode"] == "think=False"]
 
             if no_think_results:
                 no_think_result = no_think_results[0]
 
                 # Compare performance
-                if default_result['success'] and no_think_result['success']:
-                    time_diff = default_result['time'] - no_think_result['time']
-                    time_pct = (time_diff / default_result['time']) * 100
+                if default_result["success"] and no_think_result["success"]:
+                    time_diff = default_result["time"] - no_think_result["time"]
+                    time_pct = (time_diff / default_result["time"]) * 100
 
-                    entity_diff = default_result['entity_count'] - no_think_result['entity_count']
+                    entity_diff = default_result["entity_count"] - no_think_result["entity_count"]
 
                     print(f"  [INFO] Supports think parameter")
-                    print(f"  Default mode:  {default_result['entity_count']} entities in {default_result['time']:.2f}s")
-                    print(f"  think=False:   {no_think_result['entity_count']} entities in {no_think_result['time']:.2f}s")
-                    print(f"  Speed improvement: {time_pct:+.1f}% ({'faster' if time_diff > 0 else 'slower'} with think=False)")
+                    print(
+                        f"  Default mode:  {default_result['entity_count']} entities in {default_result['time']:.2f}s"
+                    )
+                    print(
+                        f"  think=False:   {no_think_result['entity_count']} entities in {no_think_result['time']:.2f}s"
+                    )
+                    print(
+                        f"  Speed improvement: {time_pct:+.1f}% ({'faster' if time_diff > 0 else 'slower'} with think=False)"
+                    )
 
                     if entity_diff != 0:
                         print(f"  Quality change: {entity_diff:+d} entities")
@@ -195,26 +208,34 @@ Sprint 13 TD-31: Testing which models support thinking mode
     print(f"{'='*80}\n")
 
     # Find best overall
-    successful_results = [r for r in results if r['success']]
+    successful_results = [r for r in results if r["success"]]
     if successful_results:
         # Best quality
-        best_quality = max(successful_results, key=lambda r: r['entity_count'])
-        print(f"Best Quality: {best_quality['model'].split('/')[-1] if '/' in best_quality['model'] else best_quality['model']}")
+        best_quality = max(successful_results, key=lambda r: r["entity_count"])
+        print(
+            f"Best Quality: {best_quality['model'].split('/')[-1] if '/' in best_quality['model'] else best_quality['model']}"
+        )
         print(f"  Mode: {best_quality['mode']}")
         print(f"  Entities: {best_quality['entity_count']}")
         print(f"  Time: {best_quality['time']:.2f}s")
 
         # Fastest
-        fastest = min(successful_results, key=lambda r: r['time'])
-        print(f"\nFastest: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}")
+        fastest = min(successful_results, key=lambda r: r["time"])
+        print(
+            f"\nFastest: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}"
+        )
         print(f"  Mode: {fastest['mode']}")
         print(f"  Time: {fastest['time']:.2f}s")
         print(f"  Entities: {fastest['entity_count']}")
 
         # Best balance
         # Score = entities / time (higher is better)
-        balanced = max(successful_results, key=lambda r: r['entity_count'] / r['time'] if r['time'] > 0 else 0)
-        print(f"\nBest Balance (entities/sec): {balanced['model'].split('/')[-1] if '/' in balanced['model'] else balanced['model']}")
+        balanced = max(
+            successful_results, key=lambda r: r["entity_count"] / r["time"] if r["time"] > 0 else 0
+        )
+        print(
+            f"\nBest Balance (entities/sec): {balanced['model'].split('/')[-1] if '/' in balanced['model'] else balanced['model']}"
+        )
         print(f"  Mode: {balanced['mode']}")
         print(f"  Entities: {balanced['entity_count']}")
         print(f"  Time: {balanced['time']:.2f}s")

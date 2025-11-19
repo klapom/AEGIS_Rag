@@ -137,9 +137,7 @@ async def docker_services():
 
 
 @pytest.mark.asyncio
-async def test_full_image_pipeline__pdf_with_images__success(
-    test_pdf_with_images, docker_services
-):
+async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_images, docker_services):
     """Test complete E2E pipeline: Docling → VLM → Chunking → Qdrant → Neo4j.
 
     This is the main integration test for Feature 21.6.
@@ -179,7 +177,9 @@ async def test_full_image_pipeline__pdf_with_images__success(
     assert "page_dimensions" in state
     print(f"✓ Docling extraction completed")
     print(f"  Pages: {len(state['page_dimensions'])}")
-    print(f"  Images: {len(state['document'].pictures) if hasattr(state['document'], 'pictures') else 0}")
+    print(
+        f"  Images: {len(state['document'].pictures) if hasattr(state['document'], 'pictures') else 0}"
+    )
 
     # NODE 2.5: VLM Image Enrichment
     print("\n=== NODE 2.5: VLM Image Enrichment ===")
@@ -365,9 +365,7 @@ async def test_vlm_processing__performance__acceptable_latency(docker_services):
 
 @pytest.mark.asyncio
 @pytest.mark.slow
-async def test_full_pipeline__memory_usage__within_limits(
-    test_pdf_with_images, docker_services
-):
+async def test_full_pipeline__memory_usage__within_limits(test_pdf_with_images, docker_services):
     """Test that full pipeline stays within memory limits."""
     import psutil
 
@@ -448,7 +446,9 @@ async def test_vlm_enrichment__no_ollama__fails_gracefully(docker_services):
     processor = ImageProcessor()
 
     # Mock ollama.chat to fail (ImageProcessor uses ollama module-level function)
-    with patch("src.components.ingestion.image_processor.ollama.chat", side_effect=Exception("Ollama down")):
+    with patch(
+        "src.components.ingestion.image_processor.ollama.chat", side_effect=Exception("Ollama down")
+    ):
         test_image = Image.new("RGB", (200, 200))
 
         # Process should return None on error (not raise)

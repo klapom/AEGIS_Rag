@@ -201,9 +201,7 @@ print(f'Routes registered: {len(app.routes)}')
                 result2 = subprocess.run(cmd2, capture_output=True, text=True)
 
                 if result1.stdout or result2.stdout:
-                    found_imports.append(
-                        f"{module}:\\n{result1.stdout}{result2.stdout}"
-                    )
+                    found_imports.append(f"{module}:\\n{result1.stdout}{result2.stdout}")
                     print(f"FOUND: Imports of {module}")
                     print(result1.stdout)
                     print(result2.stdout)
@@ -211,9 +209,7 @@ print(f'Routes registered: {len(app.routes)}')
                     print(f"OK: No imports of {module}")
             except Exception:
                 # grep not found or error - skip on Windows
-                self.warnings.append(
-                    "Deleted module check skipped (grep not available)"
-                )
+                self.warnings.append("Deleted module check skipped (grep not available)")
                 return True
 
         if found_imports:

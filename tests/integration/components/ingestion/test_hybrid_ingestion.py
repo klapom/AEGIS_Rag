@@ -222,6 +222,7 @@ class TestHybridIngestionLlamaIndex:
         self, text_file, monkeypatch
     ):
         """Verify text file uses LlamaIndex when Docling unavailable."""
+
         # Mock Docling as unavailable
         async def mock_initialize_router():
             return FormatRouter(docling_available=False)

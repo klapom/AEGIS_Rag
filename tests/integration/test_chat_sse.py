@@ -149,7 +149,9 @@ async def test_chat_stream_with_sources():
                             has_sources = True
                             # Verify source structure
                             assert "source" in message
-                            assert "document_id" in message["source"] or "context" in message["source"]
+                            assert (
+                                "document_id" in message["source"] or "context" in message["source"]
+                            )
                     except json.JSONDecodeError:
                         pass
 

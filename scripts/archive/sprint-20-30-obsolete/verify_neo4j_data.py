@@ -2,6 +2,7 @@
 Verify Neo4j/LightRAG data after indexing.
 Checks entity and relation counts to validate LightRAG extraction.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -43,29 +44,31 @@ async def main():
 
         # Count chunks
         chunk_result = await run_query(graph, "MATCH (n:__Chunk__) RETURN count(n) as count")
-        chunk_count = chunk_result[0]['count'] if chunk_result else 0
+        chunk_count = chunk_result[0]["count"] if chunk_result else 0
         print(f"   Chunks: {chunk_count}")
 
         # Count entities
         entity_result = await run_query(graph, "MATCH (n:__Entity__) RETURN count(n) as count")
-        entity_count = entity_result[0]['count'] if entity_result else 0
+        entity_count = entity_result[0]["count"] if entity_result else 0
         print(f"   Entities: {entity_count}")
 
         # Count all nodes
         all_nodes_result = await run_query(graph, "MATCH (n) RETURN count(n) as count")
-        total_nodes = all_nodes_result[0]['count'] if all_nodes_result else 0
+        total_nodes = all_nodes_result[0]["count"] if all_nodes_result else 0
         print(f"   Total Nodes: {total_nodes}")
 
         print("\n[2/4] Checking Neo4j relationship counts...")
 
         # Count relationships
-        rel_result = await run_query(graph, "MATCH ()-[r]->() RETURN type(r) as type, count(r) as count")
+        rel_result = await run_query(
+            graph, "MATCH ()-[r]->() RETURN type(r) as type, count(r) as count"
+        )
 
         total_rels = 0
         if rel_result:
             for row in rel_result:
-                count = row['count']
-                rel_type = row['type']
+                count = row["count"]
+                rel_type = row["type"]
                 print(f"   {rel_type}: {count}")
                 total_rels += count
             print(f"   Total Relationships: {total_rels}")
@@ -75,7 +78,9 @@ async def main():
         print("\n[3/4] Sampling entities...")
 
         # Sample 5 entities
-        sample_result = await run_query(graph, "MATCH (n:__Entity__) RETURN n.entity_name as name LIMIT 5")
+        sample_result = await run_query(
+            graph, "MATCH (n:__Entity__) RETURN n.entity_name as name LIMIT 5"
+        )
 
         if sample_result:
             for i, row in enumerate(sample_result, 1):
@@ -86,17 +91,19 @@ async def main():
         print("\n[4/4] Checking chunk content...")
 
         # Sample 1 chunk to verify content was stored
-        chunk_sample_result = await run_query(graph, "MATCH (n:__Chunk__) RETURN n.content as content LIMIT 1")
+        chunk_sample_result = await run_query(
+            graph, "MATCH (n:__Chunk__) RETURN n.content as content LIMIT 1"
+        )
 
-        if chunk_sample_result and chunk_sample_result[0].get('content'):
-            content = chunk_sample_result[0]['content']
+        if chunk_sample_result and chunk_sample_result[0].get("content"):
+            content = chunk_sample_result[0]["content"]
             preview = content[:200] if len(content) > 200 else content
             print(f"   Sample chunk (first 200 chars):")
             print(f"   {preview}...")
         else:
             print("   No chunk content found")
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Summary:")
         print(f"   Chunks: {chunk_count}")
         print(f"   Entities: {entity_count}")
@@ -104,7 +111,7 @@ async def main():
         print(f"   Total Relationships: {total_rels}")
 
         # Diagnosis
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         if entity_count < 10 and chunk_count > 50:
             print("⚠️  WARNING: Very low entity count for chunk count!")
             print(f"   Expected: ~10-50 entities for 103 chunks")
@@ -126,6 +133,7 @@ async def main():
     except Exception as e:
         print(f"\n[ERROR] Verification failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

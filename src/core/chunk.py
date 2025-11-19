@@ -49,6 +49,7 @@ class ChunkStrategy(BaseModel):
             raise ValueError(f"Overlap ({v}) must be less than chunk_size ({chunk_size})")
         return v
 
+
 class Chunk(BaseModel):
     """Unified chunk representation.
 

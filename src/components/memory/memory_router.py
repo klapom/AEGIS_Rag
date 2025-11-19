@@ -19,12 +19,14 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
+
 class MemoryLayer(str, Enum):
     """Memory layer enumeration."""
 
     SHORT_TERM = "short_term"  # Redis: Recent context, session state
     LONG_TERM = "long_term"  # Qdrant: Semantic facts, document chunks
     EPISODIC = "episodic"  # Graphiti: Temporal events, entity relationships
+
 
 class MemoryRouter:
     """Intelligent memory router with 3-layer selection logic.
@@ -440,8 +442,10 @@ class MemoryRouter:
 
         return summary
 
+
 # Global instance (singleton pattern for default session)
 _memory_router: MemoryRouter | None = None
+
 
 def get_memory_router(session_id: str | None = None) -> MemoryRouter:
     """Get memory router instance.

@@ -25,18 +25,20 @@ def extract_base64_images_from_markdown(markdown: str) -> list[dict]:
         List of dicts with image info (format, data_length, preview)
     """
     # Pattern: ![alt](data:image/png;base64,iVBORw0KGgo...)
-    pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)'
+    pattern = r"!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)"
 
     matches = re.findall(pattern, markdown)
 
     images = []
     for alt_text, img_format, base64_data in matches:
-        images.append({
-            "alt_text": alt_text,
-            "format": img_format,
-            "data_length": len(base64_data),
-            "preview": base64_data[:50] + "...",  # First 50 chars
-        })
+        images.append(
+            {
+                "alt_text": alt_text,
+                "format": img_format,
+                "data_length": len(base64_data),
+                "preview": base64_data[:50] + "...",  # First 50 chars
+            }
+        )
 
     return images
 
@@ -66,15 +68,17 @@ async def debug_docling_output():
             logger.info("=" * 80)
 
             # Check attributes
-            logger.info("Attributes",
-                       has_text=hasattr(parsed, "text"),
-                       has_metadata=hasattr(parsed, "metadata"),
-                       has_tables=hasattr(parsed, "tables"),
-                       has_images=hasattr(parsed, "images"),
-                       has_layout=hasattr(parsed, "layout"),
-                       has_md_content=hasattr(parsed, "md_content"),
-                       has_json_content=hasattr(parsed, "json_content"),
-                       has_document=hasattr(parsed, "document"))  # ❌ Should be False
+            logger.info(
+                "Attributes",
+                has_text=hasattr(parsed, "text"),
+                has_metadata=hasattr(parsed, "metadata"),
+                has_tables=hasattr(parsed, "tables"),
+                has_images=hasattr(parsed, "images"),
+                has_layout=hasattr(parsed, "layout"),
+                has_md_content=hasattr(parsed, "md_content"),
+                has_json_content=hasattr(parsed, "json_content"),
+                has_document=hasattr(parsed, "document"),
+            )  # ❌ Should be False
 
             logger.info("=" * 80)
             logger.info("PARSED.IMAGES (references)")
@@ -101,7 +105,7 @@ async def debug_docling_output():
                         alt=img["alt_text"],
                         format=img["format"],
                         size_kb=img["data_length"] / 1024,
-                        preview=img["preview"]
+                        preview=img["preview"],
                     )
 
             # Check if we can decode base64 to PIL
@@ -120,7 +124,7 @@ async def debug_docling_output():
                     # Note: This will fail because we only have 50 chars, but shows the pattern
 
                     # Try with full data from regex
-                    pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)'
+                    pattern = r"!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)"
                     match = re.search(pattern, parsed.md_content)
                     if match:
                         full_base64 = match.group(3)
@@ -130,7 +134,7 @@ async def debug_docling_output():
                             "SUCCESS: PIL Image created",
                             size=pil_image.size,
                             mode=pil_image.mode,
-                            format=pil_image.format
+                            format=pil_image.format,
                         )
                 except Exception as e:
                     logger.error("Failed to decode", error=str(e))
@@ -143,12 +147,12 @@ async def debug_docling_output():
                 logger.info(
                     "✅ Base64 images ARE available in md_content!",
                     count=len(base64_images),
-                    recommendation="Can extract and pass to VLM"
+                    recommendation="Can extract and pass to VLM",
                 )
             else:
                 logger.info(
                     "❌ No base64 images found in md_content",
-                    recommendation="Check Docling configuration or use different extraction method"
+                    recommendation="Check Docling configuration or use different extraction method",
                 )
 
     except Exception as e:

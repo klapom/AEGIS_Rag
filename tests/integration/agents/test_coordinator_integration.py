@@ -27,18 +27,20 @@ Document = DocumentChunk
 def mock_vector_agent():
     """Mock vector search agent."""
     agent = MagicMock()
-    agent.search = AsyncMock(return_value=[
-        Document(
-            id="doc1",
-            content="Vector search retrieves documents using embeddings.",
-            metadata={"source": "docs.md", "score": 0.95}
-        ),
-        Document(
-            id="doc2",
-            content="BGE-M3 is used for 1024-dimensional embeddings.",
-            metadata={"source": "tech.md", "score": 0.87}
-        )
-    ])
+    agent.search = AsyncMock(
+        return_value=[
+            Document(
+                id="doc1",
+                content="Vector search retrieves documents using embeddings.",
+                metadata={"source": "docs.md", "score": 0.95},
+            ),
+            Document(
+                id="doc2",
+                content="BGE-M3 is used for 1024-dimensional embeddings.",
+                metadata={"source": "tech.md", "score": 0.87},
+            ),
+        ]
+    )
     return agent
 
 
@@ -46,13 +48,13 @@ def mock_vector_agent():
 def mock_graph_agent():
     """Mock graph reasoning agent."""
     agent = MagicMock()
-    agent.query = AsyncMock(return_value={
-        "answer": "Graph reasoning uses LightRAG and Neo4j for multi-hop queries.",
-        "entities": ["LightRAG", "Neo4j", "AEGIS RAG"],
-        "relationships": [
-            {"source": "AEGIS RAG", "target": "LightRAG", "type": "USES"}
-        ]
-    })
+    agent.query = AsyncMock(
+        return_value={
+            "answer": "Graph reasoning uses LightRAG and Neo4j for multi-hop queries.",
+            "entities": ["LightRAG", "Neo4j", "AEGIS RAG"],
+            "relationships": [{"source": "AEGIS RAG", "target": "LightRAG", "type": "USES"}],
+        }
+    )
     return agent
 
 
@@ -60,11 +62,13 @@ def mock_graph_agent():
 def mock_memory_agent():
     """Mock memory agent."""
     agent = MagicMock()
-    agent.retrieve = AsyncMock(return_value={
-        "short_term": ["User asked about vector search 5 minutes ago"],
-        "long_term": ["User prefers technical explanations"],
-        "episodic": ["Previous conversation covered RAG basics"]
-    })
+    agent.retrieve = AsyncMock(
+        return_value={
+            "short_term": ["User asked about vector search 5 minutes ago"],
+            "long_term": ["User prefers technical explanations"],
+            "episodic": ["Previous conversation covered RAG basics"],
+        }
+    )
     return agent
 
 
@@ -77,6 +81,7 @@ def intent_classifier():
 # ============================================================================
 # Intent Routing Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_coordinator_route_to_vector_agent(intent_classifier):
@@ -113,6 +118,7 @@ async def test_coordinator_route_hybrid_query(intent_classifier):
 # Parallel Execution Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_coordinator_parallel_agent_execution(mock_vector_agent, mock_graph_agent):
     """Test parallel execution of vector and graph agents."""
@@ -144,10 +150,7 @@ async def test_coordinator_send_api_usage():
         return {"graph_results": {"answer": "test"}}
 
     # Test Send API dispatch
-    sends = [
-        Send("vector_agent", {"query": "test"}),
-        Send("graph_agent", {"query": "test"})
-    ]
+    sends = [Send("vector_agent", {"query": "test"}), Send("graph_agent", {"query": "test"})]
 
     assert len(sends) == 2
     assert sends[0].node == "vector_agent"
@@ -158,24 +161,22 @@ async def test_coordinator_send_api_usage():
 # Context Fusion Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_coordinator_context_fusion():
     """Test merging results from multiple agents."""
     vector_contexts = [
         Document(id="d1", content="Vector result 1", metadata={"score": 0.9}),
-        Document(id="d2", content="Vector result 2", metadata={"score": 0.8})
+        Document(id="d2", content="Vector result 2", metadata={"score": 0.8}),
     ]
 
-    graph_context = {
-        "answer": "Graph answer",
-        "entities": ["Entity1", "Entity2"]
-    }
+    graph_context = {"answer": "Graph answer", "entities": ["Entity1", "Entity2"]}
 
     # Fuse contexts
     fused = {
         "vector_results": vector_contexts,
         "graph_results": graph_context,
-        "fusion_strategy": "concatenate"
+        "fusion_strategy": "concatenate",
     }
 
     assert len(fused["vector_results"]) == 2
@@ -200,6 +201,7 @@ async def test_coordinator_deduplication():
 # ============================================================================
 # Error Recovery Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_coordinator_error_recovery(mock_vector_agent):
@@ -238,16 +240,17 @@ async def test_coordinator_partial_failure_handling(mock_vector_agent, mock_grap
 # State Management Tests
 # ============================================================================
 
+
 @pytest.mark.asyncio
 async def test_coordinator_state_persistence():
     """Test state persistence across conversation turns."""
     state = {
         "messages": [
             {"role": "user", "content": "What is RAG?"},
-            {"role": "assistant", "content": "RAG is..."}
+            {"role": "assistant", "content": "RAG is..."},
         ],
         "retrieved_contexts": [],
-        "session_id": "session_123"
+        "session_id": "session_123",
     }
 
     # Simulate state update
@@ -263,16 +266,14 @@ async def test_coordinator_multi_turn_context():
     conversation_history = []
 
     # Turn 1
-    conversation_history.append({
-        "query": "What is vector search?",
-        "response": "Vector search uses embeddings..."
-    })
+    conversation_history.append(
+        {"query": "What is vector search?", "response": "Vector search uses embeddings..."}
+    )
 
     # Turn 2 (references Turn 1)
-    conversation_history.append({
-        "query": "How does it compare to BM25?",
-        "response": "Compared to vector search, BM25..."
-    })
+    conversation_history.append(
+        {"query": "How does it compare to BM25?", "response": "Compared to vector search, BM25..."}
+    )
 
     assert len(conversation_history) == 2
     assert "vector search" in conversation_history[0]["query"]
@@ -281,6 +282,7 @@ async def test_coordinator_multi_turn_context():
 # ============================================================================
 # Integration Flow Tests
 # ============================================================================
+
 
 @pytest.mark.asyncio
 async def test_full_coordinator_flow(mock_vector_agent, mock_graph_agent, mock_memory_agent):
@@ -295,11 +297,7 @@ async def test_full_coordinator_flow(mock_vector_agent, mock_graph_agent, mock_m
     graph_results = await mock_graph_agent.query(query)
 
     # Step 3: Fuse contexts
-    fused_context = {
-        "memory": memory_context,
-        "vector": vector_results,
-        "graph": graph_results
-    }
+    fused_context = {"memory": memory_context, "vector": vector_results, "graph": graph_results}
 
     # Step 4: Generate response (mocked)
     final_response = f"Based on context, hybrid search combines vector and keyword retrieval."

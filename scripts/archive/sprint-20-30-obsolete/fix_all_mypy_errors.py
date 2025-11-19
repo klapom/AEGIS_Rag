@@ -14,16 +14,27 @@ from pathlib import Path
 from typing import List, Tuple
 
 # Base directory
-BASE_DIR = Path("C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag")
+BASE_DIR = Path(
+    "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag"
+)
 SRC_DIR = BASE_DIR / "src"
 
 
 def fix_memory_error_calls(content: str) -> str:
     """Fix MemoryError constructor calls to include operation and reason."""
     patterns = [
-        (r'raise MemoryError\(f"([^"]+): \{([^}]+)\}"\)', r'raise MemoryError(operation="\1", reason=str(\2))'),
-        (r'raise MemoryError\("([^"]+)"\)', r'raise MemoryError(operation="operation", reason="\1")'),
-        (r'raise MemoryError\(f"([^"]+)"\)', r'raise MemoryError(operation="operation", reason="\1")'),
+        (
+            r'raise MemoryError\(f"([^"]+): \{([^}]+)\}"\)',
+            r'raise MemoryError(operation="\1", reason=str(\2))',
+        ),
+        (
+            r'raise MemoryError\("([^"]+)"\)',
+            r'raise MemoryError(operation="operation", reason="\1")',
+        ),
+        (
+            r'raise MemoryError\(f"([^"]+)"\)',
+            r'raise MemoryError(operation="operation", reason="\1")',
+        ),
     ]
 
     for pattern, replacement in patterns:
@@ -42,7 +53,9 @@ def fix_datetime_utc(content: str) -> str:
     return content
 
 
-def add_type_narrowing_for_optional(content: str, var_name: str, error_msg: str = "not initialized") -> str:
+def add_type_narrowing_for_optional(
+    content: str, var_name: str, error_msg: str = "not initialized"
+) -> str:
     """Add type narrowing checks for optional variables."""
     # Pattern: await method() followed by var_name usage
     lines = content.split("\n")
@@ -57,7 +70,12 @@ def add_type_narrowing_for_optional(content: str, var_name: str, error_msg: str 
         if f"{var_name}." in line or f"await {var_name}." in line:
             # Check if previous lines have type narrowing
             prev_lines = new_lines[-10:] if len(new_lines) >= 10 else new_lines
-            has_check = any(f"if {var_name} is None:" in l or f"if {var_name} is not None:" in l or f"assert {var_name} is not None" in l for l in prev_lines)
+            has_check = any(
+                f"if {var_name} is None:" in l
+                or f"if {var_name} is not None:" in l
+                or f"assert {var_name} is not None" in l
+                for l in prev_lines
+            )
 
             if not has_check and "def " not in line:
                 # Add assertion before this line
@@ -102,9 +120,13 @@ def fix_generic_type_parameters(content: str) -> str:
             # Add to existing import
             content = re.sub(
                 r"from typing import ([^\n]+)",
-                lambda m: f"from typing import {m.group(1)}, List, Dict, Set, Any" if "List" not in m.group(1) else m.group(0),
+                lambda m: (
+                    f"from typing import {m.group(1)}, List, Dict, Set, Any"
+                    if "List" not in m.group(1)
+                    else m.group(0)
+                ),
                 content,
-                count=1
+                count=1,
             )
         else:
             # Add new import after other imports

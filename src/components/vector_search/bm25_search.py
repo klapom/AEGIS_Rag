@@ -18,6 +18,7 @@ from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
 
+
 class BM25Search:
     """BM25 keyword search for hybrid retrieval with disk persistence."""
 

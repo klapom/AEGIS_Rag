@@ -127,6 +127,7 @@ class MCPClientStub:
         """Clear all tools (for testing)."""
         self._tools = []
 
+
 class MockConnection:
     """Mock connection object for stub testing."""
 

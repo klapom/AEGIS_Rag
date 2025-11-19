@@ -4,7 +4,9 @@
 import re
 from pathlib import Path
 
-BASE_DIR = Path("C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag")
+BASE_DIR = Path(
+    "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag"
+)
 SRC_DIR = BASE_DIR / "src"
 
 
@@ -14,7 +16,10 @@ def needs_typing_import(content: str, type_name: str) -> bool:
     if f"{type_name}[" not in content and f", {type_name}" not in content:
         return False
     # Check if already imported
-    if f"from typing import" in content and type_name in content[:content.find("\nclass ") if "\nclass " in content else 1000]:
+    if (
+        f"from typing import" in content
+        and type_name in content[: content.find("\nclass ") if "\nclass " in content else 1000]
+    ):
         return True  # Check more carefully
     return True
 

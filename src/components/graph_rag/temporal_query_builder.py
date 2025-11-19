@@ -11,6 +11,7 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+
 class CypherQueryBuilder:
     """Base class for building Cypher queries."""
 
@@ -153,6 +154,7 @@ class CypherQueryBuilder:
         self._order_by.clear()
         self._limit = None
         self._skip = None
+
 
 class TemporalQueryBuilder(CypherQueryBuilder):
     """Builder for temporal Cypher queries with bi-temporal model support."""
@@ -340,8 +342,10 @@ class TemporalQueryBuilder(CypherQueryBuilder):
         super().reset()
         self._temporal_filters.clear()
 
+
 # Singleton instance
 _temporal_query_builder: TemporalQueryBuilder | None = None
+
 
 def get_temporal_query_builder() -> TemporalQueryBuilder:
     """Get global temporal query builder instance (singleton).

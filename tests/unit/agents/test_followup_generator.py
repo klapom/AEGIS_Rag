@@ -351,7 +351,9 @@ async def test_generate_followup_questions_truncates_long_inputs():
         assert len([line for line in prompt.split("\n") if "What is AEGIS RAG?" in line][0]) < 320
 
         # Answer should be truncated to 500 chars
-        assert len([line for line in prompt.split("\n") if "AEGIS RAG is a system." in line][0]) < 520
+        assert (
+            len([line for line in prompt.split("\n") if "AEGIS RAG is a system." in line][0]) < 520
+        )
 
 
 @pytest.mark.asyncio

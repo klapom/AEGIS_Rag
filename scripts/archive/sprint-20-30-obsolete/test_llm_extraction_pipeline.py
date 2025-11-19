@@ -158,7 +158,9 @@ async def main():
             product_count = sum(1 for e in entities if e.get("entity_type") == "PRODUCT")
             tech_count = sum(1 for e in entities if e.get("entity_type") == "TECHNOLOGY")
 
-            print(f"Generic Numbers/Concepts: {generic_count} ({generic_count/len(entities)*100:.1f}%)")
+            print(
+                f"Generic Numbers/Concepts: {generic_count} ({generic_count/len(entities)*100:.1f}%)"
+            )
             print(f"Organizations: {org_count}")
             print(f"Products: {product_count}")
             print(f"Technologies: {tech_count}")

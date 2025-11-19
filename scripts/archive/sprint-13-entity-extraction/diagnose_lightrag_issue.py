@@ -118,11 +118,15 @@ async def main():
 
         # Sample relationships
         if rels_after > 0:
-            result = await session.run("MATCH (a)-[r]->(b) RETURN type(r) AS rel_type, a, b LIMIT 5")
+            result = await session.run(
+                "MATCH (a)-[r]->(b) RETURN type(r) AS rel_type, a, b LIMIT 5"
+            )
             records = [record async for record in result]
             print(f"\n  Sample relationships ({len(records)} shown):")
             for i, record in enumerate(records):
-                print(f"    {i+1}. {record['rel_type']}: {dict(record['a'].items())} -> {dict(record['b'].items())}")
+                print(
+                    f"    {i+1}. {record['rel_type']}: {dict(record['a'].items())} -> {dict(record['b'].items())}"
+                )
 
     # Step 6: Test get_stats() method
     print("\n[STEP 6] Testing get_stats() method...")

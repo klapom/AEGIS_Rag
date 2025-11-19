@@ -122,6 +122,7 @@ async def test_container_reuse_across_documents__same_container__no_memory_leaks
 
     # Create test documents
     import tempfile
+
     temp_dir = Path(tempfile.mkdtemp())
     doc1 = temp_dir / "doc1.txt"
     doc2 = temp_dir / "doc2.txt"
@@ -164,13 +165,15 @@ async def test_container_reuse_across_documents__same_container__no_memory_leaks
 
         # Verify: Parse times similar (no degradation)
         # Allow 2x variance (performance can fluctuate)
-        assert parsed2.parse_time_ms < parsed1.parse_time_ms * 2, \
-            f"Performance degraded: doc1={parsed1.parse_time_ms}ms, doc2={parsed2.parse_time_ms}ms"
+        assert (
+            parsed2.parse_time_ms < parsed1.parse_time_ms * 2
+        ), f"Performance degraded: doc1={parsed1.parse_time_ms}ms, doc2={parsed2.parse_time_ms}ms"
 
     finally:
         # Cleanup
         await client.stop_container()
         import shutil
+
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -195,9 +198,10 @@ async def test_container_failure_recovery__container_unavailable__fallback_grace
         await client.start_container()
 
     # Assert: Clear error message
-    assert "health check timeout" in str(exc_info.value).lower() or \
-           "connection refused" in str(exc_info.value).lower(), \
-           f"Error message unclear: {exc_info.value}"
+    assert (
+        "health check timeout" in str(exc_info.value).lower()
+        or "connection refused" in str(exc_info.value).lower()
+    ), f"Error message unclear: {exc_info.value}"
 
     # Verify: No zombie containers
     result = subprocess.run(
@@ -227,6 +231,7 @@ async def test_container_context_manager__async_with__auto_cleanup():
     - Resources cleaned up automatically
     """
     import tempfile
+
     temp_dir = Path(tempfile.mkdtemp())
     test_doc = temp_dir / "test.txt"
     test_doc.write_text("Test document for context manager.")
@@ -260,6 +265,7 @@ async def test_container_context_manager__async_with__auto_cleanup():
     finally:
         # Cleanup
         import shutil
+
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
@@ -322,6 +328,7 @@ async def test_pipeline_manages_container_lifecycle__full_pipeline__auto_cleanup
     Skipped by default (requires all services running).
     """
     import tempfile
+
     temp_dir = Path(tempfile.mkdtemp())
     test_doc = temp_dir / "test.txt"
     test_doc.write_text("Test document for pipeline lifecycle test.")
@@ -353,6 +360,7 @@ async def test_pipeline_manages_container_lifecycle__full_pipeline__auto_cleanup
     finally:
         # Cleanup
         import shutil
+
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 

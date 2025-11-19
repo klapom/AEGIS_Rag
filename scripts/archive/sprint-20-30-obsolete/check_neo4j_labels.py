@@ -1,6 +1,7 @@
 """
 Check what node labels exist in Neo4j.
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -42,16 +43,16 @@ async def main():
         results = await run_query(graph, label_query)
 
         print("\nNode labels in Neo4j:")
-        print("="*60)
+        print("=" * 60)
         for row in results:
-            labels = row['labels']
-            count = row['count']
+            labels = row["labels"]
+            count = row["count"]
             label_str = ":".join(labels) if labels else "(no label)"
             print(f"   {label_str}: {count} nodes")
 
         # Sample some nodes to see properties
         print("\n\nSample node properties:")
-        print("="*60)
+        print("=" * 60)
         sample_query = """
         MATCH (n)
         RETURN labels(n) as labels, properties(n) as props
@@ -60,8 +61,8 @@ async def main():
 
         samples = await run_query(graph, sample_query)
         for i, row in enumerate(samples, 1):
-            labels = row['labels']
-            props = row['props']
+            labels = row["labels"]
+            props = row["props"]
             label_str = ":".join(labels) if labels else "(no label)"
             print(f"\n{i}. {label_str}")
             print(f"   Properties: {list(props.keys())}")
@@ -77,6 +78,7 @@ async def main():
     except Exception as e:
         print(f"\n[ERROR] Check failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

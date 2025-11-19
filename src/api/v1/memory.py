@@ -37,6 +37,7 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 # Request/Response Models
 # ============================================================================
 
+
 class MemorySearchRequest(BaseModel):
     """Request model for unified memory search."""
 
@@ -73,6 +74,7 @@ class MemorySearchRequest(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
+
 class MemorySearchResult(BaseModel):
     """Individual memory search result."""
 
@@ -80,6 +82,7 @@ class MemorySearchResult(BaseModel):
     content: str = Field(description="Result content or text")
     score: float | None = Field(default=None, description="Relevance score if available")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Result metadata")
+
 
 class MemorySearchResponse(BaseModel):
     """Response model for memory search."""
@@ -93,6 +96,7 @@ class MemorySearchResponse(BaseModel):
     search_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Search execution metadata"
     )
+
 
 class PointInTimeQueryRequest(BaseModel):
     """Request model for point-in-time temporal queries."""
@@ -118,6 +122,7 @@ class PointInTimeQueryRequest(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
+
 class PointInTimeQueryResponse(BaseModel):
     """Response model for point-in-time queries."""
 
@@ -125,6 +130,7 @@ class PointInTimeQueryResponse(BaseModel):
     timestamp: datetime
     results: list[dict[str, Any]] = Field(description="Entity states at the specified time")
     total_results: int
+
 
 class SessionContextResponse(BaseModel):
     """Response model for session context retrieval."""
@@ -135,6 +141,7 @@ class SessionContextResponse(BaseModel):
     summary: dict[str, Any] = Field(
         default_factory=dict, description="Session summary across layers"
     )
+
 
 class ConsolidationRequest(BaseModel):
     """Request model for manual memory consolidation."""
@@ -155,6 +162,7 @@ class ConsolidationRequest(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
+
 class ConsolidationResponse(BaseModel):
     """Response model for consolidation operations."""
 
@@ -170,6 +178,7 @@ class ConsolidationResponse(BaseModel):
         description="Results for each conversation consolidation",
     )
 
+
 class MemoryStatsResponse(BaseModel):
     """Response model for memory system statistics."""
 
@@ -178,6 +187,7 @@ class MemoryStatsResponse(BaseModel):
     episodic: dict[str, Any] = Field(description="Graphiti episodic memory statistics")
     consolidation: dict[str, Any] = Field(description="Memory consolidation statistics")
 
+
 class SessionDeleteResponse(BaseModel):
     """Response model for session deletion."""
 
@@ -185,9 +195,11 @@ class SessionDeleteResponse(BaseModel):
     deleted: bool
     message: str
 
+
 # ============================================================================
 # Endpoint Implementations
 # ============================================================================
+
 
 @router.post("/search", response_model=MemorySearchResponse)
 @limiter.limit("20/minute")
@@ -303,6 +315,7 @@ async def unified_memory_search(
             detail="An unexpected error occurred during memory search",
         ) from e
 
+
 @router.post("/temporal/point-in-time", response_model=PointInTimeQueryResponse)
 @limiter.limit("15/minute")
 async def point_in_time_query(
@@ -391,6 +404,7 @@ async def point_in_time_query(
             detail="An unexpected error occurred during point-in-time query",
         ) from e
 
+
 @router.get("/session/{session_id}", response_model=SessionContextResponse)
 @limiter.limit("30/minute")
 async def get_session_context(
@@ -473,6 +487,7 @@ async def get_session_context(
             detail="An unexpected error occurred while retrieving session context",
         ) from e
 
+
 @router.post("/consolidate", response_model=ConsolidationResponse)
 @limiter.limit("5/hour")
 async def trigger_consolidation(
@@ -551,6 +566,7 @@ async def trigger_consolidation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during consolidation",
         ) from e
+
 
 @router.get("/stats", response_model=MemoryStatsResponse)
 @limiter.limit("30/minute")
@@ -673,6 +689,7 @@ async def get_memory_stats(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve memory statistics",
         ) from e
+
 
 @router.delete("/session/{session_id}", response_model=SessionDeleteResponse)
 @limiter.limit("10/minute")

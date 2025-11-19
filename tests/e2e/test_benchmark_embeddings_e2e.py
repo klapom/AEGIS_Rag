@@ -72,7 +72,9 @@ class TestBenchmarkE2E:
         assert metrics.collection_size_mb > 0
 
         # Verify cross-layer compatibility
-        assert metrics.cross_layer_similarity_possible == False  # 768-dim not compatible with Graphiti
+        assert (
+            metrics.cross_layer_similarity_possible == False
+        )  # 768-dim not compatible with Graphiti
 
         # Verify output file created
         assert output_path.exists()
@@ -183,12 +185,14 @@ class TestBenchmarkE2E:
         # Create test corpus
         corpus = []
         for i in range(10):
-            corpus.append({
-                "id": f"omnitracker_doc_{i}",
-                "text": f"OMNITRACKER ITSM document {i}. This document contains information about "
-                       f"IT service management, ticket handling, and workflow automation. "
-                       f"It includes technical details about configuration, deployment, and best practices.",
-            })
+            corpus.append(
+                {
+                    "id": f"omnitracker_doc_{i}",
+                    "text": f"OMNITRACKER ITSM document {i}. This document contains information about "
+                    f"IT service management, ticket handling, and workflow automation. "
+                    f"It includes technical details about configuration, deployment, and best practices.",
+                }
+            )
 
         corpus_path = tmp_path / "test_corpus.json"
         with open(corpus_path, "w") as f:

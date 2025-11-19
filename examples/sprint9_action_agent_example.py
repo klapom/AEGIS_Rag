@@ -51,7 +51,7 @@ async def example_file_operations():
         print(f"Success: {result['success']}")
         print(f"Tool used: {result['tool']}")
         print(f"Trace: {' -> '.join(result['trace'])}")
-        if result['success']:
+        if result["success"]:
             print(f"Content preview: {str(result['result'])[:100]}...")
         print()
 
@@ -67,7 +67,7 @@ async def example_file_operations():
 
         print(f"Success: {result['success']}")
         print(f"Tool used: {result['tool']}")
-        if result['error']:
+        if result["error"]:
             print(f"Error: {result['error']}")
         print()
 
@@ -114,7 +114,7 @@ async def example_github_operations():
 
         print(f"Success: {result['success']}")
         print(f"Tool used: {result['tool']}")
-        if result['success']:
+        if result["success"]:
             print(f"Issue created: #{result['result'].get('issue_number')}")
         print()
 
@@ -232,6 +232,7 @@ async def example_error_handling():
 
     # Test 2: Successful execution
     print("Test 2: Successful execution")
+
     # Override execute_tool to return success
     async def mock_success(*args, **kwargs):
         return MCPToolResult(

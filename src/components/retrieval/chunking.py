@@ -72,6 +72,7 @@ logger = structlog.get_logger(__name__)
 # - Subsequent calls: <1ms (cache hit)
 _LLAMA_INDEX_CACHE: dict[str, Any] = {}
 
+
 def _get_llama_index_classes() -> dict[str, Any]:
     """Lazy import all llama_index classes needed for chunking.
 
@@ -178,6 +179,7 @@ def _get_llama_index_classes() -> dict[str, Any]:
 
         raise ImportError(error_msg) from e
 
+
 class ChunkingStrategy(str, Enum):
     """Chunking strategy types for different document formats."""
 
@@ -185,6 +187,7 @@ class ChunkingStrategy(str, Enum):
     HEADING = "heading"  # Split on Markdown headers
     FUNCTION = "function"  # Split on function definitions (code)
     SENTENCE = "sentence"  # Default fallback (plain text)
+
 
 class AdaptiveChunker:
     """Adaptive chunking that selects strategy based on document type.

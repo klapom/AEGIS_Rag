@@ -42,6 +42,7 @@ except ImportError:
 
 logger = structlog.get_logger(__name__)
 
+
 class LightRAGClient:
     """Async wrapper for LightRAG with Ollama and Neo4j backend.
 
@@ -1300,8 +1301,10 @@ class LightRAGClient:
             logger.error("neo4j_clear_failed", error=str(e))
             # Don't raise - cleanup is best-effort
 
+
 # Global instance (singleton pattern)
 _lightrag_client: LightRAGClient | None = None
+
 
 def get_lightrag_client() -> LightRAGClient:
     """Get global LightRAG client instance (singleton).
@@ -1314,6 +1317,7 @@ def get_lightrag_client() -> LightRAGClient:
         _lightrag_client = LightRAGClient()
     return _lightrag_client
 
+
 async def get_lightrag_client_async() -> LightRAGClient:
     """Get global LightRAG client instance (singleton) - async version.
 
@@ -1325,6 +1329,7 @@ async def get_lightrag_client_async() -> LightRAGClient:
     client = get_lightrag_client()
     await client._ensure_initialized()
     return client
+
 
 # ============================================================================
 # Backward Compatibility Aliases (Sprint 25 Feature 25.9)

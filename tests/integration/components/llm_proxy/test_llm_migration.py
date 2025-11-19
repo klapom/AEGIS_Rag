@@ -32,6 +32,7 @@ from src.evaluation.custom_metrics import CustomMetricsEvaluator
 # Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def mock_llm_response():
     """Mock LLM response for testing."""
@@ -50,7 +51,7 @@ def mock_llm_response():
 @pytest.fixture
 def mock_aegis_llm_proxy(mock_llm_response):
     """Mock AegisLLMProxy for testing."""
-    with patch('src.components.llm_proxy.aegis_llm_proxy.AegisLLMProxy') as mock:
+    with patch("src.components.llm_proxy.aegis_llm_proxy.AegisLLMProxy") as mock:
         instance = mock.return_value
         instance.generate = AsyncMock(return_value=mock_llm_response)
         yield instance
@@ -60,13 +61,14 @@ def mock_aegis_llm_proxy(mock_llm_response):
 # Test Custom Metrics Evaluator Migration
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_custom_metrics_uses_proxy():
     """Verify CustomMetricsEvaluator uses AegisLLMProxy for evaluation."""
     evaluator = CustomMetricsEvaluator(model="qwen3:0.6b", temperature=0.0)
 
     # Mock the LLM proxy
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.return_value = LLMResponse(
             content="YES",
             provider="local_ollama",
@@ -124,7 +126,7 @@ async def test_custom_metrics_precision_integration():
         ),
     ]
 
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.side_effect = responses
 
         result = await evaluator.evaluate_context_precision(
@@ -165,11 +167,29 @@ async def test_custom_metrics_recall_integration():
             routing_reason="default_local",
             fallback_used=False,
         ),
-        LLMResponse(content="YES", provider="local_ollama", model="qwen3:0.6b", tokens_used=60, cost_usd=0.0, latency_ms=100.0, routing_reason="default_local", fallback_used=False),
-        LLMResponse(content="NO", provider="local_ollama", model="qwen3:0.6b", tokens_used=60, cost_usd=0.0, latency_ms=100.0, routing_reason="default_local", fallback_used=False),
+        LLMResponse(
+            content="YES",
+            provider="local_ollama",
+            model="qwen3:0.6b",
+            tokens_used=60,
+            cost_usd=0.0,
+            latency_ms=100.0,
+            routing_reason="default_local",
+            fallback_used=False,
+        ),
+        LLMResponse(
+            content="NO",
+            provider="local_ollama",
+            model="qwen3:0.6b",
+            tokens_used=60,
+            cost_usd=0.0,
+            latency_ms=100.0,
+            routing_reason="default_local",
+            fallback_used=False,
+        ),
     ]
 
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.side_effect = responses
 
         result = await evaluator.evaluate_context_recall(
@@ -206,11 +226,29 @@ async def test_custom_metrics_faithfulness_integration():
             routing_reason="default_local",
             fallback_used=False,
         ),
-        LLMResponse(content="YES", provider="local_ollama", model="qwen3:0.6b", tokens_used=60, cost_usd=0.0, latency_ms=100.0, routing_reason="default_local", fallback_used=False),
-        LLMResponse(content="NO", provider="local_ollama", model="qwen3:0.6b", tokens_used=60, cost_usd=0.0, latency_ms=100.0, routing_reason="default_local", fallback_used=False),
+        LLMResponse(
+            content="YES",
+            provider="local_ollama",
+            model="qwen3:0.6b",
+            tokens_used=60,
+            cost_usd=0.0,
+            latency_ms=100.0,
+            routing_reason="default_local",
+            fallback_used=False,
+        ),
+        LLMResponse(
+            content="NO",
+            provider="local_ollama",
+            model="qwen3:0.6b",
+            tokens_used=60,
+            cost_usd=0.0,
+            latency_ms=100.0,
+            routing_reason="default_local",
+            fallback_used=False,
+        ),
     ]
 
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_generate.side_effect = responses
 
         result = await evaluator.evaluate_faithfulness(
@@ -230,6 +268,7 @@ async def test_custom_metrics_faithfulness_integration():
 # =============================================================================
 # Test Image Processor VLM Fallback Migration
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_image_processor_vlm_uses_proxy():
@@ -253,12 +292,12 @@ async def test_image_processor_vlm_uses_proxy():
     from PIL import Image
 
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-        img = Image.new('RGB', (500, 500), color='red')
+        img = Image.new("RGB", (500, 500), color="red")
         img.save(tmp.name)
         image_path = Path(tmp.name)
 
     try:
-        with patch('src.components.ingestion.image_processor.AegisLLMProxy') as mock_proxy_class:
+        with patch("src.components.ingestion.image_processor.AegisLLMProxy") as mock_proxy_class:
             mock_proxy = mock_proxy_class.return_value
             mock_proxy.generate = AsyncMock(return_value=mock_response)
 
@@ -290,6 +329,7 @@ async def test_image_processor_vlm_uses_proxy():
 # Test Cost Tracking Integration
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_cost_tracking_captures_evaluation_requests():
     """Verify cost tracker captures evaluation metric requests."""
@@ -301,7 +341,7 @@ async def test_cost_tracking_captures_evaluation_requests():
     evaluator = CustomMetricsEvaluator(model="qwen3:0.6b", temperature=0.0)
 
     # Mock the generate call to simulate real execution
-    with patch.object(evaluator.llm_proxy, 'generate', new_callable=AsyncMock) as mock_generate:
+    with patch.object(evaluator.llm_proxy, "generate", new_callable=AsyncMock) as mock_generate:
         mock_response = LLMResponse(
             content="YES",
             provider="local_ollama",
@@ -377,6 +417,7 @@ async def test_cost_tracking_shows_all_task_types():
 # Test End-to-End Migration
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_all_migrations_use_proxy():
     """Comprehensive test verifying all migrated components use AegisLLMProxy."""
@@ -388,15 +429,17 @@ async def test_all_migrations_use_proxy():
     evaluator = CustomMetricsEvaluator()
 
     # Verify evaluator has llm_proxy attribute
-    assert hasattr(evaluator, 'llm_proxy')
+    assert hasattr(evaluator, "llm_proxy")
     assert isinstance(evaluator.llm_proxy, AegisLLMProxy)
 
     # Verify image processor can import proxy
     from src.components.ingestion.image_processor import AEGIS_LLM_PROXY_AVAILABLE
+
     assert AEGIS_LLM_PROXY_AVAILABLE is True
 
     # Verify cost tracker exists
     from src.components.llm_proxy.cost_tracker import CostTracker
+
     tracker = CostTracker()
     assert tracker is not None
 

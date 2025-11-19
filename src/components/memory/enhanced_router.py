@@ -32,6 +32,7 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class EnhancedMemoryRouter:
     """Enhanced memory router with strategy-based layer selection and parallel querying.
 
@@ -483,8 +484,10 @@ class EnhancedMemoryRouter:
 
         return stats
 
+
 # Global instance (singleton pattern)
 _enhanced_router: EnhancedMemoryRouter | None = None
+
 
 def get_enhanced_router(
     strategy: RoutingStrategy | None = None,

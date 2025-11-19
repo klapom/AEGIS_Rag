@@ -20,6 +20,7 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class RedisMemoryManager:
     """Redis-based working memory manager for short-term storage.
 
@@ -182,7 +183,9 @@ class RedisMemoryManager:
 
         except RedisError as e:
             logger.error("Failed to retrieve from working memory", key=key, error=str(e))
-            raise MemoryError(operation="Failed to retrieve from working memory", reason=str(e)) from e
+            raise MemoryError(
+                operation="Failed to retrieve from working memory", reason=str(e)
+            ) from e
 
     async def get_metadata(
         self,
@@ -412,8 +415,10 @@ class RedisMemoryManager:
             self._client = None
             logger.info("Redis client closed")
 
+
 # Global instance (singleton pattern)
 _redis_memory: RedisMemoryManager | None = None
+
 
 def get_redis_memory() -> RedisMemoryManager:
     """Get global Redis memory manager instance (singleton).

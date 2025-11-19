@@ -15,6 +15,7 @@ class QueryIntent(str, Enum):
     HYBRID = "hybrid"
     MEMORY = "memory"
 
+
 class QueryMode(str, Enum):
     """Query mode for retrieval."""
 
@@ -22,6 +23,7 @@ class QueryMode(str, Enum):
     LOCAL = "local"
     GLOBAL = "global"
     HYBRID = "hybrid"
+
 
 class DocumentChunk(BaseModel):
     """Document chunk with metadata."""
@@ -41,6 +43,7 @@ class DocumentChunk(BaseModel):
     content: str = Field(..., description="Chunk text content")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
     score: float | None = Field(None, description="Relevance score", ge=0.0, le=1.0)
+
 
 class QueryRequest(BaseModel):
     """Request model for RAG query."""
@@ -76,6 +79,7 @@ class QueryRequest(BaseModel):
             raise ValueError("Query cannot be empty")
         return v
 
+
 class QueryResponse(BaseModel):
     """Response model for RAG query."""
 
@@ -106,6 +110,7 @@ class QueryResponse(BaseModel):
     conversation_id: str | None = Field(None, description="Conversation ID")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
+
 class HealthStatus(str, Enum):
     """Health check status."""
 
@@ -113,12 +118,14 @@ class HealthStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
 
+
 class ServiceHealth(BaseModel):
     """Health status for a single service."""
 
     status: HealthStatus = Field(..., description="Service health status")
     latency_ms: float | None = Field(None, description="Service response latency")
     error: str | None = Field(None, description="Error message if unhealthy")
+
 
 class HealthResponse(BaseModel):
     """Health check response."""
@@ -145,6 +152,7 @@ class HealthResponse(BaseModel):
     services: dict[str, ServiceHealth] = Field(
         default_factory=dict, description="Individual service health"
     )
+
 
 class ErrorCode:
     """Standard error codes used across the API (Sprint 22 Feature 22.2.2).
@@ -178,6 +186,7 @@ class ErrorCode:
     VALIDATION_FAILED = "VALIDATION_FAILED"
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
+
 class ErrorDetail(BaseModel):
     """Detailed error information (Sprint 22 Feature 22.2.2).
 
@@ -207,6 +216,7 @@ class ErrorDetail(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
     path: str = Field(..., description="API endpoint that generated error")
 
+
 class ErrorResponse(BaseModel):
     """Top-level error response wrapper (Sprint 22 Feature 22.2.2).
 
@@ -230,9 +240,11 @@ class ErrorResponse(BaseModel):
 
     error: ErrorDetail = Field(..., description="Error details")
 
+
 # ============================================================================
 # Graph RAG Models (Sprint 5)
 # ============================================================================
+
 
 class GraphEntity(BaseModel):
     """Graph entity (node) representation."""
@@ -256,9 +268,7 @@ class GraphEntity(BaseModel):
     transaction_from: datetime | None = Field(
         None, description="Transaction time start (database time)"
     )
-    transaction_to: datetime | None = Field(
-        None, description="Transaction time end (None=current)"
-    )
+    transaction_to: datetime | None = Field(None, description="Transaction time end (None=current)")
     changed_by: str = Field(default="system", description="User/system that made the change")
     change_reason: str = Field(default="", description="Reason for the change")
 
@@ -275,6 +285,7 @@ class GraphEntity(BaseModel):
             }
         }
     )
+
 
 class GraphRelationship(BaseModel):
     """Graph relationship (edge) representation."""
@@ -307,6 +318,7 @@ class GraphRelationship(BaseModel):
         }
     )
 
+
 class Topic(BaseModel):
     """Topic/community extracted from knowledge graph."""
 
@@ -330,6 +342,7 @@ class Topic(BaseModel):
         }
     )
 
+
 class GraphQueryResult(BaseModel):
     """Graph query result with entities, relationships, and topics."""
 
@@ -351,8 +364,7 @@ class GraphQueryResult(BaseModel):
             "example": {
                 "query": "What companies has John Smith worked for?",
                 "answer": (
-                    "John Smith has worked for Google (2020-present) "
-                    "and Microsoft (2015-2020)."
+                    "John Smith has worked for Google (2020-present) " "and Microsoft (2015-2020)."
                 ),
                 "entities": [
                     {
@@ -385,9 +397,11 @@ class GraphQueryResult(BaseModel):
         }
     )
 
+
 # ============================================================================
 # Community Detection Models (Sprint 6.3)
 # ============================================================================
+
 
 class Community(BaseModel):
     """Community (cluster) in the knowledge graph."""
@@ -417,6 +431,7 @@ class Community(BaseModel):
             }
         }
     )
+
 
 class CommunitySearchResult(BaseModel):
     """Search result filtered by communities."""
@@ -461,9 +476,11 @@ class CommunitySearchResult(BaseModel):
         }
     )
 
+
 # ============================================================================
 # Graph Visualization & Analytics Models (Sprint 6.5 & 6.6)
 # ============================================================================
+
 
 class CentralityMetrics(BaseModel):
     """Centrality metrics for a graph entity."""
@@ -487,6 +504,7 @@ class CentralityMetrics(BaseModel):
             }
         }
     )
+
 
 class GraphStatistics(BaseModel):
     """Overall graph statistics and metrics."""
@@ -516,6 +534,7 @@ class GraphStatistics(BaseModel):
             }
         }
     )
+
 
 class Recommendation(BaseModel):
     """Entity recommendation with score and reason."""

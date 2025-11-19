@@ -317,9 +317,7 @@ class TestFullPipelineWithProxy:
         # Cloud providers check against limits
         # (actual limit enforcement tested in unit tests)
 
-    async def test_pipeline_sensitive_data_local_routing(
-        self, mock_llm_response_factory
-    ):
+    async def test_pipeline_sensitive_data_local_routing(self, mock_llm_response_factory):
         """Test that sensitive data classification forces local routing."""
         # Note: Current components don't expose data_classification parameter
         # This test verifies default local routing behavior

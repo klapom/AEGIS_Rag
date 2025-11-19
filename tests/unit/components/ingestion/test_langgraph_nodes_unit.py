@@ -97,8 +97,6 @@ def sample_chunks():
     ]
 
 
-
-
 # =============================================================================
 # NODE 1: MEMORY CHECK TESTS
 # =============================================================================
@@ -107,9 +105,7 @@ def sample_chunks():
 @pytest.mark.asyncio
 async def test_memory_check_node_success(sample_state):
     """Test memory_check_node with sufficient RAM and VRAM."""
-    with patch("psutil.virtual_memory") as mock_memory, patch(
-        "subprocess.run"
-    ) as mock_nvidia_smi:
+    with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
         # Mock psutil (4GB RAM used, 6GB available)
         mock_memory.return_value = MagicMock(
             used=4 * 1024 * 1024 * 1024,  # 4GB
@@ -133,9 +129,7 @@ async def test_memory_check_node_success(sample_state):
 @pytest.mark.asyncio
 async def test_memory_check_node_vram_leak_detected(sample_state):
     """Test memory_check_node detects VRAM leak (>5.5GB)."""
-    with patch("psutil.virtual_memory") as mock_memory, patch(
-        "subprocess.run"
-    ) as mock_nvidia_smi:
+    with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
         # Mock psutil (sufficient RAM)
         mock_memory.return_value = MagicMock(
             used=3 * 1024 * 1024 * 1024,
@@ -159,9 +153,7 @@ async def test_memory_check_node_vram_leak_detected(sample_state):
 @pytest.mark.asyncio
 async def test_memory_check_node_insufficient_ram(sample_state):
     """Test memory_check_node fails with insufficient RAM (<2GB)."""
-    with patch("psutil.virtual_memory") as mock_memory, patch(
-        "subprocess.run"
-    ) as mock_nvidia_smi:
+    with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
         # Mock psutil (only 1GB RAM available)
         mock_memory.return_value = MagicMock(
             used=7 * 1024 * 1024 * 1024,
@@ -179,9 +171,7 @@ async def test_memory_check_node_insufficient_ram(sample_state):
 @pytest.mark.asyncio
 async def test_memory_check_node_no_gpu(sample_state):
     """Test memory_check_node handles missing nvidia-smi gracefully."""
-    with patch("psutil.virtual_memory") as mock_memory, patch(
-        "subprocess.run"
-    ) as mock_nvidia_smi:
+    with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
         # Mock psutil (sufficient RAM)
         mock_memory.return_value = MagicMock(
             used=3 * 1024 * 1024 * 1024,
@@ -302,9 +292,7 @@ async def test_docling_parse_node_parsing_error(sample_state):
         mock_client_class.return_value = mock_client
 
         # Mock parse_document raises exception
-        mock_client.parse_document = AsyncMock(
-            side_effect=Exception("Docling API timeout")
-        )
+        mock_client.parse_document = AsyncMock(side_effect=Exception("Docling API timeout"))
 
         # Run node (should raise exception)
         with pytest.raises(Exception, match="Docling API timeout"):
@@ -326,9 +314,7 @@ async def test_chunking_node_success(sample_state, sample_chunks):
     sample_state["parsed_content"] = "This is a long document content. " * 500
     sample_state["parsed_metadata"] = {"pages": 10}
 
-    with patch(
-        "src.components.ingestion.langgraph_nodes.get_chunking_service"
-    ) as mock_get_service:
+    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
         # Mock chunking service
         mock_service = Mock()
         mock_service.chunk_document = Mock(return_value=sample_chunks)
@@ -366,9 +352,7 @@ async def test_chunking_node_uses_1800_token_chunks(sample_state):
     """Test chunking_node uses 1800-token chunks (Feature 21.4)."""
     sample_state["parsed_content"] = "Test content for chunking."
 
-    with patch(
-        "src.components.ingestion.langgraph_nodes.get_chunking_service"
-    ) as mock_get_service:
+    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
         mock_service = Mock()
         mock_service.chunk_document = Mock(return_value=[])
         mock_get_service.return_value = mock_service
@@ -398,11 +382,12 @@ async def test_embedding_node_success(sample_state, sample_chunks):
     # Mock embeddings (1024D vectors for BGE-M3)
     mock_embeddings = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
 
-    with patch(
-        "src.components.ingestion.langgraph_nodes.get_embedding_service"
-    ) as mock_get_embedding, patch(
-        "src.components.ingestion.langgraph_nodes.QdrantClientWrapper"
-    ) as mock_qdrant_class:
+    with (
+        patch(
+            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+        ) as mock_get_embedding,
+        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+    ):
         # Mock embedding service
         mock_embedding_service = AsyncMock()
         mock_embedding_service.embed_batch = AsyncMock(return_value=mock_embeddings)
@@ -455,11 +440,12 @@ async def test_embedding_node_uses_bge_m3_1024d(sample_state, sample_chunks):
 
     mock_embeddings = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
 
-    with patch(
-        "src.components.ingestion.langgraph_nodes.get_embedding_service"
-    ) as mock_get_embedding, patch(
-        "src.components.ingestion.langgraph_nodes.QdrantClientWrapper"
-    ) as mock_qdrant_class:
+    with (
+        patch(
+            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+        ) as mock_get_embedding,
+        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+    ):
         mock_embedding_service = AsyncMock()
         mock_embedding_service.embed_batch = AsyncMock(return_value=mock_embeddings)
         mock_get_embedding.return_value = mock_embedding_service
@@ -506,9 +492,7 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
     ) as mock_get_lightrag:
         # Mock LightRAG wrapper
         mock_lightrag = AsyncMock()
-        mock_lightrag.insert_documents_optimized = AsyncMock(
-            return_value=mock_graph_stats
-        )
+        mock_lightrag.insert_documents_optimized = AsyncMock(return_value=mock_graph_stats)
         mock_get_lightrag.return_value = mock_lightrag
 
         # Run node
@@ -580,19 +564,21 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
     mock_embeddings = [[0.1] * 1024] * 3
     mock_graph_stats = {"total_entities": 10, "total_relations": 5, "total_chunks": 3}
 
-    with patch("psutil.virtual_memory") as mock_memory, patch(
-        "subprocess.run"
-    ) as mock_nvidia_smi, patch(
-        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
-    ) as mock_docling_class, patch(
-        "src.components.ingestion.langgraph_nodes.get_chunking_service"
-    ) as mock_get_chunking, patch(
-        "src.components.ingestion.langgraph_nodes.get_embedding_service"
-    ) as mock_get_embedding, patch(
-        "src.components.ingestion.langgraph_nodes.QdrantClientWrapper"
-    ) as mock_qdrant_class, patch(
-        "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
-    ) as mock_get_lightrag:
+    with (
+        patch("psutil.virtual_memory") as mock_memory,
+        patch("subprocess.run") as mock_nvidia_smi,
+        patch(
+            "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+        ) as mock_docling_class,
+        patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_chunking,
+        patch(
+            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+        ) as mock_get_embedding,
+        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+        patch(
+            "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
+        ) as mock_get_lightrag,
+    ):
         # Mock all services
         mock_memory.return_value = MagicMock(
             used=3 * 1024 * 1024 * 1024, available=6 * 1024 * 1024 * 1024
@@ -617,9 +603,7 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
         mock_qdrant_class.return_value = mock_qdrant
 
         mock_lightrag = AsyncMock()
-        mock_lightrag.insert_documents_optimized = AsyncMock(
-            return_value=mock_graph_stats
-        )
+        mock_lightrag.insert_documents_optimized = AsyncMock(return_value=mock_graph_stats)
         mock_get_lightrag.return_value = mock_lightrag
 
         # Execute all 5 nodes sequentially

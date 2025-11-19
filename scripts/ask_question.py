@@ -38,6 +38,7 @@ Example Session:
     1. score=0.8523 src=README.md
        AEGIS RAG ist ein hybrides Retrieval-Augmented Generation System...
 """
+
 import os
 import sys
 from typing import Any
@@ -143,4 +144,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

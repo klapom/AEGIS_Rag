@@ -19,7 +19,7 @@ def analyze_field_value(field_name: str, field_value, indent: int = 0) -> dict:
         return {
             "type": "string",
             "length": len(field_value),
-            "preview": field_value[:100] if len(field_value) > 100 else field_value
+            "preview": field_value[:100] if len(field_value) > 100 else field_value,
         }
     elif isinstance(field_value, list):
         total_size = len(json.dumps(field_value))
@@ -27,20 +27,13 @@ def analyze_field_value(field_name: str, field_value, indent: int = 0) -> dict:
             "type": "list",
             "count": len(field_value),
             "total_size": total_size,
-            "example": field_value[0] if field_value else None
+            "example": field_value[0] if field_value else None,
         }
     elif isinstance(field_value, dict):
         total_size = len(json.dumps(field_value))
-        return {
-            "type": "dict",
-            "keys": list(field_value.keys()),
-            "total_size": total_size
-        }
+        return {"type": "dict", "keys": list(field_value.keys()), "total_size": total_size}
     else:
-        return {
-            "type": type(field_value).__name__,
-            "value": str(field_value)
-        }
+        return {"type": type(field_value).__name__, "value": str(field_value)}
 
 
 def main():
@@ -54,10 +47,7 @@ def main():
     print()
 
     # Load document
-    reader = SimpleDirectoryReader(
-        input_files=[str(pptx_file.resolve())],
-        recursive=False
-    )
+    reader = SimpleDirectoryReader(input_files=[str(pptx_file.resolve())], recursive=False)
     documents = reader.load_data()
 
     # Analyze first document part
@@ -91,7 +81,9 @@ def main():
             print(f"  Type: List with {analysis['count']} items")
             print(f"  Total size: {analysis['total_size']} bytes")
             if analysis["example"]:
-                print(f"  Example item keys: {list(analysis['example'].keys()) if isinstance(analysis['example'], dict) else type(analysis['example']).__name__}")
+                print(
+                    f"  Example item keys: {list(analysis['example'].keys()) if isinstance(analysis['example'], dict) else type(analysis['example']).__name__}"
+                )
         elif analysis["type"] == "dict":
             print(f"  Type: Dict with keys: {analysis['keys']}")
             print(f"  Total size: {analysis['total_size']} bytes")
@@ -106,11 +98,7 @@ def main():
     print("=" * 80)
     print()
 
-    recommendations = {
-        "KEEP": [],
-        "SIMPLIFY": [],
-        "REMOVE": []
-    }
+    recommendations = {"KEEP": [], "SIMPLIFY": [], "REMOVE": []}
 
     # Analyze each field
     for field_name, field_value in metadata.items():
@@ -118,49 +106,61 @@ def main():
 
         # Essential identification fields
         if field_name in ["file_name", "file_path", "page_label", "title"]:
-            recommendations["KEEP"].append({
-                "field": field_name,
-                "reason": "Essential for document identification and citation",
-                "size": field_size
-            })
+            recommendations["KEEP"].append(
+                {
+                    "field": field_name,
+                    "reason": "Essential for document identification and citation",
+                    "size": field_size,
+                }
+            )
 
         # File metadata - useful but could be simplified
         elif field_name in ["file_type", "file_size", "creation_date", "last_modified_date"]:
-            recommendations["KEEP"].append({
-                "field": field_name,
-                "reason": "Useful file metadata (small size)",
-                "size": field_size
-            })
+            recommendations["KEEP"].append(
+                {
+                    "field": field_name,
+                    "reason": "Useful file metadata (small size)",
+                    "size": field_size,
+                }
+            )
 
         # Structure fields - very large, formatting details
         elif field_name in ["text_sections", "extraction_errors", "extraction_warnings"]:
             if field_size > 1000:
-                recommendations["REMOVE"].append({
-                    "field": field_name,
-                    "reason": f"Too large ({field_size} bytes), contains formatting details not needed for RAG",
-                    "size": field_size
-                })
+                recommendations["REMOVE"].append(
+                    {
+                        "field": field_name,
+                        "reason": f"Too large ({field_size} bytes), contains formatting details not needed for RAG",
+                        "size": field_size,
+                    }
+                )
             else:
-                recommendations["SIMPLIFY"].append({
-                    "field": field_name,
-                    "reason": "Could be useful but needs simplification",
-                    "size": field_size
-                })
+                recommendations["SIMPLIFY"].append(
+                    {
+                        "field": field_name,
+                        "reason": "Could be useful but needs simplification",
+                        "size": field_size,
+                    }
+                )
 
         # Content arrays - could be useful but check size
         elif field_name in ["tables", "charts", "images", "notes"]:
             if field_size > 500:
-                recommendations["SIMPLIFY"].append({
-                    "field": field_name,
-                    "reason": "Potentially useful but large - extract only essential info",
-                    "size": field_size
-                })
+                recommendations["SIMPLIFY"].append(
+                    {
+                        "field": field_name,
+                        "reason": "Potentially useful but large - extract only essential info",
+                        "size": field_size,
+                    }
+                )
             else:
-                recommendations["KEEP"].append({
-                    "field": field_name,
-                    "reason": "Small size, could contain useful context",
-                    "size": field_size
-                })
+                recommendations["KEEP"].append(
+                    {
+                        "field": field_name,
+                        "reason": "Small size, could contain useful context",
+                        "size": field_size,
+                    }
+                )
 
     print("Fields to KEEP (essential + small):")
     for item in recommendations["KEEP"]:

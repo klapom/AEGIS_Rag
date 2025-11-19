@@ -96,11 +96,21 @@ TEST_CASES = [
         "text": SPORTS_TEXT,
         "expected_entities": 10,
         "expected_relations": 8,
-    }
+    },
 ]
 
-def append_to_log(log_path: Path, test_case: dict, system_prompt: str, user_prompt: str,
-                  response: str, validation: dict, start_time: datetime, end_time: datetime, duration: float):
+
+def append_to_log(
+    log_path: Path,
+    test_case: dict,
+    system_prompt: str,
+    user_prompt: str,
+    response: str,
+    validation: dict,
+    start_time: datetime,
+    end_time: datetime,
+    duration: float,
+):
     """Append test execution to model's log file."""
     # Format test content
     log_content = f"""
@@ -144,36 +154,36 @@ Relations Found: {validation['relation_count']}
 """
 
     # Add entities
-    if validation['entities']:
+    if validation["entities"]:
         log_content += "\n--- EXTRACTED ENTITIES ---\n\n"
-        for i, entity in enumerate(validation['entities'], 1):
+        for i, entity in enumerate(validation["entities"], 1):
             log_content += f"{i}. {entity['name']} ({entity['type']})\n"
             log_content += f"   Description: {entity['description']}\n\n"
 
     # Add relations
-    if validation['relations']:
+    if validation["relations"]:
         log_content += "\n--- EXTRACTED RELATIONS ---\n\n"
-        for i, relation in enumerate(validation['relations'], 1):
+        for i, relation in enumerate(validation["relations"], 1):
             log_content += f"{i}. {relation['source']} -> {relation['target']}\n"
             log_content += f"   Keywords: {relation['keywords']}\n"
             log_content += f"   Description: {relation['description']}\n\n"
 
     # Add errors
-    if validation['errors']:
+    if validation["errors"]:
         log_content += "\n--- FORMAT ERRORS ---\n\n"
-        for error in validation['errors']:
+        for error in validation["errors"]:
             log_content += f"  - {error}\n"
 
     log_content += "\n"
 
     # Append to log file
-    with open(log_path, 'a', encoding='utf-8') as f:
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(log_content)
 
 
 def validate_format(response: str) -> dict:
     """Validate if response follows EXACT LightRAG format."""
-    lines = response.strip().split('\n')
+    lines = response.strip().split("\n")
 
     entities = []
     relations = []
@@ -191,49 +201,53 @@ def validate_format(response: str) -> dict:
 
         parts = line.split(TUPLE_DELIMITER)
 
-        if parts[0] == 'entity':
+        if parts[0] == "entity":
             if len(parts) != 4:
                 errors.append(f"Line {i}: Entity has {len(parts)} fields, expected 4")
             else:
-                entities.append({
-                    'name': parts[1],
-                    'type': parts[2],
-                    'description': parts[3]
-                })
-        elif parts[0] == 'relation':
+                entities.append({"name": parts[1], "type": parts[2], "description": parts[3]})
+        elif parts[0] == "relation":
             if len(parts) != 5:
                 errors.append(f"Line {i}: Relation has {len(parts)} fields, expected 5")
             else:
-                relations.append({
-                    'source': parts[1],
-                    'target': parts[2],
-                    'keywords': parts[3],
-                    'description': parts[4]
-                })
+                relations.append(
+                    {
+                        "source": parts[1],
+                        "target": parts[2],
+                        "keywords": parts[3],
+                        "description": parts[4],
+                    }
+                )
         else:
             # Check if it's JSON or markdown
-            if line.startswith('[') or line.startswith('{') or line.startswith('```'):
-                errors.append(f"Line {i}: Wrong format (JSON/markdown instead of delimiter-separated)")
+            if line.startswith("[") or line.startswith("{") or line.startswith("```"):
+                errors.append(
+                    f"Line {i}: Wrong format (JSON/markdown instead of delimiter-separated)"
+                )
             else:
-                errors.append(f"Line {i}: Unknown line type '{parts[0]}' (expected 'entity' or 'relation')")
+                errors.append(
+                    f"Line {i}: Unknown line type '{parts[0]}' (expected 'entity' or 'relation')"
+                )
 
     return {
-        'valid': len(errors) == 0 and has_completion,
-        'entities': entities,
-        'relations': relations,
-        'has_completion': has_completion,
-        'errors': errors,
-        'entity_count': len(entities),
-        'relation_count': len(relations)
+        "valid": len(errors) == 0 and has_completion,
+        "entities": entities,
+        "relations": relations,
+        "has_completion": has_completion,
+        "errors": errors,
+        "entity_count": len(entities),
+        "relation_count": len(relations),
     }
 
 
-def test_model(model: str, test_case: dict, client: Client, log_path: Path, use_think_false: bool = False) -> dict:
+def test_model(
+    model: str, test_case: dict, client: Client, log_path: Path, use_think_false: bool = False
+) -> dict:
     """Test a model with a test case using EXACT LightRAG prompts."""
     mode = "think=False" if use_think_false else "default"
 
     # Prepare prompts
-    user_prompt = USER_PROMPT_TEMPLATE.format(text=test_case['text'])
+    user_prompt = USER_PROMPT_TEMPLATE.format(text=test_case["text"])
 
     # Record start time
     start_time = datetime.now()
@@ -244,9 +258,9 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path, use_
             "model": model,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "options": {"temperature": 0.1, "num_predict": 2000, "num_ctx": 8192}
+            "options": {"temperature": 0.1, "num_predict": 2000, "num_ctx": 8192},
         }
 
         if use_think_false:
@@ -269,7 +283,7 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path, use_
             validation=validation,
             start_time=start_time,
             end_time=end_time,
-            duration=elapsed
+            duration=elapsed,
         )
 
         return {
@@ -278,18 +292,18 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path, use_
             "test_id": test_case["id"],
             "test_name": test_case["name"],
             "time": elapsed,
-            "valid_format": validation['valid'],
-            "entity_count": validation['entity_count'],
-            "relation_count": validation['relation_count'],
-            "expected_entities": test_case['expected_entities'],
-            "expected_relations": test_case['expected_relations'],
-            "has_completion": validation['has_completion'],
-            "errors": validation['errors'],
-            "entities": validation['entities'],
-            "relations": validation['relations'],
+            "valid_format": validation["valid"],
+            "entity_count": validation["entity_count"],
+            "relation_count": validation["relation_count"],
+            "expected_entities": test_case["expected_entities"],
+            "expected_relations": test_case["expected_relations"],
+            "has_completion": validation["has_completion"],
+            "errors": validation["errors"],
+            "entities": validation["entities"],
+            "relations": validation["relations"],
             "response": content,
             "log_file": str(log_path),
-            "success": validation['valid'] and validation['entity_count'] > 0
+            "success": validation["valid"] and validation["entity_count"] > 0,
         }
 
     except Exception as e:
@@ -306,16 +320,17 @@ def test_model(model: str, test_case: dict, client: Client, log_path: Path, use_
             "valid_format": False,
             "entity_count": 0,
             "relation_count": 0,
-            "expected_entities": test_case['expected_entities'],
-            "expected_relations": test_case['expected_relations'],
+            "expected_entities": test_case["expected_entities"],
+            "expected_relations": test_case["expected_relations"],
             "error": error_msg,
             "supports_think": supports_think,
-            "success": False
+            "success": False,
         }
 
 
 def main():
-    print("""
+    print(
+        """
 ================================================================================
      LightRAG EXACT PROMPT TEST - From lightrag/prompt.py
 ================================================================================
@@ -329,7 +344,8 @@ Expected format:
 - entity<|#|>name<|#|>type<|#|>description
 - relation<|#|>source<|#|>target<|#|>keywords<|#|>description
 - <|COMPLETE|> at the end
-    """)
+    """
+    )
 
     client = Client()
 
@@ -351,7 +367,7 @@ Expected format:
     log_dir.mkdir(parents=True, exist_ok=True)
 
     for model, supports_think in models_to_test:
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"MODEL: {model_short}")
@@ -364,8 +380,9 @@ Expected format:
         log_path = log_dir / log_filename
 
         # Write log header
-        with open(log_path, 'w', encoding='utf-8') as f:
-            f.write(f"""{'='*80}
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(
+                f"""{'='*80}
 LightRAG EXACT PROMPTS TEST LOG
 {'='*80}
 
@@ -376,23 +393,28 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+            )
 
         for test_case in TEST_CASES:
-            print(f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True)
+            print(
+                f"\n  [{test_case['id']}/3] {test_case['name']} [default]...", end=" ", flush=True
+            )
             result = test_model(model, test_case, client, log_path, use_think_false=False)
             results.append(result)
 
-            status = "OK" if result['success'] else "FAIL"
-            format_ok = "FORMAT_OK" if result['valid_format'] else "FORMAT_ERROR"
-            print(f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]")
+            status = "OK" if result["success"] else "FAIL"
+            format_ok = "FORMAT_OK" if result["valid_format"] else "FORMAT_ERROR"
+            print(
+                f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]"
+            )
 
-            if result.get('errors'):
-                for err in result['errors'][:2]:  # Show first 2 errors
+            if result.get("errors"):
+                for err in result["errors"][:2]:  # Show first 2 errors
                     print(f"    ERROR: {err}")
 
         # Write log footer
-        with open(log_path, 'a', encoding='utf-8') as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(f"\n{'='*80}\nEND OF LOG - {datetime.now().isoformat()}\n{'='*80}\n")
 
         # Test think=False if supported
@@ -400,12 +422,15 @@ Start Time: {datetime.now().isoformat()}
             time.sleep(0.2)
             mode = "think=False"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_filename = f"{timestamp}_{model_short.replace(':', '_')}_{mode.replace('=', '')}.log"
+            log_filename = (
+                f"{timestamp}_{model_short.replace(':', '_')}_{mode.replace('=', '')}.log"
+            )
             log_path = log_dir / log_filename
 
             # Write log header
-            with open(log_path, 'w', encoding='utf-8') as f:
-                f.write(f"""{'='*80}
+            with open(log_path, "w", encoding="utf-8") as f:
+                f.write(
+                    f"""{'='*80}
 LightRAG EXACT PROMPTS TEST LOG
 {'='*80}
 
@@ -416,23 +441,30 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+                )
 
             for test_case in TEST_CASES:
-                print(f"  [{test_case['id']}/3] {test_case['name']} [think=False]...", end=" ", flush=True)
+                print(
+                    f"  [{test_case['id']}/3] {test_case['name']} [think=False]...",
+                    end=" ",
+                    flush=True,
+                )
                 result = test_model(model, test_case, client, log_path, use_think_false=True)
                 results.append(result)
 
-                status = "OK" if result['success'] else "FAIL"
-                format_ok = "FORMAT_OK" if result['valid_format'] else "FORMAT_ERROR"
-                print(f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]")
+                status = "OK" if result["success"] else "FAIL"
+                format_ok = "FORMAT_OK" if result["valid_format"] else "FORMAT_ERROR"
+                print(
+                    f"{result['entity_count']}E/{result['relation_count']}R in {result['time']:.1f}s [{status}] [{format_ok}]"
+                )
 
-                if result.get('errors'):
-                    for err in result['errors'][:2]:
+                if result.get("errors"):
+                    for err in result["errors"][:2]:
                         print(f"    ERROR: {err}")
 
             # Write log footer
-            with open(log_path, 'a', encoding='utf-8') as f:
+            with open(log_path, "a", encoding="utf-8") as f:
                 f.write(f"\n{'='*80}\nEND OF LOG - {datetime.now().isoformat()}\n{'='*80}\n")
 
     # SUMMARY
@@ -440,38 +472,54 @@ Start Time: {datetime.now().isoformat()}
     print("SUMMARY: FORMAT COMPLIANCE")
     print(f"{'='*80}\n")
 
-    print(f"{'Model':<35} {'Mode':<15} {'Test':<30} {'Format':<12} {'Entities':<12} {'Relations':<12} {'Status'}")
+    print(
+        f"{'Model':<35} {'Mode':<15} {'Test':<30} {'Format':<12} {'Entities':<12} {'Relations':<12} {'Status'}"
+    )
     print(f"{'-'*35} {'-'*15} {'-'*30} {'-'*12} {'-'*12} {'-'*12} {'-'*8}")
 
     for r in results:
-        if 'error' in r and not r.get('entity_count'):
+        if "error" in r and not r.get("entity_count"):
             continue
 
-        model_short = r['model'].split('/')[-1] if '/' in r['model'] else r['model']
-        format_status = "VALID" if r['valid_format'] else "INVALID"
-        status = "OK" if r['success'] else "FAIL"
+        model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
+        format_status = "VALID" if r["valid_format"] else "INVALID"
+        status = "OK" if r["success"] else "FAIL"
 
-        print(f"{model_short:<35} {r['mode']:<15} {r['test_name']:<30} {format_status:<12} "
-              f"{r['entity_count']}/{r['expected_entities']:<10} {r['relation_count']}/{r['expected_relations']:<10} {status}")
+        print(
+            f"{model_short:<35} {r['mode']:<15} {r['test_name']:<30} {format_status:<12} "
+            f"{r['entity_count']}/{r['expected_entities']:<10} {r['relation_count']}/{r['expected_relations']:<10} {status}"
+        )
 
     # ACCURACY ANALYSIS
     print(f"\n{'='*80}")
     print("ACCURACY ANALYSIS (vs Expected Counts)")
     print(f"{'='*80}\n")
 
-    successful = [r for r in results if r.get('success')]
+    successful = [r for r in results if r.get("success")]
     if successful:
         for test_case in TEST_CASES:
             print(f"\nTest: {test_case['name']}")
-            print(f"  Expected: {test_case['expected_entities']}E / {test_case['expected_relations']}R")
+            print(
+                f"  Expected: {test_case['expected_entities']}E / {test_case['expected_relations']}R"
+            )
 
-            test_results = [r for r in successful if r['test_id'] == test_case['id']]
+            test_results = [r for r in successful if r["test_id"] == test_case["id"]]
             if test_results:
                 for r in test_results:
-                    model_short = r['model'].split('/')[-1] if '/' in r['model'] else r['model']
-                    entity_accuracy = (r['entity_count'] / test_case['expected_entities'] * 100) if test_case['expected_entities'] > 0 else 0
-                    relation_accuracy = (r['relation_count'] / test_case['expected_relations'] * 100) if test_case['expected_relations'] > 0 else 0
-                    print(f"  {model_short} [{r['mode']}]: {r['entity_count']}E ({entity_accuracy:.0f}%) / {r['relation_count']}R ({relation_accuracy:.0f}%) in {r['time']:.1f}s")
+                    model_short = r["model"].split("/")[-1] if "/" in r["model"] else r["model"]
+                    entity_accuracy = (
+                        (r["entity_count"] / test_case["expected_entities"] * 100)
+                        if test_case["expected_entities"] > 0
+                        else 0
+                    )
+                    relation_accuracy = (
+                        (r["relation_count"] / test_case["expected_relations"] * 100)
+                        if test_case["expected_relations"] > 0
+                        else 0
+                    )
+                    print(
+                        f"  {model_short} [{r['mode']}]: {r['entity_count']}E ({entity_accuracy:.0f}%) / {r['relation_count']}R ({relation_accuracy:.0f}%) in {r['time']:.1f}s"
+                    )
 
     # BEST PERFORMERS
     print(f"\n{'='*80}")
@@ -480,7 +528,7 @@ Start Time: {datetime.now().isoformat()}
 
     if successful:
         # Best by total extraction (entities + relations)
-        best = max(successful, key=lambda r: r['entity_count'] + r['relation_count'])
+        best = max(successful, key=lambda r: r["entity_count"] + r["relation_count"])
         print(f"Most Comprehensive Extraction:")
         print(f"  Model: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}")
         print(f"  Mode: {best['mode']}")
@@ -489,18 +537,29 @@ Start Time: {datetime.now().isoformat()}
         print(f"  Time: {best['time']:.2f}s")
 
         # Fastest valid
-        fastest = min(successful, key=lambda r: r['time'])
+        fastest = min(successful, key=lambda r: r["time"])
         print(f"\nFastest Valid Extraction:")
-        print(f"  Model: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}")
+        print(
+            f"  Model: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}"
+        )
         print(f"  Mode: {fastest['mode']}")
         print(f"  Time: {fastest['time']:.2f}s")
-        print(f"  Extracted: {fastest['entity_count']} entities, {fastest['relation_count']} relations")
+        print(
+            f"  Extracted: {fastest['entity_count']} entities, {fastest['relation_count']} relations"
+        )
 
         # Best balance (entities+relations per second)
-        balanced = max(successful, key=lambda r: (r['entity_count'] + r['relation_count']) / r['time'] if r['time'] > 0 else 0)
-        score = (balanced['entity_count'] + balanced['relation_count']) / balanced['time']
+        balanced = max(
+            successful,
+            key=lambda r: (
+                (r["entity_count"] + r["relation_count"]) / r["time"] if r["time"] > 0 else 0
+            ),
+        )
+        score = (balanced["entity_count"] + balanced["relation_count"]) / balanced["time"]
         print(f"\nBest Balance (throughput):")
-        print(f"  Model: {balanced['model'].split('/')[-1] if '/' in balanced['model'] else balanced['model']}")
+        print(
+            f"  Model: {balanced['model'].split('/')[-1] if '/' in balanced['model'] else balanced['model']}"
+        )
         print(f"  Mode: {balanced['mode']}")
         print(f"  Score: {score:.2f} items/sec")
         print(f"  Time: {balanced['time']:.2f}s")
@@ -512,17 +571,19 @@ Start Time: {datetime.now().isoformat()}
 
     error_types = {}
     for r in results:
-        if r.get('errors'):
-            for error in r['errors']:
+        if r.get("errors"):
+            for error in r["errors"]:
                 # Categorize errors
-                if 'JSON' in error or 'markdown' in error:
-                    error_types['Wrong Format (JSON/Markdown)'] = error_types.get('Wrong Format (JSON/Markdown)', 0) + 1
-                elif 'fields' in error:
-                    error_types['Wrong Field Count'] = error_types.get('Wrong Field Count', 0) + 1
-                elif 'Unknown line type' in error:
-                    error_types['Unknown Line Type'] = error_types.get('Unknown Line Type', 0) + 1
+                if "JSON" in error or "markdown" in error:
+                    error_types["Wrong Format (JSON/Markdown)"] = (
+                        error_types.get("Wrong Format (JSON/Markdown)", 0) + 1
+                    )
+                elif "fields" in error:
+                    error_types["Wrong Field Count"] = error_types.get("Wrong Field Count", 0) + 1
+                elif "Unknown line type" in error:
+                    error_types["Unknown Line Type"] = error_types.get("Unknown Line Type", 0) + 1
                 else:
-                    error_types['Other'] = error_types.get('Other', 0) + 1
+                    error_types["Other"] = error_types.get("Other", 0) + 1
 
     if error_types:
         for error_type, count in sorted(error_types.items(), key=lambda x: -x[1]):
@@ -539,37 +600,37 @@ Start Time: {datetime.now().isoformat()}
         # Group by model
         model_stats = {}
         for r in successful:
-            model = r['model']
+            model = r["model"]
             if model not in model_stats:
                 model_stats[model] = {
-                    'total_entities': 0,
-                    'total_relations': 0,
-                    'total_time': 0,
-                    'count': 0,
-                    'modes': {}
+                    "total_entities": 0,
+                    "total_relations": 0,
+                    "total_time": 0,
+                    "count": 0,
+                    "modes": {},
                 }
-            model_stats[model]['total_entities'] += r['entity_count']
-            model_stats[model]['total_relations'] += r['relation_count']
-            model_stats[model]['total_time'] += r['time']
-            model_stats[model]['count'] += 1
+            model_stats[model]["total_entities"] += r["entity_count"]
+            model_stats[model]["total_relations"] += r["relation_count"]
+            model_stats[model]["total_time"] += r["time"]
+            model_stats[model]["count"] += 1
 
-            if r['mode'] not in model_stats[model]['modes']:
-                model_stats[model]['modes'][r['mode']] = {'time': 0, 'count': 0}
-            model_stats[model]['modes'][r['mode']]['time'] += r['time']
-            model_stats[model]['modes'][r['mode']]['count'] += 1
+            if r["mode"] not in model_stats[model]["modes"]:
+                model_stats[model]["modes"][r["mode"]] = {"time": 0, "count": 0}
+            model_stats[model]["modes"][r["mode"]]["time"] += r["time"]
+            model_stats[model]["modes"][r["mode"]]["count"] += 1
 
         for model, stats in model_stats.items():
-            model_short = model.split('/')[-1] if '/' in model else model
-            avg_entities = stats['total_entities'] / stats['count']
-            avg_relations = stats['total_relations'] / stats['count']
-            avg_time = stats['total_time'] / stats['count']
+            model_short = model.split("/")[-1] if "/" in model else model
+            avg_entities = stats["total_entities"] / stats["count"]
+            avg_relations = stats["total_relations"] / stats["count"]
+            avg_time = stats["total_time"] / stats["count"]
 
             print(f"\n{model_short}:")
             print(f"  Avg per test: {avg_entities:.1f} entities, {avg_relations:.1f} relations")
             print(f"  Avg time: {avg_time:.1f}s")
 
-            for mode, mode_stats in stats['modes'].items():
-                mode_avg_time = mode_stats['time'] / mode_stats['count']
+            for mode, mode_stats in stats["modes"].items():
+                mode_avg_time = mode_stats["time"] / mode_stats["count"]
                 print(f"    [{mode}]: {mode_avg_time:.1f}s avg")
 
     # Save results

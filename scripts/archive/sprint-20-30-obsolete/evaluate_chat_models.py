@@ -76,11 +76,13 @@ async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
                 json={
                     "model": "nomic-embed-text",
                     "prompt": question,
-                }
+                },
             )
 
             if embed_response.status_code != 200:
-                console.print(f"[yellow]Warning: Embedding failed, using question without context[/yellow]")
+                console.print(
+                    f"[yellow]Warning: Embedding failed, using question without context[/yellow]"
+                )
                 return []
 
             embedding = embed_response.json()["embedding"]
@@ -92,7 +94,7 @@ async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
                     "vector": embedding,
                     "limit": top_k,
                     "with_payload": True,
-                }
+                },
             )
 
             if search_response.status_code != 200:
@@ -168,8 +170,8 @@ async def generate_answer(
                         "temperature": 0.7,
                         "top_p": 0.9,
                         "top_k": 40,
-                    }
-                }
+                    },
+                },
             ) as response:
                 first_token_received = False
 
@@ -233,7 +235,9 @@ async def evaluate_single_question(
     expected_topics = question_data.get("expected_topics", [])
     document = question_data.get("document", "N/A")
 
-    console.print(f"\n[cyan]Question {question_num}/{total_questions} (Tier {tier}, {language.upper()})[/cyan]")
+    console.print(
+        f"\n[cyan]Question {question_num}/{total_questions} (Tier {tier}, {language.upper()})[/cyan]"
+    )
     console.print(f"[dim]{question}[/dim]")
 
     # Retrieve context
@@ -246,8 +250,12 @@ async def evaluate_single_question(
     result = await generate_answer(model, question, context, language)
 
     if result["success"]:
-        console.print(f"[green]✓ Answer generated ({result['tokens']} tokens, {result['tokens_per_sec']:.1f} t/s)[/green]")
-        console.print(f"[dim]TTFT: {result['ttft_seconds']:.2f}s, Total: {result['time_seconds']:.2f}s[/dim]")
+        console.print(
+            f"[green]✓ Answer generated ({result['tokens']} tokens, {result['tokens_per_sec']:.1f} t/s)[/green]"
+        )
+        console.print(
+            f"[dim]TTFT: {result['ttft_seconds']:.2f}s, Total: {result['time_seconds']:.2f}s[/dim]"
+        )
     else:
         console.print(f"[red]✗ Failed: {result.get('error', 'Unknown error')}[/red]")
 
@@ -338,7 +346,7 @@ def print_summary_table(all_results: Dict[str, List[Dict]]):
             f"{metrics['avg_tokens_per_sec']:.1f}",
             f"{metrics['avg_ttft_seconds']:.2f}",
             f"{metrics['avg_time_seconds']:.2f}",
-            str(metrics['total_tokens']),
+            str(metrics["total_tokens"]),
         )
 
     console.print(table)
@@ -359,13 +367,13 @@ async def main():
         "--model",
         choices=["llama3.2:3b", "gemma", "all"],
         default="all",
-        help="Model to evaluate (default: all)"
+        help="Model to evaluate (default: all)",
     )
     parser.add_argument(
         "--output",
         type=Path,
         default=Path("docs/sprints/SPRINT_20_CHAT_BENCHMARK_RESULTS.json"),
-        help="Output file for results"
+        help="Output file for results",
     )
 
     args = parser.parse_args()
@@ -412,9 +420,8 @@ async def main():
         "total_questions": len(questions),
         "results": all_results,
         "aggregate_metrics": {
-            model: calculate_aggregate_metrics(results)
-            for model, results in all_results.items()
-        }
+            model: calculate_aggregate_metrics(results) for model, results in all_results.items()
+        },
     }
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

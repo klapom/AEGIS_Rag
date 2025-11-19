@@ -46,15 +46,15 @@ def check_router_prefix(file_path: str) -> Tuple[bool, List[str]]:
     errors = []
 
     # Only check API router files
-    if 'src/api/' not in file_path.replace('\\', '/'):
+    if "src/api/" not in file_path.replace("\\", "/"):
         return True, []
 
     # Skip main.py (different rules)
-    if file_path.endswith('main.py'):
+    if file_path.endswith("main.py"):
         return True, []
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             source = f.read()
 
         # Parse AST
@@ -69,30 +69,30 @@ def check_router_prefix(file_path: str) -> Tuple[bool, List[str]]:
             if isinstance(node, ast.Assign):
                 # Check for: router = APIRouter(prefix="...", ...)
                 if any(
-                    isinstance(target, ast.Name) and target.id == 'router'
+                    isinstance(target, ast.Name) and target.id == "router"
                     for target in node.targets
                 ):
                     if isinstance(node.value, ast.Call):
                         if isinstance(node.value.func, ast.Name):
-                            if node.value.func.id == 'APIRouter':
+                            if node.value.func.id == "APIRouter":
                                 # Found router = APIRouter(...)
                                 # Check prefix argument
                                 prefix = None
                                 for keyword in node.value.keywords:
-                                    if keyword.arg == 'prefix':
+                                    if keyword.arg == "prefix":
                                         if isinstance(keyword.value, ast.Constant):
                                             prefix = keyword.value.value
 
                                 if prefix:
                                     # Check if prefix starts with /api/v (anti-pattern)
-                                    if prefix.startswith('/api/v'):
+                                    if prefix.startswith("/api/v"):
                                         errors.append(
                                             f"Line {node.lineno}: Router prefix should be RELATIVE, "
                                             f"not absolute.\n"
-                                            f"   Found: APIRouter(prefix=\"{prefix}\")\n"
+                                            f'   Found: APIRouter(prefix="{prefix}")\n'
                                             f"   Use: APIRouter(prefix=\"{prefix.split('/')[-1]}\")\n"
-                                            f"   Add \"/api/v1\" in main.py: "
-                                            f"app.include_router(router, prefix=\"/api/v1\")"
+                                            f'   Add "/api/v1" in main.py: '
+                                            f'app.include_router(router, prefix="/api/v1")'
                                         )
 
         if errors:
@@ -114,13 +114,13 @@ def check_main_router_registration(file_path: str) -> Tuple[bool, List[str]]:
     Returns:
         Tuple of (success, warnings)
     """
-    if not file_path.endswith('main.py'):
+    if not file_path.endswith("main.py"):
         return True, []
 
     warnings = []
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             source = f.read()
 
         # Look for app.include_router() calls
@@ -133,7 +133,7 @@ def check_main_router_registration(file_path: str) -> Tuple[bool, List[str]]:
             if not prefix:
                 warnings.append(
                     f"WARNING: Router '{router_name}' registered without prefix.\n"
-                    f"   Consider adding: app.include_router({router_name}, prefix=\"/api/v1\")"
+                    f'   Consider adding: app.include_router({router_name}, prefix="/api/v1")'
                 )
 
         # Informational only (don't fail)
@@ -158,10 +158,10 @@ def main(filenames: List[str]) -> int:
 
     for filename in filenames:
         # Only check Python files in API directory
-        if not filename.endswith('.py'):
+        if not filename.endswith(".py"):
             continue
 
-        if 'src/api/' not in filename.replace('\\', '/'):
+        if "src/api/" not in filename.replace("\\", "/"):
             continue
 
         # Check router files
@@ -174,7 +174,7 @@ def main(filenames: List[str]) -> int:
             exit_code = 1
         else:
             # Check main.py for informational warnings
-            if filename.endswith('main.py'):
+            if filename.endswith("main.py"):
                 _, warnings = check_main_router_registration(filename)
                 if warnings:
                     print(f"\n[INFO] {filename}")
@@ -186,13 +186,13 @@ def main(filenames: List[str]) -> int:
     if exit_code == 0:
         print("\n[OK] All router prefixes follow conventions!")
         print("\nPattern established by TD-41:")
-        print("  Router files: APIRouter(prefix=\"/relative\")")
-        print("  main.py: app.include_router(router, prefix=\"/api/v1\")")
+        print('  Router files: APIRouter(prefix="/relative")')
+        print('  main.py: app.include_router(router, prefix="/api/v1")')
     else:
         print("\n[FAIL] Router prefix validation failed. Fix errors above.")
 
     return exit_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))

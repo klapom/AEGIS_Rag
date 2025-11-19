@@ -76,6 +76,7 @@ from src.utils.fusion import analyze_ranking_diversity, reciprocal_rank_fusion
 
 logger = structlog.get_logger(__name__)
 
+
 class HybridSearch:
     """Hybrid search combining vector and keyword retrieval."""
 

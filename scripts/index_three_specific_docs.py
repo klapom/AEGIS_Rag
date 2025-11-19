@@ -89,6 +89,7 @@ async def index_specific_files_to_qdrant(file_paths: list[Path]):
 
     # Create temporary directory with symlinks to specific files
     import tempfile
+
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
 
@@ -96,6 +97,7 @@ async def index_specific_files_to_qdrant(file_paths: list[Path]):
         for file_path in file_paths:
             if file_path.exists():
                 import shutil
+
                 shutil.copy(file_path, temp_path / file_path.name)
                 logger.info("file_prepared_for_indexing", file=file_path.name)
             else:
@@ -145,10 +147,12 @@ async def index_specific_files_to_neo4j(file_paths: list[Path]):
         for doc in documents:
             content = doc.get_content()
             if content and content.strip():
-                lightrag_docs.append({
-                    "text": content,
-                    "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
-                })
+                lightrag_docs.append(
+                    {
+                        "text": content,
+                        "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
+                    }
+                )
 
         logger.info(
             "documents_converted_for_lightrag",

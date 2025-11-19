@@ -50,7 +50,10 @@ while i < len(lines):
                 indent = len(line) - len(line.lstrip())
                 new_lines.append(" " * indent + "")  # Empty line
                 new_lines.append(" " * indent + "if self._client is None:")
-                new_lines.append(" " * (indent + 4) + 'raise MemoryError(operation="redis_operation", reason="client_not_initialized")')
+                new_lines.append(
+                    " " * (indent + 4)
+                    + 'raise MemoryError(operation="redis_operation", reason="client_not_initialized")'
+                )
 
     i += 1
 

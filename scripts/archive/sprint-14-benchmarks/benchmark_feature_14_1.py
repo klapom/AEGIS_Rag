@@ -23,9 +23,9 @@ from src.core.config import settings
 
 async def benchmark_single_document():
     """Benchmark single document processing."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("BENCHMARK 1: Single Document Processing")
-    print("="*80)
+    print("=" * 80)
 
     wrapper = LightRAGWrapper(
         llm_model=settings.lightrag_llm_model,
@@ -46,7 +46,8 @@ async def benchmark_single_document():
         The Three-Phase Pipeline extracts entities using SpaCy, deduplicates with semantic similarity,
         and extracts relations using Gemma 3 4B quantized to Q4_K_M.
         Performance optimization focuses on per-chunk extraction to reduce context window size.
-        """ * 3  # Repeat 3x to create ~600 tokens
+        """
+        * 3,  # Repeat 3x to create ~600 tokens
     }
 
     # Warm up
@@ -71,17 +72,17 @@ async def benchmark_single_document():
 
     return {
         "elapsed": elapsed,
-        "chunks": result['stats']['total_chunks'],
-        "entities": result['stats']['total_entities'],
-        "relations": result['stats']['total_relations']
+        "chunks": result["stats"]["total_chunks"],
+        "entities": result["stats"]["total_entities"],
+        "relations": result["stats"]["total_relations"],
     }
 
 
 async def benchmark_batch_processing():
     """Benchmark batch document processing (10 documents)."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("BENCHMARK 2: Batch Processing (10 Documents)")
-    print("="*80)
+    print("=" * 80)
 
     wrapper = LightRAGWrapper(
         llm_model=settings.lightrag_llm_model,
@@ -95,15 +96,18 @@ async def benchmark_batch_processing():
     # Generate 10 test documents
     test_docs = []
     for i in range(10):
-        test_docs.append({
-            "id": f"batch_{i:03d}",
-            "text": f"""
+        test_docs.append(
+            {
+                "id": f"batch_{i:03d}",
+                "text": f"""
             Document {i} discusses Entity_{i % 3} and Entity_{(i+1) % 3}.
             Entity_{i % 3} works with Technology_{i % 5} on Project_{i}.
             The collaboration between Entity_{i % 3} and Entity_{(i+1) % 3} improves results.
             Technology_{i % 5} enables faster processing and better accuracy.
-            """ * 2
-        })
+            """
+                * 2,
+            }
+        )
 
     # Benchmark
     print(f"\nProcessing {len(test_docs)} documents...")
@@ -112,8 +116,8 @@ async def benchmark_batch_processing():
     elapsed = time.time() - start
 
     # Results
-    throughput = result['success'] / elapsed
-    avg_time = elapsed / result['success']
+    throughput = result["success"] / elapsed
+    avg_time = elapsed / result["success"]
 
     print(f"\n✓ Results:")
     print(f"  - Total Time: {elapsed:.2f}s")
@@ -128,17 +132,17 @@ async def benchmark_batch_processing():
         "elapsed": elapsed,
         "throughput_docs_per_sec": throughput,
         "avg_time_per_doc": avg_time,
-        "chunks": result['stats']['total_chunks'],
-        "entities": result['stats']['total_entities'],
-        "relations": result['stats']['total_relations']
+        "chunks": result["stats"]["total_chunks"],
+        "entities": result["stats"]["total_entities"],
+        "relations": result["stats"]["total_relations"],
     }
 
 
 async def benchmark_chunking_performance():
     """Benchmark chunking performance (tiktoken)."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("BENCHMARK 3: Chunking Performance")
-    print("="*80)
+    print("=" * 80)
 
     wrapper = LightRAGWrapper(
         llm_model=settings.lightrag_llm_model,
@@ -161,7 +165,7 @@ async def benchmark_chunking_performance():
             text=test_text,
             document_id="chunk_test",
             chunk_token_size=600,
-            chunk_overlap_token_size=100
+            chunk_overlap_token_size=100,
         )
         elapsed = time.time() - start
         times.append(elapsed)
@@ -179,15 +183,15 @@ async def benchmark_chunking_performance():
         "avg_time_ms": avg_time * 1000,
         "std_dev_ms": std_dev * 1000,
         "chunks": len(chunks),
-        "throughput_tokens_per_sec": 5000 / avg_time
+        "throughput_tokens_per_sec": 5000 / avg_time,
     }
 
 
 async def benchmark_comparison_baseline():
     """Compare Feature 14.1 with baseline (if available)."""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("BENCHMARK 4: Comparison with Baseline")
-    print("="*80)
+    print("=" * 80)
 
     print("\n📊 Feature 14.1 Performance Characteristics:")
     print("  ✓ Per-chunk extraction: ~15-20s per document")
@@ -202,9 +206,9 @@ async def benchmark_comparison_baseline():
 
 async def main():
     """Run all benchmarks."""
-    print("\n" + "#"*80)
+    print("\n" + "#" * 80)
     print("# Sprint 14 Feature 14.1 Performance Benchmark")
-    print("#"*80)
+    print("#" * 80)
 
     results = {}
 
@@ -222,9 +226,9 @@ async def main():
         await benchmark_comparison_baseline()
 
         # Summary
-        print("\n" + "#"*80)
+        print("\n" + "#" * 80)
         print("# BENCHMARK SUMMARY")
-        print("#"*80)
+        print("#" * 80)
         print(f"\n1. Single Document:")
         print(f"   - Time: {results['single_doc']['elapsed']:.2f}s")
         print(f"   - Entities: {results['single_doc']['entities']}")
@@ -243,6 +247,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ Benchmark failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

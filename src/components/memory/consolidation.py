@@ -25,6 +25,7 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class ConsolidationPolicy:
     """Base class for consolidation policies."""
 
@@ -38,6 +39,7 @@ class ConsolidationPolicy:
             True if item should be consolidated
         """
         raise NotImplementedError
+
 
 class AccessCountPolicy(ConsolidationPolicy):
     """Consolidate based on access count threshold."""
@@ -60,6 +62,7 @@ class AccessCountPolicy(ConsolidationPolicy):
             True if access count >= threshold
         """
         return metadata.get("access_count", 0) >= self.min_access_count  # type: ignore[no-any-return]
+
 
 class TimeBasedPolicy(ConsolidationPolicy):
     """Consolidate based on age threshold."""
@@ -91,6 +94,7 @@ class TimeBasedPolicy(ConsolidationPolicy):
             return age >= timedelta(hours=self.min_age_hours)
         except Exception:
             return False
+
 
 class MemoryConsolidationPipeline:
     """Automatic memory consolidation pipeline.
@@ -442,7 +446,9 @@ class MemoryConsolidationPipeline:
 
         except Exception as e:
             logger.error("Relevance-based consolidation failed", error=str(e))
-            raise MemoryError(operation="Relevance-based consolidation failed", reason=str(e)) from e
+            raise MemoryError(
+                operation="Relevance-based consolidation failed", reason=str(e)
+            ) from e
 
     def start_cron_scheduler(self, cron_schedule: str = "0 2 * * *") -> None:
         """Start cron-based consolidation scheduler using APScheduler.
@@ -573,7 +579,9 @@ class MemoryConsolidationPipeline:
                 session_id=session_id,
                 error=str(e),
             )
-            raise MemoryError(operation="Conversation → Graphiti consolidation failed", reason=str(e)) from e
+            raise MemoryError(
+                operation="Conversation → Graphiti consolidation failed", reason=str(e)
+            ) from e
 
     async def run_consolidation_cycle(
         self,
@@ -670,8 +678,10 @@ class MemoryConsolidationPipeline:
                 logger.error("Background consolidation failed", error=str(e))
                 # Continue running despite errors
 
+
 # Global instance (singleton pattern)
 _consolidation_pipeline: MemoryConsolidationPipeline | None = None
+
 
 def get_consolidation_pipeline() -> MemoryConsolidationPipeline:
     """Get global consolidation pipeline instance (singleton).
@@ -683,6 +693,7 @@ def get_consolidation_pipeline() -> MemoryConsolidationPipeline:
     if _consolidation_pipeline is None:
         _consolidation_pipeline = MemoryConsolidationPipeline()
     return _consolidation_pipeline
+
 
 async def start_background_consolidation() -> asyncio.Task:
     """Start background consolidation as an async task.

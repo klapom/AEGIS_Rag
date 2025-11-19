@@ -13,6 +13,7 @@ from src.components.graph_rag.neo4j_client import Neo4jClient, get_neo4j_client
 
 logger = structlog.get_logger(__name__)
 
+
 class ChangeEvent(BaseModel):
     """Change event record."""
 
@@ -24,6 +25,7 @@ class ChangeEvent(BaseModel):
     change_type: str  # "create", "update", "delete"
     changed_by: str
     reason: str = ""
+
 
 class EvolutionTracker:
     """Tracks and analyzes entity evolution and changes."""
@@ -445,8 +447,10 @@ class EvolutionTracker:
 
         return active_entities
 
+
 # Singleton instance
 _evolution_tracker: EvolutionTracker | None = None
+
 
 def get_evolution_tracker() -> EvolutionTracker:
     """Get global evolution tracker instance (singleton).

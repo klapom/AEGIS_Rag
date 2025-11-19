@@ -14,6 +14,7 @@ import pytest
 # Conditional import for PIL (Pillow)
 try:
     from PIL import Image
+
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
@@ -135,8 +136,14 @@ async def test_image_enrichment_node__valid_document__enriches_successfully(
     assert len(result_state["vlm_metadata"]) == 2
 
     # Verify VLM descriptions were inserted into document
-    assert mock_docling_document.pictures[0].text == "Figure 1\n\nThis is a red diagram showing system architecture."
-    assert mock_docling_document.pictures[1].text == "This is a green flowchart depicting the process flow."
+    assert (
+        mock_docling_document.pictures[0].text
+        == "Figure 1\n\nThis is a red diagram showing system architecture."
+    )
+    assert (
+        mock_docling_document.pictures[1].text
+        == "This is a green flowchart depicting the process flow."
+    )
 
     # Verify cleanup was called
     mock_image_processor.cleanup.assert_called_once()
@@ -411,7 +418,10 @@ async def test_image_enrichment_node__with_caption__combines_caption_and_descrip
     result_state = await image_enrichment_node(state)
 
     # Caption + VLM description combined
-    assert picture.text == "Figure 1: System Overview\n\nThis is a red diagram showing system architecture."
+    assert (
+        picture.text
+        == "Figure 1: System Overview\n\nThis is a red diagram showing system architecture."
+    )
 
 
 @pytest.mark.asyncio

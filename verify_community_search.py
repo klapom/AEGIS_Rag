@@ -15,7 +15,7 @@ def verify_community_search():
     from src.components.graph_rag.community_search import CommunitySearch
     from src.components.graph_rag.dual_level_search import DualLevelSearch
 
-    print("="  * 80)
+    print("=" * 80)
     print("VERIFICATION: CommunitySearch AegisLLMProxy Migration")
     print("=" * 80)
 
@@ -56,16 +56,21 @@ def verify_community_search():
     print(f"\n5. Method Resolution Order:")
     print(f"   - CommunitySearch._generate_answer: {CommunitySearch._generate_answer}")
     print(f"   - DualLevelSearch._generate_answer: {DualLevelSearch._generate_answer}")
-    inherits_correctly = (
-        CommunitySearch._generate_answer == DualLevelSearch._generate_answer
-    )
+    inherits_correctly = CommunitySearch._generate_answer == DualLevelSearch._generate_answer
     print(f"   - Inherits _generate_answer: {inherits_correctly}")
     status_ok = "[OK]" if inherits_correctly else "[FAIL]"
     print(f"   - Status: {status_ok}")
 
     # Overall status
     print(f"\n" + "=" * 80)
-    all_correct = has_proxy and not has_ollama_client and uses_proxy and not uses_ollama and not has_ollama_ref and inherits_correctly
+    all_correct = (
+        has_proxy
+        and not has_ollama_client
+        and uses_proxy
+        and not uses_ollama
+        and not has_ollama_ref
+        and inherits_correctly
+    )
     if all_correct:
         print("RESULT: [OK] ALL CHECKS PASSED - CommunitySearch is properly migrated")
     else:

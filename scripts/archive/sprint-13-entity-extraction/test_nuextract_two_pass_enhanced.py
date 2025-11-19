@@ -19,6 +19,7 @@ from typing import List, Dict, Any, Tuple
 # Try to import spaCy
 try:
     import spacy
+
     SPACY_AVAILABLE = True
 except ImportError:
     SPACY_AVAILABLE = False
@@ -222,7 +223,7 @@ TEST_CASES = [
         "text": AUTOMOTIVE_TEXT,
         "expected_entities": 13,  # Tesla, Model Z, Detroit Auto Show, Thursday, solid-state battery, QuantumCell, 600 miles, Jennifer Park, Gigafactory Austin, March 2025, Lucid Air, BMW i7, Robert Kim, Morgan Stanley, 50k pre-orders
         "expected_relations": 15,  # Tesla develops Model Z, QuantumCell partners, competes with Lucid/BMW, analyst predicts
-    }
+    },
 ]
 
 # ============================================================================
@@ -267,18 +268,21 @@ def extract_entities_spacy(text: str, nlp) -> List[Dict[str, str]]:
         # Map spaCy type to LightRAG type
         lightrag_type = SPACY_TO_LIGHTRAG_TYPE.get(ent.label_, "OTHER")
 
-        entities.append({
-            "name": ent.text,
-            "type": lightrag_type,
-            "description": f"{ent.text} is a {ent.label_} extracted by spaCy NER.",
-            "source": "spacy"
-        })
+        entities.append(
+            {
+                "name": ent.text,
+                "type": lightrag_type,
+                "description": f"{ent.text} is a {ent.label_} extracted by spaCy NER.",
+                "source": "spacy",
+            }
+        )
 
     return entities
 
 
-def fuse_entities(nuextract_entities: List[Dict[str, str]],
-                  spacy_entities: List[Dict[str, str]]) -> List[Dict[str, str]]:
+def fuse_entities(
+    nuextract_entities: List[Dict[str, str]], spacy_entities: List[Dict[str, str]]
+) -> List[Dict[str, str]]:
     """Fuse NuExtract and spaCy entities with conflict resolution.
 
     Resolution strategy:
@@ -299,41 +303,55 @@ def fuse_entities(nuextract_entities: List[Dict[str, str]],
     # Add all NuExtract entities first (higher quality)
     for entity in nuextract_entities:
         fused.append(entity)
-        nuextract_names.add(entity['name'].lower())
+        nuextract_names.add(entity["name"].lower())
 
     # Add spaCy entities that don't conflict
     for spacy_entity in spacy_entities:
-        spacy_name_lower = spacy_entity['name'].lower()
+        spacy_name_lower = spacy_entity["name"].lower()
 
         # Check for name match
         if spacy_name_lower not in nuextract_names:
             # Unique entity from spaCy, add it
-            fused.append({
-                "name": spacy_entity['name'],
-                "type": spacy_entity['type'],
-                "description": f"{spacy_entity['name']} identified by spaCy NER as {spacy_entity['type']}."
-            })
+            fused.append(
+                {
+                    "name": spacy_entity["name"],
+                    "type": spacy_entity["type"],
+                    "description": f"{spacy_entity['name']} identified by spaCy NER as {spacy_entity['type']}.",
+                }
+            )
         else:
             # Name conflict - check if types differ
-            nuextract_entity = next((e for e in nuextract_entities
-                                    if e['name'].lower() == spacy_name_lower), None)
-            if nuextract_entity and nuextract_entity['type'] != spacy_entity['type']:
+            nuextract_entity = next(
+                (e for e in nuextract_entities if e["name"].lower() == spacy_name_lower), None
+            )
+            if nuextract_entity and nuextract_entity["type"] != spacy_entity["type"]:
                 # Note type difference in description
-                nuextract_entity['description'] += f" (spaCy also identified as {spacy_entity['type']})"
+                nuextract_entity[
+                    "description"
+                ] += f" (spaCy also identified as {spacy_entity['type']})"
 
     return fused
 
 
-def convert_json_to_lightrag(entities: List[Dict[str, str]],
-                             relations: List[Dict[str, str]]) -> str:
+def convert_json_to_lightrag(
+    entities: List[Dict[str, str]], relations: List[Dict[str, str]]
+) -> str:
     """Convert entity and relation lists to LightRAG delimiter-separated format."""
     lines = []
 
     # Convert entities
     for entity in entities:
-        name = str(entity.get('name', '')).strip() if entity.get('name') is not None else ''
-        etype = str(entity.get('type', 'OTHER')).strip().upper() if entity.get('type') is not None else 'OTHER'
-        desc = str(entity.get('description', '')).strip() if entity.get('description') is not None else ''
+        name = str(entity.get("name", "")).strip() if entity.get("name") is not None else ""
+        etype = (
+            str(entity.get("type", "OTHER")).strip().upper()
+            if entity.get("type") is not None
+            else "OTHER"
+        )
+        desc = (
+            str(entity.get("description", "")).strip()
+            if entity.get("description") is not None
+            else ""
+        )
 
         if name:
             line = f"entity{TUPLE_DELIMITER}{name}{TUPLE_DELIMITER}{etype}{TUPLE_DELIMITER}{desc}"
@@ -341,17 +359,29 @@ def convert_json_to_lightrag(entities: List[Dict[str, str]],
 
     # Convert relations
     for relation in relations:
-        source = str(relation.get('source', '')).strip() if relation.get('source') is not None else ''
-        target = str(relation.get('target', '')).strip() if relation.get('target') is not None else ''
-        desc = str(relation.get('description', '')).strip() if relation.get('description') is not None else ''
-        strength = str(relation.get('strength', '5')).strip() if relation.get('strength') is not None else '5'
+        source = (
+            str(relation.get("source", "")).strip() if relation.get("source") is not None else ""
+        )
+        target = (
+            str(relation.get("target", "")).strip() if relation.get("target") is not None else ""
+        )
+        desc = (
+            str(relation.get("description", "")).strip()
+            if relation.get("description") is not None
+            else ""
+        )
+        strength = (
+            str(relation.get("strength", "5")).strip()
+            if relation.get("strength") is not None
+            else "5"
+        )
 
         if source and target:
             line = f"relation{TUPLE_DELIMITER}{source}{TUPLE_DELIMITER}{target}{TUPLE_DELIMITER}{desc}{TUPLE_DELIMITER}{strength}"
             lines.append(line)
 
     lines.append(COMPLETION_DELIMITER)
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def parse_json_response(response: str) -> dict:
@@ -361,10 +391,10 @@ def parse_json_response(response: str) -> dict:
     cleaned = response.strip()
 
     # Remove markdown code blocks
-    if cleaned.startswith('```'):
-        lines = cleaned.split('\n')
-        cleaned = '\n'.join(lines[1:-1]) if len(lines) > 2 else cleaned
-        cleaned = cleaned.replace('```json', '').replace('```', '').strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.split("\n")
+        cleaned = "\n".join(lines[1:-1]) if len(lines) > 2 else cleaned
+        cleaned = cleaned.replace("```json", "").replace("```", "").strip()
 
     # Try direct parsing first
     try:
@@ -372,7 +402,7 @@ def parse_json_response(response: str) -> dict:
     except json.JSONDecodeError:
         # Try to extract JSON from text
         # Look for {...} pattern
-        json_match = re.search(r'\{.*\}', cleaned, re.DOTALL)
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         if json_match:
             try:
                 return json.loads(json_match.group(0))
@@ -403,7 +433,7 @@ def test_two_pass(model: str, test_case: dict, client: Client, nlp, log_path: Pa
         "entity_accuracy": 0,
         "relation_accuracy": 0,
         "status": "FAIL",
-        "errors": []
+        "errors": [],
     }
 
     total_start = time.perf_counter()
@@ -413,28 +443,24 @@ def test_two_pass(model: str, test_case: dict, client: Client, nlp, log_path: Pa
         # PHASE 1a: NuExtract Entity Extraction
         # ====================================================================
         start = time.perf_counter()
-        user_prompt_entity = USER_PROMPT_TEMPLATE_ENTITY.format(text=test_case['text'])
+        user_prompt_entity = USER_PROMPT_TEMPLATE_ENTITY.format(text=test_case["text"])
 
         response_entity = client.chat(
             model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT_ENTITY},
-                {"role": "user", "content": user_prompt_entity}
+                {"role": "user", "content": user_prompt_entity},
             ],
-            options={
-                "temperature": 0.1,
-                "num_predict": 2000,
-                "num_ctx": 16384
-            },
-            format="json"
+            options={"temperature": 0.1, "num_predict": 2000, "num_ctx": 16384},
+            format="json",
         )
 
-        results['pass1a_time'] = time.perf_counter() - start
+        results["pass1a_time"] = time.perf_counter() - start
         raw_entity_response = response_entity["message"]["content"]
 
         nuextract_data = parse_json_response(raw_entity_response)
-        nuextract_entities = nuextract_data.get('entities', [])
-        results['nuextract_entities'] = len(nuextract_entities)
+        nuextract_entities = nuextract_data.get("entities", [])
+        results["nuextract_entities"] = len(nuextract_entities)
 
         # ====================================================================
         # PHASE 1b: spaCy NER Extraction
@@ -442,15 +468,15 @@ def test_two_pass(model: str, test_case: dict, client: Client, nlp, log_path: Pa
         start = time.perf_counter()
         spacy_entities = []
         if nlp is not None:
-            spacy_entities = extract_entities_spacy(test_case['text'], nlp)
-        results['pass1b_time'] = time.perf_counter() - start
-        results['spacy_entities'] = len(spacy_entities)
+            spacy_entities = extract_entities_spacy(test_case["text"], nlp)
+        results["pass1b_time"] = time.perf_counter() - start
+        results["spacy_entities"] = len(spacy_entities)
 
         # ====================================================================
         # PHASE 2: Entity Fusion
         # ====================================================================
         fused_entities = fuse_entities(nuextract_entities, spacy_entities)
-        results['fused_entities'] = len(fused_entities)
+        results["fused_entities"] = len(fused_entities)
 
         # ====================================================================
         # PHASE 3: Relation Extraction with Entity Context
@@ -458,44 +484,51 @@ def test_two_pass(model: str, test_case: dict, client: Client, nlp, log_path: Pa
         start = time.perf_counter()
 
         # Format entity list for prompt
-        entity_names = [e['name'] for e in fused_entities]
+        entity_names = [e["name"] for e in fused_entities]
         entity_list_str = ", ".join(entity_names)
 
         user_prompt_relation = USER_PROMPT_TEMPLATE_RELATION.format(
-            entity_list=entity_list_str,
-            text=test_case['text']
+            entity_list=entity_list_str, text=test_case["text"]
         )
 
         response_relation = client.chat(
             model=model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT_RELATION},
-                {"role": "user", "content": user_prompt_relation}
+                {"role": "user", "content": user_prompt_relation},
             ],
-            options={
-                "temperature": 0.1,
-                "num_predict": 2000,
-                "num_ctx": 16384
-            },
-            format="json"
+            options={"temperature": 0.1, "num_predict": 2000, "num_ctx": 16384},
+            format="json",
         )
 
-        results['pass2_time'] = time.perf_counter() - start
+        results["pass2_time"] = time.perf_counter() - start
         raw_relation_response = response_relation["message"]["content"]
 
         relation_data = parse_json_response(raw_relation_response)
-        relations = relation_data.get('relations', [])
-        results['relations_found'] = len(relations)
+        relations = relation_data.get("relations", [])
+        results["relations_found"] = len(relations)
 
         # ====================================================================
         # PHASE 4: Post-process to LightRAG format
         # ====================================================================
         lightrag_format = convert_json_to_lightrag(fused_entities, relations)
 
-        results['total_time'] = time.perf_counter() - total_start
-        results['entity_accuracy'] = 100 * results['fused_entities'] / test_case['expected_entities'] if test_case['expected_entities'] > 0 else 0
-        results['relation_accuracy'] = 100 * results['relations_found'] / test_case['expected_relations'] if test_case['expected_relations'] > 0 else 0
-        results['status'] = "PASS" if results['fused_entities'] > 0 and results['relations_found'] > 0 else "PARTIAL"
+        results["total_time"] = time.perf_counter() - total_start
+        results["entity_accuracy"] = (
+            100 * results["fused_entities"] / test_case["expected_entities"]
+            if test_case["expected_entities"] > 0
+            else 0
+        )
+        results["relation_accuracy"] = (
+            100 * results["relations_found"] / test_case["expected_relations"]
+            if test_case["expected_relations"] > 0
+            else 0
+        )
+        results["status"] = (
+            "PASS"
+            if results["fused_entities"] > 0 and results["relations_found"] > 0
+            else "PARTIAL"
+        )
 
         # ====================================================================
         # Log Results with FULL PROMPTS AND RESPONSES
@@ -572,20 +605,22 @@ PHASE 4 - LIGHTRAG FORMAT OUTPUT:
 {lightrag_format}
 
 """
-        with open(log_path, 'a', encoding='utf-8') as f:
+        with open(log_path, "a", encoding="utf-8") as f:
             f.write(log_content)
 
     except Exception as e:
         import traceback
+
         error_details = traceback.format_exc()
 
-        results['errors'].append(str(e))
-        results['status'] = "ERROR"
-        results['total_time'] = time.perf_counter() - total_start
+        results["errors"].append(str(e))
+        results["status"] = "ERROR"
+        results["total_time"] = time.perf_counter() - total_start
 
         # Log error with full traceback
-        with open(log_path, 'a', encoding='utf-8') as f:
-            f.write(f"""
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(
+                f"""
 {'='*80}
 TEST CASE {test_case['id']}: {test_case['name']} [ERROR]
 {'='*80}
@@ -594,14 +629,16 @@ Error: {e}
 Full Traceback:
 {error_details}
 {'='*80}
-""")
+"""
+            )
 
     return results
 
 
 def main():
     """Main test execution."""
-    print(f"""{'='*80}
+    print(
+        f"""{'='*80}
      NuExtract Two-Pass ENHANCED with spaCy NER Fusion
 {'='*80}
 
@@ -620,13 +657,16 @@ Baseline Two-Pass (without enhanced examples):
   - Entity Accuracy: 153.3%
   - Relation Accuracy: 44.7%
   - Average Time: 5.6s
-    """)
+    """
+    )
 
     # Load spaCy model
     nlp = None
     if SPACY_AVAILABLE:
         try:
-            print("\n[INFO] Loading spaCy transformer model (en_core_web_trf)...", end=" ", flush=True)
+            print(
+                "\n[INFO] Loading spaCy transformer model (en_core_web_trf)...", end=" ", flush=True
+            )
             nlp = spacy.load("en_core_web_trf")
             print("OK")
         except OSError:
@@ -640,7 +680,7 @@ Baseline Two-Pass (without enhanced examples):
 
     # Test NuExtract Q4_K_M (best performer from previous benchmarks)
     model = "hf.co/mradermacher/NuExtract-2.0-4B-i1-GGUF:Q4_K_M"
-    model_short = model.split('/')[-1] if '/' in model else model
+    model_short = model.split("/")[-1] if "/" in model else model
 
     print(f"\n{'='*80}")
     print(f"MODEL: {model_short}")
@@ -653,9 +693,9 @@ Baseline Two-Pass (without enhanced examples):
             model=model,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Hello"}
+                {"role": "user", "content": "Hello"},
             ],
-            options={"num_ctx": 16384}
+            options={"num_ctx": 16384},
         )
         print("OK")
     except Exception as e:
@@ -670,8 +710,9 @@ Baseline Two-Pass (without enhanced examples):
     log_path = log_dir / log_filename
 
     # Write log header
-    with open(log_path, 'w', encoding='utf-8') as f:
-        f.write(f"""{'='*80}
+    with open(log_path, "w", encoding="utf-8") as f:
+        f.write(
+            f"""{'='*80}
 NuExtract TWO-PASS ENHANCED + spaCy NER TEST LOG
 {'='*80}
 
@@ -684,7 +725,8 @@ Start Time: {datetime.now().isoformat()}
 
 {'='*80}
 
-""")
+"""
+        )
 
     results = []
 
@@ -697,9 +739,11 @@ Start Time: {datetime.now().isoformat()}
         print(f"  Phase 1b: {result['spacy_entities']}E in {result['pass1b_time']:.1f}s")
         print(f"  Phase 2:  {result['fused_entities']}E (fused)")
         print(f"  Phase 3:  {result['relations_found']}R in {result['pass2_time']:.1f}s")
-        print(f"  Total:    {result['total_time']:.1f}s | "
-              f"{result['entity_accuracy']:.0f}% entities, {result['relation_accuracy']:.0f}% relations | "
-              f"[{result['status']}]")
+        print(
+            f"  Total:    {result['total_time']:.1f}s | "
+            f"{result['entity_accuracy']:.0f}% entities, {result['relation_accuracy']:.0f}% relations | "
+            f"[{result['status']}]"
+        )
 
     # ========================================================================
     # SUMMARY
@@ -713,20 +757,26 @@ Start Time: {datetime.now().isoformat()}
 
     for r in results:
         entity_str = f"{r['fused_entities']}/{r['entities_expected']} ({r['entity_accuracy']:.0f}%)"
-        relation_str = f"{r['relations_found']}/{r['relations_expected']} ({r['relation_accuracy']:.0f}%)"
+        relation_str = (
+            f"{r['relations_found']}/{r['relations_expected']} ({r['relation_accuracy']:.0f}%)"
+        )
         time_str = f"{r['total_time']:.1f}s"
 
-        print(f"{r['test_name']:<30} {time_str:<12} {entity_str:<15} {relation_str:<15} {r['status']:<8}")
+        print(
+            f"{r['test_name']:<30} {time_str:<12} {entity_str:<15} {relation_str:<15} {r['status']:<8}"
+        )
 
     # Calculate averages
     print(f"\n{'='*80}")
     print("AVERAGE PERFORMANCE")
     print(f"{'='*80}\n")
 
-    avg_time = sum(r['total_time'] for r in results) / len(results)
-    avg_entity_acc = sum(r['entity_accuracy'] for r in results) / len(results)
-    avg_relation_acc = sum(r['relation_accuracy'] for r in results) / len(results)
-    success_rate = 100 * sum(1 for r in results if r['status'] in ['PASS', 'PARTIAL']) / len(results)
+    avg_time = sum(r["total_time"] for r in results) / len(results)
+    avg_entity_acc = sum(r["entity_accuracy"] for r in results) / len(results)
+    avg_relation_acc = sum(r["relation_accuracy"] for r in results) / len(results)
+    success_rate = (
+        100 * sum(1 for r in results if r["status"] in ["PASS", "PARTIAL"]) / len(results)
+    )
 
     print(f"TWO-PASS + spaCy:")
     print(f"  Average Time: {avg_time:.1f}s")
@@ -744,13 +794,17 @@ Start Time: {datetime.now().isoformat()}
 
     print(f"DELTA (Enhanced vs Baseline Two-Pass):")
     print(f"  Time: {avg_time - 5.6:+.1f}s ({100*(avg_time - 5.6)/5.6:+.1f}%)")
-    print(f"  Entity Accuracy: {avg_entity_acc - 153.3:+.1f}% ({100*(avg_entity_acc - 153.3)/153.3:+.1f}%)")
-    print(f"  Relation Accuracy: {avg_relation_acc - 44.7:+.1f}% ({100*(avg_relation_acc - 44.7)/44.7:+.1f}%)")
+    print(
+        f"  Entity Accuracy: {avg_entity_acc - 153.3:+.1f}% ({100*(avg_entity_acc - 153.3)/153.3:+.1f}%)"
+    )
+    print(
+        f"  Relation Accuracy: {avg_relation_acc - 44.7:+.1f}% ({100*(avg_relation_acc - 44.7)/44.7:+.1f}%)"
+    )
     print()
 
     # Save results
     output_file = Path("nuextract_two_pass_enhanced_results.json")
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
     print(f"{'='*80}")

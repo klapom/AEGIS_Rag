@@ -53,7 +53,9 @@ async def main():
                 shutil.rmtree(lightrag_dir)
                 logger.info("lightrag_workdir_cleared", path=str(lightrag_dir))
             except PermissionError:
-                logger.warning("lightrag_workdir_locked", path=str(lightrag_dir), note="Will overwrite data")
+                logger.warning(
+                    "lightrag_workdir_locked", path=str(lightrag_dir), note="Will overwrite data"
+                )
 
         # Step 4: Load ONLY 10 documents
         logger.info("=== Step 4: Loading 10 documents ===")
@@ -83,6 +85,7 @@ async def main():
         embeddings = await pipeline.generate_embeddings(chunks)
 
         from qdrant_client.models import PointStruct
+
         points = [
             PointStruct(
                 id=chunk.chunk_id,
@@ -109,10 +112,12 @@ async def main():
         for doc in documents:
             content = doc.get_content()
             if content and content.strip():
-                lightrag_docs.append({
-                    "text": content,
-                    "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
-                })
+                lightrag_docs.append(
+                    {
+                        "text": content,
+                        "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
+                    }
+                )
 
         logger.info("documents_converted_for_lightrag", count=len(lightrag_docs))
 

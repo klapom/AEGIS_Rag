@@ -118,6 +118,7 @@ async def extract_entities(model: str, client: AsyncClient) -> dict[str, Any]:
         except json.JSONDecodeError:
             # Try to extract JSON from markdown code fence
             import re
+
             json_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", content, re.DOTALL)
             if json_match:
                 try:
@@ -195,6 +196,7 @@ async def extract_relations(model: str, client: AsyncClient) -> dict[str, Any]:
             relations = json.loads(content)
         except json.JSONDecodeError:
             import re
+
             json_match = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", content, re.DOTALL)
             if json_match:
                 try:
@@ -254,7 +256,7 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
     entity_result = await extract_entities(model, client)
     print(f"  [OK] Entities: {entity_result['entity_count']}")
     print(f"  [OK] Time: {entity_result['execution_time']:.2f}s")
-    if entity_result.get('parse_error'):
+    if entity_result.get("parse_error"):
         print(f"  [WARN] Parse Error: {entity_result['parse_error']}")
 
     # Relation extraction
@@ -262,11 +264,11 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
     relation_result = await extract_relations(model, client)
     print(f"  [OK] Relations: {relation_result['relation_count']}")
     print(f"  [OK] Time: {relation_result['execution_time']:.2f}s")
-    if relation_result.get('parse_error'):
+    if relation_result.get("parse_error"):
         print(f"  [WARN] Parse Error: {relation_result['parse_error']}")
 
-    total_time = entity_result['execution_time'] + relation_result['execution_time']
-    success = entity_result['success'] and relation_result['success']
+    total_time = entity_result["execution_time"] + relation_result["execution_time"]
+    success = entity_result["success"] and relation_result["success"]
 
     return {
         "model": model,
@@ -279,14 +281,16 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
 
 async def main():
     """Run benchmark on all three models."""
-    print("""
+    print(
+        """
 ================================================================================
            LightRAG Model Benchmark - Entity & Relation Extraction
 ================================================================================
 
 Sprint 13 TD-31: Comparing 4 models on LightRAG extraction tasks
 Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
-    """)
+    """
+    )
 
     # Model list
     models = [
@@ -307,11 +311,13 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
             results.append(result)
         except Exception as e:
             print(f"\n[ERROR] Error benchmarking {model}: {e}")
-            results.append({
-                "model": model,
-                "error": str(e),
-                "success": False,
-            })
+            results.append(
+                {
+                    "model": model,
+                    "error": str(e),
+                    "success": False,
+                }
+            )
 
     # Print comparison table
     print(f"\n{'='*80}")
@@ -324,16 +330,22 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
 
     # Results
     for result in results:
-        if result.get('success'):
-            model_name = result['model'].split('/')[-1] if '/' in result['model'] else result['model']
-            entity_count = result['entity_extraction']['entity_count']
-            relation_count = result['relation_extraction']['relation_count']
-            total_time = result['total_execution_time']
+        if result.get("success"):
+            model_name = (
+                result["model"].split("/")[-1] if "/" in result["model"] else result["model"]
+            )
+            entity_count = result["entity_extraction"]["entity_count"]
+            relation_count = result["relation_extraction"]["relation_count"]
+            total_time = result["total_execution_time"]
             status = "[OK]"
 
-            print(f"{model_name:<40} {entity_count:<12} {relation_count:<12} {total_time:<14.2f}s {status}")
+            print(
+                f"{model_name:<40} {entity_count:<12} {relation_count:<12} {total_time:<14.2f}s {status}"
+            )
         else:
-            model_name = result['model'].split('/')[-1] if '/' in result['model'] else result['model']
+            model_name = (
+                result["model"].split("/")[-1] if "/" in result["model"] else result["model"]
+            )
             print(f"{model_name:<40} {'N/A':<12} {'N/A':<12} {'N/A':<15} [ERROR]")
 
     # Quality analysis
@@ -342,12 +354,14 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
     print(f"{'='*80}\n")
 
     for result in results:
-        if result.get('success'):
-            model_name = result['model'].split('/')[-1] if '/' in result['model'] else result['model']
+        if result.get("success"):
+            model_name = (
+                result["model"].split("/")[-1] if "/" in result["model"] else result["model"]
+            )
             print(f"\n{model_name}:")
 
             # Entity quality
-            entities = result['entity_extraction'].get('entities', [])
+            entities = result["entity_extraction"].get("entities", [])
             if entities:
                 print(f"  Entities ({len(entities)}):")
                 for entity in entities[:3]:  # Show first 3
@@ -356,13 +370,13 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
                     print(f"    ... and {len(entities) - 3} more")
 
             # Relation quality
-            relations = result['relation_extraction'].get('relations', [])
+            relations = result["relation_extraction"].get("relations", [])
             if relations:
                 print(f"  Relations ({len(relations)}):")
                 for relation in relations[:3]:  # Show first 3
-                    source = relation.get('source', 'N/A')
-                    target = relation.get('target', 'N/A')
-                    rel_type = relation.get('relation_type', 'N/A')
+                    source = relation.get("source", "N/A")
+                    target = relation.get("target", "N/A")
+                    rel_type = relation.get("relation_type", "N/A")
                     print(f"    - {source} --[{rel_type}]--> {target}")
                 if len(relations) > 3:
                     print(f"    ... and {len(relations) - 3} more")
@@ -372,26 +386,27 @@ Models: Gemma-3-4b-it, Qwen3-4B (HF GGUF), Qwen3-4B (standard), Llama3.2:3b
     print("RECOMMENDATION")
     print(f"{'='*80}\n")
 
-    successful_results = [r for r in results if r.get('success')]
+    successful_results = [r for r in results if r.get("success")]
     if successful_results:
         # Find best by total entities + relations
         best = max(
             successful_results,
             key=lambda r: (
-                r['entity_extraction']['entity_count'] +
-                r['relation_extraction']['relation_count']
-            )
+                r["entity_extraction"]["entity_count"] + r["relation_extraction"]["relation_count"]
+            ),
         )
 
-        best_name = best['model'].split('/')[-1] if '/' in best['model'] else best['model']
+        best_name = best["model"].split("/")[-1] if "/" in best["model"] else best["model"]
         print(f"Best Quality: {best_name}")
         print(f"  - Entities: {best['entity_extraction']['entity_count']}")
         print(f"  - Relations: {best['relation_extraction']['relation_count']}")
         print(f"  - Time: {best['total_execution_time']:.2f}s")
 
         # Find fastest
-        fastest = min(successful_results, key=lambda r: r['total_execution_time'])
-        fastest_name = fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']
+        fastest = min(successful_results, key=lambda r: r["total_execution_time"])
+        fastest_name = (
+            fastest["model"].split("/")[-1] if "/" in fastest["model"] else fastest["model"]
+        )
         print(f"\nFastest: {fastest_name}")
         print(f"  - Time: {fastest['total_execution_time']:.2f}s")
         print(f"  - Entities: {fastest['entity_extraction']['entity_count']}")

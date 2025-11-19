@@ -27,6 +27,7 @@ from src.components.llm_proxy.models import (
 
 logger = structlog.get_logger(__name__)
 
+
 class MetricResult(BaseModel):
     """Result from a single metric evaluation.
 
@@ -37,6 +38,7 @@ class MetricResult(BaseModel):
 
     score: float = Field(..., ge=0.0, le=1.0, description="Metric score")
     details: dict[str, Any] = Field(default_factory=dict, description="Evaluation details")
+
 
 class EvaluationResults(BaseModel):
     """Combined evaluation results for all metrics.
@@ -52,6 +54,7 @@ class EvaluationResults(BaseModel):
     context_recall: float = Field(..., ge=0.0, le=1.0)
     faithfulness: float = Field(..., ge=0.0, le=1.0)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class CustomMetricsEvaluator:
     """Custom RAG evaluation metrics using Ollama LLM.
@@ -433,6 +436,7 @@ Answer ONLY with "YES" or "NO"."""
         )
 
         return results
+
 
 # Export public API
 __all__ = [

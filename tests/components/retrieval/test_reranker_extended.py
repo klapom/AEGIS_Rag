@@ -202,9 +202,7 @@ async def test_rerank_top_k_limit():
         mock_model.predict.return_value = np.array([3.0, 1.0, 2.0, 4.0, 0.5])
         reranker._model = mock_model
 
-        documents = [
-            {"id": f"doc{i}", "text": f"Text {i}", "score": 0.5} for i in range(5)
-        ]
+        documents = [{"id": f"doc{i}", "text": f"Text {i}", "score": 0.5} for i in range(5)]
 
         results = await reranker.rerank(query="test", documents=documents, top_k=2)
 
@@ -238,9 +236,7 @@ async def test_rerank_score_threshold():
         # 2.0 -> 0.88
         # -2.0 -> 0.12
         # 0.0 -> 0.5
-        results = await reranker.rerank(
-            query="test", documents=documents, score_threshold=0.6
-        )
+        results = await reranker.rerank(query="test", documents=documents, score_threshold=0.6)
 
         # Only doc1 (0.88) should pass threshold
         assert len(results) == 1

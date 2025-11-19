@@ -47,9 +47,7 @@ def test_mcp_server_creation_valid():
 @pytest.mark.unit
 def test_mcp_server_defaults():
     """Test MCPServer uses correct defaults."""
-    server = MCPServer(
-        name="test", transport=TransportType.HTTP, endpoint="http://localhost:3000"
-    )
+    server = MCPServer(name="test", transport=TransportType.HTTP, endpoint="http://localhost:3000")
 
     assert server.description == ""
     assert server.timeout == 30
@@ -75,9 +73,7 @@ def test_mcp_server_validates_empty_endpoint():
 def test_mcp_server_validates_negative_timeout():
     """Test MCPServer raises ValueError for negative timeout."""
     with pytest.raises(ValueError, match="Timeout must be positive"):
-        MCPServer(
-            name="test", transport=TransportType.STDIO, endpoint="/bin/test", timeout=-1
-        )
+        MCPServer(name="test", transport=TransportType.STDIO, endpoint="/bin/test", timeout=-1)
 
 
 @pytest.mark.unit
@@ -128,9 +124,7 @@ def test_mcp_tool_creation_valid():
 @pytest.mark.unit
 def test_mcp_tool_defaults():
     """Test MCPTool uses correct defaults."""
-    tool = MCPTool(
-        name="test_tool", description="Test", parameters={}, server="test-server"
-    )
+    tool = MCPTool(name="test_tool", description="Test", parameters={}, server="test-server")
 
     assert tool.version == "1.0.0"
     assert tool.metadata == {}
@@ -158,9 +152,7 @@ def test_mcp_tool_validates_empty_server():
 @pytest.mark.unit
 def test_mcp_tool_call_creation_valid():
     """Test MCPToolCall creation with valid data."""
-    call = MCPToolCall(
-        tool_name="read_file", arguments={"path": "/etc/hosts"}, timeout=120
-    )
+    call = MCPToolCall(tool_name="read_file", arguments={"path": "/etc/hosts"}, timeout=120)
 
     assert call.tool_name == "read_file"
     assert call.arguments["path"] == "/etc/hosts"
@@ -245,9 +237,7 @@ def test_mcp_tool_result_validates_failure_without_error():
 @pytest.mark.unit
 def test_mcp_server_connection_creation():
     """Test MCPServerConnection creation."""
-    server = MCPServer(
-        name="test", transport=TransportType.STDIO, endpoint="/bin/test"
-    )
+    server = MCPServer(name="test", transport=TransportType.STDIO, endpoint="/bin/test")
     connection = MCPServerConnection(
         server=server, status=ServerStatus.CONNECTED, connection_time="2025-10-27T10:00:00"
     )
@@ -261,9 +251,7 @@ def test_mcp_server_connection_creation():
 @pytest.mark.unit
 def test_mcp_server_connection_with_tools():
     """Test MCPServerConnection stores discovered tools."""
-    server = MCPServer(
-        name="test", transport=TransportType.STDIO, endpoint="/bin/test"
-    )
+    server = MCPServer(name="test", transport=TransportType.STDIO, endpoint="/bin/test")
     tool1 = MCPTool(name="tool1", description="Test", parameters={}, server="test")
     tool2 = MCPTool(name="tool2", description="Test", parameters={}, server="test")
 

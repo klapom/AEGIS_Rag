@@ -19,6 +19,7 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
+
 class TemporalMemoryQuery:
     """Bi-temporal query support for episodic memory.
 
@@ -370,8 +371,10 @@ class TemporalMemoryQuery:
             )
             raise MemoryError(operation="Relationship query failed", reason=str(e)) from e
 
+
 # Global instance (singleton pattern)
 _temporal_query: TemporalMemoryQuery | None = None
+
 
 def get_temporal_query() -> TemporalMemoryQuery:
     """Get global temporal query instance (singleton).

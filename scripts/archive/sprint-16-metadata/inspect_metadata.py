@@ -28,10 +28,7 @@ def main():
         return 1
 
     print("[1/2] Loading document...")
-    reader = SimpleDirectoryReader(
-        input_files=[str(pptx_file.resolve())],
-        recursive=False
-    )
+    reader = SimpleDirectoryReader(input_files=[str(pptx_file.resolve())], recursive=False)
     documents = reader.load_data()
     print(f"  [OK] Loaded {len(documents)} document parts")
     print()

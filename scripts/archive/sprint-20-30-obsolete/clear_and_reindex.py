@@ -14,6 +14,7 @@ Clear Neo4j manually and reindex Performance Tuning.pptx with the fix.
 
 ⚠️ WARNING: This script will be replaced in Sprint 21
 """
+
 import asyncio
 import shutil
 import sys
@@ -34,9 +35,9 @@ logger = structlog.get_logger(__name__)
 
 
 async def main():
-    print("="*80)
+    print("=" * 80)
     print("CLEAR NEO4J AND REINDEX")
-    print("="*80)
+    print("=" * 80)
 
     test_file = (
         project_root
@@ -75,10 +76,12 @@ async def main():
         for doc in documents:
             content = doc.get_content()
             if content and content.strip():
-                lightrag_docs.append({
-                    "text": content,
-                    "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
-                })
+                lightrag_docs.append(
+                    {
+                        "text": content,
+                        "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
+                    }
+                )
 
         print(f"   Prepared {len(lightrag_docs)} documents")
 
@@ -93,6 +96,7 @@ async def main():
     except Exception as e:
         print(f"\n[ERROR] {e}")
         import traceback
+
         traceback.print_exc()
 
 

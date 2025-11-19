@@ -128,10 +128,12 @@ async def index_to_neo4j(input_dir: str):
         for doc in documents:
             content = doc.get_content()
             if content and content.strip():
-                lightrag_docs.append({
-                    "text": content,
-                    "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
-                })
+                lightrag_docs.append(
+                    {
+                        "text": content,
+                        "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
+                    }
+                )
 
         logger.info(
             "documents_converted_for_lightrag",

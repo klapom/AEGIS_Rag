@@ -31,6 +31,7 @@ DEFAULT_POOL_SIZE = 10
 DEFAULT_CONNECTION_TIMEOUT = 30
 DEFAULT_MAX_RETRY_ATTEMPTS = 3
 
+
 class Neo4jClient:
     """Production-ready Neo4j client with connection pooling and error handling."""
 
@@ -294,8 +295,10 @@ class Neo4jClient:
         """
         await self.close()
 
+
 # Global client instance (singleton pattern)
 _neo4j_client: Neo4jClient | None = None
+
 
 def get_neo4j_client() -> Neo4jClient:
     """Get global Neo4j client instance (singleton).
@@ -307,6 +310,7 @@ def get_neo4j_client() -> Neo4jClient:
     if _neo4j_client is None:
         _neo4j_client = Neo4jClient()
     return _neo4j_client
+
 
 @asynccontextmanager
 async def get_neo4j_client_async() -> None:

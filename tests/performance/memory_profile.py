@@ -247,9 +247,7 @@ class MemoryProfiler:
                 f"{self.profile_duration + 10}s",
             ]
 
-            process = subprocess.Popen(
-                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return process
         except Exception as e:
             print(f"WARNING: Could not start load generation: {e}")
@@ -274,7 +272,9 @@ class MemoryProfiler:
                 "--nonblocking",  # Non-blocking mode
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.profile_duration + 10)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=self.profile_duration + 10
+            )
 
             if result.returncode == 0:
                 print(f"  SUCCESS: Flame graph saved to {output_file}")

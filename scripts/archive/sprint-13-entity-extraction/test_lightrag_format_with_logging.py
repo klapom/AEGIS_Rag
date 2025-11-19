@@ -23,6 +23,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # LIGHTRAG ORIGINAL PROMPT (from test_lightrag_prompts.py)
 # ============================================================================
 
+
 def create_lightrag_prompt(text: str, entity_types: list[str]) -> str:
     """Create the exact LightRAG prompt format."""
     return f"""
@@ -77,6 +78,7 @@ text: {text.strip()}
 output:
 """
 
+
 # ============================================================================
 # TEST CASES
 # ============================================================================
@@ -90,8 +92,8 @@ TEST_CASES = [
         "entity_types": ["person", "technology", "date", "event"],
         "expected": {
             "entities": ["Python", "Guido van Rossum", "1991"],
-            "relations": [("Python", "Guido van Rossum")]
-        }
+            "relations": [("Python", "Guido van Rossum")],
+        },
     },
     {
         "id": 2,
@@ -103,14 +105,23 @@ is located in Cupertino, California. Apple is known for products like the iPhone
 iPad, and Mac computers.""",
         "entity_types": ["organization", "person", "location", "product", "event", "date"],
         "expected": {
-            "entities": ["Apple Inc.", "Steve Jobs", "Steve Wozniak", "Ronald Wayne", "Cupertino", "iPhone", "iPad", "Mac"],
+            "entities": [
+                "Apple Inc.",
+                "Steve Jobs",
+                "Steve Wozniak",
+                "Ronald Wayne",
+                "Cupertino",
+                "iPhone",
+                "iPad",
+                "Mac",
+            ],
             "relations": [
                 ("Apple Inc.", "Steve Jobs"),
                 ("Apple Inc.", "Steve Wozniak"),
                 ("Apple Inc.", "Cupertino"),
-                ("Steve Jobs", "iPhone")
-            ]
-        }
+                ("Steve Jobs", "iPhone"),
+            ],
+        },
     },
     {
         "id": 3,
@@ -123,8 +134,18 @@ Both acquisitions were part of Microsoft's strategy to strengthen its cloud serv
 The Federal Trade Commission reviewed the LinkedIn acquisition but approved it without conditions.""",
         "entity_types": ["organization", "person", "location", "product", "event", "date", "money"],
         "expected": {
-            "entities": ["Microsoft", "LinkedIn", "GitHub", "Reid Hoffman", "Satya Nadella",
-                        "Jeff Weiner", "Sunnyvale", "Federal Trade Commission", "2016", "2018"],
+            "entities": [
+                "Microsoft",
+                "LinkedIn",
+                "GitHub",
+                "Reid Hoffman",
+                "Satya Nadella",
+                "Jeff Weiner",
+                "Sunnyvale",
+                "Federal Trade Commission",
+                "2016",
+                "2018",
+            ],
             "relations": [
                 ("Microsoft", "LinkedIn"),
                 ("Microsoft", "GitHub"),
@@ -132,15 +153,16 @@ The Federal Trade Commission reviewed the LinkedIn acquisition but approved it w
                 ("Microsoft", "Satya Nadella"),
                 ("LinkedIn", "Jeff Weiner"),
                 ("LinkedIn", "Sunnyvale"),
-                ("Federal Trade Commission", "LinkedIn")
-            ]
-        }
-    }
+                ("Federal Trade Commission", "LinkedIn"),
+            ],
+        },
+    },
 ]
 
 # ============================================================================
 # VALIDATION
 # ============================================================================
+
 
 def validate_response(response: str) -> dict:
     """Validate LightRAG format compliance."""
@@ -156,27 +178,28 @@ def validate_response(response: str) -> dict:
 
     # Parse entities
     import re
+
     entity_pattern = r'\("entity"<\|#\|>([^<]+)<\|#\|>([^<]+)<\|#\|>([^)]+)\)'
     entity_matches = re.findall(entity_pattern, response)
 
     for match in entity_matches:
-        entities.append({
-            "name": match[0].strip(),
-            "type": match[1].strip(),
-            "description": match[2].strip()
-        })
+        entities.append(
+            {"name": match[0].strip(), "type": match[1].strip(), "description": match[2].strip()}
+        )
 
     # Parse relationships
     relation_pattern = r'\("relationship"<\|#\|>([^<]+)<\|#\|>([^<]+)<\|#\|>([^<]+)<\|#\|>([^)]+)\)'
     relation_matches = re.findall(relation_pattern, response)
 
     for match in relation_matches:
-        relations.append({
-            "source": match[0].strip(),
-            "target": match[1].strip(),
-            "description": match[2].strip(),
-            "strength": match[3].strip()
-        })
+        relations.append(
+            {
+                "source": match[0].strip(),
+                "target": match[1].strip(),
+                "description": match[2].strip(),
+                "strength": match[3].strip(),
+            }
+        )
 
     # Format validation
     if not has_completion:
@@ -186,10 +209,10 @@ def validate_response(response: str) -> dict:
         errors.append("No entities found in expected format")
 
     # Check for wrong formats
-    if response.strip().startswith('[') or response.strip().startswith('{'):
+    if response.strip().startswith("[") or response.strip().startswith("{"):
         errors.append("Response in JSON format instead of LightRAG format")
 
-    if '```' in response:
+    if "```" in response:
         errors.append("Response contains markdown code blocks")
 
     return {
@@ -200,16 +223,18 @@ def validate_response(response: str) -> dict:
         "relation_count": len(relations),
         "has_completion": has_completion,
         "has_delimiter": has_delimiter,
-        "errors": errors
+        "errors": errors,
     }
+
 
 # ============================================================================
 # LOGGING
 # ============================================================================
 
+
 def log_test_execution(log_data: dict, log_file: Path):
     """Write detailed log entry."""
-    with open(log_file, 'a', encoding='utf-8') as f:
+    with open(log_file, "a", encoding="utf-8") as f:
         f.write("\n" + "=" * 100 + "\n")
         f.write(f"TEST EXECUTION LOG\n")
         f.write("=" * 100 + "\n\n")
@@ -217,7 +242,9 @@ def log_test_execution(log_data: dict, log_file: Path):
         f.write(f"Timestamp: {log_data['timestamp']}\n")
         f.write(f"Model: {log_data['model']}\n")
         f.write(f"Mode: {log_data['mode']}\n")
-        f.write(f"Test Case: {log_data['test_case']['name']} (Complexity: {log_data['test_case']['complexity']})\n")
+        f.write(
+            f"Test Case: {log_data['test_case']['name']} (Complexity: {log_data['test_case']['complexity']})\n"
+        )
         f.write(f"Start Time: {log_data['start_time']}\n")
         f.write(f"End Time: {log_data['end_time']}\n")
         f.write(f"Duration: {log_data['duration']:.2f}s\n\n")
@@ -225,52 +252,54 @@ def log_test_execution(log_data: dict, log_file: Path):
         f.write("-" * 100 + "\n")
         f.write("PROMPT SENT TO LLM:\n")
         f.write("-" * 100 + "\n")
-        f.write(log_data['prompt'])
+        f.write(log_data["prompt"])
         f.write("\n\n")
 
         f.write("-" * 100 + "\n")
         f.write("RESPONSE FROM LLM:\n")
         f.write("-" * 100 + "\n")
-        f.write(log_data['response'])
+        f.write(log_data["response"])
         f.write("\n\n")
 
         f.write("-" * 100 + "\n")
         f.write("VALIDATION RESULTS:\n")
         f.write("-" * 100 + "\n")
-        validation = log_data['validation']
+        validation = log_data["validation"]
         f.write(f"Valid Format: {validation['valid']}\n")
         f.write(f"Entities Found: {validation['entity_count']}\n")
         f.write(f"Relations Found: {validation['relation_count']}\n")
         f.write(f"Has Completion Marker: {validation['has_completion']}\n")
         f.write(f"Has Delimiter (##): {validation['has_delimiter']}\n")
 
-        if validation['errors']:
+        if validation["errors"]:
             f.write(f"\nErrors:\n")
-            for error in validation['errors']:
+            for error in validation["errors"]:
                 f.write(f"  - {error}\n")
 
-        if validation['entities']:
+        if validation["entities"]:
             f.write(f"\nExtracted Entities:\n")
-            for entity in validation['entities'][:5]:  # First 5
+            for entity in validation["entities"][:5]:  # First 5
                 f.write(f"  - {entity['name']} ({entity['type']})\n")
 
-        if validation['relations']:
+        if validation["relations"]:
             f.write(f"\nExtracted Relations:\n")
-            for relation in validation['relations'][:5]:  # First 5
+            for relation in validation["relations"][:5]:  # First 5
                 f.write(f"  - {relation['source']} -> {relation['target']}\n")
 
         f.write("\n" + "=" * 100 + "\n\n")
 
+
 # ============================================================================
 # TEST EXECUTION
 # ============================================================================
+
 
 def test_model(model: str, test_case: dict, client: Client, use_think_false: bool = False) -> dict:
     """Test a single model with a test case."""
     mode = "think=False" if use_think_false else "default"
 
     # Create prompt
-    prompt = create_lightrag_prompt(test_case['text'], test_case['entity_types'])
+    prompt = create_lightrag_prompt(test_case["text"], test_case["entity_types"])
 
     # Record start time
     start_time = datetime.now()
@@ -282,11 +311,7 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
         kwargs = {
             "model": model,
             "prompt": prompt,
-            "options": {
-                "temperature": 0.0,
-                "num_predict": 2000,
-                "num_ctx": 32768
-            }
+            "options": {"temperature": 0.0, "num_predict": 2000, "num_ctx": 32768},
         }
 
         if use_think_false:
@@ -317,11 +342,14 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "start_time": start_timestamp,
             "end_time": end_timestamp,
             "duration": duration,
-            "validation": validation
+            "validation": validation,
         }
 
         # Write to log file
-        log_file = LOG_DIR / f"test_{test_case['id']}_{test_case['complexity']}_{''.join(c for c in model if c.isalnum())}.log"
+        log_file = (
+            LOG_DIR
+            / f"test_{test_case['id']}_{test_case['complexity']}_{''.join(c for c in model if c.isalnum())}.log"
+        )
         log_test_execution(log_data, log_file)
 
         return {
@@ -333,12 +361,12 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "start_time": start_timestamp,
             "end_time": end_timestamp,
             "duration": duration,
-            "valid_format": validation['valid'],
-            "entity_count": validation['entity_count'],
-            "relation_count": validation['relation_count'],
-            "errors": validation['errors'],
-            "success": validation['valid'],
-            "log_file": str(log_file)
+            "valid_format": validation["valid"],
+            "entity_count": validation["entity_count"],
+            "relation_count": validation["relation_count"],
+            "errors": validation["errors"],
+            "success": validation["valid"],
+            "log_file": str(log_file),
         }
 
     except Exception as e:
@@ -360,10 +388,17 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "start_time": start_timestamp,
             "end_time": end_timestamp,
             "duration": duration,
-            "validation": {"valid": False, "errors": [error_msg], "entity_count": 0, "relation_count": 0}
+            "validation": {
+                "valid": False,
+                "errors": [error_msg],
+                "entity_count": 0,
+                "relation_count": 0,
+            },
         }
 
-        log_file = LOG_DIR / f"test_{test_case['id']}_ERROR_{''.join(c for c in model if c.isalnum())}.log"
+        log_file = (
+            LOG_DIR / f"test_{test_case['id']}_ERROR_{''.join(c for c in model if c.isalnum())}.log"
+        )
         log_test_execution(log_data, log_file)
 
         return {
@@ -376,15 +411,18 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
             "error": error_msg,
             "supports_think": supports_think,
             "success": False,
-            "log_file": str(log_file)
+            "log_file": str(log_file),
         }
+
 
 # ============================================================================
 # MAIN
 # ============================================================================
 
+
 def main():
-    print("""
+    print(
+        """
 ================================================================================
     LightRAG Format Test with Detailed Logging
 ================================================================================
@@ -396,7 +434,10 @@ Testing models with LightRAG's original format (from test_lightrag_prompts.py)
 - Format: ("relationship"<|#|>source<|#|>target<|#|>description<|#|>strength)
 
 Logs will be saved to: {LOG_DIR}
-    """.format(LOG_DIR=LOG_DIR))
+    """.format(
+            LOG_DIR=LOG_DIR
+        )
+    )
 
     client = Client()
 
@@ -405,13 +446,13 @@ Logs will be saved to: {LOG_DIR}
         "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",
         "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
         "llama3.2:3b",
-        "qwen3:4b"
+        "qwen3:4b",
     ]
 
     results = []
 
     for model in models:
-        model_short = model.split('/')[-1] if '/' in model else model
+        model_short = model.split("/")[-1] if "/" in model else model
 
         print(f"\n{'='*80}")
         print(f"MODEL: {model_short}")
@@ -425,11 +466,13 @@ Logs will be saved to: {LOG_DIR}
             result = test_model(model, test_case, client, use_think_false=False)
             results.append(result)
 
-            status = "OK" if result['success'] else "FAIL"
-            if 'error' in result:
+            status = "OK" if result["success"] else "FAIL"
+            if "error" in result:
                 print(f"ERROR: {result['error'][:50]}")
             else:
-                print(f"{result['entity_count']}E/{result['relation_count']}R in {result['duration']:.1f}s [{status}]")
+                print(
+                    f"{result['entity_count']}E/{result['relation_count']}R in {result['duration']:.1f}s [{status}]"
+                )
                 print(f"      Log: {result['log_file']}")
 
             # Test think=False
@@ -439,11 +482,13 @@ Logs will be saved to: {LOG_DIR}
             result = test_model(model, test_case, client, use_think_false=True)
             results.append(result)
 
-            status = "OK" if result['success'] else "FAIL"
-            if 'error' in result:
+            status = "OK" if result["success"] else "FAIL"
+            if "error" in result:
                 print(f"ERROR: {result['error'][:50]}")
             else:
-                print(f"{result['entity_count']}E/{result['relation_count']}R in {result['duration']:.1f}s [{status}]")
+                print(
+                    f"{result['entity_count']}E/{result['relation_count']}R in {result['duration']:.1f}s [{status}]"
+                )
                 print(f"      Log: {result['log_file']}")
 
     # Summary
@@ -451,8 +496,8 @@ Logs will be saved to: {LOG_DIR}
     print("SUMMARY")
     print(f"{'='*80}\n")
 
-    successful = [r for r in results if r.get('success')]
-    failed = [r for r in results if not r.get('success')]
+    successful = [r for r in results if r.get("success")]
+    failed = [r for r in results if not r.get("success")]
 
     print(f"Total Tests: {len(results)}")
     print(f"Successful: {len(successful)}")
@@ -460,7 +505,7 @@ Logs will be saved to: {LOG_DIR}
 
     if successful:
         print(f"\nBest Performance:")
-        best = max(successful, key=lambda r: r['entity_count'] + r['relation_count'])
+        best = max(successful, key=lambda r: r["entity_count"] + r["relation_count"])
         print(f"  Model: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}")
         print(f"  Test: {best['test_name']}")
         print(f"  Entities: {best['entity_count']}, Relations: {best['relation_count']}")
@@ -468,11 +513,12 @@ Logs will be saved to: {LOG_DIR}
 
     # Save summary
     summary_file = LOG_DIR / "summary.json"
-    with open(summary_file, 'w') as f:
+    with open(summary_file, "w") as f:
         json.dump(results, f, indent=2)
 
     print(f"\n[OK] Summary saved to: {summary_file}")
     print(f"[OK] Detailed logs in: {LOG_DIR}")
+
 
 if __name__ == "__main__":
     main()
