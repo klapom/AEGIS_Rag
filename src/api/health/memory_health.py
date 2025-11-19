@@ -7,7 +7,7 @@ This module provides health check endpoints for the 3-layer memory architecture:
 """
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from fastapi import APIRouter, status
@@ -29,7 +29,7 @@ MAX_NODES = 100_000  # Graphiti: 100K nodes = 100% capacity
     summary="Overall memory system health",
     description="Check health of all 3 memory layers",
 )
-async def memory_health_check() -> Dict[str, Any]:
+async def memory_health_check() -> dict[str, Any]:
     """Overall memory system health check.
 
     Checks all 3 layers:
@@ -108,7 +108,7 @@ async def memory_health_check() -> Dict[str, Any]:
     summary="Redis memory health",
     description="Health check for Redis working memory (Layer 1)",
 )
-async def redis_health() -> Dict[str, Any]:
+async def redis_health() -> dict[str, Any]:
     """Redis-specific health check.
 
     Checks:
@@ -128,7 +128,7 @@ async def redis_health() -> Dict[str, Any]:
     summary="Qdrant memory health",
     description="Health check for Qdrant episodic memory (Layer 2)",
 )
-async def qdrant_health() -> Dict[str, Any]:
+async def qdrant_health() -> dict[str, Any]:
     """Qdrant-specific health check.
 
     Checks:
@@ -148,7 +148,7 @@ async def qdrant_health() -> Dict[str, Any]:
     summary="Graphiti memory health",
     description="Health check for Graphiti long-term memory (Layer 3)",
 )
-async def graphiti_health() -> Dict[str, Any]:
+async def graphiti_health() -> dict[str, Any]:
     """Graphiti-specific health check.
 
     Checks:
@@ -168,7 +168,7 @@ async def graphiti_health() -> Dict[str, Any]:
     summary="Memory metrics summary",
     description="Aggregate metrics across all memory layers",
 )
-async def memory_metrics() -> Dict[str, Any]:
+async def memory_metrics() -> dict[str, Any]:
     """Get aggregated memory metrics from all layers.
 
     Returns:
@@ -198,7 +198,7 @@ async def memory_metrics() -> Dict[str, Any]:
 # ============= Internal Health Check Functions =============
 
 
-async def check_redis_health() -> Dict[str, Any]:
+async def check_redis_health() -> dict[str, Any]:
     """Internal function to check Redis health.
 
     Returns:
@@ -243,7 +243,7 @@ async def check_redis_health() -> Dict[str, Any]:
         }
 
 
-async def check_qdrant_health() -> Dict[str, Any]:
+async def check_qdrant_health() -> dict[str, Any]:
     """Internal function to check Qdrant health.
 
     Sprint 27 Feature 27.1: Implement real Qdrant health checks.
@@ -305,7 +305,7 @@ async def check_qdrant_health() -> Dict[str, Any]:
         }
 
 
-async def check_graphiti_health() -> Dict[str, Any]:
+async def check_graphiti_health() -> dict[str, Any]:
     """Internal function to check Graphiti health.
 
     Sprint 27 Feature 27.1: Implement real Graphiti health checks via Neo4j.

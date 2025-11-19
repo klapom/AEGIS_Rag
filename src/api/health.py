@@ -1,7 +1,7 @@
 """Health check endpoints."""
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, status
@@ -169,7 +169,7 @@ async def liveness() -> dict[str, str]:
     summary="Readiness probe",
     description="Readiness check for Kubernetes",
 )
-async def readiness() -> Dict[str, Any]:
+async def readiness() -> dict[str, Any]:
     """
     Readiness probe for Kubernetes.
 
