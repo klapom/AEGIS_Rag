@@ -61,7 +61,7 @@ See Also:
 """
 
 import asyncio
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -75,7 +75,6 @@ from src.core.exceptions import VectorSearchError
 from src.utils.fusion import analyze_ranking_diversity, reciprocal_rank_fusion
 
 logger = structlog.get_logger(__name__)
-
 
 class HybridSearch:
     """Hybrid search combining vector and keyword retrieval."""
@@ -137,7 +136,7 @@ class HybridSearch:
         top_k: int = 20,
         score_threshold: float | None = None,
         filters: MetadataFilters | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform vector-based semantic search.
 
         Args:
@@ -147,7 +146,7 @@ class HybridSearch:
             filters: Metadata filters for targeted search
 
         Returns:
-            List of results with text, score, and metadata
+            list of results with text, score, and metadata
         """
         try:
             # Generate query embedding
@@ -205,7 +204,7 @@ class HybridSearch:
         self,
         query: str,
         top_k: int = 20,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Perform BM25 keyword search.
 
         Args:
@@ -213,7 +212,7 @@ class HybridSearch:
             top_k: Number of results (default: 20)
 
         Returns:
-            List of results with text, score, and metadata
+            list of results with text, score, and metadata
         """
         try:
             results = self.bm25_search.search(query=query, top_k=top_k)
@@ -256,7 +255,7 @@ class HybridSearch:
         use_reranking: bool = True,
         rerank_top_k: int | None = None,
         filters: MetadataFilters | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
 
         Args:
@@ -401,7 +400,7 @@ class HybridSearch:
             logger.error("Hybrid search failed", error=str(e))
             raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
 
-    async def prepare_bm25_index(self) -> Dict[str, Any]:
+    async def prepare_bm25_index(self) -> dict[str, Any]:
         """Prepare BM25 index from Qdrant collection.
 
         This loads all documents from Qdrant and fits the BM25 model.

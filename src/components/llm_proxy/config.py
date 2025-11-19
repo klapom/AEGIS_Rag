@@ -11,7 +11,7 @@ from YAML files and environment variables.
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 import yaml
@@ -23,7 +23,6 @@ logger = structlog.get_logger(__name__)
 # Load environment variables from .env file
 load_dotenv()
 
-
 class LLMProxyConfig(BaseModel):
     """
     Configuration for AegisLLMProxy.
@@ -32,16 +31,16 @@ class LLMProxyConfig(BaseModel):
     and environment variables.
     """
 
-    providers: dict[str, Dict[str, Any]] = Field(
+    providers: dict[str, dict[str, Any]] = Field(
         ...,
         description="Provider configuration (local_ollama, ollama_cloud, openai)",
     )
-    budgets: Dict[str, Any] = Field(..., description="Budget limits and thresholds")
-    routing: Dict[str, Any] = Field(..., description="Routing configuration")
+    budgets: dict[str, Any] = Field(..., description="Budget limits and thresholds")
+    routing: dict[str, Any] = Field(..., description="Routing configuration")
     model_defaults: dict[str, dict[str, str]] = Field(
         ..., description="Default models per provider"
     )
-    fallback: Dict[str, Any] = Field(..., description="Fallback configuration")
+    fallback: dict[str, Any] = Field(..., description="Fallback configuration")
     monitoring: dict[str, bool] = Field(..., description="Monitoring flags")
 
     @classmethod
@@ -134,7 +133,7 @@ class LLMProxyConfig(BaseModel):
         pattern = r"\$\{([^}]+)\}"
         return re.sub(pattern, replace_env_var, config_str)
 
-    def get_provider_config(self, provider: str) -> Dict[str, Any]:
+    def get_provider_config(self, provider: str) -> dict[str, Any]:
         """
         Get configuration for specific provider.
 
@@ -218,10 +217,8 @@ class LLMProxyConfig(BaseModel):
 
         arbitrary_types_allowed = True
 
-
 # Convenience function for getting singleton config
 _config_instance: LLMProxyConfig | None = None
-
 
 def get_llm_proxy_config() -> LLMProxyConfig:
     """

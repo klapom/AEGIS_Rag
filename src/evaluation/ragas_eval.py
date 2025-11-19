@@ -16,7 +16,7 @@ import asyncio
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import structlog
 from pydantic import BaseModel, Field
@@ -31,14 +31,13 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
-
 class EvaluationDataset(BaseModel):
     """Single evaluation example.
 
     Attributes:
         question: User query
         ground_truth: Expected/reference answer
-        contexts: List of retrieved document texts
+        contexts: list of retrieved document texts
         answer: Generated answer (optional, can be generated during eval)
     """
 
@@ -46,8 +45,7 @@ class EvaluationDataset(BaseModel):
     ground_truth: str = Field(..., description="Expected/reference answer")
     contexts: list[str] = Field(..., description="Retrieved document contexts")
     answer: str = Field(default="", description="Generated answer (optional)")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 class EvaluationResult(BaseModel):
     """RAGAS evaluation result.
@@ -71,8 +69,7 @@ class EvaluationResult(BaseModel):
     timestamp: str = Field(
         default_factory=lambda: datetime.now(UTC).isoformat(), description="Evaluation timestamp"
     )
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 class RAGASEvaluator:
     """RAGAS evaluator for RAG system quality assessment.
@@ -103,7 +100,7 @@ class RAGASEvaluator:
         Args:
             llm_model: LLM model for evaluation (default: settings.ollama_model_query)
             llm_base_url: Ollama base URL (default: settings.ollama_base_url)
-            metrics: List of metrics to evaluate (default: all supported metrics)
+            metrics: list of metrics to evaluate (default: all supported metrics)
         """
         self.llm_model = llm_model or settings.ollama_model_query
         self.llm_base_url = llm_base_url or settings.ollama_base_url
@@ -146,7 +143,7 @@ class RAGASEvaluator:
         """Get RAGAS metric instances.
 
         Returns:
-            List of RAGAS metric objects
+            list of RAGAS metric objects
 
         Note:
             RAGAS 0.3.x uses classes instead of functions
@@ -174,7 +171,7 @@ class RAGASEvaluator:
             dataset_path: Path to JSONL dataset file
 
         Returns:
-            List of evaluation examples
+            list of evaluation examples
 
         Raises:
             FileNotFoundError: If dataset file not found
@@ -216,7 +213,7 @@ class RAGASEvaluator:
         """Evaluate retrieval quality using RAGAS metrics.
 
         Args:
-            dataset: List of evaluation examples
+            dataset: list of evaluation examples
             scenario: Scenario name (e.g., "vector-only", "hybrid-reranked")
 
         Returns:
@@ -332,7 +329,7 @@ class RAGASEvaluator:
         Uses custom implementation from src/evaluation/custom_metrics.py
 
         Args:
-            dataset: List of evaluation examples
+            dataset: list of evaluation examples
             scenario: Scenario name
 
         Returns:
@@ -429,7 +426,7 @@ class RAGASEvaluator:
 
         Args:
             dataset: Evaluation dataset
-            scenarios: List of scenario names to evaluate
+            scenarios: list of scenario names to evaluate
 
         Returns:
             Dictionary mapping scenario name to evaluation result

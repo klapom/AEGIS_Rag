@@ -3,10 +3,9 @@
 Sprint 17 Feature 17.4: Implicit User Profiling - Conversation Archiving Pipeline (Phase 1)
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel, Field
-
 
 class ArchivedConversation(BaseModel):
     """Archived conversation stored in Qdrant."""
@@ -22,13 +21,12 @@ class ArchivedConversation(BaseModel):
     archived_at: str = Field(..., description="Archiving timestamp (ISO 8601)")
     message_count: int = Field(..., description="Number of messages in conversation")
     full_text: str = Field(..., description="Concatenated conversation text for embedding")
-    messages: list[Dict[str, Any]] = Field(
+    messages: list[dict[str, Any]] = Field(
         default_factory=list, description="Full conversation messages"
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata (intents, sources, etc.)"
     )
-
 
 class ConversationSearchRequest(BaseModel):
     """Request model for semantic conversation search."""
@@ -48,7 +46,6 @@ class ConversationSearchRequest(BaseModel):
         default=None, description="Filter conversations created before this date (ISO 8601)"
     )
 
-
 class ConversationSearchResult(BaseModel):
     """Single conversation search result."""
 
@@ -61,8 +58,7 @@ class ConversationSearchResult(BaseModel):
     message_count: int = Field(..., description="Number of messages")
     relevance_score: float = Field(..., description="Semantic similarity score")
     snippet: str = Field(..., description="Relevant conversation snippet (first 300 chars)")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 class ConversationSearchResponse(BaseModel):
     """Response model for semantic conversation search."""
@@ -74,14 +70,12 @@ class ConversationSearchResponse(BaseModel):
     total_count: int = Field(..., description="Total number of results")
     search_timestamp: str = Field(..., description="Search execution timestamp")
 
-
 class ArchiveConversationRequest(BaseModel):
     """Request model for manual conversation archiving."""
 
     reason: str | None = Field(
         default=None, max_length=200, description="Optional reason for archiving"
     )
-
 
 class ArchiveConversationResponse(BaseModel):
     """Response model for conversation archiving."""
@@ -91,7 +85,6 @@ class ArchiveConversationResponse(BaseModel):
     message: str = Field(..., description="Status message")
     archived_at: str = Field(..., description="Archiving timestamp")
     qdrant_point_id: str = Field(..., description="Qdrant vector point ID")
-
 
 class ArchiveJobStatus(BaseModel):
     """Status of background archiving job."""

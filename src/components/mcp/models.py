@@ -6,15 +6,13 @@ Follows MCP Spec 2025-06-18.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict
-
+from typing import Any
 
 class TransportType(Enum):
     """Transport type for MCP server communication."""
 
     STDIO = "stdio"
     HTTP = "http"
-
 
 class ServerStatus(Enum):
     """Status of an MCP server connection."""
@@ -23,7 +21,6 @@ class ServerStatus(Enum):
     CONNECTING = "connecting"
     CONNECTED = "connected"
     ERROR = "error"
-
 
 @dataclass
 class MCPServer:
@@ -45,7 +42,7 @@ class MCPServer:
     description: str = ""
     timeout: int = 30
     retry_attempts: int = 3
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate server configuration."""
@@ -57,7 +54,6 @@ class MCPServer:
             raise ValueError("Timeout must be positive")
         if self.retry_attempts < 0:
             raise ValueError("Retry attempts cannot be negative")
-
 
 @dataclass
 class MCPTool:
@@ -74,10 +70,10 @@ class MCPTool:
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     server: str
     version: str = "1.0.0"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool definition."""
@@ -85,7 +81,6 @@ class MCPTool:
             raise ValueError("Tool name cannot be empty")
         if not self.server:
             raise ValueError("Tool server cannot be empty")
-
 
 @dataclass
 class MCPToolCall:
@@ -99,9 +94,9 @@ class MCPToolCall:
     """
 
     tool_name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     timeout: int = 60
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool call."""
@@ -109,7 +104,6 @@ class MCPToolCall:
             raise ValueError("Tool name cannot be empty")
         if self.timeout <= 0:
             raise ValueError("Timeout must be positive")
-
 
 @dataclass
 class MCPToolResult:
@@ -129,7 +123,7 @@ class MCPToolResult:
     result: Any | None = None
     error: str | None = None
     execution_time: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate tool result."""
@@ -141,7 +135,6 @@ class MCPToolResult:
         if not self.success and not self.error:
             raise ValueError("Failed execution must have an error message")
 
-
 @dataclass
 class MCPServerConnection:
     """Active connection to an MCP server.
@@ -150,7 +143,7 @@ class MCPServerConnection:
         server: Server configuration
         status: Current connection status
         connection_time: When the connection was established
-        tools: List of discovered tools from this server
+        tools: list of discovered tools from this server
         error: Last error message (if any)
         metadata: Additional connection metadata
     """
@@ -160,8 +153,7 @@ class MCPServerConnection:
     connection_time: str | None = None
     tools: list[MCPTool] = field(default_factory=list)
     error: str | None = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class MCPClientStats:

@@ -17,7 +17,7 @@ Supports PDF, TXT, MD, DOCX, and other formats via LlamaIndex loaders.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -34,7 +34,6 @@ from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
-
 
 class DocumentIngestionPipeline:
     """Document ingestion pipeline with LlamaIndex and Qdrant."""
@@ -236,10 +235,10 @@ class DocumentIngestionPipeline:
         Sprint 24 Feature 24.15: Lazy imports for optional llama_index dependency.
 
         Args:
-            documents: List of LlamaIndex documents
+            documents: list of LlamaIndex documents
 
         Returns:
-            List of Chunk objects from ChunkingService
+            list of Chunk objects from ChunkingService
 
         Raises:
             VectorSearchError: If chunking fails
@@ -300,10 +299,10 @@ class DocumentIngestionPipeline:
         Sprint 16: Now works with Chunk objects from ChunkingService.
 
         Args:
-            chunks: List of Chunk objects
+            chunks: list of Chunk objects
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
 
         Raises:
             VectorSearchError: If embedding generation fails
@@ -332,7 +331,7 @@ class DocumentIngestionPipeline:
         input_dir: str | Path,
         batch_size: int = 100,
         required_exts: list[str] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Complete ingestion pipeline: load, chunk, embed, index.
 
         ============================================================================
@@ -365,7 +364,7 @@ class DocumentIngestionPipeline:
             "src.components.ingestion.langgraph_pipeline for replacements."
         )
 
-    async def get_collection_stats(self) -> Dict[str, Any] | None:
+    async def get_collection_stats(self) -> dict[str, Any] | None:
         """Get statistics about the indexed collection.
 
         Returns:
@@ -389,7 +388,6 @@ class DocumentIngestionPipeline:
             logger.error("Failed to get collection stats", error=str(e))
             return None
 
-
 # Convenience function for quick ingestion
 async def ingest_documents(
     input_dir: str | Path,
@@ -397,7 +395,7 @@ async def ingest_documents(
     chunk_size: int = 512,
     chunk_overlap: int = 128,
     use_adaptive_chunking: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Quick document ingestion helper function.
 
     Args:

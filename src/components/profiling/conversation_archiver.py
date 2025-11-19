@@ -10,7 +10,7 @@ This module provides:
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct
@@ -30,7 +30,6 @@ logger = structlog.get_logger(__name__)
 # Qdrant collection name for archived conversations
 ARCHIVED_CONVERSATIONS_COLLECTION = "archived_conversations"
 VECTOR_DIMENSION = 1024  # BGE-M3 embedding dimension
-
 
 class ConversationArchiver:
     """Archive conversations from Redis to Qdrant for semantic search.
@@ -295,7 +294,7 @@ class ConversationArchiver:
             logger.error("conversation_search_failed", query=request.query, error=str(e))
             raise VectorSearchError(query=request.query, reason=f"Failed to search archived conversations: {e}") from e
 
-    async def archive_old_conversations(self, max_conversations: int = 100) -> Dict[str, Any]:
+    async def archive_old_conversations(self, max_conversations: int = 100) -> dict[str, Any]:
         """Background job: Archive conversations older than configured threshold.
 
         Args:
@@ -395,11 +394,11 @@ class ConversationArchiver:
                 "error": str(e),
             }
 
-    def _concatenate_messages(self, messages: list[Dict[str, Any]]) -> str:
+    def _concatenate_messages(self, messages: list[dict[str, Any]]) -> str:
         """Concatenate all messages into a single text for embedding.
 
         Args:
-            messages: List of conversation messages
+            messages: list of conversation messages
 
         Returns:
             Concatenated text
@@ -412,11 +411,11 @@ class ConversationArchiver:
 
         return "\n".join(text_parts)
 
-    def _generate_summary(self, messages: list[Dict[str, Any]]) -> str:
+    def _generate_summary(self, messages: list[dict[str, Any]]) -> str:
         """Generate simple summary from conversation messages.
 
         Args:
-            messages: List of conversation messages
+            messages: list of conversation messages
 
         Returns:
             Summary string (first question + answer count)
@@ -434,14 +433,14 @@ class ConversationArchiver:
 
         return f"Conversation with {len(messages)} messages"
 
-    def _extract_topics(self, messages: list[Dict[str, Any]]) -> list[str]:
+    def _extract_topics(self, messages: list[dict[str, Any]]) -> list[str]:
         """Extract simple topics from conversation.
 
         Args:
-            messages: List of conversation messages
+            messages: list of conversation messages
 
         Returns:
-            List of topic keywords (basic extraction for Phase 1)
+            list of topic keywords (basic extraction for Phase 1)
         """
         # Phase 1 MVP: Simple keyword extraction
         # Phase 2 will use LLM for topic extraction
@@ -463,10 +462,8 @@ class ConversationArchiver:
         # Deduplicate and limit to 5 topics
         return list(set(topics))[:5]
 
-
 # Global instance (singleton)
 _conversation_archiver: ConversationArchiver | None = None
-
 
 def get_conversation_archiver() -> ConversationArchiver:
     """Get global ConversationArchiver instance (singleton).

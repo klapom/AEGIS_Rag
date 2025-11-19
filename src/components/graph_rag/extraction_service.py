@@ -9,7 +9,7 @@ Uses Ollama's llama3.2:8b model with structured prompts for reliable JSON output
 import json
 import re
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from tenacity import (
@@ -38,7 +38,6 @@ logger = structlog.get_logger(__name__)
 # Constants
 MAX_ENTITIES_PER_DOC = 50
 MAX_RELATIONSHIPS_PER_DOC = 100
-
 
 class ExtractionService:
     """Entity and relationship extraction service using AegisLLMProxy.
@@ -83,7 +82,7 @@ class ExtractionService:
 
     def _parse_json_response(
         self, response: str, data_type: str = "entity"
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Parse JSON from LLM response with multiple fallback strategies.
 
         Sprint 13 Enhancement: Robust parsing for llama3.2:3b output variations.
@@ -246,7 +245,7 @@ class ExtractionService:
             document_id: Source document ID (optional)
 
         Returns:
-            List of extracted entities as GraphEntity objects
+            list of extracted entities as GraphEntity objects
 
         Raises:
             Exception: If extraction fails after retries
@@ -358,7 +357,7 @@ class ExtractionService:
             document_id: Source document ID (optional)
 
         Returns:
-            List of extracted relationships as GraphRelationship objects
+            list of extracted relationships as GraphRelationship objects
 
         Raises:
             Exception: If extraction fails after retries
@@ -456,7 +455,7 @@ class ExtractionService:
         self,
         text: str,
         document_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract entities and relationships from a document.
 
         This is the main extraction method that combines entity and relationship extraction.
@@ -500,12 +499,12 @@ class ExtractionService:
 
     async def extract_batch(
         self,
-        documents: list[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        documents: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Batch extraction from multiple documents.
 
         Args:
-            documents: List of {"id": str, "text": str} dicts
+            documents: list of {"id": str, "text": str} dicts
 
         Returns:
             Dictionary with batch extraction results:
@@ -580,10 +579,8 @@ class ExtractionService:
             "results": results,
         }
 
-
 # Global instance (singleton pattern)
 _extraction_service: ExtractionService | None = None
-
 
 def get_extraction_service() -> ExtractionService:
     """Get global extraction service instance (singleton).

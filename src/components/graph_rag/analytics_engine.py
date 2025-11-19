@@ -13,7 +13,7 @@ Features:
 """
 
 import time
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import networkx as nx
 import structlog
@@ -27,7 +27,6 @@ logger = structlog.get_logger(__name__)
 
 # Type alias for centrality metrics
 CentralityMetric = Literal["degree", "betweenness", "closeness", "eigenvector"]
-
 
 class GraphAnalyticsEngine:
     """Graph analytics engine with GDS and NetworkX support."""
@@ -228,14 +227,14 @@ class GraphAnalyticsEngine:
             logger.warning("Eigenvector centrality failed to converge", entity_id=entity_id)
             return 0.0
 
-    async def calculate_pagerank(self, entity_ids: list[str] | None = None) -> list[Dict[str, Any]]:
+    async def calculate_pagerank(self, entity_ids: list[str] | None = None) -> list[dict[str, Any]]:
         """Calculate PageRank scores for entities.
 
         Args:
             entity_ids: Specific entity IDs to calculate (None = all entities)
 
         Returns:
-            List of {"entity_id": str, "score": float} dictionaries
+            list of {"entity_id": str, "score": float} dictionaries
 
         Raises:
             DatabaseConnectionError: If calculation fails
@@ -284,14 +283,14 @@ class GraphAnalyticsEngine:
             logger.error("Failed to calculate PageRank", error=str(e))
             raise DatabaseConnectionError("Neo4j", f"PageRank calculation failed: {e}") from e
 
-    async def find_influential_entities(self, top_k: int = 10) -> list[Dict[str, Any]]:
+    async def find_influential_entities(self, top_k: int = 10) -> list[dict[str, Any]]:
         """Find the most influential entities by PageRank.
 
         Args:
             top_k: Number of top entities to return
 
         Returns:
-            List of entities with PageRank scores
+            list of entities with PageRank scores
 
         Raises:
             DatabaseConnectionError: If calculation fails
@@ -304,7 +303,7 @@ class GraphAnalyticsEngine:
         logger.info("Found influential entities", count=len(top_entities))
         return top_entities
 
-    async def detect_knowledge_gaps(self) -> Dict[str, Any]:
+    async def detect_knowledge_gaps(self) -> dict[str, Any]:
         """Detect knowledge gaps in the graph (orphans, sparse areas).
 
         Returns:
@@ -501,10 +500,8 @@ class GraphAnalyticsEngine:
                 "Neo4j", f"NetworkX graph construction failed: {e}"
             ) from e
 
-
 # Singleton instance
 _analytics_engine: GraphAnalyticsEngine | None = None
-
 
 def get_analytics_engine() -> GraphAnalyticsEngine:
     """Get singleton GraphAnalyticsEngine instance.

@@ -10,7 +10,7 @@ Features:
 - Depth-based traversal
 """
 
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import structlog
 
@@ -22,7 +22,6 @@ logger = structlog.get_logger(__name__)
 
 # Type alias for visualization formats
 VisualizationFormat = Literal["d3", "cytoscape", "visjs"]
-
 
 class GraphVisualizationExporter:
     """Export graph data for frontend visualization."""
@@ -51,11 +50,11 @@ class GraphVisualizationExporter:
         depth: int = 1,
         max_nodes: int | None = None,
         format: VisualizationFormat = "d3",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Export a subgraph starting from given entity IDs.
 
         Args:
-            entity_ids: List of entity IDs to start from
+            entity_ids: list of entity IDs to start from
             depth: Traversal depth (1-5)
             max_nodes: Maximum nodes to return (defaults to config)
             format: Output format (d3, cytoscape, visjs)
@@ -110,7 +109,7 @@ class GraphVisualizationExporter:
 
     async def _fetch_subgraph(
         self, entity_ids: list[str], depth: int, max_nodes: int
-    ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Fetch subgraph from Neo4j using variable-length path traversal.
 
         Args:
@@ -177,8 +176,8 @@ class GraphVisualizationExporter:
             raise DatabaseConnectionError("Neo4j", f"Failed to fetch subgraph: {e}") from e
 
     def export_for_d3js(
-        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Export graph data in D3.js force-directed graph format.
 
         D3.js format:
@@ -188,8 +187,8 @@ class GraphVisualizationExporter:
         }
 
         Args:
-            nodes: List of node dictionaries
-            edges: List of edge dictionaries
+            nodes: list of node dictionaries
+            edges: list of edge dictionaries
 
         Returns:
             D3.js formatted graph data
@@ -231,8 +230,8 @@ class GraphVisualizationExporter:
         return {"nodes": d3_nodes, "links": d3_links}
 
     def export_for_cytoscape(
-        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Export graph data in Cytoscape.js format.
 
         Cytoscape.js format:
@@ -244,8 +243,8 @@ class GraphVisualizationExporter:
         }
 
         Args:
-            nodes: List of node dictionaries
-            edges: List of edge dictionaries
+            nodes: list of node dictionaries
+            edges: list of edge dictionaries
 
         Returns:
             Cytoscape.js formatted graph data
@@ -281,8 +280,8 @@ class GraphVisualizationExporter:
         return {"elements": {"nodes": cyto_nodes, "edges": cyto_edges}}
 
     def export_for_visjs(
-        self, nodes: list[Dict[str, Any]], edges: list[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, nodes: list[dict[str, Any]], edges: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Export graph data in vis.js network format.
 
         vis.js format:
@@ -292,8 +291,8 @@ class GraphVisualizationExporter:
         }
 
         Args:
-            nodes: List of node dictionaries
-            edges: List of edge dictionaries
+            nodes: list of node dictionaries
+            edges: list of edge dictionaries
 
         Returns:
             vis.js formatted graph data
@@ -325,10 +324,8 @@ class GraphVisualizationExporter:
 
         return {"nodes": vis_nodes, "edges": vis_edges}
 
-
 # Singleton instance
 _visualization_exporter: GraphVisualizationExporter | None = None
-
 
 def get_visualization_exporter() -> GraphVisualizationExporter:
     """Get singleton GraphVisualizationExporter instance.

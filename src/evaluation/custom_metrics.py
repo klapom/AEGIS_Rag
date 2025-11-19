@@ -12,7 +12,7 @@ Sprint 8: Alternative to RAGAS library for E2E testing
 """
 
 import asyncio
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field
@@ -27,7 +27,6 @@ from src.components.llm_proxy.models import (
 
 logger = structlog.get_logger(__name__)
 
-
 class MetricResult(BaseModel):
     """Result from a single metric evaluation.
 
@@ -37,8 +36,7 @@ class MetricResult(BaseModel):
     """
 
     score: float = Field(..., ge=0.0, le=1.0, description="Metric score")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Evaluation details")
-
+    details: dict[str, Any] = Field(default_factory=dict, description="Evaluation details")
 
 class EvaluationResults(BaseModel):
     """Combined evaluation results for all metrics.
@@ -53,8 +51,7 @@ class EvaluationResults(BaseModel):
     context_precision: float = Field(..., ge=0.0, le=1.0)
     context_recall: float = Field(..., ge=0.0, le=1.0)
     faithfulness: float = Field(..., ge=0.0, le=1.0)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 class CustomMetricsEvaluator:
     """Custom RAG evaluation metrics using Ollama LLM.
@@ -134,7 +131,7 @@ class CustomMetricsEvaluator:
 
         Args:
             query: User query
-            retrieved_contexts: List of retrieved document texts
+            retrieved_contexts: list of retrieved document texts
             ground_truth: Reference answer (for context)
 
         Returns:
@@ -207,7 +204,7 @@ Answer ONLY with "YES" or "NO"."""
 
         Args:
             ground_truth: Reference answer
-            retrieved_contexts: List of retrieved document texts
+            retrieved_contexts: list of retrieved document texts
 
         Returns:
             MetricResult with recall score (0.0 to 1.0)
@@ -227,7 +224,7 @@ Answer ONLY with "YES" or "NO"."""
 
 {ground_truth}
 
-List the statements (one per line):"""
+list the statements (one per line):"""
 
         statements_response = await self._generate(split_prompt)
         statements = [s.strip() for s in statements_response.split("\n") if s.strip()]
@@ -296,7 +293,7 @@ Answer ONLY with "YES" or "NO"."""
 
         Args:
             response: Generated answer
-            retrieved_contexts: List of retrieved document texts
+            retrieved_contexts: list of retrieved document texts
 
         Returns:
             MetricResult with faithfulness score (0.0 to 1.0)
@@ -316,7 +313,7 @@ Answer ONLY with "YES" or "NO"."""
 
 {response}
 
-List the claims (one per line):"""
+list the claims (one per line):"""
 
         claims_response = await self._generate(split_prompt)
         claims = [c.strip() for c in claims_response.split("\n") if c.strip()]
@@ -436,7 +433,6 @@ Answer ONLY with "YES" or "NO"."""
         )
 
         return results
-
 
 # Export public API
 __all__ = [

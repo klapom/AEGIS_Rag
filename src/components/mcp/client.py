@@ -9,7 +9,7 @@ import json
 import logging
 import time
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 
@@ -26,24 +26,20 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
-
 class MCPClientError(Exception):
     """Base exception for MCP client errors."""
 
     pass
-
 
 class MCPConnectionError(MCPClientError):
     """Exception raised when connection to MCP server fails."""
 
     pass
 
-
 class MCPToolError(MCPClientError):
     """Exception raised when tool execution fails."""
 
     pass
-
 
 class MCPClient:
     """MCP Client to connect to external MCP servers.
@@ -192,7 +188,7 @@ class MCPClient:
             server_name: Name of the connected server
 
         Returns:
-            List of discovered tools
+            list of discovered tools
 
         Raises:
             ValueError: If not connected to the server
@@ -230,7 +226,7 @@ class MCPClient:
             server_name: Name of the server
 
         Returns:
-            List of discovered tools
+            list of discovered tools
         """
         # Send MCP tools/list request
         request = {"jsonrpc": "2.0", "method": "tools/list", "id": 2}
@@ -263,7 +259,7 @@ class MCPClient:
             server_name: Name of the server
 
         Returns:
-            List of discovered tools
+            list of discovered tools
         """
         client = self._http_clients[server_name]
         response = await client.get("/tools")
@@ -287,13 +283,13 @@ class MCPClient:
         return tools
 
     def list_tools(self, server_name: str | None = None) -> list[MCPTool]:
-        """List all discovered tools (optionally filtered by server).
+        """list all discovered tools (optionally filtered by server).
 
         Args:
             server_name: Optional server name to filter by
 
         Returns:
-            List of tools
+            list of tools
         """
         if server_name:
             return self.tools.get(server_name, [])  # type: ignore[no-any-return]
@@ -501,7 +497,7 @@ class MCPClient:
         """
         return self.connections.copy()
 
-    async def _send_stdio_request(self, server_name: str, request: Dict[str, Any]) -> None:
+    async def _send_stdio_request(self, server_name: str, request: dict[str, Any]) -> None:
         """Send JSON-RPC request via stdio.
 
         Args:
@@ -513,7 +509,7 @@ class MCPClient:
         process.stdin.write(request_json.encode())
         await process.stdin.drain()
 
-    async def _read_stdio_response(self, server_name: str) -> Dict[str, Any]:
+    async def _read_stdio_response(self, server_name: str) -> dict[str, Any]:
         """Read JSON-RPC response via stdio.
 
         Args:

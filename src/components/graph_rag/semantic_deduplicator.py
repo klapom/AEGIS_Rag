@@ -21,7 +21,7 @@ Date: 2025-10-24, Updated: 2025-10-30
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -44,14 +44,12 @@ except ImportError:
         "pip install sentence-transformers scikit-learn"
     )
 
-
 # ============================================================================
 # Sprint 20 Feature 20.3: SINGLETON PATTERN
 # ============================================================================
 
 _sentence_transformer_instance: SentenceTransformer | None = None
 _singleton_lock = None  # Will be threading.Lock() if needed
-
 
 def get_sentence_transformer_singleton(
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
@@ -110,7 +108,6 @@ def get_sentence_transformer_singleton(
             )
 
         return _sentence_transformer_instance
-
 
 class SemanticDeduplicator:
     """Deduplicate entities using semantic similarity.
@@ -181,7 +178,7 @@ class SemanticDeduplicator:
             note="Using singleton SentenceTransformer (Sprint 20.3)",
         )
 
-    def deduplicate(self, entities: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Deduplicate entities using semantic similarity.
 
         Strategy:
@@ -192,7 +189,7 @@ class SemanticDeduplicator:
         5. Merge descriptions from duplicates
 
         Args:
-            entities: List of entity dicts with keys:
+            entities: list of entity dicts with keys:
                      - name (str): Entity name
                      - type (str): Entity type (PERSON, ORG, etc.)
                      - description (str): Entity description
@@ -253,8 +250,8 @@ class SemanticDeduplicator:
         return deduplicated
 
     def _deduplicate_group(
-        self, entities: list[Dict[str, Any]], entity_type: str
-    ) -> list[Dict[str, Any]]:
+        self, entities: list[dict[str, Any]], entity_type: str
+    ) -> list[dict[str, Any]]:
         """Deduplicate entities of the same type.
 
         Args:
@@ -314,7 +311,6 @@ class SemanticDeduplicator:
             deduplicated.append(representative)
 
         return deduplicated
-
 
 def create_deduplicator_from_config(config) -> SemanticDeduplicator:
     """Factory function to create deduplicator from app config.

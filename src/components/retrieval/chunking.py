@@ -41,7 +41,7 @@ INSTALLATION:
 import re
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -61,7 +61,6 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
-
 # ============================================================================
 # LAZY IMPORT CACHE (Sprint 24, Feature 24.15)
 # ============================================================================
@@ -71,10 +70,9 @@ logger = structlog.get_logger(__name__)
 # Performance:
 # - First call: ~50-100ms (import llama_index)
 # - Subsequent calls: <1ms (cache hit)
-_LLAMA_INDEX_CACHE: Dict[str, Any] = {}
+_LLAMA_INDEX_CACHE: dict[str, Any] = {}
 
-
-def _get_llama_index_classes() -> Dict[str, Any]:
+def _get_llama_index_classes() -> dict[str, Any]:
     """Lazy import all llama_index classes needed for chunking.
 
     This function implements the LAZY IMPORT pattern for optional dependencies.
@@ -97,7 +95,7 @@ def _get_llama_index_classes() -> Dict[str, Any]:
     telling the user how to install the optional dependency group.
 
     Returns:
-        Dict with keys: 'Document', 'SentenceSplitter', 'TextNode',
+        dict with keys: 'Document', 'SentenceSplitter', 'TextNode',
                        'NodeRelationship', 'RelatedNodeInfo'
 
     Raises:
@@ -180,7 +178,6 @@ def _get_llama_index_classes() -> Dict[str, Any]:
 
         raise ImportError(error_msg) from e
 
-
 class ChunkingStrategy(str, Enum):
     """Chunking strategy types for different document formats."""
 
@@ -188,7 +185,6 @@ class ChunkingStrategy(str, Enum):
     HEADING = "heading"  # Split on Markdown headers
     FUNCTION = "function"  # Split on function definitions (code)
     SENTENCE = "sentence"  # Default fallback (plain text)
-
 
 class AdaptiveChunker:
     """Adaptive chunking that selects strategy based on document type.
@@ -395,7 +391,7 @@ class AdaptiveChunker:
             chunk_size: Maximum token size per chunk
 
         Returns:
-            List of text nodes
+            list of text nodes
         """
         # Get cached llama_index classes (already imported in __init__)
         llama_classes = _get_llama_index_classes()
@@ -476,7 +472,7 @@ class AdaptiveChunker:
             chunk_size: Maximum token size per chunk
 
         Returns:
-            List of text nodes
+            list of text nodes
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
@@ -554,7 +550,7 @@ class AdaptiveChunker:
             chunk_size: Maximum token size per chunk
 
         Returns:
-            List of text nodes
+            list of text nodes
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
@@ -644,7 +640,7 @@ class AdaptiveChunker:
             chunk_size: Maximum token size per chunk
 
         Returns:
-            List of text nodes
+            list of text nodes
         """
         # Get cached llama_index classes
         llama_classes = _get_llama_index_classes()
@@ -677,7 +673,7 @@ class AdaptiveChunker:
             doc: Document to chunk
 
         Returns:
-            List of text nodes
+            list of text nodes
         """
         # Detect document type
         doc_type = self.detect_document_type(doc)
@@ -716,10 +712,10 @@ class AdaptiveChunker:
         """Chunk multiple documents using adaptive strategies.
 
         Args:
-            documents: List of documents to chunk
+            documents: list of documents to chunk
 
         Returns:
-            List of all text nodes from all documents
+            list of all text nodes from all documents
         """
         all_nodes = []
 
@@ -772,7 +768,7 @@ class AdaptiveChunker:
             },
         )
 
-    def get_chunker_info(self) -> Dict[str, Any]:
+    def get_chunker_info(self) -> dict[str, Any]:
         """Get information about chunker configuration.
 
         Returns:

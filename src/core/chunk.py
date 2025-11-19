@@ -8,10 +8,9 @@ across all ingestion pipelines (Qdrant, BM25, LightRAG).
 """
 
 import hashlib
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
-
 
 class ChunkStrategy(BaseModel):
     """Configuration for chunking strategy.
@@ -48,7 +47,6 @@ class ChunkStrategy(BaseModel):
         if v >= chunk_size:
             raise ValueError(f"Overlap ({v}) must be less than chunk_size ({chunk_size})")
         return v
-
 
 class Chunk(BaseModel):
     """Unified chunk representation.
@@ -99,7 +97,7 @@ class Chunk(BaseModel):
         ge=0,
         description="Ending character offset in document",
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata from source document",
     )
@@ -146,7 +144,7 @@ class Chunk(BaseModel):
             f"{hash_hex[:8]}-{hash_hex[8:12]}-{hash_hex[12:16]}-{hash_hex[16:20]}-{hash_hex[20:32]}"
         )
 
-    def to_qdrant_payload(self) -> Dict[str, Any]:
+    def to_qdrant_payload(self) -> dict[str, Any]:
         """Convert chunk to Qdrant point payload.
 
         Returns:
@@ -163,7 +161,7 @@ class Chunk(BaseModel):
             **self.metadata,
         }
 
-    def to_bm25_document(self) -> Dict[str, Any]:  # noqa: N802 (BM25 is an acronym)
+    def to_bm25_document(self) -> dict[str, Any]:  # noqa: N802 (BM25 is an acronym)
         """Convert chunk to BM25 document format.
 
         Returns:
@@ -178,7 +176,7 @@ class Chunk(BaseModel):
             **self.metadata,
         }
 
-    def to_lightrag_format(self) -> Dict[str, Any]:
+    def to_lightrag_format(self) -> dict[str, Any]:
         """Convert chunk to LightRAG format for Neo4j storage.
 
         Returns:

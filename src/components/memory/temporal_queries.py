@@ -9,7 +9,7 @@ This module provides bi-temporal querying capabilities for episodic memory:
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -18,7 +18,6 @@ from src.core.config import settings
 from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
-
 
 class TemporalMemoryQuery:
     """Bi-temporal query support for episodic memory.
@@ -54,7 +53,7 @@ class TemporalMemoryQuery:
         entity_name: str,
         valid_time: datetime,
         transaction_time: datetime | None = None,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Query entity state at a specific point in time.
 
         Args:
@@ -133,7 +132,7 @@ class TemporalMemoryQuery:
         valid_start: datetime,
         valid_end: datetime,
         transaction_time: datetime | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Query entity states over a time range.
 
         Returns all versions of the entity that were valid during
@@ -146,7 +145,7 @@ class TemporalMemoryQuery:
             transaction_time: Transaction time to query at (default: now)
 
         Returns:
-            List of entity states during the time range
+            list of entity states during the time range
 
         Raises:
             MemoryError: If query fails
@@ -209,7 +208,7 @@ class TemporalMemoryQuery:
         self,
         entity_name: str,
         limit: int = 100,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get complete history of entity changes.
 
         Returns all versions of an entity ordered by transaction time.
@@ -219,7 +218,7 @@ class TemporalMemoryQuery:
             limit: Maximum number of versions to return (default: 100)
 
         Returns:
-            List of entity versions with change metadata
+            list of entity versions with change metadata
 
         Raises:
             MemoryError: If query fails
@@ -289,7 +288,7 @@ class TemporalMemoryQuery:
         relationship_type: str,
         valid_time: datetime | None = None,
         direction: str = "outgoing",
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Query entities connected by relationship at a point in time.
 
         Args:
@@ -299,7 +298,7 @@ class TemporalMemoryQuery:
             direction: Relationship direction ("outgoing", "incoming", "both")
 
         Returns:
-            List of connected entities with relationship details
+            list of connected entities with relationship details
 
         Raises:
             MemoryError: If query fails
@@ -371,10 +370,8 @@ class TemporalMemoryQuery:
             )
             raise MemoryError(operation="Relationship query failed", reason=str(e)) from e
 
-
 # Global instance (singleton pattern)
 _temporal_query: TemporalMemoryQuery | None = None
-
 
 def get_temporal_query() -> TemporalMemoryQuery:
     """Get global temporal query instance (singleton).

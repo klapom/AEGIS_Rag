@@ -10,12 +10,11 @@ import re
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
 logger = structlog.get_logger(__name__)
-
 
 class MemoryLayer(Enum):
     """Memory layer enumeration for routing decisions."""
@@ -24,12 +23,11 @@ class MemoryLayer(Enum):
     QDRANT = "qdrant"  # Long-term, semantic facts, documents
     GRAPHITI = "graphiti"  # Episodic, temporal events, relationships
 
-
 class RoutingStrategy(ABC):
     """Abstract base class for memory routing strategies."""
 
     @abstractmethod
-    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
         """Select appropriate memory layers for a query.
 
         Args:
@@ -40,7 +38,6 @@ class RoutingStrategy(ABC):
             Ordered list of memory layers to query
         """
         pass
-
 
 class RecencyBasedStrategy(RoutingStrategy):
     """Routing strategy based on temporal recency.
@@ -71,7 +68,7 @@ class RecencyBasedStrategy(RoutingStrategy):
             medium_threshold_hours=medium_threshold_hours,
         )
 
-    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
         """Select layers based on query recency.
 
         Args:
@@ -127,7 +124,6 @@ class RecencyBasedStrategy(RoutingStrategy):
 
         return layers
 
-
 class QueryTypeStrategy(RoutingStrategy):
     """Routing strategy based on query type classification.
 
@@ -172,7 +168,7 @@ class QueryTypeStrategy(RoutingStrategy):
 
         logger.info("Initialized QueryTypeStrategy")
 
-    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
         """Select layers based on query type.
 
         Args:
@@ -224,13 +220,12 @@ class QueryTypeStrategy(RoutingStrategy):
 
         Args:
             text: Text to check
-            patterns: List of regex patterns
+            patterns: list of regex patterns
 
         Returns:
             True if any pattern matches
         """
         return any(re.search(pattern, text, re.IGNORECASE) for pattern in patterns)
-
 
 class HybridStrategy(RoutingStrategy):
     """Hybrid routing strategy combining recency and query type.
@@ -255,7 +250,7 @@ class HybridStrategy(RoutingStrategy):
 
         logger.info("Initialized HybridStrategy")
 
-    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
         """Select layers using both recency and query type.
 
         Args:
@@ -295,7 +290,6 @@ class HybridStrategy(RoutingStrategy):
 
         return merged_layers
 
-
 class FallbackAllStrategy(RoutingStrategy):
     """Fallback strategy that always queries all layers.
 
@@ -303,7 +297,7 @@ class FallbackAllStrategy(RoutingStrategy):
     Guarantees comprehensive results at the cost of performance.
     """
 
-    def select_layers(self, query: str, metadata: Dict[str, Any]) -> list[MemoryLayer]:
+    def select_layers(self, query: str, metadata: dict[str, Any]) -> list[MemoryLayer]:
         """Always return all layers.
 
         Args:

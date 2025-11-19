@@ -8,7 +8,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 
 import asyncio
 import time
-from typing import Any, Dict
+from typing import Any
 
 from src.components.mcp.client import MCPClient
 from src.components.mcp.error_handler import ErrorHandler
@@ -17,7 +17,6 @@ from src.components.mcp.result_parser import ResultParser
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
-
 
 class ToolExecutor:
     """Execute MCP tool calls with error handling and retry logic.
@@ -46,7 +45,7 @@ class ToolExecutor:
     async def execute(
         self,
         tool_name: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         server_name: str | None = None,
         expected_format: str = "json",
     ) -> MCPToolResult:

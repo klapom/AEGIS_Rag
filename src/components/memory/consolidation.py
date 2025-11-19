@@ -10,7 +10,7 @@ This module provides automatic consolidation between memory layers:
 
 import asyncio
 from datetime import UTC, datetime, timedelta
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import structlog
@@ -25,11 +25,10 @@ from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
 
-
 class ConsolidationPolicy:
     """Base class for consolidation policies."""
 
-    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
         """Determine if item should be consolidated.
 
         Args:
@@ -39,7 +38,6 @@ class ConsolidationPolicy:
             True if item should be consolidated
         """
         raise NotImplementedError
-
 
 class AccessCountPolicy(ConsolidationPolicy):
     """Consolidate based on access count threshold."""
@@ -52,7 +50,7 @@ class AccessCountPolicy(ConsolidationPolicy):
         """
         self.min_access_count = min_access_count
 
-    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
         """Check if access count meets threshold.
 
         Args:
@@ -62,7 +60,6 @@ class AccessCountPolicy(ConsolidationPolicy):
             True if access count >= threshold
         """
         return metadata.get("access_count", 0) >= self.min_access_count  # type: ignore[no-any-return]
-
 
 class TimeBasedPolicy(ConsolidationPolicy):
     """Consolidate based on age threshold."""
@@ -75,7 +72,7 @@ class TimeBasedPolicy(ConsolidationPolicy):
         """
         self.min_age_hours = min_age_hours
 
-    def should_consolidate(self, metadata: Dict[str, Any]) -> bool:
+    def should_consolidate(self, metadata: dict[str, Any]) -> bool:
         """Check if item is old enough.
 
         Args:
@@ -94,7 +91,6 @@ class TimeBasedPolicy(ConsolidationPolicy):
             return age >= timedelta(hours=self.min_age_hours)
         except Exception:
             return False
-
 
 class MemoryConsolidationPipeline:
     """Automatic memory consolidation pipeline.
@@ -262,13 +258,13 @@ class MemoryConsolidationPipeline:
 
     async def _deduplicate_memories(
         self,
-        items: list[Dict[str, Any]],
+        items: list[dict[str, Any]],
         embeddings: list[list[float]] | None = None,
-    ) -> tuple[list[Dict[str, Any]], int]:
+    ) -> tuple[list[dict[str, Any]], int]:
         """Deduplicate memories based on embedding similarity.
 
         Args:
-            items: List of memory items
+            items: list of memory items
             embeddings: Precomputed embeddings (optional)
 
         Returns:
@@ -334,7 +330,7 @@ class MemoryConsolidationPipeline:
         namespace: str = "memory",
         batch_size: int = 100,
         top_percentile: float = 0.2,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Enhanced consolidation with relevance scoring and deduplication.
 
         Selects top N% of memories based on importance score.
@@ -511,7 +507,7 @@ class MemoryConsolidationPipeline:
         self,
         session_id: str,
         namespace: str = "context",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Consolidate conversation context to Graphiti episodic memory.
 
         Args:
@@ -584,13 +580,13 @@ class MemoryConsolidationPipeline:
         consolidate_to_qdrant: bool = True,
         consolidate_conversations: bool = True,
         active_sessions: list[str] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run a full consolidation cycle across all layers.
 
         Args:
             consolidate_to_qdrant: Enable Redis → Qdrant consolidation
             consolidate_conversations: Enable Redis → Graphiti consolidation
-            active_sessions: List of active session IDs to consolidate
+            active_sessions: list of active session IDs to consolidate
 
         Returns:
             Dictionary with consolidation results for all operations
@@ -674,10 +670,8 @@ class MemoryConsolidationPipeline:
                 logger.error("Background consolidation failed", error=str(e))
                 # Continue running despite errors
 
-
 # Global instance (singleton pattern)
 _consolidation_pipeline: MemoryConsolidationPipeline | None = None
-
 
 def get_consolidation_pipeline() -> MemoryConsolidationPipeline:
     """Get global consolidation pipeline instance (singleton).
@@ -689,7 +683,6 @@ def get_consolidation_pipeline() -> MemoryConsolidationPipeline:
     if _consolidation_pipeline is None:
         _consolidation_pipeline = MemoryConsolidationPipeline()
     return _consolidation_pipeline
-
 
 async def start_background_consolidation() -> asyncio.Task:
     """Start background consolidation as an async task.

@@ -7,8 +7,7 @@ Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict
-
+from typing import Any
 
 @dataclass
 class MCPTool:
@@ -25,8 +24,8 @@ class MCPTool:
     name: str
     description: str
     server: str
-    parameters: Dict[str, Any]
-    metadata: Dict[str, Any] | None = None
+    parameters: dict[str, Any]
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values."""
@@ -37,11 +36,11 @@ class MCPTool:
         """Get list of required parameter names.
 
         Returns:
-            List of required parameter names
+            list of required parameter names
         """
         return self.parameters.get("required", [])  # type: ignore[no-any-return]
 
-    def validate_parameters(self, params: Dict[str, Any]) -> tuple[bool, str | None]:
+    def validate_parameters(self, params: dict[str, Any]) -> tuple[bool, str | None]:
         """Validate parameters against tool schema.
 
         Args:
@@ -58,7 +57,6 @@ class MCPTool:
 
         return True, None
 
-
 @dataclass
 class MCPServer:
     """Represents an MCP server configuration.
@@ -69,7 +67,7 @@ class MCPServer:
         command: Command to start server (for stdio)
         url: Server URL (for http)
         env: Environment variables for server
-        tools: List of tools provided by this server
+        tools: list of tools provided by this server
     """
 
     name: str
@@ -86,7 +84,6 @@ class MCPServer:
         if self.tools is None:
             self.tools = []
 
-
 @dataclass
 class ToolExecutionResult:
     """Result of a tool execution.
@@ -101,11 +98,11 @@ class ToolExecutionResult:
     """
 
     success: bool
-    result: Dict[str, Any]
+    result: dict[str, Any]
     tool_name: str
     execution_time_ms: float
     error: str | None = None
-    metadata: Dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """Initialize default values."""

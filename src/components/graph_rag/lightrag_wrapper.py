@@ -13,7 +13,7 @@ Sprint 23: Feature 23.6 - AegisLLMProxy Integration
 
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from tenacity import (
@@ -41,7 +41,6 @@ except ImportError:
     ThreePhaseExtractor = None  # Graceful fallback
 
 logger = structlog.get_logger(__name__)
-
 
 class LightRAGClient:
     """Async wrapper for LightRAG with Ollama and Neo4j backend.
@@ -108,7 +107,7 @@ class LightRAGClient:
 
             from lightrag import LightRAG
 
-            # Set Neo4j environment variables (required by Neo4JStorage)
+            # set Neo4j environment variables (required by Neo4JStorage)
             os.environ["NEO4J_URI"] = self.neo4j_uri
             os.environ["NEO4J_USERNAME"] = self.neo4j_user
             os.environ["NEO4J_PASSWORD"] = self.neo4j_password
@@ -262,11 +261,11 @@ class LightRAGClient:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def insert_documents(self, documents: list[Dict[str, Any]]) -> Dict[str, Any]:
+    async def insert_documents(self, documents: list[dict[str, Any]]) -> dict[str, Any]:
         """Insert multiple documents into knowledge graph.
 
         Args:
-            documents: List of documents with 'text' and optional 'metadata' fields
+            documents: list of documents with 'text' and optional 'metadata' fields
 
         Returns:
             Batch insertion result with success/failure counts
@@ -448,7 +447,7 @@ class LightRAGClient:
             )
             raise
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get graph statistics (entity count, relationship count).
 
         Returns:
@@ -529,7 +528,7 @@ class LightRAGClient:
         document_id: str,
         chunk_token_size: int = 600,
         chunk_overlap_token_size: int = 100,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk text using unified ChunkingService.
 
         Sprint 16 Feature 16.1: Now uses unified ChunkingService with "fixed" strategy (tiktoken-based)
@@ -542,7 +541,7 @@ class LightRAGClient:
             chunk_overlap_token_size: Overlap between chunks (default: 100)
 
         Returns:
-            List of chunk dictionaries compatible with LightRAG format
+            list of chunk dictionaries compatible with LightRAG format
         """
         logger.info(
             "chunking_text_with_unified_service",
@@ -587,7 +586,7 @@ class LightRAGClient:
         self,
         document_text: str,
         document_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract entities and relations per-chunk using Three-Phase Pipeline.
 
         Sprint 14 Feature 14.1 - Phase 2: Per-Chunk Extraction
@@ -603,9 +602,9 @@ class LightRAGClient:
 
         Returns:
             Dictionary with:
-            - chunks: List of chunk metadata
-            - entities: List of all entities from all chunks (with chunk_id)
-            - relations: List of all relations from all chunks (with chunk_id)
+            - chunks: list of chunk metadata
+            - entities: list of all entities from all chunks (with chunk_id)
+            - relations: list of all relations from all chunks (with chunk_id)
             - stats: Extraction statistics
         """
         start_time = time.time()
@@ -731,8 +730,8 @@ class LightRAGClient:
         }
 
     def _convert_chunks_to_lightrag_format(
-        self, chunks: list[Dict[str, Any]], document_id: str
-    ) -> list[Dict[str, Any]]:
+        self, chunks: list[dict[str, Any]], document_id: str
+    ) -> list[dict[str, Any]]:
         """Convert chunks to LightRAG ainsert_custom_kg format.
 
         Sprint 30 FIX: Converts chunks to format expected by LightRAG's ainsert_custom_kg()
@@ -746,11 +745,11 @@ class LightRAGClient:
         }
 
         Args:
-            chunks: List of chunk dictionaries from _chunk_text_with_metadata()
+            chunks: list of chunk dictionaries from _chunk_text_with_metadata()
             document_id: Document ID for file_path
 
         Returns:
-            List of chunks in LightRAG ainsert_custom_kg format
+            list of chunks in LightRAG ainsert_custom_kg format
         """
         logger.info("converting_chunks_to_lightrag", count=len(chunks), document_id=document_id)
 
@@ -777,8 +776,8 @@ class LightRAGClient:
 
     def _convert_entities_to_lightrag_format(
         self,
-        entities: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        entities: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Convert Three-Phase entities to LightRAG format.
 
         Sprint 14 Feature 14.1 - Phase 3: Entity Format Conversion
@@ -806,10 +805,10 @@ class LightRAGClient:
         }
 
         Args:
-            entities: List of entities from Three-Phase Pipeline
+            entities: list of entities from Three-Phase Pipeline
 
         Returns:
-            List of entities in LightRAG format
+            list of entities in LightRAG format
         """
         logger.info("converting_entities_to_lightrag", count=len(entities))
 
@@ -859,8 +858,8 @@ class LightRAGClient:
 
     def _convert_relations_to_lightrag_format(
         self,
-        relations: list[Dict[str, Any]],
-    ) -> list[Dict[str, Any]]:
+        relations: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         """Convert Three-Phase relations to LightRAG format.
 
         Sprint 14 Feature 14.1 - Phase 4: Relation Format Conversion
@@ -891,10 +890,10 @@ class LightRAGClient:
         }
 
         Args:
-            relations: List of relations from Three-Phase Pipeline
+            relations: list of relations from Three-Phase Pipeline
 
         Returns:
-            List of relations in LightRAG format
+            list of relations in LightRAG format
         """
         logger.info("converting_relations_to_lightrag", count=len(relations))
 
@@ -934,8 +933,8 @@ class LightRAGClient:
 
     async def _store_chunks_and_provenance_in_neo4j(
         self,
-        chunks: list[Dict[str, Any]],
-        entities: list[Dict[str, Any]],
+        chunks: list[dict[str, Any]],
+        entities: list[dict[str, Any]],
     ) -> None:
         """Store chunk nodes and MENTIONED_IN relationships in Neo4j.
 
@@ -946,8 +945,8 @@ class LightRAGClient:
         - MENTIONED_IN relationships from :base entities to :chunk nodes
 
         Args:
-            chunks: List of chunk metadata from _chunk_text_with_metadata()
-            entities: List of entities in LightRAG format (with source_id=chunk_id)
+            chunks: list of chunk metadata from _chunk_text_with_metadata()
+            entities: list of entities in LightRAG format (with source_id=chunk_id)
         """
         await self._ensure_initialized()
 
@@ -1093,8 +1092,8 @@ class LightRAGClient:
     )
     async def insert_documents_optimized(
         self,
-        documents: list[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        documents: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Insert documents using Three-Phase Pipeline with Graph-based Provenance.
 
         Sprint 14 Feature 14.1 - Phase 7: Main Integration Method
@@ -1109,7 +1108,7 @@ class LightRAGClient:
         Quality: 144% entity accuracy, 123% relation accuracy, 28.6% deduplication
 
         Args:
-            documents: List of documents with 'text' and optional 'metadata' fields
+            documents: list of documents with 'text' and optional 'metadata' fields
                       Each document should have: {"text": "...", "id": "doc_123"}
 
         Returns:
@@ -1301,10 +1300,8 @@ class LightRAGClient:
             logger.error("neo4j_clear_failed", error=str(e))
             # Don't raise - cleanup is best-effort
 
-
 # Global instance (singleton pattern)
 _lightrag_client: LightRAGClient | None = None
-
 
 def get_lightrag_client() -> LightRAGClient:
     """Get global LightRAG client instance (singleton).
@@ -1317,7 +1314,6 @@ def get_lightrag_client() -> LightRAGClient:
         _lightrag_client = LightRAGClient()
     return _lightrag_client
 
-
 async def get_lightrag_client_async() -> LightRAGClient:
     """Get global LightRAG client instance (singleton) - async version.
 
@@ -1329,7 +1325,6 @@ async def get_lightrag_client_async() -> LightRAGClient:
     client = get_lightrag_client()
     await client._ensure_initialized()
     return client
-
 
 # ============================================================================
 # Backward Compatibility Aliases (Sprint 25 Feature 25.9)

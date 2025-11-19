@@ -7,19 +7,18 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
 import structlog
 
 logger = structlog.get_logger(__name__)
-
 
 class ExtractionPipeline(Protocol):
     """Protocol defining extraction pipeline interface."""
 
     async def extract(
         self, text: str, document_id: str = None
-    ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         """Extract entities and relations from text.
 
         Args:
@@ -30,7 +29,6 @@ class ExtractionPipeline(Protocol):
             Tuple of (entities, relations)
         """
         ...
-
 
 class ExtractionPipelineFactory:
     """Factory for creating extraction pipelines based on configuration.
@@ -137,7 +135,7 @@ class ExtractionPipelineFactory:
 
             async def extract(
                 self, text: str, document_id: str = None
-            ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 """Extract entities and relations using LLM.
 
                 Args:
@@ -231,7 +229,7 @@ class ExtractionPipelineFactory:
 
             async def extract(
                 self, text: str, document_id: str = None
-            ) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+            ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 """Extract using legacy LightRAG pipeline."""
                 logger.warning(
                     "legacy_extraction_invoked",
@@ -250,7 +248,6 @@ class ExtractionPipelineFactory:
                 )
 
         return LegacyLightRAGExtractor(config)
-
 
 def create_extraction_pipeline_from_config(config=None) -> ExtractionPipeline:
     """Convenience function to create extraction pipeline from config.

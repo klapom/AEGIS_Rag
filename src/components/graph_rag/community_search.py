@@ -13,7 +13,7 @@ Integrates with existing graph search to provide:
 """
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -22,7 +22,6 @@ from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.core.models import Community, CommunitySearchResult, GraphEntity
 
 logger = structlog.get_logger(__name__)
-
 
 class CommunitySearch(DualLevelSearch):
     """Community-aware graph search extending DualLevelSearch.
@@ -72,7 +71,7 @@ class CommunitySearch(DualLevelSearch):
 
         Args:
             query: User query
-            community_ids: List of community IDs to search within (None = all)
+            community_ids: list of community IDs to search within (None = all)
             top_k: Number of entities to return
 
         Returns:
@@ -126,7 +125,7 @@ class CommunitySearch(DualLevelSearch):
 
             # Convert to GraphEntity objects and collect communities
             entities = []
-            community_map: dict[str, Dict[str, Any]] = {}
+            community_map: dict[str, dict[str, Any]] = {}
 
             for record in results:
                 entity = GraphEntity(
@@ -211,7 +210,7 @@ class CommunitySearch(DualLevelSearch):
             top_k: Number of related communities to return
 
         Returns:
-            List of related Community objects
+            list of related Community objects
         """
         logger.info("find_related_communities", community_id=community_id, top_k=top_k)
 
@@ -263,7 +262,7 @@ class CommunitySearch(DualLevelSearch):
             )
             return []
 
-    async def get_community_statistics(self, community_id: str) -> Dict[str, Any]:
+    async def get_community_statistics(self, community_id: str) -> dict[str, Any]:
         """Get statistics for a specific community.
 
         Args:
@@ -337,10 +336,8 @@ class CommunitySearch(DualLevelSearch):
                 "error": str(e),
             }
 
-
 # Singleton instance
 _community_search: CommunitySearch | None = None
-
 
 def get_community_search() -> CommunitySearch:
     """Get global CommunitySearch instance (singleton).

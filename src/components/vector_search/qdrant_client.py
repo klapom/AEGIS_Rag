@@ -9,7 +9,7 @@ This module provides a production-ready wrapper around the Qdrant client with:
 """
 
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from qdrant_client import AsyncQdrantClient, QdrantClient
@@ -32,7 +32,6 @@ from src.core.config import settings
 from src.core.exceptions import DatabaseConnectionError, VectorSearchError
 
 logger = structlog.get_logger(__name__)
-
 
 class QdrantClient:
     """Production-ready Qdrant client with connection pooling and error handling.
@@ -207,7 +206,7 @@ class QdrantClient:
 
         Args:
             collection_name: Target collection name
-            points: List of PointStruct objects
+            points: list of PointStruct objects
             batch_size: Number of points per batch (default: 100)
 
         Returns:
@@ -248,7 +247,7 @@ class QdrantClient:
         limit: int = 10,
         score_threshold: float | None = None,
         query_filter: Filter | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for similar vectors in collection.
 
         Args:
@@ -259,7 +258,7 @@ class QdrantClient:
             query_filter: Optional metadata filter
 
         Returns:
-            List of search results with id, score, and payload
+            list of search results with id, score, and payload
 
         Raises:
             VectorSearchError: If search fails
@@ -348,10 +347,8 @@ class QdrantClient:
             self._client.close()
             logger.info("Qdrant sync client closed")
 
-
 # Global client instance (singleton pattern)
 _qdrant_client: QdrantClient | None = None
-
 
 def get_qdrant_client() -> QdrantClient:
     """Get global Qdrant client instance (singleton).
@@ -363,7 +360,6 @@ def get_qdrant_client() -> QdrantClient:
     if _qdrant_client is None:
         _qdrant_client = QdrantClient()
     return _qdrant_client
-
 
 @asynccontextmanager
 async def get_qdrant_client_async() -> None:
@@ -379,7 +375,6 @@ async def get_qdrant_client_async() -> None:
     finally:
         # Connection is pooled, no need to close here
         pass
-
 
 # ============================================================================
 # Backward Compatibility Alias (Sprint 25 Feature 25.9)

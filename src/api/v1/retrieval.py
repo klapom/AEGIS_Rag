@@ -7,7 +7,7 @@ Sprint 22 Feature 22.2.2: Using standardized error responses with custom excepti
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from fastapi import (
@@ -46,7 +46,6 @@ router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 # Initialize format router (Sprint 22 Feature 22.3)
 _format_router = FormatRouter()  # Will check Docling availability at startup
 
-
 # Request/Response Models
 class SearchRequest(BaseModel):
     """Search request model with enhanced validation."""
@@ -81,7 +80,7 @@ class SearchRequest(BaseModel):
         le=100,
     )
     # Sprint 3: Metadata filters
-    filters: Dict[str, Any] | None = Field(
+    filters: dict[str, Any] | None = Field(
         None,
         description="Metadata filters for targeted search (Sprint 3)",
         examples=[
@@ -100,7 +99,6 @@ class SearchRequest(BaseModel):
         str_strip_whitespace=True,
     )
 
-
 class SearchResult(BaseModel):
     """Single search result."""
 
@@ -117,7 +115,6 @@ class SearchResult(BaseModel):
     original_rrf_rank: int | None = Field(None, description="Rank before reranking")
     final_rank: int | None = Field(None, description="Rank after reranking")
 
-
 class SearchResponse(BaseModel):
     """Search response model."""
 
@@ -125,8 +122,7 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
     total_results: int
     search_type: str
-    search_metadata: Dict[str, Any] | None = None
-
+    search_metadata: dict[str, Any] | None = None
 
 class IngestionRequest(BaseModel):
     """Document ingestion request with enhanced validation."""
@@ -148,7 +144,6 @@ class IngestionRequest(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, str_strip_whitespace=True)
 
-
 class IngestionResponse(BaseModel):
     """Document ingestion response."""
 
@@ -163,10 +158,8 @@ class IngestionResponse(BaseModel):
     neo4j_entities: int = Field(default=0, description="Entities extracted to Neo4j")
     neo4j_relationships: int = Field(default=0, description="Relationships extracted to Neo4j")
 
-
 # Global hybrid search instance
 _hybrid_search: HybridSearch | None = None
-
 
 def get_hybrid_search() -> HybridSearch:
     """Get or create hybrid search instance."""
@@ -174,7 +167,6 @@ def get_hybrid_search() -> HybridSearch:
     if _hybrid_search is None:
         _hybrid_search = HybridSearch()
     return _hybrid_search
-
 
 @router.post("/search", response_model=SearchResponse)
 @limiter.limit(f"{settings.rate_limit_search}/minute")  # Config-driven rate limit
@@ -319,7 +311,6 @@ async def search(
         # Sprint 22 Feature 22.2.2: Use custom exception with request_id
         raise VectorSearchError(query=search_params.query, reason=str(e)) from None
 
-
 @router.post("/ingest", response_model=IngestionResponse)
 @limiter.limit("5/hour")  # Rate limit: 5 requests per hour (heavy operation)
 async def ingest(
@@ -405,7 +396,6 @@ async def ingest(
             status_code=500,
             detail="Document ingestion failed. Please check your input and try again.",
         ) from None
-
 
 @router.post("/upload")
 @limiter.limit(f"{settings.rate_limit_upload}/minute")  # Config-driven rate limit
@@ -538,7 +528,6 @@ async def upload_file(
             detail=f"Failed to process file: {str(e)}",
         ) from None
 
-
 @router.get("/formats")
 async def get_supported_formats() -> None:
     """Get list of all supported document formats.
@@ -595,7 +584,6 @@ async def get_supported_formats() -> None:
         "all_formats": sorted(ALL_FORMATS),
     }
 
-
 @router.post("/prepare-bm25")
 @limiter.limit("2/hour")  # Rate limit: 2 requests per hour
 async def prepare_bm25(
@@ -638,7 +626,6 @@ async def prepare_bm25(
             detail=f"BM25 preparation failed: {str(e)}",
         ) from None
 
-
 @router.get("/stats")
 async def get_stats() -> None:
     """Get retrieval system statistics.
@@ -673,7 +660,6 @@ async def get_stats() -> None:
         logger.error("Failed to get stats", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}") from None
 
-
 # Authentication Endpoint
 class TokenRequest(BaseModel):
     """Token request model."""
@@ -681,13 +667,11 @@ class TokenRequest(BaseModel):
     username: str = Field(..., description="Username")
     password: str = Field(..., description="Password")
 
-
 class TokenResponse(BaseModel):
     """Token response model."""
 
     access_token: str
     token_type: str = "bearer"
-
 
 @router.post("/auth/token", response_model=TokenResponse)
 @limiter.limit("10/minute")  # Rate limit: 10 login attempts per minute

@@ -12,7 +12,7 @@ Implementation uses LightRAG's built-in retrieval modes for efficient graph quer
 
 import time
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field
@@ -36,7 +36,6 @@ from src.core.models import GraphEntity, GraphQueryResult, GraphRelationship, To
 
 logger = structlog.get_logger(__name__)
 
-
 class SearchMode(str, Enum):
     """Search modes for dual-level retrieval."""
 
@@ -44,21 +43,19 @@ class SearchMode(str, Enum):
     GLOBAL = "global"  # Topic-level: high-level summaries, communities
     HYBRID = "hybrid"  # Combined: local + global results fused
 
-
 class GraphSearchResult(BaseModel):
     """Result from graph search."""
 
     query: str = Field(..., description="Original query")
     mode: SearchMode = Field(..., description="Search mode used")
     answer: str = Field(default="", description="LLM-generated answer")
-    entities: list[Dict[str, Any]] = Field(default_factory=list, description="Retrieved entities")
-    relationships: list[Dict[str, Any]] = Field(
+    entities: list[dict[str, Any]] = Field(default_factory=list, description="Retrieved entities")
+    relationships: list[dict[str, Any]] = Field(
         default_factory=list, description="Retrieved relationships"
     )
     context: str = Field(default="", description="Graph context used")
     topics: list[str] = Field(default_factory=list, description="Topics/communities")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Search metadata")
-
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
 class DualLevelSearch:
     """Dual-level graph search with local/global/hybrid modes.
@@ -130,7 +127,7 @@ class DualLevelSearch:
             top_k: Number of entities to retrieve
 
         Returns:
-            List of GraphEntity objects
+            list of GraphEntity objects
         """
         start_time = time.time()
 
@@ -203,7 +200,7 @@ class DualLevelSearch:
             top_k: Number of topics to retrieve
 
         Returns:
-            List of Topic objects
+            list of Topic objects
         """
         start_time = time.time()
 
@@ -398,10 +395,10 @@ Answer:"""
         """Get relationships for a list of entities.
 
         Args:
-            entities: List of entities
+            entities: list of entities
 
         Returns:
-            List of relationships involving these entities
+            list of relationships involving these entities
         """
         if not entities:
             return []
@@ -485,10 +482,8 @@ Answer:"""
 
         return "\n".join(context_parts)
 
-
 # Singleton instance
 _dual_level_search: DualLevelSearch | None = None
-
 
 def get_dual_level_search() -> DualLevelSearch:
     """Get global DualLevelSearch instance (singleton).

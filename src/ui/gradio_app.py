@@ -23,7 +23,7 @@ Usage:
 import asyncio
 import uuid
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -46,7 +46,6 @@ logger = structlog.get_logger(__name__)
 API_BASE_URL = f"http://localhost:{settings.api_port}"
 CHAT_ENDPOINT = f"{API_BASE_URL}/api/v1/chat/"
 HEALTH_ENDPOINT = f"{API_BASE_URL}/health"  # Use main health endpoint instead
-
 
 class GradioApp:
     """Gradio Chat Application for AEGIS RAG.
@@ -135,8 +134,8 @@ class GradioApp:
 
         Args:
             answer: Generated answer
-            sources: List of source documents
-            tool_calls: List of MCP tool calls
+            sources: list of source documents
+            tool_calls: list of MCP tool calls
 
         Returns:
             Formatted answer string with citations and tool calls
@@ -348,7 +347,7 @@ class GradioApp:
 
         return []  # Empty chatbot
 
-    async def get_health_stats(self) -> Dict[str, Any]:
+    async def get_health_stats(self) -> dict[str, Any]:
         """Get system health statistics.
 
         Returns:
@@ -762,7 +761,6 @@ class GradioApp:
 
         demo.launch(server_name=server_name, server_port=server_port, share=share)
 
-
 def main() -> None:
     """Main entry point."""
     import logging
@@ -780,7 +778,6 @@ def main() -> None:
     # Create and launch app
     app = GradioApp()
     app.launch()
-
 
 if __name__ == "__main__":
     main()

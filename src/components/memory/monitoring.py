@@ -9,7 +9,7 @@ This module provides:
 
 import time
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from prometheus_client import Counter, Gauge, Histogram
@@ -19,7 +19,6 @@ logger = structlog.get_logger(__name__)
 # Capacity calculation constants
 MAX_VECTORS = 10_000_000  # Qdrant: 10M vectors = 100% capacity
 MAX_NODES = 100_000  # Graphiti: 100K nodes = 100% capacity
-
 
 class MemoryMonitoring:
     """Prometheus metrics collector for memory system health.
@@ -147,7 +146,7 @@ class MemoryMonitoring:
 
     # ============= Redis Metrics Collection =============
 
-    async def collect_redis_metrics(self, redis_manager) -> Dict[str, Any]:
+    async def collect_redis_metrics(self, redis_manager) -> dict[str, Any]:
         """Collect metrics from Redis layer.
 
         Args:
@@ -195,7 +194,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "redis", "error": str(e)}
 
-    async def collect_qdrant_metrics(self, qdrant_client) -> Dict[str, Any]:
+    async def collect_qdrant_metrics(self, qdrant_client) -> dict[str, Any]:
         """Collect metrics from Qdrant layer.
 
         Sprint 27 Feature 27.1: Implement real Qdrant metrics collection.
@@ -250,7 +249,7 @@ class MemoryMonitoring:
             ).inc()
             return {"layer": "qdrant", "error": str(e)}
 
-    async def collect_graphiti_metrics(self, graphiti_client) -> Dict[str, Any]:
+    async def collect_graphiti_metrics(self, graphiti_client) -> dict[str, Any]:
         """Collect metrics from Graphiti layer.
 
         Sprint 27 Feature 27.1: Implement real Graphiti metrics collection via Neo4j.
@@ -310,7 +309,7 @@ class MemoryMonitoring:
         redis_manager=None,
         qdrant_client=None,
         graphiti_client=None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Collect metrics from all memory layers.
 
         Args:
@@ -431,10 +430,8 @@ class MemoryMonitoring:
         # For now, return 0.0 as placeholder
         return 0.0
 
-
 # Global singleton instance
 _monitoring: MemoryMonitoring | None = None
-
 
 def get_monitoring() -> MemoryMonitoring:
     """Get global MemoryMonitoring instance (singleton).

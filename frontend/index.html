@@ -4,7 +4,51 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>AegisRAG - Sprint 30</title>
+
+    <!-- Sprint 30: Mock THREE.js and AFRAME for react-force-graph (temporary fix) -->
+    <script>
+      // Mock THREE.js (required by react-force-graph)
+      window.THREE = window.THREE || {
+        Scene: class {},
+        PerspectiveCamera: class {},
+        WebGLRenderer: class {},
+        Vector3: class {},
+        Color: class {},
+        Object3D: class {},
+        Group: class {},
+        Mesh: class {},
+        BufferGeometry: class {},
+        Material: class {},
+        MeshBasicMaterial: class {},
+        LineBasicMaterial: class {},
+        SphereGeometry: class {},
+        BoxGeometry: class {},
+        Line: class {},
+        Points: class {},
+        PointsMaterial: class {},
+        AmbientLight: class {},
+        DirectionalLight: class {},
+        OrbitControls: class {},
+        Raycaster: class {},
+        LoadingManager: class {},
+        TextureLoader: class {},
+        Texture: class {},
+      };
+
+      // Mock AFRAME (required by react-force-graph)
+      window.AFRAME = window.AFRAME || {
+        registerComponent: function() {},
+        registerSystem: function() {},
+        registerGeometry: function() {},
+        registerShader: function() {},
+        utils: {
+          device: {
+            isMobile: function() { return false; }
+          }
+        }
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

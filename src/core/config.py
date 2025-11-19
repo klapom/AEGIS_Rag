@@ -52,7 +52,7 @@ See Also:
 """
 
 from functools import lru_cache
-from typing import Literal, Set
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -576,6 +576,20 @@ class Settings(BaseSettings):
     markdown_chunk_size: int = Field(default=768, description="Token limit for Markdown chunks")
     text_chunk_size: int = Field(default=512, description="Token limit for plain text chunks")
     chunk_overlap: int = Field(default=50, description="Overlap between chunks in tokens")
+
+    # Docling Container Configuration (Sprint 21: GPU-Accelerated OCR, Sprint 30: Port Config)
+    docling_base_url: str = Field(
+        default="http://localhost:8080",
+        description="Docling container HTTP endpoint (Docker maps 8080 -> 5001)"
+    )
+    docling_timeout_seconds: int = Field(
+        default=900,
+        description="HTTP timeout for Docling requests (900s = 15min for complex PDFs, Sprint 30)"
+    )
+    docling_max_retries: int = Field(
+        default=3,
+        description="Max retry count for Docling transient failures"
+    )
 
     # Graphiti Memory Configuration (Sprint 7: Episodic Memory)
     graphiti_enabled: bool = Field(default=True, description="Enable Graphiti episodic memory")

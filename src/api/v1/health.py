@@ -3,7 +3,7 @@
 Provides comprehensive health checks for all system dependencies.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from fastapi import APIRouter
@@ -17,7 +17,6 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/health", tags=["health"])
 
-
 class HealthStatus(BaseModel):
     """Health check status."""
 
@@ -25,15 +24,13 @@ class HealthStatus(BaseModel):
     version: str
     environment: str
 
-
 class DependencyHealth(BaseModel):
     """Individual dependency health."""
 
     name: str
     status: str  # "up", "down", "degraded"
     latency_ms: float
-    details: Dict[str, Any]
-
+    details: dict[str, Any]
 
 class DetailedHealthResponse(BaseModel):
     """Detailed health check response."""
@@ -42,7 +39,6 @@ class DetailedHealthResponse(BaseModel):
     version: str
     environment: str
     dependencies: dict[str, DependencyHealth]
-
 
 @router.get("/", response_model=HealthStatus, status_code=http_status.HTTP_200_OK)
 async def health_check() -> None:
@@ -61,7 +57,6 @@ async def health_check() -> None:
         version=settings.app_version,
         environment=settings.environment,
     )
-
 
 @router.get("/detailed", response_model=DetailedHealthResponse)
 async def detailed_health_check() -> None:
@@ -154,7 +149,6 @@ async def detailed_health_check() -> None:
         dependencies=dependencies,
     )
 
-
 @router.get("/ready")
 async def readiness_check() -> None:
     """Readiness check - indicates if service can handle requests.
@@ -180,7 +174,6 @@ async def readiness_check() -> None:
         raise HTTPException(
             status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE, detail="Service not ready"
         ) from e
-
 
 @router.get("/live")
 async def liveness_check() -> None:

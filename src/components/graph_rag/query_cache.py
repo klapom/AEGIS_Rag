@@ -13,14 +13,13 @@ import hashlib
 import json
 import time
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
-
 
 class GraphQueryCache:
     """LRU cache for graph query results with TTL expiration.
@@ -57,7 +56,7 @@ class GraphQueryCache:
         self.enabled = enabled if enabled is not None else settings.graph_query_cache_enabled
 
         # Cache storage: OrderedDict maintains insertion order for LRU
-        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._lock = asyncio.Lock()
 
         # Statistics
@@ -73,7 +72,7 @@ class GraphQueryCache:
             enabled=self.enabled,
         )
 
-    def _generate_cache_key(self, query: str, parameters: Dict[str, Any] | None = None) -> str:
+    def _generate_cache_key(self, query: str, parameters: dict[str, Any] | None = None) -> str:
         """Generate cache key from query and parameters.
 
         Args:
@@ -94,7 +93,7 @@ class GraphQueryCache:
 
         return cache_key
 
-    def _is_expired(self, entry: Dict[str, Any]) -> bool:
+    def _is_expired(self, entry: dict[str, Any]) -> bool:
         """Check if cache entry is expired.
 
         Args:
@@ -109,7 +108,7 @@ class GraphQueryCache:
         age_seconds = time.time() - entry["timestamp"]
         return age_seconds > self.ttl_seconds
 
-    async def get(self, query: str, parameters: Dict[str, Any] | None = None) -> Any | None:
+    async def get(self, query: str, parameters: dict[str, Any] | None = None) -> Any | None:
         """Get cached query result.
 
         Args:
@@ -148,9 +147,9 @@ class GraphQueryCache:
             return entry["result"]  # type: ignore[no-any-return]
 
     async def set(
-        self, query: str, parameters: Dict[str, Any] | None = None, result: Any = None
+        self, query: str, parameters: dict[str, Any] | None = None, result: Any = None
     ) -> None:
-        """Set cached query result.
+        """set cached query result.
 
         Args:
             query: Cypher query string
@@ -180,7 +179,7 @@ class GraphQueryCache:
 
             logger.debug("Cache set", query=query[:50], cache_size=len(self._cache))
 
-    async def invalidate(self, query: str, parameters: Dict[str, Any] | None = None) -> bool:
+    async def invalidate(self, query: str, parameters: dict[str, Any] | None = None) -> bool:
         """Invalidate a specific cache entry.
 
         Args:
@@ -216,7 +215,7 @@ class GraphQueryCache:
             logger.info("Cache cleared", entries_removed=count)
             return count
 
-    async def stats(self) -> Dict[str, Any]:
+    async def stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -274,11 +273,9 @@ class GraphQueryCache:
         cache_key = self._generate_cache_key(query, None)
         return cache_key in self._cache
 
-
 # Global cache instance (singleton pattern)
 _query_cache: GraphQueryCache | None = None
 _cache_lock = asyncio.Lock()
-
 
 async def get_query_cache() -> GraphQueryCache:
     """Get global query cache instance (singleton).
@@ -295,7 +292,6 @@ async def get_query_cache() -> GraphQueryCache:
                 _query_cache = GraphQueryCache()
 
     return _query_cache
-
 
 def get_query_cache_sync() -> GraphQueryCache:
     """Get global query cache instance (synchronous, for testing).

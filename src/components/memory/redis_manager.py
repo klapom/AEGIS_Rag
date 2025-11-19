@@ -10,7 +10,7 @@ This module provides Redis-based working memory with:
 import json
 import time
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from redis.asyncio import Redis
@@ -22,7 +22,6 @@ from src.core.config import settings
 from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
-
 
 class RedisMemoryManager:
     """Redis-based working memory manager with cluster support and eviction policies.
@@ -46,7 +45,7 @@ class RedisMemoryManager:
         redis_url: str | None = None,
         default_ttl_seconds: int | None = None,
         cluster_mode: bool = False,
-        cluster_nodes: list[Dict[str, Any]] | None = None,
+        cluster_nodes: list[dict[str, Any]] | None = None,
         eviction_threshold: float = 0.8,
         max_memory_bytes: int | None = None,
     ) -> None:
@@ -56,7 +55,7 @@ class RedisMemoryManager:
             redis_url: Redis connection URL (default: from settings)
             default_ttl_seconds: Default TTL in seconds (default: from settings)
             cluster_mode: Enable cluster mode (default: False)
-            cluster_nodes: List of cluster nodes [{host, port}, ...]
+            cluster_nodes: list of cluster nodes [{host, port}, ...]
             eviction_threshold: Memory usage threshold for eviction (0.0-1.0, default: 0.8)
             max_memory_bytes: Maximum memory in bytes (None = use Redis config)
         """
@@ -68,7 +67,7 @@ class RedisMemoryManager:
         self.max_memory_bytes = max_memory_bytes
 
         self._client: Redis | RedisCluster | None = None
-        self._capacity_cache: Dict[str, Any] = {}
+        self._capacity_cache: dict[str, Any] = {}
         self._capacity_cache_ttl = 10  # Cache capacity info for 10 seconds
 
         logger.info(
@@ -257,12 +256,12 @@ class RedisMemoryManager:
         """Search memory entries by tags.
 
         Args:
-            tags: List of tags to search for
+            tags: list of tags to search for
             namespace: Key namespace (default: "memory")
             limit: Maximum results to return
 
         Returns:
-            List of matching MemoryEntry objects
+            list of matching MemoryEntry objects
         """
         try:
             await self.initialize()
@@ -451,7 +450,7 @@ class RedisMemoryManager:
             logger.error("Failed to delete memory entry", key=key, error=str(e))
             return False
 
-    async def get_stats(self, namespace: str = "memory") -> Dict[str, Any]:
+    async def get_stats(self, namespace: str = "memory") -> dict[str, Any]:
         """Get statistics for memory usage.
 
         Args:
@@ -509,7 +508,7 @@ class RedisMemoryManager:
             for tag in entry.tags:
                 tag_set = f"{entry.namespace}:tags:{tag}"
                 await self._client.sadd(tag_set, entry.namespaced_key)
-                # Set TTL on tag index to match entry TTL
+                # set TTL on tag index to match entry TTL
                 await self._client.expire(tag_set, entry.ttl_seconds)
         except Exception as e:
             logger.warning("Failed to index tags", key=entry.key, error=str(e))
@@ -548,7 +547,7 @@ class RedisMemoryManager:
             logger.error("Failed to clear entries", error=str(e))
             return 0
 
-    async def get_capacity_info(self) -> Dict[str, Any]:
+    async def get_capacity_info(self) -> dict[str, Any]:
         """Get detailed capacity information."""
         try:
             await self.initialize()
@@ -565,7 +564,7 @@ class RedisMemoryManager:
             logger.error("Failed to get capacity info", error=str(e))
             return {"used_mb": 0, "max_mb": 0, "usage_percent": 0}
 
-    async def evict_if_needed(self, namespace: str = "memory") -> Dict[str, Any]:
+    async def evict_if_needed(self, namespace: str = "memory") -> dict[str, Any]:
         """Manually trigger eviction if needed."""
         try:
             capacity = await self.get_capacity()
@@ -577,10 +576,8 @@ class RedisMemoryManager:
             logger.error("Failed to evict", error=str(e))
             return {"evicted": False, "count": 0, "error": str(e)}
 
-
 # Global instance (singleton pattern)
 _redis_manager: RedisMemoryManager | None = None
-
 
 def get_redis_manager() -> RedisMemoryManager:
     """Get global Redis memory manager instance (singleton).

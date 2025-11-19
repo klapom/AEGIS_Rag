@@ -40,7 +40,7 @@ import asyncio
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 import structlog
@@ -50,30 +50,28 @@ from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
 
-
 class DoclingParsedDocument(BaseModel):
     """Parsed document from Docling container.
 
     Attributes:
         text: Full document text (including OCR'd content)
         metadata: Document metadata (filename, pages, size, etc.)
-        tables: List of extracted tables with structure
-        images: List of image references with positions
+        tables: list of extracted tables with structure
+        images: list of image references with positions
         layout: Document layout structure (headings, paragraphs, lists)
         parse_time_ms: Parsing duration in milliseconds
     """
 
     text: str = Field(description="Full document text with OCR")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Document metadata")
-    tables: list[Dict[str, Any]] = Field(default_factory=list, description="Extracted tables")
-    images: list[Dict[str, Any]] = Field(default_factory=list, description="Image references")
-    layout: Dict[str, Any] = Field(default_factory=dict, description="Layout structure")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Document metadata")
+    tables: list[dict[str, Any]] = Field(default_factory=list, description="Extracted tables")
+    images: list[dict[str, Any]] = Field(default_factory=list, description="Image references")
+    layout: dict[str, Any] = Field(default_factory=dict, description="Layout structure")
     parse_time_ms: float = Field(description="Parsing duration")
-    json_content: Dict[str, Any] = Field(
+    json_content: dict[str, Any] = Field(
         default_factory=dict, description="Full Docling JSON response"
     )
     md_content: str = Field(default="", description="Markdown with embedded base64 images")
-
 
 class DoclingClient:
     """HTTP client for Docling CUDA Docker container.
@@ -154,7 +152,7 @@ class DoclingClient:
             2. If running: Skip start, just verify health
             3. If not running: Start container via docker compose
             4. Wait for health check: GET /health → 200 OK
-            5. Set _container_running = True
+            5. set _container_running = True
 
         Raises:
             IngestionError: If container fails to start or health check times out
@@ -225,7 +223,7 @@ class DoclingClient:
 
         Workflow:
             1. Run: docker compose stop docling
-            2. Set _container_running = False
+            2. set _container_running = False
             3. Close HTTP client
 
         Raises:
@@ -570,10 +568,10 @@ class DoclingClient:
         For true parallel processing, use multiple container instances.
 
         Args:
-            file_paths: List of document file paths
+            file_paths: list of document file paths
 
         Returns:
-            List of DoclingParsedDocument (same order as input)
+            list of DoclingParsedDocument (same order as input)
 
         Raises:
             IngestionError: If batch processing fails
@@ -627,11 +625,9 @@ class DoclingClient:
         """Async context manager exit: stop container."""
         await self.stop_container()
 
-
 # =============================================================================
 # CONVENIENCE FUNCTIONS
 # =============================================================================
-
 
 async def parse_document_with_docling(
     file_path: Path,
@@ -666,7 +662,6 @@ async def parse_document_with_docling(
             return await client.parse_document(file_path)
     else:
         return await client.parse_document(file_path)
-
 
 # ============================================================================
 # Backward Compatibility Alias (Sprint 25 Feature 25.9)

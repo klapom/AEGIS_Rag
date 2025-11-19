@@ -6,7 +6,7 @@ Implements version retention, comparison, and rollback functionality.
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -14,7 +14,6 @@ from src.components.graph_rag.neo4j_client import Neo4jClient, get_neo4j_client
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
-
 
 class VersionManager:
     """Manages entity versions with bi-temporal tracking."""
@@ -41,10 +40,10 @@ class VersionManager:
 
     async def create_version(
         self,
-        entity: Dict[str, Any],
+        entity: dict[str, Any],
         changed_by: str = "system",
         change_reason: str = "",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create new version of an entity.
 
         Closes the current version (sets valid_to and transaction_to) and creates
@@ -144,7 +143,7 @@ class VersionManager:
         entity_id: str,
         limit: int | None = None,
         include_deleted: bool = False,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get all versions of an entity.
 
         Args:
@@ -153,7 +152,7 @@ class VersionManager:
             include_deleted: Include soft-deleted versions
 
         Returns:
-            List of version records ordered by version_number descending
+            list of version records ordered by version_number descending
         """
         query = """
         MATCH (e:Entity {id: $entity_id})
@@ -192,7 +191,7 @@ class VersionManager:
         self,
         entity_id: str,
         timestamp: datetime,
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Get specific version of entity at a given timestamp.
 
         Args:
@@ -244,7 +243,7 @@ class VersionManager:
         entity_id: str,
         version1: int,
         version2: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare two versions of an entity.
 
         Args:
@@ -322,7 +321,7 @@ class VersionManager:
         logger.debug("Compared versions", entity_id=entity_id, changes=len(changed_fields))
         return result
 
-    async def get_evolution(self, entity_id: str) -> Dict[str, Any]:
+    async def get_evolution(self, entity_id: str) -> dict[str, Any]:
         """Get change timeline for an entity.
 
         Args:
@@ -404,7 +403,7 @@ class VersionManager:
         version_id: str,
         changed_by: str = "system",
         change_reason: str = "Reverted to previous version",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Revert entity to a previous version.
 
         Creates a new version with the data from the specified version.
@@ -513,10 +512,8 @@ class VersionManager:
 
         return deleted
 
-
 # Singleton instance
 _version_manager: VersionManager | None = None
-
 
 def get_version_manager() -> VersionManager:
     """Get global version manager instance (singleton).

@@ -8,7 +8,7 @@ This module provides a wrapper around Graphiti episodic memory system with:
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from graphiti_core import Graphiti
@@ -32,7 +32,6 @@ from src.core.config import settings
 from src.core.exceptions import LLMError, MemoryError
 
 logger = structlog.get_logger(__name__)
-
 
 class OllamaLLMClient(LLMClient):
     """Custom LLM client for Graphiti using AegisLLMProxy.
@@ -87,7 +86,7 @@ class OllamaLLMClient(LLMClient):
         Sprint 25: Migrated to AegisLLMProxy for multi-cloud routing.
 
         Args:
-            messages: List of message dicts with 'role' and 'content'
+            messages: list of message dicts with 'role' and 'content'
             max_tokens: Maximum tokens to generate
 
         Returns:
@@ -139,10 +138,10 @@ class OllamaLLMClient(LLMClient):
         """Generate embeddings using Ollama.
 
         Args:
-            texts: List of texts to embed
+            texts: list of texts to embed
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
 
         Raises:
             LLMError: If embedding generation fails
@@ -175,7 +174,6 @@ class OllamaLLMClient(LLMClient):
         except Exception as e:
             logger.error("Embedding generation failed", error=str(e))
             raise LLMError(operation="graphiti_embedding_generation", reason=str(e)) from e
-
 
 class GraphitiClient:
     """Wrapper for Graphiti episodic memory with Ollama and Neo4j backend.
@@ -280,9 +278,9 @@ class GraphitiClient:
         self,
         content: str,
         source: str = "user_conversation",
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add an episode to episodic memory.
 
         Extracts entities and relationships from content and stores them
@@ -340,7 +338,7 @@ class GraphitiClient:
         limit: int = 10,
         score_threshold: float = 0.7,
         time_window_hours: int | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search episodic memory.
 
         Args:
@@ -350,7 +348,7 @@ class GraphitiClient:
             time_window_hours: Limit to recent N hours (default: None)
 
         Returns:
-            List of search results with entities, relationships, and episodes
+            list of search results with entities, relationships, and episodes
 
         Raises:
             MemoryError: If search fails
@@ -398,9 +396,9 @@ class GraphitiClient:
         self,
         name: str,
         entity_type: str,
-        properties: Dict[str, Any] | None = None,
+        properties: dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add entity to episodic memory graph.
 
         Args:
@@ -450,9 +448,9 @@ class GraphitiClient:
         source_entity_id: str,
         target_entity_id: str,
         relationship_type: str,
-        properties: Dict[str, Any] | None = None,
+        properties: dict[str, Any] | None = None,
         timestamp: datetime | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add relationship edge between entities.
 
         Args:
@@ -527,10 +525,8 @@ class GraphitiClient:
         except Exception as e:
             logger.warning("Error closing Graphiti", error=str(e))
 
-
 # Global instance (singleton pattern)
 _graphiti_client: GraphitiClient | None = None
-
 
 def get_graphiti_client() -> GraphitiClient:
     """Get global Graphiti client instance (singleton).
@@ -546,7 +542,6 @@ def get_graphiti_client() -> GraphitiClient:
             )
         _graphiti_client = GraphitiClient()
     return _graphiti_client
-
 
 # ============================================================================
 # Backward Compatibility Aliases (Sprint 25 Feature 25.9)

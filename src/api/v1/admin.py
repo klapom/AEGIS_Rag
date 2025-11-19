@@ -565,3 +565,289 @@ async def get_system_stats() -> SystemStats:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system statistics: {str(e)}",
         ) from e
+
+
+# ============================================================================
+# Sprint 30: VLM-Enhanced Re-Indexing with Image Descriptions
+# ============================================================================
+
+
+@router.post(
+    "/reindex_with_vlm",
+    response_class=StreamingResponse,
+    summary="Re-index documents with VLM image enrichment",
+    description="Full LangGraph pipeline: Docling + Qwen3-VL + BGE-M3 + Neo4j. Progress via SSE.",
+)
+async def reindex_with_vlm_enrichment(
+    input_dir: str = Query(
+        default="data/sample_documents",
+        description="Directory containing documents to index with VLM image enrichment",
+    ),
+    confirm: bool = Query(
+        default=False,
+        description="Confirmation required to execute (safety check)",
+    ),
+) -> StreamingResponse:
+    """Re-index documents with VLM image enrichment (Sprint 30).
+
+    **Full LangGraph Pipeline:**
+    1. Docling CUDA Container → Parse PDF/PPTX + extract images
+    2. Qwen3-VL Image Enrichment → Generate descriptions for all images
+    3. Chunking → 1800-token chunks with image context
+    4. BGE-M3 Embeddings → Index to Qdrant
+    5. Graph Extraction → Entities + Relations to Neo4j
+
+    **Supported Formats:**
+    - PDF (with embedded images)
+    - PPTX (PowerPoint with images)
+    - DOCX, TXT, MD, CSV
+
+    **VLM Configuration:**
+    - Local: Qwen3-VL via Ollama (5-6GB VRAM)
+    - Cloud Fallback: Alibaba DashScope qwen3-vl models
+    - Image Filtering: Min size 100px, aspect ratio 0.1-10.0
+
+    **Progress Tracking:**
+    - Real-time SSE stream
+    - Per-document progress (6 nodes each)
+    - VLM image count tracking
+    - Cost tracking via AegisLLMProxy
+
+    **Safety:**
+    - `confirm=true` required (prevents accidental deletion)
+    - Old indexes deleted before re-indexing
+    - Batch processing (one document at a time for memory optimization)
+
+    **Example Usage:**
+    ```bash
+    # PowerShell
+    $dir = "C:\\path\\to\\documents"
+    curl -N "http://localhost:8000/api/v1/admin/reindex_with_vlm?input_dir=$([Uri]::EscapeDataString($dir))&confirm=true" `
+      -H "Accept: text/event-stream"
+    ```
+
+    Args:
+        input_dir: Directory containing documents to index
+        confirm: Must be True to execute (safety check)
+
+    Returns:
+        StreamingResponse with SSE progress updates
+
+    Raises:
+        HTTPException: If confirm=false or directory not found
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Confirmation required: set confirm=true to execute VLM re-indexing. This will delete all existing indexes!",
+        )
+
+    input_path = Path(input_dir)
+
+    if not input_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Directory not found: {input_dir}",
+        )
+
+    logger.info(
+        "vlm_reindex_started",
+        input_dir=str(input_path),
+        confirm=confirm,
+        feature="sprint_30_vlm_enrichment",
+    )
+
+    # Import LangGraph pipeline (lazy import to avoid circular dependencies)
+    from src.components.ingestion.langgraph_pipeline import run_batch_ingestion
+
+    async def vlm_reindex_stream():
+        """Stream VLM re-indexing progress via SSE."""
+        import json
+        import time
+
+        start_time = time.time()
+
+        try:
+            # Phase 1: Discover documents
+            yield f"data: {json.dumps({'status': 'discovery', 'progress': 0.0, 'message': 'Discovering documents...'})}\n\n"
+
+            doc_paths = []
+            for ext in [".pdf", ".pptx", ".docx", ".txt", ".md", ".csv"]:
+                doc_paths.extend([str(p) for p in input_path.glob(f"*{ext}")])
+
+            if not doc_paths:
+                raise VectorSearchError(
+                    query="",
+                    reason=f"No documents found in {input_dir}",
+                )
+
+            total_docs = len(doc_paths)
+            yield f"data: {json.dumps({'status': 'discovery', 'progress': 0.05, 'message': f'Found {total_docs} documents', 'total_documents': total_docs})}\n\n"
+
+            # Phase 2: Clear old indexes (same as /reindex endpoint)
+            yield f"data: {json.dumps({'status': 'deletion', 'progress': 0.1, 'message': 'Deleting old indexes...'})}\n\n"
+
+            # Delete Qdrant collection
+            qdrant_client = get_qdrant_client()
+            embedding_service = get_embedding_service()
+            collection_name = settings.qdrant_collection
+
+            await qdrant_client.delete_collection(collection_name)
+            logger.info("deleted_qdrant_collection", collection=collection_name)
+
+            # Recreate collection
+            await qdrant_client.create_collection(
+                collection_name=collection_name,
+                vector_size=embedding_service.embedding_dim,
+                distance=Distance.COSINE,
+            )
+            logger.info("recreated_qdrant_collection", collection=collection_name)
+
+            # Clear BM25 cache
+            bm25_cache_path = Path("data/cache/bm25_model.pkl")
+            if bm25_cache_path.exists():
+                bm25_cache_path.unlink()
+                logger.info("cleared_bm25_cache")
+
+            # Clear Neo4j graph
+            try:
+                lightrag_wrapper = await get_lightrag_wrapper_async()
+                await lightrag_wrapper._clear_neo4j_database()
+                logger.info("cleared_neo4j_database")
+            except Exception as e:
+                logger.warning("neo4j_clear_failed", error=str(e))
+
+            yield f"data: {json.dumps({'status': 'deletion', 'progress': 0.15, 'message': 'Old indexes deleted'})}\n\n"
+
+            # Phase 3: Batch ingestion with VLM enrichment
+            batch_id = f"vlm_batch_{int(time.time())}"
+            completed_docs = 0
+            total_chunks = 0
+            total_vlm_images = 0
+            total_errors = 0
+
+            yield f"data: {json.dumps({'status': 'ingestion', 'progress': 0.2, 'message': f'Starting VLM batch ingestion (batch_id={batch_id})...'})}\n\n"
+
+            async for result in run_batch_ingestion(doc_paths, batch_id):
+                completed_docs += 1
+                doc_id = result["document_id"]
+                doc_path = result["document_path"]
+                success = result["success"]
+                batch_progress = result["batch_progress"]
+
+                # Calculate overall progress (15% for deletion, 80% for ingestion, 5% for validation)
+                overall_progress = 0.15 + (batch_progress * 0.8)
+
+                if success and result.get("state"):
+                    state = result["state"]
+                    chunk_count = len(state.get("chunks", []))
+                    vlm_count = len(state.get("vlm_metadata", []))
+                    error_count = len(state.get("errors", []))
+
+                    total_chunks += chunk_count
+                    total_vlm_images += vlm_count
+                    total_errors += error_count
+
+                    yield f"data: {json.dumps({
+                        'status': 'ingestion',
+                        'progress': overall_progress,
+                        'message': f'Processed {Path(doc_path).name}',
+                        'document_id': doc_id,
+                        'document_path': doc_path,
+                        'completed_documents': completed_docs,
+                        'total_documents': total_docs,
+                        'batch_progress': batch_progress,
+                        'chunks': chunk_count,
+                        'vlm_images': vlm_count,
+                        'errors': error_count,
+                        'success': True,
+                    })}\n\n"
+
+                    logger.info(
+                        "vlm_document_indexed",
+                        document_id=doc_id,
+                        chunks=chunk_count,
+                        vlm_images=vlm_count,
+                        batch_progress=batch_progress,
+                    )
+                else:
+                    # Document failed
+                    error_msg = result.get("error", "Unknown error")
+                    total_errors += 1
+
+                    yield f"data: {json.dumps({
+                        'status': 'ingestion',
+                        'progress': overall_progress,
+                        'message': f'FAILED: {Path(doc_path).name}',
+                        'document_id': doc_id,
+                        'document_path': doc_path,
+                        'completed_documents': completed_docs,
+                        'total_documents': total_docs,
+                        'batch_progress': batch_progress,
+                        'success': False,
+                        'error': error_msg,
+                    })}\n\n"
+
+                    logger.error(
+                        "vlm_document_failed",
+                        document_id=doc_id,
+                        error=error_msg,
+                    )
+
+            # Phase 4: Validation
+            yield f"data: {json.dumps({'status': 'validation', 'progress': 0.98, 'message': 'Validating indexes...'})}\n\n"
+
+            # Get final stats
+            collection_info = await qdrant_client.get_collection_info(collection_name)
+            qdrant_points = collection_info.points_count if collection_info else 0
+
+            try:
+                lightrag_wrapper = await get_lightrag_wrapper_async()
+                graph_stats = await lightrag_wrapper.get_stats()
+                neo4j_entities = graph_stats.get("entity_count", 0)
+                neo4j_relations = graph_stats.get("relationship_count", 0)
+            except Exception as e:
+                logger.warning("neo4j_validation_failed", error=str(e))
+                neo4j_entities = 0
+                neo4j_relations = 0
+
+            # Completion
+            total_time = time.time() - start_time
+
+            yield f"data: {json.dumps({
+                'status': 'completed',
+                'progress': 1.0,
+                'message': f'VLM re-indexing completed in {total_time:.1f}s',
+                'total_documents': total_docs,
+                'completed_documents': completed_docs,
+                'total_chunks': total_chunks,
+                'total_vlm_images': total_vlm_images,
+                'total_errors': total_errors,
+                'qdrant_points': qdrant_points,
+                'neo4j_entities': neo4j_entities,
+                'neo4j_relations': neo4j_relations,
+                'duration_seconds': total_time,
+            })}\n\n"
+
+            logger.info(
+                "vlm_reindex_completed",
+                total_docs=total_docs,
+                total_chunks=total_chunks,
+                total_vlm_images=total_vlm_images,
+                total_errors=total_errors,
+                duration_seconds=total_time,
+            )
+
+        except Exception as e:
+            logger.error("vlm_reindex_failed", error=str(e), exc_info=True)
+            yield f"data: {json.dumps({'status': 'error', 'message': f'VLM re-indexing failed: {str(e)}'})}\n\n"
+
+    return StreamingResponse(
+        vlm_reindex_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

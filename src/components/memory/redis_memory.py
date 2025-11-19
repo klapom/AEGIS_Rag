@@ -9,7 +9,7 @@ This module provides Redis-based working memory for:
 
 import json
 from datetime import UTC, datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from redis.asyncio import Redis
@@ -19,7 +19,6 @@ from src.core.config import settings
 from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
-
 
 class RedisMemoryManager:
     """Redis-based working memory manager for short-term storage.
@@ -189,7 +188,7 @@ class RedisMemoryManager:
         self,
         key: str,
         namespace: str = "memory",
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """Get metadata about a stored value (without incrementing access count).
 
         Args:
@@ -260,7 +259,7 @@ class RedisMemoryManager:
         min_access_count: int = 3,
         namespace: str = "memory",
         limit: int = 100,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get frequently accessed items for consolidation.
 
         Args:
@@ -269,7 +268,7 @@ class RedisMemoryManager:
             limit: Maximum number of items to return (default: 100)
 
         Returns:
-            List of frequently accessed items with metadata
+            list of frequently accessed items with metadata
         """
         try:
             redis_client = await self.client
@@ -326,7 +325,7 @@ class RedisMemoryManager:
 
         Args:
             session_id: Session identifier
-            messages: List of conversation messages
+            messages: list of conversation messages
             ttl_seconds: Time-to-live in seconds (default: from settings)
 
         Returns:
@@ -349,7 +348,7 @@ class RedisMemoryManager:
             session_id: Session identifier
 
         Returns:
-            List of conversation messages or None if not found
+            list of conversation messages or None if not found
         """
         return await self.retrieve(
             key=f"conversation:{session_id}",
@@ -413,10 +412,8 @@ class RedisMemoryManager:
             self._client = None
             logger.info("Redis client closed")
 
-
 # Global instance (singleton pattern)
 _redis_memory: RedisMemoryManager | None = None
-
 
 def get_redis_memory() -> RedisMemoryManager:
     """Get global Redis memory manager instance (singleton).

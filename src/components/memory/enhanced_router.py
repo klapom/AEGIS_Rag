@@ -14,7 +14,7 @@ Features:
 
 import asyncio
 import time
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -31,7 +31,6 @@ from src.core.config import settings
 from src.core.exceptions import MemoryError
 
 logger = structlog.get_logger(__name__)
-
 
 class EnhancedMemoryRouter:
     """Enhanced memory router with strategy-based layer selection and parallel querying.
@@ -82,7 +81,7 @@ class EnhancedMemoryRouter:
     async def route_query(
         self,
         query: str,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> list[MemoryLayer]:
         """Determine which memory layers to query (routing decision).
 
@@ -128,7 +127,7 @@ class EnhancedMemoryRouter:
     async def search_memory(
         self,
         query: str,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
         limit_per_layer: int = 10,
     ) -> dict[str, list[MemorySearchResult]]:
         """Search across multiple memory layers in parallel.
@@ -209,7 +208,7 @@ class EnhancedMemoryRouter:
             limit: Maximum results
 
         Returns:
-            List of search results from Redis
+            list of search results from Redis
         """
         start_time = time.time()
 
@@ -260,7 +259,7 @@ class EnhancedMemoryRouter:
             limit: Maximum results
 
         Returns:
-            List of search results from Qdrant
+            list of search results from Qdrant
         """
         time.time()
 
@@ -288,7 +287,7 @@ class EnhancedMemoryRouter:
             limit: Maximum results
 
         Returns:
-            List of search results from Graphiti
+            list of search results from Graphiti
         """
         start_time = time.time()
 
@@ -343,7 +342,7 @@ class EnhancedMemoryRouter:
             query: Query text
 
         Returns:
-            List of extracted tags (keywords)
+            list of extracted tags (keywords)
         """
         # Simple implementation: extract significant words
         # In production, could use NLP/NER
@@ -452,7 +451,7 @@ class EnhancedMemoryRouter:
 
         return results
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get statistics for all memory layers.
 
         Returns:
@@ -484,10 +483,8 @@ class EnhancedMemoryRouter:
 
         return stats
 
-
 # Global instance (singleton pattern)
 _enhanced_router: EnhancedMemoryRouter | None = None
-
 
 def get_enhanced_router(
     strategy: RoutingStrategy | None = None,

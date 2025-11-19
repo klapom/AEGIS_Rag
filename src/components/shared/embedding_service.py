@@ -8,7 +8,7 @@ Shared by:
 
 import hashlib
 from collections import OrderedDict
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from ollama import AsyncClient
@@ -23,7 +23,6 @@ from src.core.config import settings
 from src.core.exceptions import LLMError
 
 logger = structlog.get_logger(__name__)
-
 
 class LRUCache:
     """Least Recently Used (LRU) cache with size limit."""
@@ -58,7 +57,7 @@ class LRUCache:
         total = self._hits + self._misses
         return self._hits / total if total > 0 else 0.0
 
-    def stats(self) -> Dict[str, Any]:
+    def stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         return {
             "size": len(self.cache),
@@ -67,7 +66,6 @@ class LRUCache:
             "misses": self._misses,
             "hit_rate": self.hit_rate(),
         }
-
 
 class UnifiedEmbeddingService:
     """Shared embedding service for all AEGIS RAG components.
@@ -228,10 +226,10 @@ class UnifiedEmbeddingService:
         """Embed batch of texts with caching.
 
         Args:
-            texts: List of texts to embed
+            texts: list of texts to embed
 
         Returns:
-            List of embedding vectors
+            list of embedding vectors
         """
         embeddings = []
 
@@ -247,7 +245,7 @@ class UnifiedEmbeddingService:
 
         return embeddings
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get embedding service statistics."""
         return {
             "model": self.model_name,
@@ -255,10 +253,8 @@ class UnifiedEmbeddingService:
             "cache": self.cache.stats(),
         }
 
-
 # Global instance (singleton)
 _embedding_service: UnifiedEmbeddingService | None = None
-
 
 def get_embedding_service() -> UnifiedEmbeddingService:
     """Get global UnifiedEmbeddingService instance."""

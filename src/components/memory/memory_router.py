@@ -8,7 +8,7 @@ This module implements intelligent memory routing across three layers:
 
 import re
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
@@ -19,14 +19,12 @@ from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
-
 class MemoryLayer(str, Enum):
     """Memory layer enumeration."""
 
     SHORT_TERM = "short_term"  # Redis: Recent context, session state
     LONG_TERM = "long_term"  # Qdrant: Semantic facts, document chunks
     EPISODIC = "episodic"  # Graphiti: Temporal events, entity relationships
-
 
 class MemoryRouter:
     """Intelligent memory router with 3-layer selection logic.
@@ -160,7 +158,7 @@ class MemoryRouter:
         session_id: str | None = None,
         limit: int = 10,
         time_window_hours: int | None = None,
-    ) -> dict[str, list[Dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """Search across multiple memory layers.
 
         Args:
@@ -216,7 +214,7 @@ class MemoryRouter:
         self,
         query: str,
         session_id: str | None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search Redis working memory.
 
         Args:
@@ -224,7 +222,7 @@ class MemoryRouter:
             session_id: Session ID
 
         Returns:
-            List of results from short-term memory
+            list of results from short-term memory
         """
         if not session_id:
             return []
@@ -264,7 +262,7 @@ class MemoryRouter:
         self,
         query: str,
         limit: int,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search Qdrant vector store.
 
         Args:
@@ -272,7 +270,7 @@ class MemoryRouter:
             limit: Maximum results
 
         Returns:
-            List of results from long-term memory
+            list of results from long-term memory
         """
         try:
             # For this implementation, we assume embeddings are generated elsewhere
@@ -295,7 +293,7 @@ class MemoryRouter:
         query: str,
         limit: int,
         time_window_hours: int | None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search Graphiti episodic memory.
 
         Args:
@@ -304,7 +302,7 @@ class MemoryRouter:
             time_window_hours: Time window for temporal filtering
 
         Returns:
-            List of results from episodic memory
+            list of results from episodic memory
         """
         if not self.graphiti_wrapper:
             return []
@@ -336,7 +334,7 @@ class MemoryRouter:
         user_message: str,
         assistant_message: str,
         session_id: str | None = None,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, bool]:
         """Store a conversation turn across appropriate memory layers.
 
@@ -397,7 +395,7 @@ class MemoryRouter:
     async def get_session_summary(
         self,
         session_id: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get summary of session memory across all layers.
 
         Args:
@@ -442,10 +440,8 @@ class MemoryRouter:
 
         return summary
 
-
 # Global instance (singleton pattern for default session)
 _memory_router: MemoryRouter | None = None
-
 
 def get_memory_router(session_id: str | None = None) -> MemoryRouter:
     """Get memory router instance.

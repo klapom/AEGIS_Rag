@@ -14,7 +14,7 @@ Key features:
 """
 
 import time
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from prometheus_client import Counter, Histogram
@@ -27,7 +27,6 @@ from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
-
 
 class UnifiedMemoryAPI:
     """Unified API facade for all memory layers.
@@ -94,7 +93,7 @@ class UnifiedMemoryAPI:
         value: Any,
         ttl_seconds: int | None = None,
         namespace: str = "memory",
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Store data in working memory (Redis Layer 1).
 
@@ -173,7 +172,7 @@ class UnifiedMemoryAPI:
         session_id: str | None = None,
         limit: int = 10,
         time_window_hours: int | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Retrieve memories across all layers using intelligent routing.
 
         Automatically selects appropriate layers based on query analysis
@@ -261,8 +260,8 @@ class UnifiedMemoryAPI:
         query: str,
         layers: list[str] | None = None,
         top_k: int = 5,
-        filters: Dict[str, Any] | None = None,
-    ) -> list[Dict[str, Any]]:
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """Search specific memory layers with optional filters.
 
         More granular control than `retrieve()`. Allows explicit layer
@@ -336,7 +335,7 @@ class UnifiedMemoryAPI:
         self,
         query: str,
         top_k: int,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search Redis short-term memory (placeholder)."""
         # Simplified keyword search for now
         # In production, would use semantic search on embeddings
@@ -346,8 +345,8 @@ class UnifiedMemoryAPI:
         self,
         query: str,
         top_k: int,
-        filters: Dict[str, Any] | None,
-    ) -> list[Dict[str, Any]]:
+        filters: dict[str, Any] | None,
+    ) -> list[dict[str, Any]]:
         """Search Qdrant long-term memory (placeholder)."""
         # Would generate embeddings and search Qdrant
         return []
@@ -356,7 +355,7 @@ class UnifiedMemoryAPI:
         self,
         query: str,
         top_k: int,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search Graphiti episodic memory."""
         if not self.graphiti_wrapper:
             return []
@@ -426,7 +425,7 @@ class UnifiedMemoryAPI:
         self,
         user_message: str,
         assistant_message: str,
-        metadata: Dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, bool]:
         """Store a conversation turn across appropriate memory layers.
 
@@ -457,7 +456,7 @@ class UnifiedMemoryAPI:
             metadata=metadata,
         )
 
-    async def get_session_summary(self) -> Dict[str, Any]:
+    async def get_session_summary(self) -> dict[str, Any]:
         """Get summary of current session's memory across all layers.
 
         Returns:
@@ -473,7 +472,7 @@ class UnifiedMemoryAPI:
         summary["session_id"] = self.session_id
         return summary
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Check health status of all memory layers.
 
         Returns:
@@ -509,10 +508,8 @@ class UnifiedMemoryAPI:
 
         return health
 
-
 # Global instance (singleton pattern)
 _unified_memory_api: UnifiedMemoryAPI | None = None
-
 
 def get_unified_memory_api(session_id: str | None = None) -> UnifiedMemoryAPI:
     """Get unified memory API instance.

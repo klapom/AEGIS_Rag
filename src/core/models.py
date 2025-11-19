@@ -2,10 +2,9 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 
 class QueryIntent(str, Enum):
     """Query intent classification."""
@@ -15,7 +14,6 @@ class QueryIntent(str, Enum):
     HYBRID = "hybrid"
     MEMORY = "memory"
 
-
 class QueryMode(str, Enum):
     """Query mode for retrieval."""
 
@@ -23,7 +21,6 @@ class QueryMode(str, Enum):
     LOCAL = "local"
     GLOBAL = "global"
     HYBRID = "hybrid"
-
 
 class DocumentChunk(BaseModel):
     """Document chunk with metadata."""
@@ -41,9 +38,8 @@ class DocumentChunk(BaseModel):
 
     id: str = Field(..., description="Unique chunk ID")
     content: str = Field(..., description="Chunk text content")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Chunk metadata")
     score: float | None = Field(None, description="Relevance score", ge=0.0, le=1.0)
-
 
 class QueryRequest(BaseModel):
     """Request model for RAG query."""
@@ -79,7 +75,6 @@ class QueryRequest(BaseModel):
             raise ValueError("Query cannot be empty")
         return v
 
-
 class QueryResponse(BaseModel):
     """Response model for RAG query."""
 
@@ -108,8 +103,7 @@ class QueryResponse(BaseModel):
     query_intent: QueryIntent = Field(..., description="Detected query intent")
     processing_time_ms: float = Field(..., description="Query processing time in milliseconds")
     conversation_id: str | None = Field(None, description="Conversation ID")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 class HealthStatus(str, Enum):
     """Health check status."""
@@ -118,14 +112,12 @@ class HealthStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
 
-
 class ServiceHealth(BaseModel):
     """Health status for a single service."""
 
     status: HealthStatus = Field(..., description="Service health status")
     latency_ms: float | None = Field(None, description="Service response latency")
     error: str | None = Field(None, description="Error message if unhealthy")
-
 
 class HealthResponse(BaseModel):
     """Health check response."""
@@ -152,7 +144,6 @@ class HealthResponse(BaseModel):
     services: dict[str, ServiceHealth] = Field(
         default_factory=dict, description="Individual service health"
     )
-
 
 class ErrorCode:
     """Standard error codes used across the API (Sprint 22 Feature 22.2.2).
@@ -186,7 +177,6 @@ class ErrorCode:
     VALIDATION_FAILED = "VALIDATION_FAILED"
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
 
-
 class ErrorDetail(BaseModel):
     """Detailed error information (Sprint 22 Feature 22.2.2).
 
@@ -211,11 +201,10 @@ class ErrorDetail(BaseModel):
 
     code: str = Field(..., description="Machine-readable error code")
     message: str = Field(..., description="Human-readable error message")
-    details: Dict[str, Any] | None = Field(None, description="Additional error context")
+    details: dict[str, Any] | None = Field(None, description="Additional error context")
     request_id: str = Field(..., description="Request ID for log correlation")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
     path: str = Field(..., description="API endpoint that generated error")
-
 
 class ErrorResponse(BaseModel):
     """Top-level error response wrapper (Sprint 22 Feature 22.2.2).
@@ -240,11 +229,9 @@ class ErrorResponse(BaseModel):
 
     error: ErrorDetail = Field(..., description="Error details")
 
-
 # ============================================================================
 # Graph RAG Models (Sprint 5)
 # ============================================================================
-
 
 class GraphEntity(BaseModel):
     """Graph entity (node) representation."""
@@ -253,7 +240,7 @@ class GraphEntity(BaseModel):
     name: str = Field(..., description="Entity name")
     type: str = Field(..., description="Entity type (PERSON, ORGANIZATION, etc.)")
     description: str = Field(default="", description="Entity description")
-    properties: Dict[str, Any] = Field(
+    properties: dict[str, Any] = Field(
         default_factory=dict, description="Additional entity properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
@@ -286,7 +273,6 @@ class GraphEntity(BaseModel):
         }
     )
 
-
 class GraphRelationship(BaseModel):
     """Graph relationship (edge) representation."""
 
@@ -295,7 +281,7 @@ class GraphRelationship(BaseModel):
     target: str = Field(..., description="Target entity name or ID")
     type: str = Field(..., description="Relationship type (WORKS_AT, KNOWS, etc.)")
     description: str = Field(default="", description="Relationship description")
-    properties: Dict[str, Any] = Field(
+    properties: dict[str, Any] = Field(
         default_factory=dict, description="Additional relationship properties"
     )
     source_document: str | None = Field(None, description="Source document ID")
@@ -317,7 +303,6 @@ class GraphRelationship(BaseModel):
             }
         }
     )
-
 
 class Topic(BaseModel):
     """Topic/community extracted from knowledge graph."""
@@ -342,7 +327,6 @@ class Topic(BaseModel):
         }
     )
 
-
 class GraphQueryResult(BaseModel):
     """Graph query result with entities, relationships, and topics."""
 
@@ -357,7 +341,7 @@ class GraphQueryResult(BaseModel):
     )
     context: str = Field(default="", description="Graph context used for answer generation")
     mode: str = Field(default="local", description="Search mode (local/global/hybrid)")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Query metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Query metadata")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -395,11 +379,9 @@ class GraphQueryResult(BaseModel):
         }
     )
 
-
 # ============================================================================
 # Community Detection Models (Sprint 6.3)
 # ============================================================================
-
 
 class Community(BaseModel):
     """Community (cluster) in the knowledge graph."""
@@ -412,7 +394,7 @@ class Community(BaseModel):
     created_at: datetime = Field(
         default_factory=datetime.utcnow, description="Community creation timestamp"
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional community metadata"
     )
 
@@ -430,7 +412,6 @@ class Community(BaseModel):
         }
     )
 
-
 class CommunitySearchResult(BaseModel):
     """Search result filtered by communities."""
 
@@ -440,7 +421,7 @@ class CommunitySearchResult(BaseModel):
         default_factory=list, description="Entities from matched communities"
     )
     answer: str = Field(default="", description="LLM-generated answer")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Search metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Search metadata")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -474,11 +455,9 @@ class CommunitySearchResult(BaseModel):
         }
     )
 
-
 # ============================================================================
 # Graph Visualization & Analytics Models (Sprint 6.5 & 6.6)
 # ============================================================================
-
 
 class CentralityMetrics(BaseModel):
     """Centrality metrics for a graph entity."""
@@ -502,7 +481,6 @@ class CentralityMetrics(BaseModel):
             }
         }
     )
-
 
 class GraphStatistics(BaseModel):
     """Overall graph statistics and metrics."""
@@ -532,7 +510,6 @@ class GraphStatistics(BaseModel):
             }
         }
     )
-
 
 class Recommendation(BaseModel):
     """Entity recommendation with score and reason."""

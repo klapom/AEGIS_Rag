@@ -9,7 +9,7 @@ re-indexing on every backend restart.
 
 import pickle
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from rank_bm25 import BM25Okapi
@@ -17,7 +17,6 @@ from rank_bm25 import BM25Okapi
 from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
-
 
 class BM25Search:
     """BM25 keyword search for hybrid retrieval with disk persistence."""
@@ -29,7 +28,7 @@ class BM25Search:
             cache_dir: Directory to store BM25 index cache (default: data/cache)
         """
         self._corpus: list[str] = []
-        self._metadata: list[Dict[str, Any]] = []
+        self._metadata: list[dict[str, Any]] = []
         self._bm25: BM25Okapi | None = None
         self._is_fitted = False
 
@@ -47,19 +46,19 @@ class BM25Search:
             text: Input text
 
         Returns:
-            List of tokens
+            list of tokens
         """
         return text.lower().split()
 
     def fit(
         self,
-        documents: list[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         text_field: str = "text",
     ) -> None:
         """Fit BM25 model on document corpus.
 
         Args:
-            documents: List of documents with text and metadata
+            documents: list of documents with text and metadata
             text_field: Field name containing text (default: "text")
 
         Raises:
@@ -131,7 +130,7 @@ class BM25Search:
         self,
         query: str,
         top_k: int = 10,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search documents using BM25.
 
         Args:
@@ -139,7 +138,7 @@ class BM25Search:
             top_k: Number of top results to return (default: 10)
 
         Returns:
-            List of results with text, score, and metadata
+            list of results with text, score, and metadata
 
         Raises:
             VectorSearchError: If search fails or model not fitted
@@ -158,7 +157,7 @@ class BM25Search:
             top_indices = scores.argsort()[-top_k:][::-1]
 
             # Build results
-            results: list[Dict[str, Any]] = []
+            results: list[dict[str, Any]] = []
             for idx in top_indices:
                 if idx < len(self._corpus):
                     result = {

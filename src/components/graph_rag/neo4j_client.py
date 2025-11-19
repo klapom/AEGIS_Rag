@@ -9,7 +9,7 @@ This module provides a production-ready wrapper around the Neo4j driver with:
 """
 
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from neo4j import AsyncDriver, AsyncGraphDatabase
@@ -30,7 +30,6 @@ logger = structlog.get_logger(__name__)
 DEFAULT_POOL_SIZE = 10
 DEFAULT_CONNECTION_TIMEOUT = 30
 DEFAULT_MAX_RETRY_ATTEMPTS = 3
-
 
 class Neo4jClient:
     """Production-ready Neo4j client with connection pooling and error handling."""
@@ -134,9 +133,9 @@ class Neo4jClient:
     async def execute_query(
         self,
         query: str,
-        parameters: Dict[str, Any] | None = None,
+        parameters: dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Execute a Cypher query and return results.
 
         Args:
@@ -145,7 +144,7 @@ class Neo4jClient:
             database: Database name (default: from settings)
 
         Returns:
-            List of result records as dictionaries
+            list of result records as dictionaries
 
         Raises:
             DatabaseConnectionError: If query execution fails
@@ -173,9 +172,9 @@ class Neo4jClient:
     async def execute_read(
         self,
         query: str,
-        parameters: Dict[str, Any] | None = None,
+        parameters: dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> list[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Execute a read-only Cypher query and return results.
 
         Alias for execute_query for consistency with Neo4j terminology.
@@ -186,7 +185,7 @@ class Neo4jClient:
             database: Database name (default: from settings)
 
         Returns:
-            List of result records as dictionaries
+            list of result records as dictionaries
 
         Raises:
             DatabaseConnectionError: If query execution fails
@@ -201,9 +200,9 @@ class Neo4jClient:
     async def execute_write(
         self,
         query: str,
-        parameters: Dict[str, Any] | None = None,
+        parameters: dict[str, Any] | None = None,
         database: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a write transaction.
 
         Args:
@@ -295,10 +294,8 @@ class Neo4jClient:
         """
         await self.close()
 
-
 # Global client instance (singleton pattern)
 _neo4j_client: Neo4jClient | None = None
-
 
 def get_neo4j_client() -> Neo4jClient:
     """Get global Neo4j client instance (singleton).
@@ -310,7 +307,6 @@ def get_neo4j_client() -> Neo4jClient:
     if _neo4j_client is None:
         _neo4j_client = Neo4jClient()
     return _neo4j_client
-
 
 @asynccontextmanager
 async def get_neo4j_client_async() -> None:

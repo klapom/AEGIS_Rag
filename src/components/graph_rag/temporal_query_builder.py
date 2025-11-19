@@ -5,12 +5,11 @@ Implements bi-temporal model: valid_time (real-world) + transaction_time (databa
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
 logger = structlog.get_logger(__name__)
-
 
 class CypherQueryBuilder:
     """Base class for building Cypher queries."""
@@ -20,7 +19,7 @@ class CypherQueryBuilder:
         self._match: list[str] = []
         self._where: list[str] = []
         self._return: list[str] = []
-        self._params: Dict[str, Any] = {}
+        self._params: dict[str, Any] = {}
         self._order_by: list[str] = []
         self._limit: int | None = None
         self._skip: int | None = None
@@ -74,7 +73,7 @@ class CypherQueryBuilder:
         return self
 
     def limit(self, count: int) -> "CypherQueryBuilder":
-        """Set LIMIT.
+        """set LIMIT.
 
         Args:
             count: Number of results to limit
@@ -86,7 +85,7 @@ class CypherQueryBuilder:
         return self
 
     def skip(self, count: int) -> "CypherQueryBuilder":
-        """Set SKIP.
+        """set SKIP.
 
         Args:
             count: Number of results to skip
@@ -98,7 +97,7 @@ class CypherQueryBuilder:
         return self
 
     def set_param(self, key: str, value: Any) -> "CypherQueryBuilder":
-        """Set query parameter.
+        """set query parameter.
 
         Args:
             key: Parameter key
@@ -110,7 +109,7 @@ class CypherQueryBuilder:
         self._params[key] = value
         return self
 
-    def build(self) -> tuple[str, Dict[str, Any]]:
+    def build(self) -> tuple[str, dict[str, Any]]:
         """Build the Cypher query.
 
         Returns:
@@ -154,7 +153,6 @@ class CypherQueryBuilder:
         self._order_by.clear()
         self._limit = None
         self._skip = None
-
 
 class TemporalQueryBuilder(CypherQueryBuilder):
     """Builder for temporal Cypher queries with bi-temporal model support."""
@@ -325,7 +323,7 @@ class TemporalQueryBuilder(CypherQueryBuilder):
         logger.debug("Added at_transaction_time temporal filter", timestamp=timestamp.isoformat())
         return self
 
-    def build(self) -> tuple[str, Dict[str, Any]]:
+    def build(self) -> tuple[str, dict[str, Any]]:
         """Build the temporal Cypher query.
 
         Returns:
@@ -342,10 +340,8 @@ class TemporalQueryBuilder(CypherQueryBuilder):
         super().reset()
         self._temporal_filters.clear()
 
-
 # Singleton instance
 _temporal_query_builder: TemporalQueryBuilder | None = None
-
 
 def get_temporal_query_builder() -> TemporalQueryBuilder:
     """Get global temporal query builder instance (singleton).

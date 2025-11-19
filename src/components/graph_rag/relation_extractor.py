@@ -12,7 +12,7 @@ Date: 2025-10-24, Updated: 2025-11-13
 
 import json
 import re
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 from tenacity import (
@@ -32,7 +32,6 @@ from src.components.llm_proxy.models import (
 )
 
 logger = structlog.get_logger(__name__)
-
 
 # ============================================================================
 # PROMPTS (from benchmarking)
@@ -63,7 +62,7 @@ USER_PROMPT_TEMPLATE_RELATION = """---Task---
 Extract relationships between the provided entities based on the input text.
 
 ######################
--Entity List-
+-Entity list-
 ######################
 {entity_list}
 
@@ -87,7 +86,6 @@ If entity list contains ["Alex", "Jordan", "TechCorp"] and text says "Alex and J
 ######################
 Output (valid JSON only):
 """
-
 
 class RelationExtractor:
     """Extract relations between entities using multi-cloud LLM routing.
@@ -158,18 +156,18 @@ class RelationExtractor:
             proxy="AegisLLMProxy",
         )
 
-    async def extract(self, text: str, entities: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    async def extract(self, text: str, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Extract relations between entities from text.
 
         Sprint 14: Added automatic retry logic for transient failures.
 
         Args:
             text: Source text containing entities
-            entities: List of entities with 'name' key
+            entities: list of entities with 'name' key
                      (from Phase 1 SpaCy NER + Phase 2 Deduplication)
 
         Returns:
-            List of relation dicts with keys:
+            list of relation dicts with keys:
             - source (str): Source entity name
             - target (str): Target entity name
             - description (str): Why they are related
@@ -220,8 +218,8 @@ class RelationExtractor:
             return []
 
     async def _extract_with_retry(
-        self, user_prompt: str, text: str, entities: list[Dict[str, Any]]
-    ) -> list[Dict[str, Any]]:
+        self, user_prompt: str, text: str, entities: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Call Gemma LLM with automatic retry on transient failures.
 
         Sprint 14 Feature 14.5: Retry Logic
@@ -237,7 +235,7 @@ class RelationExtractor:
             entities: Entity list
 
         Returns:
-            List of extracted relations
+            list of extracted relations
 
         Raises:
             Exception: If all retries exhausted
@@ -305,7 +303,6 @@ class RelationExtractor:
 
             logger.warning("relation_json_parse_failed", response_preview=cleaned[:200])
             return {"relations": []}
-
 
 def create_relation_extractor_from_config(config) -> RelationExtractor:
     """Factory function to create relation extractor from app config.

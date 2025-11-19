@@ -8,27 +8,26 @@ and individual Rank Learning Methods"
 """
 
 from collections import defaultdict
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
 logger = structlog.get_logger(__name__)
 
-
 def reciprocal_rank_fusion(
-    rankings: list[list[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     k: int = 60,
     id_field: str = "id",
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Combine multiple rankings using Reciprocal Rank Fusion.
 
     Args:
-        rankings: List of ranked results from different retrieval methods
+        rankings: list of ranked results from different retrieval methods
         k: RRF constant (default: 60, from original paper)
         id_field: Field name for document ID (default: "id")
 
     Returns:
-        List of re-ranked results with RRF scores
+        list of re-ranked results with RRF scores
 
     Formula:
         RRF_score(d) = sum over all rankings r of: 1 / (k + rank_r(d))
@@ -43,7 +42,7 @@ def reciprocal_rank_fusion(
 
     # Calculate RRF scores
     rrf_scores: dict[str, float] = defaultdict(float)
-    doc_data: dict[str, Dict[str, Any]] = {}  # Store original document data
+    doc_data: dict[str, dict[str, Any]] = {}  # Store original document data
 
     for _ranking_idx, ranking in enumerate(rankings):
         for rank, doc in enumerate(ranking, start=1):
@@ -82,23 +81,22 @@ def reciprocal_rank_fusion(
 
     return results
 
-
 def weighted_reciprocal_rank_fusion(
-    rankings: list[list[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     weights: list[float] | None = None,
     k: int = 60,
     id_field: str = "id",
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Weighted version of RRF for different ranking importance.
 
     Args:
-        rankings: List of ranked results
+        rankings: list of ranked results
         weights: Weights for each ranking (default: equal weights)
         k: RRF constant (default: 60)
         id_field: Field name for document ID
 
     Returns:
-        List of re-ranked results with weighted RRF scores
+        list of re-ranked results with weighted RRF scores
 
     Example:
         >>> # Give vector search 70% weight, BM25 30% weight
@@ -120,7 +118,7 @@ def weighted_reciprocal_rank_fusion(
 
     # Calculate weighted RRF scores
     rrf_scores: dict[str, float] = defaultdict(float)
-    doc_data: dict[str, Dict[str, Any]] = {}
+    doc_data: dict[str, dict[str, Any]] = {}
 
     for _ranking_idx, (ranking, weight) in enumerate(
         zip(rankings, normalized_weights, strict=False)
@@ -159,16 +157,15 @@ def weighted_reciprocal_rank_fusion(
 
     return results
 
-
 def analyze_ranking_diversity(
-    rankings: list[list[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     top_k: int = 10,
     id_field: str = "id",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Analyze diversity and overlap between multiple rankings.
 
     Args:
-        rankings: List of ranked results
+        rankings: list of ranked results
         top_k: Analyze top-K results (default: 10)
         id_field: Field name for document ID
 

@@ -49,17 +49,15 @@ Sprint 22 Context:
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Set
+from typing import Literal
 
 import structlog
 
 logger = structlog.get_logger(__name__)
 
-
 # =============================================================================
 # PARSER TYPE ENUM
 # =============================================================================
-
 
 class ParserType(str, Enum):
     """Parser types for document ingestion.
@@ -72,14 +70,13 @@ class ParserType(str, Enum):
     DOCLING = "docling"
     LLAMAINDEX = "llamaindex"
 
-
 # =============================================================================
 # FORMAT SET DEFINITIONS (30 TOTAL FORMATS)
 # =============================================================================
 
 # Docling-optimized formats (14 formats)
 # These formats benefit from Docling's GPU acceleration and advanced parsing
-DOCLING_FORMATS: Set[str] = {
+DOCLING_FORMATS: set[str] = {
     # Documents (native layout preservation)
     ".pdf",  # 95% OCR accuracy with EasyOCR, GPU-accelerated
     ".docx",  # Native layout preservation, table detection
@@ -102,7 +99,7 @@ DOCLING_FORMATS: Set[str] = {
 
 # LlamaIndex-exclusive formats (9 formats)
 # These formats are ONLY supported by LlamaIndex connectors
-LLAMAINDEX_EXCLUSIVE: Set[str] = {
+LLAMAINDEX_EXCLUSIVE: set[str] = {
     ".epub",  # E-books (LlamaIndex EPUBReader)
     ".rtf",  # Rich Text Format (LlamaIndex RTFReader)
     ".tex",  # LaTeX documents (LlamaIndex LaTeXReader)
@@ -116,7 +113,7 @@ LLAMAINDEX_EXCLUSIVE: Set[str] = {
 
 # Shared formats (7 formats)
 # Both Docling and LlamaIndex support these, Docling preferred for performance
-SHARED_FORMATS: Set[str] = {
+SHARED_FORMATS: set[str] = {
     ".txt",  # Plain text (both support, Docling faster)
     ".doc",  # Legacy Word (LlamaIndex more reliable for old format)
     ".xls",  # Legacy Excel (LlamaIndex more reliable)
@@ -128,13 +125,11 @@ SHARED_FORMATS: Set[str] = {
 
 # Total supported formats: 30
 # = 14 (Docling) + 9 (LlamaIndex exclusive) + 7 (shared)
-ALL_FORMATS: Set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
-
+ALL_FORMATS: set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
 
 # =============================================================================
 # ROUTING DECISION DATA CLASS
 # =============================================================================
-
 
 @dataclass
 class RoutingDecision:
@@ -157,11 +152,9 @@ class RoutingDecision:
     fallback_available: bool
     confidence: Literal["high", "medium", "low"]
 
-
 # =============================================================================
 # FORMAT ROUTER CLASS
 # =============================================================================
-
 
 class FormatRouter:
     """Intelligent router to select optimal parser for each document format.
@@ -188,7 +181,7 @@ class FormatRouter:
 
         Args:
             docling_available: Whether Docling container is available (default: True).
-                Set to False to simulate Docling unavailability or during startup
+                set to False to simulate Docling unavailability or during startup
                 health check failures.
         """
         self.docling_available = docling_available
@@ -341,7 +334,7 @@ class FormatRouter:
         file_extension = file_path.suffix.lower()
         return file_extension in ALL_FORMATS
 
-    def get_supported_formats(self, parser: ParserType | None = None) -> Set[str]:
+    def get_supported_formats(self, parser: ParserType | None = None) -> set[str]:
         """Get supported formats for a specific parser or all parsers.
 
         Args:
@@ -349,7 +342,7 @@ class FormatRouter:
                 If None, returns all supported formats.
 
         Returns:
-            Set of supported file extensions (e.g., {".pdf", ".docx", ...})
+            set of supported file extensions (e.g., {".pdf", ".docx", ...})
 
         Example:
             >>> router = FormatRouter()
@@ -393,11 +386,9 @@ class FormatRouter:
             )
             self.docling_available = available
 
-
 # =============================================================================
 # DOCLING AVAILABILITY HEALTH CHECK
 # =============================================================================
-
 
 async def check_docling_availability() -> bool:
     """Check if Docling container is available and healthy.
@@ -457,7 +448,6 @@ async def check_docling_availability() -> bool:
         )
         return False
 
-
 async def initialize_format_router() -> FormatRouter:
     """Initialize format router with Docling availability check.
 
@@ -490,7 +480,6 @@ async def initialize_format_router() -> FormatRouter:
     )
 
     return router
-
 
 # =============================================================================
 # EXPORTS

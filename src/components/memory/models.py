@@ -7,8 +7,7 @@ This module provides data models for the 3-layer memory architecture:
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Dict
-
+from typing import Any
 
 @dataclass
 class MemoryEntry:
@@ -18,7 +17,7 @@ class MemoryEntry:
         key: Unique key for this memory entry
         value: The actual value/content to store
         ttl_seconds: Time-to-live in seconds (default: 3600 = 1 hour)
-        tags: List of tags for searchability and categorization
+        tags: list of tags for searchability and categorization
         created_at: Timestamp when entry was created
         metadata: Additional metadata dictionary
         namespace: Key namespace prefix for organization
@@ -29,7 +28,7 @@ class MemoryEntry:
     ttl_seconds: int = 3600  # Default 1 hour
     tags: list[str] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     namespace: str = "memory"
 
     def __post_init__(self) -> None:
@@ -50,7 +49,7 @@ class MemoryEntry:
         """
         return f"{self.namespace}:{self.key}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert MemoryEntry to dictionary for serialization.
 
         Returns:
@@ -67,7 +66,7 @@ class MemoryEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MemoryEntry":
+    def from_dict(cls, data: dict[str, Any]) -> "MemoryEntry":
         """Create MemoryEntry from dictionary.
 
         Args:
@@ -89,7 +88,6 @@ class MemoryEntry:
             metadata=data.get("metadata", {}),
             namespace=data.get("namespace", "memory"),
         )
-
 
 @dataclass
 class MemorySearchResult:
@@ -114,7 +112,7 @@ class MemorySearchResult:
         if self.retrieval_time_ms < 0:
             raise ValueError("Retrieval time must be non-negative")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization.
 
         Returns:

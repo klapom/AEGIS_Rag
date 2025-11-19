@@ -11,7 +11,7 @@ Sprint 29: Added 4 new endpoints for frontend graph visualization:
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -25,11 +25,9 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/graph/viz", tags=["graph-visualization"])
 
-
 # ============================================================================
 # Request/Response Models
 # ============================================================================
-
 
 class GraphExportRequest(BaseModel):
     """Request model for graph export."""
@@ -53,7 +51,6 @@ class GraphExportRequest(BaseModel):
         description="Include community detection results",
     )
 
-
 class GraphFilterRequest(BaseModel):
     """Request model for graph filtering."""
 
@@ -70,7 +67,6 @@ class GraphFilterRequest(BaseModel):
         description="Filter by community ID",
     )
 
-
 class CommunityHighlightRequest(BaseModel):
     """Request model for community highlighting."""
 
@@ -82,20 +78,17 @@ class CommunityHighlightRequest(BaseModel):
         description="Include neighbor nodes",
     )
 
-
 # ============================================================================
 # Sprint 29: New Request/Response Models
 # ============================================================================
-
 
 class QuerySubgraphRequest(BaseModel):
     """Request model for query subgraph extraction (Feature 29.2)."""
 
     entity_names: list[str] = Field(
-        description="List of entity names from query results",
+        description="list of entity names from query results",
         min_length=1,
     )
-
 
 class GraphStatistics(BaseModel):
     """Response model for graph statistics (Feature 29.4)."""
@@ -108,13 +101,11 @@ class GraphStatistics(BaseModel):
     orphaned_nodes: int = Field(description="Number of orphaned nodes (degree=0)")
     timestamp: str = Field(description="Timestamp of statistics")
 
-
 class NodeDocumentsRequest(BaseModel):
     """Request model for node documents search (Feature 29.6)."""
 
     entity_name: str = Field(description="Entity name to search for", min_length=1)
     top_k: int = Field(default=10, ge=1, le=100, description="Number of top documents to return")
-
 
 class RelatedDocument(BaseModel):
     """Related document with similarity score."""
@@ -126,14 +117,12 @@ class RelatedDocument(BaseModel):
     chunk_id: str = Field(description="Chunk ID")
     source: str = Field(description="Document source")
 
-
 class NodeDocumentsResponse(BaseModel):
     """Response model for node documents (Feature 29.6)."""
 
     entity_name: str = Field(description="Entity name searched")
     documents: list[RelatedDocument] = Field(description="Related documents")
     total: int = Field(description="Total documents found")
-
 
 class CommunityDocument(BaseModel):
     """Document mentioning community entities."""
@@ -144,7 +133,6 @@ class CommunityDocument(BaseModel):
     entities: list[str] = Field(description="Entities mentioned in document")
     chunk_id: str = Field(description="Chunk ID")
 
-
 class CommunityDocumentsResponse(BaseModel):
     """Response model for community documents (Feature 29.7)."""
 
@@ -152,14 +140,12 @@ class CommunityDocumentsResponse(BaseModel):
     documents: list[CommunityDocument] = Field(description="Related documents")
     total: int = Field(description="Total documents found")
 
-
 # ============================================================================
 # Export Endpoints
 # ============================================================================
 
-
 @router.post("/export")
-async def export_graph(request: GraphExportRequest) -> Dict[str, Any]:
+async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
     """Export graph in specified format.
 
     Sprint 12: Supports JSON, GraphML, and Cytoscape formats.
@@ -204,13 +190,12 @@ async def export_graph(request: GraphExportRequest) -> Dict[str, Any]:
         logger.error("graph_export_failed", error=str(e), format=request.format)
         raise HTTPException(status_code=500, detail=f"Export failed: {e}") from e
 
-
 @router.get("/export/formats")
 async def get_export_formats() -> dict[str, list[str]]:
     """Get supported export formats.
 
     Returns:
-        List of supported formats with descriptions
+        list of supported formats with descriptions
     """
     return {
         "formats": [
@@ -220,14 +205,12 @@ async def get_export_formats() -> dict[str, list[str]]:
         ]
     }
 
-
 # ============================================================================
 # Filter Endpoints
 # ============================================================================
 
-
 @router.post("/filter")
-async def filter_graph(request: GraphFilterRequest) -> Dict[str, Any]:
+async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
     """Filter graph by entity types and properties.
 
     Sprint 12: Advanced filtering with degree and community support.
@@ -271,16 +254,14 @@ async def filter_graph(request: GraphFilterRequest) -> Dict[str, Any]:
         logger.error("graph_filter_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Filter failed: {e}") from e
 
-
 # ============================================================================
 # Community Endpoints
 # ============================================================================
 
-
 @router.post("/communities/highlight")
 async def highlight_communities(
     request: CommunityHighlightRequest,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Highlight specific communities in graph.
 
     Sprint 12: Community-based subgraph extraction.
@@ -327,14 +308,12 @@ async def highlight_communities(
         logger.error("community_highlight_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Highlight failed: {e}") from e
 
-
 # ============================================================================
 # Sprint 29: New Endpoints
 # ============================================================================
 
-
 @router.post("/query-subgraph")
-async def get_query_subgraph(request: QuerySubgraphRequest) -> Dict[str, Any]:
+async def get_query_subgraph(request: QuerySubgraphRequest) -> dict[str, Any]:
     """Get subgraph for specific entities from query results.
 
     Sprint 29 Feature 29.2: Extract subgraph containing entities and their
@@ -372,7 +351,6 @@ async def get_query_subgraph(request: QuerySubgraphRequest) -> Dict[str, Any]:
     except Exception as e:
         logger.error("query_subgraph_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Query subgraph failed: {e}") from e
-
 
 @router.get("/statistics", response_model=GraphStatistics)
 async def get_graph_statistics() -> GraphStatistics:
@@ -440,7 +418,6 @@ async def get_graph_statistics() -> GraphStatistics:
         logger.error("graph_statistics_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Statistics failed: {e}") from e
 
-
 @router.post("/node-documents", response_model=NodeDocumentsResponse)
 async def get_documents_by_node(request: NodeDocumentsRequest) -> NodeDocumentsResponse:
     """Get related documents for an entity using vector similarity.
@@ -452,7 +429,7 @@ async def get_documents_by_node(request: NodeDocumentsRequest) -> NodeDocumentsR
         request: Node documents request with entity name and top_k
 
     Returns:
-        List of related documents with similarity scores
+        list of related documents with similarity scores
     """
     try:
         # 1. Generate embedding for entity name
@@ -497,7 +474,6 @@ async def get_documents_by_node(request: NodeDocumentsRequest) -> NodeDocumentsR
     except Exception as e:
         logger.error("node_documents_failed", error=str(e), entity=request.entity_name)
         raise HTTPException(status_code=500, detail=f"Node documents search failed: {e}") from e
-
 
 @router.get("/communities/{community_id}/documents", response_model=CommunityDocumentsResponse)
 async def get_community_documents(community_id: str, limit: int = 50) -> CommunityDocumentsResponse:
@@ -593,13 +569,11 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
             status_code=500, detail=f"Community documents search failed: {e}"
         ) from e
 
-
 # ============================================================================
 # Helper Functions
 # ============================================================================
 
-
-def _export_json(records: list[dict], include_communities: bool = True) -> Dict[str, Any]:
+def _export_json(records: list[dict], include_communities: bool = True) -> dict[str, Any]:
     """Export graph as JSON format."""
     nodes = {}
     edges = []
@@ -635,7 +609,6 @@ def _export_json(records: list[dict], include_communities: bool = True) -> Dict[
         "edge_count": len(edges),
     }
 
-
 def _export_graphml(records: list[dict]) -> dict[str, str]:
     """Export graph as GraphML XML format."""
     # Simplified GraphML export
@@ -654,8 +627,7 @@ def _export_graphml(records: list[dict]) -> dict[str, str]:
 
     return {"format": "graphml", "data": graphml}
 
-
-def _export_cytoscape(records: list[dict]) -> Dict[str, Any]:
+def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
     """Export graph as Cytoscape.js format."""
     elements = []
 

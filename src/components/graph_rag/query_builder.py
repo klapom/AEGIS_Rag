@@ -8,12 +8,11 @@ This module provides a fluent API for building parameterized Cypher queries with
 - Method chaining for readability
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
 logger = structlog.get_logger(__name__)
-
 
 class CypherQueryBuilder:
     """Fluent API for building parameterized Cypher queries.
@@ -45,7 +44,7 @@ class CypherQueryBuilder:
         self._delete_clauses: list[str] = []
         self._limit_value: int | None = None
         self._skip_value: int | None = None
-        self._parameters: Dict[str, Any] = {}
+        self._parameters: dict[str, Any] = {}
 
         logger.debug("CypherQueryBuilder initialized")
 
@@ -369,7 +368,7 @@ class CypherQueryBuilder:
         logger.debug("Added parameter", name=name)
         return self
 
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         """Build the final query and parameters.
 
         Returns:
