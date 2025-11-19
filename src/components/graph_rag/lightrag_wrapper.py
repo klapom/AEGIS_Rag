@@ -616,12 +616,12 @@ class LightRAGClient:
             text_length=len(document_text),
         )
 
-        # Step 1: Chunk the document (Sprint 16.7: aligned with Qdrant)
+        # Step 1: Chunk the document (Sprint 30: aligned with Qdrant)
         chunks = self._chunk_text_with_metadata(
             text=document_text,
             document_id=document_id,
-            chunk_token_size=600,  # Aligned with Qdrant
-            chunk_overlap_token_size=150,  # 25% overlap (aligned with Qdrant)
+            chunk_token_size=1800,  # Sprint 30: Aligned with Qdrant (1800 tokens)
+            chunk_overlap_token_size=300,  # Sprint 30: 16.7% overlap (aligned with Qdrant)
         )
 
         logger.info(
@@ -730,6 +730,51 @@ class LightRAGClient:
             "stats": stats,
         }
 
+    def _convert_chunks_to_lightrag_format(
+        self, chunks: list[Dict[str, Any]], document_id: str
+    ) -> list[Dict[str, Any]]:
+        """Convert chunks to LightRAG ainsert_custom_kg format.
+
+        Sprint 30 FIX: Converts chunks to format expected by LightRAG's ainsert_custom_kg()
+        to populate chunk_to_source_map and prevent UNKNOWN source_id warnings.
+
+        LightRAG expects:
+        {
+            "content": str,      # Chunk text
+            "source_id": str,    # Unique identifier for this chunk (will be the KEY in chunk_to_source_map)
+            "file_path": str,    # Document provenance
+        }
+
+        Args:
+            chunks: List of chunk dictionaries from _chunk_text_with_metadata()
+            document_id: Document ID for file_path
+
+        Returns:
+            List of chunks in LightRAG ainsert_custom_kg format
+        """
+        logger.info("converting_chunks_to_lightrag", count=len(chunks), document_id=document_id)
+
+        lightrag_chunks = []
+
+        for chunk in chunks:
+            # Use chunk_id as source_id - this will be the KEY in chunk_to_source_map
+            chunk_id = chunk.get("chunk_id", f"chunk_{chunk.get('chunk_index', 0)}")
+
+            lightrag_chunk = {
+                "content": chunk.get("text", ""),  # LightRAG expects "content" not "text"
+                "source_id": chunk_id,  # This becomes the KEY in chunk_to_source_map
+                "file_path": document_id,
+            }
+            lightrag_chunks.append(lightrag_chunk)
+
+        logger.info(
+            "chunks_converted",
+            original_count=len(chunks),
+            converted_count=len(lightrag_chunks),
+        )
+
+        return lightrag_chunks
+
     def _convert_entities_to_lightrag_format(
         self,
         entities: list[Dict[str, Any]],
@@ -772,14 +817,31 @@ class LightRAGClient:
 
         for entity in entities:
             entity_name = entity.get("name", "UNKNOWN")
+            # Sprint 30: Ensure source_id is never empty (LightRAG treats "" as UNKNOWN)
+            # Use chunk_id if available, otherwise fallback to document_id
+            chunk_id = entity.get("chunk_id", "")
+            document_id = entity.get("document_id", "")
+            source_id = chunk_id if chunk_id else document_id
+
+            # Sprint 30: Debug logging to understand UNKNOWN source_id warnings
+            if not source_id or source_id == "UNKNOWN":
+                logger.warning(
+                    "entity_missing_source_id",
+                    entity_name=entity_name,
+                    chunk_id=chunk_id,
+                    document_id=document_id,
+                    has_chunk_id=bool(chunk_id),
+                    entity_keys=list(entity.keys()),
+                )
+
             lightrag_entity = {
                 # LightRAG uses both entity_name (input) and entity_id (storage)
                 "entity_name": entity_name,
                 "entity_id": entity_name,  # Same as entity_name
                 "entity_type": entity.get("type", "UNKNOWN"),
                 "description": entity.get("description", ""),
-                "source_id": entity.get("chunk_id", ""),
-                "file_path": entity.get("document_id", ""),
+                "source_id": source_id,  # Sprint 30: Never empty, fallback to document_id
+                "file_path": document_id,  # Sprint 30: Use document_id for file_path
                 # Preserve additional provenance metadata
                 "chunk_index": entity.get("chunk_index"),
                 "start_token": entity.get("start_token"),
@@ -841,6 +903,11 @@ class LightRAGClient:
         for relation in relations:
             # Extract relation type for keywords
             rel_type = relation.get("type", "RELATED_TO")
+            # Sprint 30: Ensure source_id is never empty (LightRAG treats "" as UNKNOWN)
+            # Use chunk_id if available, otherwise fallback to document_id
+            chunk_id = relation.get("chunk_id", "")
+            document_id = relation.get("document_id", "")
+            source_id = chunk_id if chunk_id else document_id
 
             lightrag_relation = {
                 "src_id": relation.get("source", "UNKNOWN"),
@@ -848,8 +915,8 @@ class LightRAGClient:
                 "description": relation.get("description", ""),
                 "keywords": rel_type,  # LightRAG expects string or list
                 "weight": relation.get("confidence", 1.0),
-                "source_id": relation.get("chunk_id", ""),
-                "file_path": relation.get("document_id", ""),
+                "source_id": source_id,  # Sprint 30: Never empty, fallback to document_id
+                "file_path": document_id,  # Sprint 30: Use document_id for file_path
                 # Preserve additional provenance metadata
                 "chunk_index": relation.get("chunk_index"),
                 "start_token": relation.get("start_token"),
@@ -1109,16 +1176,23 @@ class LightRAGClient:
                 # PHASE 3-4: Convert to LightRAG format
                 lightrag_entities = self._convert_entities_to_lightrag_format(entities)
                 lightrag_relations = self._convert_relations_to_lightrag_format(relations)
+                lightrag_chunks = self._convert_chunks_to_lightrag_format(chunks, doc_id)
 
                 # PHASE 6: Insert into LightRAG (embeddings + storage)
                 # Use ainsert_custom_kg to insert pre-extracted entities/relations
+                # Sprint 30 FIX: Include chunks to populate chunk_to_source_map
                 if hasattr(self.rag, "ainsert_custom_kg"):
                     await self.rag.ainsert_custom_kg(
-                        custom_kg={"entities": lightrag_entities, "relations": lightrag_relations},
+                        custom_kg={
+                            "chunks": lightrag_chunks,
+                            "entities": lightrag_entities,
+                            "relations": lightrag_relations,
+                        },
                         full_doc_id=doc_id,
                     )
                     logger.info(
                         "lightrag_custom_kg_inserted",
+                        chunks=len(lightrag_chunks),
                         entities=len(lightrag_entities),
                         relations=len(lightrag_relations),
                     )

@@ -7,8 +7,8 @@ Sprint 4 Feature 4.1: LangGraph State Management
 Uses MessagesState as the base to integrate with LangChain message history.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Literal, Dict
+from datetime import UTC, datetime
+from typing import Any, Dict, Literal
 
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
@@ -141,7 +141,7 @@ def create_initial_state(query: str, intent: str = "hybrid") -> Dict[str, Any]:
         "retrieved_contexts": [],
         "search_mode": intent if intent in ["vector", "graph", "hybrid"] else "hybrid",
         "metadata": {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "agent_path": [],
         },
     }

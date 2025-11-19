@@ -8,7 +8,7 @@ This module provides Redis-based working memory for:
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import structlog
@@ -108,7 +108,7 @@ class RedisMemoryManager:
             serialized = json.dumps(
                 {
                     "value": value,
-                    "stored_at": datetime.now(timezone.utc).isoformat(),
+                    "stored_at": datetime.now(UTC).isoformat(),
                     "access_count": 0,
                 }
             )
@@ -162,7 +162,7 @@ class RedisMemoryManager:
 
             if track_access:
                 data["access_count"] = data.get("access_count", 0) + 1
-                data["last_accessed_at"] = datetime.now(timezone.utc).isoformat()
+                data["last_accessed_at"] = datetime.now(UTC).isoformat()
 
                 # Update with same TTL
                 ttl = await redis_client.ttl(namespaced_key)

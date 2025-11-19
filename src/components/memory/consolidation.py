@@ -9,7 +9,7 @@ This module provides automatic consolidation between memory layers:
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Dict
 
 import numpy as np
@@ -90,7 +90,7 @@ class TimeBasedPolicy(ConsolidationPolicy):
 
         try:
             stored_time = datetime.fromisoformat(stored_at)
-            age = datetime.now(timezone.utc) - stored_time
+            age = datetime.now(UTC) - stored_time
             return age >= timedelta(hours=self.min_age_hours)
         except Exception:
             return False
@@ -552,7 +552,7 @@ class MemoryConsolidationPipeline:
                 metadata={
                     "session_id": session_id,
                     "message_count": len(context),
-                    "consolidated_at": datetime.now(timezone.utc).isoformat(),
+                    "consolidated_at": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -596,7 +596,7 @@ class MemoryConsolidationPipeline:
             Dictionary with consolidation results for all operations
         """
         results = {
-            "started_at": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
             "qdrant_consolidation": None,
             "conversation_consolidations": [],
         }
@@ -629,7 +629,7 @@ class MemoryConsolidationPipeline:
                         {"session_id": session_id, "error": str(e)}
                     )
 
-        results["completed_at"] = datetime.now(timezone.utc).isoformat()
+        results["completed_at"] = datetime.now(UTC).isoformat()
 
         logger.info(
             "Completed consolidation cycle",

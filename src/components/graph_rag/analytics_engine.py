@@ -13,7 +13,7 @@ Features:
 """
 
 import time
-from typing import Any, Literal, Dict
+from typing import Any, Dict, Literal
 
 import networkx as nx
 import structlog

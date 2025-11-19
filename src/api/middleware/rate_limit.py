@@ -32,7 +32,7 @@ Example:
     ...     return {"results": [...]}
 """
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 import structlog
 from fastapi import Request

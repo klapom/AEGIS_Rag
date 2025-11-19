@@ -14,9 +14,9 @@ when RAGAS evaluation fails.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal, Dict
+from typing import Any, Dict, Literal
 
 import structlog
 from pydantic import BaseModel, Field
@@ -69,7 +69,7 @@ class EvaluationResult(BaseModel):
     num_samples: int = Field(..., description="Number of evaluation samples")
     duration_seconds: float = Field(..., description="Evaluation duration")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Evaluation timestamp"
+        default_factory=lambda: datetime.now(UTC).isoformat(), description="Evaluation timestamp"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
@@ -232,7 +232,7 @@ class RAGASEvaluator:
         """
         logger.info("starting_ragas_evaluation", scenario=scenario, num_samples=len(dataset))
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Convert to RAGAS 0.3 EvaluationDataset format
         # RAGAS 0.3 uses SingleTurnSample instead of raw dicts
@@ -271,7 +271,7 @@ class RAGASEvaluator:
             ),
         )
 
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
 
         # Extract scores
@@ -353,7 +353,7 @@ class RAGASEvaluator:
             num_samples=len(dataset),
         )
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Initialize custom evaluator
         custom_evaluator = CustomMetricsEvaluator(
@@ -384,7 +384,7 @@ class RAGASEvaluator:
             recall_scores.append(results.context_recall)
             faithfulness_scores.append(results.faithfulness)
 
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
 
         # Calculate averages
@@ -509,7 +509,7 @@ class RAGASEvaluator:
     def _generate_json_report(self, results: dict[str, EvaluationResult]) -> str:
         """Generate JSON report."""
         report_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "scenarios": {scenario: result.model_dump() for scenario, result in results.items()},
             "summary": {
                 "best_context_precision": max(r.context_precision for r in results.values()),
@@ -524,7 +524,7 @@ class RAGASEvaluator:
         lines = [
             "# RAGAS Evaluation Report",
             "",
-            f"**Timestamp**: {datetime.now(timezone.utc).isoformat()}",
+            f"**Timestamp**: {datetime.now(UTC).isoformat()}",
             "",
             "## Results by Scenario",
             "",
@@ -638,7 +638,7 @@ class RAGASEvaluator:
 <body>
     <div class="container">
         <h1>RAGAS Evaluation Report</h1>
-        <p class="timestamp">Generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+        <p class="timestamp">Generated: {datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
 
         <h2>Results by Scenario</h2>
         <table>

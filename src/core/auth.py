@@ -29,7 +29,7 @@ See Also:
     - src/api/v1/auth.py: Login endpoint implementation
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import structlog
 from fastapi import HTTPException, status
@@ -169,7 +169,7 @@ def create_access_token(user_id: str, username: str, role: str = "user") -> Toke
         - Tokens are stateless - cannot be revoked without additional infrastructure
         - Token expiration is hardcoded to JWT_EXPIRATION_MINUTES
     """
-    expires = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRATION_MINUTES)
+    expires = datetime.now(UTC) + timedelta(minutes=JWT_EXPIRATION_MINUTES)
 
     # Create payload with Unix timestamp for expiration
     payload = {

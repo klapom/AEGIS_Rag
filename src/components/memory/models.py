@@ -6,7 +6,7 @@ This module provides data models for the 3-layer memory architecture:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 
@@ -85,7 +85,7 @@ class MemoryEntry:
             value=data["value"],
             ttl_seconds=data.get("ttl_seconds", 3600),
             tags=data.get("tags", []),
-            created_at=created_at or datetime.now(timezone.utc),
+            created_at=created_at or datetime.now(UTC),
             metadata=data.get("metadata", {}),
             namespace=data.get("namespace", "memory"),
         )

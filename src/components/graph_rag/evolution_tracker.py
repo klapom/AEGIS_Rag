@@ -3,7 +3,7 @@
 This module tracks entity changes, detects drift, and provides change analytics.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Dict
 
 import structlog
@@ -87,7 +87,7 @@ class EvolutionTracker:
             entity_id=entity_id,
             version_from=version_from,
             version_to=new_version.get("version_number", 1),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             changed_fields=changed_fields,
             change_type=change_type,
             changed_by=new_version.get("changed_by", "system"),
@@ -253,7 +253,7 @@ class EvolutionTracker:
         Returns:
             Drift analysis with change rate and alert status
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         query = """
         MATCH (c:ChangeEvent {entity_id: $entity_id})
@@ -334,7 +334,7 @@ class EvolutionTracker:
         Returns:
             List of stable entity IDs with metadata
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=min_age_days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=min_age_days)
 
         query = """
         MATCH (e:Entity)
@@ -400,7 +400,7 @@ class EvolutionTracker:
         Returns:
             List of active entity IDs with change counts
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         query = """
         MATCH (c:ChangeEvent)

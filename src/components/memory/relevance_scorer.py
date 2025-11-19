@@ -8,7 +8,7 @@ This module provides importance calculation for memory items based on:
 
 import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -174,7 +174,7 @@ class RelevanceScorer:
             raise ValueError(f"stored_at must be str or datetime, got {type(stored_at)}")
 
         # Calculate age in days
-        now = current_time or datetime.now(timezone.utc)
+        now = current_time or datetime.now(UTC)
         age_delta = now - stored_time
         days_old = age_delta.total_seconds() / 86400.0  # 86400 seconds in a day
 

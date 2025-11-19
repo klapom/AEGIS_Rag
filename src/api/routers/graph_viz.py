@@ -10,8 +10,8 @@ Sprint 29: Added 4 new endpoints for frontend graph visualization:
 - GET /communities/{community_id}/documents (Feature 29.7)
 """
 
-from datetime import datetime, timezone
-from typing import Any, Literal, Dict
+from datetime import UTC, datetime
+from typing import Any, Dict, Literal
 
 import structlog
 from fastapi import APIRouter, HTTPException
@@ -433,7 +433,7 @@ async def get_graph_statistics() -> GraphStatistics:
             avg_degree=avg_degree,
             entity_type_distribution=entity_types,
             orphaned_nodes=orphaned_nodes,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
         )
 
     except Exception as e:
@@ -534,7 +534,7 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
         qdrant = QdrantClient()
         embedding_service = UnifiedEmbeddingService()
         documents: list[CommunityDocument] = []
-        seen_doc_ids: Set[str] = set()
+        seen_doc_ids: set[str] = set()
 
         # Sample first 10 entities to avoid excessive queries
         for entity_name in entity_names[:10]:

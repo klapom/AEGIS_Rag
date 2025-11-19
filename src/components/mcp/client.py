@@ -8,7 +8,7 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import httpx
@@ -91,7 +91,7 @@ class MCPClient:
 
                 self.servers[server.name] = server
                 connection.status = ServerStatus.CONNECTED
-                connection.connection_time = datetime.now(timezone.utc).isoformat()
+                connection.connection_time = datetime.now(UTC).isoformat()
                 self._stats.total_servers += 1
                 self._stats.connected_servers += 1
 

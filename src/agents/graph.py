@@ -8,7 +8,7 @@ Sprint 5 Feature 5.5: Graph Query Agent Integration
 Implements the foundational graph with optional checkpointing for conversation history.
 """
 
-from typing import Any, Literal, Dict
+from typing import Any, Dict, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph

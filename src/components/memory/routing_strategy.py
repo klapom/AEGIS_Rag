@@ -8,7 +8,7 @@ This module provides routing strategies for intelligent memory layer selection:
 
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any, Dict
 
@@ -86,14 +86,14 @@ class RecencyBasedStrategy(RoutingStrategy):
         if isinstance(query_time, str):
             query_time = datetime.fromisoformat(query_time)
         elif not isinstance(query_time, datetime):
-            query_time = datetime.now(timezone.utc)
+            query_time = datetime.now(UTC)
 
         session_start = metadata.get("session_start_time")
         if isinstance(session_start, str):
             session_start = datetime.fromisoformat(session_start)
 
         # Calculate time delta
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         reference_time = session_start if session_start else query_time
         time_delta = now - reference_time
 

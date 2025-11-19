@@ -8,7 +8,7 @@ This module provides bi-temporal querying capabilities for episodic memory:
 - Entity history tracking
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import structlog
@@ -69,7 +69,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            transaction_time = transaction_time or datetime.now(timezone.utc)
+            transaction_time = transaction_time or datetime.now(UTC)
 
             # Cypher query for bi-temporal point-in-time retrieval
             query = """
@@ -152,7 +152,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            transaction_time = transaction_time or datetime.now(timezone.utc)
+            transaction_time = transaction_time or datetime.now(UTC)
 
             # Query for entities valid during any part of the range
             query = """
@@ -305,7 +305,7 @@ class TemporalMemoryQuery:
             MemoryError: If query fails
         """
         try:
-            valid_time = valid_time or datetime.now(timezone.utc)
+            valid_time = valid_time or datetime.now(UTC)
 
             # Build direction pattern
             if direction == "outgoing":

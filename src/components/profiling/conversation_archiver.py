@@ -9,7 +9,7 @@ This module provides:
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Dict
 
 import structlog
@@ -161,8 +161,8 @@ class ConversationArchiver:
             title = conversation_data.get("title")
             summary = self._generate_summary(messages)
             topics = self._extract_topics(messages)
-            created_at = conversation_data.get("created_at", datetime.now(timezone.utc).isoformat())
-            archived_at = datetime.now(timezone.utc).isoformat()
+            created_at = conversation_data.get("created_at", datetime.now(UTC).isoformat())
+            archived_at = datetime.now(UTC).isoformat()
             message_count = len(messages)
 
             # Create Qdrant point
@@ -288,7 +288,7 @@ class ConversationArchiver:
                 query=request.query,
                 results=results,
                 total_count=len(results),
-                search_timestamp=datetime.now(timezone.utc).isoformat(),
+                search_timestamp=datetime.now(UTC).isoformat(),
             )
 
         except Exception as e:
@@ -326,7 +326,7 @@ class ConversationArchiver:
             # Process each conversation
             archived_count = 0
             failed_count = 0
-            cutoff_date = datetime.now(timezone.utc) - timedelta(days=self.auto_archive_days)
+            cutoff_date = datetime.now(UTC) - timedelta(days=self.auto_archive_days)
 
             for key in conversation_keys[:max_conversations]:
                 try:

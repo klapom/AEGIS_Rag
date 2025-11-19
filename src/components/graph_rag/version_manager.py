@@ -5,7 +5,7 @@ Implements version retention, comparison, and rollback functionality.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import structlog
@@ -65,7 +65,7 @@ class VersionManager:
         if not entity_id:
             raise ValueError("Entity must have 'id' or 'name' field")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         now_iso = now.isoformat()
 
         # Get current version
@@ -480,7 +480,7 @@ class VersionManager:
         if self.retention_count <= 0:
             return 0  # No retention limit
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         # Soft delete versions beyond retention limit
         query = """

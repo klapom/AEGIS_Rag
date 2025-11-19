@@ -44,7 +44,6 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.core.auth import User, decode_access_token
-from typing import Set
 
 logger = structlog.get_logger(__name__)
 

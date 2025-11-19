@@ -7,7 +7,7 @@ This module provides a wrapper around Graphiti episodic memory system with:
 - Episode management and search capabilities
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import structlog
@@ -301,7 +301,7 @@ class GraphitiClient:
             MemoryError: If episode addition fails
         """
         try:
-            timestamp = timestamp or datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(UTC)
             metadata = metadata or {}
 
             # Add episode to Graphiti
@@ -363,7 +363,7 @@ class GraphitiClient:
 
             # Apply time window filter if specified
             if time_window_hours:
-                cutoff_time = datetime.now(timezone.utc).timestamp() - (time_window_hours * 3600)
+                cutoff_time = datetime.now(UTC).timestamp() - (time_window_hours * 3600)
                 search_config.time_filter = {"after": cutoff_time}
 
             results = await self.graphiti.search(
@@ -416,7 +416,7 @@ class GraphitiClient:
             MemoryError: If entity addition fails
         """
         try:
-            timestamp = timestamp or datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(UTC)
             properties = properties or {}
 
             entity = await self.graphiti.add_entity(
@@ -469,7 +469,7 @@ class GraphitiClient:
             MemoryError: If edge addition fails
         """
         try:
-            timestamp = timestamp or datetime.now(timezone.utc)
+            timestamp = timestamp or datetime.now(UTC)
             properties = properties or {}
 
             edge = await self.graphiti.add_edge(

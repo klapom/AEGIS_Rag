@@ -27,7 +27,6 @@ from src.components.llm_proxy.models import (
 )
 from src.core.config import settings
 from src.core.models import Community, GraphEntity
-from typing import List
 
 logger = structlog.get_logger(__name__)
 

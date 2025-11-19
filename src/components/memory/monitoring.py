@@ -8,7 +8,7 @@ This module provides:
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Dict
 
 import structlog
@@ -184,7 +184,7 @@ class MemoryMonitoring:
                 "layer": "redis",
                 "capacity": capacity,
                 "entries": total_entries,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -239,7 +239,7 @@ class MemoryMonitoring:
                 "layer": "qdrant",
                 "capacity": capacity,
                 "entries": total_vectors,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -294,7 +294,7 @@ class MemoryMonitoring:
                 "layer": "graphiti",
                 "capacity": capacity,
                 "entries": node_count,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
@@ -322,7 +322,7 @@ class MemoryMonitoring:
             Dictionary with all collected metrics
         """
         metrics = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "layers": {},
         }
 

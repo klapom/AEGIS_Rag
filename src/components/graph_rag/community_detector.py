@@ -21,7 +21,7 @@ import asyncio
 import hashlib
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import lru_cache
 
 import networkx as nx
@@ -38,7 +38,6 @@ from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.core.config import settings
 from src.core.exceptions import DatabaseConnectionError
 from src.core.models import Community
-from typing import List
 
 logger = structlog.get_logger(__name__)
 
@@ -334,7 +333,7 @@ class CommunityDetector:
                     entity_ids=entity_ids,
                     size=len(entity_ids),
                     density=0.0,  # Calculate separately if needed
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     metadata={
                         "algorithm": algorithm,
                         "resolution": resolution,
@@ -436,7 +435,7 @@ class CommunityDetector:
                     entity_ids=entity_ids,
                     size=len(entity_ids),
                     density=self._calculate_density(graph, entity_ids),
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     metadata={
                         "algorithm": "louvain",  # NetworkX uses Louvain
                         "resolution": resolution,
@@ -540,7 +539,7 @@ class CommunityDetector:
                 entity_ids=entity_ids,
                 size=len(entity_ids),
                 density=0.0,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 metadata={},
             )
 
@@ -602,7 +601,7 @@ class CommunityDetector:
                     entity_ids=record["entity_ids"],
                     size=record["size"],
                     density=0.0,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     metadata={},
                 )
                 communities.append(community)
