@@ -6,10 +6,10 @@ connections, automatic reconnection, and connection pooling.
 
 import asyncio
 import logging
+from typing import Any
 
 from .client import MCPClient, MCPConnectionError
 from .models import MCPServer, MCPServerConnection, MCPTool, ServerStatus
-from typing import List
 
 logger = logging.getLogger(__name__)
 
