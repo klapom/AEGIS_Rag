@@ -79,7 +79,7 @@ export const test = base.extend<Fixtures>({
    */
   costDashboardPage: async ({ page }, use) => {
     const costDashboardPage = new CostDashboardPage(page);
-    await costDashboardPage.goto();
+    // Tests handle navigation
     await use(costDashboardPage);
   },
 });

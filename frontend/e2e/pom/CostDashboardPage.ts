@@ -17,6 +17,11 @@ export class CostDashboardPage extends BasePage {
   readonly exportButton: Locator;
   readonly alertBanner: Locator;
   readonly costDetails: Locator;
+  readonly totalCostCard: Locator;
+  readonly totalTokensCard: Locator;
+  readonly totalCallsCard: Locator;
+  readonly avgCostCard: Locator;
+  readonly timeRangeSelector: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -31,13 +36,19 @@ export class CostDashboardPage extends BasePage {
     this.exportButton = page.locator('[data-testid="export-costs"]');
     this.alertBanner = page.locator('[data-testid="budget-alert"]');
     this.costDetails = page.locator('[data-testid="cost-details-row"]');
+    // Summary cards
+    this.totalCostCard = page.locator('[data-testid="card-total-cost"]');
+    this.totalTokensCard = page.locator('[data-testid="card-total-tokens"]');
+    this.totalCallsCard = page.locator('[data-testid="card-total-calls"]');
+    this.avgCostCard = page.locator('[data-testid="card-avg-cost"]');
+    this.timeRangeSelector = page.locator('[data-testid="time-range-selector"]');
   }
 
   /**
    * Navigate to cost dashboard
    */
-  async goto() {
-    await super.goto('/dashboard/costs');
+  async goto(path: string = '/admin/costs') {
+    await super.goto(path);
     await this.waitForNetworkIdle();
   }
 
@@ -45,7 +56,7 @@ export class CostDashboardPage extends BasePage {
    * Get total cost displayed
    */
   async getTotalCost(): Promise<number> {
-    const text = await this.totalCostDisplay.textContent();
+    const text = await this.totalCostCard.locator(".text-3xl").textContent();
     const match = text?.match(/\$?([\d.]+)/);
     return match ? parseFloat(match[1]) : 0;
   }
@@ -230,7 +241,7 @@ export class CostDashboardPage extends BasePage {
    */
   async waitForCostDataLoad(timeout = 10000) {
     try {
-      await this.totalCostDisplay.waitFor({ state: 'visible', timeout });
+      await this.totalCostCard.waitFor({ state: 'visible', timeout });
     } catch {
       throw new Error('Cost data failed to load');
     }
