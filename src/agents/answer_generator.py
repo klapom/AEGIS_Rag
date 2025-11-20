@@ -207,9 +207,7 @@ class AnswerGenerator:
         context_text = self._format_contexts_with_citations(top_contexts)
 
         # Build prompt for citation generation
-        prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(
-            contexts=context_text, query=query
-        )
+        prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
 
         logger.debug(
             "generating_answer_with_citations",
