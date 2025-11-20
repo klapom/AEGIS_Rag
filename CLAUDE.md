@@ -20,7 +20,7 @@
 
 ---
 
-## 📍 Current Project State (Sprint 21)
+## 📍 Current Project State (Sprint 30)
 
 **Sprint 20 Status**: ✅ COMPLETE (2025-10-31 - 2025-11-06)
 - ✅ Performance Optimization & Extraction Quality
@@ -105,7 +105,34 @@
 - **Code Metrics**: +3,117 lines added, -1,626 lines removed (net -796 refactoring)
 - **ADR Compliance**: 100% (ADR-026, ADR-027, ADR-028, ADR-033)
 
-**Next Sprint**: Sprint 26 - Integration Test Fixes & Advanced Features
+**Sprint 30 Status**: ✅ COMPLETE (2025-11-20, 1 day - branch: `main`)
+- **Objective**: Frontend Production Testing & Missing Feature Implementation
+- **Key Achievements**:
+  - ✅ **Feature 27.10: Inline Source Citations** - NACHGEHOLT & PRODUCTION READY ⭐⭐⭐
+    - **Context**: Feature wurde in Sprint 27 vergessen und während Sprint 30 Testing nachimplementiert
+    - Citation generation with [1], [2] markers in LLM responses
+    - citation_map in LangGraph state for source metadata
+    - SSE streaming support for real-time citation display
+    - 19/19 Citation tests passing (12 Unit + 7 Frontend E2E)
+  - ✅ **Test Infrastructure Improvements** (während Citation-Implementierung)
+    - Lazy Import Pattern documented in CLAUDE.md (comprehensive guide)
+    - Testing Best Practices in SUBAGENTS.md (quick reference)
+    - 9 commits: poetry.lock sync → Black formatting → Sprint documentation
+    - Fixed 10+ pre-existing test issues (mock paths, API URLs, IntentClassifier assertions)
+  - ✅ **CI/CD Quality Gates**
+    - Code Quality: Black, Ruff, MyPy all passing ✅
+    - Unit Tests: 467 passed (Citation tests: 12/12) ✅
+    - Frontend Tests: E2E + Unit all passing ✅
+- **Lessons Learned**:
+  - Lazy imports require patching at source module, not caller
+  - Integration tests should have realistic assertions (e.g., accept HYBRID intent)
+  - API router prefixes must be included in test URLs
+  - Black formatting: prefer single-line for short .format() calls
+  - Feature tracking: Vergessene Features können während Testing nachgeholt werden
+- **Code Metrics**: 9 commits, +138 lines documentation, -5 lines refactoring
+- **Test Coverage**: 19/19 Citation tests passing, Feature PRODUCTION READY
+
+**Next Sprint**: Sprint 31 - Advanced Frontend Features & E2E Coverage
 
 For full details, see:
 - [SPRINT_21_PLAN_v2.md](sprints/SPRINT_21_PLAN_v2.md)
