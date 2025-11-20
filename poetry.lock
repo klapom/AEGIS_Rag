@@ -6890,7 +6890,7 @@ version = "1.16.2"
 description = "Fundamental algorithms for scientific computing in Python"
 optional = false
 python-versions = ">=3.11"
-groups = ["evaluation", "graph-analysis", "reranking"]
+groups = ["main", "evaluation", "graph-analysis", "reranking"]
 files = [
     {file = "scipy-1.16.2-cp311-cp311-macosx_10_14_x86_64.whl", hash = "sha256:6ab88ea43a57da1af33292ebd04b417e8e2eaf9d5aa05700be8d6e1b6501cd92"},
     {file = "scipy-1.16.2-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:c95e96c7305c96ede73a7389f46ccd6c659c4da5ef1b2789466baeaed3622b6e"},
@@ -9020,4 +9020,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "0fb3333d282e7c59831f5287a74398d62f863349a81992a144f03e6154dcb019"
+content-hash = "7793d73fee09a7a9b20e228fe0fe5a633b0734c67f61d6eb1878c2210c4f18e0"
