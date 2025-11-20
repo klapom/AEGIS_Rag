@@ -2,6 +2,7 @@
  * App Component
  * Sprint 15 Feature 15.4: Main App with React Router
  * Sprint 28 Feature 28.3: Settings page and context provider
+ * Sprint 31 Feature 31.10b: Cost Dashboard route registration
  */
 
 import { useState } from 'react';
@@ -14,6 +15,7 @@ import { HealthDashboard } from './pages/HealthDashboard';
 import { AdminPage } from './pages/AdminPage';
 import { Settings } from './pages/Settings';
 import { GraphAnalyticsPage } from './pages/admin/GraphAnalyticsPage';
+import { CostDashboardPage } from './pages/admin/CostDashboardPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -35,6 +37,8 @@ function App() {
             <Route path="/health" element={<HealthDashboard />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/graph" element={<GraphAnalyticsPage />} />
+            <Route path="/admin/costs" element={<CostDashboardPage />} />
+            <Route path="/dashboard/costs" element={<CostDashboardPage />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </AppLayout>

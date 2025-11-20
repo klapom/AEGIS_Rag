@@ -1,6 +1,7 @@
 /**
  * Admin API Client
  * Sprint 17 Feature 17.1: Admin UI for Directory Indexing
+ * Sprint 31 Feature 31.10b: Cost Dashboard API Integration
  */
 
 import type { ReindexProgressChunk, ReindexRequest, SystemStats } from '../types/admin';
@@ -98,6 +99,70 @@ export async function getSystemStats(): Promise<SystemStats> {
       'Content-Type': 'application/json',
     },
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Cost Tracking Types (Sprint 31 Feature 31.10b)
+ */
+export interface ProviderCost {
+  cost_usd: number;
+  tokens: number;
+  calls: number;
+  avg_cost_per_call: number;
+}
+
+export interface ModelCost {
+  provider: string;
+  cost_usd: number;
+  tokens: number;
+  calls: number;
+}
+
+export interface BudgetStatus {
+  limit_usd: number;
+  spent_usd: number;
+  utilization_percent: number;
+  status: 'ok' | 'warning' | 'critical';
+  remaining_usd: number;
+}
+
+export interface CostStats {
+  total_cost_usd: number;
+  total_tokens: number;
+  total_calls: number;
+  avg_cost_per_call: number;
+  by_provider: Record<string, ProviderCost>;
+  by_model: Record<string, ModelCost>;
+  budgets: Record<string, BudgetStatus>;
+  time_range: string;
+}
+
+/**
+ * Get cost statistics for admin dashboard
+ * Sprint 31 Feature 31.10b: Cost Dashboard API
+ *
+ * @param timeRange Time range for cost stats: '7d', '30d', or 'all'
+ * @returns CostStats with provider, model, and budget breakdown
+ */
+export async function getCostStats(
+  timeRange: '7d' | '30d' | 'all' = '7d'
+): Promise<CostStats> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/admin/costs/stats?time_range=${timeRange}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
 
   if (!response.ok) {
     const errorText = await response.text();
