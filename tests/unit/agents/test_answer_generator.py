@@ -2,8 +2,8 @@
 
 Sprint 27 Feature 27.10: Inline Source Citations
 
-NOTE: These tests are currently skipped as generate_with_citations()
-      has not been implemented yet. Tests will be enabled when feature is complete.
+Tests for the generate_with_citations() method that adds inline source
+citations ([1], [2], etc.) to generated answers.
 """
 
 import re
@@ -13,10 +13,6 @@ import pytest
 
 from src.agents.answer_generator import AnswerGenerator
 from src.components.llm_proxy.models import LLMResponse
-
-
-# Skip all citation tests until feature is implemented
-pytestmark = pytest.mark.skip(reason="Feature 27.10 (generate_with_citations) not yet implemented")
 
 
 @pytest.fixture
@@ -74,6 +70,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=150.0,
+            tokens_used=50,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -128,6 +125,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=200.0,
+            tokens_used=45,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -161,6 +159,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=100.0,
+            tokens_used=30,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -192,6 +191,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=100.0,
+            tokens_used=25,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -231,6 +231,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=100.0,
+            tokens_used=55,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -256,6 +257,7 @@ class TestAnswerGeneratorCitations:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=100.0,
+            tokens_used=20,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
@@ -292,6 +294,7 @@ class TestAnswerGeneratorPrompt:
             model="llama3.2:3b",
             cost_usd=0.0,
             latency_ms=100.0,
+            tokens_used=15,
         )
         mock_llm_proxy.generate.return_value = mock_response
 
