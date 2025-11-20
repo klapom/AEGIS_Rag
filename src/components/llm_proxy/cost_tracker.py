@@ -441,3 +441,43 @@ class CostTracker:
             writer.writerows(rows)
 
         logger.info("Cost data exported to CSV", output_path=str(output_path), rows=len(rows))
+
+
+# ============================================================================
+# Singleton Instance for Global Access (Sprint 31 Feature 31.10a)
+# ============================================================================
+
+_cost_tracker_instance: CostTracker | None = None
+
+
+def get_cost_tracker() -> CostTracker:
+    """Get or create the global cost tracker instance.
+
+    This function provides singleton access to the CostTracker for use by
+    API endpoints and other components that need cost statistics.
+
+    Returns:
+        CostTracker: Global cost tracker instance
+
+    Example:
+        >>> from src.components.llm_proxy.cost_tracker import get_cost_tracker
+        >>> tracker = get_cost_tracker()
+        >>> spending = tracker.get_monthly_spending()
+        >>> spending
+        {'alibaba_cloud': 5.25, 'openai': 2.50}
+
+    Notes:
+        - First call creates the instance with default db_path
+        - Subsequent calls return the same instance
+        - Uses data/cost_tracking.db by default
+        - Thread-safe (SQLite handles concurrency)
+
+    See Also:
+        - CostTracker: Main cost tracking class
+        - src/api/v1/admin.py: Admin endpoints using this function
+    """
+    global _cost_tracker_instance
+    if _cost_tracker_instance is None:
+        _cost_tracker_instance = CostTracker()
+        logger.info("cost_tracker_singleton_initialized", db_path=str(_cost_tracker_instance.db_path))
+    return _cost_tracker_instance

@@ -226,6 +226,16 @@ class Settings(BaseSettings):
     # Anthropic (Optional Fallback)
     anthropic_api_key: SecretStr | None = Field(default=None, description="Anthropic API key")
 
+    # Budget Limits (Sprint 31 Feature 31.10a: Cost Dashboard)
+    monthly_budget_alibaba_cloud: float | None = Field(
+        default=10.0,
+        description="Monthly budget limit for Alibaba Cloud in USD (null = unlimited)",
+    )
+    monthly_budget_openai: float | None = Field(
+        default=20.0,
+        description="Monthly budget limit for OpenAI in USD (null = unlimited)",
+    )
+
     # Feature 21.6: Qwen3-VL Image Processing
     qwen3vl_model: str = Field(
         default="qwen3-vl:4b-instruct",

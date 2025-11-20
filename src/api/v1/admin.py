@@ -1,10 +1,13 @@
 """Admin API endpoints for re-indexing and maintenance operations.
 
 Sprint 16 Feature 16.3: Unified Re-Indexing Pipeline with SSE progress tracking.
+Sprint 31 Feature 31.10a: Cost API Backend Implementation
 """
 
 from collections.abc import AsyncGenerator
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List, Literal
 
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
@@ -12,7 +15,9 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
 
+from src.api.models.cost_stats import BudgetStatus, CostHistory, CostStats, ModelCost, ProviderCost
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+from src.components.llm_proxy.cost_tracker import get_cost_tracker
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.ingestion import ingest_documents
 from src.components.vector_search.qdrant_client import get_qdrant_client
@@ -853,3 +858,399 @@ async def reindex_with_vlm_enrichment(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ============================================================================
+# Sprint 31 Feature 31.10a: Cost API Backend Implementation
+# ============================================================================
+
+
+@router.get("/costs/stats", response_model=CostStats)
+async def get_cost_stats(
+    time_range: Literal["7d", "30d", "all"] = Query(
+        default="7d",
+        description="Time range for cost statistics (7d=last 7 days, 30d=current month, all=all time)",
+    )
+) -> CostStats:
+    """Get LLM cost statistics with budget tracking.
+
+    **Sprint 31 Feature 31.10a: Cost Dashboard Backend**
+
+    Returns comprehensive cost breakdown by provider, model, and budget status.
+    Includes all LLM costs tracked by AegisLLMProxy via SQLite cost tracker.
+
+    **Time Ranges:**
+    - `7d`: Last 7 days (rolling window)
+    - `30d`: Current month (from first day of month to now)
+    - `all`: All time (entire cost tracking history)
+
+    **Budget Status Thresholds:**
+    - `ok`: <80% of budget used (green)
+    - `warning`: 80-100% of budget used (yellow)
+    - `critical`: >100% of budget used (red, over budget)
+
+    **Provider Tracking:**
+    - `local_ollama`: Always $0.00 (free local models)
+    - `alibaba_cloud`: Qwen models (qwen3-vl, qwen-turbo, etc.)
+    - `openai`: GPT models (if enabled)
+
+    **Budget Configuration:**
+    Budget limits are configured via environment variables:
+    - `MONTHLY_BUDGET_ALIBABA_CLOUD`: Default $10.00/month
+    - `MONTHLY_BUDGET_OPENAI`: Default $20.00/month
+
+    **Example Response:**
+    ```json
+    {
+      "total_cost_usd": 5.25,
+      "total_tokens": 500000,
+      "total_calls": 250,
+      "avg_cost_per_call": 0.021,
+      "by_provider": {
+        "alibaba_cloud": {
+          "cost_usd": 5.25,
+          "tokens": 500000,
+          "calls": 250,
+          "avg_cost_per_call": 0.021
+        }
+      },
+      "by_model": {
+        "alibaba_cloud/qwen3-vl-30b": {
+          "provider": "alibaba_cloud",
+          "cost_usd": 3.50,
+          "tokens": 300000,
+          "calls": 150
+        }
+      },
+      "budgets": {
+        "alibaba_cloud": {
+          "limit_usd": 10.0,
+          "spent_usd": 5.25,
+          "utilization_percent": 52.5,
+          "status": "ok",
+          "remaining_usd": 4.75
+        }
+      },
+      "time_range": "7d"
+    }
+    ```
+
+    Args:
+        time_range: Time window for statistics (7d, 30d, all)
+
+    Returns:
+        CostStats: Comprehensive cost statistics
+
+    Raises:
+        HTTPException: If cost retrieval fails
+
+    See Also:
+        - GET /admin/costs/history: Daily cost history for charting
+        - src/components/llm_proxy/cost_tracker.py: Cost tracking implementation
+        - src/components/llm_proxy/aegis_llm_proxy.py: LLM proxy with cost tracking
+    """
+    try:
+        tracker = get_cost_tracker()
+
+        # Calculate time filter based on time_range
+        start_date = None
+        if time_range == "7d":
+            start_date = (datetime.now() - timedelta(days=7)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        elif time_range == "30d":
+            # Current month (from first day to now)
+            start_date = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Get request stats from tracker
+        # Note: CostTracker.get_request_stats expects days parameter, but we need custom date ranges
+        # So we'll calculate directly from the database
+        import sqlite3
+
+        with sqlite3.connect(tracker.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Build WHERE clause
+            conditions = []
+            params = []
+            if start_date:
+                conditions.append("timestamp >= ?")
+                params.append(start_date.isoformat())
+
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            # Aggregate by provider
+            cursor.execute(
+                f"""
+                SELECT
+                    provider,
+                    SUM(cost_usd) as total_cost,
+                    SUM(tokens_total) as total_tokens,
+                    COUNT(*) as total_calls
+                FROM llm_requests
+                WHERE {where_clause}
+                GROUP BY provider
+            """,
+                tuple(params),
+            )
+
+            provider_rows = cursor.fetchall()
+
+            # Aggregate by model
+            cursor.execute(
+                f"""
+                SELECT
+                    provider,
+                    model,
+                    SUM(cost_usd) as total_cost,
+                    SUM(tokens_total) as total_tokens,
+                    COUNT(*) as total_calls
+                FROM llm_requests
+                WHERE {where_clause}
+                GROUP BY provider, model
+            """,
+                tuple(params),
+            )
+
+            model_rows = cursor.fetchall()
+
+        # Build provider cost breakdown
+        by_provider: dict[str, ProviderCost] = {}
+        for provider, cost, tokens, calls in provider_rows:
+            avg_cost = cost / calls if calls > 0 else 0.0
+            by_provider[provider] = ProviderCost(
+                cost_usd=cost,
+                tokens=tokens,
+                calls=calls,
+                avg_cost_per_call=avg_cost,
+            )
+
+        # Build model cost breakdown
+        by_model: dict[str, ModelCost] = {}
+        for provider, model, cost, tokens, calls in model_rows:
+            model_key = f"{provider}/{model}"
+            by_model[model_key] = ModelCost(
+                provider=provider,
+                cost_usd=cost,
+                tokens=tokens,
+                calls=calls,
+            )
+
+        # Calculate totals
+        total_cost = sum(p.cost_usd for p in by_provider.values())
+        total_tokens = sum(p.tokens for p in by_provider.values())
+        total_calls = sum(p.calls for p in by_provider.values())
+        avg_cost_per_call = total_cost / total_calls if total_calls > 0 else 0.0
+
+        # Calculate budget status (only for current month)
+        budgets: dict[str, BudgetStatus] = {}
+
+        # Get current month spending for budget calculation
+        current_month_spending = tracker.get_monthly_spending()
+
+        # Ollama (always free)
+        if "local_ollama" in by_provider:
+            budgets["local_ollama"] = BudgetStatus(
+                limit_usd=0.0,
+                spent_usd=0.0,
+                utilization_percent=0.0,
+                status="ok",
+                remaining_usd=0.0,
+            )
+
+        # Alibaba Cloud
+        if "alibaba_cloud" in current_month_spending or "alibaba_cloud" in by_provider:
+            alibaba_limit = float(settings.monthly_budget_alibaba_cloud or 10.0)
+            alibaba_spent = current_month_spending.get("alibaba_cloud", 0.0)
+            alibaba_util = (alibaba_spent / alibaba_limit * 100) if alibaba_limit > 0 else 0.0
+
+            budgets["alibaba_cloud"] = BudgetStatus(
+                limit_usd=alibaba_limit,
+                spent_usd=alibaba_spent,
+                utilization_percent=alibaba_util,
+                status="ok" if alibaba_util < 80 else ("warning" if alibaba_util < 100 else "critical"),
+                remaining_usd=max(0, alibaba_limit - alibaba_spent),
+            )
+
+        # OpenAI
+        if "openai" in current_month_spending or "openai" in by_provider:
+            openai_limit = float(settings.monthly_budget_openai or 20.0)
+            openai_spent = current_month_spending.get("openai", 0.0)
+            openai_util = (openai_spent / openai_limit * 100) if openai_limit > 0 else 0.0
+
+            budgets["openai"] = BudgetStatus(
+                limit_usd=openai_limit,
+                spent_usd=openai_spent,
+                utilization_percent=openai_util,
+                status="ok" if openai_util < 80 else ("warning" if openai_util < 100 else "critical"),
+                remaining_usd=max(0, openai_limit - openai_spent),
+            )
+
+        logger.info(
+            "cost_stats_retrieved",
+            time_range=time_range,
+            total_cost=total_cost,
+            total_calls=total_calls,
+            providers=list(by_provider.keys()),
+        )
+
+        return CostStats(
+            total_cost_usd=total_cost,
+            total_tokens=total_tokens,
+            total_calls=total_calls,
+            avg_cost_per_call=avg_cost_per_call,
+            by_provider=by_provider,
+            by_model=by_model,
+            budgets=budgets,
+            time_range=time_range,
+        )
+
+    except Exception as e:
+        logger.error("cost_stats_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve cost statistics: {str(e)}",
+        ) from e
+
+
+@router.get("/costs/history", response_model=List[CostHistory])
+async def get_cost_history(
+    time_range: Literal["7d", "30d", "all"] = Query(
+        default="7d",
+        description="Time range for cost history (7d=last 7 days, 30d=last 30 days, all=all time)",
+    )
+) -> List[CostHistory]:
+    """Get historical cost data grouped by day for charting.
+
+    **Sprint 31 Feature 31.10a: Cost Dashboard Backend**
+
+    Returns daily aggregated cost data for time-series visualization.
+    Used by frontend to render cost trend charts and budget burn-down graphs.
+
+    **Time Ranges:**
+    - `7d`: Last 7 days (7 data points)
+    - `30d`: Last 30 days (up to 30 data points)
+    - `all`: All time (daily aggregation since first tracked request)
+
+    **Data Aggregation:**
+    - Costs are grouped by date (YYYY-MM-DD)
+    - Tokens include both input and output
+    - Calls are the number of LLM requests per day
+    - Results are sorted chronologically (oldest to newest)
+
+    **Example Response:**
+    ```json
+    [
+      {
+        "date": "2025-11-14",
+        "cost_usd": 1.25,
+        "tokens": 50000,
+        "calls": 25
+      },
+      {
+        "date": "2025-11-15",
+        "cost_usd": 2.50,
+        "tokens": 100000,
+        "calls": 50
+      },
+      {
+        "date": "2025-11-16",
+        "cost_usd": 1.75,
+        "tokens": 75000,
+        "calls": 35
+      }
+    ]
+    ```
+
+    **Use Cases:**
+    - Render daily cost trend charts
+    - Budget burn-down graphs
+    - Usage pattern analysis
+    - Cost forecasting
+
+    Args:
+        time_range: Time window for history (7d, 30d, all)
+
+    Returns:
+        List[CostHistory]: Daily cost data sorted by date
+
+    Raises:
+        HTTPException: If cost retrieval fails
+
+    See Also:
+        - GET /admin/costs/stats: Aggregated cost statistics
+        - src/components/llm_proxy/cost_tracker.py: Cost tracking implementation
+    """
+    try:
+        tracker = get_cost_tracker()
+
+        # Calculate time filter
+        start_date = None
+        if time_range == "7d":
+            start_date = (datetime.now() - timedelta(days=7)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        elif time_range == "30d":
+            start_date = (datetime.now() - timedelta(days=30)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+
+        # Query daily aggregates from database
+        import sqlite3
+
+        with sqlite3.connect(tracker.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Build WHERE clause
+            conditions = []
+            params = []
+            if start_date:
+                conditions.append("timestamp >= ?")
+                params.append(start_date.isoformat())
+
+            where_clause = " AND ".join(conditions) if conditions else "1=1"
+
+            # Aggregate by date
+            cursor.execute(
+                f"""
+                SELECT
+                    date(timestamp) as date,
+                    SUM(cost_usd) as total_cost,
+                    SUM(tokens_total) as total_tokens,
+                    COUNT(*) as total_calls
+                FROM llm_requests
+                WHERE {where_clause}
+                GROUP BY date(timestamp)
+                ORDER BY date ASC
+            """,
+                tuple(params),
+            )
+
+            rows = cursor.fetchall()
+
+        # Build response
+        history = [
+            CostHistory(
+                date=row[0],
+                cost_usd=row[1],
+                tokens=row[2],
+                calls=row[3],
+            )
+            for row in rows
+        ]
+
+        logger.info(
+            "cost_history_retrieved",
+            time_range=time_range,
+            data_points=len(history),
+            start_date=start_date.isoformat() if start_date else "all_time",
+        )
+
+        return history
+
+    except Exception as e:
+        logger.error("cost_history_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve cost history: {str(e)}",
+        ) from e
