@@ -26,6 +26,15 @@
             this.z = z || 0;
           }
         },
+        Box3: class {
+          constructor(min, max) {
+            this.min = min;
+            this.max = max;
+          }
+          setFromObject() { return this; }
+          getCenter() { return new window.THREE.Vector3(); }
+          getSize() { return new window.THREE.Vector3(); }
+        },
         Quaternion: class {
           constructor(x, y, z, w) {
             this.x = x || 0;
@@ -62,6 +71,7 @@
         registerSystem: function() {},
         registerGeometry: function() {},
         registerShader: function() {},
+        registerPrimitive: function() {},
         utils: {
           device: {
             isMobile: function() { return false; }
