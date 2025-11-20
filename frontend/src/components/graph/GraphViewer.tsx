@@ -13,7 +13,7 @@
  */
 
 import { useRef, useCallback, useState } from 'react';
-import { ForceGraph2D } from 'react-force-graph';
+import ForceGraph2D from 'react-force-graph-2d';
 import { useGraphData } from '../../hooks/useGraphData';
 import type { GraphFilters, ForceGraphNode, ForceGraphLink } from '../../types/graph';
 
