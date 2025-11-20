@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.16",
-    "aframe": "^1.7.1",
+    "aframe": "^1.4.2",
     "lucide-react": "^0.554.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
