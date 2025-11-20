@@ -282,6 +282,26 @@ Unit tests, integration tests, E2E tests, performance tests, test infrastructure
 - **Factories:** Faker, factory_boy
 - **Assertions:** pytest assertions, hypothesis
 
+### Critical Best Practices
+
+**⚠️ Lazy Import Patching Rule**
+
+When mocking lazy-imported dependencies (imports inside functions), **ALWAYS patch at the original source module**, not the importing module.
+
+```python
+# ❌ WRONG: Patch at caller module
+with patch("src.api.v1.chat.get_redis_memory"):
+    # Fails with AttributeError if get_redis_memory is lazy-imported!
+
+# ✅ CORRECT: Patch at source module
+with patch("src.components.memory.get_redis_memory"):
+    # Works because this is where the function is defined
+```
+
+**Detection:** If you get `AttributeError: <module 'X'> does not have attribute 'Y'`, check if Y is lazy-imported in X.
+
+**Reference:** See CLAUDE.md → Testing Strategy → Test Mocking Best Practices for full details and examples.
+
 ### File Ownership
 ```
 tests/

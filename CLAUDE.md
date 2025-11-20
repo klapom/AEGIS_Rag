@@ -545,6 +545,97 @@ MCP_AUTH_ENABLED=true
 - Stress testing to find breaking point
 - Soak testing (24h sustained load)
 
+### Test Mocking Best Practices
+
+**Critical Pattern: Lazy Import Patching**
+
+When testing code that uses lazy imports (imports inside functions rather than at module level), you **MUST patch at the original source module**, not at the importing module.
+
+**Why Lazy Imports?**
+- Avoid circular dependencies
+- Reduce startup time
+- Make optional dependencies truly optional
+- Prevent import-time side effects
+
+**Common Mistake:**
+```python
+# ❌ WRONG: Trying to patch at the caller module
+with patch("src.api.v1.chat.get_redis_memory") as mock:
+    # This will fail with AttributeError!
+    # get_redis_memory is not defined at module level in chat.py
+```
+
+**Correct Approach:**
+```python
+# ✅ CORRECT: Patch at the original source module
+with patch("src.components.memory.get_redis_memory") as mock:
+    # This works because get_redis_memory is defined in memory module
+```
+
+**Real Examples from AEGIS RAG:**
+
+1. **LightRAG Dependencies** (`test_lightrag_client.py`):
+   ```python
+   # ❌ Wrong:
+   patch("src.components.graph_rag.lightrag_wrapper.AsyncGraphDatabase.driver")
+
+   # ✅ Correct:
+   patch("neo4j.AsyncGraphDatabase.driver")
+
+   # ❌ Wrong:
+   patch("src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status")
+
+   # ✅ Correct:
+   patch("lightrag.kg.shared_storage.initialize_pipeline_status")
+   ```
+
+2. **Redis Memory** (`test_followup_questions_api.py`):
+   ```python
+   # ❌ Wrong:
+   patch("src.api.v1.chat.get_redis_memory")
+
+   # ✅ Correct:
+   patch("src.components.memory.get_redis_memory")
+   ```
+
+3. **Answer Generator** (`test_graph.py`):
+   ```python
+   # ❌ Wrong:
+   patch("src.agents.graph.get_answer_generator")
+
+   # ✅ Correct:
+   patch("src.agents.answer_generator.get_answer_generator")
+   ```
+
+**How to Identify Lazy Imports:**
+
+1. Check if function is imported at module level:
+   ```python
+   # Module-level import (normal)
+   from src.components.memory import get_redis_memory
+
+   # Can be patched at caller module
+   ```
+
+2. Look for imports inside functions:
+   ```python
+   # Lazy import (inside function)
+   async def save_conversation_turn(session_id: str):
+       from src.components.memory import get_redis_memory  # ← Lazy!
+       redis_memory = get_redis_memory()
+
+   # MUST be patched at source: "src.components.memory.get_redis_memory"
+   ```
+
+**Detection Strategy:**
+- If you get `AttributeError: <module 'X'> does not have attribute 'Y'`
+- Check if Y is lazy-imported in X
+- Patch Y at its **original definition location**
+
+**Related Issues:**
+- Sprint 27 Feature 27.10 (Citation tests)
+- Commit 5ddfcb1 (Lazy import fixes)
+
 ---
 
 ## Monitoring & Observability
