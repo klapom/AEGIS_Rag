@@ -69,7 +69,7 @@ async def lightrag_client(mock_lightrag, mock_neo4j_driver):
                 "lightrag.kg.shared_storage.initialize_pipeline_status",
                 new_callable=AsyncMock,
             ):
-                with patch("src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy"):
+                with patch("src.components.llm_proxy.get_aegis_llm_proxy"):
                     client = LightRAGClient()
                     await client._ensure_initialized()
                     return client
@@ -302,10 +302,10 @@ async def test_lightrag_lazy_initialization():
     """Test lazy initialization of LightRAG."""
     with patch("src.components.graph_rag.lightrag_wrapper.LightRAG") as mock_lightrag_cls:
         with patch(
-            "src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status",
+            "lightrag.kg.shared_storage.initialize_pipeline_status",
             new_callable=AsyncMock,
         ):
-            with patch("src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy"):
+            with patch("src.components.llm_proxy.get_aegis_llm_proxy"):
                 mock_instance = MagicMock()
                 mock_instance.initialize_storages = AsyncMock()
                 mock_lightrag_cls.return_value = mock_instance
