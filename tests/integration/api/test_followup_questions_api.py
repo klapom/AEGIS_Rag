@@ -2,7 +2,7 @@
 
 Sprint 27 Feature 27.5: Follow-up Question Suggestions
 
-Tests the GET /chat/sessions/{session_id}/followup-questions endpoint:
+Tests the GET /api/v1/chat/sessions/{session_id}/followup-questions endpoint:
 - Successful question generation
 - Cache behavior (5min TTL)
 - Session not found (404)
@@ -86,7 +86,7 @@ def test_get_followup_questions_success(client, mock_redis_memory, sample_conver
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
         mock_gen.return_value = mock_questions
 
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 200
         data = response.json()
@@ -123,7 +123,7 @@ def test_get_followup_questions_from_cache(client, mock_redis_memory):
     mock_redis_memory.return_value.retrieve = AsyncMock(side_effect=mock_retrieve)
 
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 200
         data = response.json()
@@ -150,7 +150,7 @@ def test_get_followup_questions_session_not_found(client, mock_redis_memory):
 
     mock_redis_memory.return_value.retrieve = AsyncMock(side_effect=mock_retrieve)
 
-    response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+    response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
@@ -182,7 +182,7 @@ def test_get_followup_questions_insufficient_messages(client, mock_redis_memory)
 
     mock_redis_memory.return_value.retrieve = AsyncMock(side_effect=mock_retrieve)
 
-    response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+    response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
     assert response.status_code == 200
     data = response.json()
@@ -223,7 +223,7 @@ def test_get_followup_questions_no_qa_pair(client, mock_redis_memory):
 
     mock_redis_memory.return_value.retrieve = AsyncMock(side_effect=mock_retrieve)
 
-    response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+    response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
     assert response.status_code == 200
     data = response.json()
@@ -248,7 +248,7 @@ def test_get_followup_questions_generation_failure(client, mock_redis_memory, sa
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
         mock_gen.side_effect = Exception("LLM service unavailable")
 
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 500
         assert "Failed to generate follow-up questions" in response.json()["detail"]
@@ -274,7 +274,7 @@ def test_get_followup_questions_caches_results(client, mock_redis_memory, sample
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
         mock_gen.return_value = mock_questions
 
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 200
 
@@ -336,7 +336,7 @@ def test_get_followup_questions_multi_turn_conversation(client, mock_redis_memor
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
         mock_gen.return_value = mock_questions
 
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 200
 
@@ -385,7 +385,7 @@ def test_get_followup_questions_no_sources(client, mock_redis_memory):
     with patch("src.api.v1.chat.generate_followup_questions") as mock_gen:
         mock_gen.return_value = mock_questions
 
-        response = client.get(f"/chat/sessions/{session_id}/followup-questions")
+        response = client.get(f"/api/v1/chat/sessions/{session_id}/followup-questions")
 
         assert response.status_code == 200
 
