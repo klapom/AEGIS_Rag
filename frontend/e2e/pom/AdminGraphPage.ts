@@ -1,0 +1,190 @@
+import { Page, Locator } from '@playwright/test';
+import { BasePage } from './BasePage';
+
+/**
+ * Page Object for Admin Graph Visualization
+ * Handles knowledge graph visualization and admin controls
+ */
+export class AdminGraphPage extends BasePage {
+  readonly graphCanvas: Locator;
+  readonly queryInput: Locator;
+  readonly queryButton: Locator;
+  readonly graphNodes: Locator;
+  readonly graphEdges: Locator;
+  readonly filterInput: Locator;
+  readonly zoomInButton: Locator;
+  readonly zoomOutButton: Locator;
+  readonly resetViewButton: Locator;
+  readonly nodeDetailsPanel: Locator;
+  readonly nodeLabel: Locator;
+  readonly exportGraphButton: Locator;
+  readonly layoutToggle: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.graphCanvas = page.locator('[data-testid="graph-canvas"]');
+    this.queryInput = page.locator('[data-testid="graph-query-input"]');
+    this.queryButton = page.locator('[data-testid="graph-query-button"]');
+    this.graphNodes = page.locator('[data-testid="graph-node"]');
+    this.graphEdges = page.locator('[data-testid="graph-edge"]');
+    this.filterInput = page.locator('[data-testid="graph-filter"]');
+    this.zoomInButton = page.locator('[data-testid="zoom-in"]');
+    this.zoomOutButton = page.locator('[data-testid="zoom-out"]');
+    this.resetViewButton = page.locator('[data-testid="reset-view"]');
+    this.nodeDetailsPanel = page.locator('[data-testid="node-details"]');
+    this.nodeLabel = page.locator('[data-testid="node-label"]');
+    this.exportGraphButton = page.locator('[data-testid="export-graph"]');
+    this.layoutToggle = page.locator('[data-testid="layout-toggle"]');
+  }
+
+  /**
+   * Navigate to admin graph page
+   */
+  async goto() {
+    await super.goto('/admin/graph');
+    await this.waitForNetworkIdle();
+  }
+
+  /**
+   * Wait for graph to load
+   */
+  async waitForGraphLoad(timeout = 15000) {
+    try {
+      await this.graphCanvas.waitFor({ state: 'visible', timeout });
+    } catch {
+      throw new Error('Graph canvas failed to load');
+    }
+  }
+
+  /**
+   * Query the graph
+   */
+  async queryGraph(query: string) {
+    await this.queryInput.fill(query);
+    await this.queryButton.click();
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * Get number of nodes in graph
+   */
+  async getNodeCount(): Promise<number> {
+    return await this.graphNodes.count();
+  }
+
+  /**
+   * Get number of edges in graph
+   */
+  async getEdgeCount(): Promise<number> {
+    return await this.graphEdges.count();
+  }
+
+  /**
+   * Click on a node to view details
+   */
+  async clickNode(index: number) {
+    const node = this.graphNodes.nth(index);
+    await node.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Get node details
+   */
+  async getNodeDetails(): Promise<{
+    label: string | null;
+    type: string | null;
+    properties: Record<string, string>;
+  }> {
+    return {
+      label: await this.nodeLabel.textContent(),
+      type: await this.page
+        .locator('[data-testid="node-type"]')
+        .textContent(),
+      properties: {},
+    };
+  }
+
+  /**
+   * Filter graph nodes
+   */
+  async filterGraph(filterText: string) {
+    await this.filterInput.fill(filterText);
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Zoom in
+   */
+  async zoomIn() {
+    await this.zoomInButton.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Zoom out
+   */
+  async zoomOut() {
+    await this.zoomOutButton.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Reset view to default
+   */
+  async resetView() {
+    await this.resetViewButton.click();
+    await this.page.waitForTimeout(300);
+  }
+
+  /**
+   * Toggle layout algorithm (force-directed, hierarchical, etc.)
+   */
+  async toggleLayout() {
+    await this.layoutToggle.click();
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Export graph visualization
+   */
+  async exportGraph() {
+    const downloadPromise = this.page.waitForEvent('download');
+    await this.exportGraphButton.click();
+    const download = await downloadPromise;
+    return download.path();
+  }
+
+  /**
+   * Check if graph is visible
+   */
+  async isGraphVisible(): Promise<boolean> {
+    return await this.isVisible('[data-testid="graph-canvas"]');
+  }
+
+  /**
+   * Get graph statistics
+   */
+  async getGraphStats(): Promise<{
+    nodes: number;
+    edges: number;
+  }> {
+    return {
+      nodes: await this.getNodeCount(),
+      edges: await this.getEdgeCount(),
+    };
+  }
+
+  /**
+   * Wait for graph update after query
+   */
+  async waitForGraphUpdate(timeout = 10000) {
+    await this.page.waitForFunction(
+      () => {
+        const nodes = document.querySelectorAll('[data-testid="graph-node"]');
+        return nodes.length > 0;
+      },
+      { timeout }
+    );
+  }
+}

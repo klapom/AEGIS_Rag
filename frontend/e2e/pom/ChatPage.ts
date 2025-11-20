@@ -1,0 +1,213 @@
+import { Page, Locator } from '@playwright/test';
+import { BasePage } from './BasePage';
+
+/**
+ * Page Object for Chat Interface
+ * Handles message input, sending, streaming responses, and citations
+ */
+export class ChatPage extends BasePage {
+  readonly messageInput: Locator;
+  readonly sendButton: Locator;
+  readonly messages: Locator;
+  readonly citations: Locator;
+  readonly followupQuestions: Locator;
+  readonly streamingIndicator: Locator;
+  readonly sessionIdBadge: Locator;
+
+  constructor(page: Page) {
+    super(page);
+    this.messageInput = page.locator('[data-testid="message-input"]');
+    this.sendButton = page.locator('[data-testid="send-button"]');
+    this.messages = page.locator('[data-testid="message"]');
+    this.citations = page.locator('[data-testid="citation"]');
+    this.followupQuestions = page.locator('[data-testid="followup-question"]');
+    this.streamingIndicator = page.locator('[data-streaming="true"]');
+    this.sessionIdBadge = page.locator('[data-testid="session-id"]');
+  }
+
+  /**
+   * Navigate to chat page
+   */
+  async goto() {
+    await super.goto('/');
+    await this.waitForNetworkIdle();
+  }
+
+  /**
+   * Send a message to the chat
+   */
+  async sendMessage(text: string) {
+    // Ensure input is visible and focused
+    await this.messageInput.waitFor({ state: 'visible' });
+    await this.messageInput.fill(text);
+
+    // Verify text was entered
+    const inputValue = await this.messageInput.inputValue();
+    if (inputValue !== text) {
+      throw new Error(`Failed to enter message. Expected: "${text}", Got: "${inputValue}"`);
+    }
+
+    // Click send button
+    await this.sendButton.click();
+
+    // Wait for message to appear in history
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Wait for LLM to generate response
+   * Handles SSE streaming and response completion
+   */
+  async waitForResponse(timeout = 20000) {
+    // Wait for streaming to complete
+    try {
+      await this.waitForLLMResponse(timeout);
+    } catch (error) {
+      throw new Error(
+        `Failed to receive LLM response within ${timeout}ms. Backend may be unreachable.`
+      );
+    }
+  }
+
+  /**
+   * Get the last message in the chat
+   */
+  async getLastMessage(): Promise<string> {
+    const lastMessage = this.messages.last();
+    await lastMessage.waitFor({ state: 'visible' });
+    return (await lastMessage.textContent()) || '';
+  }
+
+  /**
+   * Get all messages in current conversation
+   */
+  async getAllMessages(): Promise<string[]> {
+    const count = await this.messages.count();
+    const messages: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const text = await this.messages.nth(i).textContent();
+      if (text) messages.push(text);
+    }
+    return messages;
+  }
+
+  /**
+   * Get all citations in the last response
+   */
+  async getCitations(): Promise<string[]> {
+    const citations: string[] = [];
+    const count = await this.citations.count();
+    for (let i = 0; i < count; i++) {
+      const text = await this.citations.nth(i).textContent();
+      if (text) citations.push(text);
+    }
+    return citations;
+  }
+
+  /**
+   * Get citation count in last response
+   */
+  async getCitationCount(): Promise<number> {
+    return await this.citations.count();
+  }
+
+  /**
+   * Check if citations are displayed in response
+   */
+  async hasCitations(): Promise<boolean> {
+    return (await this.citations.count()) > 0;
+  }
+
+  /**
+   * Get follow-up questions suggested by the model
+   */
+  async getFollowupQuestions(): Promise<string[]> {
+    const questions: string[] = [];
+    const count = await this.followupQuestions.count();
+    for (let i = 0; i < count; i++) {
+      const text = await this.followupQuestions.nth(i).textContent();
+      if (text) questions.push(text);
+    }
+    return questions;
+  }
+
+  /**
+   * Get follow-up question count
+   */
+  async getFollowupQuestionCount(): Promise<number> {
+    return await this.followupQuestions.count();
+  }
+
+  /**
+   * Click on a follow-up question
+   */
+  async clickFollowupQuestion(index: number) {
+    const question = this.followupQuestions.nth(index);
+    await question.click();
+    await this.waitForResponse();
+  }
+
+  /**
+   * Click on a citation to see source
+   */
+  async clickCitation(index: number) {
+    const citation = this.citations.nth(index);
+    await citation.click();
+  }
+
+  /**
+   * Get current session ID
+   */
+  async getSessionId(): Promise<string | null> {
+    return await this.sessionIdBadge.getAttribute('data-session-id');
+  }
+
+  /**
+   * Check if input field is ready
+   */
+  async isInputReady(): Promise<boolean> {
+    try {
+      await this.messageInput.waitFor({ state: 'visible', timeout: 1000 });
+      const disabled = await this.messageInput.isDisabled();
+      return !disabled;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clear the message input
+   */
+  async clearInput() {
+    await this.messageInput.clear();
+  }
+
+  /**
+   * Get streaming status
+   */
+  async isStreaming(): Promise<boolean> {
+    try {
+      await this.streamingIndicator.waitFor({ state: 'visible', timeout: 1000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Send message with Enter key
+   */
+  async sendMessageWithEnter(text: string) {
+    await this.messageInput.fill(text);
+    await this.messageInput.press('Enter');
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Get full conversation text (all messages including assistant responses)
+   */
+  async getFullConversation(): Promise<string> {
+    const messages = await this.getAllMessages();
+    return messages.join('\n\n');
+  }
+}
