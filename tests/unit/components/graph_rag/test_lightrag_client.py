@@ -64,8 +64,9 @@ async def lightrag_client(mock_lightrag, mock_neo4j_driver):
             "neo4j.AsyncGraphDatabase.driver",
             return_value=mock_neo4j_driver,
         ):
+            # Patch initialize_pipeline_status from lightrag (lazy-imported)
             with patch(
-                "src.components.graph_rag.lightrag_wrapper.initialize_pipeline_status",
+                "lightrag.kg.shared_storage.initialize_pipeline_status",
                 new_callable=AsyncMock,
             ):
                 with patch("src.components.graph_rag.lightrag_wrapper.get_aegis_llm_proxy"):

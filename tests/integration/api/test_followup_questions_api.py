@@ -29,7 +29,7 @@ def client():
 @pytest.fixture
 def mock_redis_memory():
     """Mock Redis memory for testing."""
-    with patch("src.api.v1.chat.get_redis_memory") as mock:
+    with patch("src.components.memory.get_redis_memory") as mock:
         yield mock
 
 

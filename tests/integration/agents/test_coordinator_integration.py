@@ -88,7 +88,7 @@ async def test_coordinator_route_to_vector_agent(intent_classifier):
     """Test routing simple query to vector agent."""
     query = "What is vector search?"
 
-    intent = await intent_classifier.classify(query)
+    intent = await intent_classifier.classify_intent(query)
 
     assert intent == QueryIntent.VECTOR
 
@@ -98,7 +98,7 @@ async def test_coordinator_route_to_graph_agent(intent_classifier):
     """Test routing complex query to graph agent."""
     query = "How does LightRAG connect to Neo4j and what entities does it extract?"
 
-    intent = await intent_classifier.classify(query)
+    intent = await intent_classifier.classify_intent(query)
 
     assert intent == QueryIntent.GRAPH
 
@@ -108,7 +108,7 @@ async def test_coordinator_route_hybrid_query(intent_classifier):
     """Test routing query requiring both vector and graph."""
     query = "Explain hybrid search and how it integrates with graph reasoning"
 
-    intent = await intent_classifier.classify(query)
+    intent = await intent_classifier.classify_intent(query)
 
     # Should route to hybrid or both agents
     assert intent in [QueryIntent.HYBRID, QueryIntent.VECTOR, QueryIntent.GRAPH]
