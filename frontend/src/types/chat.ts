@@ -54,6 +54,24 @@ export interface ChatResponse {
 
 export type ChatChunkType = 'metadata' | 'token' | 'source' | 'error' | 'complete';
 
+/**
+ * Citation metadata for a single source
+ * Sprint 27 Feature 27.10: Inline Source Citations
+ */
+export interface CitationMetadata {
+  text: string;
+  source: string;
+  title: string;
+  score: number;
+  metadata: Record<string, any>;
+}
+
+/**
+ * Citation map: citation number (1, 2, 3...) -> metadata
+ * Sprint 27 Feature 27.10: Inline Source Citations
+ */
+export type CitationMap = Record<number, CitationMetadata>;
+
 export interface ChatChunk {
   type: ChatChunkType;
   content?: string;
@@ -62,7 +80,11 @@ export interface ChatChunk {
   timestamp?: string;
   error?: string;
   code?: string;
-  data?: Record<string, any>;
+  data?: Record<string, any> & {
+    // Sprint 27 Feature 27.10: Citation map in metadata chunks
+    citation_map?: CitationMap;
+    citations_count?: number;
+  };
 }
 
 export interface SessionInfo {

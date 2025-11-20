@@ -41,6 +41,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
   const [intent, setIntent] = useState<string>('');
   const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(sessionId);
   const [showGraphModal, setShowGraphModal] = useState(false);  // Sprint 29 Feature 29.2
+  const [citationMap, setCitationMap] = useState<Record<number, any> | null>(null);  // Sprint 27 Feature 27.10
   const sourceCardsRef = useRef<SourceCardsScrollRef>(null);  // Sprint 28 Feature 28.2
 
   useEffect(() => {
@@ -143,6 +144,11 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
             onSessionIdReceived(chunk.data.session_id);
           }
         }
+        // Sprint 27 Feature 27.10: Store citation_map from backend
+        if (chunk.data?.citation_map) {
+          setCitationMap(chunk.data.citation_map);
+          console.log('Citation map received:', chunk.data.citations_count, 'citations');
+        }
         break;
 
       case 'source':
@@ -218,7 +224,15 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
                 // react-markdown passes props object with children
                 text: ({ children }) => {
                   if (typeof children === 'string') {
-                    const textRenderer = createCitationTextRenderer(sources, handleCitationClick);
+                    // Sprint 27 Feature 27.10: Prefer citationMap from backend over sources
+                    // Convert citationMap (1-indexed Record) to 0-indexed array
+                    const sourcesForCitations = citationMap
+                      ? Object.entries(citationMap)
+                          .sort(([a], [b]) => Number(a) - Number(b))  // Sort by citation number
+                          .map(([_, metadata]) => metadata)  // Extract metadata, now 0-indexed
+                      : sources;
+
+                    const textRenderer = createCitationTextRenderer(sourcesForCitations, handleCitationClick);
                     return <>{textRenderer(children)}</>;
                   }
                   return <>{children}</>;

@@ -55,16 +55,17 @@ async def router_node(state: dict[str, Any]) -> dict[str, Any]:
 
 
 async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate LLM-based answer from retrieved contexts.
+    """Generate LLM-based answer with inline source citations.
 
     Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
-    Uses AnswerGenerator to synthesize answers from retrieved contexts.
+    Sprint 27 Feature 27.10: Inline Source Citations
+    Uses AnswerGenerator to synthesize answers with citation markers [1], [2], etc.
 
     Args:
         state: Current agent state with retrieved_contexts
 
     Returns:
-        State with generated answer in messages
+        State with generated answer in messages and citation_map
     """
     from src.agents.answer_generator import get_answer_generator
 
@@ -73,9 +74,9 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts))
 
-    # Generate answer using LLM
+    # Generate answer with inline citations (Sprint 27 Feature 27.10)
     generator = get_answer_generator()
-    answer = await generator.generate_answer(query, contexts, mode="simple")
+    answer, citation_map = await generator.generate_with_citations(query, contexts)
 
     # Add to messages (LangGraph format)
     if "messages" not in state:
@@ -86,7 +87,15 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     # Also add as direct field for easier access
     state["answer"] = answer
 
-    logger.info("llm_answer_node_complete", answer_length=len(answer), contexts_used=len(contexts))
+    # Store citation map for API response (Sprint 27 Feature 27.10)
+    state["citation_map"] = citation_map
+
+    logger.info(
+        "llm_answer_node_complete",
+        answer_length=len(answer),
+        contexts_used=len(contexts),
+        citations_count=len(citation_map),
+    )
 
     return state
 

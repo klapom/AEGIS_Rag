@@ -468,9 +468,20 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     query=request.query, session_id=session_id, intent=request.intent
                 )
 
-                # Extract answer and intent
+                # Extract answer, intent, and citation_map (Sprint 27 Feature 27.10)
                 answer = _extract_answer(result)
                 collected_intent = result.get("intent")
+                citation_map = result.get("citation_map", {})
+
+                # Send citation_map in metadata (Sprint 27 Feature 27.10)
+                if citation_map:
+                    yield _format_sse_message({
+                        "type": "metadata",
+                        "data": {
+                            "citation_map": citation_map,
+                            "citations_count": len(citation_map)
+                        }
+                    })
 
                 # Send answer as tokens (simulate streaming)
                 for token in answer.split():

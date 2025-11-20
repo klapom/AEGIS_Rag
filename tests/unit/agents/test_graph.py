@@ -1,9 +1,11 @@
 """Unit tests for LangGraph base graph implementation.
 
 Sprint 4 Feature 4.1: Base Graph Tests
+Sprint 27 Feature 27.10: Citation tests for llm_answer_node
 """
 
 import pytest
+from unittest.mock import AsyncMock, patch
 from langgraph.graph import StateGraph
 
 from src.agents.graph import (
@@ -11,6 +13,7 @@ from src.agents.graph import (
     create_base_graph,
     route_query,
     router_node,
+    llm_answer_node,
 )
 from src.agents.state import create_initial_state
 
@@ -287,3 +290,150 @@ class TestGraphErrorHandling:
         # Should process (even if query is empty)
         assert "query" in result
         assert result["query"] == ""
+
+
+class TestLLMAnswerNode:
+    """Test llm_answer_node with citation functionality.
+
+    Sprint 27 Feature 27.10: Inline Source Citations
+    """
+
+    @pytest.mark.asyncio
+    async def test_llm_answer_node__generates_answer_with_citations(self):
+        """Test that llm_answer_node generates answer with citations."""
+        # Mock AnswerGenerator
+        mock_generator = AsyncMock()
+        mock_generator.generate_with_citations = AsyncMock(
+            return_value=(
+                "AEGIS RAG is an agentic system [1] using LangGraph [2].",
+                {
+                    1: {
+                        "text": "AEGIS RAG is an agentic enterprise system.",
+                        "source": "docs/CLAUDE.md",
+                        "title": "CLAUDE Documentation",
+                        "score": 0.95,
+                        "metadata": {},
+                    },
+                    2: {
+                        "text": "The system uses LangGraph for orchestration.",
+                        "source": "docs/architecture.md",
+                        "title": "Architecture Overview",
+                        "score": 0.88,
+                        "metadata": {},
+                    },
+                },
+            )
+        )
+
+        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+            state = {
+                "query": "What is AEGIS RAG?",
+                "retrieved_contexts": [
+                    {"text": "AEGIS RAG is an agentic enterprise system.", "source": "docs/CLAUDE.md"},
+                    {"text": "The system uses LangGraph for orchestration.", "source": "docs/architecture.md"},
+                ],
+            }
+
+            result = await llm_answer_node(state)
+
+            # Verify answer is in messages
+            assert "messages" in result
+            assert len(result["messages"]) == 1
+            assert result["messages"][0]["role"] == "assistant"
+            assert "[1]" in result["messages"][0]["content"]
+            assert "[2]" in result["messages"][0]["content"]
+
+            # Verify answer field
+            assert "answer" in result
+            assert result["answer"] == "AEGIS RAG is an agentic system [1] using LangGraph [2]."
+
+            # Verify citation_map
+            assert "citation_map" in result
+            assert len(result["citation_map"]) == 2
+            assert result["citation_map"][1]["source"] == "docs/CLAUDE.md"
+            assert result["citation_map"][2]["source"] == "docs/architecture.md"
+
+    @pytest.mark.asyncio
+    async def test_llm_answer_node__empty_contexts_returns_fallback(self):
+        """Test that llm_answer_node handles empty contexts gracefully."""
+        mock_generator = AsyncMock()
+        mock_generator.generate_with_citations = AsyncMock(
+            return_value=(
+                "I don't have enough information to answer this question.",
+                {},
+            )
+        )
+
+        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+            state = {
+                "query": "What is AEGIS RAG?",
+                "retrieved_contexts": [],
+            }
+
+            result = await llm_answer_node(state)
+
+            # Should have answer
+            assert "answer" in result
+            assert "don't have enough information" in result["answer"]
+
+            # Citation map should be empty
+            assert "citation_map" in result
+            assert result["citation_map"] == {}
+
+    @pytest.mark.asyncio
+    async def test_llm_answer_node__stores_citation_map_in_state(self):
+        """Test that citation_map is properly stored in state."""
+        mock_generator = AsyncMock()
+        mock_generator.generate_with_citations = AsyncMock(
+            return_value=(
+                "Answer [1].",
+                {1: {"text": "Context", "source": "doc.pdf", "title": "Doc", "score": 0.9, "metadata": {}}},
+            )
+        )
+
+        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+            state = {
+                "query": "Test?",
+                "retrieved_contexts": [{"text": "Context", "source": "doc.pdf"}],
+            }
+
+            result = await llm_answer_node(state)
+
+            # Verify citation_map structure
+            assert "citation_map" in result
+            assert isinstance(result["citation_map"], dict)
+            assert 1 in result["citation_map"]
+            assert "source" in result["citation_map"][1]
+            assert result["citation_map"][1]["source"] == "doc.pdf"
+
+    @pytest.mark.asyncio
+    async def test_llm_answer_node__multiple_citations_ordered_correctly(self):
+        """Test that multiple citations are ordered correctly."""
+        citation_map = {
+            1: {"text": "First", "source": "doc1.pdf", "title": "Doc 1", "score": 0.95, "metadata": {}},
+            2: {"text": "Second", "source": "doc2.pdf", "title": "Doc 2", "score": 0.90, "metadata": {}},
+            3: {"text": "Third", "source": "doc3.pdf", "title": "Doc 3", "score": 0.85, "metadata": {}},
+        }
+
+        mock_generator = AsyncMock()
+        mock_generator.generate_with_citations = AsyncMock(
+            return_value=("Answer [1] [2] [3].", citation_map)
+        )
+
+        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+            state = {
+                "query": "Test?",
+                "retrieved_contexts": [
+                    {"text": "First", "source": "doc1.pdf"},
+                    {"text": "Second", "source": "doc2.pdf"},
+                    {"text": "Third", "source": "doc3.pdf"},
+                ],
+            }
+
+            result = await llm_answer_node(state)
+
+            # Verify all citations present
+            assert len(result["citation_map"]) == 3
+            assert result["citation_map"][1]["source"] == "doc1.pdf"
+            assert result["citation_map"][2]["source"] == "doc2.pdf"
+            assert result["citation_map"][3]["source"] == "doc3.pdf"
