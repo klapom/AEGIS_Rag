@@ -57,7 +57,8 @@ def mock_neo4j_driver():
 @pytest.fixture
 async def lightrag_client(mock_lightrag, mock_neo4j_driver):
     """LightRAG client with mocked dependencies."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAG", return_value=mock_lightrag):
+    # Patch the actual lightrag library import (lazy-loaded in _ensure_initialized)
+    with patch("lightrag.LightRAG", return_value=mock_lightrag):
         with patch(
             "src.components.graph_rag.lightrag_wrapper.AsyncGraphDatabase.driver",
             return_value=mock_neo4j_driver,

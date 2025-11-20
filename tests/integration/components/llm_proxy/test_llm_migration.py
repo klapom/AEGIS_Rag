@@ -17,6 +17,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
+# Skip entire module if ragas is not installed (optional evaluation dependency)
+pytest.importorskip("ragas", reason="RAGAS evaluation tests skipped (optional dependency)")
+
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.models import (
     LLMResponse,

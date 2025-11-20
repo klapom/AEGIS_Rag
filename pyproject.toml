@@ -74,6 +74,7 @@ langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
 # LightRAG & Graph (Sprint 5: Graph RAG) - Core only, graspologic moved to optional
 lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
 networkx = "^3.2"  # Graph algorithms (CORE - needed by LightRAG)
+scipy = "^1.11.0"  # Required by networkx.pagerank() in analytics_engine.py
 
 # Graphiti Memory (Sprint 7: Episodic Memory)
 graphiti-core = "^0.3.0"  # Episodic memory with temporal graphs
