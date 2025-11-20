@@ -325,7 +325,7 @@ class TestLLMAnswerNode:
             )
         )
 
-        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+        with patch("src.agents.answer_generator.get_answer_generator", return_value=mock_generator):
             state = {
                 "query": "What is AEGIS RAG?",
                 "retrieved_contexts": [
@@ -364,7 +364,7 @@ class TestLLMAnswerNode:
             )
         )
 
-        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+        with patch("src.agents.answer_generator.get_answer_generator", return_value=mock_generator):
             state = {
                 "query": "What is AEGIS RAG?",
                 "retrieved_contexts": [],
@@ -391,7 +391,7 @@ class TestLLMAnswerNode:
             )
         )
 
-        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+        with patch("src.agents.answer_generator.get_answer_generator", return_value=mock_generator):
             state = {
                 "query": "Test?",
                 "retrieved_contexts": [{"text": "Context", "source": "doc.pdf"}],
@@ -420,7 +420,7 @@ class TestLLMAnswerNode:
             return_value=("Answer [1] [2] [3].", citation_map)
         )
 
-        with patch("src.agents.graph.get_answer_generator", return_value=mock_generator):
+        with patch("src.agents.answer_generator.get_answer_generator", return_value=mock_generator):
             state = {
                 "query": "Test?",
                 "retrieved_contexts": [
