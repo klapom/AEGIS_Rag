@@ -59,8 +59,9 @@ async def lightrag_client(mock_lightrag, mock_neo4j_driver):
     """LightRAG client with mocked dependencies."""
     # Patch the actual lightrag library import (lazy-loaded in _ensure_initialized)
     with patch("lightrag.LightRAG", return_value=mock_lightrag):
+        # Patch neo4j.AsyncGraphDatabase since it's lazy-imported inside methods
         with patch(
-            "src.components.graph_rag.lightrag_wrapper.AsyncGraphDatabase.driver",
+            "neo4j.AsyncGraphDatabase.driver",
             return_value=mock_neo4j_driver,
         ):
             with patch(

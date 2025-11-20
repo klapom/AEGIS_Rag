@@ -56,12 +56,11 @@ def mock_aegis_llm_proxy_for_ci(monkeypatch):
         mock_response.tokens_used = 150
         mock_response.cost_usd = 0.0
 
-        # Mock both sync and async completion methods
-        mock_complete_async = AsyncMock(return_value=mock_response)
+        # Mock the generate method (Sprint 23+ - replaces complete/acomplete)
+        mock_generate_async = AsyncMock(return_value=mock_response)
 
-        # Patch class methods (all instances will use mocked methods)
-        monkeypatch.setattr(AegisLLMProxy, "complete", mock_complete_async)
-        monkeypatch.setattr(AegisLLMProxy, "acomplete", mock_complete_async)
+        # Patch class method (all instances will use mocked method)
+        monkeypatch.setattr(AegisLLMProxy, "generate", mock_generate_async)
 
         print("[CI MODE] AegisLLMProxy mocked - Ollama not available in CI")
 
