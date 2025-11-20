@@ -4,81 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AegisRAG - Sprint 30</title>
+    <title>AegisRAG - Sprint 31</title>
 
-    <!-- Sprint 30: Mock THREE.js and AFRAME for react-force-graph (temporary fix) -->
-    <script>
-      // Mock THREE.js (required by react-force-graph)
-      window.THREE = window.THREE || {
-        Scene: class {},
-        PerspectiveCamera: class {},
-        WebGLRenderer: class {},
-        Vector2: class {
-          constructor(x, y) {
-            this.x = x || 0;
-            this.y = y || 0;
-          }
-        },
-        Vector3: class {
-          constructor(x, y, z) {
-            this.x = x || 0;
-            this.y = y || 0;
-            this.z = z || 0;
-          }
-        },
-        Box3: class {
-          constructor(min, max) {
-            this.min = min;
-            this.max = max;
-          }
-          setFromObject() { return this; }
-          getCenter() { return new window.THREE.Vector3(); }
-          getSize() { return new window.THREE.Vector3(); }
-        },
-        Quaternion: class {
-          constructor(x, y, z, w) {
-            this.x = x || 0;
-            this.y = y || 0;
-            this.z = z || 0;
-            this.w = (w !== undefined) ? w : 1;
-          }
-        },
-        Color: class {},
-        Object3D: class {},
-        Group: class {},
-        Mesh: class {},
-        BufferGeometry: class {},
-        Material: class {},
-        MeshBasicMaterial: class {},
-        LineBasicMaterial: class {},
-        SphereGeometry: class {},
-        BoxGeometry: class {},
-        Line: class {},
-        Points: class {},
-        PointsMaterial: class {},
-        AmbientLight: class {},
-        DirectionalLight: class {},
-        OrbitControls: class {},
-        Raycaster: class {},
-        LoadingManager: class {},
-        TextureLoader: class {},
-        Texture: class {},
-      };
-
-      // Mock AFRAME (required by react-force-graph)
-      window.AFRAME = window.AFRAME || {
-        registerComponent: function() {},
-        registerSystem: function() {},
-        registerGeometry: function() {},
-        registerShader: function() {},
-        registerPrimitive: function() {},
-        utils: {
-          device: {
-            isMobile: function() { return false; }
-          }
-        }
-      };
-    </script>
+    <!-- Sprint 31: THREE.js installed as real npm dependency (three@0.160.0) -->
   </head>
   <body>
     <div id="root"></div>
