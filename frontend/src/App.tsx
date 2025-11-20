@@ -16,6 +16,7 @@ import { AdminPage } from './pages/AdminPage';
 import { Settings } from './pages/Settings';
 import { GraphAnalyticsPage } from './pages/admin/GraphAnalyticsPage';
 import { CostDashboardPage } from './pages/admin/CostDashboardPage';
+import { AdminIndexingPage } from './pages/admin/AdminIndexingPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -36,6 +37,7 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
             <Route path="/health" element={<HealthDashboard />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/indexing" element={<AdminIndexingPage />} />
             <Route path="/admin/graph" element={<GraphAnalyticsPage />} />
             <Route path="/admin/costs" element={<CostDashboardPage />} />
             <Route path="/dashboard/costs" element={<CostDashboardPage />} />
