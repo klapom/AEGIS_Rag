@@ -62,7 +62,7 @@ export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuesti
 
       {/* Loading State: Skeleton Cards */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="followup-loading">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -105,6 +105,7 @@ function QuestionCard({ question, onClick }: QuestionCardProps) {
                  hover:shadow-md hover:border-primary/50
                  transition-all duration-200 text-left
                  flex items-start space-x-3 w-full"
+      data-testid="followup-question"
     >
       {/* Question Icon */}
       <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center

@@ -52,6 +52,8 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
         className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium transition-colors"
         style={{ fontSize: '0.75em', verticalAlign: 'super' }}
         aria-label={`Quelle ${sourceIndex}: ${getDocumentName()}`}
+        data-testid="citation"
+        data-citation-number={sourceIndex}
       >
         [{sourceIndex}]
       </button>
@@ -63,6 +65,7 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
                      w-80 p-3 bg-white border border-gray-200 rounded-lg shadow-xl
                      pointer-events-none"
           style={{ minWidth: '320px' }}
+          data-testid="citation-tooltip"
         >
           {/* Arrow */}
           <div
