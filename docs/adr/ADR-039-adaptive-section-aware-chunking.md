@@ -2,7 +2,7 @@
 
 **Status:** ✅ ACCEPTED
 **Date:** 2025-11-21
-**Sprint:** 31 (E2E Testing & Frontend Improvements)
+**Sprint:** 32 (Adaptive Section-Aware Chunking Implementation)
 **Category:** Architecture / Chunking Strategy / Knowledge Graph
 **Related:** ADR-022 (Unified Chunking), ADR-026 (Pure LLM Extraction), ADR-037 (Alibaba Cloud)
 **Deciders:** Klaus Pommer, Claude Code
@@ -318,22 +318,23 @@ Chunk 1 [Slide 4-5]: semantic_score=0.65
    - Include section headings in citations
    - Format: "[1] document.pdf - Section: 'Load Balancing' (Page 2)"
 
-### Migration Strategy
+### Implementation Strategy
 
-**Phase 1: Sprint 31 (Immediate)**
+**Phase 1: Sprint 32 (Core Implementation)**
 - Implement section extraction from Docling JSON
+- Add adaptive merging logic (800-1200 token thresholds)
 - Add multi-section metadata to chunks
-- No schema changes (backward compatible)
+- No Neo4j schema changes initially (backward compatible)
 
-**Phase 2: Sprint 32 (Graph Enhancement)**
-- Add Section nodes to Neo4j
-- Migrate existing chunks to new schema
+**Phase 2: Sprint 33 (Graph Enhancement)**
+- Add Section nodes to Neo4j (optional)
 - Enable hierarchical queries
+- Create `(:Section)-[:DEFINES]->(:Entity)` relationships
 
-**Phase 3: Sprint 33 (Optimization)**
+**Phase 3: Sprint 34+ (Optimization)**
 - Benchmark retrieval accuracy (with/without section boost)
 - A/B test extraction quality
-- Fine-tune merging thresholds (800-1800 tokens)
+- Fine-tune merging thresholds based on real data
 
 ---
 
@@ -383,10 +384,10 @@ Chunk 1 [Slide 4-5]: semantic_score=0.65
 
 ### Neutral
 
-🔄 **Requires Full Reindex:**
-- Existing documents need reprocessing
-- Section metadata not retroactively added
-- **Plan:** Reindex during Sprint 31 completion
+🔄 **No Data Migration Required:**
+- Currently in development phase (no production data)
+- New chunking strategy applies to all future ingestion
+- Existing test documents can be reindexed on demand
 
 ---
 
@@ -410,20 +411,22 @@ Chunk 1 [Slide 4-5]: semantic_score=0.65
 - No extraction quality improvement
 - Section metadata is "best guess" (not accurate)
 
-### Alternative 3: Dynamic Section Merging (ML-Based)
+### Alternative 3: BGE-M3 Similarity-Based Section Merging
 
-**Approach:** Use semantic similarity to decide which sections to merge
+**Approach:** Use BGE-M3 embeddings + cosine similarity to determine which sections to merge (instead of token-based thresholds)
 
-**Rejected because:**
-- Over-engineering for current requirements
-- Adds ML dependency (sentence-transformers)
-- Adaptive threshold-based merging sufficient
+**Deferred (not rejected):**
+- Recorded as TD-042 for future evaluation
+- BGE-M3 already in stack (no new dependencies)
+- Useful for unstructured docs (meeting notes, transcripts)
+- Current threshold-based approach sufficient for 90% of cases (PowerPoint, PDFs with headings)
+- Can be added as opt-in feature in Sprint 33+ if threshold-based approach insufficient
 
 ---
 
 ## Success Metrics
 
-### Target Metrics (Sprint 31-32)
+### Target Metrics (Sprint 32-33)
 
 **Chunking Metrics:**
 - PowerPoint chunk count: 6-8 chunks (vs 124 baseline)
@@ -487,10 +490,10 @@ Chunk 1 [Slide 4-5]: semantic_score=0.65
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Created:** 2025-11-21
 **Last Updated:** 2025-11-21
-**Status:** ACCEPTED - Implementation Planned for Sprint 31-32
+**Status:** ACCEPTED - Implementation Sprint 32-33
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
