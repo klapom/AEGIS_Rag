@@ -65,6 +65,8 @@ export async function* streamChat(request: ChatRequest, signal?: AbortSignal): A
 
           // Check for completion signal
           if (data === '[DONE]') {
+            // Yield complete event to signal end of stream
+            yield { type: 'complete', data: {} } as ChatChunk;
             return;
           }
 

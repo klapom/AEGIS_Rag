@@ -184,7 +184,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-6">
+    <div className="max-w-4xl mx-auto space-y-6 p-6" data-streaming={isStreaming}>
       {/* Query Title */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-gray-900">{query}</h1>

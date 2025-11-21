@@ -31,18 +31,20 @@ export class BasePage {
   /**
    * Wait for LLM response generation
    * LLM calls can take 10-20 seconds, especially for streaming
+   *
+   * Wait for at least one message to appear (simple and reliable)
    */
   async waitForLLMResponse(timeout = 20000) {
-    // Initial debounce to ensure streaming starts
-    await this.page.waitForTimeout(500);
-
-    // Wait for streaming indicator to disappear
-    const streamingIndicator = '[data-streaming="true"]';
     try {
-      await this.page.waitForFunction(
-        () => !document.querySelector(streamingIndicator),
-        { timeout }
-      );
+      // Wait for at least one message element to be visible
+      // This is more reliable than waiting for data-streaming attribute changes
+      await this.page.locator('[data-testid="message"]').first().waitFor({
+        state: 'visible',
+        timeout
+      });
+
+      // Additional wait to ensure streaming has finished
+      await this.page.waitForTimeout(2000);
     } catch (error) {
       throw new Error(
         `LLM response timeout after ${timeout}ms. Check backend connectivity.`

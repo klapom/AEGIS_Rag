@@ -151,7 +151,7 @@ class HybridSearch:
         """
         try:
             # Generate query embedding
-            query_embedding = await self.embedding_service.embed_text(query)
+            query_embedding = await self.embedding_service.embed_single(query)
 
             # Build Qdrant filter from metadata filters
             qdrant_filter = None

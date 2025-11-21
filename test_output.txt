@@ -1,2 +1,0 @@
-C:/Users/Klaus: line 1: syntax error near unexpected token `('
-C:/Users/Klaus: line 1: `[61D8:682C][2025-04-09T16:41:45]i001: Burn v3.14.1.8722, Windows v10.0 (Build 22631: Service Pack 0), path: C:\WINDOWS\Temp\{3AE1A89D-CBBA-49CF-A255-C4D71B5AC781}\.cr\VC_redist.x64.exe'

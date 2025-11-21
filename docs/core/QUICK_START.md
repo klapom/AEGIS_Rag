@@ -58,8 +58,8 @@ docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
   # Embeddings (Sprint 16: BGE-M3 Migration, ADR-024)
   ollama pull bge-m3                            # Multilingual Embeddings (1024-dim, 2.2GB)
 
-  # Entity/Relation Extraction (Sprint 13, ADR-018)
-  ollama pull hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0  # Gemma 3 4B (4.5GB RAM)
+  # Entity/Relation Extraction (Sprint 21+, ADR-026, ADR-037)
+  ollama pull hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0  # Gemma 3 4B Fallback (4.5GB RAM)
 
   # Vision (Sprint 21 Feature 21.6)
   ollama pull llava:7b-v1.6-mistral-q2_K        # Vision-Language Model (4.3GB VRAM)

@@ -4,7 +4,7 @@ test.describe('Smoke Tests - Infrastructure Setup', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/');
     const title = await page.title();
-    expect(title).toContain('AEGIS RAG');
+    expect(title).toContain('AegisRAG');  // Fixed: Sprint 31 title format
   });
 
   test('should have working backend health endpoint', async ({ page }) => {
@@ -45,15 +45,16 @@ test.describe('Smoke Tests - Infrastructure Setup', () => {
   });
 
   test('should verify frontend is running on correct port', async ({ page }) => {
+    await page.goto('/');  // Navigate first to get actual URL
     const url = page.url();
-    expect(url).toContain('http://localhost:5173');
+    expect(url).toContain('http://localhost:5179');  // Fixed: Sprint 31 port
   });
 
   test('should verify Playwright infrastructure is working', async ({ page }) => {
     await page.goto('/');
 
-    // Test basic element interaction
-    const title = page.locator('h1');
+    // Test basic element interaction (use .last() to get main heading, not empty header)
+    const title = page.locator('h1').last();
     const text = await title.textContent();
     expect(text).toBeTruthy();
   });

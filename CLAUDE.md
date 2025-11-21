@@ -20,7 +20,7 @@
 
 ---
 
-## 📍 Current Project State (Sprint 30)
+## 📍 Current Project State (Sprint 31)
 
 **Sprint 20 Status**: ✅ COMPLETE (2025-10-31 - 2025-11-06)
 - ✅ Performance Optimization & Extraction Quality
@@ -132,12 +132,39 @@
 - **Code Metrics**: 9 commits, +138 lines documentation, -5 lines refactoring
 - **Test Coverage**: 19/19 Citation tests passing, Feature PRODUCTION READY
 
-**Next Sprint**: Sprint 31 - Advanced Frontend Features & E2E Coverage
+**Sprint 31 Status**: 🚧 IN PROGRESS (2025-11-21, branch: `main`)
+- **Objective**: Comprehensive E2E Test Coverage & Frontend Architecture Improvements
+- **Key Achievements**:
+  - ✅ **E2E Test Infrastructure Setup** (Feature 31.1)
+    - Playwright E2E framework mit 111 tests (100 User + 11 Admin)
+    - Page Object Model (POM) pattern für alle Features
+    - Real LLM backend integration (Alibaba Cloud Qwen / Local Ollama)
+    - Fixtures für Backend/Frontend lifecycle management
+  - ✅ **Frontend Dependency Optimization** (Feature 31.2)
+    - react-force-graph → react-force-graph-2d + react-force-graph-3d migration
+    - 103 AFRAME packages removed (dependency bloat eliminated)
+    - Standalone packages for 2D/3D graph visualization
+    - Build errors fixed, TypeScript types corrected
+  - ✅ **HomePage → ChatPage Transformation** (Feature 31.11 - CRITICAL FIX)
+    - **Problem**: E2E tests expected chat interface on `/` but found only landing page
+    - **Solution**: Transformed HomePage into full-featured chat interface
+    - Inline message input with `data-testid="message-input"`
+    - Streaming responses rendered in-place (no navigation)
+    - Conversation history with session management
+    - Citations, Follow-up Questions, Message data-testids
+  - ✅ **AdminIndexingPage Implementation** (Feature 31.7)
+    - Complete Admin UI for document indexing (399 LOC)
+    - SSE streaming progress, cancellation support
+    - All 10 required data-testid attributes
+    - Route registered at `/admin/indexing`
+- **Test Coverage**:
+  - 100 User Frontend E2E Tests (Citations, Error Handling, Search, History, Graph, Settings)
+  - 11 Admin E2E Tests (Indexing, Graph Analytics, Cost Dashboard)
+  - Backend: 467 unit tests passing
+- **Code Metrics**: 25+ documentation files organized to `docs/sprints/`
+- **Architecture**: ChatPage architecture aligned with E2E test expectations
 
-For full details, see:
-- [SPRINT_21_PLAN_v2.md](sprints/SPRINT_21_PLAN_v2.md)
-- [DRIFT_ANALYSIS.md](DRIFT_ANALYSIS.md)
-- [DOCUMENTATION_PLAN.md](DOCUMENTATION_PLAN.md)
+**Current Work**: E2E tests running against transformed ChatPage interface
 
 ---
 
@@ -151,6 +178,8 @@ For full details, see:
 
 **Orchestration:** LangGraph Multi-Agent System
 **Data Ingestion:** Docling CUDA Container + LlamaIndex fallback (ADR-027, ADR-028)
+**Entity/Relation Extraction:** Pure LLM (Alibaba Cloud Qwen3-32B, fallback to local Gemma 2 4B) - ADR-026, ADR-037
+**Chunking:** Adaptive Section-Aware Chunking (800-1800 tokens, respects document structure) - ADR-039
 **Monitoring:** LangSmith + Prometheus + RAGAS
 
 ---
@@ -172,6 +201,17 @@ Orchestration: LangGraph 0.6.10, LangChain Core
 Data Ingestion:
   - Primary: Docling CUDA Container (GPU-accelerated OCR, ADR-027)
   - Fallback: LlamaIndex 0.14.3 (connectors only, ADR-028)
+Entity/Relation Extraction:
+  - Method: Pure LLM Extraction (NO SpaCy, NO Three-Phase) - ADR-026, ADR-037
+  - Primary: Alibaba Cloud Qwen3-32B (32B parameters, high quality)
+  - Fallback: Local Ollama Gemma 2 4B (automatic fallback on budget exceeded)
+  - Routing: AegisLLMProxy with Complexity=HIGH + Quality=HIGH
+  - Cost Tracking: SQLite database ($120/month budget)
+Chunking Strategy:
+  - Method: Adaptive Section-Aware Chunking - ADR-039
+  - Size: 800-1800 tokens (adaptive based on section boundaries)
+  - Metadata: Multi-section tracking (headings, pages, bounding boxes)
+  - Graph Schema: Explicit Section nodes in Neo4j for hierarchical queries
 Vector DB: Qdrant 1.11.0
 Graph DB: Neo4j 5.24 Community Edition
 Memory Cache: Redis 7.x with Persistence
@@ -194,6 +234,13 @@ Embeddings: BGE-M3 (1024-dim, multilingual, ADR-024) - Local & Cost-Free
 Optional Production: Azure OpenAI GPT-4o (if budget allows)
 MCP: Official Python SDK (anthropic/mcp)
 Container Runtime: Docker Compose + NVIDIA Container Toolkit (CUDA 12.4)
+Frontend:
+  - React 19, TypeScript, Vite 7.1.12
+  - UI: Tailwind CSS, Lucide Icons
+  - Graph Visualization: react-force-graph-2d ^1.29.0, react-force-graph-3d ^1.24.4
+  - E2E Testing: Playwright (111 tests with POM pattern)
+  - State Management: React Context API
+  - Routing: React Router v6
 ```
 
 ### Development Environment

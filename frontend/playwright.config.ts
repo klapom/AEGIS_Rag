@@ -41,7 +41,7 @@ export default defineConfig({
 
   use: {
     /* Use base URL for all requests */
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5179',
 
     /* Collect trace when retrying failed tests */
     trace: 'retain-on-failure',

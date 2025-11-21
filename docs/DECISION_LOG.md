@@ -2,7 +2,7 @@
 
 **Purpose:** Chronological list of major architecture and technology decisions
 **Format:** Date | Decision | Rationale (2-3 sentences max)
-**Last Updated:** 2025-10-22 (Post-Sprint 12)
+**Last Updated:** 2025-11-21 (Sprint 31)
 
 ---
 
@@ -167,6 +167,22 @@
 ### TBD | Multi-User Authentication & Authorization
 **Decision (Planned):** JWT-based auth, role-based access control (admin, user, viewer).
 **Rationale:** Production requires user management. NextAuth.js integration in Sprint 14. User-specific rate limiting, audit logging, session management.
+
+---
+
+## SPRINT 20-31: PRODUCTION OPTIMIZATION & FRONTEND COMPLETION
+
+### 2025-11-07 | Pure LLM Extraction as Default (ADR-026)
+**Decision:** Replace Three-Phase Extraction (SpaCy + Dedup + Gemma) with Pure LLM extraction.
+**Rationale:** Sprint 21's 1800-token chunks (vs 600 tokens) made LLM extraction feasible. Pure LLM provides better quality (domain-specific entities, German terms) with similar performance due to 65% chunk reduction. Three-Phase deprecated but available via config.
+
+### 2025-11-19 | Alibaba Cloud Qwen3-32B for Extraction (ADR-037)
+**Decision:** Use Alibaba Cloud Qwen3-32B (32B parameters) for entity/relation extraction instead of local Gemma 2 4B.
+**Rationale:** 8x larger model (32B vs 4B) provides +10-15% extraction accuracy. Cost-effective ($0.001-0.003 per 1K tokens), automatic fallback to local if budget exceeded. Budget tracking via SQLite ensures cost control ($120/month covers 1K-3K documents).
+
+### 2025-11-21 | Adaptive Section-Aware Chunking (ADR-039)
+**Decision:** Implement adaptive chunking that respects document section boundaries while avoiding fragmentation.
+**Rationale:** PowerPoint fragmentation problem (124 tiny chunks → 6-8 optimal chunks). Adaptive strategy: Large sections (>1200 tokens) stay standalone, small sections (<1200 tokens) merge to 800-1800 token range. Multi-section metadata enables precise citations and cleaner entity extraction (-15% false relations).
 
 ---
 

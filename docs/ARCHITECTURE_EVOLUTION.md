@@ -44,7 +44,7 @@
 | 10 | UI | Gradio interface | ✅ COMPLETE |
 | 11 | Optimization | GPU support, unified pipeline | ✅ COMPLETE |
 | 12 | Production | Deployment guide, CI/CD, monitoring | ✅ COMPLETE |
-| 13 | Entity Pipeline | 3-phase extraction, semantic dedup | ✅ COMPLETE |
+| 13 | Entity Pipeline | Pure LLM extraction (DEPRECATED Three-Phase) | ✅ COMPLETE |
 | 14 | Backend Performance | Benchmarking, monitoring, retry logic | ✅ COMPLETE |
 | 15 | React Frontend | SSE streaming, Perplexity UI | ✅ COMPLETE |
 | 16 | Unified Architecture | BGE-M3 system-wide, unified chunking | ✅ COMPLETE |
@@ -60,6 +60,8 @@
 | 26 | Frontend Debt | Modal refactoring, loading states | 📋 IN PROGRESS |
 | 27 | Frontend Debt | Query enhancement, frontend tests | 📋 IN PROGRESS |
 | 28 | Frontend UX | Perplexity UI features, settings page | ✅ COMPLETE |
+| 29-30 | VLM + Testing | VLM PDF ingestion, Frontend E2E tests | ✅ COMPLETE |
+| 31 | E2E Testing | Frontend E2E, Admin UI, Section-Aware Chunking | 📋 IN PROGRESS |
 
 ---
 
@@ -986,8 +988,10 @@
 
 ### Sprint 13: Entity/Relation Extraction Pipeline
 **Duration:** 1 week
-**Goal:** Optimize entity extraction with 3-phase pipeline (SpaCy → Dedup → Gemma 3)
+**Goal:** Optimize entity extraction with 3-phase pipeline (LATER REPLACED by Pure LLM in Sprint 21)
 **Status:** ✅ COMPLETE (2025-10-21 → 2025-10-24)
+
+**⚠️ NOTE:** Three-Phase Extraction (SpaCy + Dedup + Gemma) was DEPRECATED in Sprint 21 by ADR-026 (Pure LLM) and further refined in Sprint 30 by ADR-037 (Alibaba Cloud Qwen3-32B). See ADR-018 for historical context.
 
 #### Architecture Decision
 - **ADR-017:** Semantic Deduplication for Entity Extraction

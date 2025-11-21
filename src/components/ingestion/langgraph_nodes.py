@@ -237,20 +237,69 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
             # Parse document
             parsed = await docling.parse_document(doc_path)
 
-            # Feature 21.6: Extract page dimensions for BBox normalization
+            # Feature 31.12: PowerPoint Fix - parsed itself IS the DoclingDocument
+            # For PowerPoint files, the entire response is the document (no .document attribute)
+            # For PDF/DOCX, response has .document attribute
             page_dimensions = {}
-            if hasattr(parsed, "document") and hasattr(parsed.document, "pages"):
-                for page in parsed.document.pages:
-                    page_dimensions[page.page_no] = {
-                        "width": page.size.width,
-                        "height": page.size.height,
-                        "unit": "pt",
-                        "dpi": 72,
-                    }
-                # Store in state (only if document attribute exists)
-                state["document"] = parsed.document  # Feature 21.6: DoclingDocument object
+
+            # CRITICAL VERIFICATION: Log parsed object type and attributes
+            logger.warning(
+                "VERIFICATION_parsed_type_check",
+                document_id=state["document_id"],
+                parsed_type=type(parsed).__name__,
+                parsed_module=type(parsed).__module__,
+                has_document_attr=hasattr(parsed, "document"),
+                parsed_is_none=parsed is None,
+                has_text=hasattr(parsed, "text"),
+                text_length=len(parsed.text) if hasattr(parsed, "text") else 0,
+            )
+
+            if hasattr(parsed, "document"):
+                # PDF, DOCX: parsed.document is the DoclingDocument
+                state["document"] = parsed.document
+
+                # Extract page dimensions if pages exist
+                if hasattr(parsed.document, "pages") and parsed.document.pages:
+                    for page in parsed.document.pages:
+                        page_dimensions[page.page_no] = {
+                            "width": page.size.width,
+                            "height": page.size.height,
+                            "unit": "pt",
+                            "dpi": 72,
+                        }
+                logger.warning(
+                    "VERIFICATION_document_from_parsed_dot_document",
+                    document_id=state["document_id"],
+                    has_pages=hasattr(parsed.document, "pages"),
+                    pages_count=len(page_dimensions),
+                    state_document_is_none=state["document"] is None,
+                )
             else:
-                state["document"] = None  # Sprint 30: No document attribute in response
+                # PowerPoint: parsed itself is the DoclingDocument
+                logger.warning(
+                    "VERIFICATION_entering_else_branch_POWERPOINT",
+                    document_id=state["document_id"],
+                    parsed_type=type(parsed).__name__,
+                    note="PowerPoint detected: using parsed object directly as document",
+                )
+
+                state["document"] = parsed
+
+                # IMMEDIATE VERIFICATION AFTER ASSIGNMENT
+                logger.warning(
+                    "VERIFICATION_state_document_set_POWERPOINT",
+                    document_id=state["document_id"],
+                    state_document_is_none=state["document"] is None,
+                    state_document_type=type(state["document"]).__name__ if state["document"] is not None else "None",
+                    parsed_is_none=parsed is None,
+                )
+
+                # Critical check: If state["document"] is still None, raise exception
+                if state["document"] is None:
+                    raise ValueError(
+                        f"CRITICAL BUG: state['document'] is None after assignment! "
+                        f"parsed type: {type(parsed)}, parsed is None: {parsed is None}"
+                    )
 
             state["page_dimensions"] = page_dimensions  # Feature 21.6: Page metadata
             state["parsed_content"] = parsed.text  # Keep for backwards compatibility
@@ -697,6 +746,131 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
 # =============================================================================
 
 
+def merge_small_chunks(
+    enhanced_chunks: list[dict],
+    tokenizer,
+    target_tokens: int = 1800,
+    min_tokens: int = 300,
+) -> list[dict]:
+    """Merge consecutive small chunks to reach target token count.
+
+    Feature 31.12: Post-processing merger after HybridChunker to address
+    the issue of very small chunks (8.7 tokens/chunk) when processing
+    hierarchical documents like PowerPoint slides.
+
+    Strategy:
+    - Merge consecutive chunks until reaching target_tokens
+    - Preserve all VLM metadata (image_bboxes) from merged chunks
+    - Only merge if chunk is below min_tokens (avoid breaking good chunks)
+    - Stop merging if next chunk would exceed target by >20%
+
+    Args:
+        enhanced_chunks: List of {chunk, image_bboxes} dicts
+        tokenizer: HuggingFaceTokenizer for token counting
+        target_tokens: Target chunk size (default 1800)
+        min_tokens: Minimum size to trigger merge (default 300)
+
+    Returns:
+        List of merged enhanced chunks with same structure
+
+    Example:
+        >>> # Input: 124 chunks @ 8.7 tokens/chunk
+        >>> merged = merge_small_chunks(enhanced_chunks, tokenizer, 1800)
+        >>> # Output: ~6 chunks @ ~175 tokens/chunk (124 * 8.7 / 6)
+    """
+    if not enhanced_chunks:
+        return []
+
+    # Helper: Count tokens in chunk text
+    def count_tokens(chunk_obj) -> int:
+        try:
+            # Get text from chunk (use .text attribute)
+            if hasattr(chunk_obj, "text"):
+                text = chunk_obj.text
+            elif hasattr(chunk_obj, "contextualize"):
+                text = chunk_obj.contextualize()
+            else:
+                text = str(chunk_obj)
+
+            # Count tokens using tokenizer
+            tokens = tokenizer.tokenizer.encode(text, add_special_tokens=False)
+            return len(tokens)
+        except Exception:
+            # Fallback: approximate token count (avg 4 chars/token)
+            text = chunk_obj.text if hasattr(chunk_obj, "text") else str(chunk_obj)
+            return max(1, len(text) // 4)
+
+    # Helper: Merge two chunk objects into one
+    def merge_chunk_objects(chunk1, chunk2):
+        """Merge two Docling chunk objects by concatenating text."""
+        from docling_core.types.doc import DoclingDocument
+        from docling_core.types.doc.document import DocItemLabel
+
+        # Create a new chunk with merged text
+        merged_text = chunk1.text + "\n\n" + chunk2.text
+
+        # Create a simple merged chunk (we'll use the first chunk as base)
+        # and update its text
+        merged_chunk = chunk1  # Keep first chunk's structure
+        # Override text attribute
+        merged_chunk.text = merged_text
+
+        return merged_chunk
+
+    merged = []
+    current_group = None
+    current_tokens = 0
+    current_bboxes = []
+
+    for enhanced_chunk in enhanced_chunks:
+        chunk_obj = enhanced_chunk["chunk"]
+        chunk_tokens = count_tokens(chunk_obj)
+        chunk_bboxes = enhanced_chunk["image_bboxes"]
+
+        # Start new group if none exists
+        if current_group is None:
+            current_group = chunk_obj
+            current_tokens = chunk_tokens
+            current_bboxes = list(chunk_bboxes)  # Copy list
+            continue
+
+        # Check if we should merge this chunk
+        would_be_tokens = current_tokens + chunk_tokens
+        should_merge = (
+            # Current group is below minimum
+            (current_tokens < min_tokens)
+            or
+            # Would reach target without exceeding by >20%
+            (would_be_tokens <= target_tokens * 1.2)
+        )
+
+        if should_merge:
+            # Merge into current group
+            current_group = merge_chunk_objects(current_group, chunk_obj)
+            current_tokens = would_be_tokens
+            current_bboxes.extend(chunk_bboxes)  # Preserve all bboxes
+        else:
+            # Save current group and start new one
+            merged.append({"chunk": current_group, "image_bboxes": current_bboxes})
+            current_group = chunk_obj
+            current_tokens = chunk_tokens
+            current_bboxes = list(chunk_bboxes)
+
+    # Don't forget last group
+    if current_group is not None:
+        merged.append({"chunk": current_group, "image_bboxes": current_bboxes})
+
+    logger.info(
+        "chunk_merger_complete",
+        original_chunks=len(enhanced_chunks),
+        merged_chunks=len(merged),
+        reduction_ratio=round(len(merged) / len(enhanced_chunks), 2) if enhanced_chunks else 0,
+        target_tokens=target_tokens,
+    )
+
+    return merged
+
+
 async def chunking_node(state: IngestionState) -> IngestionState:
     """Node 3: Chunk document with HybridChunker + BBox mapping (Feature 21.6).
 
@@ -812,7 +986,11 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             enhanced_chunk = {"chunk": chunk, "image_bboxes": chunk_bboxes}
             enhanced_chunks.append(enhanced_chunk)
 
-        state["chunks"] = enhanced_chunks
+        # Post-Processing Merger: Merge small chunks to reach ~1800 tokens
+        # while preserving VLM metadata (Feature 31.12)
+        merged_chunks = merge_small_chunks(enhanced_chunks, tokenizer, target_tokens=1800)
+
+        state["chunks"] = merged_chunks
         state["chunking_status"] = "completed"
         state["chunking_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
@@ -820,9 +998,10 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         logger.info(
             "node_chunking_complete",
             document_id=state["document_id"],
-            chunks_created=len(enhanced_chunks),
-            chunks_with_images=sum(1 for c in enhanced_chunks if c["image_bboxes"]),
-            total_image_annotations=sum(len(c["image_bboxes"]) for c in enhanced_chunks),
+            original_chunks=len(enhanced_chunks),
+            merged_chunks=len(merged_chunks),
+            chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
+            total_image_annotations=sum(len(c["image_bboxes"]) for c in merged_chunks),
             duration_seconds=round(state["chunking_end_time"] - state["chunking_start_time"], 2),
         )
 

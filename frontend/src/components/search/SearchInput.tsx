@@ -60,6 +60,7 @@ export function SearchInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={3}
+          data-testid="message-input"
           className="w-full min-h-[4rem] px-6 pr-20 py-4 text-lg border-2 border-gray-300 rounded-2xl
                      focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20
                      placeholder-gray-400 transition-all duration-200
@@ -70,7 +71,7 @@ export function SearchInput({
         <button
           onClick={handleSubmit}
           disabled={!query.trim()}
-          data-testid="search-submit-button" // TD-38: Add testid for E2E tests
+          data-testid="send-button"
           aria-label="Suche starten"
           className="absolute right-3 top-1/2 -translate-y-1/2
                      w-10 h-10 flex items-center justify-center

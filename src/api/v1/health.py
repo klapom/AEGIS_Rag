@@ -122,7 +122,7 @@ async def detailed_health_check() -> None:
         start = time.time()
 
         embedding_service = EmbeddingService()
-        test_embedding = await embedding_service.embed_text("health check")
+        test_embedding = await embedding_service.embed_single("health check")
 
         latency_ms = (time.time() - start) * 1000
 

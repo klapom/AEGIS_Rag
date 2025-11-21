@@ -21,7 +21,8 @@ test.describe('Inline Citations', () => {
     await chatPage.goto();
 
     // Send a factual question likely to have citations
-    await chatPage.sendMessage('What are transformers in machine learning?');
+    // Query matches Performance Tuning documents in Qdrant
+    await chatPage.sendMessage('What is Multi Server Architecture?');
     await chatPage.waitForResponse();
 
     // Verify citations exist

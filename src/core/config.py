@@ -105,9 +105,9 @@ class Settings(BaseSettings):
         redis_ttl (int): Redis default TTL in seconds (default: 3600)
 
         extraction_pipeline (Literal): Entity/relation extraction pipeline
-            - 'llm_extraction': Pure LLM (NO SpaCy, high quality, ~200-300s/doc) - DEFAULT
-            - 'three_phase': SpaCy + Dedup + Gemma (fast, ~15-17s/doc)
+            - 'llm_extraction': Pure LLM (NO SpaCy, high quality) - DEFAULT (ADR-026, ADR-037)
             - 'lightrag_default': Legacy LightRAG baseline
+            Note: 'three_phase' removed in Sprint 25 (deprecated per ADR-026)
 
         retrieval_top_k (int): Number of documents to retrieve (default: 5)
         retrieval_score_threshold (float): Minimum relevance score (default: 0.7)
@@ -552,9 +552,23 @@ class Settings(BaseSettings):
     )
 
     # CORS Configuration (Sprint 22 Feature 22.2.3)
+    # Sprint 31: Extended port range 5170-5180 for frontend dev server flexibility
     cors_origins: list[str] = Field(
-        default=["http://localhost:5173", "http://localhost:3000"],
-        description="Allowed CORS origins (comma-separated in .env)",
+        default=[
+            "http://localhost:3000",
+            "http://localhost:5170",
+            "http://localhost:5171",
+            "http://localhost:5172",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:5177",
+            "http://localhost:5178",
+            "http://localhost:5179",
+            "http://localhost:5180",
+        ],
+        description="Allowed CORS origins (port range 5170-5180 for frontend dev flexibility)",
     )
     cors_allow_credentials: bool = Field(default=True, description="Allow credentials in CORS")
     cors_allow_methods: list[str] = Field(

@@ -19,7 +19,6 @@ from src.api.models.cost_stats import BudgetStatus, CostHistory, CostStats, Mode
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.llm_proxy.cost_tracker import get_cost_tracker
 from src.components.shared.embedding_service import get_embedding_service
-from src.components.vector_search.ingestion import ingest_documents
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
@@ -82,11 +81,20 @@ async def reindex_progress_stream(
         embedding_service = get_embedding_service()
         qdrant_client = get_qdrant_client()
 
-        # Discover documents
+        # Discover documents (all 30 supported formats from FormatRouter)
         if not input_dir.exists():
             raise VectorSearchError(query="", reason=f"Input directory does not exist: {input_dir}")
 
-        document_files = list(input_dir.glob("*.pdf")) + list(input_dir.glob("*.txt"))
+        # Import all supported formats from FormatRouter (Sprint 22.3)
+        from src.components.ingestion.format_router import ALL_FORMATS
+
+        # Glob all supported document formats (30 total: .pdf, .docx, .pptx, .xlsx, .md, etc.)
+        document_files = []
+        for ext in ALL_FORMATS:
+            # Remove leading dot from extension for glob pattern
+            pattern = f"*{ext}"
+            document_files.extend(input_dir.glob(pattern))
+
         total_docs = len(document_files)
 
         if total_docs == 0:
@@ -136,91 +144,64 @@ async def reindex_progress_stream(
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'deletion', 'progress_percent': 20, 'message': '[DRY RUN] Skipped deletion'})}\n\n"
 
-        # Phase 3: Indexing (use ingest_documents helper function)
+        # Phase 3: Indexing (use LangGraph pipeline with Docling)
         if not dry_run:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30, 'message': f'Indexing {total_docs} documents into Qdrant...'})}\n\n"
 
-            # Use the ingest_documents helper function (Qdrant + BM25)
-            stats = await ingest_documents(
-                input_dir=input_dir,
-                collection_name=collection_name,
-            )
+            # Sprint 31 Feature 31.11: Use LangGraph pipeline instead of deprecated ingest_documents()
+            # Import LangGraph pipeline (lazy import to avoid circular dependencies)
+            from src.components.ingestion.langgraph_pipeline import run_batch_ingestion
 
-            points_indexed = stats.get("points_indexed", 0)
-            message = (
-                f"Indexed {points_indexed} chunks into Qdrant. Starting Neo4j graph indexing..."
-            )
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 60, 'message': message})}\n\n"
+            # Run batch ingestion with Docling + VLM + BGE-M3 + Neo4j
+            batch_id = f"reindex_batch_{int(time.time())}"
+            total_chunks = 0
+            completed_docs = 0
 
-            # Phase 3b: Index into Neo4j/LightRAG graph (Sprint 16 Feature 16.7)
-            # Sprint 24 Feature 24.15: Lazy import for optional llama_index dependency
-            try:
-                # ================================================================
-                # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
-                # ================================================================
-                # Load llama_index only when re-indexing is executed.
-                # This allows the core API to run without llama_index installed.
-                # ================================================================
-                try:
-                    from llama_index.core import SimpleDirectoryReader
-                except ImportError as e:
-                    error_msg = (
-                        "llama_index is required for graph re-indexing but is not installed.\n\n"
-                        "INSTALLATION OPTIONS:\n"
-                        "1. poetry install --with ingestion\n"
-                        "2. poetry install --all-extras\n\n"
-                        "NOTE: Re-indexing requires LlamaIndex for document loading.\n"
-                        "For production deployments, install the ingestion group."
+            async for result in run_batch_ingestion(
+                document_paths=[str(p) for p in document_files],
+                batch_id=batch_id,
+            ):
+                completed_docs += 1
+                doc_path = result["document_path"]
+                success = result["success"]
+
+                if success and result.get("state"):
+                    state = result["state"]
+                    chunk_count = len(state.get("chunks", []))
+                    total_chunks += chunk_count
+
+                    # Calculate progress (30% → 60%)
+                    doc_progress = (completed_docs / total_docs) * 0.3  # 30% of total
+                    overall_progress = 30 + doc_progress
+
+                    message = f"Indexed {Path(doc_path).name}: {chunk_count} chunks"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
+
+                    logger.info(
+                        "reindex_document_indexed",
+                        document_path=doc_path,
+                        chunks=chunk_count,
+                        completed=completed_docs,
+                        total=total_docs,
                     )
-                    logger.error(
-                        "llamaindex_import_failed",
-                        endpoint="/admin/reindex",
-                        error=str(e),
-                        install_command="poetry install --with ingestion",
-                    )
-                    raise VectorSearchError(query="", reason=error_msg) from e
-
-                lightrag_wrapper = await get_lightrag_wrapper_async()
-
-                # Load documents
-                loader = SimpleDirectoryReader(
-                    input_dir=str(input_dir),
-                    required_exts=[".pdf", ".txt", ".md", ".docx", ".csv", ".pptx"],
-                    recursive=True,
-                    filename_as_id=True,
-                )
-                documents = loader.load_data()
-
-                # Convert to LightRAG format
-                lightrag_docs = []
-                for doc in documents:
-                    content = doc.get_content()
-                    if content and content.strip():
-                        lightrag_docs.append(
-                            {
-                                "text": content,
-                                "id": doc.doc_id or doc.metadata.get("file_name", "unknown"),
-                            }
-                        )
-
-                # Insert into LightRAG (entities + relationships + graph)
-                if lightrag_docs:
-                    graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
-                    logger.info("lightrag_indexing_complete", **graph_stats)
-                    total_entities = graph_stats.get("stats", {}).get("total_entities", 0)
-                    total_relations = graph_stats.get("stats", {}).get("total_relations", 0)
-                    graph_message = f"Indexed {total_entities} entities and {total_relations} relations into Neo4j"
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': graph_message})}\n\n"
                 else:
-                    logger.warning("no_documents_for_graph_indexing")
+                    # Document failed
+                    error_msg = result.get("error", "Unknown error")
+                    logger.error("reindex_document_failed", document_path=doc_path, error=error_msg)
 
-            except Exception as e:
-                logger.error("lightrag_indexing_failed", error=str(e))
-                # Continue even if graph indexing fails (Qdrant indexing succeeded)
-                error_message = f"Graph indexing failed: {str(e)} (continuing with Qdrant only)"
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 85, 'message': error_message})}\n\n"
+                    # Continue with remaining documents
+                    message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30 + (completed_docs / total_docs) * 30, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
 
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': 'Indexing completed successfully'})}\n\n"
+            points_indexed = total_chunks
+            message = (
+                f"Indexed {points_indexed} chunks from {completed_docs} documents into Qdrant + Neo4j"
+            )
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': message})}\n\n"
+
+            # NOTE: Neo4j graph indexing is handled automatically by LangGraph pipeline
+            # (graph_extraction_node in run_batch_ingestion)
+            # No need for separate LlamaIndex + LightRAG processing
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': '[DRY RUN] Skipped indexing'})}\n\n"
 
@@ -290,14 +271,16 @@ async def reindex_all_documents(
     """Re-index all documents with atomic deletion and SSE progress tracking.
 
     **Sprint 16 Feature 16.3: Unified Re-Indexing Pipeline**
+    **Sprint 31 Feature 31.11: Migrated to LangGraph Pipeline**
 
     This endpoint:
-    1. Atomically deletes old indexes (Qdrant, BM25 cache)
+    1. Atomically deletes old indexes (Qdrant, BM25 cache, Neo4j)
     2. Reloads all documents from input directory
-    3. Chunks using ChunkingService (Feature 16.1)
-    4. Embeds using BGE-M3 1024-dim (Feature 16.2)
-    5. Indexes into Qdrant + BM25
-    6. Validates consistency
+    3. Uses LangGraph pipeline (Docling → Chunking → Embedding → Graph Extraction)
+    4. Chunks using 1800-token strategy with semantic boundaries
+    5. Embeds using BGE-M3 1024-dim vectors
+    6. Indexes into Qdrant + Neo4j simultaneously
+    7. Validates consistency
 
     **Safety Checks:**
     - `dry_run=true`: Simulate without making changes

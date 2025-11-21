@@ -1,11 +1,37 @@
 # ADR-018: Model Selection for Entity and Relation Extraction
 
-**Status:** ✅ ACCEPTED
+**Status:** 🗄️ DEPRECATED (Superseded by ADR-026 and ADR-037)
 **Date:** 2025-10-24
 **Sprint:** 13 (Test Infrastructure & Performance)
 **Category:** Architecture / Performance / Model Selection
 **Related TDs:** TD-31, TD-32, TD-33 (LightRAG E2E timeout issues)
 **Deciders:** Claude Code, Klaus Pommer
+
+---
+
+## ⚠️ DEPRECATION NOTICE
+
+**This ADR is DEPRECATED as of Sprint 21.**
+
+**Evolution of Extraction Strategy:**
+1. **Sprint 13 (ADR-018):** Three-Phase Extraction (SpaCy + Semantic Dedup + Gemma 3 4B)
+2. **Sprint 21 (ADR-026):** Pure LLM Extraction (NO SpaCy, LLM-only) ✅ **CURRENT DEFAULT**
+3. **Sprint 30 (ADR-037):** Alibaba Cloud Qwen3-32B (High-quality cloud extraction) ✅ **CURRENT IMPLEMENTATION**
+
+**Current Extraction Pipeline (as of Sprint 30):**
+- **Method:** Pure LLM Extraction (LLM-only, no SpaCy/NER)
+- **Model (Primary):** Alibaba Cloud Qwen3-32B (32B parameters)
+- **Model (Fallback):** Local Ollama Gemma 2 4B
+- **Routing:** AegisLLMProxy with automatic fallback on budget exceeded
+- **See:** ADR-026 (Pure LLM), ADR-037 (Alibaba Cloud)
+
+**Why Deprecated:**
+- Three-Phase Extraction (SpaCy + Dedup + Gemma) was replaced by Pure LLM for better quality
+- Sprint 20 analysis showed SpaCy missed domain-specific entities (German terms, technical jargon)
+- Sprint 21's 1800-token chunking (ADR-022) made LLM extraction feasible
+- Sprint 30 moved to Alibaba Cloud for 8x larger model (32B vs 4B parameters)
+
+**This document is retained for historical context only.**
 
 ---
 
