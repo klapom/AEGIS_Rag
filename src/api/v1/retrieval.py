@@ -44,7 +44,9 @@ settings = get_settings()  # Sprint 22 Feature 22.2.3: Config-driven rate limits
 router = APIRouter(prefix="/api/v1/retrieval", tags=["retrieval"])
 
 # Initialize format router (Sprint 22 Feature 22.3)
-_format_router = FormatRouter()  # Will check Docling availability at startup
+# NOTE: Will be properly initialized with health check in main.py lifespan
+# Default: docling_available=True (will be updated on startup)
+_format_router = FormatRouter()  # Placeholder, updated in main.py lifespan with health check
 
 
 # Request/Response Models

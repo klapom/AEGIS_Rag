@@ -212,12 +212,14 @@ class DoclingClient:
                 stderr=e.stderr[:500] if e.stderr else "",
             )
             raise IngestionError(
-                "container_lifecycle", f"Failed to start Docling container: {e.stderr}"
+                document_id="docling_container",
+                reason=f"Failed to start Docling container: {e.stderr}",
             ) from e
         except Exception as e:
             logger.error("docling_container_start_error", error=str(e), exc_info=True)
             raise IngestionError(
-                "container_lifecycle", f"Unexpected error starting Docling container: {e}"
+                document_id="docling_container",
+                reason=f"Unexpected error starting Docling container: {e}",
             ) from e
 
     async def stop_container(self) -> None:
@@ -267,12 +269,14 @@ class DoclingClient:
                 stderr=e.stderr[:500] if e.stderr else "",
             )
             raise IngestionError(
-                "container_lifecycle", f"Failed to stop Docling container: {e.stderr}"
+                document_id="docling_container",
+                reason=f"Failed to stop Docling container: {e.stderr}",
             ) from e
         except Exception as e:
             logger.error("docling_container_stop_error", error=str(e), exc_info=True)
             raise IngestionError(
-                "container_lifecycle", f"Unexpected error stopping Docling container: {e}"
+                document_id="docling_container",
+                reason=f"Unexpected error stopping Docling container: {e}",
             ) from e
 
     async def _wait_for_ready(self, max_wait_seconds: int = 60) -> None:
@@ -334,8 +338,8 @@ class DoclingClient:
             max_wait_seconds=max_wait_seconds,
         )
         raise IngestionError(
-            "container_lifecycle",
-            f"Docling container health check timeout after {elapsed:.1f}s ({attempts} attempts)",
+            document_id="docling_container",
+            reason=f"Docling container health check timeout after {elapsed:.1f}s ({attempts} attempts)",
         )
 
     async def parse_document(self, file_path: Path) -> DoclingParsedDocument:

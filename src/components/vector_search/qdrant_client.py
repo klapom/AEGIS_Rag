@@ -241,6 +241,117 @@ class QdrantClient:
             )
             raise VectorSearchError(query="", reason=f"Failed to upsert points: {e}") from e
 
+    async def ingest_adaptive_chunks(
+        self,
+        chunks: list[Any],
+        collection_name: str,
+        batch_size: int = 100,
+    ) -> bool:
+        """Ingest AdaptiveChunk objects with multi-section metadata into Qdrant.
+
+        Sprint 32 Feature 32.3: Multi-Section Metadata in Qdrant
+        ADR-039: Adaptive Section-Aware Chunking
+
+        This method handles the ingestion of adaptive chunks with section metadata.
+        It expects chunks to have the following attributes:
+        - text: str (chunk content)
+        - section_headings: list[str] (section titles)
+        - section_pages: list[int] (page numbers)
+        - section_bboxes: list[dict] (bounding boxes)
+        - primary_section: str (main section)
+        - metadata: dict (additional metadata)
+
+        The section metadata enables:
+        1. Section-based re-ranking (boost results matching query sections)
+        2. Precise citations (include section names in citations)
+        3. Hierarchical queries (find all chunks from a specific section)
+
+        Args:
+            chunks: list of AdaptiveChunk objects (from src.components.retrieval.chunking)
+            collection_name: Target Qdrant collection
+            batch_size: Batch size for ingestion (default: 100)
+
+        Returns:
+            True if all chunks ingested successfully
+
+        Raises:
+            VectorSearchError: If ingestion fails
+
+        Example:
+            >>> from src.components.retrieval.chunking import AdaptiveChunk
+            >>> chunks = [
+            ...     AdaptiveChunk(
+            ...         text="Multi-Server Architecture\\n\\nLoad Balancing...",
+            ...         token_count=1050,
+            ...         section_headings=["Multi-Server", "Load Balancing"],
+            ...         section_pages=[1, 2],
+            ...         section_bboxes=[{"l": 50, "t": 30, "r": 670, "b": 80}, ...],
+            ...         primary_section="Multi-Server Architecture",
+            ...         metadata={"source": "doc.pptx", "num_sections": 2}
+            ...     )
+            ... ]
+            >>> await client.ingest_adaptive_chunks(chunks, "documents")
+        """
+        try:
+            # Import embedding service (lazy to avoid circular imports)
+            from src.components.shared.embedding_service import get_embedding_service
+
+            embedding_service = get_embedding_service()
+
+            # Build points with embeddings and section metadata
+            points: list[PointStruct] = []
+
+            for idx, chunk in enumerate(chunks):
+                # Generate embedding for chunk text
+                embedding = await embedding_service.embed_single(chunk.text)
+
+                # Build Qdrant payload with section metadata
+                payload = {
+                    "text": chunk.text,
+                    "token_count": chunk.token_count,
+                    # Sprint 32: Multi-section metadata
+                    "section_headings": chunk.section_headings,
+                    "section_pages": chunk.section_pages,
+                    "section_bboxes": chunk.section_bboxes,
+                    "primary_section": chunk.primary_section,
+                    # Additional metadata (source, file_type, etc.)
+                    **chunk.metadata,
+                }
+
+                point = PointStruct(
+                    id=idx,
+                    vector=embedding,
+                    payload=payload,
+                )
+                points.append(point)
+
+            # Upsert points in batches
+            success = await self.upsert_points(
+                collection_name=collection_name,
+                points=points,
+                batch_size=batch_size,
+            )
+
+            logger.info(
+                "Adaptive chunks ingested with section metadata",
+                collection_name=collection_name,
+                chunks_count=len(chunks),
+                sections_tracked=sum(len(c.section_headings) for c in chunks),
+                batch_size=batch_size,
+            )
+
+            return success
+
+        except Exception as e:
+            logger.error(
+                "Failed to ingest adaptive chunks",
+                collection_name=collection_name,
+                error=str(e),
+            )
+            raise VectorSearchError(
+                query="", reason=f"Failed to ingest adaptive chunks: {e}"
+            ) from e
+
     async def search(
         self,
         collection_name: str,

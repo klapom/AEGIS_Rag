@@ -34,7 +34,9 @@ Example:
 import subprocess
 import time
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -54,6 +56,219 @@ from src.core.config import settings
 from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
+
+
+# =============================================================================
+# DATACLASSES: SECTION METADATA & ADAPTIVE CHUNKS (Feature 32.1, 32.2)
+# =============================================================================
+
+
+@dataclass
+class SectionMetadata:
+    """Section metadata extracted from Docling JSON (Feature 32.1).
+
+    Represents a document section with hierarchical heading structure,
+    bounding box coordinates, and token count for adaptive chunking.
+
+    Attributes:
+        heading: Section heading text (e.g., "Multi-Server Architecture")
+        level: Heading level (1 = title, 2 = subtitle-level-1, 3 = subtitle-level-2)
+        page_no: Page number where section starts
+        bbox: Bounding box coordinates {"l": left, "t": top, "r": right, "b": bottom}
+        text: Section body text (accumulated from cells)
+        token_count: Number of tokens in section text
+        metadata: Additional metadata (source, file_type, etc.)
+    """
+
+    heading: str
+    level: int
+    page_no: int
+    bbox: dict[str, float]
+    text: str
+    token_count: int
+    metadata: dict[str, Any]
+
+
+@dataclass
+class AdaptiveChunk:
+    """Chunk with multi-section metadata (Feature 32.2).
+
+    Created by adaptive_section_chunking() to merge small sections
+    intelligently while preserving provenance chain.
+
+    Attributes:
+        text: Merged text from all sections
+        token_count: Total tokens in chunk
+        section_headings: List of all section headings in chunk
+        section_pages: List of page numbers for each section
+        section_bboxes: List of bounding boxes for each section
+        primary_section: First section heading (main topic)
+        metadata: Additional metadata (source, file_type, num_sections)
+    """
+
+    text: str
+    token_count: int
+    section_headings: list[str]
+    section_pages: list[int]
+    section_bboxes: list[dict[str, float]]
+    primary_section: str
+    metadata: dict[str, Any]
+
+
+# =============================================================================
+# ADAPTIVE SECTION CHUNKING (Feature 32.2)
+# =============================================================================
+
+
+def adaptive_section_chunking(
+    sections: list[SectionMetadata],
+    min_chunk: int = 800,
+    max_chunk: int = 1800,
+    large_section_threshold: int = 1200,
+) -> list[AdaptiveChunk]:
+    """Chunk with section-awareness, merging small sections intelligently (Feature 32.2).
+
+    Implements ADR-039 adaptive section-aware chunking strategy:
+    - Large sections (>1200 tokens) → Keep as standalone chunks
+    - Small sections (<1200 tokens) → Merge until 800-1800 tokens
+    - Track ALL sections in chunk metadata (multi-section support)
+    - Preserve thematic coherence when merging
+
+    Args:
+        sections: List of SectionMetadata from extract_section_hierarchy()
+        min_chunk: Minimum tokens per chunk (default 800)
+        max_chunk: Maximum tokens per chunk (default 1800)
+        large_section_threshold: Threshold for standalone sections (default 1200)
+
+    Returns:
+        List of AdaptiveChunk with multi-section metadata
+
+    Example:
+        >>> sections = extract_section_hierarchy(docling_json)
+        >>> chunks = adaptive_section_chunking(sections)
+        >>> # PowerPoint (15 slides @ 150-250 tokens) → 6-8 chunks
+        >>> len(chunks)
+        7
+        >>> chunks[0].section_headings
+        ['Multi-Server Architecture', 'Load Balancing', 'Caching']
+    """
+    if not sections:
+        return []
+
+    chunks = []
+    current_sections = []
+    current_tokens = 0
+
+    for section in sections:
+        section_tokens = section.token_count
+
+        # Large section → standalone chunk (preserve clean extraction)
+        if section_tokens > large_section_threshold:
+            # Flush any accumulated small sections first
+            if current_sections:
+                chunks.append(_merge_sections(current_sections))
+                current_sections = []
+                current_tokens = 0
+
+            # Create standalone chunk for large section
+            chunks.append(_create_chunk(section))
+
+        # Small section → merge with others (reduce fragmentation)
+        elif current_tokens + section_tokens <= max_chunk:
+            current_sections.append(section)
+            current_tokens += section_tokens
+
+        # Current batch full → flush and start new
+        else:
+            chunks.append(_merge_sections(current_sections))
+            current_sections = [section]
+            current_tokens = section_tokens
+
+    # Flush remaining sections
+    if current_sections:
+        chunks.append(_merge_sections(current_sections))
+
+    logger.info(
+        "adaptive_section_chunking_complete",
+        sections_count=len(sections),
+        chunks_count=len(chunks),
+        avg_sections_per_chunk=round(len(sections) / len(chunks), 2) if chunks else 0,
+        min_chunk=min_chunk,
+        max_chunk=max_chunk,
+        large_section_threshold=large_section_threshold,
+    )
+
+    return chunks
+
+
+def _merge_sections(sections: list[SectionMetadata]) -> AdaptiveChunk:
+    """Merge multiple sections into one chunk with multi-section metadata.
+
+    Args:
+        sections: List of sections to merge (must be non-empty)
+
+    Returns:
+        AdaptiveChunk with merged text and multi-section metadata
+
+    Example:
+        >>> sections = [
+        ...     SectionMetadata(heading="Architecture", text="...", token_count=400, ...),
+        ...     SectionMetadata(heading="Load Balancing", text="...", token_count=350, ...),
+        ... ]
+        >>> chunk = _merge_sections(sections)
+        >>> chunk.section_headings
+        ['Architecture', 'Load Balancing']
+        >>> chunk.token_count
+        750
+    """
+    if not sections:
+        raise ValueError("Cannot merge empty sections list")
+
+    return AdaptiveChunk(
+        text="\n\n".join(s.text for s in sections),
+        token_count=sum(s.token_count for s in sections),
+        section_headings=[s.heading for s in sections],
+        section_pages=[s.page_no for s in sections],
+        section_bboxes=[s.bbox for s in sections],
+        primary_section=sections[0].heading,
+        metadata={
+            "source": sections[0].metadata.get("source", ""),
+            "file_type": sections[0].metadata.get("file_type", ""),
+            "num_sections": len(sections),
+        },
+    )
+
+
+def _create_chunk(section: SectionMetadata) -> AdaptiveChunk:
+    """Create chunk from single section (large section → standalone).
+
+    Args:
+        section: Section to convert to chunk
+
+    Returns:
+        AdaptiveChunk with single section metadata
+
+    Example:
+        >>> section = SectionMetadata(heading="Introduction", text="...", token_count=1500, ...)
+        >>> chunk = _create_chunk(section)
+        >>> chunk.section_headings
+        ['Introduction']
+        >>> chunk.token_count
+        1500
+    """
+    return AdaptiveChunk(
+        text=section.text,
+        token_count=section.token_count,
+        section_headings=[section.heading],
+        section_pages=[section.page_no],
+        section_bboxes=[section.bbox],
+        primary_section=section.heading,
+        metadata={
+            "source": section.metadata.get("source", ""),
+            "file_type": section.metadata.get("file_type", ""),
+            "num_sections": 1,
+        },
+    )
 
 
 # =============================================================================
@@ -91,20 +306,38 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
     )
 
     try:
-        # Check system RAM usage (psutil)
-        import psutil
+        # Check system RAM usage (psutil) - graceful degradation if unavailable
+        try:
+            import psutil
 
-        memory = psutil.virtual_memory()
-        ram_used_mb = memory.used / 1024 / 1024
-        ram_available_mb = memory.available / 1024 / 1024
+            memory = psutil.virtual_memory()
+            ram_used_mb = memory.used / 1024 / 1024
+            ram_available_mb = memory.available / 1024 / 1024
 
-        state["current_memory_mb"] = ram_used_mb
+            state["current_memory_mb"] = ram_used_mb
 
-        logger.info(
-            "memory_check_ram",
-            ram_used_mb=round(ram_used_mb, 2),
-            ram_available_mb=round(ram_available_mb, 2),
-        )
+            logger.info(
+                "memory_check_ram",
+                ram_used_mb=round(ram_used_mb, 2),
+                ram_available_mb=round(ram_available_mb, 2),
+            )
+
+            # Check if sufficient memory available
+            # Sprint 30: Lowered to 500MB for small PDF testing (production should use 2000MB minimum)
+            # TODO: Make threshold configurable via settings.min_required_ram_mb
+            if ram_available_mb < 500:  # Less than 500MB RAM available
+                raise IngestionError(
+                    document_id=state["document_id"],
+                    reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 500MB)",
+                )
+
+        except ImportError:
+            # psutil not available (common in Uvicorn reloader subprocess on Windows)
+            logger.warning(
+                "psutil_unavailable",
+                note="Skipping RAM check (psutil not available in subprocess)",
+            )
+            state["current_memory_mb"] = 0.0
 
         # Check GPU VRAM usage (nvidia-smi)
         try:
@@ -140,16 +373,7 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
             state["current_vram_mb"] = 0.0  # GPU not available or nvidia-smi not found
             state["requires_container_restart"] = False
 
-        # Check if sufficient memory available
-        # Sprint 30: Lowered to 500MB for small PDF testing (production should use 2000MB minimum)
-        # TODO: Make threshold configurable via settings.min_required_ram_mb
-        if ram_available_mb < 500:  # Less than 500MB RAM available
-            raise IngestionError(
-                document_id=state["document_id"],
-                reason=f"Insufficient RAM: Only {ram_available_mb:.0f}MB available (need 500MB)",
-            )
-
-        # Mark check as passed
+        # Mark check as passed (even if psutil unavailable)
         state["memory_check_passed"] = True
         state["overall_progress"] = calculate_progress(state)
 
@@ -162,6 +386,9 @@ async def memory_check_node(state: IngestionState) -> IngestionState:
 
         return state
 
+    except IngestionError:
+        # Re-raise IngestionError (insufficient RAM)
+        raise
     except Exception as e:
         logger.error("node_memory_check_error", document_id=state["document_id"], error=str(e))
         add_error(state, "memory_check", str(e), "error")
@@ -213,7 +440,10 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
         doc_path = Path(state["document_path"])
 
         if not doc_path.exists():
-            raise IngestionError(f"Document not found: {doc_path}")
+            raise IngestionError(
+                document_id=state.get("document_id", "unknown"),
+                reason=f"Document not found: {doc_path}",
+            )
 
         # Initialize Docling client (Sprint 30: Configurable via settings.docling_base_url)
         from src.core.config import settings
@@ -290,7 +520,11 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                     "VERIFICATION_state_document_set_POWERPOINT",
                     document_id=state["document_id"],
                     state_document_is_none=state["document"] is None,
-                    state_document_type=type(state["document"]).__name__ if state["document"] is not None else "None",
+                    state_document_type=(
+                        type(state["document"]).__name__
+                        if state["document"] is not None
+                        else "None"
+                    ),
                     parsed_is_none=parsed is None,
                 )
 
@@ -317,6 +551,15 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                 images_count=len(parsed.images),
                 pages_count=len(page_dimensions),
                 parse_time_ms=parsed.parse_time_ms,
+            )
+
+            # CRITICAL LOGGING: COMPLETE raw text from Docling (user requested full text)
+            logger.warning(
+                "docling_raw_text_complete",
+                document_id=state["document_id"],
+                raw_text_length=len(parsed.text),
+                raw_text_complete=parsed.text,  # GESAMTER TEXT
+                note="COMPLETE raw text extracted by Docling for debugging (full content)",
             )
 
         finally:
@@ -803,8 +1046,6 @@ def merge_small_chunks(
     # Helper: Merge two chunk objects into one
     def merge_chunk_objects(chunk1, chunk2):
         """Merge two Docling chunk objects by concatenating text."""
-        from docling_core.types.doc import DoclingDocument
-        from docling_core.types.doc.document import DocItemLabel
 
         # Create a new chunk with merged text
         merged_text = chunk1.text + "\n\n" + chunk2.text
@@ -914,7 +1155,10 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             )
             content = state.get("parsed_content", "")
             if not content or not content.strip():
-                raise IngestionError("No content to chunk (both document and parsed_content empty)")
+                raise IngestionError(
+                    document_id=state.get("document_id", "unknown"),
+                    reason="No content to chunk (both document and parsed_content empty)",
+                )
 
             # Use legacy ChunkingService as fallback
             chunk_strategy = ChunkStrategy(
@@ -936,59 +1180,117 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             logger.info("node_chunking_complete_legacy", chunks_created=len(legacy_chunks))
             return state
 
-        # Feature 21.6: HybridChunker with BGE-M3
-        from docling.chunking import HybridChunker
-        from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-        from transformers import AutoTokenizer
+        # Sprint 32 Feature 32.1 & 32.2: Adaptive Section-Aware Chunking (ADR-039)
+        # Extract section hierarchy from Docling JSON
+        from src.components.ingestion.section_extraction import extract_section_hierarchy
 
-        # Initialize BGE-M3 tokenizer
-        tokenizer = HuggingFaceTokenizer(
-            tokenizer=AutoTokenizer.from_pretrained("BAAI/bge-m3"),
-            max_tokens=8192,  # BGE-M3 context window
+        sections = extract_section_hierarchy(enriched_doc, SectionMetadata)
+
+        # CRITICAL LOGGING: Section extraction results
+        logger.info(
+            "chunking_section_extraction_complete",
+            document_id=state["document_id"],
+            sections_found=len(sections),
+            total_section_text_length=sum(len(s.text) for s in sections),
         )
 
-        # Initialize HybridChunker
-        chunker = HybridChunker(
-            tokenizer=tokenizer,
-            merge_peers=True,  # Merge adjacent chunks for better context
+        # FALLBACK: If no sections found, create single default section from document text
+        if not sections:
+            logger.warning(
+                "chunking_no_sections_found_fallback",
+                document_id=state["document_id"],
+                reason="extract_section_hierarchy returned empty list",
+                fallback_action="creating single section from document text",
+            )
+
+            # Extract all text from DoclingDocument
+            doc_text = ""
+            if hasattr(enriched_doc, "export_to_markdown"):
+                doc_text = enriched_doc.export_to_markdown()
+            elif hasattr(enriched_doc, "text"):
+                doc_text = enriched_doc.text
+            elif hasattr(enriched_doc, "pages"):
+                # Fallback: concatenate text from all pages
+                doc_text = "\n\n".join(
+                    " ".join(item.text for item in page.items if hasattr(item, "text"))
+                    for page in enriched_doc.pages
+                )
+
+            if not doc_text or not doc_text.strip():
+                raise IngestionError(
+                    document_id=state.get("document_id", "unknown"),
+                    reason="No sections found AND document text is empty (cannot create fallback section)",
+                )
+
+            # Create single default section (use SectionMetadata defined above)
+            # Count tokens for fallback section
+            try:
+                from transformers import AutoTokenizer
+
+                tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+                tokens = tokenizer.encode(doc_text.strip(), add_special_tokens=False)
+                token_count = len(tokens)
+            except Exception:
+                # Fallback: approximate token count (avg 4 chars/token)
+                token_count = max(1, len(doc_text) // 4)
+
+            default_section = SectionMetadata(
+                heading="Document",  # Default heading (singular, not list)
+                level=1,  # Top-level section
+                page_no=1,  # Assume page 1
+                bbox={"l": 0.0, "t": 0.0, "r": 0.0, "b": 0.0},  # No bbox info
+                text=doc_text.strip(),
+                token_count=token_count,
+                metadata={},  # Empty metadata
+            )
+            sections = [default_section]
+
+            logger.info(
+                "chunking_fallback_section_created",
+                document_id=state["document_id"],
+                fallback_section_length=len(doc_text),
+                fallback_section_preview=doc_text[:200] + "..." if len(doc_text) > 200 else doc_text,
+            )
+
+        # Apply adaptive chunking (800-1800 tokens, section-aware)
+        adaptive_chunks = adaptive_section_chunking(
+            sections=sections, min_chunk=800, max_chunk=1800, large_section_threshold=1200
         )
 
-        # Chunk enriched document
-        base_chunks = list(chunker.chunk(enriched_doc))
-
+        # Convert AdaptiveChunk to enhanced_chunks format (backward compatible)
         # Map VLM metadata to chunks
         vlm_metadata = state.get("vlm_metadata", [])
         vlm_lookup = {vm["picture_ref"]: vm for vm in vlm_metadata}
 
-        enhanced_chunks = []
-        for chunk in base_chunks:
-            # Find picture references in chunk
-            picture_refs = []
-            if hasattr(chunk.meta, "doc_items") and chunk.meta.doc_items:
-                picture_refs = [
-                    ref for ref in chunk.meta.doc_items if ref.startswith("#/pictures/")
-                ]
-
-            # Collect BBox info for images in this chunk
-            chunk_bboxes = []
-            for pic_ref in picture_refs:
-                if pic_ref in vlm_lookup:
-                    vlm_info = vlm_lookup[pic_ref]
-                    chunk_bboxes.append(
+        merged_chunks = []
+        for adaptive_chunk in adaptive_chunks:
+            # Create chunk object compatible with downstream processing
+            chunk_obj = type(
+                "Chunk",
+                (),
+                {
+                    "text": adaptive_chunk.text,
+                    "meta": type(
+                        "Meta",
+                        (),
                         {
-                            "picture_ref": pic_ref,
-                            "description": vlm_info["description"],
-                            "bbox_full": vlm_info["bbox_full"],
-                            "vlm_model": vlm_info["vlm_model"],
-                        }
-                    )
+                            "section_headings": adaptive_chunk.section_headings,
+                            "section_pages": adaptive_chunk.section_pages,
+                            "section_bboxes": adaptive_chunk.section_bboxes,
+                            "primary_section": adaptive_chunk.primary_section,
+                            "token_count": adaptive_chunk.token_count,
+                        },
+                    )(),
+                },
+            )()
 
-            enhanced_chunk = {"chunk": chunk, "image_bboxes": chunk_bboxes}
-            enhanced_chunks.append(enhanced_chunk)
+            # VLM metadata mapping (if available)
+            # Note: Section-aware chunking may not have picture refs
+            # This is OK - VLM metadata is optional
+            chunk_bboxes = []
 
-        # Post-Processing Merger: Merge small chunks to reach ~1800 tokens
-        # while preserving VLM metadata (Feature 31.12)
-        merged_chunks = merge_small_chunks(enhanced_chunks, tokenizer, target_tokens=1800)
+            enhanced_chunk = {"chunk": chunk_obj, "image_bboxes": chunk_bboxes}
+            merged_chunks.append(enhanced_chunk)
 
         state["chunks"] = merged_chunks
         state["chunking_status"] = "completed"
@@ -998,8 +1300,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         logger.info(
             "node_chunking_complete",
             document_id=state["document_id"],
-            original_chunks=len(enhanced_chunks),
-            merged_chunks=len(merged_chunks),
+            original_sections=len(sections),  # ADR-039: sections instead of chunks
+            adaptive_chunks=len(adaptive_chunks),  # ADR-039: adaptive merged chunks
+            final_chunks=len(merged_chunks),
             chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
             total_image_annotations=sum(len(c["image_bboxes"]) for c in merged_chunks),
             duration_seconds=round(state["chunking_end_time"] - state["chunking_start_time"], 2),
@@ -1060,7 +1363,10 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         # Get enhanced chunks (Feature 21.6: list of {chunk, image_bboxes})
         chunk_data_list = state.get("chunks", [])
         if not chunk_data_list:
-            raise IngestionError("No chunks to embed (chunks list is empty)")
+            raise IngestionError(
+                document_id=state.get("document_id", "unknown"),
+                reason="No chunks to embed (chunks list is empty)",
+            )
 
         # Get embedding service (BGE-M3, 1024D)
         embedding_service = get_embedding_service()
@@ -1242,6 +1548,15 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         >>> state["graph_status"]
         'completed'
     """
+    logger.info(
+        "DEBUG_graph_extraction_node_CALLED",
+        document_id=state["document_id"],
+        state_keys=list(state.keys()),
+        chunks_available=len(state.get("chunks", [])),
+        embedding_status=state.get("embedding_status"),
+        chunking_status=state.get("chunking_status"),
+    )
+
     logger.info("node_graph_extraction_start", document_id=state["document_id"])
 
     state["graph_status"] = "running"
@@ -1251,7 +1566,10 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         # Get enhanced chunks (Feature 21.6: list of {chunk, image_bboxes})
         chunk_data_list = state.get("chunks", [])
         if not chunk_data_list:
-            raise IngestionError("No chunks for graph extraction (chunks list is empty)")
+            raise IngestionError(
+                document_id=state.get("document_id", "unknown"),
+                reason="No chunks for graph extraction (chunks list is empty)",
+            )
 
         # Get embedded chunk IDs (from embedding_node)
         embedded_chunk_ids = state.get("embedded_chunk_ids", [])

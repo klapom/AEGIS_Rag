@@ -434,7 +434,7 @@ async def check_docling_availability() -> bool:
         from src.core.config import settings
 
         async with httpx.AsyncClient(timeout=15.0) as http_client:
-            response = await http_client.get(f"{settings.docling_base_url}/health")
+            response = await http_client.get(f"{settings.docling_base_url}/openapi.json")
             response.raise_for_status()
 
         logger.info("docling_health_check_passed")

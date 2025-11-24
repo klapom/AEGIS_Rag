@@ -36,9 +36,15 @@ WHEN LLAMA_INDEX IS LOADED:
 INSTALLATION:
 - poetry install --with ingestion  # Include llama_index
 - poetry install                    # Skip llama_index (core only)
+
+SPRINT 32 ENHANCEMENT (Feature 32.3):
+-------------------------------------
+Added AdaptiveChunk dataclass for multi-section metadata tracking (ADR-039).
+Supports section-aware chunking with section_headings, section_pages, section_bboxes.
 """
 
 import re
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -60,6 +66,75 @@ if TYPE_CHECKING:
     from llama_index.core.schema import TextNode
 
 logger = structlog.get_logger(__name__)
+
+# ============================================================================
+# ADAPTIVE CHUNK MODEL (Sprint 32, Feature 32.3)
+# ============================================================================
+
+
+@dataclass
+class AdaptiveChunk:
+    """Chunk with multi-section metadata for adaptive section-aware chunking.
+
+    Sprint 32 Feature 32.3: Multi-Section Metadata in Qdrant
+    ADR-039: Adaptive Section-Aware Chunking
+
+    This dataclass represents a chunk that can contain multiple sections from
+    a document, with full metadata tracking for each section.
+
+    Attributes:
+        text: Combined text content from all sections
+        token_count: Total token count for the chunk
+        section_headings: list of section headings (e.g., ["Multi-Server", "Load Balancing"])
+        section_pages: list of page numbers where sections appear
+        section_bboxes: list of bounding boxes for each section (PDF coordinates)
+        primary_section: First section heading (main topic of chunk)
+        metadata: Additional metadata (source, file_type, num_sections, etc.)
+
+    Example:
+        >>> chunk = AdaptiveChunk(
+        ...     text="Multi-Server Architecture\\n\\nLoad Balancing...",
+        ...     token_count=1050,
+        ...     section_headings=["Multi-Server Architecture", "Load Balancing"],
+        ...     section_pages=[1, 2],
+        ...     section_bboxes=[
+        ...         {"l": 50, "t": 30, "r": 670, "b": 80},
+        ...         {"l": 50, "t": 30, "r": 670, "b": 80}
+        ...     ],
+        ...     primary_section="Multi-Server Architecture",
+        ...     metadata={"source": "PerformanceTuning.pptx", "num_sections": 2}
+        ... )
+    """
+
+    text: str
+    token_count: int
+    section_headings: list[str] = field(default_factory=list)
+    section_pages: list[int] = field(default_factory=list)
+    section_bboxes: list[dict[str, float]] = field(default_factory=list)
+    primary_section: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert AdaptiveChunk to dictionary for Qdrant payload.
+
+        Returns:
+            Dictionary with all chunk data and metadata
+
+        Example:
+            >>> chunk_dict = chunk.to_dict()
+            >>> # Store in Qdrant
+            >>> payload = {**chunk_dict, "source": "doc.pdf"}
+        """
+        return {
+            "text": self.text,
+            "token_count": self.token_count,
+            "section_headings": self.section_headings,
+            "section_pages": self.section_pages,
+            "section_bboxes": self.section_bboxes,
+            "primary_section": self.primary_section,
+            **self.metadata,
+        }
+
 
 # ============================================================================
 # LAZY IMPORT CACHE (Sprint 24, Feature 24.15)

@@ -475,13 +475,15 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
                 # Send citation_map in metadata (Sprint 27 Feature 27.10)
                 if citation_map:
-                    yield _format_sse_message({
-                        "type": "metadata",
-                        "data": {
-                            "citation_map": citation_map,
-                            "citations_count": len(citation_map)
+                    yield _format_sse_message(
+                        {
+                            "type": "metadata",
+                            "data": {
+                                "citation_map": citation_map,
+                                "citations_count": len(citation_map),
+                            },
                         }
-                    })
+                    )
 
                 # Send answer as tokens (simulate streaming)
                 for token in answer.split():
@@ -982,11 +984,13 @@ def _extract_answer(result: dict[str, Any]) -> str:
 def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
     """Extract source documents from coordinator result.
 
+    Sprint 32 Feature 32.3: Enhanced with section metadata for precise citations
+
     Args:
         result: Result dictionary from CoordinatorAgent
 
     Returns:
-        list of SourceDocument objects
+        list of SourceDocument objects with section information
     """
     sources: list[SourceDocument] = []
 
@@ -995,16 +999,43 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
 
     for ctx in contexts:
         if isinstance(ctx, dict):
+            # Sprint 32: Extract section metadata for citations
+            section_headings = ctx.get("section_headings", [])
+            section_pages = ctx.get("section_pages", [])
+            primary_section = ctx.get("primary_section", "")
+
+            # Build enhanced title with section information
+            title = ctx.get("title", ctx.get("source", "Unknown"))
+
+            # Format: "document.pdf - Section: 'Load Balancing' (Page 2)"
+            if primary_section and section_pages:
+                title = f"{title} - Section: '{primary_section}' (Page {section_pages[0]})"
+            elif primary_section:
+                title = f"{title} - Section: '{primary_section}'"
+
+            # Add section metadata to metadata field
+            enhanced_metadata = ctx.get("metadata", {})
+            if section_headings:
+                enhanced_metadata["section_headings"] = section_headings
+            if section_pages:
+                enhanced_metadata["section_pages"] = section_pages
+            if primary_section:
+                enhanced_metadata["primary_section"] = primary_section
+
             source = SourceDocument(
                 text=ctx.get("text", ctx.get("content", ""))[:500],  # Limit to 500 chars
-                title=ctx.get("title", ctx.get("source", "Unknown")),
+                title=title,  # Enhanced with section info
                 source=ctx.get("source", ctx.get("file_path", "Unknown")),
                 score=ctx.get("score", ctx.get("relevance", None)),
-                metadata=ctx.get("metadata", {}),
+                metadata=enhanced_metadata,
             )
             sources.append(source)
 
-    logger.debug("sources_extracted", count=len(sources))
+    logger.debug(
+        "sources_extracted",
+        count=len(sources),
+        with_sections=sum(1 for s in sources if s.metadata.get("primary_section")),
+    )
     return sources[:5]  # Return top 5 sources
 
 

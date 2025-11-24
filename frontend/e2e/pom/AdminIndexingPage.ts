@@ -74,28 +74,59 @@ export class AdminIndexingPage extends BasePage {
   }
 
   /**
+   * Check if progress display is visible
+   */
+  async isProgressVisible(): Promise<boolean> {
+    try {
+      return await this.progressPercentage.isVisible({ timeout: 2000 });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Get current progress percentage
+   * Returns 0 if progress is not visible
    */
   async getProgressPercentage(): Promise<number> {
-    const text = await this.progressPercentage.textContent();
-    const match = text?.match(/(\d+)%/);
-    return match ? parseInt(match[1]) : 0;
+    try {
+      const isVisible = await this.isProgressVisible();
+      if (!isVisible) return 0;
+
+      const text = await this.progressPercentage.textContent({ timeout: 5000 });
+      const match = text?.match(/(\d+)%/);
+      return match ? parseInt(match[1]) : 0;
+    } catch {
+      return 0; // Graceful degradation
+    }
   }
 
   /**
    * Get status message
    */
   async getStatusMessage(): Promise<string | null> {
-    return await this.statusMessage.textContent();
+    try {
+      const isVisible = await this.statusMessage.isVisible({ timeout: 2000 });
+      if (!isVisible) return null;
+      return await this.statusMessage.textContent({ timeout: 5000 });
+    } catch {
+      return null; // Graceful degradation
+    }
   }
 
   /**
    * Get number of indexed documents
    */
   async getIndexedDocumentCount(): Promise<number> {
-    const text = await this.indexedDocumentsCount.textContent();
-    const match = text?.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 0;
+    try {
+      const isVisible = await this.indexedDocumentsCount.isVisible({ timeout: 2000 });
+      if (!isVisible) return 0;
+      const text = await this.indexedDocumentsCount.textContent({ timeout: 5000 });
+      const match = text?.match(/(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    } catch {
+      return 0; // Graceful degradation
+    }
   }
 
   /**
@@ -147,6 +178,7 @@ export class AdminIndexingPage extends BasePage {
 
   /**
    * Get indexing statistics
+   * Returns default values if elements are not visible
    */
   async getIndexingStats(): Promise<{
     progress: number;
@@ -154,7 +186,7 @@ export class AdminIndexingPage extends BasePage {
     indexedDocs: number;
   }> {
     return {
-      progress: await this.getProgressPercentage(),
+      progress: await this.getProgressPercentage(), // Already has graceful fallback
       status: await this.getStatusMessage(),
       indexedDocs: await this.getIndexedDocumentCount(),
     };
@@ -183,11 +215,21 @@ export class AdminIndexingPage extends BasePage {
 
   /**
    * Check if admin page is accessible
+   * Verifies page is on /admin/indexing and key elements are visible
    */
   async isAdminAccessible(): Promise<boolean> {
     try {
-      const title = await this.page.title();
-      return title.includes('Admin') || title.includes('Indexing');
+      // Check URL
+      const url = this.page.url();
+      if (!url.includes('/admin/indexing')) {
+        return false;
+      }
+
+      // Check key elements are present
+      const inputVisible = await this.directorySelectorInput.isVisible({ timeout: 2000 });
+      const buttonVisible = await this.indexButton.isVisible({ timeout: 2000 });
+
+      return inputVisible && buttonVisible;
     } catch {
       return false;
     }

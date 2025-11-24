@@ -53,6 +53,7 @@ pyyaml = "^6.0.0"
 python-multipart = "^0.0.20"
 numpy = "^1.26.0"  # For vector operations in consolidation
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
+psutil = "^5.9.0"  # System resource monitoring (memory/VRAM checks in ingestion - Sprint 32)
 
 # Monitoring (Sprint 2: Metrics)
 prometheus-client = "^0.21.0"
@@ -99,6 +100,10 @@ llama-index-llms-ollama = "^0.8.0"  # LlamaIndex Ollama integration
 llama-index-embeddings-ollama = "^0.8.3"  # LlamaIndex embeddings
 llama-index-readers-file = "^0.5.4"  # File readers (PDF, DOCX, etc.)
 llama-index-vector-stores-qdrant = "^0.8.6"  # Qdrant vector store integration
+
+# NOTE: Docling runs as CONTAINER (HTTP API on port 8080), NOT as Python package
+# See: docker-compose.yml (aegis-docling service)
+# ADR-039: Section extraction done via Docling Container JSON output, not Python SDK
 
 # Document Format Support
 python-pptx = "1.0.2"  # Sprint 16 Feature 16.5: PowerPoint support

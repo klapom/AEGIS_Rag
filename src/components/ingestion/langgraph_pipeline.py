@@ -191,29 +191,46 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
     graph = StateGraph(IngestionState)
 
     # Add nodes (5 stages with conditional parser)
+    logger.info("DEBUG_adding_nodes_start", parser_type=parser_type)
+
     graph.add_node("memory_check", memory_check_node)
+    logger.info("DEBUG_node_added", node_name="memory_check")
 
     # Sprint 22.4: Add both parsers (router decides which to use)
     if parser_type == ParserType.DOCLING:
         graph.add_node("parse", docling_parse_node)
+        logger.info("DEBUG_node_added", node_name="parse", parser="docling")
     else:
         graph.add_node("parse", llamaindex_parse_node)
+        logger.info("DEBUG_node_added", node_name="parse", parser="llamaindex")
 
     graph.add_node("chunking", chunking_node)
+    logger.info("DEBUG_node_added", node_name="chunking")
+
     graph.add_node("embedding", embedding_node)
+    logger.info("DEBUG_node_added", node_name="embedding")
+
     graph.add_node("graph", graph_extraction_node)
+    logger.info("DEBUG_node_added", node_name="graph", function=graph_extraction_node.__name__)
 
     # Define edges (sequential flow)
     # START → memory_check → parse → chunking → embedding → graph → END
+    logger.info("DEBUG_adding_edges_start")
+
     graph.set_entry_point("memory_check")
+    logger.info("DEBUG_entry_point_set", entry="memory_check")
+
     graph.add_edge("memory_check", "parse")
     graph.add_edge("parse", "chunking")
     graph.add_edge("chunking", "embedding")
     graph.add_edge("embedding", "graph")
     graph.add_edge("graph", END)
+    logger.info("DEBUG_all_edges_added", flow="memory_check → parse → chunking → embedding → graph → END")
 
     # Compile graph
+    logger.info("DEBUG_compiling_graph")
     compiled_graph = graph.compile()
+    logger.info("DEBUG_graph_compiled_successfully")
 
     logger.info(
         "ingestion_graph_created",
@@ -325,8 +342,30 @@ async def run_ingestion_pipeline(
     )
 
     # Create and execute pipeline (with parser selection from routing decision)
+    logger.info(
+        "DEBUG_pipeline_creation_start",
+        document_id=document_id,
+        parser_type=routing_decision.parser,
+    )
     pipeline = create_ingestion_graph(parser_type=routing_decision.parser)
+
+    logger.info(
+        "DEBUG_pipeline_execution_start",
+        document_id=document_id,
+        state_keys=list(state.keys()),
+    )
     final_state = await pipeline.ainvoke(state)
+
+    logger.info(
+        "DEBUG_pipeline_execution_complete",
+        document_id=document_id,
+        final_state_keys=list(final_state.keys()),
+        memory_status=final_state.get("memory_status"),
+        parse_status=final_state.get("parse_status"),
+        chunking_status=final_state.get("chunking_status"),
+        embedding_status=final_state.get("embedding_status"),
+        graph_status=final_state.get("graph_status"),
+    )
 
     logger.info(
         "run_ingestion_pipeline_complete",

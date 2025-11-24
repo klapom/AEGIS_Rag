@@ -27,10 +27,9 @@
 Bitte mach dich mit dem Projekt vertraut. Lies folgende Dateien:
 
 📖 CORE CONTEXT (IMMER):
-1. docs/CLAUDE.md - Projekt-Übersicht & Architektur
-2. docs/SUBAGENTS.md - Delegation Strategy & File Ownership
-3. docs/NAMING_CONVENTIONS.md - Code Standards
-4. README.md - Projekt-Status & Quick Start
+1. CLAUDE.md - Projekt-Übersicht & Architektur (inkl. Subagent Responsibilities)
+2. docs/NAMING_CONVENTIONS.md - Code Standards
+3. README.md - Projekt-Status & Quick Start
 
 📊 CURRENT STATE (DYNAMISCH):
 5. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht & aktueller Sprint
@@ -89,8 +88,9 @@ Team-Übergabe:                        → Deep Refresh
 
 **Copy-Paste Prompt:**
 ```
-Context Refresh: Lies docs/CLAUDE.md, docs/sprints/SPRINT_PLAN.md (aktueller Sprint),
-docs/SUBAGENTS.md, docs/NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
+Context Refresh: Lies CLAUDE.md (inkl. Subagent Responsibilities),
+docs/sprints/SPRINT_PLAN.md (aktueller Sprint), docs/NAMING_CONVENTIONS.md.
+Bestätige kurz (3 Sätze).
 ```
 
 **What Gets Refreshed:**
@@ -115,16 +115,15 @@ docs/SUBAGENTS.md, docs/NAMING_CONVENTIONS.md. Bestätige kurz (3 Sätze).
 Bitte reaktiviere vollständigen Projekt-Context:
 
 📖 CORE:
-1. docs/CLAUDE.md - Projekt & Architektur
+1. CLAUDE.md - Projekt & Architektur (inkl. Subagent Responsibilities)
 2. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht
 3. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
-4. docs/SUBAGENTS.md - 5 Subagenten & File Ownership
-5. docs/NAMING_CONVENTIONS.md - Code Standards
+4. docs/NAMING_CONVENTIONS.md - Code Standards
 
 📚 TECH & DECISIONS:
-6. docs/TECH_STACK.md - Tech Stack Updates
-7. docs/adr/ADR_INDEX.md - Architecture Decisions
-8. README.md - Project overview
+5. docs/TECH_STACK.md - Tech Stack Updates
+6. docs/adr/ADR_INDEX.md - Architecture Decisions
+7. README.md - Project overview
 
 Bestätige mit Zusammenfassung (5 Bulletpoints):
 - Projekt-Ziel & 3-Layer Architecture
@@ -158,20 +157,19 @@ Neue Session / Major Context Loss. Vollständiger Architektur-Context benötigt:
 
 📋 PROJECT FOUNDATION:
 1. README.md - Projekt-Überblick & Quick Start
-2. docs/CLAUDE.md - Vollständiger Projekt-Context
+2. CLAUDE.md - Vollständiger Projekt-Context (inkl. Subagent Responsibilities)
 3. docs/ARCHITECTURE_EVOLUTION.md - Sprint Journey & Learnings
 4. docs/sprints/SPRINT_PLAN.md - Master Sprint Plan
 
 🏗️ ARCHITECTURE & TECH STACK:
 5. docs/TECH_STACK.md - Complete stack
-6. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design
-7. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts
-8. docs/DEPENDENCY_RATIONALE.md - Library choice justifications
+6. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design (falls vorhanden)
+7. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts (falls vorhanden)
+8. docs/DEPENDENCY_RATIONALE.md - Library choice justifications (falls vorhanden)
 
 👥 WORKFLOW & STANDARDS:
-9.  docs/SUBAGENTS.md - Delegation Strategy
-10. docs/NAMING_CONVENTIONS.md - Code Standards
-11. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status (falls vorhanden)
+9. docs/NAMING_CONVENTIONS.md - Code Standards
+10. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status (falls vorhanden)
 
 🎯 ADRs (Architecture Decisions):
 12. docs/adr/ADR_INDEX.md - Alle ADRs mit Querverweisen
@@ -215,8 +213,7 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 
 | Document | What It Contains | Read When | Status |
 |----------|------------------|-----------|--------|
-| **docs/CLAUDE.md** | Complete project context, architecture, workflows | Every refresh | ✅ Auto-updated |
-| **docs/SUBAGENTS.md** | 5 subagents, file ownership, delegation rules | Every refresh | ✅ Stable |
+| **CLAUDE.md** | Complete project context, architecture, workflows, subagent responsibilities | Every refresh | ✅ Auto-updated |
 | **docs/NAMING_CONVENTIONS.md** | snake_case, PascalCase, SCREAMING_SNAKE rules | Every refresh | ✅ Stable |
 | **README.md** | Project overview, quick start, current status | Every refresh | ✅ Auto-updated |
 
@@ -268,9 +265,8 @@ Priority 2 (SHOULD READ - Architecture):
 8. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows
 
 Priority 3 (SHOULD READ - Workflow):
-9. docs/SUBAGENTS.md - Delegation
-10. docs/NAMING_CONVENTIONS.md - Code standards
-11. docs/adr/ADR_INDEX.md - Architecture decisions
+9. docs/NAMING_CONVENTIONS.md - Code standards
+10. docs/adr/ADR_INDEX.md - Architecture decisions
 
 Priority 4 (OPTIONAL - Task-Specific):
 12. Specific ADRs based on task (from ADR_INDEX.md)
@@ -323,8 +319,7 @@ After ANY refresh, Claude Code should be able to confirm:
 
 ### ✅ WORKFLOW & STANDARDS
 ```
-- [ ] 5 Subagenten: test-engineer, langgraph-specialist, graphiti-specialist,
-                   lightrag-specialist, general-backend-dev
+- [ ] 4 Subagenten: Backend, Infrastructure, API, Testing (see CLAUDE.md)
 - [ ] Naming Conventions:
       - Functions/variables: snake_case
       - Classes: PascalCase
@@ -343,9 +338,10 @@ After ANY refresh, Claude Code should be able to confirm:
 ✅ Deep Refresh am Montag / Sprint-Start
 ✅ Standard Refresh am Session-Start (nach >1 Tag)
 ✅ Quick Check alle 20-30 Nachrichten
-✅ Lies SPRINT_PLAN.md für aktuellen Sprint-Status
-✅ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context
-✅ Lies TECH_STACK.md für aktuelle Versionen
+✅ Lies CLAUDE.md für Subagent Responsibilities
+✅ Lies docs/sprints/SPRINT_PLAN.md für aktuellen Sprint-Status
+✅ Lies docs/ARCHITECTURE_EVOLUTION.md für vollständigen Context
+✅ Lies docs/TECH_STACK.md für aktuelle Versionen
 ✅ Nutze die Copy-Paste Prompts aus diesem Guide
 ✅ Bestätige Verständnis mit Verification Checklist
 ```
@@ -449,10 +445,11 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ---
 
 **Quick Access Commands:**
-- Full Project Context: Read `docs/CLAUDE.md`
+- Full Project Context: Read `CLAUDE.md` (inkl. Subagent Responsibilities)
 - Current Sprint Status: Read `docs/sprints/SPRINT_PLAN.md`
 - Architecture History: Read `docs/ARCHITECTURE_EVOLUTION.md`
 - Tech Stack: Read `docs/TECH_STACK.md`
 - All ADRs: Read `docs/adr/ADR_INDEX.md`
+- Naming Standards: Read `docs/NAMING_CONVENTIONS.md`
 - Quick Refresh: Use Strategy 1 prompt above
 - Deep Refresh: Use Strategy 3 prompt above

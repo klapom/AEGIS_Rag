@@ -77,6 +77,113 @@ from src.utils.fusion import analyze_ranking_diversity, reciprocal_rank_fusion
 logger = structlog.get_logger(__name__)
 
 
+# ============================================================================
+# SECTION-BASED RE-RANKING (Sprint 32, Feature 32.3)
+# ============================================================================
+
+
+def section_based_reranking(results: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
+    """Boost search results when query matches section headings.
+
+    Sprint 32 Feature 32.3: Multi-Section Metadata in Qdrant
+    ADR-039: Adaptive Section-Aware Chunking
+
+    This function re-ranks search results by boosting chunks whose section
+    headings match the user query. This improves retrieval precision when
+    the query explicitly mentions a section name.
+
+    Algorithm:
+        1. Extract section_headings from each result's metadata
+        2. Count how many sections match the query (case-insensitive substring)
+        3. Calculate boost: (matched_sections / total_sections) * 0.3
+        4. Add boost to result's score
+        5. Re-sort by updated scores
+
+    Args:
+        results: list of search results (from vector_search or hybrid_search)
+        query: User query string
+
+    Returns:
+        Re-ranked results with section heading boost applied
+
+    Example:
+        >>> results = [
+        ...     {"id": "1", "score": 0.85, "metadata": {
+        ...         "section_headings": ["Multi-Server", "Load Balancing", "Caching"]
+        ...     }},
+        ...     {"id": "2", "score": 0.82, "metadata": {
+        ...         "section_headings": ["Database Optimization"]
+        ...     }}
+        ... ]
+        >>> query = "What is load balancing?"
+        >>> reranked = section_based_reranking(results, query)
+        >>> # Result 1 gets +0.10 boost (1/3 sections match * 0.3)
+        >>> # Result 2 gets +0.00 boost (0/1 sections match)
+        >>> reranked[0]["score"]  # 0.95 (was 0.85)
+        0.95
+
+    Performance Impact (Expected):
+        - Retrieval Precision: +10% when query mentions section names
+        - Latency: <5ms (simple string matching)
+        - False Positives: Minimal (only boosts, doesn't filter)
+    """
+    query_lower = query.lower()
+
+    for result in results:
+        # Get section headings from payload/metadata
+        # Support both direct metadata and nested payload structure
+        if "payload" in result:
+            headings = result["payload"].get("section_headings", [])
+        else:
+            headings = result.get("section_headings", [])
+
+        if not headings:
+            # No section metadata → no boost (backward compatible)
+            continue
+
+        # Count how many section headings match the query
+        # Match is bidirectional: heading in query OR query terms in heading
+        matches = sum(
+            1
+            for heading in headings
+            if (query_lower in heading.lower() or heading.lower() in query_lower)
+        )
+
+        # Calculate boost: (matches / total_sections) * 0.3
+        # Max boost: 0.3 (when all sections match)
+        # Min boost: 0.0 (when no sections match)
+        boost = (matches / len(headings)) * 0.3 if headings else 0.0
+
+        # Apply boost to score
+        result["score"] = result.get("score", 0.0) + boost
+
+        # Log boost for debugging (only if boost applied)
+        if boost > 0:
+            logger.debug(
+                "section_heading_boost_applied",
+                result_id=result.get("id"),
+                original_score=result.get("score", 0.0) - boost,
+                boost=boost,
+                final_score=result["score"],
+                matched_sections=matches,
+                total_sections=len(headings),
+                headings=headings,
+            )
+
+    # Re-sort by updated scores (descending)
+    reranked = sorted(results, key=lambda x: x.get("score", 0.0), reverse=True)
+
+    logger.debug(
+        "section_based_reranking_completed",
+        results_count=len(results),
+        query=query[:50],  # Log first 50 chars
+        top_score_before=results[0].get("score", 0.0) if results else 0.0,
+        top_score_after=reranked[0].get("score", 0.0) if reranked else 0.0,
+    )
+
+    return reranked
+
+
 class HybridSearch:
     """Hybrid search combining vector and keyword retrieval."""
 
@@ -313,6 +420,14 @@ class HybridSearch:
                 k=rrf_k,
                 id_field="id",
             )
+
+            # Sprint 32: Apply section-based re-ranking (boosts results matching section headings)
+            if fused_results:
+                fused_results = section_based_reranking(fused_results, query)
+                logger.debug(
+                    "section_based_reranking_applied",
+                    results_count=len(fused_results),
+                )
 
             # Apply reranking if enabled
             reranking_applied = False

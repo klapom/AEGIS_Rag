@@ -99,6 +99,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Can be initialized via /api/v1/retrieval/prepare-bm25",
         )
 
+    # Sprint 31: Initialize FormatRouter with Docling health check
+    try:
+        from src.api.v1 import retrieval
+        from src.components.ingestion import langgraph_pipeline
+        from src.components.ingestion.format_router import initialize_format_router
+
+        logger.info("Initializing FormatRouter with Docling health check...")
+        retrieval._format_router = await initialize_format_router()
+        logger.info(
+            "format_router_initialized_retrieval",
+            docling_available=retrieval._format_router.docling_available,
+        )
+
+        # Sprint 32: Also initialize ingestion pipeline router
+        await langgraph_pipeline.initialize_ingestion_pipeline()
+        logger.info(
+            "format_router_initialized_ingestion",
+            docling_available=langgraph_pipeline._format_router.docling_available,
+        )
+    except Exception as e:
+        logger.warning(
+            "format_router_initialization_failed",
+            error=str(e),
+            note="FormatRouter will use default (Docling assumed available)",
+        )
+
     # Sprint 27 Feature 27.1: Initialize database connections
     try:
         from src.components.graph_rag.neo4j_client import get_neo4j_client

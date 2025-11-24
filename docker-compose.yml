@@ -60,7 +60,7 @@ services:
     profiles:
       - ingestion  # Only start when explicitly requested (not part of default stack)
     ports:
-      - "8080:8080"  # HTTP API for parsing
+      - "8080:5001"  # HTTP API for parsing (container uses 5001 internally)
     volumes:
       # Cache volumes to persist downloaded models (OCR, layout, table detection)
       - docling_hf_cache:/root/.cache/huggingface
@@ -68,6 +68,9 @@ services:
       # Optional: Mount document directory for direct access
       # - ./data/documents:/input:ro
     environment:
+      # Port Configuration (docling-serve defaults to 5001)
+      - PORT=5001  # Internal port (mapped to 8080 externally)
+
       # CUDA Configuration
       - CUDA_VISIBLE_DEVICES=0  # Use first GPU (RTX 3060)
       - DOCLING_GPU_MEMORY_FRACTION=0.8  # Allocate 80% of VRAM (4.8GB)
@@ -103,7 +106,7 @@ services:
 
     # Health Check
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 10s
       timeout: 5s
       retries: 5

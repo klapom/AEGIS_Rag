@@ -156,6 +156,7 @@ async def reindex_progress_stream(
             batch_id = f"reindex_batch_{int(time.time())}"
             total_chunks = 0
             completed_docs = 0
+            failed_docs = 0  # Track failed documents
 
             async for result in run_batch_ingestion(
                 document_paths=[str(p) for p in document_files],
@@ -186,6 +187,7 @@ async def reindex_progress_stream(
                     )
                 else:
                     # Document failed
+                    failed_docs += 1  # Increment failed counter
                     error_msg = result.get("error", "Unknown error")
                     logger.error("reindex_document_failed", document_path=doc_path, error=error_msg)
 
@@ -241,7 +243,19 @@ async def reindex_progress_stream(
 
         # Completion
         total_time = time.time() - start_time
-        yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'documents_processed': total_docs, 'documents_total': total_docs, 'message': f'Re-indexing completed successfully in {total_time:.1f}s'})}\n\n"
+
+        # Determine completion status based on failures
+        if not dry_run and failed_docs > 0:
+            # Some documents failed - report partial success
+            success_docs = total_docs - failed_docs
+            completion_message = f'Re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s'
+            completion_status = 'completed_with_errors'
+        else:
+            # All documents succeeded (or dry run)
+            completion_message = f'Re-indexing completed successfully in {total_time:.1f}s'
+            completion_status = 'completed'
+
+        yield f"data: {json.dumps({'status': completion_status, 'phase': 'completed', 'progress_percent': 100, 'documents_processed': total_docs, 'documents_total': total_docs, 'documents_failed': failed_docs if not dry_run else 0, 'message': completion_message})}\n\n"
 
     except Exception as e:
         logger.error("reindex_failed", error=str(e), exc_info=True)
@@ -422,39 +436,45 @@ async def get_system_stats() -> SystemStats:
         logger.info("qdrant_clients_initialized", collection=collection_name)
 
         try:
-            collection_info = await qdrant_client.get_collection(collection_name)
-            qdrant_total_chunks = collection_info.points_count
-            logger.info(
-                "qdrant_stats_retrieved", chunks=qdrant_total_chunks, collection=collection_name
-            )
+            collection_info = await qdrant_client.get_collection_info(collection_name)
+            if collection_info:
+                qdrant_total_chunks = collection_info.points_count
+                logger.info(
+                    "qdrant_stats_retrieved", chunks=qdrant_total_chunks, collection=collection_name
+                )
+            else:
+                logger.warning("collection_not_found", collection=collection_name)
+                qdrant_total_chunks = 0
         except Exception as e:
             logger.warning("failed_to_get_qdrant_stats", error=str(e), exc_info=True)
             qdrant_total_chunks = 0
 
-        # BM25 statistics (optional - requires BM25 manager)
+        # BM25 statistics (from HybridSearch)
         logger.info("stats_collection_phase", phase="bm25", status="starting")
         bm25_corpus_size = None
         try:
-            from src.components.vector_search.bm25_manager import get_bm25_manager
+            from src.api.v1.retrieval import get_hybrid_search
 
-            bm25_manager = get_bm25_manager()
-            if hasattr(bm25_manager, "get_corpus_size"):
-                bm25_corpus_size = bm25_manager.get_corpus_size()
+            hybrid_search = get_hybrid_search()
+            if hybrid_search.bm25_search.is_fitted():
+                bm25_corpus_size = hybrid_search.bm25_search.get_corpus_size()
                 logger.info("bm25_stats_retrieved", corpus_size=bm25_corpus_size)
             else:
-                logger.debug("bm25_manager_missing_get_corpus_size_method")
+                logger.debug("bm25_not_fitted")
         except Exception as e:
             logger.debug("bm25_stats_unavailable", error=str(e))
 
-        # Neo4j / LightRAG statistics
+        # Neo4j statistics (direct Neo4j client)
         logger.info("stats_collection_phase", phase="neo4j", status="starting")
         neo4j_total_entities = None
         neo4j_total_relations = None
         neo4j_total_chunks = None
 
         try:
-            lightrag = await get_lightrag_wrapper_async()
-            logger.info("lightrag_wrapper_initialized")
+            from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+            neo4j_client = get_neo4j_client()
+            logger.info("neo4j_client_initialized")
 
             # Query Neo4j for statistics
             query_entities = "MATCH (e:Entity) RETURN count(e) as count"
@@ -463,19 +483,19 @@ async def get_system_stats() -> SystemStats:
 
             # Execute queries
             logger.info("executing_neo4j_query", query="entities")
-            entities_result = await lightrag.graph_storage_cls.execute_query(query_entities)
+            entities_result = await neo4j_client.execute_query(query_entities)
             if entities_result and len(entities_result) > 0:
                 neo4j_total_entities = entities_result[0].get("count", 0)
                 logger.info("neo4j_entities_retrieved", count=neo4j_total_entities)
 
             logger.info("executing_neo4j_query", query="relations")
-            relations_result = await lightrag.graph_storage_cls.execute_query(query_relations)
+            relations_result = await neo4j_client.execute_query(query_relations)
             if relations_result and len(relations_result) > 0:
                 neo4j_total_relations = relations_result[0].get("count", 0)
                 logger.info("neo4j_relations_retrieved", count=neo4j_total_relations)
 
             logger.info("executing_neo4j_query", query="chunks")
-            chunks_result = await lightrag.graph_storage_cls.execute_query(query_chunks)
+            chunks_result = await neo4j_client.execute_query(query_chunks)
             if chunks_result and len(chunks_result) > 0:
                 neo4j_total_chunks = chunks_result[0].get("count", 0)
                 logger.info("neo4j_chunks_retrieved", count=neo4j_total_chunks)
@@ -712,6 +732,7 @@ async def reindex_with_vlm_enrichment(
             # Phase 3: Batch ingestion with VLM enrichment
             batch_id = f"vlm_batch_{int(time.time())}"
             completed_docs = 0
+            failed_docs = 0  # Track failed documents
             total_chunks = 0
             total_vlm_images = 0
             total_errors = 0
@@ -762,6 +783,7 @@ async def reindex_with_vlm_enrichment(
                     )
                 else:
                     # Document failed
+                    failed_docs += 1  # Increment failed counter
                     error_msg = result.get("error", "Unknown error")
                     total_errors += 1
 
@@ -804,12 +826,24 @@ async def reindex_with_vlm_enrichment(
             # Completion
             total_time = time.time() - start_time
 
+            # Determine completion status based on failures
+            if failed_docs > 0:
+                # Some documents failed - report partial success
+                success_docs = total_docs - failed_docs
+                completion_message = f'VLM re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s'
+                completion_status = 'completed_with_errors'
+            else:
+                # All documents succeeded
+                completion_message = f'VLM re-indexing completed successfully in {total_time:.1f}s'
+                completion_status = 'completed'
+
             yield f"data: {json.dumps({
-                'status': 'completed',
+                'status': completion_status,
                 'progress': 1.0,
-                'message': f'VLM re-indexing completed in {total_time:.1f}s',
+                'message': completion_message,
                 'total_documents': total_docs,
                 'completed_documents': completed_docs,
+                'documents_failed': failed_docs,
                 'total_chunks': total_chunks,
                 'total_vlm_images': total_vlm_images,
                 'total_errors': total_errors,
