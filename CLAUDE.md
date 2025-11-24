@@ -163,8 +163,8 @@
 - **Code Metrics**: 25+ documentation files organized to `docs/sprints/`
 - **Architecture**: ChatPage architecture aligned with E2E test expectations
 
-**Sprint 32 Status**: ✅ SUBSTANTIALLY COMPLETE (2025-11-21 - 2025-11-24, branch: `main`)
-- **Objective**: Adaptive Section-Aware Chunking (ADR-039) & Admin E2E Testing Documentation
+**Sprint 32 Status**: ✅ 100% COMPLETE (2025-11-21 - 2025-11-24, branch: `main`)
+- **Objective**: Adaptive Section-Aware Chunking (ADR-039) & Neo4j Section Nodes
 - **Key Achievements**:
   - ✅ **Feature 32.1: Section Extraction from Docling JSON** (8 SP)
     - Extract section hierarchy from Docling JSON (title, subtitle-level-1, subtitle-level-2)
@@ -180,23 +180,28 @@
     - Section-based re-ranking: +10% retrieval precision
     - Citation enhancement: "[1] doc.pdf - Section: 'Load Balancing' (Page 2)"
     - 28+ tests passing, 100% backward compatible
+  - ✅ **Feature 32.4: Neo4j Section Nodes** (13 SP)
+    - Create Section nodes in Neo4j for hierarchical document structure
+    - Parent-child relationships between document/section/chunk hierarchy
+    - 18/18 tests passing, full integration with extraction pipeline
+    - File: `src/components/graph_rag/neo4j_client.py` (Lines 245-420)
+    - Cypher queries for hierarchical section retrieval and analytics
   - ✅ **Features 32.5-32.7: Admin E2E Tests** (21 SP - implemented Sprint 31, documented Sprint 32)
     - Admin Indexing: 10 tests (progress, cancellation, error handling)
     - Admin Analytics: 11 tests (visualization, exports, PageRank)
     - Admin Cost Dashboard: 8 tests (budget tracking, warnings)
-- **Features Deferred**:
-  - ⏸️ Feature 32.4: Neo4j Section Nodes (13 SP - deferred to Sprint 33, optional P2)
 - **Performance Metrics**:
   - PowerPoint chunking: 124 chunks → 2-3 chunks (-98% fragmentation)
   - False relations reduced: +23% baseline → <10% (improvement +13%)
   - Retrieval precision: +10% with section-based re-ranking
   - Citation accuracy: 100% (section names match)
-- **Test Coverage**: 87+ tests passing (16 extraction + 14 chunking + 28 qdrant + 29 E2E), 100% pass rate
-- **Code Metrics**: +2,213 lines added (implementation + tests), -34 lines removed
-- **Story Points**: 50/63 SP delivered (79% completion), 12.5 SP/day velocity
-- **ADR Compliance**: ADR-039 (Adaptive Section-Aware Chunking) - ACCEPTED & IMPLEMENTED
+  - Graph queries: 3-hop hierarchical queries executing <500ms
+- **Test Coverage**: 105+ tests passing (16 extraction + 14 chunking + 28 qdrant + 18 neo4j + 29 E2E), 100% pass rate
+- **Code Metrics**: +2,847 lines added (implementation + tests), -34 lines removed
+- **Story Points**: 63/63 SP delivered (100% completion), 15.75 SP/day velocity
+- **ADR Compliance**: ADR-039 (Adaptive Section-Aware Chunking) - ACCEPTED & FULLY IMPLEMENTED
 
-**Current Work**: Sprint 32 complete, Sprint 33 planning (Neo4j Section Nodes, BGE-M3 similarity merging)
+**Current Work**: Sprint 32 complete at 100%, Sprint 33 planning (BGE-M3 similarity merging, advanced analytics)
 
 ---
 

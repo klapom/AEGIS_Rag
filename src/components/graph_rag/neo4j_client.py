@@ -269,6 +269,179 @@ class Neo4jClient:
 
         return results
 
+    async def create_section_nodes(
+        self,
+        document_id: str,
+        sections: list[Any],
+        chunks: list[Any],
+    ) -> dict[str, int]:
+        """Create Section nodes with hierarchical relationships (Sprint 32 Feature 32.4).
+
+        Implements ADR-039 section-aware graph schema:
+        - Creates Section nodes with heading, page_no, order, bbox
+        - Creates Document-[:HAS_SECTION]->Section relationships
+        - Creates Section-[:CONTAINS_CHUNK]->Chunk relationships
+        - Creates Section-[:DEFINES]->Entity relationships (for entities in section)
+
+        Args:
+            document_id: Source document ID
+            sections: List of SectionMetadata from extract_section_hierarchy()
+            chunks: List of AdaptiveChunk from adaptive_section_chunking()
+
+        Returns:
+            Dictionary with creation statistics:
+            - sections_created: Number of Section nodes created
+            - has_section_rels: Number of HAS_SECTION relationships
+            - contains_chunk_rels: Number of CONTAINS_CHUNK relationships
+            - defines_entity_rels: Number of DEFINES relationships
+
+        Example:
+            >>> client = get_neo4j_client()
+            >>> stats = await client.create_section_nodes(
+            ...     document_id="doc123",
+            ...     sections=[SectionMetadata(...)],
+            ...     chunks=[AdaptiveChunk(...)]
+            ... )
+            >>> stats["sections_created"]
+            5
+        """
+        logger.info(
+            "creating_section_nodes",
+            document_id=document_id,
+            sections_count=len(sections),
+            chunks_count=len(chunks),
+        )
+
+        try:
+            # Use batched write operations for performance
+            async with self.driver.session(database=self.database) as session:
+                # Step 1: Create/Merge Document node
+                await session.run(
+                    """
+                    MERGE (d:Document {id: $document_id})
+                    SET d.updated_at = datetime()
+                    """,
+                    document_id=document_id,
+                )
+
+                sections_created = 0
+                has_section_rels = 0
+
+                # Step 2: Create Section nodes + Document-[:HAS_SECTION]->Section
+                for idx, section in enumerate(sections):
+                    # Create Section node with all metadata
+                    await session.run(
+                        """
+                        CREATE (s:Section {
+                            heading: $heading,
+                            level: $level,
+                            page_no: $page_no,
+                            order: $order,
+                            bbox_left: $bbox_left,
+                            bbox_top: $bbox_top,
+                            bbox_right: $bbox_right,
+                            bbox_bottom: $bbox_bottom,
+                            token_count: $token_count,
+                            text_preview: $text_preview,
+                            created_at: datetime()
+                        })
+                        WITH s
+                        MATCH (d:Document {id: $document_id})
+                        MERGE (d)-[:HAS_SECTION {order: $order}]->(s)
+                        """,
+                        heading=section.heading,
+                        level=section.level,
+                        page_no=section.page_no,
+                        order=idx,
+                        bbox_left=section.bbox.get("l", 0.0),
+                        bbox_top=section.bbox.get("t", 0.0),
+                        bbox_right=section.bbox.get("r", 0.0),
+                        bbox_bottom=section.bbox.get("b", 0.0),
+                        token_count=section.token_count,
+                        text_preview=section.text[:200] if section.text else "",
+                        document_id=document_id,
+                    )
+                    sections_created += 1
+                    has_section_rels += 1
+
+                logger.info(
+                    "section_nodes_created",
+                    sections_created=sections_created,
+                    has_section_relationships=has_section_rels,
+                )
+
+                # Step 3: Create Section-[:CONTAINS_CHUNK]->Chunk relationships
+                # Match chunks to sections by primary_section heading
+                contains_chunk_rels = 0
+                for chunk in chunks:
+                    # Get primary section heading from chunk
+                    primary_section = chunk.primary_section
+
+                    # For each section heading in this chunk, create CONTAINS_CHUNK
+                    for section_heading in chunk.section_headings:
+                        await session.run(
+                            """
+                            MATCH (s:Section {heading: $section_heading})
+                            MATCH (c:chunk)
+                            WHERE c.text CONTAINS $chunk_text_preview
+                            MERGE (s)-[:CONTAINS_CHUNK]->(c)
+                            """,
+                            section_heading=section_heading,
+                            chunk_text_preview=chunk.text[:100],
+                        )
+                        contains_chunk_rels += 1
+
+                logger.info(
+                    "contains_chunk_relationships_created",
+                    contains_chunk_rels=contains_chunk_rels,
+                )
+
+                # Step 4: Create Section-[:DEFINES]->Entity relationships
+                # Match entities from chunks that belong to this section
+                defines_entity_rels = 0
+                for section in sections:
+                    # Find entities mentioned in chunks belonging to this section
+                    result = await session.run(
+                        """
+                        MATCH (s:Section {heading: $section_heading})-[:CONTAINS_CHUNK]->(c:chunk)
+                        MATCH (e:base)-[:MENTIONED_IN]->(c)
+                        MERGE (s)-[:DEFINES]->(e)
+                        RETURN count(e) as entity_count
+                        """,
+                        section_heading=section.heading,
+                    )
+                    record = await result.single()
+                    if record:
+                        defines_entity_rels += record["entity_count"]
+
+                logger.info(
+                    "defines_entity_relationships_created",
+                    defines_entity_rels=defines_entity_rels,
+                )
+
+                stats = {
+                    "sections_created": sections_created,
+                    "has_section_rels": has_section_rels,
+                    "contains_chunk_rels": contains_chunk_rels,
+                    "defines_entity_rels": defines_entity_rels,
+                }
+
+                logger.info(
+                    "section_nodes_creation_complete",
+                    document_id=document_id,
+                    **stats,
+                )
+
+                return stats
+
+        except Exception as e:
+            logger.error(
+                "section_nodes_creation_failed",
+                document_id=document_id,
+                error=str(e),
+            )
+            raise DatabaseConnectionError("Neo4j", f"Section nodes creation failed: {e}") from e
+
     async def close(self) -> None:
         """Close the Neo4j driver connection."""
         if self._driver:

@@ -1293,6 +1293,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             merged_chunks.append(enhanced_chunk)
 
         state["chunks"] = merged_chunks
+        # Sprint 32 Feature 32.4: Store sections and adaptive_chunks for Neo4j section node creation
+        state["sections"] = sections  # SectionMetadata list for section hierarchy
+        state["adaptive_chunks"] = adaptive_chunks  # AdaptiveChunk list for multi-section metadata
         state["chunking_status"] = "completed"
         state["chunking_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
@@ -1630,6 +1633,62 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         logger.info("lightrag_insert_start", chunk_count=len(lightrag_docs))
         graph_stats = await lightrag.insert_documents_optimized(lightrag_docs)
 
+        # Sprint 32 Feature 32.4: Create Section nodes in Neo4j (ADR-039)
+        # Extract sections and chunks from state for section node creation
+        sections = state.get("sections", [])
+        adaptive_chunks = state.get("adaptive_chunks", [])
+
+        if sections and adaptive_chunks:
+            try:
+                logger.info(
+                    "creating_section_nodes_start",
+                    document_id=state["document_id"],
+                    sections_count=len(sections),
+                    chunks_count=len(adaptive_chunks),
+                )
+
+                # Import Neo4j client
+                from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+                neo4j_client = get_neo4j_client()
+
+                # Create section nodes with hierarchical relationships
+                section_stats = await neo4j_client.create_section_nodes(
+                    document_id=state["document_id"],
+                    sections=sections,
+                    chunks=adaptive_chunks,
+                )
+
+                logger.info(
+                    "section_nodes_created_successfully",
+                    document_id=state["document_id"],
+                    sections_created=section_stats["sections_created"],
+                    has_section_rels=section_stats["has_section_rels"],
+                    contains_chunk_rels=section_stats["contains_chunk_rels"],
+                    defines_entity_rels=section_stats["defines_entity_rels"],
+                )
+
+                # Store section stats in state for analytics
+                state["section_node_stats"] = section_stats
+
+            except Exception as e:
+                # Log error but don't fail entire ingestion (section nodes are optional enhancement)
+                logger.warning(
+                    "section_nodes_creation_failed",
+                    document_id=state["document_id"],
+                    error=str(e),
+                    note="Continuing ingestion without section nodes",
+                )
+                state["section_node_stats"] = {"error": str(e)}
+        else:
+            logger.info(
+                "section_nodes_skipped",
+                document_id=state["document_id"],
+                reason="no_sections_or_chunks_available",
+                has_sections=bool(sections),
+                has_chunks=bool(adaptive_chunks),
+            )
+
         # Store statistics
         state["entities"] = []  # Full entities stored in Neo4j
         state["relations"] = []  # Full relations stored in Neo4j
@@ -1646,6 +1705,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             chunks_with_images=sum(
                 1 for doc in lightrag_docs if doc["metadata"].get("has_image_annotation")
             ),
+            section_nodes_created=state.get("section_node_stats", {}).get("sections_created", 0),
             duration_seconds=round(state["graph_end_time"] - state["graph_start_time"], 2),
         )
 
