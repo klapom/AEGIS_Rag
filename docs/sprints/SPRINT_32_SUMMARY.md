@@ -1095,6 +1095,74 @@ async def create_hierarchical_relationships(
 
 ---
 
+## 🔧 Post-Sprint Refactoring: Neo4j Label Migration (`:Entity` → `:base`)
+
+**Date:** 2025-11-27
+**Commit:** `374f5e3`
+**Type:** Refactoring (Non-Breaking)
+
+### Background
+
+LightRAG's native schema uses the `:base` label for entity nodes, not `:Entity`. This migration aligns all custom Cypher queries with LightRAG's schema conventions to ensure compatibility and consistency.
+
+### Migration Scope
+
+#### Source Code Files Fixed (12 files):
+
+| File | Occurrences | Description |
+|------|-------------|-------------|
+| `src/components/graph_rag/query_templates.py` | 25+ | All query template patterns |
+| `src/components/graph_rag/neo4j_client.py` | 6 | Index definitions |
+| `src/components/graph_rag/version_manager.py` | 7 | Version queries |
+| `src/components/graph_rag/evolution_tracker.py` | 2 | Evolution tracking |
+| `src/components/graph_rag/community_detector.py` | 4 | Community detection |
+| `src/components/graph_rag/community_labeler.py` | 3 | Community labeling |
+| `src/components/graph_rag/community_search.py` | 5 | Community search |
+| `src/components/graph_rag/dual_level_search.py` | 3 | Dual-level search |
+| `src/components/memory/temporal_queries.py` | 6 | Temporal queries |
+| `src/api/v1/memory.py` | 1 | Memory API |
+| `src/api/v1/admin.py` | 1 | Admin API |
+| `src/api/routers/graph_viz.py` | 2 | Graph visualization |
+
+#### Test Files Fixed (7 files):
+
+| File | Occurrences | Tests |
+|------|-------------|-------|
+| `tests/unit/components/graph_rag/test_query_templates.py` | ~20 | **29/29 PASSED** |
+| `tests/unit/components/graph_rag/test_query_builder.py` | ~20 | **23/23 PASSED** |
+| `tests/unit/components/graph_rag/test_query_cache.py` | ~12 | **18/18 PASSED** |
+| `tests/unit/components/graph_rag/test_batch_executor.py` | ~9 | **15/15 PASSED** |
+| `tests/unit/components/graph_rag/test_temporal_query_builder.py` | ~25 | **24/24 PASSED** |
+| `tests/integration/memory/test_temporal_queries_e2e.py` | 6 | Integration test |
+| `tests/api/test_graph_visualization.py` | 1 | API test |
+
+### Migration Pattern
+
+```cypher
+-- BEFORE (Custom label)
+MATCH (e:Entity) WHERE e.name = $name RETURN e
+
+-- AFTER (LightRAG-compatible)
+MATCH (e:base) WHERE e.name = $name RETURN e
+```
+
+### Test Results
+
+```
+Total Tests Run: 109
+Passed: 109 (100%)
+Failed: 0
+```
+
+### Impact
+
+- ✅ **LightRAG Compatibility:** Full alignment with LightRAG's native schema
+- ✅ **No Breaking Changes:** Existing data unaffected (LightRAG already uses `:base`)
+- ✅ **Test Coverage:** All 109 graph_rag unit tests passing
+- ✅ **Code Consistency:** Unified label convention across codebase
+
+---
+
 ## 🎉 Conclusion
 
 **Sprint 32 successfully delivered 63/63 Story Points (100% completion rate)** with exceptional quality and velocity:
