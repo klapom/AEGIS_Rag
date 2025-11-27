@@ -201,6 +201,19 @@
 - **Story Points**: 63/63 SP delivered (100% completion), 15.75 SP/day velocity
 - **ADR Compliance**: ADR-039 (Adaptive Section-Aware Chunking) - ACCEPTED & FULLY IMPLEMENTED
 
+**Post-Sprint Refactoring** (2025-11-27):
+  - ✅ **Neo4j Label Migration: `:Entity` → `:base`** (Commit `374f5e3`)
+    - LightRAG schema alignment (native `:base` label convention)
+    - 12 source files + 7 test files migrated
+    - 109/109 graph_rag unit tests passing
+    - Full documentation in SPRINT_32_SUMMARY.md
+
+**Known Technical Debt**:
+  - **TD-043**: Follow-up Questions Redis Storage (see `docs/technical-debt/TD-043_FOLLOWUP_QUESTIONS_REDIS.md`)
+    - Backend `save_conversation_turn()` not storing to Redis
+    - Frontend implementation correct, backend fix required
+    - Impact: Follow-up questions E2E tests failing (9 tests)
+
 **Current Work**: Sprint 32 complete at 100%, Sprint 33 planning (BGE-M3 similarity merging, advanced analytics)
 
 ---
@@ -838,17 +851,6 @@ python scripts/migrate.py
 uvicorn src.api.main:app --reload --port 8000
 ```
 
-### Production (Kubernetes)
-```bash
-# Deploy with Helm
-helm install aegis-rag ./k8s/helm-chart \
-  --namespace production \
-  --values k8s/values-prod.yaml
-
-# Check deployment
-kubectl get pods -n production
-kubectl logs -f deployment/aegis-rag-api -n production
-```
 
 ---
 
@@ -890,8 +892,8 @@ python -m cProfile -o profile.stats scripts/benchmark.py
 
 ## Contact & Support
 
-- **Project Lead:** [Your Name]
-- **Repository:** github.com/your-org/aegis-rag
-- **Documentation:** docs.aegis-rag.com
+- **Project Lead:** Klaus Pommer
+- **Repository:** github.com/klapom/aegis-rag
+- **Documentation:** 
 - **Issue Tracker:** GitHub Issues
 - **Community:** Discord/Slack Channel
