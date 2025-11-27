@@ -1202,6 +1202,38 @@ Total:                                           55 SP
 
 ---
 
+## Sprint 33: Enhanced Directory Indexing & Live Progress Visualization
+**Status:** PLANNED
+**Branch:** `sprint-33-directory-indexing`
+**Estimated Story Points:** 62 SP
+
+### Features
+| # | Feature | SP | Priority |
+|---|---------|-----|----------|
+| 33.1 | Verzeichnisauswahl-Dialog | 5 | P0 |
+| 33.2 | Dateilisten mit Farbkodierung | 5 | P0 |
+| 33.3 | Live-Fortschrittsanzeige (Kompakt) | 5 | P0 |
+| 33.4 | Detail-Dialog (Seite, VLM, Chunks, Pipeline, Entities) | 13 | P1 |
+| 33.5 | Error-Tracking mit Button | 5 | P1 |
+| 33.6 | Live-Log Stream | 8 | P2 |
+| 33.7 | Persistente Logging-Datenbank + API | 13 | P1 |
+| 33.8 | Parallele Dateiverarbeitung | 8 | P1 |
+
+### Key Deliverables
+- Verzeichnisauswahl mit rekursiver Suche
+- Farbkodierte Dateiliste (Docling/LlamaIndex/Unsupported)
+- Echtzeit-Fortschrittsanzeige mit Seiten- und Datei-Tracking
+- Detail-Dialog mit VLM-Analyse, Chunks, Pipeline-Status, Entities
+- Error-Tracking mit Button und Dialog
+- Live-Log-Stream mit Filtern
+- SQLite-basierte Job-Persistierung
+- Parallele Dateiverarbeitung (konfigurierbar)
+
+### Full Plan
+See: `docs/sprints/SPRINT_33_PLAN.md`
+
+---
+
 ## Post-Sprint 17: Continuous Improvement Backlog
 
 ### High Priority

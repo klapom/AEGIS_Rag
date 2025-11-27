@@ -4,6 +4,7 @@ Sprint 16 Feature 16.3: Unified Re-Indexing Pipeline with SSE progress tracking.
 Sprint 31 Feature 31.10a: Cost API Backend Implementation
 """
 
+import asyncio
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -1261,4 +1262,722 @@ async def get_cost_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve cost history: {str(e)}",
+        ) from e
+
+
+# ============================================================================
+# Sprint 33: Enhanced Directory Indexing
+# Feature 33.1: Directory Scanning API
+# ============================================================================
+
+
+class FileInfo(BaseModel):
+    """Information about a single file in a directory scan.
+
+    Sprint 33 Feature 33.1: Directory Selector
+    """
+
+    file_path: str = Field(..., description="Full path to the file")
+    file_name: str = Field(..., description="File name without path")
+    file_extension: str = Field(..., description="File extension (e.g., '.pdf')")
+    file_size_bytes: int = Field(..., description="File size in bytes")
+    parser_type: Literal["docling", "llamaindex", "unsupported"] = Field(
+        ..., description="Which parser will handle this file"
+    )
+    is_supported: bool = Field(..., description="Whether this file type is supported")
+
+
+class DirectoryScanStatistics(BaseModel):
+    """Statistics about files found in a directory scan.
+
+    Sprint 33 Feature 33.1: Directory Selector
+    """
+
+    total: int = Field(..., description="Total number of files found")
+    docling_supported: int = Field(..., description="Files supported by Docling parser")
+    llamaindex_supported: int = Field(..., description="Files supported by LlamaIndex parser")
+    unsupported: int = Field(..., description="Files not supported (will be skipped)")
+    total_size_bytes: int = Field(..., description="Total size of all files in bytes")
+    docling_size_bytes: int = Field(..., description="Size of Docling-supported files")
+    llamaindex_size_bytes: int = Field(..., description="Size of LlamaIndex-supported files")
+
+
+class ScanDirectoryRequest(BaseModel):
+    """Request model for directory scanning.
+
+    Sprint 33 Feature 33.1: Directory Selector
+    """
+
+    path: str = Field(..., description="Path to the directory to scan")
+    recursive: bool = Field(default=False, description="Whether to scan subdirectories")
+
+
+class ScanDirectoryResponse(BaseModel):
+    """Response model for directory scanning.
+
+    Sprint 33 Feature 33.1: Directory Selector
+    """
+
+    path: str = Field(..., description="Scanned directory path")
+    recursive: bool = Field(..., description="Whether scan was recursive")
+    files: List[FileInfo] = Field(..., description="List of files found")
+    statistics: DirectoryScanStatistics = Field(..., description="Aggregated statistics")
+
+
+@router.post(
+    "/indexing/scan-directory",
+    response_model=ScanDirectoryResponse,
+    summary="Scan directory for indexable files",
+    description="Scans a directory and returns a list of files with their support status (Docling/LlamaIndex/unsupported).",
+)
+async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse:
+    """Scan a directory for files that can be indexed.
+
+    **Sprint 33 Feature 33.1: Directory Selector**
+
+    Scans the specified directory and categorizes files by their parser support:
+    - **Docling** (dark green): GPU-accelerated OCR, optimal for PDF, DOCX, PPTX, XLSX, PNG, JPG
+    - **LlamaIndex** (light green): Fallback parser for TXT, MD, HTML, JSON, CSV, RTF
+    - **Unsupported** (red): Files that cannot be indexed (EXE, ZIP, MP4, etc.)
+
+    **Supported Formats (30 total):**
+    - Docling (14): .pdf, .docx, .pptx, .xlsx, .png, .jpg, .jpeg, .tiff, .bmp, .html, .xml, .json, .csv, .ipynb
+    - LlamaIndex exclusive (9): .epub, .rtf, .tex, .md, .rst, .adoc, .org, .odt, .msg
+    - Shared (7): .txt, .doc, .xls, .ppt, .htm, .mhtml, .eml
+
+    **Example Request:**
+    ```json
+    {
+      "path": "C:/data/documents",
+      "recursive": true
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "path": "C:/data/documents",
+      "recursive": true,
+      "files": [
+        {
+          "file_path": "C:/data/documents/report.pdf",
+          "file_name": "report.pdf",
+          "file_extension": ".pdf",
+          "file_size_bytes": 2457600,
+          "parser_type": "docling",
+          "is_supported": true
+        }
+      ],
+      "statistics": {
+        "total": 23,
+        "docling_supported": 15,
+        "llamaindex_supported": 6,
+        "unsupported": 2,
+        "total_size_bytes": 45678900,
+        "docling_size_bytes": 35000000,
+        "llamaindex_size_bytes": 10000000
+      }
+    }
+    ```
+
+    Args:
+        request: Directory path and recursive flag
+
+    Returns:
+        ScanDirectoryResponse with file list and statistics
+
+    Raises:
+        HTTPException: If directory does not exist or is not readable
+    """
+    # Import format definitions (lazy import to avoid circular dependencies)
+    from src.components.ingestion.format_router import (
+        ALL_FORMATS,
+        DOCLING_FORMATS,
+        LLAMAINDEX_EXCLUSIVE,
+        SHARED_FORMATS,
+    )
+
+    dir_path = Path(request.path)
+
+    # Validate directory exists
+    if not dir_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Directory does not exist: {request.path}",
+        )
+
+    if not dir_path.is_dir():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Path is not a directory: {request.path}",
+        )
+
+    logger.info(
+        "scan_directory_started",
+        path=str(dir_path),
+        recursive=request.recursive,
+        feature="sprint_33_feature_33.1",
+    )
+
+    try:
+        # Scan directory for files
+        files: List[FileInfo] = []
+        stats = {
+            "total": 0,
+            "docling_supported": 0,
+            "llamaindex_supported": 0,
+            "unsupported": 0,
+            "total_size_bytes": 0,
+            "docling_size_bytes": 0,
+            "llamaindex_size_bytes": 0,
+        }
+
+        # Get file iterator based on recursive flag
+        if request.recursive:
+            file_iterator = dir_path.rglob("*")
+        else:
+            file_iterator = dir_path.glob("*")
+
+        for file_path in file_iterator:
+            # Skip directories
+            if not file_path.is_file():
+                continue
+
+            file_extension = file_path.suffix.lower()
+            file_size = file_path.stat().st_size
+
+            # Determine parser type
+            if file_extension in DOCLING_FORMATS:
+                parser_type = "docling"
+                is_supported = True
+                stats["docling_supported"] += 1
+                stats["docling_size_bytes"] += file_size
+            elif file_extension in LLAMAINDEX_EXCLUSIVE:
+                parser_type = "llamaindex"
+                is_supported = True
+                stats["llamaindex_supported"] += 1
+                stats["llamaindex_size_bytes"] += file_size
+            elif file_extension in SHARED_FORMATS:
+                # Shared formats use Docling by default
+                parser_type = "docling"
+                is_supported = True
+                stats["docling_supported"] += 1
+                stats["docling_size_bytes"] += file_size
+            else:
+                parser_type = "unsupported"
+                is_supported = False
+                stats["unsupported"] += 1
+
+            stats["total"] += 1
+            stats["total_size_bytes"] += file_size
+
+            files.append(
+                FileInfo(
+                    file_path=str(file_path),
+                    file_name=file_path.name,
+                    file_extension=file_extension,
+                    file_size_bytes=file_size,
+                    parser_type=parser_type,
+                    is_supported=is_supported,
+                )
+            )
+
+        # Sort files: supported first (docling, then llamaindex), then unsupported
+        parser_priority = {"docling": 0, "llamaindex": 1, "unsupported": 2}
+        files.sort(key=lambda f: (parser_priority.get(f.parser_type, 3), f.file_name.lower()))
+
+        logger.info(
+            "scan_directory_completed",
+            path=str(dir_path),
+            total_files=stats["total"],
+            docling_files=stats["docling_supported"],
+            llamaindex_files=stats["llamaindex_supported"],
+            unsupported_files=stats["unsupported"],
+        )
+
+        return ScanDirectoryResponse(
+            path=str(dir_path),
+            recursive=request.recursive,
+            files=files,
+            statistics=DirectoryScanStatistics(**stats),
+        )
+
+    except PermissionError as e:
+        logger.error("scan_directory_permission_error", path=str(dir_path), error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Permission denied: Cannot read directory {request.path}",
+        ) from e
+
+    except Exception as e:
+        logger.error("scan_directory_failed", path=str(dir_path), error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to scan directory: {str(e)}",
+        ) from e
+
+
+# ============================================================================
+# Sprint 33: Job Tracking API (Feature 33.7)
+# ============================================================================
+
+
+class IngestionJobResponse(BaseModel):
+    """Response model for ingestion job details.
+
+    Sprint 33 Feature 33.7: Persistent Job Tracking
+    """
+
+    id: str = Field(..., description="Job ID")
+    started_at: str = Field(..., description="Job start timestamp (ISO 8601)")
+    completed_at: str | None = Field(None, description="Job completion timestamp (ISO 8601)")
+    status: Literal["running", "completed", "failed", "cancelled"] = Field(..., description="Job status")
+    directory_path: str = Field(..., description="Directory being indexed")
+    recursive: bool = Field(..., description="Whether scan is recursive")
+    total_files: int = Field(..., description="Total number of files")
+    processed_files: int = Field(..., description="Number of files processed")
+    total_errors: int = Field(..., description="Total error count")
+    total_warnings: int = Field(..., description="Total warning count")
+    config: dict | None = Field(None, description="Job configuration metadata")
+
+
+class IngestionEventResponse(BaseModel):
+    """Response model for ingestion events.
+
+    Sprint 33 Feature 33.7: Event Logging
+    """
+
+    id: int = Field(..., description="Event ID")
+    job_id: str = Field(..., description="Job ID")
+    timestamp: str = Field(..., description="Event timestamp (ISO 8601)")
+    level: Literal["INFO", "DEBUG", "WARN", "ERROR"] = Field(..., description="Event level")
+    phase: str | None = Field(None, description="Pipeline phase")
+    file_name: str | None = Field(None, description="File name")
+    page_number: int | None = Field(None, description="Page number")
+    chunk_id: str | None = Field(None, description="Chunk ID")
+    message: str = Field(..., description="Event message")
+    details: dict | None = Field(None, description="Additional details")
+
+
+class IngestionFileResponse(BaseModel):
+    """Response model for ingestion file details.
+
+    Sprint 33 Feature 33.7: File-Level Tracking
+    """
+
+    id: int = Field(..., description="File record ID")
+    job_id: str = Field(..., description="Job ID")
+    file_path: str = Field(..., description="Full file path")
+    file_name: str = Field(..., description="File name")
+    file_type: str = Field(..., description="File extension")
+    file_size_bytes: int | None = Field(None, description="File size in bytes")
+    parser_used: str | None = Field(None, description="Parser type (docling/llamaindex)")
+    status: Literal["pending", "processing", "completed", "failed", "skipped"] = Field(..., description="File status")
+    pages_total: int | None = Field(None, description="Total pages")
+    pages_processed: int = Field(..., description="Pages processed")
+    chunks_created: int = Field(..., description="Chunks created")
+    entities_extracted: int = Field(..., description="Entities extracted")
+    relations_extracted: int = Field(..., description="Relations extracted")
+    vlm_images_total: int = Field(..., description="Total VLM images")
+    vlm_images_processed: int = Field(..., description="VLM images processed")
+    processing_time_ms: int | None = Field(None, description="Processing time in milliseconds")
+    error_message: str | None = Field(None, description="Error message if failed")
+    started_at: str | None = Field(None, description="File processing start timestamp")
+    completed_at: str | None = Field(None, description="File processing completion timestamp")
+
+
+@router.get("/ingestion/jobs", response_model=List[IngestionJobResponse])
+async def list_ingestion_jobs(
+    status_filter: Literal["running", "completed", "failed", "cancelled"] | None = Query(
+        None, alias="status", description="Filter by job status"
+    ),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+) -> List[IngestionJobResponse]:
+    """List all ingestion jobs with optional filtering.
+
+    **Sprint 33 Feature 33.7: Job Tracking API**
+
+    Returns list of ingestion jobs sorted by start time (newest first).
+    Supports filtering by status and pagination.
+
+    **Example Request:**
+    ```bash
+    # Get all running jobs
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs?status=running"
+
+    # Get last 10 completed jobs
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs?status=completed&limit=10"
+    ```
+
+    **Example Response:**
+    ```json
+    [
+      {
+        "id": "job_2025-11-27_123456",
+        "started_at": "2025-11-27T12:34:56",
+        "completed_at": "2025-11-27T12:45:00",
+        "status": "completed",
+        "directory_path": "/data/documents",
+        "recursive": true,
+        "total_files": 10,
+        "processed_files": 10,
+        "total_errors": 0,
+        "total_warnings": 2,
+        "config": {"vlm_enabled": true}
+      }
+    ]
+    ```
+
+    Args:
+        status_filter: Filter by status (optional)
+        limit: Maximum results (default 100)
+        offset: Pagination offset (default 0)
+
+    Returns:
+        List of IngestionJobResponse
+
+    Raises:
+        HTTPException: If database query fails
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+        jobs = await tracker.get_jobs(status=status_filter, limit=limit, offset=offset)
+
+        return [IngestionJobResponse(**job) for job in jobs]
+
+    except Exception as e:
+        logger.error("list_jobs_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list ingestion jobs: {str(e)}",
+        ) from e
+
+
+@router.get("/ingestion/jobs/{job_id}", response_model=IngestionJobResponse)
+async def get_ingestion_job(job_id: str) -> IngestionJobResponse:
+    """Get ingestion job details by ID.
+
+    **Sprint 33 Feature 33.7: Job Tracking API**
+
+    Returns detailed information about a specific ingestion job,
+    including configuration, file counts, and error statistics.
+
+    **Example Request:**
+    ```bash
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs/job_2025-11-27_123456"
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "id": "job_2025-11-27_123456",
+      "started_at": "2025-11-27T12:34:56",
+      "completed_at": "2025-11-27T12:45:00",
+      "status": "completed",
+      "directory_path": "/data/documents",
+      "recursive": true,
+      "total_files": 10,
+      "processed_files": 10,
+      "total_errors": 0,
+      "total_warnings": 2,
+      "config": {"vlm_enabled": true}
+    }
+    ```
+
+    Args:
+        job_id: Job ID
+
+    Returns:
+        IngestionJobResponse
+
+    Raises:
+        HTTPException: If job not found or database query fails
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+        job = await tracker.get_job(job_id)
+
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job not found: {job_id}",
+            )
+
+        return IngestionJobResponse(**job)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("get_job_failed", job_id=job_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get job: {str(e)}",
+        ) from e
+
+
+@router.get("/ingestion/jobs/{job_id}/events", response_model=List[IngestionEventResponse])
+async def get_job_events(
+    job_id: str,
+    level_filter: Literal["INFO", "DEBUG", "WARN", "ERROR"] | None = Query(
+        None, alias="level", description="Filter by event level"
+    ),
+    limit: int = Query(1000, ge=1, le=10000, description="Maximum number of events"),
+) -> List[IngestionEventResponse]:
+    """Get ingestion events for job.
+
+    **Sprint 33 Feature 33.7: Event Logging API**
+
+    Returns event log for specific job, sorted chronologically.
+    Useful for debugging and replaying ingestion pipeline execution.
+
+    **Example Request:**
+    ```bash
+    # Get all events
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123/events"
+
+    # Get only errors
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123/events?level=ERROR"
+    ```
+
+    **Example Response:**
+    ```json
+    [
+      {
+        "id": 1,
+        "job_id": "job_123",
+        "timestamp": "2025-11-27T12:35:00",
+        "level": "INFO",
+        "phase": "parsing",
+        "file_name": "report.pdf",
+        "page_number": null,
+        "chunk_id": null,
+        "message": "Parsing started",
+        "details": {"parser": "docling"}
+      }
+    ]
+    ```
+
+    Args:
+        job_id: Job ID
+        level_filter: Filter by level (optional)
+        limit: Maximum events (default 1000)
+
+    Returns:
+        List of IngestionEventResponse
+
+    Raises:
+        HTTPException: If database query fails
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+        events = await tracker.get_events(job_id, level=level_filter, limit=limit)
+
+        return [IngestionEventResponse(**event) for event in events]
+
+    except Exception as e:
+        logger.error("get_events_failed", job_id=job_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get events: {str(e)}",
+        ) from e
+
+
+@router.get("/ingestion/jobs/{job_id}/errors", response_model=List[IngestionEventResponse])
+async def get_job_errors(job_id: str) -> List[IngestionEventResponse]:
+    """Get only ERROR-level events for job.
+
+    **Sprint 33 Feature 33.7: Error Logging API**
+
+    Convenience endpoint that returns only ERROR events for debugging.
+
+    **Example Request:**
+    ```bash
+    curl "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123/errors"
+    ```
+
+    **Example Response:**
+    ```json
+    [
+      {
+        "id": 5,
+        "job_id": "job_123",
+        "timestamp": "2025-11-27T12:40:00",
+        "level": "ERROR",
+        "phase": "parsing",
+        "file_name": "corrupted.pdf",
+        "page_number": null,
+        "chunk_id": null,
+        "message": "Parsing failed: Invalid PDF structure",
+        "details": {"error_code": "PDF_PARSE_ERROR"}
+      }
+    ]
+    ```
+
+    Args:
+        job_id: Job ID
+
+    Returns:
+        List of ERROR-level IngestionEventResponse
+
+    Raises:
+        HTTPException: If database query fails
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+        errors = await tracker.get_errors(job_id)
+
+        return [IngestionEventResponse(**error) for error in errors]
+
+    except Exception as e:
+        logger.error("get_errors_failed", job_id=job_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get errors: {str(e)}",
+        ) from e
+
+
+@router.post("/ingestion/jobs/{job_id}/cancel", status_code=status.HTTP_200_OK)
+async def cancel_ingestion_job(job_id: str) -> dict:
+    """Cancel running ingestion job.
+
+    **Sprint 33 Feature 33.7: Job Cancellation API**
+
+    Marks job as cancelled. Note: This only updates database status,
+    actual cancellation of running tasks requires implementation in orchestrator.
+
+    **Example Request:**
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123/cancel"
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "message": "Job cancelled successfully",
+      "job_id": "job_123"
+    }
+    ```
+
+    Args:
+        job_id: Job ID to cancel
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If job not found or already completed
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+
+        # Check job exists and is running
+        job = await tracker.get_job(job_id)
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job not found: {job_id}",
+            )
+
+        if job["status"] != "running":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot cancel job with status: {job['status']}",
+            )
+
+        # Update status to cancelled
+        await tracker.update_job_status(job_id, "cancelled")
+
+        logger.info("job_cancelled", job_id=job_id)
+
+        return {"message": "Job cancelled successfully", "job_id": job_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("cancel_job_failed", job_id=job_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel job: {str(e)}",
+        ) from e
+
+
+@router.delete("/ingestion/jobs/{job_id}", status_code=status.HTTP_200_OK)
+async def delete_ingestion_job(job_id: str) -> dict:
+    """Delete ingestion job and all associated data.
+
+    **Sprint 33 Feature 33.7: Job Deletion API**
+
+    Deletes job from database including all events and file records (CASCADE).
+    Use with caution - this operation is irreversible.
+
+    **Example Request:**
+    ```bash
+    curl -X DELETE "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123"
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "message": "Job deleted successfully",
+      "job_id": "job_123"
+    }
+    ```
+
+    Args:
+        job_id: Job ID to delete
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If job not found or database operation fails
+    """
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    try:
+        tracker = get_job_tracker()
+
+        # Check job exists
+        job = await tracker.get_job(job_id)
+        if not job:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Job not found: {job_id}",
+            )
+
+        # Delete job (CASCADE deletes events and files)
+        import sqlite3
+
+        def delete_job(conn: sqlite3.Connection) -> None:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM ingestion_jobs WHERE id = ?", (job_id,))
+            conn.commit()
+
+        await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: delete_job(sqlite3.connect(tracker.db_path, check_same_thread=False))
+        )
+
+        logger.info("job_deleted", job_id=job_id)
+
+        return {"message": "Job deleted successfully", "job_id": job_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("delete_job_failed", job_id=job_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete job: {str(e)}",
         ) from e

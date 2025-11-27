@@ -993,40 +993,81 @@ class LightRAGClient:
 
                 # Step 1.5: Create :base entity nodes (FIX for missing entity_name bug)
                 # These nodes were never being created, causing MENTIONED_IN to fail!
+
+                # DEBUG: Log entity count and sample before loop
+                logger.info(
+                    "DEBUG_entity_creation_starting",
+                    total_entities=len(entities),
+                    sample_entity=entities[0] if entities else "NO_ENTITIES",
+                    entity_keys=list(entities[0].keys()) if entities else [],
+                )
+
+                entities_created = 0
+                entities_skipped = 0
+
                 for entity in entities:
                     entity_id = entity.get("entity_id", "")
                     entity_name = entity.get("entity_name", entity_id)  # Fallback to entity_id
                     entity_type = entity.get("entity_type", "UNKNOWN")
 
                     if not entity_id:
-                        logger.warning("entity_missing_id", entity=entity)
+                        logger.warning(
+                            "entity_missing_id_SKIPPED",
+                            entity=entity,
+                            entity_keys=list(entity.keys()),
+                        )
+                        entities_skipped += 1
                         continue
 
                     # Create dynamic label based on entity type (e.g., :base:ORGANIZATION)
                     # This matches the label structure seen in Neo4j (base:ORGANIZATION, etc.)
                     labels_str = f"base:{entity_type}"
 
-                    await session.run(
-                        f"""
-                        MERGE (e:{labels_str} {{entity_id: $entity_id}})
-                        SET e.entity_name = $entity_name,
-                            e.entity_type = $entity_type,
-                            e.description = $description,
-                            e.source_id = $source_id,
-                            e.file_path = $file_path,
-                            e.chunk_index = $chunk_index,
-                            e.created_at = datetime()
-                        """,
+                    # DEBUG: Log each entity being created
+                    logger.info(
+                        "DEBUG_creating_entity",
                         entity_id=entity_id,
                         entity_name=entity_name,
                         entity_type=entity_type,
-                        description=entity.get("description", ""),
-                        source_id=entity.get("source_id", ""),
-                        file_path=entity.get("file_path", ""),
-                        chunk_index=entity.get("chunk_index", 0),
+                        labels_str=labels_str,
                     )
 
-                logger.info("entity_nodes_created", count=len(entities))
+                    try:
+                        await session.run(
+                            f"""
+                            MERGE (e:{labels_str} {{entity_id: $entity_id}})
+                            SET e.entity_name = $entity_name,
+                                e.entity_type = $entity_type,
+                                e.description = $description,
+                                e.source_id = $source_id,
+                                e.file_path = $file_path,
+                                e.chunk_index = $chunk_index,
+                                e.created_at = datetime()
+                            """,
+                            entity_id=entity_id,
+                            entity_name=entity_name,
+                            entity_type=entity_type,
+                            description=entity.get("description", ""),
+                            source_id=entity.get("source_id", ""),
+                            file_path=entity.get("file_path", ""),
+                            chunk_index=entity.get("chunk_index", 0),
+                        )
+                        entities_created += 1
+                    except Exception as e:
+                        logger.error(
+                            "DEBUG_entity_creation_failed",
+                            entity_id=entity_id,
+                            error=str(e),
+                            error_type=type(e).__name__,
+                        )
+                        entities_skipped += 1
+
+                logger.info(
+                    "entity_nodes_created_DEBUG_SUMMARY",
+                    total_input=len(entities),
+                    created=entities_created,
+                    skipped=entities_skipped,
+                )
 
                 # Step 2: Create MENTIONED_IN relationships
                 # Group entities by chunk_id for efficient batch creation
@@ -1164,6 +1205,20 @@ class LightRAGClient:
                 lightrag_entities = self._convert_entities_to_lightrag_format(entities)
                 lightrag_relations = self._convert_relations_to_lightrag_format(relations)
                 lightrag_chunks = self._convert_chunks_to_lightrag_format(chunks, doc_id)
+
+                # DEBUG: Log counts after extraction and conversion
+                logger.info(
+                    "DEBUG_extraction_and_conversion_complete",
+                    doc_id=doc_id,
+                    raw_entities=len(entities),
+                    raw_relations=len(relations),
+                    raw_chunks=len(chunks),
+                    converted_entities=len(lightrag_entities),
+                    converted_relations=len(lightrag_relations),
+                    converted_chunks=len(lightrag_chunks),
+                    sample_entity_raw=entities[0] if entities else "NO_ENTITIES",
+                    sample_entity_converted=lightrag_entities[0] if lightrag_entities else "NO_ENTITIES",
+                )
 
                 # PHASE 6: Insert into LightRAG (embeddings + storage)
                 # Use ainsert_custom_kg to insert pre-extracted entities/relations

@@ -2,9 +2,16 @@
  * Admin API Client
  * Sprint 17 Feature 17.1: Admin UI for Directory Indexing
  * Sprint 31 Feature 31.10b: Cost Dashboard API Integration
+ * Sprint 33 Feature 33.1: Directory Scanning API
  */
 
-import type { ReindexProgressChunk, ReindexRequest, SystemStats } from '../types/admin';
+import type {
+  ReindexProgressChunk,
+  ReindexRequest,
+  SystemStats,
+  ScanDirectoryRequest,
+  ScanDirectoryResponse,
+} from '../types/admin';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -163,6 +170,36 @@ export async function getCostStats(
       },
     }
   );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Sprint 33 Feature 33.1: Directory Scanning API
+// ============================================================================
+
+/**
+ * Scan a directory for indexable files
+ * Sprint 33 Feature 33.1: Directory Selector
+ *
+ * @param request Directory path and recursive flag
+ * @returns ScanDirectoryResponse with file list and statistics
+ */
+export async function scanDirectory(
+  request: ScanDirectoryRequest
+): Promise<ScanDirectoryResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/indexing/scan-directory`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
