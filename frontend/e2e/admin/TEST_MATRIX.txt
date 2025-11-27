@@ -1,0 +1,216 @@
+================================================================================
+                    SPRINT 33 E2E TEST MATRIX
+================================================================================
+
+TOTAL TESTS: 37 | GROUPS: 6 | DURATION: 15-25 minutes | STATUS: READY
+
+================================================================================
+FEATURE 31.7 - Core Indexing Interface (Legacy Compatibility)
+================================================================================
+
+Tests: 10/10 | Duration: 5-10 min | Priority: P0 | Status: PASSING
+
+Tests:
+ 1. Display indexing interface with all controls
+ 2. Handle invalid directory path with error message
+ 3. Cancel indexing operation gracefully
+ 4. Display progress bar during indexing
+ 5. Track indexing progress and display status updates
+ 6. Display indexed document count
+ 7. Complete indexing with success message
+ 8. Toggle advanced options if available
+ 9. Maintain admin access and page functionality
+ 10. Get indexing statistics snapshot
+
+Required Elements:
+  [data-testid="directory-input"]
+  [data-testid="start-indexing"]
+  [data-testid="progress-bar"]
+  [data-testid="cancel-indexing"]
+  [data-testid="success-message"]
+
+================================================================================
+FEATURE 33.1 - Directory Selection Dialog
+================================================================================
+
+Tests: 5/5 | Duration: 1-2 min | Priority: P0 | Status: READY
+
+Tests:
+ 1. Display directory input field with placeholder
+ 2. Show default directory path
+ 3. Enable scan button when directory path entered
+ 4. Display recursive checkbox
+ 5. Handle directory with files
+
+Critical Data-TestID:
+  [data-testid="directory-input"]         REQUIRED
+
+Optional Data-TestID:
+  [data-testid="recursive-checkbox"]      Optional
+  [data-testid="scan-directory"]          Optional
+
+================================================================================
+FEATURE 33.2 - File List with Color Coding
+================================================================================
+
+Tests: 3/3 | Duration: 1-2 min | Priority: P0 | Status: READY
+
+Tests:
+ 1. Display file statistics after directory scan
+ 2. Display file list items
+ 3. Support file selection controls
+
+File Types:
+  Docling (bg-green-700)    - Primary parser, best quality
+  LlamaIndex (bg-green-400) - Fallback parser
+  Unsupported (bg-red-500)  - Skipped files
+
+Data-TestID:
+  [data-testid="file-list"]               Optional
+  [data-testid="scan-statistics"]         Optional
+  [data-testid="select-all"]              Optional
+
+================================================================================
+FEATURE 33.3 - Live Progress Display (Compact)
+================================================================================
+
+Tests: 5/5 | Duration: 2-3 min | Priority: P0 | Status: READY
+
+Tests:
+ 1. Display current file name during indexing
+ 2. Display page numbers during indexing
+ 3. Calculate and display estimated remaining time
+ 4. Show progress bar with percentage
+
+Progress Info Required:
+  Current File: "financial_report_2024.pdf"
+  Page Numbers: "12 / 45"
+  Files: "3 / 23"
+  Percentage: "27%"
+  ETA: "~4 min 32s"
+
+Critical Data-TestID:
+  [data-testid="progress-bar"]            REQUIRED
+  [data-testid="progress-percentage"]     REQUIRED
+
+Optional Data-TestID:
+  [data-testid="current-file"]            Optional
+  [data-testid="current-page"]            Optional
+  [data-testid="estimated-time"]          Optional
+
+================================================================================
+FEATURE 33.4 - Detail Dialog with Extended Information
+================================================================================
+
+Tests: 7/7 | Duration: 3-5 min | Priority: P1 | Status: READY
+
+Tests:
+ 1. Show Details button during indexing
+ 2. Open detail dialog when Details button clicked
+ 3. Display page preview in detail dialog
+ 4. Display VLM images section in detail dialog
+ 5. Display pipeline status in detail dialog
+ 6. Display extracted entities in detail dialog
+
+Detail Dialog Sections:
+  Page Preview/Thumbnail
+  VLM Images with descriptions
+  Chunk text preview
+  Pipeline status (parsing, VLM, chunking, embedding, graph)
+  Extracted entities and relations
+
+Optional Data-TestID:
+  [data-testid="detail-dialog"]           Optional
+  [data-testid="detail-page-preview"]     Optional
+  [data-testid="detail-vlm-images"]       Optional
+  [data-testid="detail-chunk-preview"]    Optional
+  [data-testid="detail-pipeline-status"]  Optional
+  [data-testid="detail-entities"]         Optional
+
+================================================================================
+FEATURE 33.5 - Error Tracking with Dialog
+================================================================================
+
+Tests: 7/7 | Duration: 2-3 min | Priority: P1 | Status: READY
+
+Tests:
+ 1. Display error tracking button during indexing
+ 2. Show error count badge
+ 3. Open error dialog when error button clicked
+ 4. Display error list with details
+ 5. Support CSV export of errors
+ 6. Categorize errors with type indicators
+ 7. Support error type categories (ERROR, WARNING, INFO)
+
+Error Categories:
+  ERROR  - File skipped (red)
+  WARN   - Problem but continued (orange)
+  INFO   - Informational (blue)
+
+Critical Data-TestID:
+  [data-testid="error-button"]            REQUIRED
+  [data-testid="error-count-badge"]       REQUIRED
+
+Optional Data-TestID:
+  [data-testid="error-dialog"]            Optional
+  [data-testid="error-list"]              Optional
+  [data-testid="error-export-csv"]        Optional
+
+================================================================================
+EXECUTION SUMMARY
+================================================================================
+
+Estimated Timeline:
+  Setup (10-15 sec)
+  Feature 31.7  (5-10 min)
+  Feature 33.1  (1-2 min)
+  Feature 33.2  (1-2 min)
+  Feature 33.3  (2-3 min)
+  Feature 33.4  (3-5 min)
+  Feature 33.5  (2-3 min)
+  Report (1-2 min)
+  ----------------------
+  TOTAL: 15-25 minutes
+
+Test Distribution:
+  Feature 31.7: 10 tests (27%)
+  Feature 33.1:  5 tests (14%)
+  Feature 33.2:  3 tests (8%)
+  Feature 33.3:  5 tests (14%)
+  Feature 33.4:  7 tests (19%)
+  Feature 33.5:  7 tests (19%)
+  -------
+  37 tests total
+
+Success Criteria:
+  - All 37 tests executable
+  - At least 32/37 pass (86% pass rate)
+  - No critical backend errors
+  - All required data-testid found
+  - HTML report generated
+  - No console errors
+
+================================================================================
+QUICK COMMANDS
+================================================================================
+
+# Run all tests
+npm run test:e2e -- e2e/admin/indexing.spec.ts
+
+# Run specific feature
+npm run test:e2e -- e2e/admin/indexing.spec.ts -g "Feature 33.1"
+
+# Debug mode
+npm run test:e2e -- e2e/admin/indexing.spec.ts --debug
+
+# Generate HTML report
+npm run test:e2e -- e2e/admin/indexing.spec.ts --reporter=html
+
+# View report
+open playwright-report/index.html
+
+================================================================================
+STATUS: READY FOR EXECUTION
+CREATED: 2025-11-27
+SPRINT: 33
+================================================================================

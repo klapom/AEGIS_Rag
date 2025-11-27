@@ -234,4 +234,324 @@ export class AdminIndexingPage extends BasePage {
       return false;
     }
   }
+
+  /**
+   * Feature 33.1: Get file statistics after directory scan
+   * Returns counts of different file types found
+   */
+  async getFileStatistics(): Promise<{
+    total: number;
+    docling_supported: number;
+    llamaindex_supported: number;
+    unsupported: number;
+  } | null> {
+    try {
+      const statsText = await this.page
+        .locator('[data-testid="scan-statistics"]')
+        .textContent({ timeout: 5000 });
+
+      if (!statsText) return null;
+
+      // Parse statistics from text (format depends on UI)
+      // This is a placeholder - adjust based on actual format
+      return {
+        total: 0,
+        docling_supported: 0,
+        llamaindex_supported: 0,
+        unsupported: 0,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Feature 33.2: Get list of files with their support status
+   */
+  async getFileList(): Promise<
+    Array<{
+      name: string;
+      size: string;
+      type: 'docling' | 'llamaindex' | 'unsupported';
+    }>
+  > {
+    try {
+      const fileItems = await this.page.locator('[data-testid="file-item-"]').all();
+
+      const files: Array<{
+        name: string;
+        size: string;
+        type: 'docling' | 'llamaindex' | 'unsupported';
+      }> = [];
+
+      for (const item of fileItems) {
+        const name = await item.locator('[data-testid*="file-name"]').textContent();
+        const size = await item.locator('[data-testid*="file-size"]').textContent();
+        const classes = await item.evaluate((el) => el.className);
+
+        let type: 'docling' | 'llamaindex' | 'unsupported' = 'unsupported';
+        if (classes.includes('bg-green-700')) {
+          type = 'docling';
+        } else if (classes.includes('bg-green-400')) {
+          type = 'llamaindex';
+        }
+
+        if (name && size) {
+          files.push({
+            name: name.trim(),
+            size: size.trim(),
+            type,
+          });
+        }
+      }
+
+      return files;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Feature 33.3: Get current progress details
+   */
+  async getProgressDetails(): Promise<{
+    currentFile: string | null;
+    currentPage: string | null;
+    totalPages: string | null;
+    filesProcessed: string | null;
+    totalFiles: string | null;
+    percentage: number;
+    estimatedTime: string | null;
+  }> {
+    return {
+      currentFile: await this.page
+        .locator('[data-testid="current-file"]')
+        .textContent()
+        .catch(() => null),
+      currentPage: await this.page
+        .locator('[data-testid="current-page"]')
+        .textContent()
+        .catch(() => null),
+      totalPages: await this.page
+        .locator('[data-testid="total-pages"]')
+        .textContent()
+        .catch(() => null),
+      filesProcessed: await this.page
+        .locator('[data-testid="files-processed"]')
+        .textContent()
+        .catch(() => null),
+      totalFiles: await this.page
+        .locator('[data-testid="total-files"]')
+        .textContent()
+        .catch(() => null),
+      percentage: await this.getProgressPercentage(),
+      estimatedTime: await this.page
+        .locator('[data-testid="estimated-time"]')
+        .textContent()
+        .catch(() => null),
+    };
+  }
+
+  /**
+   * Feature 33.4: Open detail dialog
+   */
+  async openDetailDialog(): Promise<boolean> {
+    try {
+      const detailsBtn = this.page.locator('button:has-text("Details")');
+      const isVisible = await detailsBtn.isVisible({ timeout: 5000 }).catch(() => false);
+
+      if (isVisible) {
+        await detailsBtn.click();
+        // Wait for dialog to open
+        await this.page.waitForTimeout(500);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Feature 33.4: Close detail dialog
+   */
+  async closeDetailDialog(): Promise<void> {
+    try {
+      const closeBtn = this.page.locator('[data-testid="detail-dialog"] button:has-text("Close")');
+      await closeBtn.click();
+    } catch {
+      // Dialog may not have close button - use Escape key
+      await this.page.press('Escape');
+    }
+  }
+
+  /**
+   * Feature 33.4: Get detail dialog information
+   */
+  async getDetailDialogInfo(): Promise<{
+    hasPagePreview: boolean;
+    hasVLMImages: boolean;
+    hasChunks: boolean;
+    hasPipelineStatus: boolean;
+    hasEntities: boolean;
+  }> {
+    return {
+      hasPagePreview: await this.page
+        .locator('[data-testid="detail-page-preview"]')
+        .isVisible({ timeout: 2000 })
+        .catch(() => false),
+      hasVLMImages: await this.page
+        .locator('[data-testid="detail-vlm-images"]')
+        .isVisible({ timeout: 2000 })
+        .catch(() => false),
+      hasChunks: await this.page
+        .locator('[data-testid="detail-chunk-preview"]')
+        .isVisible({ timeout: 2000 })
+        .catch(() => false),
+      hasPipelineStatus: await this.page
+        .locator('[data-testid="detail-pipeline-status"]')
+        .isVisible({ timeout: 2000 })
+        .catch(() => false),
+      hasEntities: await this.page
+        .locator('[data-testid="detail-entities"]')
+        .isVisible({ timeout: 2000 })
+        .catch(() => false),
+    };
+  }
+
+  /**
+   * Feature 33.5: Open error dialog
+   */
+  async openErrorDialog(): Promise<boolean> {
+    try {
+      const errorBtn = this.page.locator('[data-testid="error-button"]');
+      const isVisible = await errorBtn.isVisible({ timeout: 5000 }).catch(() => false);
+
+      if (isVisible) {
+        await errorBtn.click();
+        // Wait for dialog to open
+        await this.page.waitForTimeout(500);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Feature 33.5: Get error count
+   */
+  async getErrorCount(): Promise<number> {
+    try {
+      const text = await this.page
+        .locator('[data-testid="error-count-badge"]')
+        .textContent({ timeout: 2000 });
+      const match = text?.match(/(\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Feature 33.5: Get list of errors
+   */
+  async getErrorList(): Promise<
+    Array<{
+      type: 'ERROR' | 'WARNING' | 'INFO';
+      timestamp: string | null;
+      file: string | null;
+      message: string;
+    }>
+  > {
+    try {
+      const errorItems = await this.page.locator('[data-testid^="error-item-"]').all();
+
+      const errors: Array<{
+        type: 'ERROR' | 'WARNING' | 'INFO';
+        timestamp: string | null;
+        file: string | null;
+        message: string;
+      }> = [];
+
+      for (const item of errorItems) {
+        const text = await item.textContent();
+        const classes = await item.evaluate((el) => el.className);
+
+        let type: 'ERROR' | 'WARNING' | 'INFO' = 'INFO';
+        if (classes.includes('error')) type = 'ERROR';
+        else if (classes.includes('warning')) type = 'WARNING';
+
+        if (text) {
+          errors.push({
+            type,
+            timestamp: null, // Extract from text if format known
+            file: null, // Extract from text if format known
+            message: text.trim(),
+          });
+        }
+      }
+
+      return errors;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Feature 33.5: Export errors as CSV
+   */
+  async exportErrorsAsCSV(): Promise<boolean> {
+    try {
+      const exportBtn = this.page.locator('[data-testid="error-export-csv"]');
+      const isVisible = await exportBtn.isVisible({ timeout: 2000 }).catch(() => false);
+
+      if (isVisible) {
+        await exportBtn.click();
+        // Wait for download
+        await this.page.waitForTimeout(1000);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Select/deselect specific files
+   */
+  async selectFile(fileName: string, selected: boolean): Promise<void> {
+    const checkbox = this.page.locator(`[data-testid="file-checkbox-${fileName}"]`);
+    const isChecked = await checkbox.isChecked().catch(() => false);
+
+    if (selected && !isChecked) {
+      await checkbox.check();
+    } else if (!selected && isChecked) {
+      await checkbox.uncheck();
+    }
+  }
+
+  /**
+   * Get all selected files
+   */
+  async getSelectedFiles(): Promise<string[]> {
+    try {
+      const checkboxes = await this.page.locator('[data-testid^="file-checkbox-"]:checked').all();
+
+      const files: string[] = [];
+      for (const checkbox of checkboxes) {
+        const testId = await checkbox.getAttribute('data-testid');
+        if (testId) {
+          const fileName = testId.replace('file-checkbox-', '');
+          files.push(fileName);
+        }
+      }
+
+      return files;
+    } catch {
+      return [];
+    }
+  }
 }
