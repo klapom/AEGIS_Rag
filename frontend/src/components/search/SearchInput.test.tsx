@@ -94,4 +94,41 @@ describe('SearchInput', () => {
     const submitButton = screen.getByTitle(/Suche starten/) as HTMLButtonElement;
     expect(submitButton.disabled).toBe(false);
   });
+
+  it('should clear input field after successful submission', () => {
+    const mockOnSubmit = vi.fn();
+    render(<SearchInput onSubmit={mockOnSubmit} />);
+
+    const input = screen.getByPlaceholderText(/Fragen Sie/) as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'What is AI?' } });
+
+    // Verify input has the value before submission
+    expect(input.value).toBe('What is AI?');
+
+    // Submit via button click
+    const submitButton = screen.getByTitle(/Suche starten/);
+    fireEvent.click(submitButton);
+
+    // Input should be cleared immediately
+    expect(input.value).toBe('');
+    expect(mockOnSubmit).toHaveBeenCalledWith('What is AI?', 'hybrid');
+  });
+
+  it('should clear input field after Enter key submission', () => {
+    const mockOnSubmit = vi.fn();
+    render(<SearchInput onSubmit={mockOnSubmit} />);
+
+    const input = screen.getByPlaceholderText(/Fragen Sie/) as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'test query' } });
+
+    // Verify input has the value before submission
+    expect(input.value).toBe('test query');
+
+    // Submit via Enter key
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    // Input should be cleared immediately
+    expect(input.value).toBe('');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid');
+  });
 });

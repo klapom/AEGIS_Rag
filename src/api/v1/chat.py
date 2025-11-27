@@ -68,9 +68,15 @@ async def save_conversation_turn(
         True if saved successfully
     """
     try:
+        logger.info(
+            "save_conversation_turn_start",
+            session_id=session_id,
+            sources_count=len(sources) if sources else 0
+        )
         from src.components.memory import get_redis_memory
 
         redis_memory = get_redis_memory()
+        logger.info("redis_memory_obtained", session_id=session_id)
 
         # Load existing conversation or create new one
         existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
@@ -97,6 +103,23 @@ async def save_conversation_turn(
             }
         )
 
+        # Serialize sources for storage (ensure they're dicts)
+        serialized_sources = []
+        if sources:
+            for source in sources:
+                if isinstance(source, dict):
+                    # Already a dict, use as-is
+                    serialized_sources.append(source)
+                elif hasattr(source, 'model_dump'):
+                    # Pydantic v2
+                    serialized_sources.append(source.model_dump())
+                elif hasattr(source, 'dict'):
+                    # Pydantic v1
+                    serialized_sources.append(source.dict())
+                else:
+                    # Fallback: try to convert to dict
+                    serialized_sources.append(dict(source) if hasattr(source, '__iter__') else {})
+
         messages.append(
             {
                 "role": "assistant",
@@ -104,6 +127,7 @@ async def save_conversation_turn(
                 "timestamp": datetime.now(UTC).isoformat(),
                 "intent": intent,
                 "source_count": len(sources) if sources else 0,
+                "sources": serialized_sources,  # Store full sources for follow-up generation
             }
         )
 
@@ -115,6 +139,13 @@ async def save_conversation_turn(
             "message_count": len(messages),
         }
 
+        logger.info(
+            "storing_conversation_to_redis",
+            session_id=session_id,
+            message_count=len(messages),
+            sources_in_last_msg=len(serialized_sources)
+        )
+
         success = await redis_memory.store(
             key=session_id,
             value=conversation_data,
@@ -124,9 +155,14 @@ async def save_conversation_turn(
 
         if success:
             logger.info(
-                "conversation_saved",
+                "conversation_saved_success",
                 session_id=session_id,
                 message_count=len(messages),
+            )
+        else:
+            logger.error(
+                "conversation_save_failed_redis_returned_false",
+                session_id=session_id
             )
 
         return success
@@ -352,13 +388,20 @@ async def chat(request: ChatRequest) -> ChatResponse:
         )
 
         # Sprint 17 Feature 17.2: Save conversation to Redis
-        await save_conversation_turn(
+        save_success = await save_conversation_turn(
             session_id=session_id,
             user_message=request.query,
             assistant_message=answer,
             intent=result.get("intent"),
             sources=sources,
         )
+
+        if not save_success:
+            logger.warning(
+                "conversation_save_failed_nonstreaming",
+                session_id=session_id,
+                message="save_conversation_turn returned False"
+            )
 
         return response
 
@@ -472,6 +515,16 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                 answer = _extract_answer(result)
                 collected_intent = result.get("intent")
                 citation_map = result.get("citation_map", {})
+
+                # Phase 1 Diagnostic Logging: Log citation_map state
+                logger.info(
+                    "CITATIONS_DEBUG_CHAT_API",
+                    has_citation_map=bool(citation_map),
+                    citation_map_count=len(citation_map) if citation_map else 0,
+                    citation_map_keys=list(citation_map.keys())[:5] if citation_map else [],
+                    answer_preview=answer[:200] if answer else "",
+                    result_keys=list(result.keys()),
+                )
 
                 # Send citation_map in metadata (Sprint 27 Feature 27.10)
                 if citation_map:

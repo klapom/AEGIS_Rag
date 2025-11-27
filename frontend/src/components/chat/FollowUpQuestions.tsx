@@ -25,17 +25,20 @@ export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuesti
   useEffect(() => {
     const fetchQuestions = async () => {
       if (!sessionId) {
+        console.log('[FollowUpQuestions] No session ID provided');
         return;
       }
 
+      console.log('[FollowUpQuestions] Fetching questions for session:', sessionId);
       setIsLoading(true);
       setError(null);
 
       try {
         const fetchedQuestions = await getFollowUpQuestions(sessionId);
+        console.log('[FollowUpQuestions] Received questions:', fetchedQuestions);
         setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
       } catch (err) {
-        console.error('Failed to fetch follow-up questions:', err);
+        console.error('[FollowUpQuestions] Failed to fetch follow-up questions:', err);
         setError('Keine Fragen verfugbar');
         // Don't show empty state - just silently fail
         setQuestions([]);

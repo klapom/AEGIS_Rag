@@ -369,7 +369,6 @@ class SystemStats(BaseModel):
     neo4j_total_relations: int | None = Field(
         None, description="Total relationships in Neo4j graph"
     )
-    neo4j_total_chunks: int | None = Field(None, description="Total chunks stored in Neo4j")
 
     # System metadata
     last_reindex_timestamp: str | None = Field(
@@ -468,7 +467,6 @@ async def get_system_stats() -> SystemStats:
         logger.info("stats_collection_phase", phase="neo4j", status="starting")
         neo4j_total_entities = None
         neo4j_total_relations = None
-        neo4j_total_chunks = None
 
         try:
             from src.components.graph_rag.neo4j_client import get_neo4j_client
@@ -477,9 +475,9 @@ async def get_system_stats() -> SystemStats:
             logger.info("neo4j_client_initialized")
 
             # Query Neo4j for statistics
-            query_entities = "MATCH (e:Entity) RETURN count(e) as count"
+            # Note: LightRAG uses "base" label for entities, not "Entity"
+            query_entities = "MATCH (e:base) RETURN count(e) as count"
             query_relations = "MATCH ()-[r]->() RETURN count(r) as count"
-            query_chunks = "MATCH (c:Chunk) RETURN count(c) as count"
 
             # Execute queries
             logger.info("executing_neo4j_query", query="entities")
@@ -493,12 +491,6 @@ async def get_system_stats() -> SystemStats:
             if relations_result and len(relations_result) > 0:
                 neo4j_total_relations = relations_result[0].get("count", 0)
                 logger.info("neo4j_relations_retrieved", count=neo4j_total_relations)
-
-            logger.info("executing_neo4j_query", query="chunks")
-            chunks_result = await neo4j_client.execute_query(query_chunks)
-            if chunks_result and len(chunks_result) > 0:
-                neo4j_total_chunks = chunks_result[0].get("count", 0)
-                logger.info("neo4j_chunks_retrieved", count=neo4j_total_chunks)
 
         except Exception as e:
             logger.warning("failed_to_get_neo4j_stats", error=str(e), exc_info=True)
@@ -549,7 +541,6 @@ async def get_system_stats() -> SystemStats:
             bm25_corpus_size=bm25_corpus_size,
             neo4j_total_entities=neo4j_total_entities,
             neo4j_total_relations=neo4j_total_relations,
-            neo4j_total_chunks=neo4j_total_chunks,
             last_reindex_timestamp=last_reindex_timestamp,
             embedding_model=embedding_service.model_name,
             total_conversations=total_conversations,

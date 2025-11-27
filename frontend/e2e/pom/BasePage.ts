@@ -32,19 +32,34 @@ export class BasePage {
    * Wait for LLM response generation
    * LLM calls can take 10-20 seconds, especially for streaming
    *
-   * Wait for at least one message to appear (simple and reliable)
+   * Waits for streaming to complete by checking for:
+   * 1. The streaming indicator to appear (confirms backend responded)
+   * 2. The streaming indicator to show completion (data-streaming="false")
    */
-  async waitForLLMResponse(timeout = 20000) {
+  async waitForLLMResponse(timeout = 30000) {
     try {
-      // Wait for at least one message element to be visible
-      // This is more reliable than waiting for data-streaming attribute changes
-      await this.page.locator('[data-testid="message"]').first().waitFor({
+      // Wait for the prose content area to have actual text (not skeleton)
+      // The .prose div contains the answer - wait until it has real content
+      const answerArea = this.page.locator('.prose.prose-lg');
+
+      // First, wait for the streaming container to appear
+      await this.page.locator('[data-streaming]').first().waitFor({
         state: 'visible',
-        timeout
+        timeout: timeout / 2
       });
 
-      // Additional wait to ensure streaming has finished
-      await this.page.waitForTimeout(2000);
+      // Then wait for streaming to complete (data-streaming="false")
+      // Poll for this state since attribute value changes
+      await this.page.waitForFunction(
+        () => {
+          const el = document.querySelector('[data-streaming="false"]');
+          return el !== null;
+        },
+        { timeout }
+      );
+
+      // Small buffer for React re-render with citations
+      await this.page.waitForTimeout(1000);
     } catch (error) {
       throw new Error(
         `LLM response timeout after ${timeout}ms. Check backend connectivity.`
@@ -86,8 +101,9 @@ export class BasePage {
 
   /**
    * Wait for network to be idle
+   * Increased timeout for LLM responses which can take 10-30 seconds
    */
-  async waitForNetworkIdle(timeout = 5000) {
+  async waitForNetworkIdle(timeout = 30000) {
     await this.page.waitForLoadState('networkidle', { timeout });
   }
 

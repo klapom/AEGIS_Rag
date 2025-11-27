@@ -412,10 +412,6 @@ function StatisticsGrid({ stats }: StatisticsGridProps) {
             label: 'Relations',
             value: stats.neo4j_total_relations?.toLocaleString() || 'N/A',
           },
-          {
-            label: 'Chunks',
-            value: stats.neo4j_total_chunks?.toLocaleString() || 'N/A',
-          },
         ]}
       />
 

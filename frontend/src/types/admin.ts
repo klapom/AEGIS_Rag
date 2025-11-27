@@ -48,7 +48,6 @@ export interface SystemStats {
   // Neo4j / LightRAG statistics
   neo4j_total_entities?: number | null;
   neo4j_total_relations?: number | null;
-  neo4j_total_chunks?: number | null;
 
   // System metadata
   last_reindex_timestamp?: string | null;

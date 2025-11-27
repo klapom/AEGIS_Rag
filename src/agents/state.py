@@ -87,6 +87,10 @@ class AgentState(MessagesState):
         default_factory=dict,
         description="Additional metadata for execution tracking",
     )
+    citation_map: dict[int, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Map of citation numbers to source metadata (Sprint 27 Feature 27.10)",
+    )
 
 
 class QueryMetadata(BaseModel):

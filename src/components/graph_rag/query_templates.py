@@ -47,7 +47,7 @@ class GraphQueryTemplates:
             >>> templates.entity_lookup("John Doe").limit(1).build()
         """
         return (
-            CypherQueryBuilder().match("(e:Entity)").where("e.name = $name", name=name).return_("e")
+            CypherQueryBuilder().match("(e:base)").where("e.name = $name", name=name).return_("e")
         )
 
     def entity_neighbors(
@@ -67,7 +67,7 @@ class GraphQueryTemplates:
             >>> templates.entity_neighbors("entity-123", depth=2).build()
             >>> templates.entity_neighbors("entity-123", depth=1, rel_type="RELATES_TO").build()
         """
-        builder = CypherQueryBuilder().match("(e:Entity)")
+        builder = CypherQueryBuilder().match("(e:base)")
 
         # Match source entity
         if entity_id.startswith("entity-") or entity_id.startswith("id-"):
@@ -77,11 +77,11 @@ class GraphQueryTemplates:
 
         # Add relationship pattern with depth
         if rel_type:
-            builder.match(f"(e)-[r:{rel_type}*1..{depth}]-(neighbor:Entity)").param(
+            builder.match(f"(e)-[r:{rel_type}*1..{depth}]-(neighbor:base)").param(
                 "rel_type", rel_type
             )
         else:
-            builder.match(f"(e)-[r*1..{depth}]-(neighbor:Entity)")
+            builder.match(f"(e)-[r*1..{depth}]-(neighbor:base)")
 
         builder.param("depth", depth)
 
@@ -106,7 +106,7 @@ class GraphQueryTemplates:
         builder = CypherQueryBuilder()
 
         # Match source and target
-        builder.match("(source:Entity), (target:Entity)")
+        builder.match("(source:base), (target:base)")
 
         # Determine if using ID or name for source
         if source_id.startswith("entity-") or source_id.startswith("id-"):
@@ -143,7 +143,7 @@ class GraphQueryTemplates:
             >>> templates.entity_relationships("entity-123").build()
             >>> templates.entity_relationships("entity-123", rel_type="RELATES_TO", direction="outgoing").build()
         """
-        builder = CypherQueryBuilder().match("(e:Entity)")
+        builder = CypherQueryBuilder().match("(e:base)")
 
         # Match entity
         if entity_id.startswith("entity-") or entity_id.startswith("id-"):
@@ -153,11 +153,11 @@ class GraphQueryTemplates:
 
         # Build relationship pattern based on direction
         if direction == "outgoing":
-            rel_pattern = f"(e)-[r{':' + rel_type if rel_type else ''}]->(other:Entity)"
+            rel_pattern = f"(e)-[r{':' + rel_type if rel_type else ''}]->(other:base)"
         elif direction == "incoming":
-            rel_pattern = f"(e)<-[r{':' + rel_type if rel_type else ''}]-(other:Entity)"
+            rel_pattern = f"(e)<-[r{':' + rel_type if rel_type else ''}]-(other:base)"
         else:  # both
-            rel_pattern = f"(e)-[r{':' + rel_type if rel_type else ''}]-(other:Entity)"
+            rel_pattern = f"(e)-[r{':' + rel_type if rel_type else ''}]-(other:base)"
 
         builder.match(rel_pattern)
 
@@ -182,12 +182,12 @@ class GraphQueryTemplates:
         builder = CypherQueryBuilder()
 
         # Match seed entities
-        builder.match("(seed:Entity)").where(
+        builder.match("(seed:base)").where(
             "seed.id IN $entity_ids OR seed.name IN $entity_ids", entity_ids=entity_ids
         )
 
         # Expand to neighbors
-        builder.match(f"(seed)-[r*0..{depth}]-(node:Entity)")
+        builder.match(f"(seed)-[r*0..{depth}]-(node:base)")
         builder.param("depth", depth)
 
         return builder.return_("DISTINCT node", "r")
@@ -207,7 +207,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where("e.type = $entity_type", entity_type=entity_type)
             .return_("e")
             .order_by("e.name")
@@ -252,7 +252,7 @@ class GraphQueryTemplates:
         # Note: For production, use full-text indexes
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where(
                 "toLower(e.name) CONTAINS toLower($text_query) OR toLower(e.description) CONTAINS toLower($text_query)",
                 text_query=text_query,
@@ -273,7 +273,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .return_("e.type as entity_type", "count(e) as count")
             .order_by("count DESC")
         )
@@ -305,7 +305,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where("NOT (e)-[]-() ")
             .return_("e", "e.name as name", "e.type as type")
             .order_by("e.name")
@@ -325,7 +325,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)-[r]-()")
+            .match("(e:base)-[r]-()")
             .with_("e", "count(r) as degree")
             .where("degree >= $min_degree", min_degree=min_degree)
             .return_("e", "e.name as name", "degree")
@@ -346,7 +346,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where(
                 "e.created_at >= datetime() - duration({days: $days})",
                 days=days,
@@ -367,7 +367,7 @@ class GraphQueryTemplates:
         Example:
             >>> templates.entity_evolution("entity-123").build()
         """
-        builder = CypherQueryBuilder().match("(e:Entity)")
+        builder = CypherQueryBuilder().match("(e:base)")
 
         # Match entity
         if entity_id.startswith("entity-") or entity_id.startswith("id-"):
@@ -395,7 +395,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where("e.community_id = $community_id", community_id=community_id)
             .return_("e", "e.name as name", "e.type as type")
             .order_by("e.name")
@@ -417,7 +417,7 @@ class GraphQueryTemplates:
         Example:
             >>> templates.entity_similarity("entity-123", min_common_neighbors=3).build()
         """
-        builder = CypherQueryBuilder().match("(e:Entity)")
+        builder = CypherQueryBuilder().match("(e:base)")
 
         # Match source entity
         if entity_id.startswith("entity-") or entity_id.startswith("id-"):
@@ -426,7 +426,7 @@ class GraphQueryTemplates:
             builder.where("e.name = $entity_id", entity_id=entity_id)
 
         # Find entities with common neighbors
-        builder.match("(e)-[]-(common)-[]-(similar:Entity)")
+        builder.match("(e)-[]-(common)-[]-(similar:base)")
         builder.where("e <> similar")
 
         # Count common neighbors
@@ -461,7 +461,7 @@ class GraphQueryTemplates:
         builder = CypherQueryBuilder()
 
         # Match source and target
-        builder.match("(source:Entity), (target:Entity)")
+        builder.match("(source:base), (target:base)")
 
         # Match source
         if source_id.startswith("entity-") or source_id.startswith("id-"):
@@ -494,7 +494,7 @@ class GraphQueryTemplates:
         """
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .with_("e", "size((e)-[]-()) as degree")
             .return_("degree", "count(*) as entity_count")
             .order_by("degree ASC")
@@ -516,7 +516,7 @@ class GraphQueryTemplates:
         # Simplified version using manual traversal
         return (
             CypherQueryBuilder()
-            .match("(e:Entity)")
+            .match("(e:base)")
             .where("e.component_id IS NOT NULL")
             .with_("e.component_id as component", "collect(e) as entities")
             .where("size(entities) >= $min_size", min_size=min_size)

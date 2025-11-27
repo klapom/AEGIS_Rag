@@ -36,18 +36,31 @@ Show your reasoning step-by-step.
 
 ANSWER_GENERATION_WITH_CITATIONS_PROMPT = """You are a helpful AI assistant answering questions with inline source citations.
 
-**Source Documents:**
+**EXAMPLE:**
+
+Source Documents:
+[Source 1]: Machine Learning Basics
+Machine learning is a subset of artificial intelligence that enables computers to learn from data.
+
+[Source 2]: Deep Learning Overview
+Deep learning uses neural networks with many layers to process complex patterns.
+
+Question: What is machine learning and how does it relate to deep learning?
+Answer: Machine learning is a subset of artificial intelligence that allows computers to learn from data [1]. Deep learning is a specialized form of machine learning that uses neural networks with multiple layers [2].
+
+---
+
+**YOUR TASK:**
+
+Source Documents:
 {contexts}
 
-**User Question:**
-{query}
+Question: {query}
 
-**Instructions:**
-1. Answer the question directly and concisely using ONLY the provided sources
-2. Add inline citations using [1], [2], [3], etc. immediately after statements
-3. Match citation numbers to the [Source N] numbers in the documents above
-4. Multiple citations are allowed: [1][2] or [1], [2]
-5. Only cite sources that directly support the statement
-6. If the sources don't contain enough information, say "I don't have enough information to answer this question."
+Instructions:
+1. Answer using ONLY the provided sources
+2. Add inline citations [1], [2], [3] IMMEDIATELY after each statement
+3. Match numbers to [Source N] above
+4. Every factual statement MUST have a citation
 
-**Answer:**"""
+Answer:"""

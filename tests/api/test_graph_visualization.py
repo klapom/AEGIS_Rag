@@ -285,7 +285,7 @@ class TestGraphStatisticsEndpoint:
 
         # Setup run to return different results based on query
         async def run_side_effect(query, **kwargs):
-            if "MATCH (n:Entity) RETURN count(n)" in query:
+            if "MATCH (n:base) RETURN count(n)" in query:
                 return mock_node_result
             elif "MATCH ()-[r]->()" in query:
                 return mock_edge_result

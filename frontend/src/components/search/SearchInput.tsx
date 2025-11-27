@@ -38,6 +38,7 @@ export function SearchInput({
     const trimmedQuery = query.trim();
     if (trimmedQuery) {
       onSubmit(trimmedQuery, mode);
+      setQuery(''); // Clear input immediately after sending
     }
   };
 

@@ -85,7 +85,7 @@ class CommunityLabeler:
         try:
             cypher = """
             UNWIND $entity_ids AS entity_id
-            MATCH (e:Entity {id: entity_id})
+            MATCH (e:base {id: entity_id})
             RETURN e.id AS id, e.name AS name, e.type AS type,
                    e.description AS description, e.properties AS properties,
                    e.source_document AS source_document, e.confidence AS confidence
@@ -290,7 +290,7 @@ Label:"""
         """
         try:
             cypher = """
-            MATCH (e:Entity {community_id: $community_id})
+            MATCH (e:base {community_id: $community_id})
             SET e.community_label = $label
             RETURN count(e) AS updated_count
             """
@@ -330,7 +330,7 @@ Label:"""
         """
         try:
             cypher = """
-            MATCH (e:Entity {community_id: $community_id})
+            MATCH (e:base {community_id: $community_id})
             RETURN e.community_label AS label
             LIMIT 1
             """

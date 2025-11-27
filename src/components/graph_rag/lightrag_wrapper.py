@@ -28,17 +28,9 @@ from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.models import GraphQueryResult
 
-# Import deprecated ThreePhaseExtractor (still used in _extract_per_chunk_with_three_phase)
-# TODO Sprint 30: Migrate to ExtractionService and remove this import
-try:
-    import sys
-
-    sys.path.insert(
-        0, str(Path(__file__).parent.parent.parent.parent / "archive" / "deprecated" / "sprint-21")
-    )
-    from three_phase_extractor_deprecated import ThreePhaseExtractor  # noqa: F401
-except ImportError:
-    ThreePhaseExtractor = None  # Graceful fallback
+# Sprint 32 FIX: Use ExtractionPipelineFactory instead of deprecated ThreePhaseExtractor
+# The ThreePhaseExtractor was removed in Sprint 25 (ADR-026) and caused 'NoneType' is not callable errors
+from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
 
 logger = structlog.get_logger(__name__)
 
@@ -630,16 +622,14 @@ class LightRAGClient:
             total_chunks=len(chunks),
         )
 
-        # Step 2: Initialize Three-Phase Extractor
-        try:
-            extractor = ThreePhaseExtractor()
-        except ImportError as e:
-            logger.error(
-                "three_phase_extractor_unavailable",
-                error=str(e),
-                hint="Install: pip install spacy && python -m spacy download en_core_web_trf",
-            )
-            raise
+        # Step 2: Initialize Extraction Pipeline (Sprint 32 FIX: Use Factory per ADR-026)
+        # Replaces deprecated ThreePhaseExtractor which was removed in Sprint 25
+        extractor = create_extraction_pipeline_from_config()
+        logger.info(
+            "extraction_pipeline_initialized",
+            pipeline_type="llm_extraction",
+            note="Using ExtractionPipelineFactory for entity/relation extraction",
+        )
 
         # Step 3: Extract entities and relations per chunk
         all_entities = []
@@ -659,7 +649,7 @@ class LightRAGClient:
             )
 
             try:
-                # Run Three-Phase Pipeline
+                # Run LLM Extraction Pipeline (Sprint 32 FIX: Replaced Three-Phase)
                 entities, relations = await extractor.extract(
                     text=chunk_text, document_id=f"{document_id}#{chunk_index}"
                 )
@@ -782,19 +772,11 @@ class LightRAGClient:
         """Convert Three-Phase entities to LightRAG format.
 
         Sprint 14 Feature 14.1 - Phase 3: Entity Format Conversion
+        Sprint 32 FIX: Handle both "name" (Three-Phase) and "entity_name" (LLMExtractionPipeline) keys
 
-        Three-Phase Format:
-        {
-            "name": "Entity Name",
-            "type": "PERSON",
-            "description": "...",
-            "source": "spacy",
-            "chunk_id": "abc123...",
-            "document_id": "docs/file.md",
-            "chunk_index": 0,
-            "start_token": 0,
-            "end_token": 600
-        }
+        Input formats (both supported):
+        - Three-Phase: {"name": "...", "type": "..."}
+        - LLMExtractionPipeline: {"entity_name": "...", "entity_type": "..."}
 
         LightRAG Format:
         {
@@ -806,7 +788,7 @@ class LightRAGClient:
         }
 
         Args:
-            entities: list of entities from Three-Phase Pipeline
+            entities: list of entities from extraction pipeline
 
         Returns:
             list of entities in LightRAG format
@@ -816,7 +798,9 @@ class LightRAGClient:
         lightrag_entities = []
 
         for entity in entities:
-            entity_name = entity.get("name", "UNKNOWN")
+            # Sprint 32 FIX: Handle both "name" and "entity_name" keys
+            # LLMExtractionPipeline uses "entity_name", Three-Phase uses "name"
+            entity_name = entity.get("name", entity.get("entity_name", "UNKNOWN"))
             # Sprint 30: Ensure source_id is never empty (LightRAG treats "" as UNKNOWN)
             # Use chunk_id if available, otherwise fallback to document_id
             chunk_id = entity.get("chunk_id", "")
@@ -834,11 +818,14 @@ class LightRAGClient:
                     entity_keys=list(entity.keys()),
                 )
 
+            # Sprint 32 FIX: Handle both "type" and "entity_type" keys
+            entity_type = entity.get("type", entity.get("entity_type", "UNKNOWN"))
+
             lightrag_entity = {
                 # LightRAG uses both entity_name (input) and entity_id (storage)
                 "entity_name": entity_name,
                 "entity_id": entity_name,  # Same as entity_name
-                "entity_type": entity.get("type", "UNKNOWN"),
+                "entity_type": entity_type,
                 "description": entity.get("description", ""),
                 "source_id": source_id,  # Sprint 30: Never empty, fallback to document_id
                 "file_path": document_id,  # Sprint 30: Use document_id for file_path

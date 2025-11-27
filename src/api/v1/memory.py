@@ -645,7 +645,7 @@ async def get_memory_stats(
                 if neo4j_connected:
                     # Get entity/relationship counts
                     count_query = """
-                    MATCH (e:Entity)
+                    MATCH (e:base)
                     WITH count(e) as entity_count
                     MATCH ()-[r]->()
                     RETURN entity_count, count(r) as relationship_count

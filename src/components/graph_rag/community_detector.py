@@ -373,11 +373,11 @@ class CommunityDetector:
 
         try:
             # Fetch all entities and relationships
-            entities_query = "MATCH (e:Entity) RETURN e.id AS id"
+            entities_query = "MATCH (e:base) RETURN e.id AS id"
             entities = await self.neo4j_client.execute_read(entities_query)
 
             relationships_query = """
-            MATCH (e1:Entity)-[r:RELATED_TO]-(e2:Entity)
+            MATCH (e1:base)-[r:RELATED_TO]-(e2:base)
             RETURN DISTINCT e1.id AS source, e2.id AS target
             """
             relationships = await self.neo4j_client.execute_read(relationships_query)
@@ -481,7 +481,7 @@ class CommunityDetector:
                 # Update all entities in this community
                 cypher = """
                 UNWIND $entity_ids AS entity_id
-                MATCH (e:Entity {id: entity_id})
+                MATCH (e:base {id: entity_id})
                 SET e.community_id = $community_id
                 RETURN count(e) AS updated_count
                 """
@@ -518,7 +518,7 @@ class CommunityDetector:
         """
         try:
             cypher = """
-            MATCH (e:Entity {community_id: $community_id})
+            MATCH (e:base {community_id: $community_id})
             RETURN e.id AS entity_id, e.community_label AS label
             """
 
@@ -557,7 +557,7 @@ class CommunityDetector:
             Community ID or None if not assigned
         """
         try:
-            cypher = "MATCH (e:Entity {id: $entity_id}) RETURN e.community_id AS community_id"
+            cypher = "MATCH (e:base {id: $entity_id}) RETURN e.community_id AS community_id"
             result = await self.neo4j_client.execute_read(cypher, {"entity_id": entity_id})
 
             if result and result[0].get("community_id"):
@@ -582,7 +582,7 @@ class CommunityDetector:
 
         try:
             cypher = """
-            MATCH (e:Entity)
+            MATCH (e:base)
             WHERE e.community_id IS NOT NULL
             WITH e.community_id AS community_id,
                  e.community_label AS label,

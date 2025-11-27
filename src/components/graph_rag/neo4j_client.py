@@ -249,12 +249,12 @@ class Neo4jClient:
             DatabaseConnectionError: If index creation fails
         """
         indexes = {
-            "entity_valid_from": "CREATE INDEX entity_valid_from IF NOT EXISTS FOR (e:Entity) ON (e.valid_from)",
-            "entity_valid_to": "CREATE INDEX entity_valid_to IF NOT EXISTS FOR (e:Entity) ON (e.valid_to)",
-            "entity_transaction_from": "CREATE INDEX entity_transaction_from IF NOT EXISTS FOR (e:Entity) ON (e.transaction_from)",
-            "entity_transaction_to": "CREATE INDEX entity_transaction_to IF NOT EXISTS FOR (e:Entity) ON (e.transaction_to)",
-            "entity_version_id": "CREATE INDEX entity_version_id IF NOT EXISTS FOR (e:Entity) ON (e.version_id)",
-            "entity_version_number": "CREATE INDEX entity_version_number IF NOT EXISTS FOR (e:Entity) ON (e.version_number)",
+            "entity_valid_from": "CREATE INDEX entity_valid_from IF NOT EXISTS FOR (e:base) ON (e.valid_from)",
+            "entity_valid_to": "CREATE INDEX entity_valid_to IF NOT EXISTS FOR (e:base) ON (e.valid_to)",
+            "entity_transaction_from": "CREATE INDEX entity_transaction_from IF NOT EXISTS FOR (e:base) ON (e.transaction_from)",
+            "entity_transaction_to": "CREATE INDEX entity_transaction_to IF NOT EXISTS FOR (e:base) ON (e.transaction_to)",
+            "entity_version_id": "CREATE INDEX entity_version_id IF NOT EXISTS FOR (e:base) ON (e.version_id)",
+            "entity_version_number": "CREATE INDEX entity_version_number IF NOT EXISTS FOR (e:base) ON (e.version_number)",
         }
 
         results = {}

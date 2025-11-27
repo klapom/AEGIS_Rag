@@ -19,19 +19,19 @@ class TestCypherQueryBuilder:
     def test_simple_match_return(self):
         """Test basic MATCH ... RETURN query."""
         builder = CypherQueryBuilder()
-        result = builder.match("(n:Entity)").return_("n").build()
+        result = builder.match("(n:base)").return_("n").build()
 
-        assert result["query"] == "MATCH (n:Entity) RETURN n"
+        assert result["query"] == "MATCH (n:base) RETURN n"
         assert result["parameters"] == {}
 
     def test_match_with_where(self):
         """Test MATCH with WHERE clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)").where("n.name = $name", name="John").return_("n").build()
+            builder.match("(n:base)").where("n.name = $name", name="John").return_("n").build()
         )
 
-        assert "MATCH (n:Entity)" in result["query"]
+        assert "MATCH (n:base)" in result["query"]
         assert "WHERE (n.name = $name)" in result["query"]
         assert "RETURN n" in result["query"]
         assert result["parameters"]["name"] == "John"
@@ -40,7 +40,7 @@ class TestCypherQueryBuilder:
         """Test multiple WHERE conditions with AND."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)")
+            builder.match("(n:base)")
             .where("n.name = $name", name="John")
             .where("n.age > $min_age", min_age=18)
             .return_("n")
@@ -54,7 +54,7 @@ class TestCypherQueryBuilder:
     def test_order_by_limit(self):
         """Test ORDER BY and LIMIT clauses."""
         builder = CypherQueryBuilder()
-        result = builder.match("(n:Entity)").return_("n").order_by("n.name DESC").limit(10).build()
+        result = builder.match("(n:base)").return_("n").order_by("n.name DESC").limit(10).build()
 
         assert "ORDER BY n.name DESC" in result["query"]
         assert "LIMIT 10" in result["query"]
@@ -62,7 +62,7 @@ class TestCypherQueryBuilder:
     def test_skip_and_limit(self):
         """Test SKIP and LIMIT for pagination."""
         builder = CypherQueryBuilder()
-        result = builder.match("(n:Entity)").return_("n").skip(20).limit(10).build()
+        result = builder.match("(n:base)").return_("n").skip(20).limit(10).build()
 
         assert "SKIP 20" in result["query"]
         assert "LIMIT 10" in result["query"]
@@ -78,7 +78,7 @@ class TestCypherQueryBuilder:
         """Test multi-hop relationship pattern."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(a:Entity)")
+            builder.match("(a:base)")
             .relationship("a", "RELATES_TO", "b", min_hops=1, max_hops=3)
             .return_("b")
             .build()
@@ -104,27 +104,27 @@ class TestCypherQueryBuilder:
         """Test CREATE clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.create("(n:Entity {name: $name})").param("name", "Test").return_("n").build()
+            builder.create("(n:base {name: $name})").param("name", "Test").return_("n").build()
         )
 
-        assert "CREATE (n:Entity {name: $name})" in result["query"]
+        assert "CREATE (n:base {name: $name})" in result["query"]
         assert result["parameters"]["name"] == "Test"
 
     def test_merge_node(self):
         """Test MERGE clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.merge("(n:Entity {name: $name})").param("name", "Test").return_("n").build()
+            builder.merge("(n:base {name: $name})").param("name", "Test").return_("n").build()
         )
 
-        assert "MERGE (n:Entity {name: $name})" in result["query"]
+        assert "MERGE (n:base {name: $name})" in result["query"]
         assert result["parameters"]["name"] == "Test"
 
     def test_set_properties(self):
         """Test SET clause."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)")
+            builder.match("(n:base)")
             .where("n.id = $id", id="123")
             .set_("n.updated = $updated", updated=True)
             .return_("n")
@@ -137,7 +137,7 @@ class TestCypherQueryBuilder:
     def test_delete_node(self):
         """Test DELETE clause."""
         builder = CypherQueryBuilder()
-        result = builder.match("(n:Entity)").where("n.id = $id", id="123").delete("n").build()
+        result = builder.match("(n:base)").where("n.id = $id", id="123").delete("n").build()
 
         assert "DELETE n" in result["query"]
         assert result["parameters"]["id"] == "123"
@@ -146,7 +146,7 @@ class TestCypherQueryBuilder:
         """Test WITH clause for query chaining."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)")
+            builder.match("(n:base)")
             .with_("n", "count(*) as total")
             .where("total > $min", min=5)
             .return_("n", "total")
@@ -160,7 +160,7 @@ class TestCypherQueryBuilder:
         """Test complex query with multiple clauses."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(a:Entity)")
+            builder.match("(a:base)")
             .where("a.type = $type", type="Person")
             .relationship("a", "KNOWS", "b", min_hops=1, max_hops=2)
             .where("b.age > $min_age", min_age=18)
@@ -170,7 +170,7 @@ class TestCypherQueryBuilder:
             .build()
         )
 
-        assert "MATCH (a:Entity)" in result["query"]
+        assert "MATCH (a:base)" in result["query"]
         assert "WHERE" in result["query"]
         assert "RETURN a, b, count(*) as connection_count" in result["query"]
         assert "ORDER BY connection_count DESC" in result["query"]
@@ -179,7 +179,7 @@ class TestCypherQueryBuilder:
     def test_reset_builder(self):
         """Test resetting the query builder."""
         builder = CypherQueryBuilder()
-        builder.match("(n:Entity)").where("n.name = $name", name="John").return_("n")
+        builder.match("(n:base)").where("n.name = $name", name="John").return_("n")
 
         builder.reset()
 
@@ -225,7 +225,7 @@ class TestCypherQueryBuilder:
         """Test query parameterization for security."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)")
+            builder.match("(n:base)")
             .where("n.name = $name", name="John'; DROP TABLE users; --")
             .return_("n")
             .build()
@@ -239,7 +239,7 @@ class TestCypherQueryBuilder:
         """Test multiple RETURN items."""
         builder = CypherQueryBuilder()
         result = (
-            builder.match("(n:Entity)")
+            builder.match("(n:base)")
             .return_("n.name", "n.type", "n.id", "count(*) as total")
             .build()
         )

@@ -76,7 +76,7 @@ class VersionManager:
 
         # Close current version
         close_query = """
-        MATCH (e:Entity {id: $entity_id})
+        MATCH (e:base {id: $entity_id})
         WHERE e.valid_to IS NULL
         SET e.valid_to = datetime($now),
             e.transaction_to = datetime($now)
@@ -118,7 +118,7 @@ class VersionManager:
                     prop_assignments.append(f"e.{key} = ${param_key}")
 
         create_query = f"""
-        CREATE (e:Entity {{id: $entity_id}})
+        CREATE (e:base {{id: $entity_id}})
         SET {', '.join(prop_assignments)}
         RETURN e
         """
@@ -156,7 +156,7 @@ class VersionManager:
             list of version records ordered by version_number descending
         """
         query = """
-        MATCH (e:Entity {id: $entity_id})
+        MATCH (e:base {id: $entity_id})
         """
 
         if not include_deleted:
@@ -203,7 +203,7 @@ class VersionManager:
             Version data at timestamp or None if not found
         """
         query = """
-        MATCH (e:Entity {id: $entity_id})
+        MATCH (e:base {id: $entity_id})
         WHERE e.valid_from <= datetime($timestamp)
           AND (e.valid_to IS NULL OR e.valid_to > datetime($timestamp))
           AND e.transaction_from <= datetime($timestamp)
@@ -256,7 +256,7 @@ class VersionManager:
             Comparison result with changed fields and differences
         """
         query = """
-        MATCH (e:Entity {id: $entity_id})
+        MATCH (e:base {id: $entity_id})
         WHERE e.version_number IN [$version1, $version2]
         RETURN e
         ORDER BY e.version_number
@@ -420,7 +420,7 @@ class VersionManager:
         """
         # Get target version
         query = """
-        MATCH (e:Entity {id: $entity_id, version_id: $version_id})
+        MATCH (e:base {id: $entity_id, version_id: $version_id})
         RETURN e
         """
 
@@ -484,7 +484,7 @@ class VersionManager:
 
         # Soft delete versions beyond retention limit
         query = """
-        MATCH (e:Entity {id: $entity_id})
+        MATCH (e:base {id: $entity_id})
         WHERE e.transaction_to IS NULL
         WITH e
         ORDER BY e.version_number DESC

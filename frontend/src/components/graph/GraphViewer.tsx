@@ -15,7 +15,7 @@
 import { useRef, useCallback, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useGraphData } from '../../hooks/useGraphData';
-import type { GraphFilters, ForceGraphNode, ForceGraphLink } from '../../types/graph';
+import type { GraphFilters, ForceGraphNode } from '../../types/graph';
 
 interface GraphViewerProps {
   maxNodes?: number;
@@ -37,8 +37,9 @@ export function GraphViewer({
   const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
 
   // Entity type color mapping
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getNodeColor = useCallback(
-    (node: ForceGraphNode) => {
+    (node: any) => {
       // Highlight selected node
       if (selectedNode && node.id === selectedNode.id) {
         return '#f59e0b'; // Amber
@@ -72,16 +73,18 @@ export function GraphViewer({
   );
 
   // Node size based on degree (number of connections)
-  const getNodeSize = useCallback((node: ForceGraphNode) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getNodeSize = useCallback((node: any) => {
     const baseSize = 4;
     const scaleFactor = 0.5;
     return baseSize + ((node.degree as number) || 0) * scaleFactor;
   }, []);
 
   // Handle node click
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeClick = useCallback(
-    (node: ForceGraphNode) => {
-      setSelectedNode(node);
+    (node: any) => {
+      setSelectedNode(node as ForceGraphNode);
       if (onNodeClick) {
         onNodeClick(node as ForceGraphNode);
       }
@@ -95,7 +98,8 @@ export function GraphViewer({
   }, []);
 
   // Node hover tooltip
-  const getNodeLabel = useCallback((node: ForceGraphNode) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getNodeLabel = useCallback((node: any) => {
     const label = node.label || node.id || 'Unknown';
     const type = node.type || 'Unknown';
     const degree = node.degree || 0;
@@ -106,13 +110,15 @@ export function GraphViewer({
   }, []);
 
   // Handle node hover
-  const handleNodeHover = useCallback((node: ForceGraphNode | null) => {
-    setHoveredNode(node);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleNodeHover = useCallback((node: any) => {
+    setHoveredNode(node as ForceGraphNode | null);
   }, []);
 
   // Link color and opacity
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getLinkColor = useCallback(
-    (link: ForceGraphLink) => {
+    (link: any) => {
       const source = typeof link.source === 'object' ? link.source : null;
       const target = typeof link.target === 'object' ? link.target : null;
 

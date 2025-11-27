@@ -12,13 +12,12 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { Network } from 'lucide-react';  // Sprint 29 Feature 29.2
 import { streamChat, generateConversationTitle, type ChatChunk } from '../../api/chat';
 import type { Source } from '../../types/chat';
 import { SourceCardsScroll, type SourceCardsScrollRef } from './SourceCardsScroll';
 import { CopyButton } from './CopyButton';  // Sprint 27 Feature 27.6
-import { createCitationTextRenderer } from '../../utils/citations';  // Sprint 28 Feature 28.2
+import { MarkdownWithCitations } from './MarkdownWithCitations';  // Sprint 32 Fix: Simpler citation rendering
 import { FollowUpQuestions } from './FollowUpQuestions';  // Sprint 28 Feature 28.1
 import { GraphModal } from '../graph/GraphModal';  // Sprint 29 Feature 29.2
 import { extractEntitiesFromSources } from '../../utils/entityExtractor';  // Sprint 29 Feature 29.2
@@ -30,9 +29,10 @@ interface StreamingAnswerProps {
   onSessionIdReceived?: (sessionId: string) => void;
   onTitleGenerated?: (title: string) => void;  // Sprint 17 Feature 17.3
   onFollowUpQuestion?: (question: string) => void;  // Sprint 28 Feature 28.1
+  onComplete?: (answer: string, sources: Source[]) => void;  // Sprint 32: Save answer to history
 }
 
-export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated, onFollowUpQuestion }: StreamingAnswerProps) {
+export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated, onFollowUpQuestion, onComplete }: StreamingAnswerProps) {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
@@ -43,6 +43,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
   const [showGraphModal, setShowGraphModal] = useState(false);  // Sprint 29 Feature 29.2
   const [citationMap, setCitationMap] = useState<Record<number, any> | null>(null);  // Sprint 27 Feature 27.10
   const sourceCardsRef = useRef<SourceCardsScrollRef>(null);  // Sprint 28 Feature 28.2
+  const hasCalledOnComplete = useRef(false);  // Sprint 32 Fix: Prevent duplicate onComplete calls
 
   useEffect(() => {
     // Sprint 17 Feature 17.5: Fix duplicate streaming caused by React StrictMode
@@ -57,6 +58,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
       setIntent('');
       setError(null);
       setIsStreaming(true);
+      hasCalledOnComplete.current = false;  // Sprint 32 Fix: Reset on new query
 
       try {
         for await (const chunk of streamChat({
@@ -108,6 +110,15 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
     }
   };
 
+  // Sprint 32: Notify parent when streaming completes so answer can be saved to history
+  // Fix: Use ref guard to prevent duplicate calls when sources change after streaming ends
+  useEffect(() => {
+    if (!isStreaming && answer && onComplete && !hasCalledOnComplete.current) {
+      hasCalledOnComplete.current = true;
+      onComplete(answer, sources);
+    }
+  }, [isStreaming, answer, sources, onComplete]);
+
   // Sprint 17 Feature 17.3: Auto-trigger title generation after first answer
   useEffect(() => {
     const triggerTitleGeneration = async () => {
@@ -138,16 +149,18 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
           setIntent(chunk.data.intent);
         }
         // Sprint 17 Feature 17.2: Notify parent of session_id for follow-up questions
-        if (chunk.data?.session_id) {
-          setCurrentSessionId(chunk.data.session_id);
+        // Handle both formats: chunk.data?.session_id (nested) and chunk.session_id (top-level)
+        const sessionIdFromMetadata = chunk.data?.session_id || (chunk as any).session_id;
+        if (sessionIdFromMetadata) {
+          setCurrentSessionId(sessionIdFromMetadata);
           if (onSessionIdReceived) {
-            onSessionIdReceived(chunk.data.session_id);
+            onSessionIdReceived(sessionIdFromMetadata);
           }
         }
         // Sprint 27 Feature 27.10: Store citation_map from backend
         if (chunk.data?.citation_map) {
           setCitationMap(chunk.data.citation_map);
-          console.log('Citation map received:', chunk.data.citations_count, 'citations');
+          console.log('Citation map received from metadata:', chunk.data.citations_count, 'citations');
         }
         break;
 
@@ -165,6 +178,12 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
 
       case 'complete':
         setMetadata(chunk.data);
+        // Sprint 27 Fix: Also check for citation_map in complete event
+        // In fallback mode, citation_map might be in the final complete data
+        if (chunk.data?.citation_map) {
+          setCitationMap(chunk.data.citation_map);
+          console.log('Citation map received from complete:', Object.keys(chunk.data.citation_map).length, 'citations');
+        }
         setIsStreaming(false);
         break;
 
@@ -214,33 +233,51 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
         <SourceCardsScroll ref={sourceCardsRef} sources={sources} />
       )}
 
-      {/* Answer Content with Citations - Sprint 28 Feature 28.2 */}
+      {/* Answer Content with Citations - Sprint 28 Feature 28.2, Sprint 32 Fix */}
       <div className="prose prose-lg max-w-none">
         {answer ? (
           <>
-            <ReactMarkdown
-              components={{
-                // Custom text renderer to process inline citations
-                // react-markdown passes props object with children
-                text: ({ children }) => {
-                  if (typeof children === 'string') {
-                    // Sprint 27 Feature 27.10: Prefer citationMap from backend over sources
-                    // Convert citationMap (1-indexed Record) to 0-indexed array
-                    const sourcesForCitations = citationMap
-                      ? Object.entries(citationMap)
-                          .sort(([a], [b]) => Number(a) - Number(b))  // Sort by citation number
-                          .map(([_, metadata]) => metadata)  // Extract metadata, now 0-indexed
-                      : sources;
+            {/* Sprint 32 Fix: Use citation_map directly - backend now includes score/metadata */}
+            {(() => {
+              // Sprint 32 Backend Fix: citation_map now contains score and metadata
+              // No merge workaround needed - use citation_map directly if available
+              const sourcesForCitations = citationMap
+                ? Object.entries(citationMap)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([_, citationData]) => ({
+                      ...citationData,
+                      // Ensure score is a number (backend sends it properly now)
+                      score: typeof citationData.score === 'number' ? citationData.score : 0,
+                      // Ensure metadata is an object
+                      metadata: citationData.metadata || {},
+                    }))
+                : sources;
 
-                    const textRenderer = createCitationTextRenderer(sourcesForCitations, handleCitationClick);
-                    return <>{textRenderer(children)}</>;
-                  }
-                  return <>{children}</>;
-                }
-              }}
-            >
-              {answer}
-            </ReactMarkdown>
+              // DEBUG: Log what we're passing to MarkdownWithCitations
+              console.log('[StreamingAnswer] Citation data from backend:', {
+                citationMapExists: !!citationMap,
+                citationMapKeys: citationMap ? Object.keys(citationMap) : [],
+                sourcesCount: sources.length,
+                sourcesForCitationsCount: sourcesForCitations.length,
+                answerHasCitations: /\[\d+\]/.test(answer),
+                firstSourcePreview: sourcesForCitations[0] ? {
+                  text: sourcesForCitations[0].text?.substring(0, 50),
+                  source: sourcesForCitations[0].source,
+                  score: sourcesForCitations[0].score,
+                  hasMetadata: !!sourcesForCitations[0].metadata,
+                  metadataKeys: sourcesForCitations[0].metadata ? Object.keys(sourcesForCitations[0].metadata) : []
+                } : 'NO SOURCES'
+              });
+
+              return (
+                <MarkdownWithCitations
+                  key={`md-${citationMap ? Object.keys(citationMap).length : 0}-${sources.length}`}
+                  content={answer}
+                  sources={sourcesForCitations as Source[]}
+                  onCitationClick={handleCitationClick}
+                />
+              );
+            })()}
             {isStreaming && <span className="animate-pulse text-primary">▊</span>}
           </>
         ) : (
@@ -281,15 +318,19 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
       )}
 
       {/* Follow-up Questions - Sprint 28 Feature 28.1 */}
-      {!isStreaming && currentSessionId && (
+      {!isStreaming && currentSessionId ? (
         <FollowUpQuestions
           sessionId={currentSessionId}
           onQuestionClick={(question) => {
+            console.log('[StreamingAnswer] Follow-up question clicked:', question);
             if (onFollowUpQuestion) {
               onFollowUpQuestion(question);
             }
           }}
         />
+      ) : (
+        console.log('[StreamingAnswer] Follow-up rendering blocked:', { isStreaming, currentSessionId }),
+        null
       )}
 
       {/* Metadata */}

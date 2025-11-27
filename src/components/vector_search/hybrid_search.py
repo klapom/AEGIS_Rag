@@ -286,9 +286,9 @@ class HybridSearch:
                 formatted_results.append(
                     {
                         "id": str(result["id"]),
-                        "text": result["payload"].get("text", ""),
+                        "text": result["payload"].get("content", result["payload"].get("text", "")),
                         "score": result["score"],
-                        "source": result["payload"].get("source", "unknown"),
+                        "source": result["payload"].get("document_path", result["payload"].get("source", "unknown")),
                         "document_id": result["payload"].get("document_id", ""),
                         "rank": rank,
                         "search_type": "vector",
@@ -567,15 +567,15 @@ class HybridSearch:
                             text = node_content.get("text", "")
                         except (json.JSONDecodeError, KeyError):
                             logger.warning("Failed to parse _node_content", point_id=str(point.id))
-                    elif point.payload and "text" in point.payload:
-                        # Direct text field
-                        text = str(point.payload.get("text", ""))
+                    elif point.payload and ("content" in point.payload or "text" in point.payload):
+                        # Direct text field - try 'content' first (Sprint 32), fallback to 'text'
+                        text = str(point.payload.get("content", point.payload.get("text", "")))
 
                     doc = {
                         "id": str(point.id),
                         "text": text,
                         "source": (
-                            str(point.payload.get("file_name", point.payload.get("source", "")))
+                            str(point.payload.get("document_path", point.payload.get("file_name", point.payload.get("source", ""))))
                             if point.payload
                             else ""
                         ),

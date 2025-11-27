@@ -90,25 +90,27 @@ async def test_citations_e2e_flow_with_mocked_llm():
         },
     ]
 
-    # Patch LLM proxy to return mocked response
-    with patch("src.agents.answer_generator.AegisLLMProxy") as mock_proxy_class:
+    # Patch LLM proxy singleton getter to return mocked response
+    with patch("src.agents.answer_generator.get_aegis_llm_proxy") as mock_proxy_getter:
         mock_proxy_instance = AsyncMock()
         mock_proxy_instance.generate = AsyncMock(return_value=mock_llm_response)
-        mock_proxy_class.return_value = mock_proxy_instance
+        mock_proxy_getter.return_value = mock_proxy_instance
 
-        # Patch vector search to return mock contexts (if Qdrant unavailable)
-        if not check_qdrant_available():
-            with patch(
-                "src.agents.vector_search_agent.get_hybrid_search_engine"
-            ) as mock_search_engine:
-                mock_engine = AsyncMock()
-                mock_engine.search = AsyncMock(return_value=mock_contexts)
-                mock_search_engine.return_value = mock_engine
+        # CRITICAL: Reset AnswerGenerator singleton to pick up mocked proxy
+        with patch("src.agents.answer_generator._answer_generator", None):
+            # Patch vector search to return mock contexts (if Qdrant unavailable)
+            if not check_qdrant_available():
+                with patch(
+                    "src.agents.vector_search_agent.get_hybrid_search_engine"
+                ) as mock_search_engine:
+                    mock_engine = AsyncMock()
+                    mock_engine.search = AsyncMock(return_value=mock_contexts)
+                    mock_search_engine.return_value = mock_engine
 
+                    await _run_citation_e2e_test(mock_contexts)
+            else:
+                # Use real Qdrant if available
                 await _run_citation_e2e_test(mock_contexts)
-        else:
-            # Use real Qdrant if available
-            await _run_citation_e2e_test(mock_contexts)
 
 
 async def _run_citation_e2e_test(expected_contexts: list[dict[str, Any]]) -> None:
@@ -191,41 +193,43 @@ async def test_citations_e2e_with_vector_intent():
         tokens_used=20,
     )
 
-    with patch("src.agents.answer_generator.AegisLLMProxy") as mock_proxy_class:
+    with patch("src.agents.answer_generator.get_aegis_llm_proxy") as mock_proxy_getter:
         mock_proxy_instance = AsyncMock()
         mock_proxy_instance.generate = AsyncMock(return_value=mock_llm_response)
-        mock_proxy_class.return_value = mock_proxy_instance
+        mock_proxy_getter.return_value = mock_proxy_instance
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            async with client.stream(
-                "POST",
-                "/api/v1/chat/stream",
-                json={
-                    "query": "How does vector search work?",
-                    "intent": "vector",
-                    "include_sources": True,
-                },
-                headers={"Accept": "text/event-stream"},
-            ) as response:
-                assert response.status_code == 200
+        # CRITICAL: Reset AnswerGenerator singleton to pick up mocked proxy
+        with patch("src.agents.answer_generator._answer_generator", None):
+            async with AsyncClient(app=app, base_url="http://test") as client:
+                async with client.stream(
+                    "POST",
+                    "/api/v1/chat/stream",
+                    json={
+                        "query": "How does vector search work?",
+                        "intent": "vector",
+                        "include_sources": True,
+                    },
+                    headers={"Accept": "text/event-stream"},
+                ) as response:
+                    assert response.status_code == 200
 
-                citation_map_received = False
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            message = json.loads(data_str)
-                            if message.get("type") == "metadata" and "data" in message:
-                                if "citation_map" in message["data"]:
-                                    citation_map_received = True
-                                    break
-                        except json.JSONDecodeError:
-                            pass
+                    citation_map_received = False
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                message = json.loads(data_str)
+                                if message.get("type") == "metadata" and "data" in message:
+                                    if "citation_map" in message["data"]:
+                                        citation_map_received = True
+                                        break
+                            except json.JSONDecodeError:
+                                pass
 
-                # Citation map should be sent (even if empty)
-                assert response.status_code == 200
+                    # Citation map should be sent (even if empty)
+                    assert response.status_code == 200
 
 
 @pytest.mark.e2e
@@ -241,40 +245,42 @@ async def test_citations_e2e_with_hybrid_intent():
         tokens_used=30,
     )
 
-    with patch("src.agents.answer_generator.AegisLLMProxy") as mock_proxy_class:
+    with patch("src.agents.answer_generator.get_aegis_llm_proxy") as mock_proxy_getter:
         mock_proxy_instance = AsyncMock()
         mock_proxy_instance.generate = AsyncMock(return_value=mock_llm_response)
-        mock_proxy_class.return_value = mock_proxy_instance
+        mock_proxy_getter.return_value = mock_proxy_instance
 
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            async with client.stream(
-                "POST",
-                "/api/v1/chat/stream",
-                json={
-                    "query": "What is hybrid search?",
-                    "intent": "hybrid",
-                    "include_sources": True,
-                },
-                headers={"Accept": "text/event-stream"},
-            ) as response:
-                assert response.status_code == 200
+        # CRITICAL: Reset AnswerGenerator singleton to pick up mocked proxy
+        with patch("src.agents.answer_generator._answer_generator", None):
+            async with AsyncClient(app=app, base_url="http://test") as client:
+                async with client.stream(
+                    "POST",
+                    "/api/v1/chat/stream",
+                    json={
+                        "query": "What is hybrid search?",
+                        "intent": "hybrid",
+                        "include_sources": True,
+                    },
+                    headers={"Accept": "text/event-stream"},
+                ) as response:
+                    assert response.status_code == 200
 
-                answer_tokens = []
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]
-                        if data_str == "[DONE]":
-                            break
-                        try:
-                            message = json.loads(data_str)
-                            if message.get("type") == "token":
-                                answer_tokens.append(message.get("content", ""))
-                        except json.JSONDecodeError:
-                            pass
+                    answer_tokens = []
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                break
+                            try:
+                                message = json.loads(data_str)
+                                if message.get("type") == "token":
+                                    answer_tokens.append(message.get("content", ""))
+                            except json.JSONDecodeError:
+                                pass
 
-                # Verify answer contains citation markers
-                full_answer = "".join(answer_tokens)
-                assert "[1]" in full_answer or "[2]" in full_answer, "Answer missing citations"
+                    # Verify answer contains citation markers
+                    full_answer = "".join(answer_tokens)
+                    assert "[1]" in full_answer or "[2]" in full_answer, "Answer missing citations"
 
 
 @pytest.mark.e2e

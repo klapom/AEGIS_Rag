@@ -42,7 +42,7 @@ async def create_temporal_entity(
     with neo4j_driver.session() as session:
         result = session.run(
             """
-            CREATE (e:Entity {
+            CREATE (e:base {
                 name: $name,
                 type: $type,
                 properties: $properties,
@@ -347,8 +347,8 @@ async def test_temporal_relationship_traversal_e2e(temporal_query, neo4j_driver)
     with neo4j_driver.session() as session:
         session.run(
             """
-            MATCH (source:Entity {name: $source_name})
-            MATCH (target:Entity {name: $target_name})
+            MATCH (source:base {name: $source_name})
+            MATCH (target:base {name: $target_name})
             CREATE (source)-[r:CONNECTED_TO {
                 type: 'test_connection',
                 valid_from: $valid_from,
@@ -391,8 +391,8 @@ async def test_temporal_relationship_direction_e2e(temporal_query, neo4j_driver)
     with neo4j_driver.session() as session:
         session.run(
             """
-            MATCH (s:Entity {name: $source})
-            MATCH (t:Entity {name: $target})
+            MATCH (s:base {name: $source})
+            MATCH (t:base {name: $target})
             CREATE (s)-[r:LINKS_TO {
                 valid_from: $valid_from,
                 valid_to: null

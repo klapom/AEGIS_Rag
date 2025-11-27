@@ -16,43 +16,43 @@ class TestCypherQueryBuilder:
     def test_match_clause(self):
         """Test adding MATCH clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)")
+        builder.match("(e:base)")
         query, params = builder.build()
-        assert "MATCH (e:Entity)" in query
+        assert "MATCH (e:base)" in query
         assert params == {}
 
     def test_where_clause(self):
         """Test adding WHERE clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").where("e.type = 'PERSON'")
+        builder.match("(e:base)").where("e.type = 'PERSON'")
         query, params = builder.build()
         assert "WHERE (e.type = 'PERSON')" in query
 
     def test_return_clause(self):
         """Test adding RETURN clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").return_clause("e")
+        builder.match("(e:base)").return_clause("e")
         query, params = builder.build()
         assert "RETURN e" in query
 
     def test_order_by(self):
         """Test ORDER BY clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").return_clause("e").order_by("e.name")
+        builder.match("(e:base)").return_clause("e").order_by("e.name")
         query, params = builder.build()
         assert "ORDER BY e.name" in query
 
     def test_limit(self):
         """Test LIMIT clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").return_clause("e").limit(10)
+        builder.match("(e:base)").return_clause("e").limit(10)
         query, params = builder.build()
         assert "LIMIT 10" in query
 
     def test_skip(self):
         """Test SKIP clause."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").return_clause("e").skip(5)
+        builder.match("(e:base)").return_clause("e").skip(5)
         query, params = builder.build()
         assert "SKIP 5" in query
 
@@ -66,12 +66,12 @@ class TestCypherQueryBuilder:
     def test_complex_query(self):
         """Test building complex query with multiple clauses."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").where("e.id = $entity_id").return_clause("e").order_by(
+        builder.match("(e:base)").where("e.id = $entity_id").return_clause("e").order_by(
             "e.name"
         ).limit(5).set_param("entity_id", "test123")
 
         query, params = builder.build()
-        assert "MATCH (e:Entity)" in query
+        assert "MATCH (e:base)" in query
         assert "WHERE (e.id = $entity_id)" in query
         assert "RETURN e" in query
         assert "ORDER BY e.name" in query
@@ -81,7 +81,7 @@ class TestCypherQueryBuilder:
     def test_reset(self):
         """Test resetting builder state."""
         builder = CypherQueryBuilder()
-        builder.match("(e:Entity)").where("e.id = 'test'").return_clause("e").set_param("id", "123")
+        builder.match("(e:base)").where("e.id = 'test'").return_clause("e").set_param("id", "123")
         builder.reset()
 
         query, params = builder.build()
@@ -96,7 +96,7 @@ class TestTemporalQueryBuilder:
         """Test as_of point-in-time query."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").as_of(timestamp).return_clause("e")
+        builder.match("(e:base)").as_of(timestamp).return_clause("e")
 
         query, params = builder.build()
         assert "e.valid_from <=" in query
@@ -111,7 +111,7 @@ class TestTemporalQueryBuilder:
         builder = TemporalQueryBuilder()
         start = datetime(2025, 1, 1, 0, 0, 0)
         end = datetime(2025, 1, 31, 23, 59, 59)
-        builder.match("(e:Entity)").between(start, end).return_clause("e")
+        builder.match("(e:base)").between(start, end).return_clause("e")
 
         query, params = builder.build()
         assert "e.valid_from <=" in query
@@ -123,7 +123,7 @@ class TestTemporalQueryBuilder:
         builder = TemporalQueryBuilder()
         start = datetime(2025, 1, 1, 0, 0, 0)
         end = datetime(2025, 1, 31, 23, 59, 59)
-        builder.match("(e:Entity)").valid_during(start, end).return_clause("e")
+        builder.match("(e:base)").valid_during(start, end).return_clause("e")
 
         query, params = builder.build()
         assert "e.valid_from <=" in query
@@ -137,7 +137,7 @@ class TestTemporalQueryBuilder:
         builder = TemporalQueryBuilder()
         start = datetime(2025, 1, 1, 0, 0, 0)
         end = datetime(2025, 1, 31, 23, 59, 59)
-        builder.match("(e:Entity)").transaction_during(start, end).return_clause("e")
+        builder.match("(e:base)").transaction_during(start, end).return_clause("e")
 
         query, params = builder.build()
         assert "e.transaction_from <=" in query
@@ -149,7 +149,7 @@ class TestTemporalQueryBuilder:
     def test_current_query(self):
         """Test current (latest version) filter."""
         builder = TemporalQueryBuilder()
-        builder.match("(e:Entity)").current().return_clause("e")
+        builder.match("(e:base)").current().return_clause("e")
 
         query, params = builder.build()
         assert "e.valid_to IS NULL" in query
@@ -159,7 +159,7 @@ class TestTemporalQueryBuilder:
     def test_with_history_query(self):
         """Test with_history (no temporal filter)."""
         builder = TemporalQueryBuilder()
-        builder.match("(e:Entity)").with_history().return_clause("e")
+        builder.match("(e:base)").with_history().return_clause("e")
 
         query, params = builder.build()
         # Should not have temporal filters
@@ -170,7 +170,7 @@ class TestTemporalQueryBuilder:
         """Test at_valid_time (real-world time only)."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").at_valid_time(timestamp).return_clause("e")
+        builder.match("(e:base)").at_valid_time(timestamp).return_clause("e")
 
         query, params = builder.build()
         assert "e.valid_from <=" in query
@@ -183,7 +183,7 @@ class TestTemporalQueryBuilder:
         """Test at_transaction_time (database time only)."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").at_transaction_time(timestamp).return_clause("e")
+        builder.match("(e:base)").at_transaction_time(timestamp).return_clause("e")
 
         query, params = builder.build()
         assert "e.transaction_from <=" in query
@@ -196,7 +196,7 @@ class TestTemporalQueryBuilder:
         """Test combining multiple temporal filters."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").at_valid_time(timestamp).current().return_clause("e")
+        builder.match("(e:base)").at_valid_time(timestamp).current().return_clause("e")
 
         query, params = builder.build()
         # Should have both filters
@@ -207,7 +207,7 @@ class TestTemporalQueryBuilder:
         """Test resetting temporal builder state."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").as_of(timestamp).return_clause("e")
+        builder.match("(e:base)").as_of(timestamp).return_clause("e")
 
         builder.reset()
         query, params = builder.build()
@@ -228,7 +228,7 @@ class TestTemporalQueryEdgeCases:
         """Test querying future timestamp."""
         builder = TemporalQueryBuilder()
         future = datetime.utcnow() + timedelta(days=365)
-        builder.match("(e:Entity)").as_of(future).return_clause("e")
+        builder.match("(e:base)").as_of(future).return_clause("e")
 
         query, params = builder.build()
         assert len(params) == 1
@@ -238,7 +238,7 @@ class TestTemporalQueryEdgeCases:
         """Test querying historical timestamp."""
         builder = TemporalQueryBuilder()
         past = datetime(2020, 1, 1, 0, 0, 0)
-        builder.match("(e:Entity)").as_of(past).return_clause("e")
+        builder.match("(e:base)").as_of(past).return_clause("e")
 
         query, params = builder.build()
         assert len(params) == 1
@@ -248,7 +248,7 @@ class TestTemporalQueryEdgeCases:
         """Test between query with same start and end time."""
         builder = TemporalQueryBuilder()
         timestamp = datetime(2025, 1, 15, 10, 0, 0)
-        builder.match("(e:Entity)").between(timestamp, timestamp).return_clause("e")
+        builder.match("(e:base)").between(timestamp, timestamp).return_clause("e")
 
         query, params = builder.build()
         assert len(params) == 2
@@ -261,7 +261,7 @@ class TestTemporalQueryEdgeCases:
         builder = TemporalQueryBuilder()
         start = datetime(2025, 12, 31, 23, 59, 59)
         end = datetime(2025, 1, 1, 0, 0, 0)
-        builder.match("(e:Entity)").between(start, end).return_clause("e")
+        builder.match("(e:base)").between(start, end).return_clause("e")
 
         query, params = builder.build()
         # Query should build but likely return no results

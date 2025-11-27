@@ -179,11 +179,11 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
 
         # Query nodes and relationships
         query = f"""
-        MATCH (n:Entity)
+        MATCH (n:base)
         {type_filter}
         WITH n
         LIMIT {request.max_nodes}
-        OPTIONAL MATCH (n)-[r]->(m:Entity)
+        OPTIONAL MATCH (n)-[r]->(m:base)
         RETURN n, r, m
         """
 
@@ -252,11 +252,11 @@ async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
         where_clause = " AND ".join(filters)
 
         query = f"""
-        MATCH (n:Entity)
+        MATCH (n:base)
         WHERE {where_clause}
         WITH n
         LIMIT 100
-        OPTIONAL MATCH (n)-[r]->(m:Entity)
+        OPTIONAL MATCH (n)-[r]->(m:base)
         RETURN n, r, m
         """
 
@@ -295,19 +295,19 @@ async def highlight_communities(
 
         # Query nodes in specified communities
         query = f"""
-        MATCH (n:Entity)
+        MATCH (n:base)
         WHERE n.community_id IN {request.community_ids}
         """
 
         if request.include_neighbors:
             query += """
-            OPTIONAL MATCH (n)-[r]-(neighbor:Entity)
+            OPTIONAL MATCH (n)-[r]-(neighbor:base)
             RETURN n, r, neighbor
             """
         else:
             query += """
             WITH n
-            OPTIONAL MATCH (n)-[r]->(m:Entity)
+            OPTIONAL MATCH (n)-[r]->(m:base)
             WHERE m.community_id IN {request.community_ids}
             RETURN n, r, m
             """
@@ -349,10 +349,10 @@ async def get_query_subgraph(request: QuerySubgraphRequest) -> dict[str, Any]:
         neo4j = get_neo4j_client()
 
         query = """
-        MATCH (n:Entity)
+        MATCH (n:base)
         WHERE n.name IN $entity_names
         WITH n
-        OPTIONAL MATCH (n)-[r]-(m:Entity)
+        OPTIONAL MATCH (n)-[r]-(m:base)
         RETURN n, r, m
         """
 
@@ -389,7 +389,7 @@ async def get_graph_statistics() -> GraphStatistics:
 
         async with neo4j.get_driver().session() as session:
             # Node count
-            node_result = await session.run("MATCH (n:Entity) RETURN count(n) as count")
+            node_result = await session.run("MATCH (n:base) RETURN count(n) as count")
             node_count = (await node_result.single())["count"]
 
             # Edge count
@@ -398,21 +398,21 @@ async def get_graph_statistics() -> GraphStatistics:
 
             # Community count
             comm_result = await session.run(
-                "MATCH (n:Entity) WHERE n.community_id IS NOT NULL "
+                "MATCH (n:base) WHERE n.community_id IS NOT NULL "
                 "RETURN count(DISTINCT n.community_id) as count"
             )
             community_count = (await comm_result.single())["count"]
 
             # Entity type distribution
             type_result = await session.run(
-                "MATCH (n:Entity) RETURN n.entity_type as type, count(*) as count"
+                "MATCH (n:base) RETURN n.entity_type as type, count(*) as count"
             )
             type_records = await type_result.data()
             entity_types = {record["type"]: record["count"] for record in type_records}
 
             # Orphaned nodes (degree = 0)
             orphan_result = await session.run(
-                "MATCH (n:Entity) WHERE NOT (n)--() RETURN count(n) as count"
+                "MATCH (n:base) WHERE NOT (n)--() RETURN count(n) as count"
             )
             orphaned_nodes = (await orphan_result.single())["count"]
 
@@ -518,7 +518,7 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
         # 1. Get entities in community
         async with neo4j.get_driver().session() as session:
             entity_result = await session.run(
-                "MATCH (n:Entity {community_id: $community_id}) "
+                "MATCH (n:base {community_id: $community_id}) "
                 "RETURN collect(n.name) as entity_names",
                 community_id=community_id,
             )

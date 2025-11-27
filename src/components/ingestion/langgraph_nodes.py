@@ -1696,12 +1696,14 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         state["graph_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
 
+        # Extract stats from nested structure (Sprint 32 Fix)
+        stats = graph_stats.get("stats", {})
         logger.info(
             "node_graph_extraction_complete",
             document_id=state["document_id"],
-            total_entities=graph_stats.get("total_entities", 0),
-            total_relations=graph_stats.get("total_relations", 0),
-            total_chunks=graph_stats.get("total_chunks", 0),
+            total_entities=stats.get("total_entities", 0),
+            total_relations=stats.get("total_relations", 0),
+            total_chunks=stats.get("total_chunks", 0),
             chunks_with_images=sum(
                 1 for doc in lightrag_docs if doc["metadata"].get("has_image_annotation")
             ),

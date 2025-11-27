@@ -51,7 +51,7 @@ class TestBatchQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_single_query(self, executor, mock_client):
         """Test executing single query in batch."""
-        queries = [("MATCH (n:Entity) RETURN n", {})]
+        queries = [("MATCH (n:base) RETURN n", {})]
 
         results = await executor.execute_batch(queries)
 
@@ -64,7 +64,7 @@ class TestBatchQueryExecutor:
     async def test_execute_multiple_queries(self, executor, mock_client):
         """Test executing multiple queries in parallel."""
         queries = [
-            ("MATCH (n:Entity) RETURN n", {}),
+            ("MATCH (n:base) RETURN n", {}),
             ("MATCH (n:Person) RETURN n", {}),
             ("MATCH (n:Organization) RETURN n", {}),
         ]
@@ -145,8 +145,8 @@ class TestBatchQueryExecutor:
     async def test_batch_write_queries(self, executor, mock_client):
         """Test batch write query execution."""
         queries = [
-            ("CREATE (n:Entity {name: $name})", {"name": "Test1"}),
-            ("CREATE (n:Entity {name: $name})", {"name": "Test2"}),
+            ("CREATE (n:base {name: $name})", {"name": "Test1"}),
+            ("CREATE (n:base {name: $name})", {"name": "Test2"}),
         ]
 
         results = await executor.execute_batch_write(queries)
@@ -176,8 +176,8 @@ class TestBatchQueryExecutor:
         ]
 
         queries = [
-            ("CREATE (n:Entity)-[:REL]->(m:Entity)", {}),
-            ("CREATE (n:Entity), (m:Entity)", {}),
+            ("CREATE (n:base)-[:REL]->(m:base)", {}),
+            ("CREATE (n:base), (m:base)", {}),
         ]
 
         results = await executor.execute_batch_write(queries)
@@ -276,8 +276,8 @@ class TestBatchQueryExecutor:
         ]
 
         queries = [
-            ("CREATE (n:Entity {name: 'Test1'})", {}),
-            ("CREATE (n:Entity {name: 'Test2'})", {}),
+            ("CREATE (n:base {name: 'Test1'})", {}),
+            ("CREATE (n:base {name: 'Test2'})", {}),
         ]
 
         results = await executor.execute_batch_write(queries)

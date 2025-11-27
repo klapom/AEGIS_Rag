@@ -1,6 +1,7 @@
 /**
  * Citation Parsing Utilities
  * Sprint 28 Feature 28.2: Parse and render inline citations
+ * Sprint 32 Fix: Pre-process markdown to handle citations before react-markdown
  *
  * Converts [1], [2], etc. in markdown text to Citation components
  */
@@ -8,6 +9,11 @@
 import { Fragment, type ReactNode } from 'react';
 import { Citation } from '../components/chat/Citation';
 import type { Source } from '../types/chat';
+
+// Special marker for citation placeholders that won't conflict with markdown
+// Using CITE_MARK_X format to avoid markdown interpretation of underscores
+const CITATION_MARKER_PREFIX = 'CITEMARK';
+const CITATION_MARKER_SUFFIX = 'ENDCITE';
 
 /**
  * Parse markdown text and replace citation markers [1], [2], etc.
@@ -110,5 +116,147 @@ export function createCitationTextRenderer(
       return children;
     }
     return <>{parseCitationsInText(children, sources, onClickScrollTo)}</>;
+  };
+}
+
+/**
+ * Pre-process markdown to replace [N] citations with special markers.
+ * This ensures citations are preserved through react-markdown parsing.
+ * Sprint 32 Fix: Pre-processing approach for react-markdown v10+
+ *
+ * @param markdown - The markdown text with [N] citation markers
+ * @returns Modified markdown with citation markers replaced by placeholders
+ */
+export function preprocessMarkdownCitations(markdown: string): string {
+  if (!markdown) return markdown;
+
+  // Replace [N] patterns with special markers
+  // Avoid replacing markdown link syntax like [text](url) or [text][ref]
+  const result = markdown.replace(
+    /\[(\d+)\](?!\(|\[)/g,
+    (_match, num) => `${CITATION_MARKER_PREFIX}${num}${CITATION_MARKER_SUFFIX}`
+  );
+
+  // Log if any replacements were made
+  if (result !== markdown) {
+    console.log('[Preprocess] Replaced citations. Before:', markdown.substring(0, 100));
+    console.log('[Preprocess] After:', result.substring(0, 100));
+  }
+
+  return result;
+}
+
+/**
+ * Check if a string contains citation markers
+ */
+export function containsCitationMarkers(text: string): boolean {
+  return text.includes(CITATION_MARKER_PREFIX);
+}
+
+/**
+ * Replace citation markers with actual Citation components.
+ * Use this to post-process react-markdown output.
+ *
+ * @param text - Text containing citation markers
+ * @param sources - Array of sources for citations
+ * @param onClickScrollTo - Callback when citation is clicked
+ * @returns React nodes with Citation components
+ */
+export function replaceCitationMarkers(
+  text: string,
+  sources: Source[],
+  onClickScrollTo: (sourceId: string) => void
+): ReactNode[] {
+  if (!text || sources.length === 0) {
+    // If no sources, replace markers with original [N] format
+    return [text.replace(
+      new RegExp(`${CITATION_MARKER_PREFIX}(\\d+)${CITATION_MARKER_SUFFIX}`, 'g'),
+      '[$1]'
+    )];
+  }
+
+  const markerRegex = new RegExp(
+    `${CITATION_MARKER_PREFIX}(\\d+)${CITATION_MARKER_SUFFIX}`,
+    'g'
+  );
+
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = markerRegex.exec(text)) !== null) {
+    const fullMatch = match[0];
+    const citationNumber = parseInt(match[1], 10);
+    const matchIndex = match.index;
+
+    // Add text before the citation
+    if (matchIndex > lastIndex) {
+      parts.push(
+        <Fragment key={`text-${key++}`}>
+          {text.slice(lastIndex, matchIndex)}
+        </Fragment>
+      );
+    }
+
+    // Check if citation index is valid (1-indexed)
+    const sourceIndex = citationNumber - 1;
+    if (sourceIndex >= 0 && sourceIndex < sources.length) {
+      const source = sources[sourceIndex];
+      parts.push(
+        <Citation
+          key={`citation-${key++}`}
+          sourceIndex={citationNumber}
+          source={source}
+          onClickScrollTo={onClickScrollTo}
+        />
+      );
+    } else {
+      // Invalid citation number - render as plain text
+      parts.push(
+        <Fragment key={`text-${key++}`}>
+          [{citationNumber}]
+        </Fragment>
+      );
+    }
+
+    lastIndex = matchIndex + fullMatch.length;
+  }
+
+  // Add remaining text after last citation
+  if (lastIndex < text.length) {
+    parts.push(
+      <Fragment key={`text-${key++}`}>
+        {text.slice(lastIndex)}
+      </Fragment>
+    );
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
+/**
+ * Create a text renderer that handles citation markers from pre-processed markdown.
+ * Sprint 32 Fix: Use this with react-markdown components prop.
+ */
+export function createMarkerTextRenderer(
+  sources: Source[],
+  onClickScrollTo: (sourceId: string) => void
+) {
+  return function renderMarkersAsComponents(text: string): ReactNode {
+    if (typeof text !== 'string') {
+      console.log('[TextRenderer] Not a string:', typeof text);
+      return text;
+    }
+    if (!containsCitationMarkers(text)) {
+      // Only log if text is non-trivial
+      if (text.length > 20) {
+        console.log('[TextRenderer] No markers in:', text.substring(0, 50));
+      }
+      return text;
+    }
+    console.log('[TextRenderer] Found markers in:', text.substring(0, 100));
+    console.log('[TextRenderer] sources.length:', sources.length);
+    return <>{replaceCitationMarkers(text, sources, onClickScrollTo)}</>;
   };
 }

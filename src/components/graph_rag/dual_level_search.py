@@ -140,7 +140,7 @@ class DualLevelSearch:
             # Query Neo4j for entities matching the query
             # Use full-text search or embedding similarity (simplified version here)
             cypher_query = """
-            MATCH (e:Entity)
+            MATCH (e:base)
             WHERE toLower(e.name) CONTAINS toLower($query_term)
                OR toLower(e.description) CONTAINS toLower($query_term)
             RETURN e.id AS id, e.name AS name, e.type AS type,
@@ -214,7 +214,7 @@ class DualLevelSearch:
             # This is a simplified implementation - production would use
             # community detection algorithms (Leiden, Louvain)
             cypher_query = """
-            MATCH (e:Entity)
+            MATCH (e:base)
             WHERE toLower(e.name) CONTAINS toLower($query_term)
                OR toLower(e.description) CONTAINS toLower($query_term)
             WITH e.type AS entity_type, collect(e.name) AS entity_names,
@@ -410,7 +410,7 @@ Answer:"""
             entity_names = [e.name for e in entities]
 
             cypher_query = """
-            MATCH (e1:Entity)-[r:RELATED_TO]->(e2:Entity)
+            MATCH (e1:base)-[r:RELATED_TO]->(e2:base)
             WHERE e1.name IN $entity_names OR e2.name IN $entity_names
             RETURN r.id AS id, e1.name AS source, e2.name AS target, r.type AS type,
                    r.description AS description, r.properties AS properties,

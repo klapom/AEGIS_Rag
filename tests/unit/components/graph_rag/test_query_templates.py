@@ -24,7 +24,7 @@ class TestGraphQueryTemplates:
         """Test entity lookup template."""
         result = templates.entity_lookup("John Doe").build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.name = $name)" in result["query"]
         assert "RETURN e" in result["query"]
         assert result["parameters"]["name"] == "John Doe"
@@ -33,7 +33,7 @@ class TestGraphQueryTemplates:
         """Test entity neighbors with depth 1."""
         result = templates.entity_neighbors("entity-123", depth=1).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.id = $entity_id)" in result["query"]
         assert "*1..1" in result["query"]
         assert result["parameters"]["entity_id"] == "entity-123"
@@ -50,7 +50,7 @@ class TestGraphQueryTemplates:
         """Test shortest path template."""
         result = templates.shortest_path("entity-1", "entity-2", max_hops=5).build()
 
-        assert "MATCH (source:Entity), (target:Entity)" in result["query"]
+        assert "MATCH (source:base), (target:base)" in result["query"]
         assert "shortestPath" in result["query"]
         assert "(source.id = $source_id)" in result["query"]
         assert "(target.id = $target_id)" in result["query"]
@@ -61,21 +61,21 @@ class TestGraphQueryTemplates:
         """Test entity relationships with all directions."""
         result = templates.entity_relationships("entity-123", direction="both").build()
 
-        assert "MATCH (e:Entity)" in result["query"]
-        assert "(e)-[r]-(other:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
+        assert "(e)-[r]-(other:base)" in result["query"]
         assert result["parameters"]["entity_id"] == "entity-123"
 
     def test_entity_relationships_outgoing(self, templates):
         """Test entity relationships outgoing only."""
         result = templates.entity_relationships("entity-123", direction="outgoing").build()
 
-        assert "(e)-[r]->(other:Entity)" in result["query"]
+        assert "(e)-[r]->(other:base)" in result["query"]
 
     def test_entity_relationships_incoming(self, templates):
         """Test entity relationships incoming only."""
         result = templates.entity_relationships("entity-123", direction="incoming").build()
 
-        assert "(e)<-[r]-(other:Entity)" in result["query"]
+        assert "(e)<-[r]-(other:base)" in result["query"]
 
     def test_entity_relationships_with_type(self, templates):
         """Test entity relationships with type filter."""
@@ -90,7 +90,7 @@ class TestGraphQueryTemplates:
         entity_ids = ["entity-1", "entity-2", "entity-3"]
         result = templates.subgraph_extraction(entity_ids, depth=2).build()
 
-        assert "MATCH (seed:Entity)" in result["query"]
+        assert "MATCH (seed:base)" in result["query"]
         assert "seed.id IN $entity_ids OR seed.name IN $entity_ids" in result["query"]
         assert "*0..2" in result["query"]
         assert result["parameters"]["entity_ids"] == entity_ids
@@ -100,7 +100,7 @@ class TestGraphQueryTemplates:
         """Test entity by type template."""
         result = templates.entity_by_type("Person", limit=50).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.type = $entity_type)" in result["query"]
         assert "ORDER BY e.name" in result["query"]
         assert "LIMIT 50" in result["query"]
@@ -118,7 +118,7 @@ class TestGraphQueryTemplates:
         """Test entity search template."""
         result = templates.entity_search("machine learning", limit=5).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "CONTAINS" in result["query"]
         assert "toLower" in result["query"]
         assert "LIMIT 5" in result["query"]
@@ -128,7 +128,7 @@ class TestGraphQueryTemplates:
         """Test entity statistics template."""
         result = templates.entity_statistics().build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "RETURN e.type as entity_type, count(e) as count" in result["query"]
         assert "ORDER BY count DESC" in result["query"]
 
@@ -144,7 +144,7 @@ class TestGraphQueryTemplates:
         """Test orphan entities template."""
         result = templates.orphan_entities().build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (NOT (e)-[]-()" in result["query"]
         assert "RETURN e" in result["query"]
 
@@ -152,7 +152,7 @@ class TestGraphQueryTemplates:
         """Test highly connected entities template."""
         result = templates.highly_connected(min_degree=10).build()
 
-        assert "MATCH (e:Entity)-[r]-()" in result["query"]
+        assert "MATCH (e:base)-[r]-()" in result["query"]
         assert "WITH e, count(r) as degree" in result["query"]
         assert "WHERE (degree >= $min_degree)" in result["query"]
         assert "ORDER BY degree DESC" in result["query"]
@@ -162,7 +162,7 @@ class TestGraphQueryTemplates:
         """Test recent entities template."""
         result = templates.recent_entities(days=30).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.created_at >= datetime() - duration({days: $days}))" in result["query"]
         assert "ORDER BY e.created_at DESC" in result["query"]
         assert result["parameters"]["days"] == 30
@@ -171,7 +171,7 @@ class TestGraphQueryTemplates:
         """Test entity evolution template."""
         result = templates.entity_evolution("entity-123").build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.id = $entity_id)" in result["query"]
         assert "HAS_VERSION" in result["query"]
         assert "EntityVersion" in result["query"]
@@ -181,7 +181,7 @@ class TestGraphQueryTemplates:
         """Test community entities template."""
         result = templates.community_entities("community-1").build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.community_id = $community_id)" in result["query"]
         assert result["parameters"]["community_id"] == "community-1"
 
@@ -195,8 +195,8 @@ class TestGraphQueryTemplates:
         """Test entity similarity template."""
         result = templates.entity_similarity("entity-123", min_common_neighbors=3, limit=10).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
-        assert "(e)-[]-(common)-[]-(similar:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
+        assert "(e)-[]-(common)-[]-(similar:base)" in result["query"]
         assert "(e <> similar)" in result["query"]  # Check for filter, not exact WHERE clause
         assert "common_count >= $min_common_neighbors" in result["query"]
         assert "ORDER BY common_count DESC" in result["query"]
@@ -208,7 +208,7 @@ class TestGraphQueryTemplates:
         rel_types = ["KNOWS", "WORKS_WITH"]
         result = templates.relationship_path("entity-1", "entity-2", rel_types, max_hops=3).build()
 
-        assert "MATCH (source:Entity), (target:Entity)" in result["query"]
+        assert "MATCH (source:base), (target:base)" in result["query"]
         assert "KNOWS|WORKS_WITH" in result["query"]
         assert "*1..3" in result["query"]
         assert result["parameters"]["rel_types"] == rel_types
@@ -218,7 +218,7 @@ class TestGraphQueryTemplates:
         """Test entity degree distribution template."""
         result = templates.entity_degree_distribution().build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WITH e, size((e)-[]-()) as degree" in result["query"]
         assert "RETURN degree, count(*) as entity_count" in result["query"]
         assert "ORDER BY degree ASC" in result["query"]
@@ -227,7 +227,7 @@ class TestGraphQueryTemplates:
         """Test connected components template."""
         result = templates.connected_components(min_size=5).build()
 
-        assert "MATCH (e:Entity)" in result["query"]
+        assert "MATCH (e:base)" in result["query"]
         assert "WHERE (e.component_id IS NOT NULL)" in result["query"]
         assert "size(entities) >= $min_size" in result["query"]
         assert "ORDER BY component_size DESC" in result["query"]

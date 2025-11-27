@@ -35,6 +35,97 @@ from src.prompts.extraction_prompts import (
 
 logger = structlog.get_logger(__name__)
 
+# JSON repair utilities for malformed LLM responses (Sprint 32 Enhancement)
+
+
+def _repair_json_string(json_str: str) -> str:
+    """Apply common repairs to malformed JSON from LLM responses.
+
+    Handles:
+    - Trailing commas before ] or }
+    - Missing commas between objects
+    - Unescaped newlines in strings
+    - Single quotes instead of double quotes
+    - Python None/True/False instead of null/true/false
+
+    Args:
+        json_str: Raw JSON string that may be malformed
+
+    Returns:
+        Repaired JSON string
+    """
+    # Replace single quotes with double quotes (already done in main parser, but ensure here too)
+    json_str = json_str.replace("'", '"')
+
+    # Fix Python literals
+    json_str = re.sub(r"\bNone\b", "null", json_str)
+    json_str = re.sub(r"\bTrue\b", "true", json_str)
+    json_str = re.sub(r"\bFalse\b", "false", json_str)
+
+    # Remove trailing commas before ] or }
+    json_str = re.sub(r",\s*]", "]", json_str)
+    json_str = re.sub(r",\s*}", "}", json_str)
+
+    # Fix missing commas between objects: }{ -> },{
+    json_str = re.sub(r"}\s*{", "},{", json_str)
+
+    # Fix missing commas between array elements: ]["name" -> ],["name" or ]{ -> ],{
+    json_str = re.sub(r"]\s*\[", "],[", json_str)
+    json_str = re.sub(r"]\s*{", "],{", json_str)
+
+    # Remove control characters that break JSON (except \n, \r, \t)
+    json_str = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", json_str)
+
+    return json_str
+
+
+def _extract_json_objects_individually(
+    text: str, data_type: str = "entity"
+) -> list[dict[str, Any]]:
+    """Extract individual JSON objects when array parsing fails.
+
+    When the full JSON array is malformed, try to extract each valid object individually.
+
+    Args:
+        text: Text containing JSON objects (potentially malformed array)
+        data_type: Type of data ("entity" or "relationship")
+
+    Returns:
+        List of successfully parsed objects
+    """
+    objects = []
+
+    # Pattern to match individual JSON objects
+    # This is more lenient than full array parsing
+    object_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+
+    matches = re.finditer(object_pattern, text, re.DOTALL)
+
+    for match in matches:
+        obj_str = match.group(0)
+        try:
+            # Try to repair and parse individual object
+            repaired = _repair_json_string(obj_str)
+            obj = json.loads(repaired)
+
+            if isinstance(obj, dict):
+                # Validate required fields
+                if data_type == "entity":
+                    if "name" in obj and "type" in obj:
+                        objects.append(obj)
+                elif data_type == "relationship":
+                    if "source" in obj and "target" in obj and "type" in obj:
+                        objects.append(obj)
+                else:
+                    objects.append(obj)
+
+        except json.JSONDecodeError:
+            # Individual object also malformed, skip it
+            continue
+
+    return objects
+
+
 # Constants
 MAX_ENTITIES_PER_DOC = 50
 MAX_RELATIONSHIPS_PER_DOC = 100
@@ -87,12 +178,14 @@ class ExtractionService:
         """Parse JSON from LLM response with multiple fallback strategies.
 
         Sprint 13 Enhancement: Robust parsing for llama3.2:3b output variations.
+        Sprint 32 Enhancement: Added JSON repair for malformed LLM responses.
 
         Handles various response formats:
         - Markdown code fences: ```json [...] ```
         - Plain JSON array: [...]
         - Text before/after JSON: "Here are the entities: [...] Hope this helps!"
         - Full response as JSON
+        - Malformed JSON with trailing commas, missing commas, etc.
 
         Args:
             response: Raw LLM response text
@@ -104,7 +197,7 @@ class ExtractionService:
         Raises:
             ValueError: If JSON parsing fails after all strategies
         """
-        # 🔍 ENHANCED LOGGING: Log full response for debugging
+        # ENHANCED LOGGING: Log full response for debugging
         logger.info(
             "parsing_llm_response",
             response_length=len(response),
@@ -139,6 +232,9 @@ class ExtractionService:
         # Clean up common JSON issues
         json_str = json_str.strip()
         json_str = json_str.replace("'", '"')  # Single quotes to double quotes
+
+        # Sprint 32: Apply JSON repair before parsing
+        json_str = _repair_json_string(json_str)
 
         try:
             data = json.loads(json_str)
@@ -212,8 +308,8 @@ class ExtractionService:
                 return []
 
         except json.JSONDecodeError as e:
-            logger.error(
-                "json_parse_failed",
+            logger.warning(
+                "json_parse_failed_trying_individual_extraction",
                 response_preview=response[:500],
                 json_str_preview=json_str[:500] if json_str else "NONE",
                 strategy=strategy_used,
@@ -221,11 +317,33 @@ class ExtractionService:
                 error_position=e.pos if hasattr(e, "pos") else None,
             )
 
+            # Sprint 32: Fallback - try to extract individual JSON objects
+            # This handles cases where the array structure is broken but individual objects are valid
+            individual_objects = _extract_json_objects_individually(response, data_type)
+
+            if individual_objects:
+                logger.info(
+                    "json_individual_extraction_success",
+                    extracted_count=len(individual_objects),
+                    data_type=data_type,
+                    original_strategy=strategy_used,
+                )
+                return individual_objects
+
+            # All strategies failed
+            logger.error(
+                "json_parse_failed_all_strategies",
+                response_preview=response[:500],
+                json_str_preview=json_str[:500] if json_str else "NONE",
+                strategy=strategy_used,
+                error=str(e),
+            )
+
             # Sprint 13 CHANGE: Raise error instead of silent failure
             # This triggers retry logic (3 attempts with exponential backoff)
             # If all retries fail, test will show clear error message
             raise ValueError(
-                f"Failed to parse JSON from LLM response after trying strategy '{strategy_used}': {str(e)}"
+                f"Failed to parse JSON from LLM response after trying strategy '{strategy_used}' and individual extraction: {str(e)}"
             ) from e
 
     @retry(

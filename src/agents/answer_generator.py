@@ -209,10 +209,14 @@ class AnswerGenerator:
         # Build prompt for citation generation
         prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
 
-        logger.debug(
-            "generating_answer_with_citations",
-            query=query[:100],
+        # Phase 1 Diagnostic Logging: Log full prompt for debugging
+        logger.info(
+            "CITATIONS_DEBUG_PROMPT",
+            prompt_preview=prompt[:2000] if len(prompt) > 2000 else prompt,
+            prompt_length=len(prompt),
+            query=query,
             contexts_count=len(top_contexts),
+            context_text_preview=context_text[:500] if len(context_text) > 500 else context_text,
         )
 
         try:
@@ -231,6 +235,17 @@ class AnswerGenerator:
 
             # Extract cited sources for logging
             cited_sources = self._extract_cited_sources(answer)
+
+            # Phase 1 Diagnostic Logging: Log full response
+            logger.info(
+                "CITATIONS_DEBUG_RESPONSE",
+                answer_preview=answer[:1000] if len(answer) > 1000 else answer,
+                answer_length=len(answer),
+                citations_found=list(cited_sources),
+                citations_count=len(cited_sources),
+                has_citations=len(cited_sources) > 0,
+                provider=response.provider,
+            )
 
             logger.info(
                 "answer_with_citations_generated",
@@ -275,6 +290,9 @@ class AnswerGenerator:
     def _build_citation_map(self, contexts: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
         """Build citation map from contexts.
 
+        Sprint 32 Fix: Ensure score and metadata are properly extracted from contexts.
+        The contexts come from VectorSearchAgent which includes score and metadata.
+
         Args:
             contexts: List of context dicts (max 10)
 
@@ -287,13 +305,64 @@ class AnswerGenerator:
             text = ctx.get("text", "")
             truncated_text = text[:500] if len(text) > 500 else text
 
+            # Sprint 32 Fix: Extract score from multiple possible keys
+            # VectorSearchAgent stores normalized scores in 'score' field
+            # But also check alternative score fields for robustness
+            score = ctx.get("score")
+            if score is None or score == 0:
+                # Try alternative score fields
+                score = ctx.get(
+                    "normalized_rerank_score",
+                    ctx.get(
+                        "rerank_score",
+                        ctx.get("rrf_score", ctx.get("relevance", 0.0)),
+                    ),
+                )
+            # Ensure score is a float
+            try:
+                score = float(score) if score is not None else 0.0
+            except (TypeError, ValueError):
+                score = 0.0
+
+            # Sprint 32 Fix: Extract metadata and enrich with additional context fields
+            metadata = ctx.get("metadata", {})
+            if not isinstance(metadata, dict):
+                metadata = {}
+
+            # Add useful fields to metadata if present in context
+            if ctx.get("search_type") and "search_type" not in metadata:
+                metadata["search_type"] = ctx["search_type"]
+            if ctx.get("rank") and "rank" not in metadata:
+                metadata["rank"] = ctx["rank"]
+            if ctx.get("document_id") and "document_id" not in metadata:
+                metadata["document_id"] = ctx["document_id"]
+
             citation_map[i] = {
                 "text": truncated_text,
                 "source": ctx.get("source", "Unknown"),
                 "title": ctx.get("title", ctx.get("source", "Unknown")),
-                "score": ctx.get("score", 0.0),
-                "metadata": ctx.get("metadata", {}),
+                "score": score,
+                "metadata": metadata,
+                "document_id": ctx.get("document_id", ""),
             }
+
+            # Debug logging to verify data flow
+            logger.debug(
+                "citation_map_entry_built",
+                citation_number=i,
+                score=score,
+                has_metadata=bool(metadata),
+                metadata_keys=list(metadata.keys())[:5] if metadata else [],
+                source=ctx.get("source", "Unknown")[:50],
+                ctx_keys=list(ctx.keys()),
+            )
+
+        logger.info(
+            "citation_map_built",
+            total_citations=len(citation_map),
+            scores=[citation_map[k]["score"] for k in sorted(citation_map.keys())],
+        )
+
         return citation_map
 
     def _extract_cited_sources(self, answer: str) -> set[int]:

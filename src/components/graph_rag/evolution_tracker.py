@@ -337,7 +337,7 @@ class EvolutionTracker:
         cutoff_date = datetime.now(UTC) - timedelta(days=min_age_days)
 
         query = """
-        MATCH (e:Entity)
+        MATCH (e:base)
         WHERE e.transaction_to IS NULL
           AND NOT exists((e)<-[:CHANGED]-(:ChangeEvent))
           AND e.valid_from <= datetime($cutoff_date)
@@ -407,7 +407,7 @@ class EvolutionTracker:
         WHERE c.timestamp >= datetime($cutoff_date)
         WITH c.entity_id as entity_id, count(c) as change_count
         WHERE change_count >= $min_changes
-        MATCH (e:Entity {id: entity_id})
+        MATCH (e:base {id: entity_id})
         WHERE e.transaction_to IS NULL
         RETURN e.id as entity_id,
                e.name as name,

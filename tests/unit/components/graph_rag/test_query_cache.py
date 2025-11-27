@@ -28,7 +28,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_set_and_get(self, cache):
         """Test basic cache set and get operations."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         params = {"limit": 10}
         result = [{"name": "Test"}]
 
@@ -40,7 +40,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_miss(self, cache):
         """Test cache miss returns None."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         params = {"limit": 10}
 
         result = await cache.get(query, params)
@@ -50,7 +50,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_hit_statistics(self, cache):
         """Test cache hit/miss statistics."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         result = [{"name": "Test"}]
 
         # Set cache
@@ -96,7 +96,7 @@ class TestGraphQueryCache:
         """Test TTL-based cache expiration."""
         cache = GraphQueryCache(max_size=10, ttl_seconds=1, enabled=True)
 
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         result = [{"name": "Test"}]
 
         await cache.set(query, None, result)
@@ -115,7 +115,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_invalidation(self, cache):
         """Test explicit cache invalidation."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         result = [{"name": "Test"}]
 
         await cache.set(query, None, result)
@@ -156,7 +156,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_key_generation(self, cache):
         """Test cache key is consistent for same query+params."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         params1 = {"limit": 10, "name": "Test"}
         params2 = {"name": "Test", "limit": 10}  # Different order
 
@@ -172,7 +172,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_different_params_different_cache(self, cache):
         """Test different parameters create different cache entries."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         params1 = {"limit": 10}
         params2 = {"limit": 20}
 
@@ -210,7 +210,7 @@ class TestGraphQueryCache:
         """Test cache behavior when disabled."""
         cache = GraphQueryCache(max_size=10, ttl_seconds=60, enabled=False)
 
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         result = [{"name": "Test"}]
 
         # Set should not cache
@@ -239,7 +239,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_reset_stats(self, cache):
         """Test resetting cache statistics."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
 
         await cache.set(query, None, [{"result": 1}])
         await cache.get(query, None)  # Hit
@@ -258,7 +258,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_cache_with_none_parameters(self, cache):
         """Test cache with None parameters."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
 
         await cache.set(query, None, [{"result": 1}])
 
@@ -293,7 +293,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_concurrent_access(self, cache):
         """Test concurrent cache access."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
         result = [{"name": "Test"}]
 
         await cache.set(query, None, result)
@@ -307,7 +307,7 @@ class TestGraphQueryCache:
     @pytest.mark.asyncio
     async def test_len_and_contains(self, cache):
         """Test __len__ and __contains__ methods."""
-        query = "MATCH (n:Entity) RETURN n"
+        query = "MATCH (n:base) RETURN n"
 
         assert len(cache) == 0
 

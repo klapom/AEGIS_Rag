@@ -11,9 +11,10 @@
  * - Welcome screen with quick prompts
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SearchInput, type SearchMode } from '../components/search';
 import { StreamingAnswer } from '../components/chat';
+import type { Source } from '../types/chat';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -50,6 +51,15 @@ export function HomePage() {
   const handleFollowUpQuestion = (question: string) => {
     handleSearch(question, currentMode);
   };
+
+  // Sprint 32: Save completed answer to history
+  // Sprint 32 Fix: DON'T clear currentQuery - keep StreamingAnswer rendered so citations remain visible
+  const handleAnswerComplete = useCallback((answer: string, _sources: Source[]) => {
+    // Add assistant message to history (for when new question is asked and this one moves to history)
+    setConversationHistory(prev => [...prev, { role: 'assistant', content: answer }]);
+    // NOTE: Don't clear currentQuery! StreamingAnswer must stay rendered to show citations.
+    // It will be replaced when user asks a new question via handleSearch.
+  }, []);
 
   // Show welcome screen if no conversation yet
   const showWelcome = conversationHistory.length === 0;
@@ -171,6 +181,7 @@ export function HomePage() {
                 sessionId={activeSessionId}
                 onSessionIdReceived={handleSessionIdReceived}
                 onFollowUpQuestion={handleFollowUpQuestion}
+                onComplete={handleAnswerComplete}
               />
             )}
           </div>

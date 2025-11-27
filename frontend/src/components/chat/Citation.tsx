@@ -11,6 +11,55 @@
 import { useState } from 'react';
 import type { Source } from '../../types/chat';
 
+/**
+ * Extract clean text content from source text field.
+ *
+ * Sprint 32 Fix: Handle malformed Python object strings from legacy ingestion.
+ * Some older data in Qdrant contains stringified Python objects like:
+ * "chunk_id='abc' document_id='def' chunk_index=0 content='The actual text...' metadata={...}"
+ *
+ * This function extracts the actual content from such strings.
+ */
+function extractContextText(text: string | undefined): string {
+  if (!text) return '';
+
+  // Check if this looks like a Python object string (contains content='...')
+  const contentMatch = text.match(/content='([^']*(?:''[^']*)*)'/);
+  if (contentMatch) {
+    // Extract content and unescape Python string escapes
+    return contentMatch[1]
+      .replace(/''/g, "'")  // Python escaped single quotes
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\r/g, '\r');
+  }
+
+  // Check for double-quoted content
+  const contentMatchDouble = text.match(/content="([^"]*(?:""[^"]*)*)"/);
+  if (contentMatchDouble) {
+    return contentMatchDouble[1]
+      .replace(/""/g, '"')
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\r/g, '\r');
+  }
+
+  // Not a Python object string, return as-is
+  return text;
+}
+
+/**
+ * Clean text for display by removing control characters.
+ */
+function cleanTextForDisplay(text: string): string {
+  if (!text) return '';
+
+  // Remove control characters but keep newlines, tabs, and spaces
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars except \t, \n, \r
+    .trim();
+}
+
 interface CitationProps {
   sourceIndex: number;
   source: Source;
@@ -28,10 +77,26 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
   };
 
   const getDocumentName = () => {
+    // Check title first (from citation_map, usually the best display name)
+    if (source.title && source.title !== 'Unknown') {
+      // If title is a file path, extract just the filename
+      if (source.title.includes('/') || source.title.includes('\\')) {
+        const filename = source.title.split(/[/\\]/).pop() || source.title;
+        return filename.replace(/\.[^/.]+$/, '');
+      }
+      return source.title;
+    }
+    // Check direct source field (from citation_map - the document path)
+    if (source.source && source.source !== 'Unknown') {
+      const filename = source.source.split(/[/\\]/).pop() || source.source;
+      return filename.replace(/\.[^/.]+$/, '');
+    }
+    // Check metadata.source (from SSE source events)
     if (source.metadata?.source) {
       const filename = source.metadata.source.split(/[/\\]/).pop() || source.metadata.source;
       return filename.replace(/\.[^/.]+$/, '');
     }
+    // Check document_id as fallback
     if (source.document_id && source.document_id !== 'Document') {
       return source.document_id;
     }
@@ -39,7 +104,9 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
   };
 
   const getPreviewText = () => {
-    const text = source.context || source.text || '';
+    // Sprint 32 Fix: Extract clean text from Python object strings + clean for display
+    const rawText = source.context || source.text || '';
+    const text = cleanTextForDisplay(extractContextText(rawText));
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
   };
 
@@ -87,20 +154,25 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
               </div>
             </div>
 
-            {source.score !== undefined && (
-              <div className="flex items-center space-x-2 text-xs">
-                <span className="text-gray-500">Relevanz:</span>
-                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: `${Math.min(source.score * 100, 100)}%` }}
-                  />
-                </div>
-                <span className="font-medium text-gray-700">
-                  {(source.score * 100).toFixed(0)}%
-                </span>
-              </div>
-            )}
+            {/* Sprint 32 Fix: Check for both null and undefined */}
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="text-gray-500">Relevanz:</span>
+              {source.score != null && source.score > 0 ? (
+                <>
+                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${Math.min(source.score * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-medium text-gray-700">
+                    {(source.score * 100).toFixed(0)}%
+                  </span>
+                </>
+              ) : (
+                <span className="font-medium text-gray-400">N/A</span>
+              )}
+            </div>
 
             <p className="text-xs text-gray-700 leading-relaxed line-clamp-3">
               {getPreviewText()}

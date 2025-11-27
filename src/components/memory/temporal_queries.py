@@ -73,7 +73,7 @@ class TemporalMemoryQuery:
 
             # Cypher query for bi-temporal point-in-time retrieval
             query = """
-            MATCH (e:Entity {name: $entity_name})
+            MATCH (e:base {name: $entity_name})
             WHERE e.valid_from <= $valid_time
               AND (e.valid_to IS NULL OR e.valid_to > $valid_time)
               AND e.transaction_from <= $transaction_time
@@ -156,7 +156,7 @@ class TemporalMemoryQuery:
 
             # Query for entities valid during any part of the range
             query = """
-            MATCH (e:Entity {name: $entity_name})
+            MATCH (e:base {name: $entity_name})
             WHERE e.valid_from <= $valid_end
               AND (e.valid_to IS NULL OR e.valid_to >= $valid_start)
               AND e.transaction_from <= $transaction_time
@@ -226,7 +226,7 @@ class TemporalMemoryQuery:
         """
         try:
             query = """
-            MATCH (e:Entity {name: $entity_name})
+            MATCH (e:base {name: $entity_name})
             RETURN e {
                 .id,
                 .name,
@@ -309,11 +309,11 @@ class TemporalMemoryQuery:
 
             # Build direction pattern
             if direction == "outgoing":
-                pattern = "(e:Entity {name: $entity_name})-[r:$rel_type]->(target:Entity)"
+                pattern = "(e:base {name: $entity_name})-[r:$rel_type]->(target:base)"
             elif direction == "incoming":
-                pattern = "(e:Entity {name: $entity_name})<-[r:$rel_type]-(target:Entity)"
+                pattern = "(e:base {name: $entity_name})<-[r:$rel_type]-(target:base)"
             else:  # both
-                pattern = "(e:Entity {name: $entity_name})-[r:$rel_type]-(target:Entity)"
+                pattern = "(e:base {name: $entity_name})-[r:$rel_type]-(target:base)"
 
             query = f"""
             MATCH {pattern}

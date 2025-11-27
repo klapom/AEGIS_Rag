@@ -94,7 +94,7 @@ class CommunitySearch(DualLevelSearch):
             # Build cypher query with optional community filter
             if community_ids:
                 cypher = """
-                MATCH (e:Entity)
+                MATCH (e:base)
                 WHERE e.community_id IN $community_ids
                   AND (toLower(e.name) CONTAINS toLower($query_term)
                        OR toLower(e.description) CONTAINS toLower($query_term))
@@ -111,7 +111,7 @@ class CommunitySearch(DualLevelSearch):
                 }
             else:
                 cypher = """
-                MATCH (e:Entity)
+                MATCH (e:base)
                 WHERE toLower(e.name) CONTAINS toLower($query_term)
                    OR toLower(e.description) CONTAINS toLower($query_term)
                 RETURN e.id AS id, e.name AS name, e.type AS type,
@@ -218,7 +218,7 @@ class CommunitySearch(DualLevelSearch):
         try:
             # Find communities connected by relationships
             cypher = """
-            MATCH (e1:Entity {community_id: $community_id})-[r:RELATED_TO]-(e2:Entity)
+            MATCH (e1:base {community_id: $community_id})-[r:RELATED_TO]-(e2:base)
             WHERE e2.community_id IS NOT NULL
               AND e2.community_id <> $community_id
             WITH e2.community_id AS related_community_id,
@@ -277,12 +277,12 @@ class CommunitySearch(DualLevelSearch):
         try:
             # Get basic statistics
             stats_cypher = """
-            MATCH (e:Entity {community_id: $community_id})
+            MATCH (e:base {community_id: $community_id})
             WITH e.community_id AS community_id,
                  e.community_label AS label,
                  count(e) AS size,
                  collect(e.type) AS types
-            MATCH (e1:Entity {community_id: $community_id})-[r:RELATED_TO]-(e2:Entity)
+            MATCH (e1:base {community_id: $community_id})-[r:RELATED_TO]-(e2:base)
             WHERE e2.community_id = $community_id
             WITH community_id, label, size, types, count(r) AS internal_edges
             RETURN community_id, label, size, types, internal_edges
