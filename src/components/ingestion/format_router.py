@@ -100,8 +100,9 @@ DOCLING_FORMATS: set[str] = {
     ".ipynb",  # Jupyter notebooks with cell structure
 }
 
-# LlamaIndex-exclusive formats (9 formats)
+# LlamaIndex-exclusive formats (12 formats)
 # These formats are ONLY supported by LlamaIndex connectors
+# NOTE: Legacy Office formats (.doc, .xls, .ppt) moved here because Docling doesn't support them
 LLAMAINDEX_EXCLUSIVE: set[str] = {
     ".epub",  # E-books (LlamaIndex EPUBReader)
     ".rtf",  # Rich Text Format (LlamaIndex RTFReader)
@@ -112,22 +113,23 @@ LLAMAINDEX_EXCLUSIVE: set[str] = {
     ".org",  # Org-Mode (LlamaIndex OrgReader)
     ".odt",  # OpenDocument Text (LlamaIndex ODTReader)
     ".msg",  # Outlook messages (LlamaIndex MSGReader)
+    # Legacy Office formats (Docling only supports modern .docx/.xlsx/.pptx)
+    ".doc",  # Legacy Word 97-2003 (LlamaIndex DOCReader)
+    ".xls",  # Legacy Excel 97-2003 (LlamaIndex XLSReader)
+    ".ppt",  # Legacy PowerPoint 97-2003 (LlamaIndex PPTReader)
 }
 
-# Shared formats (7 formats)
+# Shared formats (4 formats)
 # Both Docling and LlamaIndex support these, Docling preferred for performance
 SHARED_FORMATS: set[str] = {
     ".txt",  # Plain text (both support, Docling faster)
-    ".doc",  # Legacy Word (LlamaIndex more reliable for old format)
-    ".xls",  # Legacy Excel (LlamaIndex more reliable)
-    ".ppt",  # Legacy PowerPoint (LlamaIndex more reliable)
     ".htm",  # HTML variant
     ".mhtml",  # Web archive (MIME HTML)
     ".eml",  # Email messages (RFC 822)
 }
 
 # Total supported formats: 30
-# = 14 (Docling) + 9 (LlamaIndex exclusive) + 7 (shared)
+# = 14 (Docling) + 12 (LlamaIndex exclusive) + 4 (shared)
 ALL_FORMATS: set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
 
 # =============================================================================

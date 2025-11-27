@@ -298,7 +298,11 @@ async def run_ingestion_pipeline(
         - Container lifecycle managed automatically
         - **Sprint 22.3:** Format routing with 30+ supported formats
     """
+    import time as time_module
+
     from src.components.ingestion.ingestion_state import create_initial_state
+
+    pipeline_start = time_module.perf_counter()
 
     logger.info(
         "run_ingestion_pipeline_start",
@@ -349,22 +353,53 @@ async def run_ingestion_pipeline(
     )
     pipeline = create_ingestion_graph(parser_type=routing_decision.parser)
 
+    # Sprint 33: Execute with node-level timing
     logger.info(
-        "DEBUG_pipeline_execution_start",
+        "TIMING_pipeline_execution_start",
         document_id=document_id,
-        state_keys=list(state.keys()),
+        document_name=file_path.name,
     )
-    final_state = await pipeline.ainvoke(state)
 
+    # Track timing per node using streaming (astream gives us per-node updates)
+    node_timings: dict[str, float] = {}
+    last_node_end = time_module.perf_counter()
+    final_state = state
+
+    async for event in pipeline.astream(state):
+        node_name = list(event.keys())[0]
+        node_end = time_module.perf_counter()
+        node_duration = node_end - last_node_end
+
+        node_timings[node_name] = node_duration
+        final_state = event[node_name]
+
+        # Log each node's timing
+        logger.info(
+            f"TIMING_node_{node_name}",
+            document_id=document_id,
+            node=node_name,
+            duration_seconds=round(node_duration, 2),
+            duration_ms=round(node_duration * 1000, 0),
+            status=final_state.get(f"{node_name}_status", "unknown"),
+        )
+
+        last_node_end = node_end
+
+    pipeline_end = time_module.perf_counter()
+    total_duration = pipeline_end - pipeline_start
+
+    # Log complete timing summary
     logger.info(
-        "DEBUG_pipeline_execution_complete",
+        "TIMING_pipeline_complete",
         document_id=document_id,
-        final_state_keys=list(final_state.keys()),
-        memory_status=final_state.get("memory_status"),
-        parse_status=final_state.get("parse_status"),
-        chunking_status=final_state.get("chunking_status"),
-        embedding_status=final_state.get("embedding_status"),
-        graph_status=final_state.get("graph_status"),
+        document_name=file_path.name,
+        total_seconds=round(total_duration, 2),
+        node_timings_seconds={k: round(v, 2) for k, v in node_timings.items()},
+        slowest_node=max(node_timings, key=node_timings.get) if node_timings else None,
+        slowest_duration_seconds=round(max(node_timings.values()), 2) if node_timings else 0,
+        chunks_created=len(final_state.get("chunks", [])),
+        entities_extracted=len(final_state.get("entities", [])),
+        parser_used=routing_decision.parser.value,
     )
 
     logger.info(
