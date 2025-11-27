@@ -351,6 +351,95 @@ async def reindex_all_documents(
 # ============================================================================
 
 
+def _build_detailed_progress(
+    file_path: str,
+    file_size: int,
+    state: dict,
+    pipeline_phase: str,
+    pipeline_status: str,
+) -> dict:
+    """Build detailed_progress object for SSE stream.
+
+    Args:
+        file_path: Path to current file
+        file_size: File size in bytes
+        state: LangGraph pipeline state with chunks, entities, etc.
+        pipeline_phase: Current pipeline phase name
+        pipeline_status: Status of current phase
+
+    Returns:
+        DetailedProgress dict matching frontend type
+    """
+    from pathlib import Path
+
+    file_name = Path(file_path).name
+    file_ext = Path(file_path).suffix.lower().lstrip(".")
+
+    # Build current_file info
+    current_file = {
+        "file_path": file_path,
+        "file_name": file_name,
+        "file_extension": file_ext,
+        "file_size_bytes": file_size,
+        "parser_type": "docling",  # Default to docling
+        "is_supported": True,
+    }
+
+    # Extract chunks info
+    chunks = state.get("chunks", [])
+    chunk_infos = []
+    for i, chunk in enumerate(chunks[:10]):  # Limit to first 10 chunks for display
+        chunk_text = chunk.get("text", "") if isinstance(chunk, dict) else str(chunk)
+        chunk_infos.append({
+            "chunk_id": f"chunk_{i}",
+            "text_preview": chunk_text[:100] + "..." if len(chunk_text) > 100 else chunk_text,
+            "token_count": len(chunk_text.split()) * 1.3,  # Rough token estimate
+            "section_name": chunk.get("section", "Main") if isinstance(chunk, dict) else "Main",
+            "has_image": False,
+        })
+
+    # Extract entities info
+    entities = state.get("entities", [])
+    relations = state.get("relations", [])
+
+    # Build pipeline status
+    phases = ["docling", "chunking", "embedding", "graph_extraction", "validation"]
+    pipeline_statuses = []
+    for phase in phases:
+        if phase == pipeline_phase:
+            status = pipeline_status
+        elif phases.index(phase) < phases.index(pipeline_phase) if pipeline_phase in phases else False:
+            status = "completed"
+        else:
+            status = "pending"
+        pipeline_statuses.append({
+            "phase": phase,
+            "status": status,
+            "duration_ms": None,
+        })
+
+    return {
+        "current_file": current_file,
+        "current_page": 1,
+        "total_pages": 1,
+        "page_thumbnail_url": None,
+        "page_elements": {
+            "tables": 0,
+            "images": 0,
+            "word_count": sum(len(c.get("text", "").split()) if isinstance(c, dict) else 0 for c in chunks),
+        },
+        "vlm_images": [],
+        "current_chunk": chunk_infos[0] if chunk_infos else None,
+        "pipeline_status": pipeline_statuses,
+        "entities": {
+            "new_entities": [e.get("name", str(e))[:30] for e in entities[:5]] if entities else [],
+            "new_relations": [r.get("type", str(r))[:30] for r in relations[:5]] if relations else [],
+            "total_entities": len(entities),
+            "total_relations": len(relations),
+        },
+    }
+
+
 async def add_documents_stream(
     file_paths: List[str],
     dry_run: bool = False,
@@ -366,6 +455,7 @@ async def add_documents_stream(
     """
     import json
     import time
+    import os
 
     start_time = time.time()
     total_docs = len(file_paths)
@@ -391,6 +481,8 @@ async def add_documents_stream(
             total_chunks = 0
             completed_docs = 0
             failed_docs = 0
+            all_entities: List[dict] = []
+            all_relations: List[dict] = []
 
             async for result in run_batch_ingestion(
                 document_paths=file_paths,
@@ -405,12 +497,31 @@ async def add_documents_stream(
                     chunk_count = len(state.get("chunks", []))
                     total_chunks += chunk_count
 
+                    # Collect entities and relations
+                    all_entities.extend(state.get("entities", []))
+                    all_relations.extend(state.get("relations", []))
+
                     # Calculate progress (10% → 90%)
                     doc_progress = (completed_docs / total_docs) * 80
                     overall_progress = 10 + doc_progress
 
+                    # Get file size
+                    try:
+                        file_size = os.path.getsize(doc_path)
+                    except OSError:
+                        file_size = 0
+
+                    # Build detailed progress
+                    detailed_progress = _build_detailed_progress(
+                        file_path=doc_path,
+                        file_size=file_size,
+                        state=state,
+                        pipeline_phase="graph_extraction",
+                        pipeline_status="completed",
+                    )
+
                     message = f"Added {Path(doc_path).name}: {chunk_count} chunks"
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'current_document': Path(doc_path).name})}\n\n"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                     logger.info(
                         "add_document_indexed",
@@ -424,8 +535,17 @@ async def add_documents_stream(
                     error_msg = result.get("error", "Unknown error")
                     logger.error("add_document_failed", document_path=doc_path, error=error_msg)
 
+                    # Build error info for SSE
+                    error_info = {
+                        "type": "error",
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "file_name": Path(doc_path).name,
+                        "message": error_msg,
+                        "details": str(result.get("error_details", "")),
+                    }
+
                     message = f"FAILED: {Path(doc_path).name} - {error_msg}"
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10 + (completed_docs / total_docs) * 80, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs})}\n\n"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10 + (completed_docs / total_docs) * 80, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
 
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'Added {total_chunks} chunks from {completed_docs - failed_docs} document(s)'})}\n\n"
         else:
