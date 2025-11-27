@@ -347,6 +347,201 @@ async def reindex_all_documents(
 
 
 # ============================================================================
+# Sprint 33: ADD Documents Endpoint (no deletion)
+# ============================================================================
+
+
+async def add_documents_stream(
+    file_paths: List[str],
+    dry_run: bool = False,
+) -> AsyncGenerator[str, None]:
+    """Stream progress updates during document addition (ADD-only, no deletion).
+
+    Args:
+        file_paths: List of file paths to add to index
+        dry_run: If True, simulate operation without making changes
+
+    Yields:
+        SSE-formatted progress messages (JSON)
+    """
+    import json
+    import time
+
+    start_time = time.time()
+    total_docs = len(file_paths)
+
+    try:
+        # Phase 1: Initialization
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': f'Adding {total_docs} document(s) to index...'})}\n\n"
+
+        if total_docs == 0:
+            yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': 'No documents to add', 'documents_processed': 0, 'documents_total': 0})}\n\n"
+            return
+
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 5, 'message': f'Preparing to index {total_docs} document(s)'})}\n\n"
+
+        # Phase 2: Indexing (use LangGraph pipeline with Docling) - NO DELETION
+        if not dry_run:
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10, 'message': f'Indexing {total_docs} document(s)...'})}\n\n"
+
+            # Import LangGraph pipeline (lazy import)
+            from src.components.ingestion.langgraph_pipeline import run_batch_ingestion
+
+            batch_id = f"add_batch_{int(time.time())}"
+            total_chunks = 0
+            completed_docs = 0
+            failed_docs = 0
+
+            async for result in run_batch_ingestion(
+                document_paths=file_paths,
+                batch_id=batch_id,
+            ):
+                completed_docs += 1
+                doc_path = result["document_path"]
+                success = result["success"]
+
+                if success and result.get("state"):
+                    state = result["state"]
+                    chunk_count = len(state.get("chunks", []))
+                    total_chunks += chunk_count
+
+                    # Calculate progress (10% → 90%)
+                    doc_progress = (completed_docs / total_docs) * 80
+                    overall_progress = 10 + doc_progress
+
+                    message = f"Added {Path(doc_path).name}: {chunk_count} chunks"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'current_document': Path(doc_path).name})}\n\n"
+
+                    logger.info(
+                        "add_document_indexed",
+                        document_path=doc_path,
+                        chunks=chunk_count,
+                        completed=completed_docs,
+                        total=total_docs,
+                    )
+                else:
+                    failed_docs += 1
+                    error_msg = result.get("error", "Unknown error")
+                    logger.error("add_document_failed", document_path=doc_path, error=error_msg)
+
+                    message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10 + (completed_docs / total_docs) * 80, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs})}\n\n"
+
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'Added {total_chunks} chunks from {completed_docs - failed_docs} document(s)'})}\n\n"
+        else:
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': '[DRY RUN] Skipped indexing'})}\n\n"
+            completed_docs = total_docs
+            failed_docs = 0
+            total_chunks = 0
+
+        # Phase 3: Validation
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Validating index...'})}\n\n"
+
+        # Completion
+        elapsed_time = time.time() - start_time
+        success_count = completed_docs - failed_docs
+
+        completion_message = f"Successfully added {success_count} document(s) ({total_chunks} chunks) in {elapsed_time:.1f}s"
+        if failed_docs > 0:
+            completion_message += f" ({failed_docs} failed)"
+
+        yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': completion_message, 'documents_processed': success_count, 'documents_total': total_docs, 'chunks_created': total_chunks, 'failed_documents': failed_docs})}\n\n"
+
+        logger.info(
+            "add_documents_completed",
+            total_docs=total_docs,
+            success_count=success_count,
+            failed_count=failed_docs,
+            total_chunks=total_chunks,
+            elapsed_seconds=elapsed_time,
+        )
+
+    except Exception as e:
+        logger.error("add_documents_error", error=str(e), exc_info=True)
+        yield f"data: {json.dumps({'status': 'error', 'phase': 'error', 'progress_percent': 0, 'message': f'Error: {str(e)}', 'error': str(e)})}\n\n"
+
+
+@router.post(
+    "/indexing/add",
+    summary="Add documents to index (no deletion)",
+    description="Add selected documents to the existing index without deleting anything. Progress tracked via SSE.",
+)
+async def add_documents_to_index(
+    file_paths: List[str] = Query(
+        default=[],
+        description="List of file paths to add to index",
+    ),
+    dry_run: bool = Query(
+        default=False,
+        description="Simulate operation without making changes",
+    ),
+) -> StreamingResponse:
+    """Add documents to existing index without deletion.
+
+    **Sprint 33: ADD-only indexing (no deletion)**
+
+    This endpoint:
+    1. Takes a list of file paths to add
+    2. Uses LangGraph pipeline (Docling → Chunking → Embedding → Graph Extraction)
+    3. Adds documents to existing Qdrant + Neo4j indexes
+    4. Does NOT delete any existing data
+
+    **Use Cases:**
+    - Adding new documents to existing knowledge base
+    - Incremental updates without full re-index
+    - Selective file indexing from directory scan
+
+    **Progress Tracking:**
+    - Returns SSE (Server-Sent Events) stream
+    - Real-time progress updates with percentage
+    - Final message indicates completion or error
+
+    **Example Usage:**
+    ```bash
+    curl -N "http://localhost:8000/api/v1/admin/indexing/add?file_paths=doc1.pdf&file_paths=doc2.pdf" \\
+      -H "Accept: text/event-stream"
+    ```
+
+    Args:
+        file_paths: List of file paths to add
+        dry_run: If True, simulate operation without making changes
+
+    Returns:
+        StreamingResponse with SSE progress updates
+    """
+    # Validate file paths exist
+    valid_paths = []
+    for fp in file_paths:
+        path = Path(fp)
+        if path.exists() and path.is_file():
+            valid_paths.append(str(path))
+        else:
+            logger.warning("add_documents_invalid_path", path=fp)
+
+    if not valid_paths and not dry_run:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid file paths provided",
+        )
+
+    logger.info(
+        "add_documents_started",
+        file_count=len(valid_paths),
+        dry_run=dry_run,
+    )
+
+    return StreamingResponse(
+        add_documents_stream(valid_paths, dry_run=dry_run),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ============================================================================
 # Sprint 17 Feature 17.6: Admin Statistics API
 # ============================================================================
 

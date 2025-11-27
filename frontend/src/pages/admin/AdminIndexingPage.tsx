@@ -21,7 +21,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { scanDirectory, streamReindex } from '../../api/admin';
+import { scanDirectory, streamAddDocuments } from '../../api/admin';
 import type {
   ReindexProgressChunk,
   ScanDirectoryResponse,
@@ -169,11 +169,11 @@ export function AdminIndexingPage() {
       return;
     }
 
-    // Confirmation
+    // Confirmation (ADD-only mode - no deletion warning)
     const confirmed = window.confirm(
-      'WARNUNG: Dies löscht alle bestehenden Indizes und indiziert neu.\n\n' +
-        `${selectedFiles.size} Datei(en) werden indiziert.\n\n` +
-        'Sind Sie sicher?'
+      `${selectedFiles.size} Datei(en) werden zum Index hinzugefuegt.\n\n` +
+        'Bestehende Dokumente bleiben erhalten.\n\n' +
+        'Fortfahren?'
     );
     if (!confirmed) {
       return;
@@ -190,13 +190,13 @@ export function AdminIndexingPage() {
     const controller = new AbortController();
     setAbortController(controller);
 
+    // Get selected file paths as array
+    const filePaths = Array.from(selectedFiles);
+
     try {
-      for await (const chunk of streamReindex(
-        {
-          input_dir: directory,
-          dry_run: false,
-          confirm: true,
-        },
+      for await (const chunk of streamAddDocuments(
+        filePaths,
+        false, // dry_run = false
         controller.signal
       )) {
         setProgress(chunk);

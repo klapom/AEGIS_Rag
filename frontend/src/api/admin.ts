@@ -208,3 +208,84 @@ export async function scanDirectory(
 
   return response.json();
 }
+
+/**
+ * Stream document addition progress using Server-Sent Events (SSE)
+ * ADD-only mode: Documents are added to existing index without deletion
+ *
+ * @param filePaths Array of file paths to add to the index
+ * @param dryRun If true, simulates the operation without making changes
+ * @param signal Optional AbortSignal to cancel the stream
+ * @yields ReindexProgressChunk objects with progress updates
+ */
+export async function* streamAddDocuments(
+  filePaths: string[],
+  dryRun: boolean = false,
+  signal?: AbortSignal
+): AsyncGenerator<ReindexProgressChunk> {
+  const params = new URLSearchParams();
+  for (const path of filePaths) {
+    params.append('file_paths', path);
+  }
+  if (dryRun) {
+    params.append('dry_run', 'true');
+  }
+
+  const url = `${API_BASE_URL}/api/v1/admin/indexing/add?${params.toString()}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'text/event-stream',
+    },
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  if (!response.body) {
+    throw new Error('Response body is null');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      // Decode chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Split by newlines to get individual SSE messages
+      const lines = buffer.split('\n');
+
+      // Keep the last incomplete line in buffer
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        // SSE messages start with "data: "
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6); // Remove "data: " prefix
+
+          try {
+            const chunk: ReindexProgressChunk = JSON.parse(data);
+            yield chunk;
+          } catch (e) {
+            console.error('Failed to parse SSE chunk:', e, 'Data:', data);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
