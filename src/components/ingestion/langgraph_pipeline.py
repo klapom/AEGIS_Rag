@@ -88,6 +88,7 @@ Example with Error Handling:
 """
 
 from pathlib import Path
+from typing import Any
 
 import structlog
 from langgraph.graph import END, StateGraph
@@ -655,6 +656,72 @@ async def run_batch_ingestion(
 
 
 # =============================================================================
+# CONVENIENCE WRAPPER FOR PARALLEL ORCHESTRATOR (Sprint 33 Performance Fix)
+# =============================================================================
+
+
+async def process_single_document(
+    document_path: str,
+    document_id: str,
+) -> dict[str, Any]:
+    """Process single document (convenience wrapper for parallel orchestrator).
+
+    This function provides a simplified interface for processing a single document,
+    returning a result dictionary with success status, state, and error information.
+
+    Sprint 33 Performance Fix: Added as missing function required by parallel_orchestrator.py
+
+    Args:
+        document_path: Absolute path to document file
+        document_id: Unique document identifier
+
+    Returns:
+        dict with:
+        - success: bool (True if all stages completed)
+        - state: IngestionState (complete pipeline state)
+        - error: str | None (error message if failed)
+
+    Example:
+        >>> result = await process_single_document(
+        ...     document_path="/data/doc.pdf",
+        ...     document_id="doc_001"
+        ... )
+        >>> print(f"Success: {result['success']}")
+        >>> print(f"Chunks: {len(result['state']['chunks'])}")
+    """
+    try:
+        state = await run_ingestion_pipeline(
+            document_path=document_path,
+            document_id=document_id,
+            batch_id="parallel_batch",
+            batch_index=0,
+            total_documents=1,
+        )
+
+        # Determine success based on graph extraction status
+        success = state.get("graph_status") == "completed"
+
+        return {
+            "success": success,
+            "state": state,
+            "error": state["errors"][0]["message"] if state.get("errors") else None,
+        }
+
+    except Exception as e:
+        logger.error(
+            "process_single_document_failed",
+            document_id=document_id,
+            error=str(e),
+            exc_info=True,
+        )
+        return {
+            "success": False,
+            "state": {},
+            "error": str(e),
+        }
+
+
+# =============================================================================
 # EXPORTS
 # =============================================================================
 
@@ -664,4 +731,5 @@ __all__ = [
     "run_ingestion_pipeline_streaming",
     "run_batch_ingestion",
     "initialize_pipeline_router",  # Sprint 22.3
+    "process_single_document",  # Sprint 33 Performance Fix
 ]

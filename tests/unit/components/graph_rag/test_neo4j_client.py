@@ -650,16 +650,36 @@ def mock_adaptive_chunks():
 async def test_create_section_nodes_success(
     mock_neo4j_session, mock_section_metadata, mock_adaptive_chunks
 ):
-    """Test successful section node creation."""
-    # Mock run() to return AsyncMock for all queries
-    mock_neo4j_session.run.return_value = AsyncMock()
+    """Test successful section node creation with Sprint 33 batch operations."""
+    # Sprint 33 Performance Fix: Mock batch query results
+    # The new implementation uses UNWIND batches that return counts
 
-    # Mock single() for DEFINES relationship query
-    mock_record = AsyncMock()
-    mock_record.__getitem__ = MagicMock(return_value=5)  # 5 entities found
-    mock_result = AsyncMock()
-    mock_result.single = AsyncMock(return_value=mock_record)
-    mock_neo4j_session.run.return_value = mock_result
+    # Create different mock results for each query type
+    # Query 1: Document MERGE (no return)
+    mock_doc_result = AsyncMock()
+
+    # Query 2: Batch section creation (returns sections_created count)
+    mock_section_result = AsyncMock()
+    mock_section_record = {"sections_created": 2}  # 2 sections in mock_section_metadata
+    mock_section_result.single = AsyncMock(return_value=mock_section_record)
+
+    # Query 3: Batch CONTAINS_CHUNK (returns rels_created count)
+    mock_contains_result = AsyncMock()
+    mock_contains_record = {"rels_created": 2}  # 2 section headings in mock_adaptive_chunks
+    mock_contains_result.single = AsyncMock(return_value=mock_contains_record)
+
+    # Query 4: Batch DEFINES (returns defines_created count)
+    mock_defines_result = AsyncMock()
+    mock_defines_record = {"defines_created": 5}  # 5 entities
+    mock_defines_result.single = AsyncMock(return_value=mock_defines_record)
+
+    # Set up side_effect to return different results for each call
+    mock_neo4j_session.run.side_effect = [
+        mock_doc_result,       # Document MERGE
+        mock_section_result,   # Batch section creation
+        mock_contains_result,  # Batch CONTAINS_CHUNK
+        mock_defines_result,   # Batch DEFINES
+    ]
 
     client = Neo4jClient()
     client._driver = create_driver_with_session(mock_neo4j_session)
@@ -670,20 +690,43 @@ async def test_create_section_nodes_success(
         chunks=mock_adaptive_chunks,
     )
 
-    # Verify statistics
+    # Verify statistics from batch operations
     assert stats["sections_created"] == 2, "Should create 2 sections"
     assert stats["has_section_rels"] == 2, "Should create 2 HAS_SECTION relationships"
-    assert stats["contains_chunk_rels"] >= 1, "Should create at least 1 CONTAINS_CHUNK relationship"
+    assert stats["contains_chunk_rels"] == 2, "Should create 2 CONTAINS_CHUNK relationships"
+    assert stats["defines_entity_rels"] == 5, "Should create 5 DEFINES relationships"
 
-    # Verify session.run was called (document creation, section creation, relationships)
-    assert mock_neo4j_session.run.call_count >= 4
+    # Verify session.run was called 4 times (batch operations)
+    assert mock_neo4j_session.run.call_count == 4
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_create_section_nodes_empty_sections(mock_neo4j_session, mock_adaptive_chunks):
     """Test section node creation with empty sections list."""
-    mock_neo4j_session.run.return_value = AsyncMock()
+    # Sprint 33: Mock batch results for empty sections case
+
+    # Query 1: Document MERGE (no return)
+    mock_doc_result = AsyncMock()
+
+    # Query 2: Batch section creation (returns 0 for empty list)
+    mock_section_result = AsyncMock()
+    mock_section_result.single = AsyncMock(return_value=None)  # No sections created
+
+    # Query 3: Batch CONTAINS_CHUNK (returns 0 for no mappings)
+    mock_contains_result = AsyncMock()
+    mock_contains_result.single = AsyncMock(return_value=None)
+
+    # Query 4: Batch DEFINES (returns 0)
+    mock_defines_result = AsyncMock()
+    mock_defines_result.single = AsyncMock(return_value=None)
+
+    mock_neo4j_session.run.side_effect = [
+        mock_doc_result,
+        mock_section_result,
+        mock_contains_result,
+        mock_defines_result,
+    ]
 
     client = Neo4jClient()
     client._driver = create_driver_with_session(mock_neo4j_session)
@@ -694,9 +737,10 @@ async def test_create_section_nodes_empty_sections(mock_neo4j_session, mock_adap
         chunks=mock_adaptive_chunks,
     )
 
-    # Should still create document node
+    # Should still create document node but no sections
     assert stats["sections_created"] == 0
     assert stats["has_section_rels"] == 0
+    # With empty sections, no CONTAINS_CHUNK relationships
     assert stats["contains_chunk_rels"] == 0
 
 
@@ -727,13 +771,30 @@ async def test_create_section_nodes_error_handling(
 async def test_create_section_nodes_hierarchical_structure(
     mock_neo4j_session, mock_section_metadata, mock_adaptive_chunks
 ):
-    """Test that section nodes maintain hierarchical structure."""
-    # Create mock result for DEFINES query
-    mock_record = MagicMock()
-    mock_record.__getitem__ = MagicMock(return_value=3)
-    mock_result = AsyncMock()
-    mock_result.single = AsyncMock(return_value=mock_record)
-    mock_neo4j_session.run.return_value = mock_result
+    """Test that section nodes maintain hierarchical structure with batch ops."""
+    # Sprint 33: Mock batch query results for hierarchical test
+
+    # Query 1: Document MERGE
+    mock_doc_result = AsyncMock()
+
+    # Query 2: Batch section creation (returns sections_created count)
+    mock_section_result = AsyncMock()
+    mock_section_result.single = AsyncMock(return_value={"sections_created": 2})
+
+    # Query 3: Batch CONTAINS_CHUNK
+    mock_contains_result = AsyncMock()
+    mock_contains_result.single = AsyncMock(return_value={"rels_created": 2})
+
+    # Query 4: Batch DEFINES
+    mock_defines_result = AsyncMock()
+    mock_defines_result.single = AsyncMock(return_value={"defines_created": 3})
+
+    mock_neo4j_session.run.side_effect = [
+        mock_doc_result,
+        mock_section_result,
+        mock_contains_result,
+        mock_defines_result,
+    ]
 
     client = Neo4jClient()
     client._driver = create_driver_with_session(mock_neo4j_session)
@@ -747,8 +808,6 @@ async def test_create_section_nodes_hierarchical_structure(
     # Verify sections maintain order
     assert stats["sections_created"] == 2
 
-    # Verify run was called with order parameter (for HAS_SECTION relationships)
+    # Verify run was called with batch operations
     calls = mock_neo4j_session.run.call_args_list
-    # Check that order parameters were passed (0 for first section, 1 for second)
-    # Note: We can't directly assert order here without more complex mocking,
-    # but we verify that section creation happened in order
+    # Batch operations should include order parameter in section data

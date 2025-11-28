@@ -614,6 +614,26 @@ class Settings(BaseSettings):
         default=3, description="Max retry count for Docling transient failures"
     )
 
+    # Sprint 33 Performance: Parallel Ingestion Settings
+    ingestion_parallel_files: int = Field(
+        default=3,
+        ge=1,
+        le=20,
+        description="Maximum concurrent files to process during ingestion (default 3, increase if RAM allows)",
+    )
+    ingestion_parallel_chunks: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum concurrent chunk embeddings to generate (default 10)",
+    )
+    ingestion_max_concurrent_vlm: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Maximum concurrent VLM image processing calls (default 5)",
+    )
+
     # Graphiti Memory Configuration (Sprint 7: Episodic Memory)
     graphiti_enabled: bool = Field(default=True, description="Enable Graphiti episodic memory")
     graphiti_llm_model: str = Field(

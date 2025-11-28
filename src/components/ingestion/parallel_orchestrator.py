@@ -55,9 +55,29 @@ from src.components.ingestion.job_tracker import IngestionJobTracker
 
 logger = structlog.get_logger(__name__)
 
-# Parallelism constants
+# Default parallelism constants (can be overridden via settings)
 PARALLEL_FILES = 3  # Number of files processed concurrently
 PARALLEL_CHUNKS = 10  # Number of chunk embeddings generated concurrently
+
+
+def _get_parallelism_settings() -> tuple[int, int]:
+    """Get parallelism settings from config or use defaults.
+
+    Sprint 33 Performance Fix: Make parallelism configurable via environment variables.
+
+    Returns:
+        Tuple of (parallel_files, parallel_chunks)
+    """
+    try:
+        from src.core.config import settings
+
+        return (
+            settings.ingestion_parallel_files,
+            settings.ingestion_parallel_chunks,
+        )
+    except Exception:
+        # Fallback to defaults if settings not available
+        return (PARALLEL_FILES, PARALLEL_CHUNKS)
 
 
 class ParallelIngestionOrchestrator:
@@ -83,25 +103,47 @@ class ParallelIngestionOrchestrator:
         ...     print(progress["message"])
     """
 
-    def __init__(self, max_workers: int = PARALLEL_FILES, max_chunk_workers: int = PARALLEL_CHUNKS):
+    def __init__(
+        self,
+        max_workers: int | None = None,
+        max_chunk_workers: int | None = None,
+    ):
         """Initialize orchestrator with concurrency limits.
 
+        Sprint 33 Performance Fix: Settings-based parallelism configuration.
+
         Args:
-            max_workers: Maximum concurrent files (default 3)
-            max_chunk_workers: Maximum concurrent chunk embeddings (default 10)
+            max_workers: Maximum concurrent files (default from settings or 3)
+            max_chunk_workers: Maximum concurrent chunk embeddings (default from settings or 10)
 
         Example:
+            >>> # Use defaults from settings
+            >>> orchestrator = ParallelIngestionOrchestrator()
+
+            >>> # Or override explicitly
             >>> orchestrator = ParallelIngestionOrchestrator(max_workers=5)
+
+        Environment Variables:
+            INGESTION_PARALLEL_FILES: Override default parallel files (default: 3)
+            INGESTION_PARALLEL_CHUNKS: Override default parallel chunks (default: 10)
         """
-        self.max_workers = max_workers
-        self.max_chunk_workers = max_chunk_workers
-        self._file_semaphore = asyncio.Semaphore(max_workers)
-        self._chunk_semaphore = asyncio.Semaphore(max_chunk_workers)
+        # Get settings-based defaults
+        settings_parallel_files, settings_parallel_chunks = _get_parallelism_settings()
+
+        # Use provided values or settings defaults
+        self.max_workers = max_workers if max_workers is not None else settings_parallel_files
+        self.max_chunk_workers = (
+            max_chunk_workers if max_chunk_workers is not None else settings_parallel_chunks
+        )
+
+        self._file_semaphore = asyncio.Semaphore(self.max_workers)
+        self._chunk_semaphore = asyncio.Semaphore(self.max_chunk_workers)
 
         logger.info(
             "parallel_orchestrator_initialized",
-            max_workers=max_workers,
-            max_chunk_workers=max_chunk_workers,
+            max_workers=self.max_workers,
+            max_chunk_workers=self.max_chunk_workers,
+            source="settings" if max_workers is None else "explicit",
         )
 
     async def process_files_parallel(

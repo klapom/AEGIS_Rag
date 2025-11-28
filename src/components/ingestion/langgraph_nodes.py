@@ -445,23 +445,46 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                 reason=f"Document not found: {doc_path}",
             )
 
-        # Initialize Docling client (Sprint 30: Configurable via settings.docling_base_url)
+        # Sprint 33 Performance Fix: Use pre-warmed Docling client if available
+        from src.components.ingestion.docling_client import (
+            get_prewarmed_docling_client,
+            is_docling_container_prewarmed,
+        )
         from src.core.config import settings
 
-        docling = DoclingContainerClient(
-            base_url=settings.docling_base_url,
-            timeout_seconds=settings.docling_timeout_seconds,
-            max_retries=settings.docling_max_retries,
-        )
+        # Check if we have a pre-warmed client (saves 5-10s per document)
+        prewarmed_client = get_prewarmed_docling_client()
+        use_prewarmed = prewarmed_client is not None and is_docling_container_prewarmed()
+        should_stop_container = not use_prewarmed  # Only stop if we started it
 
-        # Start container (or restart if memory leak detected)
-        if state.get("requires_container_restart", False):
-            logger.info("docling_container_restart", reason="vram_leak")
-            # Stop any existing container first (suppress errors if container not running)
-            with suppress(Exception):
-                await docling.stop_container()
+        if use_prewarmed:
+            logger.info(
+                "docling_using_prewarmed_container",
+                document_id=state["document_id"],
+                startup_time_saved="5-10s",
+            )
+            docling = prewarmed_client
+        else:
+            # Fallback: Create new client (old behavior)
+            logger.info(
+                "docling_creating_new_client",
+                document_id=state["document_id"],
+                reason="no_prewarmed_container",
+            )
+            docling = DoclingContainerClient(
+                base_url=settings.docling_base_url,
+                timeout_seconds=settings.docling_timeout_seconds,
+                max_retries=settings.docling_max_retries,
+            )
 
-        await docling.start_container()
+            # Start container (or restart if memory leak detected)
+            if state.get("requires_container_restart", False):
+                logger.info("docling_container_restart", reason="vram_leak")
+                # Stop any existing container first (suppress errors if container not running)
+                with suppress(Exception):
+                    await docling.stop_container()
+
+            await docling.start_container()
 
         try:
             # Parse document
@@ -563,9 +586,17 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
             )
 
         finally:
-            # CRITICAL: Always stop container to free VRAM (6GB → 0GB)
-            await docling.stop_container()
-            logger.info("docling_container_stopped", vram_freed="~6GB")
+            # Sprint 33 Performance Fix: Only stop container if we started it ourselves
+            # Pre-warmed containers stay running for subsequent documents
+            if should_stop_container:
+                await docling.stop_container()
+                logger.info("docling_container_stopped", vram_freed="~6GB")
+            else:
+                logger.info(
+                    "docling_container_kept_running",
+                    reason="prewarmed_container",
+                    vram_note="Container stays warm for next document",
+                )
 
         state["docling_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
@@ -852,7 +883,7 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
         processor = ImageProcessor()
 
         try:
-            # 3. Process each picture
+            # 3. Process each picture - Sprint 33 Performance: Parallel VLM Processing
             pictures_count = len(doc.pictures) if hasattr(doc, "pictures") else 0
             logger.info("vlm_processing_start", pictures_total=pictures_count)
 
@@ -867,12 +898,25 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                 state["overall_progress"] = calculate_progress(state)
                 return state
 
+            # Sprint 33 Performance Fix: Parallelize VLM image processing (5-10x speedup)
+            # Maximum concurrent VLM calls to avoid overwhelming the API
+            try:
+                from src.core.config import settings
+
+                MAX_CONCURRENT_VLM = settings.ingestion_max_concurrent_vlm
+            except Exception:
+                MAX_CONCURRENT_VLM = 5  # Conservative default
+
+            vlm_start_time = time.time()
+
+            # Step 3a: Prepare all images with their metadata (synchronous)
+            image_tasks_data = []
             for idx, picture_item in enumerate(doc.pictures):
                 try:
-                    # 3a. Get PIL image
+                    # Get PIL image
                     pil_image = picture_item.get_image()
 
-                    # 3b. Extract enhanced BBox (if available)
+                    # Extract enhanced BBox (if available)
                     enhanced_bbox = None
                     if hasattr(picture_item, "prov") and picture_item.prov:
                         prov = picture_item.prov[0]
@@ -906,55 +950,125 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                                 },
                             }
 
-                    # 3c. Generate VLM description (Sprint 25 Feature 25.4: now async)
-                    description = await processor.process_image(
-                        image=pil_image,
-                        picture_index=idx,
-                    )
-
-                    if description is None:
-                        # Image filtered out (too small, wrong aspect ratio)
-                        logger.debug(
-                            "vlm_image_filtered",
-                            picture_index=idx,
-                            reason="failed_filter_check",
-                        )
-                        continue
-
-                    # 3d. INSERT INTO DoclingDocument (CRITICAL!)
-                    if hasattr(picture_item, "caption") and picture_item.caption:
-                        picture_item.text = f"{picture_item.caption}\n\n{description}"
-                    else:
-                        picture_item.text = description
-
-                    # 3e. Store VLM metadata
-                    vlm_metadata.append(
-                        {
-                            "picture_index": idx,
-                            "picture_ref": f"#/pictures/{idx}",
-                            "description": description,
-                            "bbox_full": enhanced_bbox,
-                            "vlm_model": "qwen3-vl:4b-instruct",
-                            "timestamp": time.time(),
-                        }
-                    )
-
-                    logger.info(
-                        "vlm_image_processed",
-                        picture_index=idx,
-                        description_length=len(description),
-                        has_bbox=enhanced_bbox is not None,
-                    )
+                    image_tasks_data.append({
+                        "idx": idx,
+                        "picture_item": picture_item,
+                        "pil_image": pil_image,
+                        "enhanced_bbox": enhanced_bbox,
+                    })
 
                 except Exception as e:
                     logger.warning(
-                        "vlm_image_processing_error",
+                        "vlm_image_preparation_error",
                         picture_index=idx,
                         error=str(e),
                         action="skipping_image",
                     )
-                    # Continue with next image instead of failing entire pipeline
                     continue
+
+            logger.info(
+                "vlm_parallel_processing_prepared",
+                images_prepared=len(image_tasks_data),
+                images_total=pictures_count,
+                max_concurrent=MAX_CONCURRENT_VLM,
+            )
+
+            # Step 3b: Process images in parallel batches using asyncio.Semaphore
+            semaphore = asyncio.Semaphore(MAX_CONCURRENT_VLM)
+
+            async def process_single_image(task_data: dict) -> dict | None:
+                """Process single image with semaphore concurrency control."""
+                async with semaphore:
+                    idx = task_data["idx"]
+                    pil_image = task_data["pil_image"]
+                    enhanced_bbox = task_data["enhanced_bbox"]
+
+                    try:
+                        description = await processor.process_image(
+                            image=pil_image,
+                            picture_index=idx,
+                        )
+
+                        if description is None:
+                            logger.debug(
+                                "vlm_image_filtered",
+                                picture_index=idx,
+                                reason="failed_filter_check",
+                            )
+                            return None
+
+                        return {
+                            "idx": idx,
+                            "description": description,
+                            "enhanced_bbox": enhanced_bbox,
+                        }
+
+                    except Exception as e:
+                        logger.warning(
+                            "vlm_image_processing_error",
+                            picture_index=idx,
+                            error=str(e),
+                            action="skipping_image",
+                        )
+                        return None
+
+            # Execute all VLM tasks in parallel (bounded by semaphore)
+            vlm_tasks = [process_single_image(data) for data in image_tasks_data]
+            vlm_results = await asyncio.gather(*vlm_tasks, return_exceptions=True)
+
+            # Step 3c: Process results and update DoclingDocument
+            for task_data, result in zip(image_tasks_data, vlm_results):
+                # Handle exceptions from gather
+                if isinstance(result, Exception):
+                    logger.warning(
+                        "vlm_parallel_task_exception",
+                        picture_index=task_data["idx"],
+                        error=str(result),
+                    )
+                    continue
+
+                if result is None:
+                    continue
+
+                idx = result["idx"]
+                description = result["description"]
+                enhanced_bbox = result["enhanced_bbox"]
+                picture_item = task_data["picture_item"]
+
+                # INSERT INTO DoclingDocument (CRITICAL!)
+                if hasattr(picture_item, "caption") and picture_item.caption:
+                    picture_item.text = f"{picture_item.caption}\n\n{description}"
+                else:
+                    picture_item.text = description
+
+                # Store VLM metadata
+                vlm_metadata.append(
+                    {
+                        "picture_index": idx,
+                        "picture_ref": f"#/pictures/{idx}",
+                        "description": description,
+                        "bbox_full": enhanced_bbox,
+                        "vlm_model": "qwen3-vl:4b-instruct",
+                        "timestamp": time.time(),
+                    }
+                )
+
+                logger.debug(
+                    "vlm_image_processed",
+                    picture_index=idx,
+                    description_length=len(description),
+                    has_bbox=enhanced_bbox is not None,
+                )
+
+            vlm_duration = time.time() - vlm_start_time
+            logger.info(
+                "vlm_parallel_processing_complete",
+                images_total=pictures_count,
+                images_processed=len(vlm_metadata),
+                duration_seconds=round(vlm_duration, 2),
+                images_per_second=round(len(vlm_metadata) / vlm_duration, 2) if vlm_duration > 0 else 0,
+                max_concurrent=MAX_CONCURRENT_VLM,
+            )
 
         finally:
             # Cleanup temp files

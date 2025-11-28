@@ -672,6 +672,150 @@ async def parse_document_with_docling(
         return await client.parse_document(file_path)
 
 
+# =============================================================================
+# PRE-WARMED SINGLETON CLIENT (Sprint 33 Performance Optimization)
+# =============================================================================
+
+# Global singleton for pre-warmed Docling client
+_prewarmed_docling_client: DoclingClient | None = None
+_prewarmed_client_lock = asyncio.Lock()
+
+
+async def prewarm_docling_container(
+    base_url: str = "http://localhost:8080",
+    timeout_seconds: int = 300,
+) -> DoclingClient:
+    """Pre-warm Docling container during application startup.
+
+    Sprint 33 Performance Fix: Save 5-10s per document by keeping container warm.
+
+    This function should be called during FastAPI lifespan initialization to
+    ensure the Docling container is ready before processing any documents.
+
+    Args:
+        base_url: Docling container HTTP endpoint
+        timeout_seconds: HTTP request timeout for large files
+
+    Returns:
+        Pre-warmed DoclingClient instance
+
+    Example:
+        >>> # In FastAPI lifespan:
+        >>> @asynccontextmanager
+        >>> async def lifespan(app: FastAPI):
+        ...     client = await prewarm_docling_container()
+        ...     yield
+        ...     await shutdown_docling_container()
+
+    Note:
+        - Container stays running until shutdown_docling_container() called
+        - Use get_prewarmed_docling_client() to get the singleton instance
+        - This eliminates 5-10s startup overhead per document
+    """
+    global _prewarmed_docling_client
+
+    async with _prewarmed_client_lock:
+        if _prewarmed_docling_client is not None and _prewarmed_docling_client._container_running:
+            logger.info("docling_prewarm_skipped", reason="already_running")
+            return _prewarmed_docling_client
+
+        logger.info("docling_prewarm_starting", base_url=base_url)
+        prewarm_start = time.time()
+
+        _prewarmed_docling_client = DoclingClient(
+            base_url=base_url,
+            timeout_seconds=timeout_seconds,
+        )
+
+        try:
+            await _prewarmed_docling_client.start_container()
+            prewarm_duration = time.time() - prewarm_start
+
+            logger.info(
+                "docling_prewarm_complete",
+                duration_seconds=round(prewarm_duration, 2),
+                status="ready",
+            )
+
+            return _prewarmed_docling_client
+
+        except Exception as e:
+            logger.error(
+                "docling_prewarm_failed",
+                error=str(e),
+                duration_seconds=round(time.time() - prewarm_start, 2),
+            )
+            _prewarmed_docling_client = None
+            raise
+
+
+def get_prewarmed_docling_client() -> DoclingClient | None:
+    """Get pre-warmed Docling client singleton (or None if not pre-warmed).
+
+    Sprint 33 Performance Fix: Use this in ingestion pipeline to avoid
+    container startup overhead.
+
+    Returns:
+        Pre-warmed DoclingClient instance, or None if not initialized
+
+    Example:
+        >>> client = get_prewarmed_docling_client()
+        >>> if client is None:
+        ...     # Fall back to creating new client
+        ...     client = DoclingClient()
+        ...     await client.start_container()
+
+    Note:
+        - Returns None if prewarm_docling_container() was not called
+        - Returns None if container failed to start
+        - Thread-safe (uses module-level singleton)
+    """
+    return _prewarmed_docling_client
+
+
+def is_docling_container_prewarmed() -> bool:
+    """Check if Docling container is pre-warmed and ready.
+
+    Returns:
+        True if container is pre-warmed and running, False otherwise
+    """
+    return (
+        _prewarmed_docling_client is not None
+        and _prewarmed_docling_client._container_running
+    )
+
+
+async def shutdown_docling_container() -> None:
+    """Shutdown pre-warmed Docling container during application shutdown.
+
+    This should be called in FastAPI lifespan cleanup to properly stop
+    the container and free VRAM.
+
+    Example:
+        >>> # In FastAPI lifespan:
+        >>> @asynccontextmanager
+        >>> async def lifespan(app: FastAPI):
+        ...     await prewarm_docling_container()
+        ...     yield
+        ...     await shutdown_docling_container()
+    """
+    global _prewarmed_docling_client
+
+    async with _prewarmed_client_lock:
+        if _prewarmed_docling_client is None:
+            logger.info("docling_shutdown_skipped", reason="not_running")
+            return
+
+        try:
+            logger.info("docling_shutdown_starting")
+            await _prewarmed_docling_client.stop_container()
+            logger.info("docling_shutdown_complete", status="stopped")
+        except Exception as e:
+            logger.error("docling_shutdown_error", error=str(e))
+        finally:
+            _prewarmed_docling_client = None
+
+
 # ============================================================================
 # Backward Compatibility Alias (Sprint 25 Feature 25.9)
 # ============================================================================
