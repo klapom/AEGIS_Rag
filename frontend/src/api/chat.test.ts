@@ -48,10 +48,11 @@ describe('streamChat', () => {
       chunks.push(chunk);
     }
 
-    expect(chunks).toHaveLength(2);
+    expect(chunks).toHaveLength(3);
     expect(chunks[0].type).toBe('metadata');
     expect(chunks[1].type).toBe('token');
     expect(chunks[1].content).toBe('Hello');
+    expect(chunks[2].type).toBe('complete');
   });
 
   it('should throw error on HTTP error', async () => {

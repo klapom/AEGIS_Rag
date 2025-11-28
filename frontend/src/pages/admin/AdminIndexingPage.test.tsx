@@ -318,7 +318,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should start indexing on confirmation', async () => {
-      const mockStreamReindex = vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      const mockStreamAddDocuments = vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 25 });
         yield createMockProgressChunk({ progress_percent: 50 });
         yield createMockProgressChunk({ progress_percent: 100, status: 'completed' });
@@ -330,14 +330,14 @@ describe('AdminIndexingPage', () => {
       await userEvent.click(startButton);
 
       await waitFor(() => {
-        expect(mockStreamReindex).toHaveBeenCalled();
+        expect(mockStreamAddDocuments).toHaveBeenCalled();
       });
 
-      mockStreamReindex.mockRestore();
+      mockStreamAddDocuments.mockRestore();
     });
 
     it('should display progress during indexing', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 25, phase: 'chunking' });
       });
 
@@ -345,12 +345,12 @@ describe('AdminIndexingPage', () => {
 
       // The indexing page displays progress information during indexing
       // This test verifies that the progress UI updates as chunks arrive
-      // The streamReindex API is properly mocked and called during indexing
+      // The streamAddDocuments API is properly mocked and called during indexing
       expect(screen.getByTestId('start-indexing')).toBeInTheDocument();
     });
 
     it('should show success message on completion', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({
           status: 'completed',
           progress_percent: 100,
@@ -371,7 +371,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should handle indexing errors', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({
           status: 'error',
           error: 'Failed to connect to database',
@@ -391,7 +391,7 @@ describe('AdminIndexingPage', () => {
 
     it('should allow cancellation', async () => {
       const abortController = new AbortController();
-      const mockStreamReindex = vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      const mockStreamAddDocuments = vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         try {
           yield createMockProgressChunk({ progress_percent: 25 });
           yield createMockProgressChunk({ progress_percent: 50 });
@@ -412,7 +412,7 @@ describe('AdminIndexingPage', () => {
       const cancelButton = screen.getByTestId('cancel-indexing');
       await userEvent.click(cancelButton);
 
-      mockStreamReindex.mockRestore();
+      mockStreamAddDocuments.mockRestore();
     });
   });
 
@@ -434,7 +434,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should render ErrorTrackingButton during indexing', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 50 });
       });
 
@@ -449,7 +449,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should render Details button during indexing', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 50 });
       });
 
@@ -475,7 +475,7 @@ describe('AdminIndexingPage', () => {
         entities: { new_entities: [], new_relations: [], total_entities: 0, total_relations: 0 },
       };
 
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({
           progress_percent: 50,
           detailed_progress: mockDetailedProgress,
@@ -502,7 +502,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should accumulate errors from SSE stream', async () => {
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({
           progress_percent: 25,
           errors: [
@@ -552,7 +552,7 @@ describe('AdminIndexingPage', () => {
         entities: { new_entities: [], new_relations: [], total_entities: 0, total_relations: 0 },
       };
 
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({
           progress_percent: 50,
           detailed_progress: mockDetailedProgress,
@@ -654,7 +654,7 @@ describe('AdminIndexingPage', () => {
 
     it('should disable file selection during indexing', async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
-      vi.spyOn(adminApi, 'streamReindex').mockImplementation(async function* () {
+      vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 50 });
       });
 
