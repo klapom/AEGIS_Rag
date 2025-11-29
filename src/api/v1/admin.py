@@ -1655,10 +1655,15 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
     - **LlamaIndex** (light green): Fallback parser for TXT, MD, HTML, JSON, CSV, RTF
     - **Unsupported** (red): Files that cannot be indexed (EXE, ZIP, MP4, etc.)
 
-    **Supported Formats (30 total):**
+    **Supported Formats (27 total - Sprint 33 update):**
     - Docling (14): .pdf, .docx, .pptx, .xlsx, .png, .jpg, .jpeg, .tiff, .bmp, .html, .xml, .json, .csv, .ipynb
     - LlamaIndex exclusive (9): .epub, .rtf, .tex, .md, .rst, .adoc, .org, .odt, .msg
-    - Shared (7): .txt, .doc, .xls, .ppt, .htm, .mhtml, .eml
+    - Shared (4): .txt, .htm, .mhtml, .eml
+
+    **NOT Supported (Legacy Office - require conversion):**
+    - .doc → convert to .docx
+    - .xls → convert to .xlsx
+    - .ppt → convert to .pptx
 
     **Example Request:**
     ```json
@@ -1709,6 +1714,7 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
         ALL_FORMATS,
         DOCLING_FORMATS,
         LLAMAINDEX_EXCLUSIVE,
+        LEGACY_UNSUPPORTED,
         SHARED_FORMATS,
     )
 
@@ -1762,7 +1768,13 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
             file_size = file_path.stat().st_size
 
             # Determine parser type
-            if file_extension in DOCLING_FORMATS:
+            # Sprint 33: Check legacy formats FIRST (before LLAMAINDEX_EXCLUSIVE check)
+            if file_extension in LEGACY_UNSUPPORTED:
+                # Legacy Office formats - explicitly unsupported
+                parser_type = "unsupported"
+                is_supported = False
+                stats["unsupported"] += 1
+            elif file_extension in DOCLING_FORMATS:
                 parser_type = "docling"
                 is_supported = True
                 stats["docling_supported"] += 1

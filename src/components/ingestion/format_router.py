@@ -4,10 +4,11 @@ This module provides intelligent routing between Docling (GPU-accelerated) and
 LlamaIndex (fallback) parsers based on document format.
 
 Architecture:
-    - 30+ supported formats across 3 categories:
+    - 27 supported formats across 3 categories (Sprint 33: legacy formats removed):
       1. Docling-optimized (14 formats): PDF, DOCX, PPTX, XLSX, images, etc.
       2. LlamaIndex-exclusive (9 formats): EPUB, RTF, TEX, MD, etc.
-      3. Shared formats (7 formats): TXT, DOC, XLS, PPT, etc.
+      3. Shared formats (4 formats): TXT, HTM, MHTML, EML
+    - Legacy unsupported (3 formats): DOC, XLS, PPT (require conversion)
     - Graceful degradation when Docling container unavailable
     - Confidence scoring for routing decisions
     - Health check integration for real-time availability
@@ -100,9 +101,8 @@ DOCLING_FORMATS: set[str] = {
     ".ipynb",  # Jupyter notebooks with cell structure
 }
 
-# LlamaIndex-exclusive formats (12 formats)
+# LlamaIndex-exclusive formats (9 formats)
 # These formats are ONLY supported by LlamaIndex connectors
-# NOTE: Legacy Office formats (.doc, .xls, .ppt) moved here because Docling doesn't support them
 LLAMAINDEX_EXCLUSIVE: set[str] = {
     ".epub",  # E-books (LlamaIndex EPUBReader)
     ".rtf",  # Rich Text Format (LlamaIndex RTFReader)
@@ -113,10 +113,16 @@ LLAMAINDEX_EXCLUSIVE: set[str] = {
     ".org",  # Org-Mode (LlamaIndex OrgReader)
     ".odt",  # OpenDocument Text (LlamaIndex ODTReader)
     ".msg",  # Outlook messages (LlamaIndex MSGReader)
-    # Legacy Office formats (Docling only supports modern .docx/.xlsx/.pptx)
-    ".doc",  # Legacy Word 97-2003 (LlamaIndex DOCReader)
-    ".xls",  # Legacy Excel 97-2003 (LlamaIndex XLSReader)
-    ".ppt",  # Legacy PowerPoint 97-2003 (LlamaIndex PPTReader)
+}
+
+# Sprint 33: Legacy Office formats - NOT SUPPORTED
+# Reason: Docling uses python-docx/python-pptx/openpyxl which only support modern formats
+# LlamaIndex's LegacyOfficeReader requires Apache Tika (Java) - not available in our stack
+# Users must convert these to modern formats (.docx, .xlsx, .pptx) before processing
+LEGACY_UNSUPPORTED: set[str] = {
+    ".doc",  # Legacy Word 97-2003 - NOT SUPPORTED (convert to .docx)
+    ".xls",  # Legacy Excel 97-2003 - NOT SUPPORTED (convert to .xlsx)
+    ".ppt",  # Legacy PowerPoint 97-2003 - NOT SUPPORTED (convert to .pptx)
 }
 
 # Shared formats (4 formats)
@@ -128,8 +134,9 @@ SHARED_FORMATS: set[str] = {
     ".eml",  # Email messages (RFC 822)
 }
 
-# Total supported formats: 30
-# = 14 (Docling) + 12 (LlamaIndex exclusive) + 4 (shared)
+# Total supported formats: 27 (down from 30 - legacy formats removed)
+# = 14 (Docling) + 9 (LlamaIndex exclusive) + 4 (shared)
+# Legacy formats (.doc, .xls, .ppt) are in LEGACY_UNSUPPORTED (not processable)
 ALL_FORMATS: set[str] = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
 
 # =============================================================================
@@ -498,6 +505,7 @@ __all__ = [
     "LLAMAINDEX_EXCLUSIVE",
     "SHARED_FORMATS",
     "ALL_FORMATS",
+    "LEGACY_UNSUPPORTED",  # Sprint 33: Legacy Office formats not supported
     "check_docling_availability",
     "initialize_format_router",
 ]
