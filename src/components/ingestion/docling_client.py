@@ -6,8 +6,37 @@ Docling is a GPU-accelerated document parsing library that provides:
 - OCR for scanned PDFs (Tesseract + GPU acceleration)
 - Table extraction with structure preservation
 - Layout analysis (headings, lists, columns, formatting)
-- Multi-format support (PDF, DOCX, PPTX, HTML, images)
+- Multi-format support (PDF, DOCX, PPTX, XLSX, HTML, images)
 - CUDA optimization for RTX 3060 6GB VRAM
+
+================================================================================
+SUPPORTED FORMATS (Sprint 33)
+================================================================================
+
+MODERN OFFICE FORMATS (SUPPORTED):
+  - PDF  (.pdf)   - Full support with OCR, tables, layout
+  - DOCX (.docx)  - Full support, requires Word heading styles for section_header
+  - PPTX (.pptx)  - Full support with slide titles
+  - XLSX (.xlsx)  - Table extraction
+  - HTML (.html)  - Structure preserved
+  - Images        - PNG, TIFF, JPEG with OCR
+
+LEGACY OFFICE FORMATS (NOT SUPPORTED):
+  - DOC  (.doc)   - Legacy Word 97-2003 - NOT SUPPORTED
+  - XLS  (.xls)   - Legacy Excel 97-2003 - NOT SUPPORTED
+  - PPT  (.ppt)   - Legacy PowerPoint 97-2003 - NOT SUPPORTED
+
+Docling uses python-docx, python-pptx, openpyxl internally which only support
+the modern Office Open XML formats (2007+). Legacy binary formats (.doc, .xls, .ppt)
+must be converted to modern formats before processing.
+
+WORKAROUND FOR LEGACY FORMATS:
+  1. Convert to modern format using Microsoft Office or LibreOffice
+  2. Use LibreOffice CLI: `soffice --headless --convert-to docx file.doc`
+  3. For programmatic conversion: python-docx2txt (text only, no structure)
+
+See: https://docling-project.github.io/docling/usage/supported_formats/
+================================================================================
 
 Container Lifecycle:
   1. start_container() → Docker Compose starts Docling service
@@ -73,6 +102,32 @@ class DoclingParsedDocument(BaseModel):
         default_factory=dict, description="Full Docling JSON response"
     )
     md_content: str = Field(default="", description="Markdown with embedded base64 images")
+
+    @property
+    def body(self) -> dict[str, Any] | None:
+        """Provide Docling-compatible .body attribute for section extraction.
+
+        Sprint 33 Fix (TD-044): The section_extraction.py expects .body attribute
+        which exists on native Docling DoclingDocument objects but not on our
+        HTTP API wrapper. This property provides compatibility.
+
+        Returns:
+            Body structure from json_content, or None if not available.
+        """
+        return self.json_content.get("body") if self.json_content else None
+
+    @property
+    def document(self) -> "DoclingParsedDocument":
+        """Self-reference for code expecting .document attribute.
+
+        Sprint 33 Fix (TD-044): Some code paths check for parsed.document
+        expecting a nested document object. Since DoclingParsedDocument IS
+        the document, we return self.
+
+        Returns:
+            Self reference.
+        """
+        return self
 
 
 class DoclingClient:
@@ -371,6 +426,16 @@ class DoclingClient:
         if not file_path.exists():
             raise FileNotFoundError(f"Document not found: {file_path}")
 
+        # Sprint 33: Reject legacy Office formats (not supported by Docling)
+        LEGACY_FORMATS = {".doc", ".xls", ".ppt"}
+        file_ext = file_path.suffix.lower()
+        if file_ext in LEGACY_FORMATS:
+            raise IngestionError(
+                f"Legacy Office format '{file_ext}' is NOT SUPPORTED. "
+                f"Please convert to modern format (.docx, .xlsx, .pptx) before processing. "
+                f"File: {file_path.name}"
+            )
+
         if not self._container_running:
             logger.warning(
                 "docling_parse_without_start",
@@ -378,12 +443,20 @@ class DoclingClient:
                 message="Container not explicitly started, health may be unknown",
             )
 
+        file_size_bytes = file_path.stat().st_size
         logger.info(
-            "docling_parse_start", file_path=str(file_path), file_size=file_path.stat().st_size
+            "TIMING_docling_parse_start",
+            stage="docling",
+            file_path=str(file_path),
+            file_size_bytes=file_size_bytes,
+            file_size_mb=round(file_size_bytes / 1024 / 1024, 2),
         )
 
         client = await self._ensure_client()
-        start_time = time.time()
+        start_time = time.perf_counter()
+
+        # Timing variables for sub-stages
+        upload_start = time.perf_counter()
 
         try:
             # Step 1: Submit file to async API
@@ -407,12 +480,25 @@ class DoclingClient:
                 )
                 response.raise_for_status()
 
+            upload_end = time.perf_counter()
+            upload_duration_ms = (upload_end - upload_start) * 1000
+
             task_data = response.json()
             task_id = task_data.get("task_id")
             if not task_id:
                 raise IngestionError(str(file_path), f"No task_id in response: {task_data}")
 
-            logger.info("docling_task_submitted", task_id=task_id, file_path=str(file_path))
+            logger.info(
+                "TIMING_docling_file_uploaded",
+                stage="docling",
+                substage="file_upload",
+                duration_ms=round(upload_duration_ms, 2),
+                task_id=task_id,
+                file_path=str(file_path),
+            )
+
+            # Start polling timer
+            polling_start = time.perf_counter()
 
             # Step 2: Poll for task completion
             poll_interval = 2.0  # seconds
@@ -430,7 +516,16 @@ class DoclingClient:
                 task_status = status_data.get("task_status")
 
                 if task_status == "success":
-                    logger.info("docling_task_completed", task_id=task_id, attempts=attempt + 1)
+                    polling_end = time.perf_counter()
+                    polling_duration_ms = (polling_end - polling_start) * 1000
+                    logger.info(
+                        "TIMING_docling_task_completed",
+                        stage="docling",
+                        substage="task_polling",
+                        duration_ms=round(polling_duration_ms, 2),
+                        task_id=task_id,
+                        poll_attempts=attempt + 1,
+                    )
                     break
                 elif task_status == "failure":
                     raise IngestionError(str(file_path), f"Docling task failed: {status_data}")
@@ -442,21 +537,32 @@ class DoclingClient:
 
             else:
                 # Timeout: max_polls reached
-                elapsed = time.time() - start_time
+                elapsed = time.perf_counter() - start_time
                 raise IngestionError(
                     str(file_path),
                     f"Docling task timeout after {elapsed:.1f}s (task_id: {task_id}, file: {file_path.name})",
                 )
 
             # Step 3: Fetch result
+            result_download_start = time.perf_counter()
             result_response = await client.get(
                 f"{self.base_url}/v1/result/{task_id}",
                 timeout=30.0,
             )
             result_response.raise_for_status()
             result_data = result_response.json()
+            result_download_end = time.perf_counter()
+            result_download_ms = (result_download_end - result_download_start) * 1000
 
-            parse_time = (time.time() - start_time) * 1000  # Convert to ms
+            logger.info(
+                "TIMING_docling_result_downloaded",
+                stage="docling",
+                substage="result_download",
+                duration_ms=round(result_download_ms, 2),
+                task_id=task_id,
+            )
+
+            parse_time = (time.perf_counter() - start_time) * 1000  # Convert to ms
 
             # Extract document content
             document = result_data.get("document", {})
@@ -528,12 +634,25 @@ class DoclingClient:
                 md_content=md_content,  # Store markdown with embedded base64 images
             )
 
+            # Calculate throughput metrics
+            throughput_kb_per_sec = (file_size_bytes / 1024) / (parse_time / 1000) if parse_time > 0 else 0
+
             logger.info(
-                "docling_parse_success",
+                "TIMING_docling_parse_complete",
+                stage="docling",
+                duration_ms=round(parse_time, 2),
                 file_path=str(file_path),
+                file_size_bytes=file_size_bytes,
                 text_length=len(parsed.text),
-                parse_time_ms=round(parse_time, 2),
+                tables_count=len(parsed.tables),
+                images_count=len(parsed.images),
+                throughput_kb_per_sec=round(throughput_kb_per_sec, 2),
                 task_id=task_id,
+                timing_breakdown={
+                    "file_upload_ms": round(upload_duration_ms, 2),
+                    "task_polling_ms": round(polling_duration_ms, 2),
+                    "result_download_ms": round(result_download_ms, 2),
+                },
             )
 
             return parsed

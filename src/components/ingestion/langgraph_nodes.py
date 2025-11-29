@@ -490,73 +490,36 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
             # Parse document
             parsed = await docling.parse_document(doc_path)
 
-            # Feature 31.12: PowerPoint Fix - parsed itself IS the DoclingDocument
-            # For PowerPoint files, the entire response is the document (no .document attribute)
-            # For PDF/DOCX, response has .document attribute
+            # Sprint 33 Fix (TD-044): DoclingParsedDocument now has .document property
+            # All formats use unified code path
+            state["document"] = parsed.document  # Works for all formats
+
+            # Extract page dimensions from json_content if available
+            # Sprint 33 Fix (TD-044): Docling API pages is ALWAYS a dict {"1": PageItem, "2": PageItem}
+            # Schema: additionalProperties with $ref to PageItem (page_no: int, size: {width, height})
             page_dimensions = {}
+            pages_data = parsed.json_content.get("pages", {}) if parsed.json_content else {}
 
-            # CRITICAL VERIFICATION: Log parsed object type and attributes
-            logger.warning(
-                "VERIFICATION_parsed_type_check",
-                document_id=state["document_id"],
-                parsed_type=type(parsed).__name__,
-                parsed_module=type(parsed).__module__,
-                has_document_attr=hasattr(parsed, "document"),
-                parsed_is_none=parsed is None,
-                has_text=hasattr(parsed, "text"),
-                text_length=len(parsed.text) if hasattr(parsed, "text") else 0,
-            )
-
-            if hasattr(parsed, "document"):
-                # PDF, DOCX: parsed.document is the DoclingDocument
-                state["document"] = parsed.document
-
-                # Extract page dimensions if pages exist
-                if hasattr(parsed.document, "pages") and parsed.document.pages:
-                    for page in parsed.document.pages:
-                        page_dimensions[page.page_no] = {
-                            "width": page.size.width,
-                            "height": page.size.height,
+            # Pages is a dict: {"1": {"page_no": 1, "size": {...}}, "2": {...}}
+            for page_key, page_info in pages_data.items():
+                if isinstance(page_info, dict):
+                    # page_no from PageItem, fallback to dict key as int
+                    page_no = page_info.get("page_no", int(page_key) if page_key.isdigit() else None)
+                    size = page_info.get("size", {})
+                    if page_no is not None and size:
+                        page_dimensions[page_no] = {
+                            "width": size.get("width", 0),
+                            "height": size.get("height", 0),
                             "unit": "pt",
                             "dpi": 72,
                         }
-                logger.warning(
-                    "VERIFICATION_document_from_parsed_dot_document",
-                    document_id=state["document_id"],
-                    has_pages=hasattr(parsed.document, "pages"),
-                    pages_count=len(page_dimensions),
-                    state_document_is_none=state["document"] is None,
-                )
-            else:
-                # PowerPoint: parsed itself is the DoclingDocument
-                logger.warning(
-                    "VERIFICATION_entering_else_branch_POWERPOINT",
-                    document_id=state["document_id"],
-                    parsed_type=type(parsed).__name__,
-                    note="PowerPoint detected: using parsed object directly as document",
-                )
 
-                state["document"] = parsed
-
-                # IMMEDIATE VERIFICATION AFTER ASSIGNMENT
-                logger.warning(
-                    "VERIFICATION_state_document_set_POWERPOINT",
-                    document_id=state["document_id"],
-                    state_document_is_none=state["document"] is None,
-                    state_document_type=(
-                        type(state["document"]).__name__
-                        if state["document"] is not None
-                        else "None"
-                    ),
-                    parsed_is_none=parsed is None,
-                )
-
-                # Critical check: If state["document"] is still None, raise exception
-                if state["document"] is None:
-                    raise ValueError(
-                        f"CRITICAL BUG: state['document'] is None after assignment! "
-                        f"parsed type: {type(parsed)}, parsed is None: {parsed is None}"
-                    )
+            logger.info(
+                "docling_document_processed",
+                document_id=state["document_id"],
+                has_body=parsed.body is not None,
+                pages_count=len(page_dimensions),
+            )
 
             state["page_dimensions"] = page_dimensions  # Feature 21.6: Page metadata
             state["parsed_content"] = parsed.text  # Keep for backwards compatibility
@@ -576,13 +539,13 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
                 parse_time_ms=parsed.parse_time_ms,
             )
 
-            # CRITICAL LOGGING: COMPLETE raw text from Docling (user requested full text)
-            logger.warning(
-                "docling_raw_text_complete",
+            # Sprint 33: Removed verbose raw_text_complete logging (caused Unicode errors on Windows)
+            # Text length is logged above in node_docling_parsed
+            logger.debug(
+                "docling_raw_text_available",
                 document_id=state["document_id"],
                 raw_text_length=len(parsed.text),
-                raw_text_complete=parsed.text,  # GESAMTER TEXT
-                note="COMPLETE raw text extracted by Docling for debugging (full content)",
+                first_100_chars=parsed.text[:100].encode("ascii", errors="replace").decode("ascii"),
             )
 
         finally:
@@ -1251,7 +1214,12 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         >>> state["chunks"][0]["image_bboxes"]
         [...]  # BBox info for images in this chunk
     """
-    logger.info("node_chunking_start", document_id=state["document_id"])
+    chunking_start = time.perf_counter()
+    logger.info(
+        "TIMING_chunking_start",
+        stage="chunking",
+        document_id=state["document_id"],
+    )
 
     state["chunking_status"] = "running"
     state["chunking_start_time"] = time.time()
@@ -1296,13 +1264,19 @@ async def chunking_node(state: IngestionState) -> IngestionState:
 
         # Sprint 32 Feature 32.1 & 32.2: Adaptive Section-Aware Chunking (ADR-039)
         # Extract section hierarchy from Docling JSON
+        section_extraction_start = time.perf_counter()
         from src.components.ingestion.section_extraction import extract_section_hierarchy
 
         sections = extract_section_hierarchy(enriched_doc, SectionMetadata)
+        section_extraction_end = time.perf_counter()
+        section_extraction_ms = (section_extraction_end - section_extraction_start) * 1000
 
         # CRITICAL LOGGING: Section extraction results
         logger.info(
-            "chunking_section_extraction_complete",
+            "TIMING_chunking_section_extraction",
+            stage="chunking",
+            substage="section_extraction",
+            duration_ms=round(section_extraction_ms, 2),
             document_id=state["document_id"],
             sections_found=len(sections),
             total_section_text_length=sum(len(s.text) for s in sections),
@@ -1367,8 +1341,21 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             )
 
         # Apply adaptive chunking (800-1800 tokens, section-aware)
+        adaptive_chunking_start = time.perf_counter()
         adaptive_chunks = adaptive_section_chunking(
             sections=sections, min_chunk=800, max_chunk=1800, large_section_threshold=1200
+        )
+        adaptive_chunking_end = time.perf_counter()
+        adaptive_chunking_ms = (adaptive_chunking_end - adaptive_chunking_start) * 1000
+
+        logger.info(
+            "TIMING_chunking_adaptive_merge",
+            stage="chunking",
+            substage="adaptive_merge",
+            duration_ms=round(adaptive_chunking_ms, 2),
+            input_sections=len(sections),
+            output_chunks=len(adaptive_chunks),
+            compression_ratio=round(len(sections) / len(adaptive_chunks), 2) if adaptive_chunks else 0,
         )
 
         # Convert AdaptiveChunk to enhanced_chunks format (backward compatible)
@@ -1414,15 +1401,26 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         state["chunking_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
 
+        chunking_end = time.perf_counter()
+        total_chunking_ms = (chunking_end - chunking_start) * 1000
+        total_tokens = sum(ac.token_count for ac in adaptive_chunks)
+
         logger.info(
-            "node_chunking_complete",
+            "TIMING_chunking_complete",
+            stage="chunking",
+            duration_ms=round(total_chunking_ms, 2),
             document_id=state["document_id"],
-            original_sections=len(sections),  # ADR-039: sections instead of chunks
-            adaptive_chunks=len(adaptive_chunks),  # ADR-039: adaptive merged chunks
+            original_sections=len(sections),
+            adaptive_chunks=len(adaptive_chunks),
             final_chunks=len(merged_chunks),
+            total_tokens=total_tokens,
+            avg_tokens_per_chunk=round(total_tokens / len(merged_chunks), 1) if merged_chunks else 0,
             chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
             total_image_annotations=sum(len(c["image_bboxes"]) for c in merged_chunks),
-            duration_seconds=round(state["chunking_end_time"] - state["chunking_start_time"], 2),
+            timing_breakdown={
+                "section_extraction_ms": round(section_extraction_ms, 2),
+                "adaptive_merge_ms": round(adaptive_chunking_ms, 2),
+            },
         )
 
         return state
@@ -1471,7 +1469,12 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         >>> state["embedding_status"]
         'completed'
     """
-    logger.info("node_embedding_start", document_id=state["document_id"])
+    embedding_node_start = time.perf_counter()
+    logger.info(
+        "TIMING_embedding_start",
+        stage="embedding",
+        document_id=state["document_id"],
+    )
 
     state["embedding_status"] = "running"
     state["embedding_start_time"] = time.time()
@@ -1501,8 +1504,28 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 texts.append(chunk.content if hasattr(chunk, "content") else str(chunk))
 
         # Generate embeddings
-        logger.info("embedding_batch_start", chunk_count=len(texts))
+        embedding_gen_start = time.perf_counter()
+        logger.info(
+            "TIMING_embedding_generation_start",
+            stage="embedding",
+            substage="embedding_generation",
+            chunk_count=len(texts),
+            total_chars=sum(len(t) for t in texts),
+        )
         embeddings = await embedding_service.embed_batch(texts)
+        embedding_gen_end = time.perf_counter()
+        embedding_gen_ms = (embedding_gen_end - embedding_gen_start) * 1000
+        embeddings_per_sec = len(texts) / (embedding_gen_ms / 1000) if embedding_gen_ms > 0 else 0
+
+        logger.info(
+            "TIMING_embedding_generation_complete",
+            stage="embedding",
+            substage="embedding_generation",
+            duration_ms=round(embedding_gen_ms, 2),
+            embeddings_generated=len(embeddings),
+            throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
+            embedding_dim=len(embeddings[0]) if embeddings else 0,
+        )
 
         # Upload to Qdrant
         qdrant = QdrantClientWrapper()
@@ -1597,10 +1620,23 @@ async def embedding_node(state: IngestionState) -> IngestionState:
             points.append(point)
 
         # Upload batch
+        qdrant_upsert_start = time.perf_counter()
         await qdrant.upsert_points(
             collection_name=collection_name,
             points=points,
             batch_size=100,
+        )
+        qdrant_upsert_end = time.perf_counter()
+        qdrant_upsert_ms = (qdrant_upsert_end - qdrant_upsert_start) * 1000
+
+        logger.info(
+            "TIMING_qdrant_upsert_complete",
+            stage="embedding",
+            substage="qdrant_upsert",
+            duration_ms=round(qdrant_upsert_ms, 2),
+            points_uploaded=len(points),
+            batch_size=100,
+            collection=collection_name,
         )
 
         # Store point IDs
@@ -1609,13 +1645,21 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         state["embedding_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
 
+        embedding_node_end = time.perf_counter()
+        total_embedding_ms = (embedding_node_end - embedding_node_start) * 1000
+
         logger.info(
-            "node_embedding_complete",
+            "TIMING_embedding_complete",
+            stage="embedding",
+            duration_ms=round(total_embedding_ms, 2),
             document_id=state["document_id"],
             points_uploaded=len(points),
             points_with_images=sum(1 for p in points if p.payload.get("contains_images")),
             collection=collection_name,
-            duration_seconds=round(state["embedding_end_time"] - state["embedding_start_time"], 2),
+            timing_breakdown={
+                "embedding_generation_ms": round(embedding_gen_ms, 2),
+                "qdrant_upsert_ms": round(qdrant_upsert_ms, 2),
+            },
         )
 
         return state
@@ -1665,16 +1709,16 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         >>> state["graph_status"]
         'completed'
     """
+    graph_node_start = time.perf_counter()
+
     logger.info(
-        "DEBUG_graph_extraction_node_CALLED",
+        "TIMING_graph_extraction_start",
+        stage="graph_extraction",
         document_id=state["document_id"],
-        state_keys=list(state.keys()),
         chunks_available=len(state.get("chunks", [])),
         embedding_status=state.get("embedding_status"),
         chunking_status=state.get("chunking_status"),
     )
-
-    logger.info("node_graph_extraction_start", document_id=state["document_id"])
 
     state["graph_status"] = "running"
     state["graph_start_time"] = time.time()
@@ -1744,18 +1788,40 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             )
 
         # Insert into LightRAG (extracts entities/relations, stores in Neo4j)
-        logger.info("lightrag_insert_start", chunk_count=len(lightrag_docs))
+        lightrag_insert_start = time.perf_counter()
+        logger.info(
+            "TIMING_lightrag_insert_start",
+            stage="graph_extraction",
+            substage="lightrag_insert",
+            chunk_count=len(lightrag_docs),
+        )
         graph_stats = await lightrag.insert_documents_optimized(lightrag_docs)
+        lightrag_insert_end = time.perf_counter()
+        lightrag_insert_ms = (lightrag_insert_end - lightrag_insert_start) * 1000
+
+        logger.info(
+            "TIMING_lightrag_insert_complete",
+            stage="graph_extraction",
+            substage="lightrag_insert",
+            duration_ms=round(lightrag_insert_ms, 2),
+            chunks_processed=len(lightrag_docs),
+            entities_extracted=graph_stats.get("stats", {}).get("total_entities", 0),
+            relations_extracted=graph_stats.get("stats", {}).get("total_relations", 0),
+        )
 
         # Sprint 32 Feature 32.4: Create Section nodes in Neo4j (ADR-039)
         # Extract sections and chunks from state for section node creation
         sections = state.get("sections", [])
         adaptive_chunks = state.get("adaptive_chunks", [])
 
+        section_nodes_ms = 0.0
         if sections and adaptive_chunks:
             try:
+                section_nodes_start = time.perf_counter()
                 logger.info(
-                    "creating_section_nodes_start",
+                    "TIMING_section_nodes_start",
+                    stage="graph_extraction",
+                    substage="section_nodes",
                     document_id=state["document_id"],
                     sections_count=len(sections),
                     chunks_count=len(adaptive_chunks),
@@ -1773,8 +1839,14 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                     chunks=adaptive_chunks,
                 )
 
+                section_nodes_end = time.perf_counter()
+                section_nodes_ms = (section_nodes_end - section_nodes_start) * 1000
+
                 logger.info(
-                    "section_nodes_created_successfully",
+                    "TIMING_section_nodes_complete",
+                    stage="graph_extraction",
+                    substage="section_nodes",
+                    duration_ms=round(section_nodes_ms, 2),
                     document_id=state["document_id"],
                     sections_created=section_stats["sections_created"],
                     has_section_rels=section_stats["has_section_rels"],
@@ -1812,8 +1884,13 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
         # Extract stats from nested structure (Sprint 32 Fix)
         stats = graph_stats.get("stats", {})
+        graph_node_end = time.perf_counter()
+        total_graph_ms = (graph_node_end - graph_node_start) * 1000
+
         logger.info(
-            "node_graph_extraction_complete",
+            "TIMING_graph_extraction_complete",
+            stage="graph_extraction",
+            duration_ms=round(total_graph_ms, 2),
             document_id=state["document_id"],
             total_entities=stats.get("total_entities", 0),
             total_relations=stats.get("total_relations", 0),
@@ -1822,7 +1899,10 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                 1 for doc in lightrag_docs if doc["metadata"].get("has_image_annotation")
             ),
             section_nodes_created=state.get("section_node_stats", {}).get("sections_created", 0),
-            duration_seconds=round(state["graph_end_time"] - state["graph_start_time"], 2),
+            timing_breakdown={
+                "lightrag_insert_ms": round(lightrag_insert_ms, 2),
+                "section_nodes_ms": round(section_nodes_ms, 2),
+            },
         )
 
         return state

@@ -24,7 +24,9 @@ Verbesserung der Admin-Indizierung mit Verzeichnisauswahl, Dateivorschau, detail
 | 33.6 | Live-Log Stream | 8 SP | P2 |
 | 33.7 | Persistente Logging-Datenbank + API | 13 SP | P1 |
 | 33.8 | Parallele Dateiverarbeitung | 8 SP | P1 |
-| **Gesamt** | | **62 SP** | |
+| 33.9 | DoclingParsedDocument Interface Fix (TD-044) | 5 SP | P0 |
+| 33.10 | Multi-Format Section Extraction & Legacy Handling | 5 SP | P0 |
+| **Gesamt** | | **72 SP** | |
 
 ---
 
@@ -433,6 +435,218 @@ ingestion:
 - [ ] Parallelität ist konfigurierbar
 - [ ] Fortschrittsanzeige zeigt alle aktiven Dateien
 - [ ] Fehler in einer Datei stoppen nicht die anderen
+
+---
+
+## Feature 33.9: DoclingParsedDocument Interface Fix (TD-044) (5 SP)
+
+### Beschreibung
+Kritische Fehlerbehebung für DoclingParsedDocument Interface-Mismatch, der Section Extraction für alle Dokumentformate blockiert hat.
+
+### Problem
+- `DoclingParsedDocument` (HTTP API Wrapper) fehlten `.body` und `.document` Attribute
+- Section Extraction scheiterte für ALLE Formate (PDF, DOCX, PPTX - nicht nur PowerPoint)
+- Dead Code in `langgraph_nodes.py` (Zeilen 510-529) wurde nie ausgeführt
+- Doppeltes Chunking: Pipeline → 1 Chunk, LightRAG → 122 Chunks
+- Symptom: Alle Dateien bekamen nur 1 Chunk ohne Sections
+
+### Root Cause
+```python
+# DoclingParsedDocument (HTTP wrapper) war:
+class DoclingParsedDocument:
+    json_content: dict  # Parsed document as dict
+    # FEHLEND: .body und .document wie native Docling Objekte
+
+# Aber section_extraction.py erwartete:
+if isinstance(parsed_doc.document.body, list):  # AttributeError!
+```
+
+### Lösung
+
+#### 1. Property Accessors zu DoclingParsedDocument hinzufügen
+```python
+@property
+def body(self):
+    """Access document body from Docling JSON."""
+    return self.json_content.get("body")
+
+@property
+def document(self):
+    """Self-reference for native Docling object interface."""
+    return self
+```
+
+#### 2. Dead Code aus langgraph_nodes.py entfernen (Zeilen 510-529)
+```python
+# ENTFERNEN: Dieser Code wurde nie ausgeführt
+if hasattr(parsed_docling_doc, "document") and parsed_docling_doc.document is not None:
+    # This branch never executed for DoclingParsedDocument
+    sections = extract_sections_from_docling(parsed_docling_doc.document.body)
+else:
+    # Always took this path, so dead code above was useless
+    sections = extract_sections_from_docling(parsed_docling_doc.json_content.get("body"))
+```
+
+#### 3. section_extraction.py für Dict-Format aktualisieren
+```python
+# Jetzt funktioniert mit beiden Formaten:
+# - Docling native Objekte: parsed_doc.document.body
+# - DoclingParsedDocument HTTP wrapper: parsed_doc.body (via property)
+def extract_sections(body_content):
+    if isinstance(body_content, dict):
+        # Handle dict format from Docling JSON
+        return extract_from_dict(body_content)
+    elif isinstance(body_content, list):
+        # Handle native Docling object format
+        return extract_from_list(body_content)
+```
+
+### Auswirkungen
+- Section Extraction funktioniert jetzt für PDF, DOCX, PPTX
+- Kein doppeltes Chunking mehr
+- Dead Code entfernt, Codebase sauberer
+- Backward compatible (alle Dateitypen)
+
+### Betroffene Dateien
+- `src/components/ingestion/docling_client.py` (Add properties)
+- `src/components/ingestion/langgraph_nodes.py` (Remove dead code)
+- `src/components/ingestion/section_extraction.py` (Handle dict format)
+
+### Acceptance Criteria
+- [ ] Section Extraction funktioniert für PDF
+- [ ] Section Extraction funktioniert für DOCX
+- [ ] Section Extraction funktioniert für PPTX
+- [ ] Kein doppeltes Chunking mehr
+- [ ] Dead Code entfernt
+- [ ] Alle Tests bestehen (>80% coverage)
+- [ ] Integration Tests für all 3 Formate
+
+### Test-Strategie
+```python
+@pytest.mark.parametrize("file_format", ["pdf", "docx", "pptx"])
+async def test_section_extraction_for_all_formats(file_format):
+    # Test mit echten Test-Dateien für alle Formate
+    parsed_doc = await docling_client.parse_document(test_file[file_format])
+    sections = extract_sections(parsed_doc)
+    assert len(sections) > 0
+    assert all(s.heading for s in sections)
+```
+
+### Dokumentation
+- **TD-044:** `docs/technical-debt/TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md`
+- **Sprint 33:** Diese Feature dokumentiert in SPRINT_33_PLAN.md
+- **Architecture:** ARCHITECTURE_EVOLUTION.md aktualisiert
+
+### Abhängigkeiten
+- Keine - Standalone Bug Fix
+- Blockiert: Alle anderen Sprint-33-Features (bis TD-044 behoben)
+
+---
+
+## Feature 33.10: Multi-Format Section Extraction & Legacy Format Handling (5 SP)
+
+### Beschreibung
+Verbesserungen an der Section Extraction für verschiedene Dokumentformate nach detaillierter API-Analyse und Tests.
+
+### Erkenntnisse aus der Docling API-Analyse
+
+#### Docling DocItemLabel Enum
+Docling verwendet verschiedene Labels je nach Dokumenttyp:
+- **PPTX:** `title`, `subtitle-level-1`, `subtitle-level-2`, `paragraph`, `list_item`
+- **DOCX:** `section_header` (für Word Heading Styles), `paragraph`, `list_item`
+- **PDF:** `section_header`, `title`, `paragraph`
+
+**Wichtig:** Unser Code hatte ursprünglich nur `title` Labels geprüft, aber DOCX verwendet `section_header` mit `level` Attribut!
+
+#### Format Support Matrix
+
+| Format | Status | Strategy | Labels | Notes |
+|--------|--------|----------|--------|-------|
+| **PPTX** | Working | `labels` | `title`, `subtitle-level-*` | Slide titles werden erkannt |
+| **DOCX** (mit Word Heading Styles) | Fixed | `labels` | `section_header` mit `level` | Nach Fix für `section_header` Label |
+| **DOCX** (ohne Heading Styles) | Fixed | `formatting` | `paragraph` mit `formatting.bold` | Fallback für formatierte Headings |
+| **PDF** | Working | `labels` | `title`, `section_header` | Standard PDF Headings |
+| **PPT** | NOT SUPPORTED | N/A | N/A | Legacy Binary Format |
+| **DOC** | NOT SUPPORTED | N/A | N/A | Legacy Binary Format |
+| **XLS** | NOT SUPPORTED | N/A | N/A | Legacy Binary Format |
+
+### Implementierte Fixes
+
+#### 1. `section_header` Label Support
+```python
+# Vorher: Nur title Labels
+HEADING_LABELS = {"title", "subtitle-level-1", "subtitle-level-2"}
+
+# Nachher: Auch section_header
+HEADING_LABELS = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
+```
+
+#### 2. Level-Attribut für section_header
+```python
+def _get_heading_level(heading_type: str, text_item: dict | None = None) -> int:
+    # section_header hat level-Attribut (1, 2, 3, etc.)
+    if heading_type == "section_header" and text_item:
+        level = text_item.get("level")
+        if level and isinstance(level, int) and 1 <= level <= 6:
+            return level
+        return 1
+    # Andere Labels: Mapping
+    heading_map = {"title": 1, "section_header": 1, "subtitle-level-1": 2, "subtitle-level-2": 3}
+    return heading_map.get(heading_type, 1)
+```
+
+#### 3. Legacy Format Rejection
+```python
+# docling_client.py: Runtime check für unsupported formats
+LEGACY_FORMATS = {".doc", ".xls", ".ppt"}
+if file_ext in LEGACY_FORMATS:
+    raise IngestionError(
+        f"Legacy Office format '{file_ext}' is NOT SUPPORTED. "
+        f"Please convert to modern format (.docx, .xlsx, .pptx) before processing."
+    )
+```
+
+### Betroffene Dateien
+- `src/components/ingestion/section_extraction.py`
+  - Added `section_header` to HEADING_LABELS
+  - Updated `_get_heading_level()` for level attribute
+  - Strategy detection für `labels` vs `formatting`
+- `src/components/ingestion/docling_client.py`
+  - Added format support matrix documentation
+  - Added legacy format runtime rejection
+
+### Test-Ergebnisse
+
+**OT_requirements_FNT_Command_20221219.docx** (mit Word Heading Styles):
+```
+section_header labels: 42
+Level distribution:
+- L1: 8 headings (Hauptkapitel)
+- L2: 22 headings (Unterkapitel)
+- L3: 12 headings (Abschnitte)
+```
+
+**DE-D-AdvancedAdministration_0368.docx** (ohne Word Heading Styles):
+```
+section_header labels: 0 (uses formatting.bold fallback)
+Formatting-based headings: 187
+Strategy: formatting
+```
+
+### Acceptance Criteria
+- [x] `section_header` Label wird erkannt
+- [x] Level-Attribut wird korrekt verarbeitet (1-6)
+- [x] DOCX mit Word Heading Styles extrahiert Sections korrekt
+- [x] DOCX ohne Heading Styles nutzt Formatting-Fallback
+- [x] Legacy Formate (.doc, .xls, .ppt) werden mit klarer Fehlermeldung abgelehnt
+- [x] API-Dokumentation im Code aktualisiert
+- [x] TD-044 Addendum dokumentiert
+
+### Lessons Learned
+- Docling API Dokumentation ist nicht vollständig - praktisches Testen essentiell
+- DOCX verwendet `section_header` statt `title` für Word Heading Styles
+- Legacy Office Formate (Binary) werden von Docling nicht unterstützt (python-docx limitation)
+- Formatting-based heading detection ist guter Fallback für DOCX ohne Styles
 
 ---
 

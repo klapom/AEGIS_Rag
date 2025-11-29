@@ -61,7 +61,9 @@
 | 27 | Frontend Debt | Query enhancement, frontend tests | 📋 IN PROGRESS |
 | 28 | Frontend UX | Perplexity UI features, settings page | ✅ COMPLETE |
 | 29-30 | VLM + Testing | VLM PDF ingestion, Frontend E2E tests | ✅ COMPLETE |
-| 31 | E2E Testing | Frontend E2E, Admin UI, Section-Aware Chunking | 📋 IN PROGRESS |
+| 31 | E2E Testing | Frontend E2E, Admin UI, Section-Aware Chunking | ✅ COMPLETE |
+| 32 | Section-Aware Chunking | ADR-039, Neo4j Section Nodes, Adaptive Merging | ✅ COMPLETE |
+| 33 | Directory Indexing | DoclingParsedDocument Fix (TD-044), Live Progress | 📋 IN PROGRESS |
 
 ---
 
@@ -2199,6 +2201,194 @@ const SourceCardsScroll = forwardRef<HTMLDivElement, SourceCardsScrollProps>((pr
 - Dedicated sprint (Sprint 11) for technical debt
 - Regular cleanup prevents accumulation
 - **Result:** Technical debt manageable (22 items, 0 Critical)
+
+---
+
+### Sprint 32: Adaptive Section-Aware Chunking & Neo4j Section Nodes
+**Duration:** 2025-11-21 - 2025-11-24
+**Goal:** Implement section hierarchy awareness in chunking and graph storage
+**Status:** ✅ COMPLETE
+
+#### Architecture Decision
+- **ADR-039:** Adaptive Section-Aware Chunking
+  - *Problem:* Fixed 800-token chunks caused PowerPoint fragmentation (124 chunks from 2-3 slides)
+  - *Solution:* Adaptive merging based on section boundaries (800-1800 tokens)
+  - *Rationale:* Respect document structure, improve context coherence, reduce false relations
+  - *Alternatives:* Token-only chunking (loses structure), hierarchical chunking (too complex)
+
+#### Architecture Added: Section-Aware Chunking Pipeline
+```
+DoclingJSON
+    │
+    ▼
+Section Extraction (Title, Subtitle-Level-1, Subtitle-Level-2)
+    │
+    ▼
+Adaptive Merging (>1200 tokens standalone, <1200 tokens merged)
+    │
+    ├─► Qdrant (section_headings, pages, bboxes metadata)
+    ├─► Neo4j (Section nodes with Document/Chunk hierarchy)
+    └─► Embeddings & BM25 Index
+```
+
+#### Key Features Implemented
+1. **Feature 32.1:** Section Extraction from Docling JSON (8 SP)
+   - Extract hierarchy from Docling JSON structure
+   - Track headings, pages, bounding boxes
+   - 16/16 tests passing
+
+2. **Feature 32.2:** Adaptive Section Merging (13 SP)
+   - Large sections >1200 tokens: chunk independently
+   - Small sections <1200 tokens: merge with adjacent sections
+   - PowerPoint: 124 chunks → 2-3 chunks (-98% fragmentation)
+   - 14/14 tests passing
+
+3. **Feature 32.3:** Multi-Section Metadata in Qdrant (8 SP)
+   - Store section hierarchy in Qdrant payloads
+   - Enable section-based re-ranking (+10% precision)
+   - Enhanced citations: "[1] doc.pdf - Section: 'Load Balancing' (Page 2)"
+   - 28+ tests passing
+
+4. **Feature 32.4:** Neo4j Section Nodes (13 SP)
+   - Create hierarchical structure: Document → Section → Chunk
+   - Parent-child relationships for multi-hop queries
+   - Cypher queries for analytics
+   - 18/18 tests passing
+
+5. **Features 32.5-32.7:** Admin E2E Tests (21 SP)
+   - Admin Indexing: 10 tests
+   - Admin Analytics: 11 tests
+   - Admin Cost Dashboard: 8 tests
+   - All passing
+
+#### Performance Improvements
+- **PowerPoint Processing:** 124 chunks → 2-3 chunks (-98%)
+- **False Relations:** Baseline +23% → <10% (-13%)
+- **Retrieval Precision:** +10% with section-based re-ranking
+- **Graph Queries:** 3-hop hierarchical queries <500ms
+
+#### Test Coverage
+- Section Extraction: 16 tests
+- Adaptive Merging: 14 tests
+- Qdrant Metadata: 28+ tests
+- Neo4j Graph: 18 tests
+- E2E Tests: 29 tests
+- **Total:** 105+ tests, 100% pass rate
+
+#### Key Learnings
+✅ **What Worked:**
+- Section-aware chunking dramatically improves coherence
+- Qdrant metadata enables sophisticated filtering
+- Neo4j hierarchy enables powerful analytics
+- Adaptive merging respects both content and structure
+
+⚠️ **Challenges:**
+- Section extraction from Docling JSON requires careful parsing
+- Metadata storage in Qdrant increases payload size (+15%)
+- Complex Cypher queries need optimization for large graphs
+
+#### Story Points
+- **Delivered:** 63/63 SP (100% completion)
+- **Velocity:** 15.75 SP/day
+
+---
+
+### Sprint 33: Directory Indexing & Interface Fixes
+**Duration:** 2025-11-27 - TBD
+**Goal:** Enhanced Admin Indexing with Directory Selection, Live Progress, and Critical Interface Fixes
+**Status:** 📋 IN PROGRESS
+
+#### Architecture Decision
+- **TD-044:** DoclingParsedDocument Interface Mismatch Fix
+  - *Problem:* `DoclingParsedDocument` (HTTP API wrapper) missing `.body` and `.document` attributes
+  - *Impact:* Section extraction failed for ALL document formats (PDF, DOCX, PPTX, not just PowerPoint)
+  - *Dead Code:* Unused if/else check in `langgraph_nodes.py` (lines 510-529)
+  - *Solution:* Add @property accessors for Docling-compatible interface
+  - *Rationale:* Unifies code path for all document types
+
+#### Critical Fix: DoclingParsedDocument Compatibility Layer
+**Problem Identified:**
+```python
+# DoclingParsedDocument from HTTP API wrapper
+class DoclingParsedDocument:
+    json_content: dict  # Contains parsed document
+    # MISSING: .body and .document attributes expected by section extraction
+```
+
+**Solution Implemented:**
+```python
+# Add @property accessors for backward compatibility
+@property
+def body(self):
+    """Access document body from Docling JSON."""
+    return self.json_content.get("body")
+
+@property
+def document(self):
+    """Self-reference for native Docling object interface."""
+    return self
+```
+
+**Impact:**
+- Section extraction now works for ALL document formats
+- Removes dead code in `langgraph_nodes.py`
+- No doppeltes (double) chunking anymore
+- Backward compatible with existing code
+
+#### Affected Files
+- `src/components/ingestion/docling_client.py` (DoclingParsedDocument class)
+- `src/components/ingestion/langgraph_nodes.py` (Dead code removal)
+- `src/components/ingestion/section_extraction.py` (Dict format support)
+
+#### Features Planned
+1. **Feature 33.1:** Verzeichnisauswahl-Dialog (5 SP) - Directory selection with recursive option
+2. **Feature 33.2:** Dateilisten mit Farbkodierung (5 SP) - File listing with color coding by support status
+3. **Feature 33.3:** Live-Fortschrittsanzeige (5 SP) - Compact progress display
+4. **Feature 33.4:** Detail-Dialog (13 SP) - Advanced progress details with page preview, VLM status, chunks
+5. **Feature 33.5:** Error-Tracking (5 SP) - Error button with dialog
+6. **Feature 33.6:** Live-Log Stream (8 SP) - Scrollable log with filtering
+7. **Feature 33.7:** Persistente Logging-DB (13 SP) - SQLite job tracking
+8. **Feature 33.8:** Parallele Dateiverarbeitung (8 SP) - Parallel file processing
+9. **Feature 33.9:** DoclingParsedDocument Interface Fix (5 SP) - TD-044 resolution
+10. **Feature 33.10:** Multi-Format Section Extraction (5 SP) - `section_header` support, legacy format rejection ✅
+
+#### Test Coverage Target
+- Section extraction for all formats (PDF, DOCX, PPTX)
+- No duplicate chunking
+- Admin E2E tests for directory indexing
+- Integration tests for section metadata
+
+#### Architecture Decision: Multi-Format Section Extraction
+- **Feature 33.10:** Multi-Format Section Extraction & Legacy Format Handling
+  - *Discovery:* DOCX uses `section_header` label (not `title`) for Word heading styles
+  - *Discovery:* `section_header` has `level` attribute (1-6) for heading hierarchy
+  - *Dual Strategy:* `labels` strategy for PPTX/PDF, `formatting` strategy for DOCX
+  - *Legacy Formats:* .doc, .xls, .ppt NOT supported by Docling (python-docx limitation)
+
+#### Format Support Matrix (Validated)
+| Format | Status | Strategy | Notes |
+|--------|--------|----------|-------|
+| PPTX | Working | `labels` | Uses `title`, `subtitle-level-*` labels |
+| DOCX (Word Heading Styles) | Fixed | `labels` | Uses `section_header` with `level` attribute |
+| DOCX (Bold Formatting) | Fixed | `formatting` | Fallback via `formatting.bold` |
+| PDF | Working | `labels` | Uses `title`, `section_header` labels |
+| PPT/DOC/XLS | NOT SUPPORTED | N/A | Legacy binary formats rejected at runtime |
+
+#### Key Learnings (Preliminary)
+✅ **What We've Learned:**
+- HTTP API wrappers need careful interface compatibility
+- Property accessors are cleaner than conditional logic
+- Dead code indicates integration gaps
+- Docling uses different labels per format (`title` for PPTX, `section_header` for DOCX)
+- `section_header` has `level` attribute for heading hierarchy (1-6)
+- Legacy Office formats require explicit rejection with user-friendly error messages
+- Formatting-based heading detection is robust fallback for DOCX without Word styles
+
+⚠️ **Ongoing Challenges:**
+- Complex async flows in directory scanning
+- SQLite performance under parallel load
+- VLM API rate limiting during batch processing
+- Users may have legacy .doc/.xls/.ppt files that need manual conversion
 
 ---
 

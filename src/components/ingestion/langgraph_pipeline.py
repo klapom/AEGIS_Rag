@@ -226,7 +226,7 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
     graph.add_edge("chunking", "embedding")
     graph.add_edge("embedding", "graph")
     graph.add_edge("graph", END)
-    logger.info("DEBUG_all_edges_added", flow="memory_check → parse → chunking → embedding → graph → END")
+    logger.info("DEBUG_all_edges_added", flow="memory_check -> parse -> chunking -> embedding -> graph -> END")
 
     # Compile graph
     logger.info("DEBUG_compiling_graph")
@@ -389,18 +389,36 @@ async def run_ingestion_pipeline(
     pipeline_end = time_module.perf_counter()
     total_duration = pipeline_end - pipeline_start
 
+    # Calculate throughput metrics
+    file_size_bytes = file_path.stat().st_size if file_path.exists() else 0
+    file_size_mb = file_size_bytes / 1024 / 1024
+    throughput_mb_per_sec = file_size_mb / total_duration if total_duration > 0 else 0
+    chunks_created = len(final_state.get("chunks", []))
+
     # Log complete timing summary
     logger.info(
         "TIMING_pipeline_complete",
         document_id=document_id,
         document_name=file_path.name,
+        file_size_bytes=file_size_bytes,
+        file_size_mb=round(file_size_mb, 2),
         total_seconds=round(total_duration, 2),
+        total_ms=round(total_duration * 1000, 0),
+        throughput_mb_per_sec=round(throughput_mb_per_sec, 3),
         node_timings_seconds={k: round(v, 2) for k, v in node_timings.items()},
+        node_timings_ms={k: round(v * 1000, 0) for k, v in node_timings.items()},
         slowest_node=max(node_timings, key=node_timings.get) if node_timings else None,
-        slowest_duration_seconds=round(max(node_timings.values()), 2) if node_timings else 0,
-        chunks_created=len(final_state.get("chunks", [])),
+        slowest_duration_ms=round(max(node_timings.values()) * 1000, 0) if node_timings else 0,
+        chunks_created=chunks_created,
         entities_extracted=len(final_state.get("entities", [])),
+        sections_created=final_state.get("section_node_stats", {}).get("sections_created", 0),
         parser_used=routing_decision.parser.value,
+        performance_summary={
+            "parse_ms": round(node_timings.get("parse", 0) * 1000, 0),
+            "chunk_ms": round(node_timings.get("chunking", 0) * 1000, 0),
+            "embed_ms": round(node_timings.get("embedding", 0) * 1000, 0),
+            "graph_ms": round(node_timings.get("graph", 0) * 1000, 0),
+        },
     )
 
     logger.info(
