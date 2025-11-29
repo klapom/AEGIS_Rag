@@ -1,7 +1,7 @@
 # ARCHITECTURE EVOLUTION - Sprint 1-21 Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete architectural history from foundation to production-ready system
-**Last Updated:** 2025-11-10 (Sprint 21 Complete)
+**Last Updated:** 2025-11-29 (Sprint 33 - VLM Pipeline Integration)
 
 ---
 
@@ -63,7 +63,7 @@
 | 29-30 | VLM + Testing | VLM PDF ingestion, Frontend E2E tests | ✅ COMPLETE |
 | 31 | E2E Testing | Frontend E2E, Admin UI, Section-Aware Chunking | ✅ COMPLETE |
 | 32 | Section-Aware Chunking | ADR-039, Neo4j Section Nodes, Adaptive Merging | ✅ COMPLETE |
-| 33 | Directory Indexing | DoclingParsedDocument Fix (TD-044), Live Progress | 📋 IN PROGRESS |
+| 33 | Directory Indexing | TD-044 Fix, Multi-Format Sections, VLM Pipeline Integration | 📋 IN PROGRESS |
 
 ---
 

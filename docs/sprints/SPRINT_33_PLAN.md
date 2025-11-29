@@ -26,7 +26,8 @@ Verbesserung der Admin-Indizierung mit Verzeichnisauswahl, Dateivorschau, detail
 | 33.8 | Parallele Dateiverarbeitung | 8 SP | P1 |
 | 33.9 | DoclingParsedDocument Interface Fix (TD-044) | 5 SP | P0 |
 | 33.10 | Multi-Format Section Extraction & Legacy Handling | 5 SP | P0 |
-| **Gesamt** | | **72 SP** | |
+| 33.11 | VLM Pipeline Integration & Image Filtering | 5 SP | P1 |
+| **Gesamt** | | **77 SP** | |
 
 ---
 
@@ -647,6 +648,123 @@ Strategy: formatting
 - DOCX verwendet `section_header` statt `title` für Word Heading Styles
 - Legacy Office Formate (Binary) werden von Docling nicht unterstützt (python-docx limitation)
 - Formatting-based heading detection ist guter Fallback für DOCX ohne Styles
+
+---
+
+## Feature 33.11: VLM Pipeline Integration & Image Filtering (5 SP)
+
+### Beschreibung
+Integration des VLM Image Enrichment Nodes in die LangGraph Ingestion Pipeline mit optimierten Bildfiltern zur Kosteneinsparung.
+
+### Problem
+- `image_enrichment_node` existierte bereits (Feature 21.6), war aber NICHT in die Pipeline eingebunden
+- Keine Bildfilterung für irrelevante Bilder (kleine Icons, Platzhalter, Banner)
+- Pipeline hatte nur 5 Nodes: `memory_check → parse → chunking → embedding → graph`
+
+### Lösung
+
+#### 1. VLM Node in Pipeline integriert
+```python
+# langgraph_pipeline.py - Neue 6-Node Pipeline
+graph.add_edge("memory_check", "parse")
+graph.add_edge("parse", "image_enrichment")  # NEU: VLM nach Parsing
+graph.add_edge("image_enrichment", "chunking")
+graph.add_edge("chunking", "embedding")
+graph.add_edge("embedding", "graph")
+```
+
+#### 2. Optimierte Bildfilter (Kostenersparnis)
+```python
+# image_processor.py - Verbesserte Defaults
+class ImageProcessorConfig:
+    min_size: int = 200           # War 100 - Skip kleine Icons
+    min_aspect_ratio: float = 0.2 # War 0.1 - Skip schmale Balken
+    max_aspect_ratio: float = 5.0 # War 10.0 - Skip breite Banner
+    min_unique_colors: int = 16   # NEU - Skip einfarbige Platzhalter
+```
+
+#### 3. Farbfilter für Platzhalter-Bilder
+```python
+def count_unique_colors(image: Image.Image, sample_size: int = 10000) -> int:
+    """Zählt einzigartige Farben (mit Sampling für Performance)."""
+    pixels = list(image.getdata())
+    if len(pixels) > sample_size:
+        pixels = random.sample(pixels, sample_size)
+    return len(set(pixels))
+
+def should_process_image(..., min_unique_colors: int = 16) -> tuple[bool, str]:
+    # ... size und aspect ratio checks ...
+    if min_unique_colors > 0:
+        unique_colors = count_unique_colors(image)
+        if unique_colors < min_unique_colors:
+            return False, f"too_few_colors: {unique_colors} < {min_unique_colors}"
+    return True, "valid"
+```
+
+### Pipeline Flow (Neu)
+```
+START
+  ↓
+memory_check_node (5% progress)
+  ↓
+parse_node (20% progress) - Docling oder LlamaIndex
+  ↓
+image_enrichment_node (35% progress) - NEU: Qwen3-VL Beschreibungen
+  ↓
+chunking_node (50% progress)
+  ↓
+embedding_node (75% progress)
+  ↓
+graph_extraction_node (100% progress)
+  ↓
+END
+```
+
+### VLM-Text Platzierung
+- VLM-Beschreibungen werden in `picture_item.text` eingefügt (Docling-Objekt)
+- Beim Chunking fließt der VLM-Text in den richtigen Dokumentkontext
+- BBox-Metadaten bleiben für präzise Lokalisierung erhalten
+- Funktioniert für alle Docling-unterstützten Formate (PDF, DOCX, PPTX, XLSX)
+
+### Betroffene Dateien
+- `src/components/ingestion/image_processor.py`
+  - Neue Defaults für Filter (min_size=200, aspect ratios, colors)
+  - `count_unique_colors()` Funktion hinzugefügt
+  - `should_process_image()` erweitert um Farbfilter
+- `src/components/ingestion/langgraph_pipeline.py`
+  - Import von `image_enrichment_node`
+  - Node zur Pipeline hinzugefügt zwischen `parse` und `chunking`
+  - Timing-Logs aktualisiert für VLM-Metrik
+
+### Test-Ergebnisse
+```
+IMAGE FILTER TESTS - Sprint 33
+============================================================
+
+1. Single color image:    1 unique colors -> too_few_colors: 1 < 16    PASS
+2. Small image (50x50):   -> too_small: 50x50 < 200px                  PASS
+3. Wide image (10:1):     -> too_small: 1000x100 < 200px               PASS
+4. Narrow image (0.1:1):  -> too_small: 100x1000 < 200px               PASS
+5. Good gradient image:   9609 unique colors -> valid                  PASS
+
+ALL FILTER TESTS PASSED!
+```
+
+### Erwartete Kosteneinsparung
+| Filter | Geschätzte Filterrate | Einsparung |
+|--------|----------------------|------------|
+| min_size: 200px | ~30% Icons/Logos | 30% VLM Calls |
+| aspect_ratio: 0.2-5.0 | ~10% Banner/Bars | 10% VLM Calls |
+| min_unique_colors: 16 | ~20% Platzhalter | 20% VLM Calls |
+| **Gesamt** | | **~50% weniger VLM Calls** |
+
+### Acceptance Criteria
+- [x] `image_enrichment_node` ist in Pipeline eingebunden
+- [x] Filter-Defaults optimiert (min_size=200, aspect ratios)
+- [x] Farbfilter für einfarbige Bilder implementiert
+- [x] Alle Filter-Tests bestehen
+- [x] Pipeline-Timing enthält VLM-Metrik
+- [x] Dokumentation aktualisiert
 
 ---
 

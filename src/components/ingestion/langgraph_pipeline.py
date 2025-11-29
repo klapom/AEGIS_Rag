@@ -1,7 +1,9 @@
-"""LangGraph Ingestion Pipeline Compiler - Sprint 21 Feature 21.2 + Sprint 22 Feature 22.3.
+"""LangGraph Ingestion Pipeline Compiler - Sprint 33 Feature 33.11.
 
-This module creates the LangGraph StateGraph that connects the 5 ingestion nodes
+This module creates the LangGraph StateGraph that connects the 6 ingestion nodes
 into a sequential pipeline with error handling and progress tracking.
+
+Sprint 33: Added VLM image enrichment node for intelligent image descriptions.
 
 Pipeline Flow:
   START
@@ -10,9 +12,11 @@ Pipeline Flow:
     ↓
   format_routing (Sprint 22.3: Decide Docling vs LlamaIndex)
     ↓
-  docling_parse_node OR llamaindex_parse_node (30% progress)
+  docling_parse_node OR llamaindex_parse_node (20% progress)
     ↓
-  chunking_node (45% progress)
+  image_enrichment_node (35% progress) - Sprint 33: VLM image descriptions
+    ↓
+  chunking_node (50% progress)
     ↓
   embedding_node (75% progress)
     ↓
@@ -100,6 +104,7 @@ from src.components.ingestion.langgraph_nodes import (
     docling_parse_node,
     embedding_node,
     graph_extraction_node,
+    image_enrichment_node,  # Sprint 33: VLM image processing
     llamaindex_parse_node,
     memory_check_node,
 )
@@ -153,14 +158,18 @@ async def initialize_pipeline_router() -> None:
 
 
 def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> StateGraph:
-    """Create LangGraph StateGraph for document ingestion pipeline (Sprint 22.4).
+    """Create LangGraph StateGraph for document ingestion pipeline (Sprint 33).
 
-    Creates a sequential pipeline with 5 nodes (with conditional parser routing):
+    Creates a sequential pipeline with 6 nodes (with conditional parser routing):
     1. memory_check → Verify RAM/VRAM available
     2. docling OR llamaindex → Parse document (selected by router)
-    3. chunking → Split into 1800-token chunks
-    4. embedding → Generate BGE-M3 vectors → Qdrant
-    5. graph → Extract entities/relations → Neo4j
+    3. image_enrichment → VLM image descriptions (Sprint 33 - NEW!)
+    4. chunking → Split into 1800-token chunks
+    5. embedding → Generate BGE-M3 vectors → Qdrant
+    6. graph → Extract entities/relations → Neo4j
+
+    Sprint 33: Added image_enrichment_node for VLM processing.
+    Images are filtered by size, aspect ratio, and color diversity before VLM.
 
     Args:
         parser_type: Parser to use (DOCLING or LLAMAINDEX). Default: DOCLING.
@@ -185,13 +194,14 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
         - Error handling in each node
         - Progress tracking automatic
         - Parser selection based on format (Sprint 22.3 routing)
+        - VLM enrichment for images (Sprint 33)
     """
     logger.info("ingestion_graph_create_start", parser_type=parser_type)
 
     # Create graph with IngestionState schema
     graph = StateGraph(IngestionState)
 
-    # Add nodes (5 stages with conditional parser)
+    # Add nodes (6 stages with conditional parser - Sprint 33: Added image_enrichment)
     logger.info("DEBUG_adding_nodes_start", parser_type=parser_type)
 
     graph.add_node("memory_check", memory_check_node)
@@ -205,6 +215,10 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
         graph.add_node("parse", llamaindex_parse_node)
         logger.info("DEBUG_node_added", node_name="parse", parser="llamaindex")
 
+    # Sprint 33: Add VLM image enrichment node
+    graph.add_node("image_enrichment", image_enrichment_node)
+    logger.info("DEBUG_node_added", node_name="image_enrichment")
+
     graph.add_node("chunking", chunking_node)
     logger.info("DEBUG_node_added", node_name="chunking")
 
@@ -215,18 +229,22 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
     logger.info("DEBUG_node_added", node_name="graph", function=graph_extraction_node.__name__)
 
     # Define edges (sequential flow)
-    # START → memory_check → parse → chunking → embedding → graph → END
+    # START → memory_check → parse → image_enrichment → chunking → embedding → graph → END
     logger.info("DEBUG_adding_edges_start")
 
     graph.set_entry_point("memory_check")
     logger.info("DEBUG_entry_point_set", entry="memory_check")
 
     graph.add_edge("memory_check", "parse")
-    graph.add_edge("parse", "chunking")
+    graph.add_edge("parse", "image_enrichment")  # Sprint 33: VLM after parsing
+    graph.add_edge("image_enrichment", "chunking")
     graph.add_edge("chunking", "embedding")
     graph.add_edge("embedding", "graph")
     graph.add_edge("graph", END)
-    logger.info("DEBUG_all_edges_added", flow="memory_check -> parse -> chunking -> embedding -> graph -> END")
+    logger.info(
+        "DEBUG_all_edges_added",
+        flow="memory_check -> parse -> image_enrichment -> chunking -> embedding -> graph -> END",
+    )
 
     # Compile graph
     logger.info("DEBUG_compiling_graph")
@@ -235,7 +253,7 @@ def create_ingestion_graph(parser_type: ParserType = ParserType.DOCLING) -> Stat
 
     logger.info(
         "ingestion_graph_created",
-        nodes=["memory_check", "parse", "chunking", "embedding", "graph"],
+        nodes=["memory_check", "parse", "image_enrichment", "chunking", "embedding", "graph"],
         parser=parser_type,
         flow="sequential",
     )
@@ -415,10 +433,12 @@ async def run_ingestion_pipeline(
         parser_used=routing_decision.parser.value,
         performance_summary={
             "parse_ms": round(node_timings.get("parse", 0) * 1000, 0),
+            "vlm_ms": round(node_timings.get("image_enrichment", 0) * 1000, 0),  # Sprint 33
             "chunk_ms": round(node_timings.get("chunking", 0) * 1000, 0),
             "embed_ms": round(node_timings.get("embedding", 0) * 1000, 0),
             "graph_ms": round(node_timings.get("graph", 0) * 1000, 0),
         },
+        vlm_images_processed=len(final_state.get("vlm_metadata", [])),  # Sprint 33
     )
 
     logger.info(

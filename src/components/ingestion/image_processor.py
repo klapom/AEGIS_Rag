@@ -85,6 +85,13 @@ class ImageProcessorConfig:
         min_size: Minimum image size (width or height)
         min_aspect_ratio: Minimum aspect ratio
         max_aspect_ratio: Maximum aspect ratio
+        min_unique_colors: Minimum unique colors (filter single-color images)
+
+    Sprint 33: Optimized defaults for cost savings:
+    - min_size: 200px (was 100px) - skip small icons/logos
+    - min_aspect_ratio: 0.2 (was 0.1) - skip very narrow bars
+    - max_aspect_ratio: 5.0 (was 10.0) - skip very wide banners
+    - min_unique_colors: 16 - skip single-color placeholder images
     """
 
     def __init__(self):
@@ -102,10 +109,11 @@ class ImageProcessorConfig:
         # Set to -1 to use all GPU layers (default), or specify layer count for CPU offloading
         self.num_gpu = getattr(settings, "qwen3vl_num_gpu", 10)
 
-        # Image Filtering
-        self.min_size = getattr(settings, "image_min_size", 100)
-        self.min_aspect_ratio = getattr(settings, "image_min_aspect_ratio", 0.1)
-        self.max_aspect_ratio = getattr(settings, "image_max_aspect_ratio", 10.0)
+        # Image Filtering - Sprint 33: Optimized defaults for cost savings
+        self.min_size = getattr(settings, "image_min_size", 200)  # Was 100
+        self.min_aspect_ratio = getattr(settings, "image_min_aspect_ratio", 0.2)  # Was 0.1
+        self.max_aspect_ratio = getattr(settings, "image_max_aspect_ratio", 5.0)  # Was 10.0
+        self.min_unique_colors = getattr(settings, "image_min_unique_colors", 16)  # NEW
 
 
 # =============================================================================
@@ -113,31 +121,76 @@ class ImageProcessorConfig:
 # =============================================================================
 
 
-def should_process_image(
-    image: Image.Image,
-    min_size: int = 100,
-    min_aspect_ratio: float = 0.1,
-    max_aspect_ratio: float = 10.0,
-) -> tuple[bool, str]:
-    """Determine if an image should be processed by VLM.
+def count_unique_colors(image: Image.Image, sample_size: int = 10000) -> int:
+    """Count approximate unique colors in an image.
+
+    Sprint 33: Filter single-color/placeholder images to save VLM costs.
+
+    Uses sampling for large images to improve performance.
 
     Args:
         image: PIL Image object
-        min_size: Minimum width or height in pixels
-        min_aspect_ratio: Minimum aspect ratio (width/height)
-        max_aspect_ratio: Maximum aspect ratio
+        sample_size: Number of pixels to sample (for performance)
+
+    Returns:
+        Approximate count of unique colors
+
+    Examples:
+        >>> solid_color = Image.new('RGB', (100, 100), color='red')
+        >>> count_unique_colors(solid_color)
+        1
+
+        >>> gradient = Image.new('RGB', (100, 100))
+        >>> # ... fill with gradient ...
+        >>> count_unique_colors(gradient)
+        > 100  # Many colors
+    """
+    # Convert to RGB if needed
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    # Get all pixels
+    pixels = list(image.getdata())
+
+    # Sample if image is large (performance optimization)
+    if len(pixels) > sample_size:
+        import random
+        pixels = random.sample(pixels, sample_size)
+
+    # Count unique colors
+    unique_colors = set(pixels)
+    return len(unique_colors)
+
+
+def should_process_image(
+    image: Image.Image,
+    min_size: int = 200,
+    min_aspect_ratio: float = 0.2,
+    max_aspect_ratio: float = 5.0,
+    min_unique_colors: int = 16,
+) -> tuple[bool, str]:
+    """Determine if an image should be processed by VLM.
+
+    Sprint 33: Enhanced filtering with color check for cost optimization.
+
+    Args:
+        image: PIL Image object
+        min_size: Minimum width or height in pixels (default: 200)
+        min_aspect_ratio: Minimum aspect ratio width/height (default: 0.2)
+        max_aspect_ratio: Maximum aspect ratio (default: 5.0)
+        min_unique_colors: Minimum unique colors to process (default: 16)
 
     Returns:
         Tuple of (should_process: bool, reason: str)
 
     Examples:
-        >>> img = Image.new('RGB', (200, 200))
+        >>> img = Image.new('RGB', (300, 300))
         >>> should_process_image(img)
-        (True, 'valid')
+        (False, 'too_few_colors: 1 < 16')  # Single color
 
         >>> small_img = Image.new('RGB', (50, 50))
         >>> should_process_image(small_img)
-        (False, 'too_small')
+        (False, 'too_small: 50x50 < 200px')
     """
     width, height = image.size
 
@@ -152,6 +205,12 @@ def should_process_image(
 
     if aspect_ratio > max_aspect_ratio:
         return False, f"aspect_ratio_too_high: {aspect_ratio:.2f} > {max_aspect_ratio}"
+
+    # Sprint 33: Check for single-color/placeholder images
+    if min_unique_colors > 0:
+        unique_colors = count_unique_colors(image)
+        if unique_colors < min_unique_colors:
+            return False, f"too_few_colors: {unique_colors} < {min_unique_colors}"
 
     return True, "valid"
 
@@ -393,13 +452,14 @@ class ImageProcessor:
             >>> img = Image.new('RGB', (500, 500))
             >>> desc = await processor.process_image(img, picture_index=0)
         """
-        # Image filtering
+        # Image filtering - Sprint 33: Added min_unique_colors check
         if not skip_filtering:
             should_process, reason = should_process_image(
                 image,
                 min_size=self.config.min_size,
                 min_aspect_ratio=self.config.min_aspect_ratio,
                 max_aspect_ratio=self.config.max_aspect_ratio,
+                min_unique_colors=self.config.min_unique_colors,
             )
 
             if not should_process:
