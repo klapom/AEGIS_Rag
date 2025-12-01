@@ -159,3 +159,4 @@ poetry.sh
 
 # Backup venv
 .venv.backup/
+tests/performance/results/
