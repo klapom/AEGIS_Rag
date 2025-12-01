@@ -132,14 +132,15 @@ export function GraphAnalyticsPage() {
                   <div className="text-sm text-red-600">Failed to load statistics</div>
                 </div>
               ) : stats ? (
-                <div className="space-y-3">
-                  <StatItem label="Total Nodes" value={stats.node_count.toLocaleString()} />
-                  <StatItem label="Total Edges" value={stats.edge_count.toLocaleString()} />
-                  <StatItem label="Communities" value={stats.community_count.toLocaleString()} />
-                  <StatItem label="Avg Degree" value={stats.avg_degree.toFixed(2)} />
+                <div className="space-y-3" data-testid="entity-type-stats">
+                  <StatItem label="Total Nodes" value={stats.node_count.toLocaleString()} testid="stat-nodes" />
+                  <StatItem label="Total Edges" value={stats.edge_count.toLocaleString()} testid="stat-edges" />
+                  <StatItem label="Communities" value={stats.community_count.toLocaleString()} testid="stat-communities" />
+                  <StatItem label="Avg Degree" value={stats.avg_degree.toFixed(2)} testid="stat-avg-degree" />
                   <StatItem
                     label="Orphaned Nodes"
                     value={stats.orphaned_nodes.toLocaleString()}
+                    testid="stat-orphaned"
                   />
                 </div>
               ) : null}
@@ -149,7 +150,7 @@ export function GraphAnalyticsPage() {
             <div className="border-t-2 border-gray-200" />
 
             {/* Filters Section */}
-            <section>
+            <section data-testid="graph-filters-section">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <span className="text-2xl mr-2">🔍</span>
                 Graph Filters
@@ -241,11 +242,12 @@ export function GraphAnalyticsPage() {
 interface StatItemProps {
   label: string;
   value: string | number;
+  testid?: string;
 }
 
-function StatItem({ label, value }: StatItemProps) {
+function StatItem({ label, value, testid }: StatItemProps) {
   return (
-    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200" data-testid={testid ? `relationship-type-stats-${testid}` : undefined}>
       <span className="text-sm font-medium text-gray-700">{label}</span>
       <span className="text-lg font-bold text-gray-900">{value}</span>
     </div>

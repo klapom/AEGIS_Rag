@@ -193,11 +193,11 @@ export function GraphFilters({
       </div>
 
       {/* Sprint 34 Feature 34.6: Edge Type Filters Section */}
-      <div className="border-t border-gray-200 pt-4">
+      <div className="border-t border-gray-200 pt-4" data-testid="graph-edge-filter">
         <h4 className="text-sm font-semibold text-gray-900 mb-3">Relationship Types</h4>
 
-        <div className="space-y-2">
-          <label className="flex items-center space-x-2 cursor-pointer group">
+        <div className="space-y-2" data-testid="edge-type-filter">
+          <label className="flex items-center space-x-2 cursor-pointer group" data-testid="edge-filter-relates-to">
             <input
               type="checkbox"
               checked={localEdgeFilters.showRelatesTo}
@@ -208,6 +208,7 @@ export function GraphFilters({
               className="w-4 h-4 text-primary border-2 border-gray-300 rounded
                          focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
               aria-label="Show RELATES_TO relationships"
+              data-testid="edge-filter-relates-to-checkbox"
             />
             <div className="w-4 h-0.5 bg-blue-500"></div>
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
@@ -215,7 +216,7 @@ export function GraphFilters({
             </span>
           </label>
 
-          <label className="flex items-center space-x-2 cursor-pointer group">
+          <label className="flex items-center space-x-2 cursor-pointer group" data-testid="edge-filter-mentioned-in">
             <input
               type="checkbox"
               checked={localEdgeFilters.showMentionedIn}
@@ -226,6 +227,7 @@ export function GraphFilters({
               className="w-4 h-4 text-primary border-2 border-gray-300 rounded
                          focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
               aria-label="Show MENTIONED_IN relationships"
+              data-testid="edge-filter-mentioned-in-checkbox"
             />
             <div className="w-4 h-0.5 bg-gray-400"></div>
             <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
@@ -240,7 +242,7 @@ export function GraphFilters({
             <label htmlFor="edge-weight-slider" className="block text-sm font-medium text-gray-700">
               Min Relationship Strength
             </label>
-            <span className="text-sm text-gray-600 font-medium">
+            <span className="text-sm text-gray-600 font-medium" data-testid="weight-threshold-value">
               {Math.round(localEdgeFilters.minWeight * 100)}%
             </span>
           </div>
@@ -271,6 +273,7 @@ export function GraphFilters({
                        [&::-moz-range-thumb]:border-0
                        [&::-moz-range-thumb]:hover:bg-primary-hover"
             aria-label="Minimum relationship strength"
+            data-testid="weight-threshold-slider"
           />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
             <span>0%</span>
@@ -302,6 +305,7 @@ export function GraphFilters({
         className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100
                    hover:bg-gray-200 active:bg-gray-300 rounded-lg
                    transition-colors duration-200"
+        data-testid="reset-filters"
       >
         Reset Filters
       </button>

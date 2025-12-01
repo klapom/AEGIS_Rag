@@ -3,6 +3,7 @@
  * Sprint 29 Feature 29.1: Interactive Graph Visualization
  * Sprint 34 Features 34.3-34.4: Edge-Type Visualization
  * Sprint 34 Feature 34.6: Graph Edge Filter Controls
+ * Sprint 35 Fix: External Data Support for GraphModal Integration
  *
  * Features:
  * - Force-directed layout with react-force-graph-2d
@@ -18,14 +19,21 @@
  * - Legend for both entity types and relationship types
  * - Edge type filtering (show/hide RELATES_TO, MENTIONED_IN)
  * - Relationship weight threshold filtering
+ * - External data support: Can accept pre-fetched graph data (for GraphModal)
  */
 
 import { useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useGraphData } from '../../hooks/useGraphData';
-import type { GraphFilters, ForceGraphNode, EdgeFilters } from '../../types/graph';
+import type { GraphData, GraphFilters, ForceGraphNode, EdgeFilters } from '../../types/graph';
 
 interface GraphViewerProps {
+  /** Optional pre-fetched graph data (if provided, internal fetching is skipped) */
+  data?: GraphData | null;
+  /** Loading state (only used when data prop is provided) */
+  loading?: boolean;
+  /** Error state (only used when data prop is provided) */
+  error?: Error | null;
   maxNodes?: number;
   entityTypes?: string[];
   highlightCommunities?: string[];
@@ -35,14 +43,31 @@ interface GraphViewerProps {
 }
 
 export function GraphViewer({
+  data: externalData,
+  loading: externalLoading,
+  error: externalError,
   maxNodes = 100,
   entityTypes,
   highlightCommunities,
   onNodeClick,
   edgeFilters,
 }: GraphViewerProps) {
+  // Determine if we should use external data or fetch our own
+  const useExternalData = externalData !== undefined;
+
   const filters: GraphFilters = { maxNodes, entityTypes, highlightCommunities };
-  const { data, loading, error } = useGraphData(filters);
+
+  // Only fetch data if not provided externally
+  // When external data is provided, pass empty filters to avoid unnecessary fetching
+  const { data: fetchedData, loading: fetchedLoading, error: fetchedError } = useGraphData(
+    useExternalData ? {} : filters
+  );
+
+  // Use external data if provided, otherwise use fetched data
+  const data = useExternalData ? externalData : fetchedData;
+  const loading = useExternalData ? (externalLoading ?? false) : fetchedLoading;
+  const error = useExternalData ? (externalError ?? null) : fetchedError;
+
   const graphRef = useRef<any>(null);
   const [selectedNode, setSelectedNode] = useState<ForceGraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
@@ -286,11 +311,11 @@ export function GraphViewer({
       )}
 
       {/* Graph Stats Overlay */}
-      <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
+      <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200" data-testid="graph-stats">
         <div className="text-sm space-y-1">
           <div className="font-semibold text-gray-900">Graph Stats</div>
-          <div className="text-gray-600">Nodes: {filteredData.nodes.length}</div>
-          <div className="text-gray-600">
+          <div className="text-gray-600" data-testid="graph-node-count">Nodes: {filteredData.nodes.length}</div>
+          <div className="text-gray-600" data-testid="graph-edge-count">
             Edges: {filteredData.links.length}
             {data.links.length !== filteredData.links.length && (
               <span className="text-gray-500"> / {data.links.length}</span>
