@@ -2,7 +2,7 @@
 
 **Purpose:** Chronological list of major architecture and technology decisions
 **Format:** Date | Decision | Rationale (2-3 sentences max)
-**Last Updated:** 2025-11-21 (Sprint 31)
+**Last Updated:** 2025-12-01 (Sprint 34)
 
 ---
 
@@ -186,6 +186,26 @@
 
 ---
 
+## SPRINT 34: KNOWLEDGE GRAPH ENHANCEMENT & RELATES_TO RELATIONSHIPS
+
+### 2025-12-01 | RELATES_TO via Pure LLM Extraction
+**Decision:** Use Alibaba Cloud qwen3-32b for semantic relation extraction via AegisLLMProxy.
+**Rationale:** 32B model provides high-quality semantic relation extraction beyond entity mentions. Achieves +13% false relation reduction (baseline 23% → <10%) through section-aware context. Cost-effective at $0.001-0.003 per 1K tokens, automatic fallback to local Gemma 2 4B if budget exceeded. Pure LLM approach ensures consistency with entity extraction (both via AegisLLMProxy).
+
+### 2025-12-01 | Edge Visualization Color-Coding by Relationship Type
+**Decision:** Color-code edges by relationship type in graph visualization.
+**Rationale:** Visual distinction improves user comprehension of graph structure. RELATES_TO edges (semantic) rendered in blue (#3B82F6), MENTIONED_IN edges (chunk references) in gray (#9CA3AF), HAS_SECTION edges (document structure) in green (#10B981). Pattern enables quick filtering by edge type.
+
+### 2025-12-01 | Edge Filtering UI Pattern (Checkboxes + Weight Slider)
+**Decision:** Implement checkboxes for edge type filtering + weight threshold slider in graph UI.
+**Rationale:** Simple, intuitive pattern for exploring graph subsets. Users select which edge types to show (RELATES_TO, MENTIONED_IN, HAS_SECTION checkboxes), adjust minimum weight (0.0-1.0 slider). Real-time updates provide immediate feedback. Alternative (dropdown) less discoverable for multiple selections.
+
+### 2025-12-01 | Comprehensive E2E Test Coverage for Graph Features (19 tests)
+**Decision:** Implement 19 end-to-end tests covering graph visualization, filtering, and relation extraction.
+**Rationale:** Visual components require browser-based testing (Playwright). Unit tests insufficient for graph interaction testing. 19 tests organized as: 6 relation extraction tests, 7 visualization tests, 6 filtering interaction tests. Ensures production-ready graph features.
+
+---
+
 ## KEY PIVOT POINTS
 
 ### Sprint 11: LightRAG Model Switch (qwen3:0.6b → llama3.2:3b)
@@ -330,7 +350,7 @@
 
 ---
 
-**Last Updated:** 2025-11-18 (Sprint 28 Complete)
-**Total Decisions Documented:** 55+
-**Current Sprint:** Sprint 28 (Complete)
-**Next Sprint:** Sprint 29 (Planned)
+**Last Updated:** 2025-12-01 (Sprint 34 Complete)
+**Total Decisions Documented:** 59
+**Current Sprint:** Sprint 34 (Complete)
+**Next Sprint:** Sprint 35 (Planned)

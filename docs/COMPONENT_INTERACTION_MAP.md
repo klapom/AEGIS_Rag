@@ -84,10 +84,13 @@
 | Vector Agent | Qdrant | gRPC/HTTP | Protobuf/JSON | Vector search |
 | Vector Agent | BM25 | Python Call | Python objects | Keyword search |
 | Graph Agent | LightRAG | Python Call | Python objects | Entity extraction |
-| Graph Agent | Neo4j | Bolt Protocol | Cypher queries | Graph traversal |
+| Graph Agent | Neo4j | Bolt Protocol | Cypher queries | Graph traversal, RELATES_TO queries |
 | Memory Agent | Redis | Redis Protocol | JSON | Short-term memory |
 | Memory Agent | Qdrant | gRPC/HTTP | Protobuf/JSON | Semantic memory |
 | Memory Agent | Graphiti | Python Call | Python objects | Episodic memory |
+| RelationExtractor | AegisLLMProxy | Python Call | Pydantic | RELATES_TO extraction via Qwen3-32B (Sprint 34) |
+| RelationExtractor | Neo4j | Bolt Protocol | Cypher queries | Store RELATES_TO relationships |
+| GraphViewer | Neo4j API | HTTP/REST | JSON | Edge filtering, relationship queries |
 | All Agents | AegisLLMProxy | Python Call | Pydantic | Multi-cloud LLM routing (Sprint 25) |
 | AegisLLMProxy | Ollama/Cloud | HTTP | JSON | LLM inference (local → Alibaba → OpenAI) |
 
@@ -994,8 +997,15 @@ vector_size = 1024  # bge-m3 (Sprint 16)
     confidence: 0.95
 })
 
-// Relationship
-(:Entity {name: "Transformer"})-[:USES {weight: 0.9}]->(:Entity {name: "Attention Mechanism"})
+// Relationship Types (Sprint 34)
+// 1. RELATES_TO: Semantic relationships (blue #3B82F6)
+(:Entity {name: "Transformer"})-[:RELATES_TO {weight: 0.92, extraction_method: "llm"}]->(:Entity {name: "Attention Mechanism"})
+
+// 2. MENTIONED_IN: Chunk references (gray #9CA3AF)
+(:Entity {name: "Transformer"})-[:MENTIONED_IN {frequency: 15}]->(:Chunk {id: "chunk_abc123"})
+
+// 3. HAS_SECTION: Document structure (green #10B981)
+(:Document {id: "doc_123"})-[:HAS_SECTION]->(:Section {title: "Introduction", page: 1})
 
 // Community Node
 (:Community {
@@ -1008,6 +1018,16 @@ vector_size = 1024  # bge-m3 (Sprint 16)
 
 // Membership
 (:Entity {name: "Transformer"})-[:BELONGS_TO]->(:Community {id: "community1"})
+
+// Section Node (Sprint 34)
+(:Section {
+    id: "section_123",
+    title: "Load Balancing",
+    document_id: "doc_456",
+    page: 2,
+    level: 1  # Heading level
+})
+(:Section {id: "section_123"})-[:PARENT]->(:Document {id: "doc_456"})
 
 // Graphiti Episodic Memory (via Graphiti SDK)
 (:Episode {
@@ -1244,7 +1264,7 @@ frontend/src/
 
 ---
 
-**Last Updated:** 2025-11-18 (Sprint 28 - Post Sprint 28 Architecture Alignment)
+**Last Updated:** 2025-12-01 (Sprint 34 - Knowledge Graph Enhancement)
 **Status:** Active Development
 
 **Architecture Changes Since Sprint 16:**
@@ -1252,12 +1272,16 @@ frontend/src/
 - **Sprint 23:** AegisLLMProxy multi-cloud LLM routing (ADR-033)
 - **Sprint 25:** Complete migration to AegisLLMProxy (Feature 25.10)
 - **Sprint 28:** Frontend UX enhancements (Perplexity-style interface)
+- **Sprint 34:** Knowledge graph enhancement with RELATES_TO relationships and edge visualization
 
-**Current Architecture (Sprint 28):**
+**Current Architecture (Sprint 34):**
 - **Embeddings:** BGE-M3 (1024-dim, Sprint 16) - Local & Cost-Free
 - **LLM Routing:** AegisLLMProxy (Local Ollama → Alibaba Cloud → OpenAI)
 - **Search Strategy:** Hybrid (Vector BGE-M3 + BM25 Keyword + RRF Fusion)
+- **Graph Relationships:** RELATES_TO (semantic), MENTIONED_IN (chunk refs), HAS_SECTION (document structure)
+- **Edge Visualization:** Color-coded by type (Blue: RELATES_TO, Gray: MENTIONED_IN, Green: HAS_SECTION)
 - **Ingestion:** LangGraph pipeline (Docling primary, LlamaIndex fallback)
 - **Document Formats:** 30+ formats (FormatRouter Sprint 22.3)
+- **Relation Extraction:** Pure LLM via AegisLLMProxy (Alibaba Cloud Qwen3-32B)
 
 **Next:** Sprint 29 (Graph Visualization Frontend - 36 SP, 7-9 days)

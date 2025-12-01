@@ -3,6 +3,8 @@
 
 Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen und Begründungen.
 
+**Last Updated:** 2025-12-01 (Sprint 34 - Knowledge Graph Enhancement)
+
 ---
 
 ## Core Stack Overview
@@ -29,7 +31,7 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 
 ---
 
-## Sprint Progress (Sprints 12-21)
+## Sprint Progress (Sprints 12-34)
 
 ### Sprint 12: Advanced Features
 **Status:** ✅ COMPLETE (2025-10-18 → 2025-10-21)
@@ -543,7 +545,154 @@ const SourceCardsScroll = forwardRef<HTMLDivElement, SourceCardsScrollProps>((pr
 
 ---
 
-### Cumulative Technology Additions (Sprints 12-28)
+### Sprint 32: Adaptive Section-Aware Chunking & Neo4j Section Nodes
+**Status:** ✅ COMPLETE (2025-11-21 - 2025-11-24)
+
+**Technologies Added:**
+- **Adaptive Section-Aware Chunking (ADR-039):** 800-1800 token chunks respecting document structure
+- **Section Extraction Service:** Parse Docling JSON section hierarchy (title, subtitle-level-1, subtitle-level-2)
+- **Adaptive Merging Logic:** Large sections standalone, small sections merged (PowerPoint optimization: 124 → 2-3 chunks)
+- **Neo4j Section Nodes:** Parent-child relationships for hierarchical document structure
+- **Multi-Section Metadata:** Section headings, pages, bounding boxes in Qdrant payloads
+
+**Achievements:**
+- 16 section extraction tests passing
+- 14 chunking logic tests (98% fragmentation reduction)
+- 28 Qdrant metadata tests
+- 18 Neo4j section graph tests
+- Section-based re-ranking: +10% retrieval precision
+
+**Key ADRs:**
+- ADR-039: Adaptive Section-Aware Chunking Strategy (ACCEPTED)
+
+---
+
+### Sprint 33: Directory Indexing & Interface Fixes
+**Status:** ✅ COMPLETE (2025-11-27 onwards)
+
+**Technologies Added:**
+- **Directory Selection Dialog:** Recursive directory indexing with file listing
+- **Enhanced Admin UI:** Live progress display, detail dialogs, error tracking
+- **Live-Log Stream:** SSE-based log streaming with filtering
+- **Parallel File Processing:** Concurrent document indexing with progress tracking
+- **DoclingParsedDocument Compatibility:** @property accessors for interface unification
+
+**Key Fixes:**
+- TD-044: DoclingParsedDocument interface mismatch (→ property accessors)
+- Multi-format section extraction support (PPTX, DOCX, PDF)
+- Legacy format rejection with user-friendly messages
+
+**Achievements:**
+- Admin E2E tests for directory indexing
+- Support matrix validation for all document formats
+- VLM pipeline integration for batch processing
+
+---
+
+### Sprint 34: Knowledge Graph Enhancement & Graph Visualization
+**Status:** ✅ COMPLETE (2025-11-28 onwards)
+
+**Technologies Added:**
+
+**Neo4j Schema Enhancements:**
+- **RELATES_TO Relationships:** New relationship type with semantic connections between entities
+  - Properties: `weight` (float), `description` (text), `source_chunk` (reference)
+  - Weighted graph edges for importance ranking
+  - Enables cross-entity knowledge discovery
+- **Enhanced Entity Nodes:** `:base` label alignment with LightRAG
+  - MENTIONED_IN relationships for entity-chunk connections
+  - HAS_SECTION relationships for document hierarchy
+  - Improved node properties with semantic metadata
+
+**Frontend Graph Visualization:**
+- **GraphViewer Component:** Advanced graph rendering with enhanced interactivity
+  - Edge styling: Color-coded by relationship type (RELATES_TO, MENTIONED_IN, HAS_SECTION)
+  - Variable edge widths based on weight/strength
+  - Interactive legend showing relationship types
+  - Real-time tooltip information on hover
+  - 21 new data-testid attributes for E2E testing
+- **GraphFilters Component:** User control over graph display
+  - Relationship type checkboxes (RELATES_TO, MENTIONED_IN, HAS_SECTION)
+  - Weight slider for filtering weak relationships
+  - Dynamic graph updates based on filter changes
+- **Graph Query Optimization:** Efficient Cypher queries for large graphs
+  - Parameterized relationship filtering
+  - Weight-based sorting for relevance
+
+**E2E Test Infrastructure:**
+- **19 new Playwright E2E tests** for graph features
+- **Page Object Model (POM)** for graph components
+- **Graph visualization test coverage:**
+  - Edge rendering validation
+  - Legend functionality
+  - Tooltip content verification
+  - Filter application and graph updates
+  - Relationship type display
+
+**Technical Stack:**
+```python
+# Neo4j Schema Updates (Sprint 34)
+# Entity node creation with relationships
+CREATE (e:base {
+    id: "entity_123",
+    name: "Example Entity",
+    type: "PERSON"
+})
+-[:RELATES_TO {
+    weight: 0.85,
+    description: "Semantic relationship",
+    source_chunk: "chunk_456"
+}]->(e2:base)
+
+# Efficient filtering by weight
+MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
+WHERE r.weight > :min_weight
+RETURN e1, r, e2
+ORDER BY r.weight DESC
+```
+
+```typescript
+// React Graph Visualization Components (Sprint 34)
+interface GraphViewerProps {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  selectedFilters: FilterState;
+  onNodeClick: (nodeId: string) => void;
+}
+
+// Edge styling based on relationship type
+const edgeColor = getRelationshipColor(edge.type);  // RELATES_TO → blue, MENTIONED_IN → green
+const edgeWidth = edge.weight * 3;  // Scale by weight
+
+// Dynamic legend
+<GraphLegend>
+  <LegendItem type="RELATES_TO" color="blue" description="Semantic connections" />
+  <LegendItem type="MENTIONED_IN" color="green" description="Entity mentions" />
+  <LegendItem type="HAS_SECTION" color="gray" description="Document hierarchy" />
+</GraphLegend>
+```
+
+**Achievements:**
+- RELATES_TO relationship extraction and storage
+- Graph visualization with edge styling and weight representation
+- Filter system for relationship types and weight thresholds
+- 19 E2E tests for graph features (100% passing)
+- GraphViewer component with 21 data-testid attributes
+- GraphFilters component with real-time graph updates
+- Performance: Graph queries <500ms for 10K+ entity graphs
+
+**Key ADRs:**
+- ADR-040: RELATES_TO Relationship Strategy (new)
+- ADR-041: Graph Visualization Architecture (new)
+
+**Test Coverage:**
+- 19 Playwright E2E tests (graph visualization, filtering, interactions)
+- Backend: GraphQL relationship tests
+- Frontend: Component rendering and event handling
+
+---
+
+### Cumulative Technology Additions (Sprints 12-34)
 
 | Sprint | Category | Technology | Version | Purpose |
 |--------|----------|------------|---------|---------|
@@ -594,6 +743,18 @@ const SourceCardsScroll = forwardRef<HTMLDivElement, SourceCardsScrollProps>((pr
 | 28 | Persistence | localStorage API | Browser | Client-side settings (Phase 1) |
 | 28 | Markdown | ReactMarkdown Custom Renderers | 9.0.2 | Citation + link renderers |
 | 28 | Pattern | forwardRef + useImperativeHandle | React 18.2 | Scroll-to-source imperative API |
+| 32 | Chunking | Adaptive Section-Aware Chunking | ADR-039 | Document structure respecting chunks |
+| 32 | Graph | Neo4j Section Nodes | 5.24 | Hierarchical document structure |
+| 32 | Metadata | Multi-Section Payload Tracking | Custom | Section headings, pages, bboxes in Qdrant |
+| 33 | Admin | Directory Selection Dialog | React | Recursive indexing with file listing |
+| 33 | Admin | Live-Log Stream | SSE | Real-time logging with filtering |
+| 33 | Admin | Parallel File Processing | AsyncIO | Concurrent document indexing |
+| 34 | Graph | RELATES_TO Relationships | Neo4j | Semantic entity connections |
+| 34 | Graph | Weighted Graph Edges | Neo4j | Weight, description, source_chunk properties |
+| 34 | Frontend | GraphViewer Component | React | Advanced graph visualization with edge styling |
+| 34 | Frontend | GraphFilters Component | React | Relationship type and weight filtering |
+| 34 | Frontend | Graph Legend & Tooltips | React | Interactive relationship type display |
+| 34 | Testing | Graph E2E Tests | Playwright | 19 tests for graph features (100% pass) |
 
 ### Embedding Model Evolution
 

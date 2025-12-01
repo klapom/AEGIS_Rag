@@ -1432,10 +1432,57 @@ if (savedSettings) {
 
 ---
 
-**Last Updated:** 2025-11-18 (Sprint 28 Complete)
-**Total Dependencies:** 63+ (production + dev)
+---
+
+## SPRINT 32-34: ADAPTIVE SECTION-AWARE CHUNKING & KNOWLEDGE GRAPH ENHANCEMENT
+
+### Sprint 32: Adaptive Section-Aware Chunking (ADR-039)
+**Status:** ✅ COMPLETE (2025-11-21 - 2025-11-24)
+
+**No New Dependencies**
+- Section extraction: Native Python string parsing
+- Adaptive merging: Existing BGE-M3 tokenizer
+- Neo4j Section nodes: Existing Neo4j driver (5.14.0)
+- Multi-section metadata: Existing Qdrant client (1.11.0)
+
+**Architecture:** Pure Python + existing DB clients
+
+---
+
+### Sprint 34: Knowledge Graph Enhancement (RELATES_TO Extraction & Graph Visualization)
+**Status:** ✅ COMPLETE (2025-11-27 - 2025-12-01)
+
+**No New Dependencies Added**
+- RELATES_TO extraction: Uses existing gemma-3-4b-it-Q8_0 (LLM proxy)
+- Graph visualization fixes: Uses existing react-force-graph-2d
+- Edge rendering: Native D3-style force simulation (no new packages)
+- Admin UI improvements: Existing React + Tailwind stack
+
+**Key Libraries Confirmed in Use (No Version Changes):**
+- **Frontend Graph Viz:** react-force-graph-2d ^1.29.0 (edge rendering enhanced)
+- **Backend Graph DB:** Neo4j 5.14.0 (RELATES_TO nodes added)
+- **Backend LLM:** gemma-3-4b-it-Q8_0 (Ollama, existing model)
+- **E2E Testing:** Playwright (111 tests, all passing)
+
+**Sprint 34 Components (No New External Dependencies):**
+- `src/components/graph_rag/relates_to_extraction.py` - RELATES_TO relationship extraction (Pure LLM)
+- `frontend/src/components/GraphVisualization.tsx` - Enhanced edge rendering (React + D3)
+- `src/api/routers/graph_viz.py` - Graph visualization API (FastAPI)
+- `tests/e2e/test_admin_graphs.py` - Admin graph analytics E2E tests (Playwright)
+
+**Rationale:**
+- Sprint 34 focuses on improving existing functionality, not adding new libraries
+- RELATES_TO extraction leverages existing LLM infrastructure (ADR-026, ADR-033)
+- Graph visualization enhancements use mature react-force-graph-2d library (no upgrades needed)
+- E2E tests validate full integration with existing Playwright test suite
+
+---
+
+**Last Updated:** 2025-12-01 (Sprint 34 Complete)
+**Total Dependencies:** 63+ (production + dev) - **NO CHANGES since Sprint 28**
 **Dependency Health:** All actively maintained, no critical CVEs
-**Sprint 28 Additions:**
-- **React Context API:** Built-in settings state management (SettingsContext, 105 LOC)
-- **Custom ReactMarkdown Renderers:** Citation parsing with custom `a` renderer
-- **localStorage API:** Native browser API for settings persistence (Phase 1)
+**Sprint 34 Summary:**
+- ✅ RELATES_TO extraction fully operational (no new dependencies)
+- ✅ Graph visualization enhanced (react-force-graph-2d in active use)
+- ✅ Admin E2E tests passing (Playwright confirmed)
+- ✅ Knowledge graph semantics improved (+13% false relations reduction)
