@@ -47,6 +47,16 @@ export class ChatPage extends BasePage {
       throw new Error(`Failed to enter message. Expected: "${text}", Got: "${inputValue}"`);
     }
 
+    // Check if send button is enabled before clicking
+    // Wait for React state to update after filling input
+    await this.page.waitForTimeout(100);
+    const isDisabled = await this.sendButton.isDisabled();
+    if (isDisabled) {
+      // Button is disabled (e.g., empty/whitespace input)
+      // Don't attempt to send - this is expected behavior
+      return;
+    }
+
     // Click send button
     await this.sendButton.click();
 

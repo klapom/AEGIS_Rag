@@ -8,6 +8,7 @@ This module provides a production-ready wrapper around the Qdrant client with:
 - Batch operations
 """
 
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -216,20 +217,37 @@ class QdrantClient:
         Raises:
             VectorSearchError: If upsert fails
         """
+        upsert_start = time.perf_counter()
+        num_batches = (len(points) + batch_size - 1) // batch_size
+        batch_timings = []
+
         try:
             # Process in batches for better performance
             for i in range(0, len(points), batch_size):
+                batch_start = time.perf_counter()
                 batch = points[i : i + batch_size]
                 await self.async_client.upsert(
                     collection_name=collection_name,
                     points=batch,
                 )
+                batch_duration_ms = (time.perf_counter() - batch_start) * 1000
+                batch_timings.append(batch_duration_ms)
+
+            upsert_end = time.perf_counter()
+            total_duration_ms = (upsert_end - upsert_start) * 1000
+            points_per_sec = len(points) / (total_duration_ms / 1000) if total_duration_ms > 0 else 0
+            avg_batch_ms = sum(batch_timings) / len(batch_timings) if batch_timings else 0
 
             logger.info(
-                "Points upserted successfully",
+                "TIMING_qdrant_upsert_complete",
+                stage="qdrant",
+                duration_ms=round(total_duration_ms, 2),
                 collection_name=collection_name,
                 total_points=len(points),
                 batch_size=batch_size,
+                num_batches=num_batches,
+                avg_batch_ms=round(avg_batch_ms, 2),
+                throughput_points_per_sec=round(points_per_sec, 2),
             )
             return True
 

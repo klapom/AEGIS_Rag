@@ -41,8 +41,11 @@ budgets:
   reset_day: 1           # Reset on 1st of each month
 
 # Routing configuration
+# Sprint 33: Cloud-First Strategy for Performance Testing
+# Set prefer_cloud: true to route extraction/generation to Alibaba Cloud Qwen
 routing:
   default_provider: local_ollama
+  prefer_cloud: true  # NEW: Route extraction/generation to cloud when true
   quality_critical_provider: openai
   batch_processing_provider: alibaba_cloud
 

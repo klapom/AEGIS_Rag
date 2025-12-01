@@ -7,6 +7,7 @@ Shared by:
 """
 
 import hashlib
+import time
 from collections import OrderedDict
 from typing import Any
 
@@ -184,13 +185,18 @@ class UnifiedEmbeddingService:
             Creates fresh AsyncClient for each call to maintain pickle compatibility.
             See class docstring for detailed explanation of design decision.
         """
+        embed_start = time.perf_counter()
+
         # Check cache
         cache_key = self._cache_key(text)
         cached = self.cache.get(cache_key)
         if cached:
-            # Safe logging: remove non-ASCII characters for Windows console
-            safe_preview = text[:50].encode("ascii", errors="replace").decode("ascii")
-            logger.debug("embedding_cache_hit", text_preview=safe_preview)
+            cache_duration_ms = (time.perf_counter() - embed_start) * 1000
+            logger.debug(
+                "TIMING_embedding_cache_hit",
+                duration_ms=round(cache_duration_ms, 3),
+                text_length=len(text),
+            )
             return cached
 
         # Generate embedding with fresh AsyncClient (pickle-compatible approach)
@@ -198,10 +204,13 @@ class UnifiedEmbeddingService:
             # Create fresh client for this operation (no stored state = pickle-compatible)
             client = AsyncClient(host=settings.ollama_base_url)
 
+            ollama_start = time.perf_counter()
             response = await client.embeddings(
                 model=self.model_name,
                 prompt=text,
             )
+            ollama_duration_ms = (time.perf_counter() - ollama_start) * 1000
+
             embedding = response.get("embedding", [])
 
             if not embedding:
@@ -210,11 +219,12 @@ class UnifiedEmbeddingService:
             # Cache result
             self.cache.set(cache_key, embedding)
 
-            # Safe logging: remove non-ASCII characters for Windows console
-            safe_preview = text[:50].encode("ascii", errors="replace").decode("ascii")
+            total_duration_ms = (time.perf_counter() - embed_start) * 1000
             logger.debug(
-                "embedding_generated",
-                text_preview=safe_preview,
+                "TIMING_embedding_single",
+                duration_ms=round(total_duration_ms, 2),
+                ollama_duration_ms=round(ollama_duration_ms, 2),
+                text_length=len(text),
                 embedding_dim=len(embedding),
             )
 
@@ -233,16 +243,41 @@ class UnifiedEmbeddingService:
         Returns:
             list of embedding vectors
         """
+        batch_start = time.perf_counter()
         embeddings = []
+        cache_hits = 0
+        cache_misses = 0
+        total_chars = sum(len(t) for t in texts)
 
-        for text in texts:
+        for idx, text in enumerate(texts):
+            # Track cache state before embed
+            hits_before = self.cache._hits
             embedding = await self.embed_single(text)
             embeddings.append(embedding)
 
+            # Track cache hit/miss
+            if self.cache._hits > hits_before:
+                cache_hits += 1
+            else:
+                cache_misses += 1
+
+        batch_end = time.perf_counter()
+        batch_duration_ms = (batch_end - batch_start) * 1000
+        embeddings_per_sec = len(texts) / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
+        chars_per_sec = total_chars / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
+
         logger.info(
-            "batch_embedding_complete",
+            "TIMING_embedding_batch_complete",
+            stage="embedding",
+            duration_ms=round(batch_duration_ms, 2),
             batch_size=len(texts),
-            cache_hit_rate=self.cache.hit_rate(),
+            total_chars=total_chars,
+            cache_hits=cache_hits,
+            cache_misses=cache_misses,
+            cache_hit_rate=round(self.cache.hit_rate(), 3),
+            throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
+            throughput_chars_per_sec=round(chars_per_sec, 0),
+            avg_ms_per_embedding=round(batch_duration_ms / len(texts), 2) if texts else 0,
         )
 
         return embeddings

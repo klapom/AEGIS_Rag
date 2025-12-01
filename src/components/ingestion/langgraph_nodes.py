@@ -31,6 +31,7 @@ Example:
     >>> state = await graph_extraction_node(state)
 """
 
+import asyncio
 import subprocess
 import time
 from contextlib import suppress

@@ -150,6 +150,9 @@ class Neo4jClient:
         Raises:
             DatabaseConnectionError: If query execution fails
         """
+        import time
+
+        query_start = time.perf_counter()
         db = database or self.database
         params = parameters or {}
 
@@ -157,9 +160,13 @@ class Neo4jClient:
             async with self.driver.session(database=db) as session:
                 result = await session.run(query, params)
                 records = await result.data()
+
+                query_duration_ms = (time.perf_counter() - query_start) * 1000
                 logger.debug(
-                    "Query executed successfully",
-                    query=query[:100],  # Log first 100 chars
+                    "TIMING_neo4j_query",
+                    stage="neo4j",
+                    duration_ms=round(query_duration_ms, 2),
+                    query_preview=query[:100],
                     record_count=len(records),
                 )
                 return records
@@ -217,6 +224,9 @@ class Neo4jClient:
         Raises:
             DatabaseConnectionError: If write transaction fails
         """
+        import time
+
+        write_start = time.perf_counter()
         db = database or self.database
         params = parameters or {}
 
@@ -225,13 +235,25 @@ class Neo4jClient:
                 result = await session.run(query, params)
                 summary = await result.consume()
 
-                return {
+                write_duration_ms = (time.perf_counter() - write_start) * 1000
+                result_summary = {
                     "nodes_created": summary.counters.nodes_created,
                     "nodes_deleted": summary.counters.nodes_deleted,
                     "relationships_created": summary.counters.relationships_created,
                     "relationships_deleted": summary.counters.relationships_deleted,
                     "properties_set": summary.counters.properties_set,
                 }
+
+                logger.debug(
+                    "TIMING_neo4j_write",
+                    stage="neo4j",
+                    duration_ms=round(write_duration_ms, 2),
+                    query_preview=query[:100],
+                    nodes_created=result_summary["nodes_created"],
+                    relationships_created=result_summary["relationships_created"],
+                )
+
+                return result_summary
         except (ServiceUnavailable, Neo4jError):
             # Let tenacity retry on these exceptions
             raise
@@ -443,9 +465,13 @@ class Neo4jClient:
                 }
 
                 logger.info(
-                    "section_nodes_creation_complete_batched",
+                    "TIMING_neo4j_section_nodes_complete",
+                    stage="neo4j",
+                    substage="section_nodes",
+                    duration_ms=round(batch_duration * 1000, 2),
                     document_id=document_id,
-                    total_duration_ms=round(batch_duration * 1000, 2),
+                    sections_count=len(sections),
+                    chunks_count=len(chunks),
                     **stats,
                 )
 

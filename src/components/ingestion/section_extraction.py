@@ -74,6 +74,34 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
+def _safe_log_text(text: str, max_len: int = 50) -> str:
+    """Make text safe for Windows console logging (CP1252 compatible).
+
+    Windows console uses CP1252 encoding which cannot display many Unicode characters.
+    This function replaces problematic characters with ASCII equivalents.
+
+    Args:
+        text: Text to sanitize
+        max_len: Maximum length to return
+
+    Returns:
+        Sanitized text safe for console output
+    """
+    if not text:
+        return ""
+    # Truncate first
+    truncated = text[:max_len]
+    # Replace problematic Unicode with ASCII equivalents
+    try:
+        # Try to encode to cp1252 - if it fails, we need to sanitize
+        truncated.encode("cp1252")
+        return truncated
+    except UnicodeEncodeError:
+        # Replace characters that can't be encoded
+        safe_text = truncated.encode("cp1252", errors="replace").decode("cp1252")
+        return safe_text
+
+
 def _is_likely_heading_by_formatting(text_item: dict[str, Any]) -> bool:
     """Detect if a text item is likely a heading based on formatting (DOCX fallback).
 
@@ -328,7 +356,7 @@ def _extract_from_texts_array(
 
             logger.debug(
                 "section_detected_from_texts",
-                heading=text_content[:50],
+                heading=_safe_log_text(text_content, 50),
                 level=current_section.level,
                 page_no=page_no,
                 label=label,
@@ -344,7 +372,7 @@ def _extract_from_texts_array(
                 # Content before first heading - create implicit section
                 logger.debug(
                     "content_before_heading",
-                    text_preview=text_content[:30],
+                    text_preview=_safe_log_text(text_content, 30),
                     label=label,
                 )
                 # Optionally: Create a default section for orphan content
@@ -486,7 +514,7 @@ def _extract_from_body_tree(
 
             logger.debug(
                 "section_detected_from_body",
-                heading=heading_text,
+                heading=_safe_log_text(heading_text, 50),
                 level=current_section.level,
                 page_no=page_no,
             )

@@ -36,10 +36,12 @@ export function SearchInput({
 
   const handleSubmit = () => {
     const trimmedQuery = query.trim();
-    if (trimmedQuery) {
-      onSubmit(trimmedQuery, mode);
-      setQuery(''); // Clear input immediately after sending
+    if (!trimmedQuery) {
+      // Don't submit empty or whitespace-only queries
+      return;
     }
+    onSubmit(trimmedQuery, mode);
+    setQuery(''); // Clear input immediately after sending
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

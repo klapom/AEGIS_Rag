@@ -164,6 +164,12 @@ export function AdminIndexingPage() {
       return;
     }
 
+    // Sprint 33: Auto-scan if not already scanned (backward compatibility for E2E tests)
+    if (!scanResult) {
+      await handleScanDirectory();
+      return; // handleScanDirectory will auto-select supported files
+    }
+
     if (selectedFiles.size === 0) {
       setError('Bitte wählen Sie mindestens eine Datei aus');
       return;
@@ -234,7 +240,7 @@ export function AdminIndexingPage() {
       setIsIndexing(false);
       setAbortController(null);
     }
-  }, [directory, selectedFiles]);
+  }, [directory, selectedFiles, scanResult, handleScanDirectory]);
 
   const handleCancelIndexing = useCallback(() => {
     if (abortController) {
@@ -474,39 +480,50 @@ export function AdminIndexingPage() {
         )}
 
         {/* Indexing Section */}
-        {scanResult && selectedFiles.size > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Schritt 3: Indizierung starten
-            </h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {scanResult && selectedFiles.size > 0
+              ? 'Schritt 3: Indizierung starten'
+              : 'Indizierung starten'
+            }
+          </h2>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-4">
-              <button
-                data-testid="start-indexing"
-                onClick={handleStartIndexing}
-                disabled={selectedSupportedCount === 0 || isIndexing}
-                className="
-                  flex-1 px-6 py-3 rounded-lg font-semibold
-                  bg-blue-600 text-white
-                  hover:bg-blue-700
-                  disabled:bg-gray-300 disabled:cursor-not-allowed
-                  transition-all
-                  flex items-center justify-center space-x-2
-                "
-              >
-                {isIndexing ? (
-                  <>
-                    <LoadingSpinner />
-                    <span>Indizierung läuft...</span>
-                  </>
-                ) : (
-                  <span>
-                    Indizierung starten ({selectedSupportedCount} Datei
-                    {selectedSupportedCount !== 1 ? 'en' : ''})
-                  </span>
-                )}
-              </button>
+          {!scanResult && (
+            <p className="text-sm text-gray-600">
+              Geben Sie einen Verzeichnispfad ein und klicken Sie auf "Indizierung starten".
+              Das System wird automatisch das Verzeichnis durchsuchen und die Dateien indizieren.
+            </p>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex space-x-4">
+            <button
+              data-testid="start-indexing"
+              onClick={handleStartIndexing}
+              disabled={!directory.trim() || isIndexing || (scanResult !== null && selectedSupportedCount === 0)}
+              className="
+                flex-1 px-6 py-3 rounded-lg font-semibold
+                bg-blue-600 text-white
+                hover:bg-blue-700
+                disabled:bg-gray-300 disabled:cursor-not-allowed
+                transition-all
+                flex items-center justify-center space-x-2
+              "
+            >
+              {isIndexing ? (
+                <>
+                  <LoadingSpinner />
+                  <span>Indizierung läuft...</span>
+                </>
+              ) : scanResult ? (
+                <span>
+                  Indizierung starten ({selectedSupportedCount} Datei
+                  {selectedSupportedCount !== 1 ? 'en' : ''})
+                </span>
+              ) : (
+                <span>Indizierung starten</span>
+              )}
+            </button>
 
               {isIndexing && (
                 <button
@@ -625,27 +642,26 @@ export function AdminIndexingPage() {
               </div>
             )}
 
-            {/* Progress History (Collapsible) */}
-            {progressHistory.length > 0 && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
-                  Fortschritts-Log anzeigen ({progressHistory.length} Ereignisse)
-                </summary>
-                <div className="mt-3 max-h-64 overflow-y-auto space-y-1 text-xs font-mono bg-gray-50 rounded-lg p-3">
-                  {progressHistory.map((chunk, i) => (
-                    <div key={i} className="text-gray-600">
-                      <span className="text-gray-400">[{chunk.phase || 'unknown'}]</span>{' '}
-                      {chunk.message}{' '}
-                      {chunk.progress_percent
-                        ? `(${chunk.progress_percent.toFixed(0)}%)`
-                        : ''}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-          </div>
-        )}
+          {/* Progress History (Collapsible) */}
+          {progressHistory.length > 0 && (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                Fortschritts-Log anzeigen ({progressHistory.length} Ereignisse)
+              </summary>
+              <div className="mt-3 max-h-64 overflow-y-auto space-y-1 text-xs font-mono bg-gray-50 rounded-lg p-3">
+                {progressHistory.map((chunk, i) => (
+                  <div key={i} className="text-gray-600">
+                    <span className="text-gray-400">[{chunk.phase || 'unknown'}]</span>{' '}
+                    {chunk.message}{' '}
+                    {chunk.progress_percent
+                      ? `(${chunk.progress_percent.toFixed(0)}%)`
+                      : ''}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
 
         {/* Advanced Options (Optional - for future enhancements) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

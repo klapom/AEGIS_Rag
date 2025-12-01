@@ -399,7 +399,7 @@ function SkeletonLine({ width = '100%' }: { width?: string }) {
 
 function ErrorDisplay({ error }: { error: string }) {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-6 space-y-3">
+    <div className="bg-red-50 border border-red-200 rounded-xl p-6 space-y-3" data-testid="error-message">
       <div className="flex items-center space-x-2 text-red-700">
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -411,10 +411,11 @@ function ErrorDisplay({ error }: { error: string }) {
         </svg>
         <h3 className="font-semibold">Fehler beim Laden der Antwort</h3>
       </div>
-      <p className="text-red-600">{error}</p>
+      <p className="text-red-600" data-testid="error-text">{error}</p>
       <button
         onClick={() => window.location.reload()}
         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+        data-testid="retry-button"
       >
         Erneut versuchen
       </button>

@@ -287,9 +287,10 @@ class AegisLLMProxy:
             1. Data Privacy: PII/HIPAA/Confidential → ALWAYS local
             2. Task Type: Embeddings → ALWAYS local
             3. Budget Check: If exceeded → Local
-            4. Quality + Complexity: Critical + High → OpenAI
-            5. Quality or Batch: High quality OR batch → Ollama Cloud
-            6. Default: Local (70% of tasks)
+            4. prefer_cloud: If true → Route extraction/generation to cloud
+            5. Quality + Complexity: Critical + High → OpenAI
+            6. Quality or Batch: High quality OR batch → Ollama Cloud
+            7. Default: Local (70% of tasks)
 
         Args:
             task: LLM task with routing criteria
@@ -325,6 +326,29 @@ class AegisLLMProxy:
                 return ("alibaba_cloud", "vision_task_best_vlm")
             # Fallback to local VLM if cloud unavailable
             return ("local_ollama", "vision_task_local_fallback")
+
+        # PRIORITY 2.6: prefer_cloud mode (Sprint 33 - Cloud-First for Performance Testing)
+        # When prefer_cloud=true, route extraction/generation tasks to Alibaba Cloud
+        prefer_cloud = self.config.routing.get("prefer_cloud", False)
+        cloud_task_types = [
+            TaskType.EXTRACTION,
+            TaskType.GENERATION,
+            TaskType.ANSWER_GENERATION,
+            TaskType.SUMMARIZATION,
+        ]
+        if (
+            prefer_cloud
+            and task.task_type in cloud_task_types
+            and self.config.is_provider_enabled("alibaba_cloud")
+            and not self._is_budget_exceeded("alibaba_cloud")
+        ):
+            logger.info(
+                "routing_prefer_cloud",
+                task_type=task.task_type,
+                provider="alibaba_cloud",
+                reason="prefer_cloud_enabled",
+            )
+            return ("alibaba_cloud", "prefer_cloud_extraction_generation")
 
         # PRIORITY 3: TIER 3 (OpenAI) - Critical quality + High complexity
         if (

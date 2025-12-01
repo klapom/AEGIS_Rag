@@ -58,8 +58,9 @@ export class BasePage {
         { timeout }
       );
 
-      // Small buffer for React re-render with citations
-      await this.page.waitForTimeout(1000);
+      // Buffer for React re-render with citations
+      // Increased from 1s to 2s to allow citation components to fully render
+      await this.page.waitForTimeout(2000);
     } catch (error) {
       throw new Error(
         `LLM response timeout after ${timeout}ms. Check backend connectivity.`

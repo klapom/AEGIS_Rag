@@ -66,10 +66,13 @@ Example:
 """
 
 import asyncio
+import base64
+import io
+import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import structlog
@@ -77,7 +80,190 @@ from pydantic import BaseModel, Field
 
 from src.core.exceptions import IngestionError
 
+if TYPE_CHECKING:
+    from PIL import Image
+
 logger = structlog.get_logger(__name__)
+
+
+class BBoxWrapper:
+    """Wrapper for bounding box compatible with Docling BoundingBox interface."""
+
+    def __init__(self, bbox_dict: dict[str, float] | None):
+        """Initialize BBoxWrapper.
+
+        Args:
+            bbox_dict: Dictionary with l, t, r, b keys (left, top, right, bottom)
+        """
+        if bbox_dict:
+            self.l = bbox_dict.get("l", 0.0)
+            self.t = bbox_dict.get("t", 0.0)
+            self.r = bbox_dict.get("r", 0.0)
+            self.b = bbox_dict.get("b", 0.0)
+        else:
+            self.l = 0.0
+            self.t = 0.0
+            self.r = 0.0
+            self.b = 0.0
+        # coord_origin is typically "BOTTOMLEFT" in Docling
+        self.coord_origin = _CoordOriginWrapper("BOTTOMLEFT")
+
+
+class _CoordOriginWrapper:
+    """Simple wrapper for coordinate origin enum-like behavior."""
+
+    def __init__(self, value: str):
+        self.value = value
+
+
+class ProvWrapper:
+    """Wrapper for provenance information compatible with Docling PictureItem.prov."""
+
+    def __init__(self, page_no: int | None, bbox_dict: dict[str, float] | None):
+        self.page_no = page_no
+        self.bbox = BBoxWrapper(bbox_dict)
+
+
+class PictureItemWrapper:
+    """Wrapper for picture items compatible with Docling PictureItem interface.
+
+    Sprint 33 Fix: Provides .get_image() method and .prov attribute expected by
+    image_enrichment_node in langgraph_nodes.py.
+    """
+
+    def __init__(
+        self,
+        image_data: bytes,
+        page_no: int | None = None,
+        bbox: dict[str, float] | None = None,
+        ref: str = "",
+    ):
+        """Initialize PictureItemWrapper.
+
+        Args:
+            image_data: Raw image bytes (decoded from base64)
+            page_no: Page number where image appears
+            bbox: Bounding box coordinates
+            ref: Reference ID from Docling JSON
+        """
+        self._image_data = image_data
+        self._ref = ref
+        self.prov = [ProvWrapper(page_no, bbox)] if page_no is not None else []
+
+    def get_image(self) -> "Image.Image":
+        """Get PIL Image from raw bytes.
+
+        Returns:
+            PIL Image object.
+
+        Raises:
+            ImportError: If PIL is not installed.
+        """
+        try:
+            from PIL import Image
+        except ImportError as e:
+            raise ImportError(
+                "PIL (Pillow) required for image processing. "
+                "Install with: poetry install --with ingestion"
+            ) from e
+
+        return Image.open(io.BytesIO(self._image_data))
+
+
+def _extract_pictures_from_markdown(
+    md_content: str,
+    images_metadata: list[dict[str, Any]],
+    json_content: dict[str, Any],
+) -> list[PictureItemWrapper]:
+    """Extract base64 images from markdown content and create PictureItemWrappers.
+
+    Sprint 33 Fix: The Docling HTTP API embeds images as base64 in markdown output.
+    This function extracts them and creates wrapper objects compatible with the
+    VLM processing pipeline.
+
+    Markdown image format: ![Image](data:image/png;base64,iVBORw0KGgo...)
+
+    Args:
+        md_content: Markdown content with embedded base64 images
+        images_metadata: Metadata about images (page_no, bbox) from JSON extraction
+        json_content: Full Docling JSON response (for additional picture info)
+
+    Returns:
+        List of PictureItemWrapper objects ready for VLM processing.
+    """
+    pictures = []
+
+    # Pattern to match markdown images with base64 data
+    # ![Image](data:image/png;base64,...)
+    # ![Image](data:image/jpeg;base64,...)
+    pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)'
+
+    matches = list(re.finditer(pattern, md_content))
+
+    logger.info(
+        "extracting_pictures_from_markdown",
+        md_content_length=len(md_content),
+        images_metadata_count=len(images_metadata),
+        regex_matches=len(matches),
+    )
+
+    # Also check json_content for pictures with image data
+    json_pictures = json_content.get("pictures", [])
+
+    for idx, match in enumerate(matches):
+        try:
+            alt_text = match.group(1)
+            image_type = match.group(2)  # png, jpeg, etc.
+            base64_data = match.group(3)
+
+            # Decode base64 to bytes
+            image_bytes = base64.b64decode(base64_data)
+
+            # Try to get metadata for this image
+            page_no = None
+            bbox = None
+
+            if idx < len(images_metadata):
+                page_no = images_metadata[idx].get("page_no")
+                bbox = images_metadata[idx].get("bbox")
+            elif idx < len(json_pictures):
+                prov = json_pictures[idx].get("prov", [])
+                if prov:
+                    p = prov[0] if isinstance(prov, list) else prov
+                    page_no = p.get("page_no")
+                    bbox = p.get("bbox")
+
+            wrapper = PictureItemWrapper(
+                image_data=image_bytes,
+                page_no=page_no,
+                bbox=bbox,
+                ref=f"picture_{idx}",
+            )
+            pictures.append(wrapper)
+
+            logger.debug(
+                "picture_extracted",
+                index=idx,
+                image_type=image_type,
+                size_bytes=len(image_bytes),
+                page_no=page_no,
+            )
+
+        except Exception as e:
+            logger.warning(
+                "picture_extraction_failed",
+                index=idx,
+                error=str(e),
+            )
+            continue
+
+    logger.info(
+        "pictures_extraction_complete",
+        total_extracted=len(pictures),
+        from_regex_matches=len(matches),
+    )
+
+    return pictures
 
 
 class DoclingParsedDocument(BaseModel):
@@ -91,6 +277,9 @@ class DoclingParsedDocument(BaseModel):
         layout: Document layout structure (headings, paragraphs, lists)
         parse_time_ms: Parsing duration in milliseconds
     """
+
+    # Pydantic v2 config: Allow extra attributes for caching
+    model_config = {"extra": "allow", "arbitrary_types_allowed": True}
 
     text: str = Field(description="Full document text with OCR")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Document metadata")
@@ -128,6 +317,23 @@ class DoclingParsedDocument(BaseModel):
             Self reference.
         """
         return self
+
+    @property
+    def pictures(self) -> list["PictureItemWrapper"]:
+        """Provide Docling-compatible .pictures attribute for VLM processing.
+
+        Sprint 33 Fix: The image_enrichment_node expects .pictures attribute
+        with PictureItem objects that have .get_image() method. This property
+        extracts base64 images from md_content and wraps them in compatible objects.
+
+        Returns:
+            List of PictureItemWrapper objects with .get_image() and .prov attributes.
+        """
+        if not hasattr(self, "_pictures_cache"):
+            self._pictures_cache = _extract_pictures_from_markdown(
+                self.md_content, self.images, self.json_content
+            )
+        return self._pictures_cache
 
 
 class DoclingClient:
