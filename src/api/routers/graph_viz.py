@@ -153,6 +153,77 @@ class CommunityDocumentsResponse(BaseModel):
 
 
 # ============================================================================
+# Sprint 34: Multi-Hop Query Models
+# ============================================================================
+
+
+class MultiHopRequest(BaseModel):
+    """Request for multi-hop graph traversal (Feature 34.5)."""
+
+    entity_id: str = Field(..., description="Starting entity ID or name")
+    max_hops: int = Field(default=2, ge=1, le=5, description="Maximum hops (1-5)")
+    relationship_types: list[str] | None = Field(
+        default=None, description="Filter by relationship types (e.g., ['RELATES_TO'])"
+    )
+    include_paths: bool = Field(default=False, description="Include full path information")
+
+
+class GraphNode(BaseModel):
+    """Graph node representation."""
+
+    id: str = Field(description="Node ID")
+    label: str = Field(description="Node label/name")
+    type: str | None = Field(default=None, description="Node type")
+    hops: int = Field(description="Distance from start entity")
+
+
+class GraphEdge(BaseModel):
+    """Graph edge representation."""
+
+    source: str = Field(description="Source node ID")
+    target: str = Field(description="Target node ID")
+    type: str = Field(description="Relationship type")
+    weight: float | None = Field(default=None, description="Edge weight")
+    description: str | None = Field(default=None, description="Edge description")
+
+
+class MultiHopResponse(BaseModel):
+    """Response with connected entities (Feature 34.5)."""
+
+    start_entity: str = Field(description="Starting entity ID/name")
+    max_hops: int = Field(description="Maximum hops used")
+    nodes: list[GraphNode] = Field(description="Connected entities")
+    edges: list[GraphEdge] = Field(description="Relationships")
+    paths: list[list[str]] | None = Field(default=None, description="Full path info (optional)")
+
+
+class ShortestPathRequest(BaseModel):
+    """Request for shortest path between two entities (Feature 34.5)."""
+
+    source_entity: str = Field(..., description="Source entity ID or name")
+    target_entity: str = Field(..., description="Target entity ID or name")
+    max_hops: int = Field(default=5, ge=1, le=10, description="Maximum hops (1-10)")
+
+
+class PathRelationship(BaseModel):
+    """Relationship in a path."""
+
+    type: str = Field(description="Relationship type")
+    weight: float | None = Field(default=None, description="Edge weight")
+
+
+class ShortestPathResponse(BaseModel):
+    """Response for shortest path query (Feature 34.5)."""
+
+    found: bool = Field(description="Whether a path was found")
+    path: list[str] | None = Field(default=None, description="Node names in path")
+    relationships: list[PathRelationship] | None = Field(
+        default=None, description="Relationships in path"
+    )
+    hops: int | None = Field(default=None, description="Path length")
+
+
+# ============================================================================
 # Export Endpoints
 # ============================================================================
 
@@ -590,6 +661,216 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
         logger.error("community_documents_failed", error=str(e))
         raise HTTPException(
             status_code=500, detail=f"Community documents search failed: {e}"
+        ) from e
+
+
+# ============================================================================
+# Sprint 34: Multi-Hop Query Endpoints
+# ============================================================================
+
+
+@router.post("/multi-hop", response_model=MultiHopResponse)
+async def get_multi_hop_subgraph(request: MultiHopRequest) -> MultiHopResponse:
+    """Get entities connected within N hops via RELATES_TO relationships.
+
+    Sprint 34 Feature 34.5: Multi-Hop Query Support
+
+    Traverses the knowledge graph starting from a given entity and finds all
+    connected entities within N hops. Supports filtering by relationship types
+    and optional path tracking.
+
+    Args:
+        request: Multi-hop request with entity_id, max_hops, and filters
+
+    Returns:
+        Subgraph with nodes, edges, and optional paths
+
+    Raises:
+        HTTPException: If query fails or entity not found
+    """
+    try:
+        neo4j = get_neo4j_client()
+
+        # Build relationship type filter
+        rel_filter = ""
+        if request.relationship_types:
+            rel_types = "|".join(request.relationship_types)
+            rel_filter = f":{rel_types}"
+
+        # Query for n-hop connected entities
+        # Note: Using entity_name for matching (standard in AegisRAG schema)
+        query = f"""
+        MATCH path = (start:base {{entity_name: $entity_id}})-[r{rel_filter}*1..{request.max_hops}]-(connected:base)
+        WITH DISTINCT connected, path, length(path) as hops
+        RETURN connected.entity_id AS entity_id,
+               connected.entity_name AS entity_name,
+               connected.entity_type AS entity_type,
+               hops,
+               [rel in relationships(path) | type(rel)] AS rel_types,
+               [node in nodes(path) | node.entity_name] AS path_nodes
+        ORDER BY hops, entity_name
+        LIMIT 100
+        """
+
+        results = await neo4j.execute_query(query, {"entity_id": request.entity_id})
+
+        # Build nodes and edges
+        nodes: list[GraphNode] = []
+        edges: list[GraphEdge] = []
+        seen_nodes: set[str] = set()
+        seen_edges: set[str] = set()
+        paths: list[list[str]] = [] if request.include_paths else None
+
+        # Add starting node
+        nodes.append(
+            GraphNode(
+                id=request.entity_id,
+                label=request.entity_id,
+                type="start",
+                hops=0,
+            )
+        )
+        seen_nodes.add(request.entity_id)
+
+        for record in results:
+            # Add connected node
+            node_id = record.get("entity_id") or record["entity_name"]
+            if node_id not in seen_nodes:
+                nodes.append(
+                    GraphNode(
+                        id=node_id,
+                        label=record["entity_name"],
+                        type=record.get("entity_type"),
+                        hops=record["hops"],
+                    )
+                )
+                seen_nodes.add(node_id)
+
+            # Track paths
+            if request.include_paths and record.get("path_nodes"):
+                paths.append(record["path_nodes"])
+
+        # Get edges between found nodes (separate query for clarity)
+        if len(nodes) > 1:
+            node_ids = [n.id for n in nodes]
+            edge_query = """
+            MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
+            WHERE (e1.entity_id IN $node_ids OR e1.entity_name IN $node_ids)
+              AND (e2.entity_id IN $node_ids OR e2.entity_name IN $node_ids)
+            RETURN COALESCE(e1.entity_id, e1.entity_name) AS source,
+                   COALESCE(e2.entity_id, e2.entity_name) AS target,
+                   type(r) AS type,
+                   r.weight AS weight,
+                   r.description AS description
+            """
+            edge_results = await neo4j.execute_query(edge_query, {"node_ids": node_ids})
+
+            for edge in edge_results:
+                edge_key = f"{edge['source']}->{edge['target']}"
+                if edge_key not in seen_edges:
+                    edges.append(
+                        GraphEdge(
+                            source=edge["source"],
+                            target=edge["target"],
+                            type=edge["type"],
+                            weight=edge.get("weight"),
+                            description=edge.get("description"),
+                        )
+                    )
+                    seen_edges.add(edge_key)
+
+        logger.info(
+            "multi_hop_query_executed",
+            entity_id=request.entity_id,
+            max_hops=request.max_hops,
+            node_count=len(nodes),
+            edge_count=len(edges),
+        )
+
+        return MultiHopResponse(
+            start_entity=request.entity_id,
+            max_hops=request.max_hops,
+            nodes=nodes,
+            edges=edges,
+            paths=paths,
+        )
+
+    except Exception as e:
+        logger.error("multi_hop_query_failed", error=str(e), entity=request.entity_id)
+        raise HTTPException(
+            status_code=500, detail=f"Multi-hop query failed: {e}"
+        ) from e
+
+
+@router.post("/shortest-path", response_model=ShortestPathResponse)
+async def get_shortest_path(request: ShortestPathRequest) -> ShortestPathResponse:
+    """Find shortest path between two entities via RELATES_TO.
+
+    Sprint 34 Feature 34.5: Multi-Hop Query Support
+
+    Uses Neo4j's shortestPath algorithm to find the shortest path between
+    two entities in the knowledge graph.
+
+    Args:
+        request: Shortest path request with source and target entities
+
+    Returns:
+        Shortest path with node names and relationships
+
+    Raises:
+        HTTPException: If query fails
+    """
+    try:
+        neo4j = get_neo4j_client()
+
+        # Cypher query for shortest path
+        query = f"""
+        MATCH (start:base {{entity_name: $source}}), (end:base {{entity_name: $target}})
+        MATCH path = shortestPath((start)-[:RELATES_TO*1..{request.max_hops}]-(end))
+        RETURN [node in nodes(path) | node.entity_name] AS path_nodes,
+               [rel in relationships(path) | {{type: type(rel), weight: rel.weight}}] AS path_rels,
+               length(path) AS hops
+        """
+
+        results = await neo4j.execute_query(
+            query,
+            {"source": request.source_entity, "target": request.target_entity},
+        )
+
+        if not results or len(results) == 0:
+            logger.info(
+                "shortest_path_not_found",
+                source=request.source_entity,
+                target=request.target_entity,
+            )
+            return ShortestPathResponse(found=False, path=None, relationships=None, hops=None)
+
+        record = results[0]
+        path_rels = [PathRelationship(**rel) for rel in record["path_rels"]]
+
+        logger.info(
+            "shortest_path_found",
+            source=request.source_entity,
+            target=request.target_entity,
+            hops=record["hops"],
+        )
+
+        return ShortestPathResponse(
+            found=True,
+            path=record["path_nodes"],
+            relationships=path_rels,
+            hops=record["hops"],
+        )
+
+    except Exception as e:
+        logger.error(
+            "shortest_path_query_failed",
+            error=str(e),
+            source=request.source_entity,
+            target=request.target_entity,
+        )
+        raise HTTPException(
+            status_code=500, detail=f"Shortest path query failed: {e}"
         ) from e
 
 

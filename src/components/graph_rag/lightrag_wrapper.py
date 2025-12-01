@@ -1113,6 +1113,96 @@ class LightRAGClient:
             )
             raise
 
+    async def _store_relations_to_neo4j(
+        self,
+        relations: list[dict[str, Any]],
+        chunk_id: str,
+    ) -> int:
+        """Store RELATES_TO relationships between entities in Neo4j.
+
+        Sprint 34 Feature 34.1: LightRAG Schema Alignment (ADR-040)
+
+        Args:
+            relations: List of relations from RelationExtractor with keys:
+                - source (str): Source entity name
+                - target (str): Target entity name
+                - description (str): Relationship description
+                - strength (int): Strength 1-10
+            chunk_id: Source chunk ID for provenance
+
+        Returns:
+            Number of relationships created
+        """
+        if not relations:
+            return 0
+
+        await self._ensure_initialized()
+
+        if not self.rag or not self.rag.chunk_entity_relation_graph:
+            logger.error("neo4j_storage_not_initialized", hint="Call _ensure_initialized() first")
+            raise RuntimeError("Neo4j storage not initialized")
+
+        logger.info(
+            "storing_relates_to_relationships",
+            total_relations=len(relations),
+            chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+        )
+
+        try:
+            # Get Neo4j driver from LightRAG
+            graph = self.rag.chunk_entity_relation_graph
+            if not hasattr(graph, "_driver"):
+                logger.error("neo4j_driver_not_found")
+                raise RuntimeError("Neo4j driver not available")
+
+            # Use Neo4j driver for direct operations
+            async with graph._driver.session() as session:
+                # Batch create RELATES_TO relationships
+                result = await session.run(
+                    """
+                    UNWIND $relations AS rel
+                    MATCH (e1:base {entity_name: rel.source})
+                    MATCH (e2:base {entity_name: rel.target})
+                    WHERE e1 <> e2
+                    MERGE (e1)-[r:RELATES_TO]->(e2)
+                    SET r.weight = toFloat(rel.strength) / 10.0,
+                        r.description = rel.description,
+                        r.source_chunk_id = $chunk_id,
+                        r.created_at = datetime()
+                    RETURN count(r) AS created
+                    """,
+                    relations=[
+                        {
+                            "source": r["source"],
+                            "target": r["target"],
+                            "description": r.get("description", ""),
+                            "strength": r.get("strength", 5),
+                        }
+                        for r in relations
+                    ],
+                    chunk_id=chunk_id,
+                )
+                record = await result.single()
+                created = record["created"] if record else 0
+
+                logger.info(
+                    "relates_to_relationships_created",
+                    count=created,
+                    chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                    input_relations=len(relations),
+                )
+
+                return created
+
+        except Exception as e:
+            logger.error(
+                "store_relations_to_neo4j_failed",
+                error=str(e),
+                error_type=type(e).__name__,
+                chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+            )
+            raise
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),

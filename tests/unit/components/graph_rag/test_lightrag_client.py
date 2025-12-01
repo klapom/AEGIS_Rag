@@ -208,9 +208,26 @@ async def test_lightrag_query_failure_handling(lightrag_client):
 
 
 @pytest.mark.asyncio
-async def test_lightrag_get_stats(lightrag_client, mock_neo4j_driver):
+async def test_lightrag_get_stats(lightrag_client):
     """Test retrieving graph statistics."""
-    stats = await lightrag_client.get_stats()
+    # Create a mock driver for the get_stats() method which creates its own connection
+    mock_result = AsyncMock()
+    mock_record = MagicMock()
+    mock_record.__getitem__ = lambda self, key: 10 if key == "count" else None
+    mock_result.single = AsyncMock(return_value=mock_record)
+
+    mock_session = AsyncMock()
+    mock_session.run = AsyncMock(return_value=mock_result)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock()
+
+    mock_driver = AsyncMock()
+    mock_driver.session = MagicMock(return_value=mock_session)
+    mock_driver.close = AsyncMock()
+
+    # Patch at the source module where neo4j is imported (lazy import in get_stats)
+    with patch("neo4j.AsyncGraphDatabase.driver", return_value=mock_driver):
+        stats = await lightrag_client.get_stats()
 
     assert "entity_count" in stats
     assert "relationship_count" in stats
@@ -219,37 +236,46 @@ async def test_lightrag_get_stats(lightrag_client, mock_neo4j_driver):
 
 
 @pytest.mark.asyncio
-async def test_lightrag_health_check(lightrag_client, mock_neo4j_driver):
+async def test_lightrag_health_check(lightrag_client):
     """Test Neo4j health check."""
-    # Mock health check query
-    result = AsyncMock()
-    record = MagicMock()
-    record.__getitem__ = lambda self, key: 1 if key == "health" else None
-    result.single = AsyncMock(return_value=record)
+    # Create a mock driver for the health_check() method which creates its own connection
+    mock_result = AsyncMock()
+    mock_record = MagicMock()
+    mock_record.__getitem__ = lambda self, key: 1 if key == "health" else None
+    mock_result.single = AsyncMock(return_value=mock_record)
 
-    session = AsyncMock()
-    session.run = AsyncMock(return_value=result)
-    session.__aenter__ = AsyncMock(return_value=session)
-    session.__aexit__ = AsyncMock()
+    mock_session = AsyncMock()
+    mock_session.run = AsyncMock(return_value=mock_result)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock()
 
-    mock_neo4j_driver.session = MagicMock(return_value=session)
+    mock_driver = AsyncMock()
+    mock_driver.session = MagicMock(return_value=mock_session)
+    mock_driver.close = AsyncMock()
 
-    healthy = await lightrag_client.health_check()
+    # Patch at the source module where neo4j is imported (lazy import in health_check)
+    with patch("neo4j.AsyncGraphDatabase.driver", return_value=mock_driver):
+        healthy = await lightrag_client.health_check()
 
     assert healthy is True
 
 
 @pytest.mark.asyncio
-async def test_lightrag_health_check_failure(lightrag_client, mock_neo4j_driver):
+async def test_lightrag_health_check_failure(lightrag_client):
     """Test health check failure handling."""
-    session = AsyncMock()
-    session.run = AsyncMock(side_effect=Exception("Connection failed"))
-    session.__aenter__ = AsyncMock(return_value=session)
-    session.__aexit__ = AsyncMock()
+    # Create a mock driver that simulates connection failure
+    mock_session = AsyncMock()
+    mock_session.run = AsyncMock(side_effect=Exception("Connection failed"))
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock()
 
-    mock_neo4j_driver.session = MagicMock(return_value=session)
+    mock_driver = AsyncMock()
+    mock_driver.session = MagicMock(return_value=mock_session)
+    mock_driver.close = AsyncMock()
 
-    healthy = await lightrag_client.health_check()
+    # Patch at the source module where neo4j is imported (lazy import in health_check)
+    with patch("neo4j.AsyncGraphDatabase.driver", return_value=mock_driver):
+        healthy = await lightrag_client.health_check()
 
     assert healthy is False
 
@@ -300,7 +326,8 @@ async def test_lightrag_concurrent_insertions(lightrag_client):
 @pytest.mark.asyncio
 async def test_lightrag_lazy_initialization():
     """Test lazy initialization of LightRAG."""
-    with patch("src.components.graph_rag.lightrag_wrapper.LightRAG") as mock_lightrag_cls:
+    # Patch at the source module where LightRAG is imported from (lazy import)
+    with patch("lightrag.LightRAG") as mock_lightrag_cls:
         with patch(
             "lightrag.kg.shared_storage.initialize_pipeline_status",
             new_callable=AsyncMock,
@@ -308,6 +335,8 @@ async def test_lightrag_lazy_initialization():
             with patch("src.components.llm_proxy.get_aegis_llm_proxy"):
                 mock_instance = MagicMock()
                 mock_instance.initialize_storages = AsyncMock()
+                mock_instance.chunk_entity_relation_graph = MagicMock()
+                mock_instance.chunk_entity_relation_graph._driver = MagicMock()
                 mock_lightrag_cls.return_value = mock_instance
 
                 client = LightRAGClient()
@@ -321,8 +350,9 @@ async def test_lightrag_lazy_initialization():
 @pytest.mark.asyncio
 async def test_lightrag_initialization_failure():
     """Test handling of initialization failure."""
+    # Patch at the source module where LightRAG is imported from (lazy import)
     with patch(
-        "src.components.graph_rag.lightrag_wrapper.LightRAG",
+        "lightrag.LightRAG",
         side_effect=ImportError("LightRAG not installed"),
     ):
         client = LightRAGClient()

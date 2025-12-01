@@ -188,10 +188,19 @@ def test_semantic_deduplicator_init_missing_dependencies():
 # ============================================================================
 
 
+# Check if sklearn is available for this test
+try:
+    from sklearn.metrics.pairwise import cosine_similarity as _sklearn_available
+
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+
+
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
-@patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
-def test_deduplicate_with_duplicates(mock_get_singleton, mock_cosine_sim, sample_entities):
+def test_deduplicate_with_duplicates(mock_get_singleton, sample_entities):
     """Test deduplication removes duplicate entities (Sprint 20.3 Singleton)."""
     import numpy as np
 
@@ -209,19 +218,22 @@ def test_deduplicate_with_duplicates(mock_get_singleton, mock_cosine_sim, sample
     similarity = np.eye(4)
     similarity[0, 1] = 0.95  # High similarity between first two
     similarity[1, 0] = 0.95
-    mock_cosine_sim.return_value = similarity
 
-    dedup = SemanticDeduplicator(threshold=0.93)
+    with patch(
+        "src.components.graph_rag.semantic_deduplicator.cosine_similarity",
+        return_value=similarity,
+    ):
+        dedup = SemanticDeduplicator(threshold=0.93)
 
-    # Get only PERSON entities for this test
-    person_entities = [e for e in sample_entities if e["type"] == "PERSON"][:4]
+        # Get only PERSON entities for this test
+        person_entities = [e for e in sample_entities if e["type"] == "PERSON"][:4]
 
-    # When: Deduplicate
-    result = dedup.deduplicate(person_entities)
+        # When: Deduplicate
+        result = dedup.deduplicate(person_entities)
 
-    # Then: Should merge first two entities
-    assert len(result) < len(person_entities)
-    assert any("[Deduplicated from" in r["description"] for r in result)
+        # Then: Should merge first two entities
+        assert len(result) < len(person_entities)
+        assert any("[Deduplicated from" in r["description"] for r in result)
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
@@ -242,6 +254,7 @@ def test_deduplicate_empty_list(mock_get_singleton):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_deduplicate_no_duplicates(
@@ -295,6 +308,7 @@ def test_deduplicate_single_entity(mock_get_singleton):
 
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_deduplicate_groups_by_type(mock_get_singleton, mock_cosine_sim, sample_entities):
@@ -336,6 +350,7 @@ def test_deduplicate_groups_by_type(mock_get_singleton, mock_cosine_sim, sample_
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_get_singleton):
     """Test deduplication behavior with different threshold values."""
@@ -377,6 +392,7 @@ def test_deduplicate_threshold_sensitivity(mock_cosine_sim, mock_get_singleton):
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_preserves_first_entity(mock_cosine_sim, mock_get_singleton):
     """Test deduplication keeps first entity as representative."""
@@ -444,6 +460,7 @@ def test_deduplicate_missing_type_field(mock_get_singleton):
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_multiple_type_groups(mock_cosine_sim, mock_get_singleton):
     """Test deduplication correctly handles multiple entity types."""
@@ -579,6 +596,7 @@ def test_create_deduplicator_from_config_custom_model(mock_get_singleton, mock_c
 
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
 def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_get_singleton):
     """Test deduplication merges descriptions from duplicate entities."""
@@ -619,6 +637,7 @@ def test_deduplicate_merges_descriptions(mock_cosine_sim, mock_get_singleton):
 # ============================================================================
 
 
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 @patch("src.components.graph_rag.semantic_deduplicator.logger")
@@ -652,6 +671,7 @@ def test_deduplicate_logs_statistics(mock_logger, mock_get_singleton):
     assert mock_logger.info.called
 
 
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed - optional dependency")
 @patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
 @patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
 def test_deduplicate_batch_processing(mock_get_singleton):

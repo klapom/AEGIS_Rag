@@ -1234,6 +1234,52 @@ See: `docs/sprints/SPRINT_33_PLAN.md`
 
 ---
 
+## Sprint 34: Knowledge Graph Enhancement & LightRAG Alignment
+**Status:** PLANNED
+**Branch:** `sprint-34-knowledge-graph`
+**Estimated Story Points:** 63 SP
+
+### Context
+Nach erfolgreicher Stabilisierung der Ingestion-Pipeline in Sprint 33 fokussiert Sprint 34 auf den Knowledge Graph. Eine Analyse zeigte Abweichungen vom LightRAG Neo4j Schema-Standard.
+
+### Key Decisions
+- **ADR-040**: LightRAG Neo4j Schema Alignment
+- **TD-045**: entity_id Property Migration
+- **TD-046**: RELATES_TO Relationship Extraction
+
+### Features
+| # | Feature | SP | Priority |
+|---|---------|-----|----------|
+| 34.1 | entity_id Property Migration | 5 | P0 |
+| 34.2 | RELATES_TO Relationship Extraction | 13 | P0 |
+| 34.3 | Frontend Graph Visualization (RELATES_TO) | 13 | P0 |
+| 34.4 | Graph Filter & Edge Styling | 8 | P1 |
+| 34.5 | Multi-Hop Query Support | 8 | P1 |
+| 34.6 | Graph Export (Cytoscape/D3) | 5 | P2 |
+| 34.7 | Graph Analytics Dashboard | 8 | P2 |
+| 34.8 | Re-Indexing with New Schema | 3 | P0 |
+
+### Key Deliverables
+- Neo4j Schema aligned with LightRAG standard (`entity_id` property)
+- Entity-Entity `RELATES_TO` relationships with weight, description, keywords
+- Frontend graph visualization with distinct edge colors and styles
+- Graph filters (relationship types, confidence threshold, entity search)
+- Multi-hop traversal queries (1-5 hops)
+- Export to Cytoscape, D3, vis.js formats
+- Analytics dashboard with entity/relationship counts and PageRank
+
+### Full Plan
+See: `docs/sprints/SPRINT_34_PLAN.md`
+
+### References
+- [ADR-040: LightRAG Neo4j Schema Alignment](../adr/ADR-040-lightrag-neo4j-schema-alignment.md)
+- [TD-045: entity_id Property Migration](../technical-debt/TD-045_ENTITY_ID_PROPERTY_MIGRATION.md)
+- [TD-046: RELATES_TO Relationship Extraction](../technical-debt/TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md)
+- [Under the Covers With LightRAG: Extraction - Neo4j Blog](https://neo4j.com/blog/developer/under-the-covers-with-lightrag-extraction/)
+- [LightRAG GitHub Repository](https://github.com/HKUDS/LightRAG)
+
+---
+
 ## Post-Sprint 17: Continuous Improvement Backlog
 
 ### High Priority

@@ -1,15 +1,19 @@
 /**
  * GraphFilters Component
  * Sprint 29 Feature 29.5: Graph Explorer with Search
+ * Sprint 34 Feature 34.6: Graph Edge Filter Controls
  *
  * Features:
  * - Multi-select for entity types
  * - Slider for minimum degree (1-20)
  * - Dropdown for max nodes (50/100/200/500)
+ * - Edge type filters (RELATES_TO, MENTIONED_IN)
+ * - Weight threshold slider for relationship strength
  * - onChange callback with updated filters
  */
 
 import { useState, useEffect } from 'react';
+import type { EdgeFilters } from '../../types/graph';
 
 export interface GraphFilterValues {
   entityTypes: string[];
@@ -21,6 +25,9 @@ interface GraphFiltersProps {
   entityTypes: string[]; // Available entity types
   value: GraphFilterValues;
   onChange: (filters: GraphFilterValues) => void;
+  // Sprint 34 Feature 34.6: Edge filters
+  edgeFilters?: EdgeFilters;
+  onEdgeFilterChange?: (edgeFilters: EdgeFilters) => void;
 }
 
 const ENTITY_TYPE_OPTIONS = [
@@ -40,14 +47,32 @@ const MAX_NODES_OPTIONS = [50, 100, 200, 500];
  * @param entityTypes Available entity types in the graph
  * @param value Current filter values
  * @param onChange Callback when filters change
+ * @param edgeFilters Edge filter values (Sprint 34 Feature 34.6)
+ * @param onEdgeFilterChange Callback when edge filters change
  */
-export function GraphFilters({ entityTypes, value, onChange }: GraphFiltersProps) {
+export function GraphFilters({
+  entityTypes,
+  value,
+  onChange,
+  edgeFilters,
+  onEdgeFilterChange
+}: GraphFiltersProps) {
   const [localFilters, setLocalFilters] = useState(value);
+  const [localEdgeFilters, setLocalEdgeFilters] = useState<EdgeFilters>(
+    edgeFilters || { showRelatesTo: true, showMentionedIn: true, minWeight: 0 }
+  );
 
   // Update local state when external value changes
   useEffect(() => {
     setLocalFilters(value);
   }, [value]);
+
+  // Update local edge filters when external value changes
+  useEffect(() => {
+    if (edgeFilters) {
+      setLocalEdgeFilters(edgeFilters);
+    }
+  }, [edgeFilters]);
 
   const handleEntityTypeToggle = (type: string) => {
     const newTypes = localFilters.entityTypes.includes(type)
@@ -69,6 +94,14 @@ export function GraphFilters({ entityTypes, value, onChange }: GraphFiltersProps
     const updated = { ...localFilters, maxNodes };
     setLocalFilters(updated);
     onChange(updated);
+  };
+
+  // Sprint 34 Feature 34.6: Edge filter handlers
+  const handleEdgeFilterChange = (updatedEdgeFilters: EdgeFilters) => {
+    setLocalEdgeFilters(updatedEdgeFilters);
+    if (onEdgeFilterChange) {
+      onEdgeFilterChange(updatedEdgeFilters);
+    }
   };
 
   // Filter options to only show available entity types
@@ -159,6 +192,93 @@ export function GraphFilters({ entityTypes, value, onChange }: GraphFiltersProps
         </select>
       </div>
 
+      {/* Sprint 34 Feature 34.6: Edge Type Filters Section */}
+      <div className="border-t border-gray-200 pt-4">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3">Relationship Types</h4>
+
+        <div className="space-y-2">
+          <label className="flex items-center space-x-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={localEdgeFilters.showRelatesTo}
+              onChange={(e) => handleEdgeFilterChange({
+                ...localEdgeFilters,
+                showRelatesTo: e.target.checked
+              })}
+              className="w-4 h-4 text-primary border-2 border-gray-300 rounded
+                         focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
+              aria-label="Show RELATES_TO relationships"
+            />
+            <div className="w-4 h-0.5 bg-blue-500"></div>
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Relates To
+            </span>
+          </label>
+
+          <label className="flex items-center space-x-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={localEdgeFilters.showMentionedIn}
+              onChange={(e) => handleEdgeFilterChange({
+                ...localEdgeFilters,
+                showMentionedIn: e.target.checked
+              })}
+              className="w-4 h-4 text-primary border-2 border-gray-300 rounded
+                         focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
+              aria-label="Show MENTIONED_IN relationships"
+            />
+            <div className="w-4 h-0.5 bg-gray-400"></div>
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Mentioned In
+            </span>
+          </label>
+        </div>
+
+        {/* Weight Threshold Slider */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="edge-weight-slider" className="block text-sm font-medium text-gray-700">
+              Min Relationship Strength
+            </label>
+            <span className="text-sm text-gray-600 font-medium">
+              {Math.round(localEdgeFilters.minWeight * 100)}%
+            </span>
+          </div>
+          <input
+            id="edge-weight-slider"
+            type="range"
+            min="0"
+            max="100"
+            value={localEdgeFilters.minWeight * 100}
+            onChange={(e) => handleEdgeFilterChange({
+              ...localEdgeFilters,
+              minWeight: parseInt(e.target.value) / 100
+            })}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer
+                       focus:outline-none focus:ring-2 focus:ring-primary/20
+                       [&::-webkit-slider-thumb]:appearance-none
+                       [&::-webkit-slider-thumb]:w-4
+                       [&::-webkit-slider-thumb]:h-4
+                       [&::-webkit-slider-thumb]:rounded-full
+                       [&::-webkit-slider-thumb]:bg-primary
+                       [&::-webkit-slider-thumb]:cursor-pointer
+                       [&::-webkit-slider-thumb]:hover:bg-primary-hover
+                       [&::-moz-range-thumb]:w-4
+                       [&::-moz-range-thumb]:h-4
+                       [&::-moz-range-thumb]:rounded-full
+                       [&::-moz-range-thumb]:bg-primary
+                       [&::-moz-range-thumb]:cursor-pointer
+                       [&::-moz-range-thumb]:border-0
+                       [&::-moz-range-thumb]:hover:bg-primary-hover"
+            aria-label="Minimum relationship strength"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>0%</span>
+            <span>100%</span>
+          </div>
+        </div>
+      </div>
+
       {/* Reset Filters Button */}
       <button
         onClick={() => {
@@ -167,8 +287,17 @@ export function GraphFilters({ entityTypes, value, onChange }: GraphFiltersProps
             minDegree: 1,
             maxNodes: 100,
           };
+          const defaultEdgeFilters: EdgeFilters = {
+            showRelatesTo: true,
+            showMentionedIn: true,
+            minWeight: 0,
+          };
           setLocalFilters(defaultFilters);
+          setLocalEdgeFilters(defaultEdgeFilters);
           onChange(defaultFilters);
+          if (onEdgeFilterChange) {
+            onEdgeFilterChange(defaultEdgeFilters);
+          }
         }}
         className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100
                    hover:bg-gray-200 active:bg-gray-300 rounded-lg

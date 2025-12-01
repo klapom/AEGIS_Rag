@@ -1,6 +1,8 @@
 /**
  * GraphViewer Component
  * Sprint 29 Feature 29.1: Interactive Graph Visualization
+ * Sprint 34 Features 34.3-34.4: Edge-Type Visualization
+ * Sprint 34 Feature 34.6: Graph Edge Filter Controls
  *
  * Features:
  * - Force-directed layout with react-force-graph-2d
@@ -10,18 +12,26 @@
  * - Color by entity type
  * - Size by node degree
  * - Directional edges with arrow heads
+ * - Edge colors by relationship type (RELATES_TO: blue, MENTIONED_IN: gray)
+ * - Edge width based on relationship weight (1-3px)
+ * - Edge hover tooltips with type, weight, and description
+ * - Legend for both entity types and relationship types
+ * - Edge type filtering (show/hide RELATES_TO, MENTIONED_IN)
+ * - Relationship weight threshold filtering
  */
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { useGraphData } from '../../hooks/useGraphData';
-import type { GraphFilters, ForceGraphNode } from '../../types/graph';
+import type { GraphFilters, ForceGraphNode, EdgeFilters } from '../../types/graph';
 
 interface GraphViewerProps {
   maxNodes?: number;
   entityTypes?: string[];
   highlightCommunities?: string[];
   onNodeClick?: (node: ForceGraphNode) => void;
+  // Sprint 34 Feature 34.6: Edge filters
+  edgeFilters?: EdgeFilters;
 }
 
 export function GraphViewer({
@@ -29,12 +39,41 @@ export function GraphViewer({
   entityTypes,
   highlightCommunities,
   onNodeClick,
+  edgeFilters,
 }: GraphViewerProps) {
   const filters: GraphFilters = { maxNodes, entityTypes, highlightCommunities };
   const { data, loading, error } = useGraphData(filters);
   const graphRef = useRef<any>(null);
   const [selectedNode, setSelectedNode] = useState<ForceGraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<ForceGraphNode | null>(null);
+
+  // Sprint 34 Feature 34.6: Filter graph data by edge types
+  const filteredData = useMemo(() => {
+    if (!data) return null;
+
+    // Default edge filters: show all edges
+    const filters = edgeFilters || { showRelatesTo: true, showMentionedIn: true, minWeight: 0 };
+
+    const filteredLinks = data.links.filter((link) => {
+      const linkType = (link.label || '').toUpperCase();
+
+      // Filter by type
+      if (linkType === 'RELATES_TO' && !filters.showRelatesTo) return false;
+      if (linkType === 'MENTIONED_IN' && !filters.showMentionedIn) return false;
+
+      // Filter by weight (only for RELATES_TO which has meaningful weights)
+      if (linkType === 'RELATES_TO' && link.weight !== undefined) {
+        if (link.weight < filters.minWeight) return false;
+      }
+
+      return true;
+    });
+
+    return {
+      nodes: data.nodes,
+      links: filteredLinks,
+    };
+  }, [data, edgeFilters]);
 
   // Entity type color mapping
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -124,13 +163,48 @@ export function GraphViewer({
 
       // Highlight links connected to selected node
       if (selectedNode && (source?.id === selectedNode.id || target?.id === selectedNode.id)) {
-        return '#f59e0b'; // Amber
+        return '#f59e0b'; // Amber for selected
       }
 
-      return '#d1d5db'; // Gray
+      // Color by relationship type
+      const linkType = (link.label || link.type || '').toUpperCase();
+      switch (linkType) {
+        case 'RELATES_TO':
+          return '#3B82F6'; // Blue
+        case 'MENTIONED_IN':
+          return '#9CA3AF'; // Gray
+        case 'HAS_SECTION':
+          return '#10B981'; // Green
+        case 'DEFINES':
+          return '#F59E0B'; // Amber
+        default:
+          return '#d1d5db'; // Light gray
+      }
     },
     [selectedNode]
   );
+
+  // Link width based on relationship type and weight
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getLinkWidth = useCallback((link: any) => {
+    const linkType = (link.label || link.type || '').toUpperCase();
+
+    // RELATES_TO edges vary by weight
+    if (linkType === 'RELATES_TO' && typeof link.weight === 'number') {
+      return 1 + link.weight * 2; // 1-3px based on weight 0-1
+    }
+
+    return 1.5; // Default width
+  }, []);
+
+  // Link hover tooltip
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getLinkLabel = useCallback((link: any) => {
+    const type = link.label || link.type || 'Unknown';
+    const desc = link.description || '';
+    const weight = link.weight ? ` (${Math.round(link.weight * 100)}%)` : '';
+    return `${type}${weight}${desc ? `\n${desc}` : ''}`;
+  }, []);
 
   if (loading) {
     return <GraphSkeleton />;
@@ -153,6 +227,17 @@ export function GraphViewer({
         <div className="text-center text-gray-500">
           <div className="text-xl mb-2">No graph data available</div>
           <div>Try adjusting your filters or ingest some documents</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!filteredData || filteredData.nodes.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="text-center text-gray-500">
+          <div className="text-xl mb-2">No nodes match the current filters</div>
+          <div>Try adjusting your filters</div>
         </div>
       </div>
     );
@@ -201,8 +286,13 @@ export function GraphViewer({
       <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
         <div className="text-sm space-y-1">
           <div className="font-semibold text-gray-900">Graph Stats</div>
-          <div className="text-gray-600">Nodes: {data.nodes.length}</div>
-          <div className="text-gray-600">Edges: {data.links.length}</div>
+          <div className="text-gray-600">Nodes: {filteredData.nodes.length}</div>
+          <div className="text-gray-600">
+            Edges: {filteredData.links.length}
+            {data.links.length !== filteredData.links.length && (
+              <span className="text-gray-500"> / {data.links.length}</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,13 +318,35 @@ export function GraphViewer({
               <span className="text-gray-600">Event</span>
             </div>
           </div>
+
+          <div className="border-t border-gray-200 pt-2 mt-2">
+            <div className="font-semibold text-gray-900">Relationships</div>
+            <div className="space-y-1 mt-1">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-0.5 bg-blue-500"></div>
+                <span className="text-gray-600">Relates To</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-0.5 bg-gray-400"></div>
+                <span className="text-gray-600">Mentioned In</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-0.5 bg-green-500"></div>
+                <span className="text-gray-600">Has Section</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-0.5 bg-amber-500"></div>
+                <span className="text-gray-600">Defines</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Force Graph */}
       <ForceGraph2D
         ref={graphRef}
-        graphData={data}
+        graphData={filteredData}
         nodeLabel={getNodeLabel}
         nodeColor={getNodeColor}
         nodeVal={getNodeSize}
@@ -242,7 +354,8 @@ export function GraphViewer({
         linkDirectionalArrowLength={3.5}
         linkDirectionalArrowRelPos={1}
         linkColor={getLinkColor}
-        linkWidth={1.5}
+        linkWidth={getLinkWidth}
+        linkLabel={getLinkLabel}
         onNodeClick={handleNodeClick}
         onNodeHover={handleNodeHover}
         onBackgroundClick={handleBackgroundClick}

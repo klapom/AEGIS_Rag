@@ -15,8 +15,9 @@ export interface GraphNode {
 export interface GraphLink {
   source: string | GraphNode;
   target: string | GraphNode;
-  label: string; // Relationship type
+  label: string; // Relationship type (RELATES_TO, MENTIONED_IN, etc.)
   weight?: number;
+  description?: string; // Relationship description
 }
 
 export interface GraphData {
@@ -28,6 +29,13 @@ export interface GraphFilters {
   maxNodes?: number;
   entityTypes?: string[];
   highlightCommunities?: string[];
+}
+
+// Sprint 34 Feature 34.6: Edge Filter Types
+export interface EdgeFilters {
+  showRelatesTo: boolean;
+  showMentionedIn: boolean;
+  minWeight: number;
 }
 
 export interface GraphExportRequest {
