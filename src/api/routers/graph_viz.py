@@ -258,7 +258,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
         RETURN n, r, m
         """
 
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             result = await session.run(query)
             records = await result.data()
 
@@ -331,7 +331,7 @@ async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
         RETURN n, r, m
         """
 
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             result = await session.run(query)
             records = await result.data()
 
@@ -383,7 +383,7 @@ async def highlight_communities(
             RETURN n, r, m
             """
 
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             result = await session.run(query, community_ids=request.community_ids)
             records = await result.data()
 
@@ -427,7 +427,7 @@ async def get_query_subgraph(request: QuerySubgraphRequest) -> dict[str, Any]:
         RETURN n, r, m
         """
 
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             result = await session.run(query, entity_names=request.entity_names)
             records = await result.data()
 
@@ -458,7 +458,7 @@ async def get_graph_statistics() -> GraphStatistics:
     try:
         neo4j = get_neo4j_client()
 
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             # Node count
             node_result = await session.run("MATCH (n:base) RETURN count(n) as count")
             node_count = (await node_result.single())["count"]
@@ -587,7 +587,7 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
         neo4j = get_neo4j_client()
 
         # 1. Get entities in community
-        async with neo4j.get_driver().session() as session:
+        async with neo4j.driver.session() as session:
             entity_result = await session.run(
                 "MATCH (n:base {community_id: $community_id}) "
                 "RETURN collect(n.name) as entity_names",
@@ -880,33 +880,63 @@ async def get_shortest_path(request: ShortestPathRequest) -> ShortestPathRespons
 
 
 def _export_json(records: list[dict], include_communities: bool = True) -> dict[str, Any]:
-    """Export graph as JSON format."""
+    """Export graph as JSON format.
+
+    Note: Records from session.run().data() are already dicts, not Neo4j objects.
+    Node properties are accessed via dict keys like node["name"], node["entity_type"].
+    """
     nodes = {}
     edges = []
 
     for record in records:
-        # Add node
+        # Add node (n is a dict with node properties)
         if "n" in record and record["n"]:
             node = record["n"]
-            node_id = node.get("id") or node.element_id
+            # Use entity_id or entity_name as unique identifier (standard in AegisRAG schema)
+            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
             nodes[node_id] = {
                 "id": node_id,
-                "label": node.get("name", "Unknown"),
-                "type": node.get("entity_type", "Entity"),
+                "label": node.get("entity_name") or node.get("name") or "Unknown",
+                "type": node.get("entity_type") or "Entity",
             }
-            if include_communities and "community_id" in node:
+            if include_communities and node.get("community_id"):
                 nodes[node_id]["community"] = node["community_id"]
 
-        # Add relationship
+        # Add target node (m) if present
+        if "m" in record and record["m"]:
+            target_node = record["m"]
+            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            if target_id not in nodes:
+                nodes[target_id] = {
+                    "id": target_id,
+                    "label": target_node.get("entity_name") or target_node.get("name") or "Unknown",
+                    "type": target_node.get("entity_type") or "Entity",
+                }
+                if include_communities and target_node.get("community_id"):
+                    nodes[target_id]["community"] = target_node["community_id"]
+
+        # Add relationship (r is a dict with rel properties or tuple for relationship)
         if "r" in record and record["r"]:
             rel = record["r"]
-            edges.append(
-                {
-                    "source": rel.start_node.element_id,
-                    "target": rel.end_node.element_id,
-                    "type": rel.type,
-                }
-            )
+            # Get source and target from the relationship dict
+            # When using .data(), relationships come as dicts with limited info
+            # We need to get source/target from the node data in the same record
+            source_node = record.get("n", {})
+            target_node = record.get("m", {})
+            source_id = source_node.get("entity_id") or source_node.get("entity_name") or source_node.get("name") or source_node.get("id") if source_node else None
+            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") if target_node else None
+
+            if source_id and target_id:
+                # Get relationship type - may be stored as 'type' or as a tuple with type info
+                rel_type = rel[1] if isinstance(rel, tuple) else (rel.get("type") or "RELATES_TO")
+                edges.append(
+                    {
+                        "source": source_id,
+                        "target": target_id,
+                        "type": rel_type,
+                        "weight": rel.get("weight") if isinstance(rel, dict) else None,
+                    }
+                )
 
     return {
         "nodes": list(nodes.values()),
@@ -917,18 +947,31 @@ def _export_json(records: list[dict], include_communities: bool = True) -> dict[
 
 
 def _export_graphml(records: list[dict]) -> dict[str, str]:
-    """Export graph as GraphML XML format."""
+    """Export graph as GraphML XML format.
+
+    Note: Records from session.run().data() are already dicts.
+    """
     # Simplified GraphML export
     graphml = '<?xml version="1.0" encoding="UTF-8"?>\n'
     graphml += '<graphml xmlns="http://graphml.graphdrawing.org/xmlns">\n'
     graphml += '  <graph edgedefault="directed">\n'
 
+    seen_nodes = set()
     # Add nodes and edges (basic implementation)
     for record in records:
         if "n" in record and record["n"]:
             node = record["n"]
-            node_id = node.get("id") or node.element_id
-            graphml += f'    <node id="{node_id}"/>\n'
+            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
+            if node_id not in seen_nodes:
+                seen_nodes.add(node_id)
+                graphml += f'    <node id="{node_id}"/>\n'
+
+        if "m" in record and record["m"]:
+            target_node = record["m"]
+            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            if target_id not in seen_nodes:
+                seen_nodes.add(target_id)
+                graphml += f'    <node id="{target_id}"/>\n'
 
     graphml += "  </graph>\n</graphml>"
 
@@ -936,35 +979,64 @@ def _export_graphml(records: list[dict]) -> dict[str, str]:
 
 
 def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
-    """Export graph as Cytoscape.js format."""
+    """Export graph as Cytoscape.js format.
+
+    Note: Records from session.run().data() are already dicts.
+    """
     elements = []
+    seen_nodes = set()
 
     for record in records:
         # Add node
         if "n" in record and record["n"]:
             node = record["n"]
-            node_id = node.get("id") or node.element_id
-            elements.append(
-                {
-                    "data": {
-                        "id": node_id,
-                        "label": node.get("name", "Unknown"),
-                        "type": node.get("entity_type", "Entity"),
+            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
+            if node_id not in seen_nodes:
+                seen_nodes.add(node_id)
+                elements.append(
+                    {
+                        "data": {
+                            "id": node_id,
+                            "label": node.get("entity_name") or node.get("name") or "Unknown",
+                            "type": node.get("entity_type") or "Entity",
+                        }
                     }
-                }
-            )
+                )
+
+        # Add target node
+        if "m" in record and record["m"]:
+            target_node = record["m"]
+            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            if target_id not in seen_nodes:
+                seen_nodes.add(target_id)
+                elements.append(
+                    {
+                        "data": {
+                            "id": target_id,
+                            "label": target_node.get("entity_name") or target_node.get("name") or "Unknown",
+                            "type": target_node.get("entity_type") or "Entity",
+                        }
+                    }
+                )
 
         # Add edge
         if "r" in record and record["r"]:
-            rel = record["r"]
-            elements.append(
-                {
-                    "data": {
-                        "source": rel.start_node.element_id,
-                        "target": rel.end_node.element_id,
-                        "label": rel.type,
+            source_node = record.get("n", {})
+            target_node = record.get("m", {})
+            source_id = source_node.get("entity_id") or source_node.get("entity_name") or source_node.get("name") or source_node.get("id") if source_node else None
+            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") if target_node else None
+
+            if source_id and target_id:
+                rel = record["r"]
+                rel_type = rel[1] if isinstance(rel, tuple) else (rel.get("type") or "RELATES_TO")
+                elements.append(
+                    {
+                        "data": {
+                            "source": source_id,
+                            "target": target_id,
+                            "label": rel_type,
+                        }
                     }
-                }
-            )
+                )
 
     return {"format": "cytoscape", "elements": elements}

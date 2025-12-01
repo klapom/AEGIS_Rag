@@ -51,27 +51,40 @@ def docling_client():
 
 @pytest.fixture
 def sample_parsed_response():
-    """Sample parsed document response from Docling API."""
+    """Sample parsed document response from Docling API (async result format).
+
+    Sprint 33: Matches actual Docling HTTP API async response structure.
+    """
     return {
-        "text": "This is a sample document with multiple pages.\nContains tables and images.",
-        "metadata": {
+        "document": {
             "filename": "test_document.pdf",
-            "pages": 5,
-            "file_size": 1024000,
-            "mime_type": "application/pdf",
-        },
-        "tables": [
-            {
-                "page": 2,
-                "content": "Column1,Column2\nValue1,Value2",
-                "structure": {"rows": 2, "cols": 2},
-            }
-        ],
-        "images": [{"page": 3, "position": {"x": 100, "y": 200}, "reference": "img_001"}],
-        "layout": {
-            "sections": [{"type": "heading", "level": 1, "text": "Introduction"}],
-            "headings": ["Introduction", "Methods", "Results"],
-        },
+            "md_content": "This is a sample document with multiple pages.\nContains tables and images.",
+            "text_content": "This is a sample document with multiple pages.\nContains tables and images.",
+            "json_content": {
+                "schema_name": "DoclingDocument",
+                "version": "1.0.0",
+                "pages": {"count": 5},
+                "body": {},
+                "texts": [],
+                "groups": [],
+                "tables": [
+                    {
+                        "self_ref": "table_0",
+                        "label": "table",
+                        "captions": [],
+                        "prov": [{"page_no": 2, "bbox": {"l": 10, "t": 20, "r": 100, "b": 200}}],
+                    }
+                ],
+                "pictures": [
+                    {
+                        "self_ref": "picture_0",
+                        "label": "picture",
+                        "captions": [],
+                        "prov": [{"page_no": 3, "bbox": {"l": 100, "t": 200, "r": 300, "b": 400}}],
+                    }
+                ],
+            },
+        }
     }
 
 
@@ -132,6 +145,9 @@ def test_docling_client_custom_configuration():
 @pytest.mark.asyncio
 async def test_start_container_success(docling_client, mock_subprocess, mock_httpx_client):
     """Test container starts successfully with health check."""
+    # Mock docker ps check (container not running)
+    mock_subprocess.return_value = Mock(returncode=0, stdout="", stderr="", check=True)
+
     # Mock health check response
     mock_response = Mock(status_code=200)
     mock_httpx_client.get.return_value = mock_response
@@ -139,11 +155,17 @@ async def test_start_container_success(docling_client, mock_subprocess, mock_htt
     # Start container
     await docling_client.start_container()
 
-    # Verify docker compose command
-    mock_subprocess.assert_called_once()
-    call_args = mock_subprocess.call_args
-    assert call_args[0][0] == ["docker", "compose", "--profile", "ingestion", "up", "-d", "docling"]
-    assert call_args[1]["check"] is True
+    # Verify docker commands: ps check + compose up
+    assert mock_subprocess.call_count == 2
+
+    # First call: docker ps check
+    ps_call = mock_subprocess.call_args_list[0]
+    assert ps_call[0][0] == ["docker", "ps", "--filter", "name=aegis-docling", "--format", "{{.Names}}"]
+
+    # Second call: docker compose up
+    compose_call = mock_subprocess.call_args_list[1]
+    assert compose_call[0][0] == ["docker", "compose", "--profile", "ingestion", "up", "-d", "docling"]
+    assert compose_call[1]["check"] is True
 
     # Verify container marked as running
     assert docling_client._container_running is True
@@ -264,31 +286,45 @@ async def test_wait_for_ready_timeout(docling_client, mock_httpx_client):
 async def test_parse_document_success(
     docling_client, mock_httpx_client, sample_parsed_response, tmp_path
 ):
-    """Test document parsing succeeds with valid response."""
+    """Test document parsing succeeds with valid response (async API flow).
+
+    Sprint 33: Tests async pattern with task_id submission → polling → result fetch.
+    """
     # Create temp file
     test_file = tmp_path / "test_document.pdf"
     test_file.write_bytes(b"PDF content")
 
-    # Mock HTTP response
-    mock_response = Mock(status_code=200)
-    mock_response.json.return_value = sample_parsed_response
-    mock_httpx_client.post.return_value = mock_response
+    # Mock async API flow:
+    # Step 1: POST /v1/convert/file/async → {"task_id": "abc123"}
+    mock_submit_response = Mock(status_code=200)
+    mock_submit_response.json.return_value = {"task_id": "abc123"}
+    mock_httpx_client.post.return_value = mock_submit_response
+
+    # Step 2: GET /v1/status/poll/abc123 → {"task_status": "success"}
+    mock_status_response = Mock(status_code=200)
+    mock_status_response.json.return_value = {"task_status": "success"}
+
+    # Step 3: GET /v1/result/abc123 → full document
+    mock_result_response = Mock(status_code=200)
+    mock_result_response.json.return_value = sample_parsed_response
+
+    # Set up get() to return different responses for status vs result
+    mock_httpx_client.get.side_effect = [mock_status_response, mock_result_response]
 
     # Parse document
     parsed = await docling_client.parse_document(test_file)
 
     # Verify result
     assert isinstance(parsed, DoclingParsedDocument)
-    assert parsed.text == sample_parsed_response["text"]
-    assert parsed.metadata == sample_parsed_response["metadata"]
+    assert "sample document" in parsed.text.lower()
+    assert parsed.metadata["filename"] == "test_document.pdf"
     assert len(parsed.tables) == 1
     assert len(parsed.images) == 1
     assert parsed.parse_time_ms > 0
 
-    # Verify HTTP call
-    mock_httpx_client.post.assert_called_once()
-    call_args = mock_httpx_client.post.call_args
-    assert call_args[0][0] == "http://localhost:8080/parse"
+    # Verify HTTP calls
+    mock_httpx_client.post.assert_called_once()  # Task submission
+    assert mock_httpx_client.get.call_count == 2  # Status poll + result fetch
 
 
 @pytest.mark.asyncio
@@ -302,11 +338,11 @@ async def test_parse_document_file_not_found(docling_client):
 
 @pytest.mark.asyncio
 async def test_parse_document_http_error(docling_client, mock_httpx_client, tmp_path):
-    """Test parsing fails on HTTP error."""
+    """Test parsing fails on HTTP error (async API submission failure)."""
     test_file = tmp_path / "test_document.pdf"
     test_file.write_bytes(b"PDF content")
 
-    # Mock HTTP error
+    # Mock HTTP error on task submission
     mock_response = Mock(status_code=500, text="Internal server error")
     mock_httpx_client.post.return_value = mock_response
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
@@ -339,16 +375,35 @@ async def test_parse_document_timeout(docling_client, mock_httpx_client, tmp_pat
 async def test_parse_batch_success(
     docling_client, mock_httpx_client, sample_parsed_response, tmp_path
 ):
-    """Test batch parsing succeeds for multiple files."""
+    """Test batch parsing succeeds for multiple files (async API flow)."""
     # Create temp files
     files = [tmp_path / f"doc{i}.pdf" for i in range(3)]
     for f in files:
         f.write_bytes(b"PDF content")
 
-    # Mock HTTP responses
-    mock_response = Mock(status_code=200)
-    mock_response.json.return_value = sample_parsed_response
-    mock_httpx_client.post.return_value = mock_response
+    # Mock async API flow for each file:
+    # POST /v1/convert/file/async → {"task_id": "..."}
+    mock_submit_response = Mock(status_code=200)
+    mock_submit_response.json.return_value = {"task_id": "task123"}
+    mock_httpx_client.post.return_value = mock_submit_response
+
+    # GET /v1/status/poll/task123 → {"task_status": "success"}
+    mock_status_response = Mock(status_code=200)
+    mock_status_response.json.return_value = {"task_status": "success"}
+
+    # GET /v1/result/task123 → document
+    mock_result_response = Mock(status_code=200)
+    mock_result_response.json.return_value = sample_parsed_response
+
+    # Set up get() to return status, result repeatedly for 3 files
+    mock_httpx_client.get.side_effect = [
+        mock_status_response,
+        mock_result_response,  # File 1
+        mock_status_response,
+        mock_result_response,  # File 2
+        mock_status_response,
+        mock_result_response,  # File 3
+    ]
 
     # Parse batch
     results = await docling_client.parse_batch(files)
@@ -356,36 +411,58 @@ async def test_parse_batch_success(
     # Verify results
     assert len(results) == 3
     assert all(isinstance(r, DoclingParsedDocument) for r in results)
-    assert mock_httpx_client.post.call_count == 3
+    assert mock_httpx_client.post.call_count == 3  # 3 submissions
+    assert mock_httpx_client.get.call_count == 6  # 3 x (status + result)
 
 
 @pytest.mark.asyncio
 async def test_parse_batch_partial_failure(
     docling_client, mock_httpx_client, sample_parsed_response, tmp_path
 ):
-    """Test batch processing continues on partial failures."""
+    """Test batch processing continues on partial failures (async API)."""
     # Create temp files
     files = [tmp_path / f"doc{i}.pdf" for i in range(3)]
     for f in files:
         f.write_bytes(b"PDF content")
 
     # Mock responses: success, fail, success
-    mock_success = Mock(status_code=200)
-    mock_success.json.return_value = sample_parsed_response
+    # File 1: Success
+    mock_submit_1 = Mock(status_code=200)
+    mock_submit_1.json.return_value = {"task_id": "task1"}
 
+    # File 2: Fail on submission
     mock_error = Mock(status_code=500, text="Error")
     mock_error.raise_for_status.side_effect = httpx.HTTPStatusError(
         "500 Error", request=Mock(), response=mock_error
     )
 
-    mock_httpx_client.post.side_effect = [mock_success, mock_error, mock_success]
+    # File 3: Success
+    mock_submit_3 = Mock(status_code=200)
+    mock_submit_3.json.return_value = {"task_id": "task3"}
+
+    mock_httpx_client.post.side_effect = [mock_submit_1, mock_error, mock_submit_3]
+
+    # Mock status/result for successful files
+    mock_status = Mock(status_code=200)
+    mock_status.json.return_value = {"task_status": "success"}
+    mock_result = Mock(status_code=200)
+    mock_result.json.return_value = sample_parsed_response
+
+    # File 1 and File 3 get status + result
+    mock_httpx_client.get.side_effect = [
+        mock_status,
+        mock_result,  # File 1
+        mock_status,
+        mock_result,  # File 3
+    ]
 
     # Parse batch (should continue despite failure)
     results = await docling_client.parse_batch(files)
 
     # Verify: 2 successes (middle one failed)
     assert len(results) == 2
-    assert mock_httpx_client.post.call_count == 3
+    assert mock_httpx_client.post.call_count == 3  # All 3 submissions attempted
+    assert mock_httpx_client.get.call_count == 4  # 2 successful files x (status + result)
 
 
 # =============================================================================
@@ -401,14 +478,25 @@ async def test_context_manager_success(
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"PDF")
 
+    # Mock docker ps (not running)
+    mock_subprocess.return_value = Mock(returncode=0, stdout="", stderr="")
+
     # Mock health check
     mock_health = Mock(status_code=200)
-    mock_httpx_client.get.return_value = mock_health
 
-    # Mock parse response
-    mock_parse = Mock(status_code=200)
-    mock_parse.json.return_value = sample_parsed_response
-    mock_httpx_client.post.return_value = mock_parse
+    # Mock async parse flow
+    mock_submit = Mock(status_code=200)
+    mock_submit.json.return_value = {"task_id": "task123"}
+    mock_httpx_client.post.return_value = mock_submit
+
+    mock_status = Mock(status_code=200)
+    mock_status.json.return_value = {"task_status": "success"}
+
+    mock_result = Mock(status_code=200)
+    mock_result.json.return_value = sample_parsed_response
+
+    # Health check + status poll + result fetch
+    mock_httpx_client.get.side_effect = [mock_health, mock_status, mock_result]
 
     # Use context manager
     async with DoclingContainerClient() as client:
@@ -416,7 +504,9 @@ async def test_context_manager_success(
         assert isinstance(parsed, DoclingParsedDocument)
 
     # Verify start and stop called
-    assert mock_subprocess.call_count == 2  # start + stop
+    # Start: ps check + compose up = 2 calls
+    # Stop: compose stop = 1 call
+    assert mock_subprocess.call_count == 3
 
 
 @pytest.mark.asyncio
@@ -425,21 +515,27 @@ async def test_context_manager_cleanup_on_error(mock_subprocess, mock_httpx_clie
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"PDF")
 
+    # Mock docker ps (not running)
+    mock_subprocess.return_value = Mock(returncode=0, stdout="", stderr="")
+
     # Mock health check
     mock_health = Mock(status_code=200)
     mock_httpx_client.get.return_value = mock_health
 
-    # Mock parse error
-    mock_httpx_client.post.side_effect = httpx.HTTPStatusError(
-        "500 Error", request=Mock(), response=Mock(status_code=500, text="Error")
+    # Mock parse error on submission
+    mock_error = Mock(status_code=500, text="Error")
+    mock_error.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "500 Error", request=Mock(), response=mock_error
     )
+    mock_httpx_client.post.return_value = mock_error
 
     # Use context manager with error
     with pytest.raises(IngestionError):
         async with DoclingContainerClient() as client:
             await client.parse_document(test_file)
 
-    # Verify stop still called
+    # Verify stop still called (ps check + compose up + compose stop = 3)
+    assert mock_subprocess.call_count == 3
     stop_calls = [c for c in mock_subprocess.call_args_list if "stop" in str(c)]
     assert len(stop_calls) == 1
 
@@ -457,24 +553,34 @@ async def test_parse_document_with_docling_auto_manage(
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"PDF")
 
+    # Mock docker ps (not running)
+    mock_subprocess.return_value = Mock(returncode=0, stdout="", stderr="")
+
     # Mock health check
     mock_health = Mock(status_code=200)
-    mock_httpx_client.get.return_value = mock_health
 
-    # Mock parse response
-    mock_parse = Mock(status_code=200)
-    mock_parse.json.return_value = sample_parsed_response
-    mock_httpx_client.post.return_value = mock_parse
+    # Mock async parse flow
+    mock_submit = Mock(status_code=200)
+    mock_submit.json.return_value = {"task_id": "task123"}
+    mock_httpx_client.post.return_value = mock_submit
+
+    mock_status = Mock(status_code=200)
+    mock_status.json.return_value = {"task_status": "success"}
+
+    mock_result = Mock(status_code=200)
+    mock_result.json.return_value = sample_parsed_response
+
+    mock_httpx_client.get.side_effect = [mock_health, mock_status, mock_result]
 
     # Parse with auto-management
     parsed = await parse_document_with_docling(test_file, auto_manage_container=True)
 
     # Verify result
     assert isinstance(parsed, DoclingParsedDocument)
-    assert parsed.text == sample_parsed_response["text"]
+    assert "sample document" in parsed.text.lower()
 
-    # Verify container started and stopped
-    assert mock_subprocess.call_count == 2
+    # Verify container started and stopped (ps check + compose up + compose stop = 3)
+    assert mock_subprocess.call_count == 3
 
 
 @pytest.mark.asyncio
@@ -485,13 +591,22 @@ async def test_parse_document_with_docling_manual_manage(
     test_file = tmp_path / "test.pdf"
     test_file.write_bytes(b"PDF")
 
-    # Mock parse response (no health check needed for manual mode)
-    mock_parse = Mock(status_code=200)
-    mock_parse.json.return_value = sample_parsed_response
-    mock_httpx_client.post.return_value = mock_parse
+    # Mock async parse flow (no health check needed for manual mode)
+    mock_submit = Mock(status_code=200)
+    mock_submit.json.return_value = {"task_id": "task123"}
+    mock_httpx_client.post.return_value = mock_submit
+
+    mock_status = Mock(status_code=200)
+    mock_status.json.return_value = {"task_status": "success"}
+
+    mock_result = Mock(status_code=200)
+    mock_result.json.return_value = sample_parsed_response
+
+    mock_httpx_client.get.side_effect = [mock_status, mock_result]
 
     # Parse without auto-management (assume container already running)
     parsed = await parse_document_with_docling(test_file, auto_manage_container=False)
 
     # Verify result
     assert isinstance(parsed, DoclingParsedDocument)
+    assert "sample document" in parsed.text.lower()

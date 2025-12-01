@@ -14,8 +14,26 @@ Tests cover:
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from prometheus_client import REGISTRY
 
 from src.components.memory.monitoring import MemoryMonitoring, get_monitoring
+
+
+@pytest.fixture(autouse=True)
+def reset_prometheus_registry():
+    """Reset Prometheus registry before each test to avoid duplicate metrics."""
+    # Clear all collectors from the registry
+    collectors = list(REGISTRY._collector_to_names.keys())
+    for collector in collectors:
+        try:
+            REGISTRY.unregister(collector)
+        except Exception:
+            pass  # Ignore errors if collector already unregistered
+    yield
+    # Clear singleton instance after test
+    import src.components.memory.monitoring as monitoring_module
+
+    monitoring_module._monitoring = None
 
 
 class TestMemoryMonitoringInit:
@@ -111,20 +129,25 @@ class TestQdrantMetricsCollection:
 
     @pytest.mark.asyncio
     async def test_collect_qdrant_metrics_placeholder(self):
-        """Test Qdrant metrics collection (placeholder implementation)."""
+        """Test Qdrant metrics collection (real implementation)."""
         monitoring = MemoryMonitoring()
 
-        # Mock QdrantClient
+        # Mock QdrantClient with collections
         mock_qdrant = AsyncMock()
+        mock_collections = AsyncMock()
+        mock_collections.collections = []
+        mock_qdrant.async_client.get_collections.return_value = mock_collections
 
         metrics = await monitoring.collect_qdrant_metrics(mock_qdrant)
 
-        # Verify placeholder metrics
+        # Verify metrics structure
         assert metrics["layer"] == "qdrant"
         assert "capacity" in metrics
         assert "entries" in metrics
         assert "timestamp" in metrics
-        assert "note" in metrics  # Placeholder note
+        # Real implementation returns actual metrics, not placeholder note
+        assert metrics["capacity"] == 0.0
+        assert metrics["entries"] == 0
 
 
 class TestGraphitiMetricsCollection:
@@ -132,20 +155,40 @@ class TestGraphitiMetricsCollection:
 
     @pytest.mark.asyncio
     async def test_collect_graphiti_metrics_placeholder(self):
-        """Test Graphiti metrics collection (placeholder implementation)."""
-        monitoring = MemoryMonitoring()
+        """Test Graphiti metrics collection (real implementation with Neo4j)."""
+        with patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_get_neo4j:
+            monitoring = MemoryMonitoring()
 
-        # Mock GraphitiClient
-        mock_graphiti = AsyncMock()
+            # Mock Neo4jClient with driver and session
+            mock_neo4j = MagicMock()
+            mock_session = AsyncMock()
+            mock_result = AsyncMock()
+            mock_record = {"node_count": 42}
 
-        metrics = await monitoring.collect_graphiti_metrics(mock_graphiti)
+            mock_result.single = AsyncMock(return_value=mock_record)
+            mock_session.run = AsyncMock(return_value=mock_result)
 
-        # Verify placeholder metrics
-        assert metrics["layer"] == "graphiti"
-        assert "capacity" in metrics
-        assert "entries" in metrics
-        assert "timestamp" in metrics
-        assert "note" in metrics  # Placeholder note
+            # Mock the async context manager for session
+            mock_session_cm = MagicMock()
+            mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_cm.__aexit__ = AsyncMock(return_value=None)
+
+            mock_neo4j.driver.session.return_value = mock_session_cm
+            mock_neo4j.database = "neo4j"
+            mock_get_neo4j.return_value = mock_neo4j
+
+            # Mock GraphitiClient (passed as argument but not used)
+            mock_graphiti = AsyncMock()
+
+            metrics = await monitoring.collect_graphiti_metrics(mock_graphiti)
+
+            # Verify metrics structure
+            assert metrics["layer"] == "graphiti"
+            assert "capacity" in metrics
+            assert "entries" in metrics
+            assert "timestamp" in metrics
+            # Real implementation returns actual node count from Neo4j
+            assert metrics["entries"] == 42
 
 
 class TestCollectAllMetrics:

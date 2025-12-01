@@ -375,7 +375,7 @@ class TestLlamaIndexParserFormats:
         assert "Line 3" in content
 
     @pytest.mark.asyncio
-    @patch("src.components.ingestion.langgraph_nodes.SimpleDirectoryReader")
+    @patch("llama_index.core.SimpleDirectoryReader")
     async def test_parse__multiple_pages__combines_text(
         self, mock_reader_class, markdown_file, mock_llama_documents
     ):

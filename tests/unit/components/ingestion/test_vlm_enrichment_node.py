@@ -102,10 +102,13 @@ def page_dimensions():
 def mock_image_processor():
     """Create mock ImageProcessor."""
     processor = Mock()
-    processor.process_image.side_effect = [
-        "This is a red diagram showing system architecture.",
-        "This is a green flowchart depicting the process flow.",
-    ]
+    # CRITICAL FIX: process_image is called with await, so it must be AsyncMock
+    processor.process_image = AsyncMock(
+        side_effect=[
+            "This is a red diagram showing system architecture.",
+            "This is a green flowchart depicting the process flow.",
+        ]
+    )
     processor.cleanup = Mock()
     return processor
 
@@ -321,10 +324,12 @@ async def test_image_enrichment_node__vlm_error_on_one_image__continues(
     """Test that node continues processing if one image fails."""
     # Mock processor that fails on first image, succeeds on second
     processor = Mock()
-    processor.process_image.side_effect = [
-        Exception("VLM timeout"),
-        "Second image processed successfully",
-    ]
+    processor.process_image = AsyncMock(
+        side_effect=[
+            Exception("VLM timeout"),
+            "Second image processed successfully",
+        ]
+    )
     processor.cleanup = Mock()
     mock_processor_class.return_value = processor
 
@@ -349,10 +354,12 @@ async def test_image_enrichment_node__filtered_image__skips_gracefully(
 ):
     """Test that filtered images (None returned) are skipped."""
     processor = Mock()
-    processor.process_image.side_effect = [
-        None,  # First image filtered out
-        "Second image description",
-    ]
+    processor.process_image = AsyncMock(
+        side_effect=[
+            None,  # First image filtered out
+            "Second image description",
+        ]
+    )
     processor.cleanup = Mock()
     mock_processor_class.return_value = processor
 

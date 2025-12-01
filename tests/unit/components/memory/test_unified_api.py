@@ -25,12 +25,23 @@ from src.components.memory.unified_api import UnifiedMemoryAPI
 @pytest.fixture
 def mock_redis_memory():
     """Mock Redis memory manager."""
-    mock = AsyncMock()
+    # Create mock client first
+    mock_client = AsyncMock()
+    mock_client.ping = AsyncMock(return_value=True)
+
+    # Create mock redis memory
+    mock = MagicMock()
     mock.store = AsyncMock(return_value=True)
     mock.retrieve = AsyncMock(return_value="test_value")
     mock.delete = AsyncMock(return_value=True)
-    mock.client = AsyncMock()
-    mock.client.ping = AsyncMock()
+
+    # Mock the async client property - use an async function
+    async def get_client():
+        return mock_client
+
+    # Assign the coroutine function (not called) as a property
+    type(mock).client = property(lambda self: get_client())
+
     return mock
 
 

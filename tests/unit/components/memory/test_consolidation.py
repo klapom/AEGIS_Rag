@@ -14,7 +14,7 @@ Tests:
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -218,7 +218,7 @@ class TestConsolidationPipeline:
     @pytest.mark.asyncio
     async def test_relevance_scoring_integration(self, mock_redis_memory):
         """Test 6: Test integration with RelevanceScorer."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Mock Redis items with metadata
         mock_items = [
@@ -264,7 +264,7 @@ class TestConsolidationPipeline:
     @pytest.mark.asyncio
     async def test_top_percentile_selection(self, mock_redis_memory):
         """Test 7: Test top N% selection logic."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Create 10 items with varying access counts
         mock_items = [

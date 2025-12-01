@@ -269,7 +269,7 @@ class MemoryMonitoring:
             neo4j = get_neo4j_client()
 
             # Query Neo4j for node count
-            async with neo4j.get_session() as session:
+            async with neo4j.driver.session(database=neo4j.database) as session:
                 node_result = await session.run("MATCH (n) RETURN count(n) as node_count")
                 node_record = await node_result.single()
                 node_count = node_record["node_count"] if node_record else 0

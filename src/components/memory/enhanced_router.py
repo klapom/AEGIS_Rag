@@ -171,8 +171,9 @@ class EnhancedMemoryRouter:
         # Execute searches in parallel
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Merge results
+        # Merge results and track failures
         results = {}
+        failed_layers = []
         for layer_name, layer_results in zip(layer_names, results_list, strict=False):
             if isinstance(layer_results, Exception):
                 logger.error(
@@ -181,8 +182,18 @@ class EnhancedMemoryRouter:
                     error=str(layer_results),
                 )
                 results[layer_name] = []
+                failed_layers.append(layer_name)
             else:
                 results[layer_name] = layer_results
+
+        # Check if ALL layers failed with exceptions
+        if results and len(failed_layers) == len(results):
+            logger.error(
+                "All memory layer searches failed",
+                query=query[:100],
+                layers_attempted=list(results.keys()),
+            )
+            raise MemoryError(operation="search_memory", reason="All memory layer searches failed")
 
         elapsed_ms = (time.time() - start_time) * 1000
         total_results = sum(len(r) for r in results.values())
@@ -194,10 +205,6 @@ class EnhancedMemoryRouter:
             total_results=total_results,
             search_time_ms=round(elapsed_ms, 2),
         )
-
-        # Check if all searches failed
-        if all(isinstance(r, Exception) for r in results_list):
-            raise MemoryError(operation="operation", reason="All memory layer searches failed")
 
         return results
 
@@ -250,7 +257,7 @@ class EnhancedMemoryRouter:
 
         except Exception as e:
             logger.error("Redis search failed", error=str(e))
-            return []
+            raise  # Re-raise exception to be caught by gather()
 
     async def _search_qdrant(self, query: str, limit: int) -> list[MemorySearchResult]:
         """Search Qdrant long-term semantic memory.
@@ -278,7 +285,7 @@ class EnhancedMemoryRouter:
 
         except Exception as e:
             logger.error("Qdrant search failed", error=str(e))
-            return []
+            raise  # Re-raise exception to be caught by gather()
 
     async def _search_graphiti(self, query: str, limit: int) -> list[MemorySearchResult]:
         """Search Graphiti episodic temporal memory.
@@ -334,7 +341,7 @@ class EnhancedMemoryRouter:
 
         except Exception as e:
             logger.error("Graphiti search failed", error=str(e))
-            return []
+            raise  # Re-raise exception to be caught by gather()
 
     def _extract_tags(self, query: str) -> list[str]:
         """Extract potential tags from query for Redis search.

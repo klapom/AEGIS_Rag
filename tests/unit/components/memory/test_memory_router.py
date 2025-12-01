@@ -10,7 +10,7 @@ Tests cover:
 
 import asyncio
 import time
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -34,8 +34,8 @@ class TestRoutingStrategies:
         """Test RecencyBasedStrategy selects Redis for recent queries."""
         strategy = RecencyBasedStrategy(recent_threshold_hours=1.0)
 
-        # Recent query (30 minutes ago)
-        metadata = {"timestamp": datetime.utcnow() - timedelta(minutes=30)}
+        # Recent query (30 minutes ago) - use timezone-aware datetime
+        metadata = {"timestamp": datetime.now(UTC) - timedelta(minutes=30)}
 
         layers = strategy.select_layers("test query", metadata)
 
@@ -46,7 +46,7 @@ class TestRoutingStrategies:
         strategy = RecencyBasedStrategy(recent_threshold_hours=1.0, medium_threshold_hours=24.0)
 
         # Medium query (12 hours ago)
-        metadata = {"timestamp": datetime.utcnow() - timedelta(hours=12)}
+        metadata = {"timestamp": datetime.now(UTC) - timedelta(hours=12)}
 
         layers = strategy.select_layers("test query", metadata)
 
@@ -58,7 +58,7 @@ class TestRoutingStrategies:
         strategy = RecencyBasedStrategy(medium_threshold_hours=24.0)
 
         # Old query (48 hours ago)
-        metadata = {"timestamp": datetime.utcnow() - timedelta(hours=48)}
+        metadata = {"timestamp": datetime.now(UTC) - timedelta(hours=48)}
 
         layers = strategy.select_layers("test query", metadata)
 
@@ -103,7 +103,7 @@ class TestRoutingStrategies:
         strategy = HybridStrategy()
 
         # Recent factual query
-        metadata = {"timestamp": datetime.utcnow() - timedelta(minutes=30)}
+        metadata = {"timestamp": datetime.now(UTC) - timedelta(minutes=30)}
 
         layers = strategy.select_layers("What is machine learning?", metadata)
 
@@ -200,7 +200,7 @@ class TestRouteQuery:
 
                     router = EnhancedMemoryRouter(session_id="test-session")
 
-                    metadata = {"timestamp": datetime.utcnow()}
+                    metadata = {"timestamp": datetime.now(UTC)}
                     layers = await router.route_query("test query", metadata)
 
                     # Should include session_id in metadata
@@ -318,13 +318,25 @@ class TestSearchMemory:
 
     @pytest.mark.asyncio
     async def test_search_memory_all_layers_fail(self):
-        """Test that MemoryError is raised when all layers fail."""
+        """Test that MemoryError is raised when all layers fail.
+
+        Note: This test uses a custom strategy that only queries Redis and Graphiti
+        (the fully implemented layers) to properly test the "all layers fail" scenario.
+        Qdrant has a placeholder implementation that always returns empty results.
+        """
         with patch("src.components.memory.enhanced_router.get_redis_manager") as mock_redis:
             with patch("src.components.memory.enhanced_router.get_qdrant_client"):
                 with patch(
                     "src.components.memory.enhanced_router.get_graphiti_wrapper"
                 ) as mock_graphiti:
-                    # All layers fail
+                    # Mock a strategy that only returns Redis and Graphiti
+                    mock_strategy = MagicMock()
+                    mock_strategy.select_layers.return_value = [
+                        MemoryLayer.REDIS,
+                        MemoryLayer.GRAPHITI,
+                    ]
+
+                    # Both layers fail with exceptions
                     mock_redis_mgr = AsyncMock()
                     mock_redis_mgr.search = AsyncMock(side_effect=Exception("Redis error"))
                     mock_redis.return_value = mock_redis_mgr
@@ -335,7 +347,7 @@ class TestSearchMemory:
                     )
                     mock_graphiti.return_value = mock_graphiti_wrapper
 
-                    router = EnhancedMemoryRouter(strategy=FallbackAllStrategy())
+                    router = EnhancedMemoryRouter(strategy=mock_strategy)
 
                     with pytest.raises(MemoryError, match="All memory layer searches failed"):
                         await router.search_memory("test query")

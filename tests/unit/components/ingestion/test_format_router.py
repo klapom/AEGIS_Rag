@@ -64,17 +64,17 @@ class TestFormatSets:
         assert ".tex" in LLAMAINDEX_EXCLUSIVE
         assert ".rtf" in LLAMAINDEX_EXCLUSIVE
 
-    def test_format_sets__shared_count__7_formats(self):
-        """Verify 7 shared formats between Docling and LlamaIndex."""
-        assert len(SHARED_FORMATS) == 7
+    def test_format_sets__shared_count__4_formats(self):
+        """Verify 4 shared formats between Docling and LlamaIndex."""
+        assert len(SHARED_FORMATS) == 4
         # Spot check key formats
         assert ".txt" in SHARED_FORMATS
-        assert ".doc" in SHARED_FORMATS
-        assert ".xls" in SHARED_FORMATS
+        assert ".htm" in SHARED_FORMATS
+        assert ".eml" in SHARED_FORMATS
 
-    def test_format_sets__total_count__30_formats(self):
-        """Verify 30 total formats supported."""
-        assert len(ALL_FORMATS) == 30
+    def test_format_sets__total_count__27_formats(self):
+        """Verify 27 total formats supported."""
+        assert len(ALL_FORMATS) == 27
         # Verify ALL_FORMATS is union of all three sets
         expected_all = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
         assert ALL_FORMATS == expected_all
@@ -224,12 +224,12 @@ class TestFormatRouterBasicRouting:
         assert "preferred" in decision.reason.lower() or "shared" in decision.reason.lower()
         assert decision.fallback_available is True
 
-    def test_route__doc__prefers_docling(self, router_with_docling):
-        """Verify legacy DOC prefers Docling when available."""
-        decision = router_with_docling.route(Path("old_document.doc"))
+    def test_route__htm__prefers_docling(self, router_with_docling):
+        """Verify HTM (HTML) prefers Docling when available."""
+        decision = router_with_docling.route(Path("webpage.htm"))
 
         assert decision.parser == ParserType.DOCLING
-        assert decision.format == ".doc"
+        assert decision.format == ".htm"
         assert decision.fallback_available is True
 
     def test_route__eml__prefers_docling(self, router_with_docling):
@@ -341,27 +341,27 @@ class TestFormatRouterHelperMethods:
         assert router.is_supported(Path("unknown.abc")) is False
 
     def test_get_supported_formats__docling__correct_count(self, router):
-        """Verify Docling supports 21 formats (14 exclusive + 7 shared)."""
+        """Verify Docling supports 18 formats (14 exclusive + 4 shared)."""
         formats = router.get_supported_formats(ParserType.DOCLING)
-        assert len(formats) == 21
+        assert len(formats) == 18
         # Check some key formats
         assert ".pdf" in formats
         assert ".txt" in formats  # Shared
         assert ".epub" not in formats  # LlamaIndex exclusive
 
     def test_get_supported_formats__llamaindex__correct_count(self, router):
-        """Verify LlamaIndex supports 16 formats (9 exclusive + 7 shared)."""
+        """Verify LlamaIndex supports 13 formats (9 exclusive + 4 shared)."""
         formats = router.get_supported_formats(ParserType.LLAMAINDEX)
-        assert len(formats) == 16
+        assert len(formats) == 13
         # Check some key formats
         assert ".epub" in formats
         assert ".txt" in formats  # Shared
         assert ".pdf" not in formats  # Docling exclusive
 
     def test_get_supported_formats__all__correct_count(self, router):
-        """Verify all formats = 30 (14 + 9 + 7)."""
+        """Verify all formats = 27 (14 + 9 + 4)."""
         formats = router.get_supported_formats()
-        assert len(formats) == 30
+        assert len(formats) == 27
         # Check union of all formats
         assert ".pdf" in formats
         assert ".epub" in formats
@@ -415,31 +415,66 @@ class TestDoclingAvailabilityHealthCheck:
     @pytest.mark.asyncio
     async def test_check_docling_availability__success__returns_true(self):
         """Verify health check returns True when Docling available."""
-        # Mock DoclingContainerClient at the import location
-        with patch(
-            "src.components.ingestion.docling_client.DoclingContainerClient"
-        ) as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.start = AsyncMock()
-            mock_client_class.return_value = mock_client
+        # Mock httpx module (lazy import in function)
+        import sys
+        from unittest.mock import MagicMock
 
+        # Create mock httpx module
+        mock_httpx = MagicMock()
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(return_value=mock_response)
+
+        mock_httpx.AsyncClient.return_value = mock_client
+
+        # Temporarily replace httpx in sys.modules
+        original_httpx = sys.modules.get("httpx")
+        sys.modules["httpx"] = mock_httpx
+
+        try:
             result = await check_docling_availability()
-
             assert result is True
-            mock_client.start.assert_called_once()
+            mock_client.get.assert_called_once()
+        finally:
+            # Restore original httpx
+            if original_httpx:
+                sys.modules["httpx"] = original_httpx
+            else:
+                sys.modules.pop("httpx", None)
 
     @pytest.mark.asyncio
     async def test_check_docling_availability__failure__returns_false(self):
         """Verify health check returns False when Docling unavailable."""
-        # Mock DoclingContainerClient to raise exception at import location
-        with patch(
-            "src.components.ingestion.docling_client.DoclingContainerClient"
-        ) as mock_client_class:
-            mock_client_class.side_effect = Exception("Container not found")
+        # Mock httpx module (lazy import in function)
+        import sys
+        from unittest.mock import MagicMock
 
+        # Create mock httpx module that raises exception
+        mock_httpx = MagicMock()
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.get = AsyncMock(side_effect=Exception("Connection refused"))
+
+        mock_httpx.AsyncClient.return_value = mock_client
+
+        # Temporarily replace httpx in sys.modules
+        original_httpx = sys.modules.get("httpx")
+        sys.modules["httpx"] = mock_httpx
+
+        try:
             result = await check_docling_availability()
-
             assert result is False
+        finally:
+            # Restore original httpx
+            if original_httpx:
+                sys.modules["httpx"] = original_httpx
+            else:
+                sys.modules.pop("httpx", None)
 
     @pytest.mark.asyncio
     async def test_initialize_format_router__creates_router_with_availability(self):

@@ -81,7 +81,7 @@ def mock_ollama_client():
 
 def test_should_process_image__valid_image__returns_true(sample_image):
     """Test that valid images pass filtering."""
-    should_process, reason = should_process_image(sample_image)
+    should_process, reason = should_process_image(sample_image, min_unique_colors=0)
 
     assert should_process is True
     assert reason == "valid"
@@ -99,7 +99,7 @@ def test_should_process_image__too_small__returns_false(small_image):
 def test_should_process_image__aspect_ratio_too_wide__returns_false(wide_image):
     """Test that images with extreme wide aspect ratio are filtered."""
     should_process, reason = should_process_image(
-        wide_image, min_aspect_ratio=0.1, max_aspect_ratio=10.0
+        wide_image, min_size=100, min_aspect_ratio=0.1, max_aspect_ratio=10.0
     )
 
     assert should_process is False
@@ -109,7 +109,7 @@ def test_should_process_image__aspect_ratio_too_wide__returns_false(wide_image):
 def test_should_process_image__aspect_ratio_too_tall__returns_false(tall_image):
     """Test that images with extreme tall aspect ratio are filtered."""
     should_process, reason = should_process_image(
-        tall_image, min_aspect_ratio=0.1, max_aspect_ratio=10.0
+        tall_image, min_size=100, min_aspect_ratio=0.1, max_aspect_ratio=10.0
     )
 
     assert should_process is False
@@ -119,7 +119,7 @@ def test_should_process_image__aspect_ratio_too_tall__returns_false(tall_image):
 def test_should_process_image__edge_case_square__returns_true():
     """Test that perfect square images pass filtering."""
     square_image = Image.new("RGB", (200, 200))
-    should_process, reason = should_process_image(square_image)
+    should_process, reason = should_process_image(square_image, min_unique_colors=0)
 
     assert should_process is True
     assert reason == "valid"
@@ -128,7 +128,9 @@ def test_should_process_image__edge_case_square__returns_true():
 def test_should_process_image__minimum_size_boundary__returns_true():
     """Test boundary case: image exactly at min_size."""
     boundary_image = Image.new("RGB", (100, 100))
-    should_process, reason = should_process_image(boundary_image, min_size=100)
+    should_process, reason = should_process_image(
+        boundary_image, min_size=100, min_unique_colors=0
+    )
 
     assert should_process is True
     assert reason == "valid"
@@ -227,8 +229,10 @@ async def test_process_image__valid_image__returns_description(sample_image):
 
         processor = ImageProcessor()
 
-        # Process image (now async!)
-        description = await processor.process_image(sample_image, picture_index=0)
+        # Process image (now async!) - skip_filtering=True to bypass color filter
+        description = await processor.process_image(
+            sample_image, picture_index=0, skip_filtering=True
+        )
 
         assert description is not None
         assert "red square" in description.lower()
@@ -258,8 +262,8 @@ async def test_process_image__creates_temp_file(sample_image):
 
         processor = ImageProcessor()
 
-        # Process image (now async!)
-        await processor.process_image(sample_image, picture_index=0)
+        # Process image (now async!) with skip_filtering=True to bypass color filter
+        await processor.process_image(sample_image, picture_index=0, skip_filtering=True)
 
         # Verify temp file was created
         assert len(processor.temp_files) == 1
@@ -282,13 +286,14 @@ async def test_process_image__vlm_error__returns_none(sample_image):
 
         processor = ImageProcessor()
 
-        # Should return None on error (not raise)
-        description = await processor.process_image(sample_image, picture_index=0)
+        # Should return None on error (not raise) - skip_filtering=True to bypass color filter
+        description = await processor.process_image(
+            sample_image, picture_index=0, skip_filtering=True
+        )
         assert description is None
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_image__custom_prompt__used_in_request(mock_ollama_chat, sample_image):
+def test_process_image__custom_prompt__used_in_request(sample_image):
     """Test that custom prompt is passed to Ollama (currently not supported - skip)."""
     pytest.skip("Custom prompt parameter not yet implemented in process_image")
 
@@ -298,63 +303,73 @@ def test_process_image__custom_prompt__used_in_request(mock_ollama_chat, sample_
 # =============================================================================
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_multiple_images__sequential__success(mock_ollama_chat):
+@pytest.mark.asyncio
+async def test_process_multiple_images__sequential__success():
     """Test processing multiple images sequentially."""
-    mock_ollama_chat.side_effect = [
-        {"message": {"content": "First image description"}},
-        {"message": {"content": "Second image description"}},
-        {"message": {"content": "Third image description"}},
-    ]
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock,
+    ) as mock_vlm:
+        mock_vlm.side_effect = [
+            "First image description",
+            "Second image description",
+            "Third image description",
+        ]
 
-    processor = ImageProcessor()
+        processor = ImageProcessor()
 
-    images = [
-        Image.new("RGB", (200, 200), color=(255, 0, 0)),
-        Image.new("RGB", (200, 200), color=(0, 255, 0)),
-        Image.new("RGB", (200, 200), color=(0, 0, 255)),
-    ]
+        images = [
+            Image.new("RGB", (200, 200), color=(255, 0, 0)),
+            Image.new("RGB", (200, 200), color=(0, 255, 0)),
+            Image.new("RGB", (200, 200), color=(0, 0, 255)),
+        ]
 
-    descriptions = []
-    for idx, img in enumerate(images):
-        desc = processor.process_image(img, picture_index=idx)
-        descriptions.append(desc)
+        descriptions = []
+        for idx, img in enumerate(images):
+            desc = await processor.process_image(img, picture_index=idx, skip_filtering=True)
+            descriptions.append(desc)
 
-    assert len(descriptions) == 3
-    assert all(desc is not None for desc in descriptions)
-    assert mock_ollama_chat.call_count == 3
-    assert len(processor.temp_files) == 3
+        assert len(descriptions) == 3
+        assert all(desc is not None for desc in descriptions)
+        assert mock_vlm.call_count == 3
+        assert len(processor.temp_files) == 3
 
-    # Cleanup
-    processor.cleanup()
+        # Cleanup
+        processor.cleanup()
 
 
-@patch("src.components.ingestion.image_processor.ollama.chat")
-def test_process_mixed_valid_invalid_images__filters_correctly(mock_ollama_chat):
+@pytest.mark.asyncio
+async def test_process_mixed_valid_invalid_images__filters_correctly():
     """Test processing mix of valid and invalid images."""
-    mock_ollama_chat.return_value = {"message": {"content": "Valid image"}}
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock,
+    ) as mock_vlm:
+        mock_vlm.return_value = "Valid image"
 
-    processor = ImageProcessor()
+        processor = ImageProcessor()
 
-    images = [
-        Image.new("RGB", (200, 200)),  # Valid
-        Image.new("RGB", (50, 50)),  # Too small
-        Image.new("RGB", (200, 200)),  # Valid
-        Image.new("RGB", (1000, 50)),  # Wrong aspect ratio (height too small)
-    ]
+        images = [
+            Image.new("RGB", (200, 200)),  # Valid (with skip_filtering)
+            Image.new("RGB", (50, 50)),  # Too small
+            Image.new("RGB", (200, 200)),  # Valid (with skip_filtering)
+            Image.new("RGB", (1000, 50)),  # Wrong aspect ratio (height too small)
+        ]
 
-    descriptions = []
-    for idx, img in enumerate(images):
-        desc = processor.process_image(img, picture_index=idx)
-        descriptions.append(desc)
+        descriptions = []
+        for idx, img in enumerate(images):
+            # Use skip_filtering=True for valid images (index 0, 2)
+            skip = idx in [0, 2]
+            desc = await processor.process_image(img, picture_index=idx, skip_filtering=skip)
+            descriptions.append(desc)
 
-    # Only 2 valid images should be processed
-    valid_descriptions = [d for d in descriptions if d is not None]
-    assert len(valid_descriptions) == 2
-    assert mock_ollama_chat.call_count == 2
+        # Only 2 valid images should be processed
+        valid_descriptions = [d for d in descriptions if d is not None]
+        assert len(valid_descriptions) == 2
+        assert mock_vlm.call_count == 2
 
-    # Cleanup
-    processor.cleanup()
+        # Cleanup
+        processor.cleanup()
 
 
 # =============================================================================
@@ -362,15 +377,19 @@ def test_process_mixed_valid_invalid_images__filters_correctly(mock_ollama_chat)
 # =============================================================================
 
 
-def test_process_image__empty_response__handles_gracefully():
+@pytest.mark.asyncio
+async def test_process_image__empty_response__handles_gracefully():
     """Test handling of empty VLM response."""
-    with patch("src.components.ingestion.image_processor.ollama.chat") as mock_ollama_chat:
-        mock_ollama_chat.return_value = {"message": {"content": ""}}
+    with patch(
+        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        new_callable=AsyncMock,
+    ) as mock_vlm:
+        mock_vlm.return_value = ""
 
         processor = ImageProcessor()
 
         image = Image.new("RGB", (200, 200))
-        description = processor.process_image(image, picture_index=0)
+        description = await processor.process_image(image, picture_index=0, skip_filtering=True)
 
         # Should return empty string, not None (image was valid)
         assert description == ""

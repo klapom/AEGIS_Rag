@@ -244,7 +244,10 @@ export function GraphViewer({
   }
 
   return (
-    <div className="relative w-full h-full bg-white rounded-lg border border-gray-200">
+    <div
+      className="relative w-full h-full bg-white rounded-lg border border-gray-200"
+      data-testid="graph-canvas"
+    >
       {/* Graph Controls Overlay */}
       <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
         <div className="text-sm space-y-1">
@@ -297,7 +300,10 @@ export function GraphViewer({
       </div>
 
       {/* Legend Overlay */}
-      <div className="absolute bottom-4 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200">
+      <div
+        className="absolute bottom-4 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-3 border border-gray-200"
+        data-testid="graph-legend"
+      >
         <div className="text-sm space-y-2">
           <div className="font-semibold text-gray-900">Entity Types</div>
           <div className="space-y-1">
@@ -322,21 +328,33 @@ export function GraphViewer({
           <div className="border-t border-gray-200 pt-2 mt-2">
             <div className="font-semibold text-gray-900">Relationships</div>
             <div className="space-y-1 mt-1">
-              <div className="flex items-center space-x-2">
+              <div
+                className="flex items-center space-x-2"
+                data-testid="legend-item-relates-to"
+              >
                 <div className="w-6 h-0.5 bg-blue-500"></div>
-                <span className="text-gray-600">Relates To</span>
+                <span className="text-gray-600">RELATES_TO</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div
+                className="flex items-center space-x-2"
+                data-testid="legend-item-mentioned-in"
+              >
                 <div className="w-6 h-0.5 bg-gray-400"></div>
-                <span className="text-gray-600">Mentioned In</span>
+                <span className="text-gray-600">MENTIONED_IN</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div
+                className="flex items-center space-x-2"
+                data-testid="legend-item-has-section"
+              >
                 <div className="w-6 h-0.5 bg-green-500"></div>
-                <span className="text-gray-600">Has Section</span>
+                <span className="text-gray-600">HAS_SECTION</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div
+                className="flex items-center space-x-2"
+                data-testid="legend-item-defines"
+              >
                 <div className="w-6 h-0.5 bg-amber-500"></div>
-                <span className="text-gray-600">Defines</span>
+                <span className="text-gray-600">DEFINES</span>
               </div>
             </div>
           </div>

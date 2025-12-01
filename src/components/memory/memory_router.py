@@ -203,6 +203,15 @@ class MemoryRouter:
                 # Continue with other layers on failure
                 results[layer.value] = []
 
+        # Check if all layers failed (all returned empty results)
+        if results and all(len(r) == 0 for r in results.values()):
+            logger.error(
+                "All memory layer searches failed",
+                query=query[:100],
+                layers_attempted=list(results.keys()),
+            )
+            raise MemoryError("All memory layer searches failed")
+
         logger.info(
             "Completed multi-layer memory search",
             query=query[:100],

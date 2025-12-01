@@ -806,4 +806,4 @@ def test_get_graphiti_wrapper_disabled():
         with pytest.raises(MemoryError) as exc_info:
             get_graphiti_wrapper()
 
-        assert "get_graphiti_wrapper" in str(exc_info.value)
+        assert "get_graphiti_client" in str(exc_info.value)
