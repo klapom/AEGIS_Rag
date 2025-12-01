@@ -112,4 +112,103 @@ describe('GraphViewer', () => {
     // Component renders successfully with callback (no AFRAME/THREE errors)
     expect(container).toBeInTheDocument();
   });
+
+  it('uses external data when provided instead of fetching', () => {
+    const externalData = {
+      nodes: [
+        { id: 'ext1', label: 'External Node 1', type: 'PERSON', degree: 1 },
+        { id: 'ext2', label: 'External Node 2', type: 'ORGANIZATION', degree: 1 },
+      ],
+      links: [{ source: 'ext1', target: 'ext2', label: 'WORKS_FOR' }],
+    };
+
+    const mockUseGraphData = vi.spyOn(useGraphDataModule, 'useGraphData').mockReturnValue({
+      data: null,
+      loading: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(
+      <GraphViewer
+        data={externalData}
+        loading={false}
+        error={null}
+      />
+    );
+
+    // Should not fetch data when external data is provided
+    // When external data is provided, empty filters should be passed
+    expect(mockUseGraphData).toHaveBeenCalledWith({});
+
+    // Component should render successfully with external data
+    expect(container).toBeInTheDocument();
+  });
+
+  it('shows loading state from external props when external data is used', () => {
+    vi.spyOn(useGraphDataModule, 'useGraphData').mockReturnValue({
+      data: null,
+      loading: false, // Internal loading is false
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <GraphViewer
+        data={null}
+        loading={true} // External loading is true
+        error={null}
+      />
+    );
+
+    expect(screen.getByText('Loading graph...')).toBeInTheDocument();
+  });
+
+  it('shows error state from external props when external data is used', () => {
+    vi.spyOn(useGraphDataModule, 'useGraphData').mockReturnValue({
+      data: null,
+      loading: false,
+      error: null, // Internal error is null
+      refetch: vi.fn(),
+    });
+
+    render(
+      <GraphViewer
+        data={null}
+        loading={false}
+        error={new Error('External fetch failed')} // External error
+      />
+    );
+
+    expect(screen.getByText('Failed to load graph')).toBeInTheDocument();
+    expect(screen.getByText('External fetch failed')).toBeInTheDocument();
+  });
+
+  it('renders external data correctly when loading is false', () => {
+    const externalData = {
+      nodes: [
+        { id: 'ext1', label: 'External Entity', type: 'PERSON', degree: 2 },
+      ],
+      links: [],
+    };
+
+    vi.spyOn(useGraphDataModule, 'useGraphData').mockReturnValue({
+      data: null,
+      loading: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(
+      <GraphViewer
+        data={externalData}
+        loading={false}
+        error={null}
+      />
+    );
+
+    // Should render the graph canvas (not loading or error state)
+    expect(screen.getByTestId('graph-canvas')).toBeInTheDocument();
+    expect(container).toBeInTheDocument();
+  });
 });

@@ -40,6 +40,59 @@ logger.info(
 
 
 # ============================================================================
+# Sprint 33: Last Re-Index Timestamp (Redis-based persistence)
+# ============================================================================
+
+REDIS_KEY_LAST_REINDEX = "admin:last_reindex_timestamp"
+
+
+async def save_last_reindex_timestamp() -> None:
+    """Save the current timestamp as last re-index time to Redis.
+
+    Sprint 33: Persistent storage for last re-index timestamp.
+    Uses Redis key 'admin:last_reindex_timestamp'.
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        timestamp = datetime.now().isoformat()
+        await redis_client.set(REDIS_KEY_LAST_REINDEX, timestamp)
+
+        logger.info("last_reindex_timestamp_saved", timestamp=timestamp)
+    except Exception as e:
+        logger.warning("failed_to_save_reindex_timestamp", error=str(e))
+
+
+async def get_last_reindex_timestamp() -> str | None:
+    """Get the last re-index timestamp from Redis.
+
+    Sprint 33: Fetch persistent last re-index timestamp.
+
+    Returns:
+        ISO 8601 formatted timestamp or None if not set.
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        timestamp = await redis_client.get(REDIS_KEY_LAST_REINDEX)
+
+        if timestamp:
+            # Redis returns bytes, decode to string
+            return timestamp.decode("utf-8") if isinstance(timestamp, bytes) else timestamp
+
+        return None
+    except Exception as e:
+        logger.warning("failed_to_get_reindex_timestamp", error=str(e))
+        return None
+
+
+# ============================================================================
 # Re-Indexing Endpoint with SSE Progress Tracking
 # ============================================================================
 
@@ -126,7 +179,8 @@ async def reindex_progress_stream(
             )
 
             # Clear BM25 cache (will be rebuilt during indexing)
-            bm25_cache_path = Path("data/cache/bm25_model.pkl")
+            # Note: BM25Search uses "bm25_index.pkl" (not "bm25_model.pkl")
+            bm25_cache_path = Path("data/cache/bm25_index.pkl")
             if bm25_cache_path.exists():
                 bm25_cache_path.unlink()
                 logger.info("cleared_bm25_cache")
@@ -242,6 +296,25 @@ async def reindex_progress_stream(
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': '[DRY RUN] Validation skipped'})}\n\n"
 
+        # Sprint 33: Refresh BM25 index after reindexing
+        if not dry_run and total_chunks > 0:
+            try:
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 99, 'message': 'Refreshing BM25 keyword index...'})}\n\n"
+
+                from src.api.v1.retrieval import get_hybrid_search
+
+                hybrid_search = get_hybrid_search()
+                bm25_stats = await hybrid_search.prepare_bm25_index()
+                bm25_corpus_size = bm25_stats.get("bm25_corpus_size", 0)
+
+                logger.info(
+                    "bm25_index_refreshed",
+                    corpus_size=bm25_corpus_size,
+                    documents_indexed=bm25_stats.get("documents_indexed", 0),
+                )
+            except Exception as e:
+                logger.warning("bm25_refresh_failed", error=str(e))
+
         # Completion
         total_time = time.time() - start_time
 
@@ -257,6 +330,10 @@ async def reindex_progress_stream(
             completion_status = 'completed'
 
         yield f"data: {json.dumps({'status': completion_status, 'phase': 'completed', 'progress_percent': 100, 'documents_processed': total_docs, 'documents_total': total_docs, 'documents_failed': failed_docs if not dry_run else 0, 'message': completion_message})}\n\n"
+
+        # Sprint 33: Save last reindex timestamp
+        if not dry_run:
+            await save_last_reindex_timestamp()
 
     except Exception as e:
         logger.error("reindex_failed", error=str(e), exc_info=True)
@@ -418,17 +495,64 @@ def _build_detailed_progress(
             "duration_ms": None,
         })
 
+    # Sprint 33 Fix: Read actual detected elements from Docling parsing state
+    parsed_tables = state.get("parsed_tables", [])
+    parsed_images = state.get("parsed_images", [])
+    page_dimensions = state.get("page_dimensions", {})
+    parsed_content = state.get("parsed_content", "")
+
+    # Try to get actual picture count from document object (more accurate for VLM)
+    document = state.get("document")
+    try:
+        if document and hasattr(document, "pictures"):
+            total_pictures = len(document.pictures)
+        else:
+            total_pictures = len(parsed_images)
+    except Exception:
+        total_pictures = len(parsed_images)
+
+    # Calculate word count from parsed content (more accurate than chunk-based)
+    word_count = len(parsed_content.split()) if parsed_content else sum(
+        len(c.get("text", "").split()) if isinstance(c, dict) else 0 for c in chunks
+    )
+
+    # Build VLM images status from vlm_metadata in state
+    vlm_metadata = state.get("vlm_metadata", [])
+    enrichment_status = state.get("enrichment_status", "pending")
+    vlm_images = []
+
+    # Use total_pictures for accurate VLM tracking
+    total_vlm_images = total_pictures
+
+    for idx, meta in enumerate(vlm_metadata):
+        vlm_images.append({
+            "image_id": f"img_{idx:03d}",
+            "thumbnail_url": None,  # Thumbnails not generated yet
+            "status": "completed",
+            "description": meta.get("description", "")[:100] if meta.get("description") else None,
+        })
+
+    # Add pending images that haven't been processed yet
+    if enrichment_status == "running" and total_vlm_images > len(vlm_metadata):
+        for idx in range(len(vlm_metadata), total_vlm_images):
+            vlm_images.append({
+                "image_id": f"img_{idx:03d}",
+                "thumbnail_url": None,
+                "status": "pending",
+                "description": None,
+            })
+
     return {
         "current_file": current_file,
         "current_page": 1,
-        "total_pages": 1,
+        "total_pages": len(page_dimensions) if page_dimensions else 1,
         "page_thumbnail_url": None,
         "page_elements": {
-            "tables": 0,
-            "images": 0,
-            "word_count": sum(len(c.get("text", "").split()) if isinstance(c, dict) else 0 for c in chunks),
+            "tables": len(parsed_tables),
+            "images": total_pictures,  # Use document.pictures count for accuracy
+            "word_count": word_count,
         },
-        "vlm_images": [],
+        "vlm_images": vlm_images,
         "current_chunk": chunk_infos[0] if chunk_infos else None,
         "pipeline_status": pipeline_statuses,
         "entities": {
@@ -471,11 +595,13 @@ async def add_documents_stream(
         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 5, 'message': f'Preparing to index {total_docs} document(s)'})}\n\n"
 
         # Phase 2: Indexing (use LangGraph pipeline with Docling) - NO DELETION
+        # Sprint 33: Use streaming pipeline for granular progress updates
         if not dry_run:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10, 'message': f'Indexing {total_docs} document(s)...'})}\n\n"
 
-            # Import LangGraph pipeline (lazy import)
-            from src.components.ingestion.langgraph_pipeline import run_batch_ingestion
+            # Import LangGraph streaming pipeline (lazy import)
+            from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline_streaming
+            import hashlib
 
             batch_id = f"add_batch_{int(time.time())}"
             total_chunks = 0
@@ -484,78 +610,177 @@ async def add_documents_stream(
             all_entities: List[dict] = []
             all_relations: List[dict] = []
 
-            async for result in run_batch_ingestion(
-                document_paths=file_paths,
-                batch_id=batch_id,
-            ):
-                completed_docs += 1
-                doc_path = result["document_path"]
-                success = result["success"]
+            # Node name to human-readable phase mapping
+            # NOTE: Node names from LangGraph have NO "_node" suffix!
+            # See langgraph_pipeline.py: graph.add_node("memory_check", ...)
+            NODE_PHASES = {
+                "memory_check": ("memory_check", "Checking document memory..."),
+                "parse": ("parse", "Parsing document..."),
+                "image_enrichment": ("image_enrichment", "Processing images with VLM..."),
+                "chunking": ("chunking", "Creating text chunks..."),
+                "embedding": ("embedding", "Generating embeddings..."),
+                "graph": ("graph", "Extracting entities and relations..."),
+            }
 
-                if success and result.get("state"):
-                    state = result["state"]
-                    chunk_count = len(state.get("chunks", []))
-                    total_chunks += chunk_count
+            # Node name to progress percentage (within document: 10% to 90% of doc's share)
+            NODE_PROGRESS = {
+                "memory_check": 0.05,
+                "parse": 0.25,
+                "image_enrichment": 0.40,
+                "chunking": 0.55,
+                "embedding": 0.75,
+                "graph": 1.0,
+            }
 
-                    # Collect entities and relations
-                    all_entities.extend(state.get("entities", []))
-                    all_relations.extend(state.get("relations", []))
+            # Process each document with streaming progress
+            for doc_index, doc_path in enumerate(file_paths):
+                # Generate document ID
+                document_id = hashlib.sha256(doc_path.encode()).hexdigest()[:16]
 
-                    # Calculate progress (10% → 90%)
-                    doc_progress = (completed_docs / total_docs) * 80
-                    overall_progress = 10 + doc_progress
+                # Calculate base progress for this document (10% to 90% total range)
+                doc_base_progress = 10 + (doc_index / total_docs) * 80
+                doc_progress_range = 80 / total_docs  # Each doc gets equal share
 
+                try:
                     # Get file size
                     try:
                         file_size = os.path.getsize(doc_path)
                     except OSError:
                         file_size = 0
 
-                    # Build detailed progress
-                    detailed_progress = _build_detailed_progress(
-                        file_path=doc_path,
-                        file_size=file_size,
-                        state=state,
-                        pipeline_phase="graph_extraction",
-                        pipeline_status="completed",
-                    )
+                    last_state = None
 
-                    message = f"Added {Path(doc_path).name}: {chunk_count} chunks"
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
-
-                    logger.info(
-                        "add_document_indexed",
+                    # Stream progress for each pipeline node
+                    async for update in run_ingestion_pipeline_streaming(
                         document_path=doc_path,
-                        chunks=chunk_count,
-                        completed=completed_docs,
-                        total=total_docs,
-                    )
-                else:
-                    failed_docs += 1
-                    error_msg = result.get("error", "Unknown error")
-                    logger.error("add_document_failed", document_path=doc_path, error=error_msg)
+                        document_id=document_id,
+                        batch_id=batch_id,
+                        batch_index=doc_index,
+                        total_documents=total_docs,
+                    ):
+                        node_name = update.get("node", "unknown")
+                        state = update.get("state", {})
+                        last_state = state
 
-                    # Build error info for SSE
+                        # Get phase info
+                        phase_info = NODE_PHASES.get(node_name, ("indexing", f"Processing {node_name}..."))
+                        node_progress = NODE_PROGRESS.get(node_name, 0.5)
+
+                        # Calculate overall progress
+                        overall_progress = doc_base_progress + (node_progress * doc_progress_range)
+
+                        # Build detailed progress
+                        detailed_progress = _build_detailed_progress(
+                            file_path=doc_path,
+                            file_size=file_size,
+                            state=state,
+                            pipeline_phase=phase_info[0],
+                            pipeline_status="in_progress",
+                        )
+
+                        message = f"{Path(doc_path).name}: {phase_info[1]}"
+                        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
+
+                        logger.debug(
+                            "add_document_node_progress",
+                            document_path=doc_path,
+                            node=node_name,
+                            progress=overall_progress,
+                        )
+
+                    # Document completed - check for errors
+                    if last_state and last_state.get("errors"):
+                        failed_docs += 1
+                        error_list = last_state.get("errors", [])
+                        error_msg = error_list[0].get("message", "Unknown error") if error_list else "Unknown error"
+                        logger.error("add_document_failed", document_path=doc_path, error=error_msg)
+
+                        error_info = {
+                            "type": "error",
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "file_name": Path(doc_path).name,
+                            "message": error_msg,
+                            "details": str(error_list),
+                        }
+
+                        message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
+                    else:
+                        # Success - count chunks
+                        completed_docs += 1
+                        if last_state:
+                            chunk_count = len(last_state.get("chunks", []))
+                            total_chunks += chunk_count
+                            all_entities.extend(last_state.get("entities", []))
+                            all_relations.extend(last_state.get("relations", []))
+
+                            detailed_progress = _build_detailed_progress(
+                                file_path=doc_path,
+                                file_size=file_size,
+                                state=last_state,
+                                pipeline_phase="graph_extraction",
+                                pipeline_status="completed",
+                            )
+
+                            message = f"Added {Path(doc_path).name}: {chunk_count} chunks"
+                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
+
+                            logger.info(
+                                "add_document_indexed",
+                                document_path=doc_path,
+                                chunks=chunk_count,
+                                completed=completed_docs,
+                                total=total_docs,
+                            )
+
+                except Exception as e:
+                    failed_docs += 1
+                    error_msg = str(e)
+                    logger.error("add_document_exception", document_path=doc_path, error=error_msg)
+
                     error_info = {
                         "type": "error",
                         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                         "file_name": Path(doc_path).name,
                         "message": error_msg,
-                        "details": str(result.get("error_details", "")),
+                        "details": "",
                     }
 
                     message = f"FAILED: {Path(doc_path).name} - {error_msg}"
-                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10 + (completed_docs / total_docs) * 80, 'message': message, 'documents_processed': completed_docs, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
+                    yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
 
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'Added {total_chunks} chunks from {completed_docs - failed_docs} document(s)'})}\n\n"
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'Added {total_chunks} chunks from {completed_docs} document(s)'})}\n\n"
         else:
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': '[DRY RUN] Skipped indexing'})}\n\n"
             completed_docs = total_docs
             failed_docs = 0
             total_chunks = 0
 
-        # Phase 3: Validation
-        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Validating index...'})}\n\n"
+        # Phase 3: Validation + BM25 Refresh
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 92, 'message': 'Validating index...'})}\n\n"
+
+        # Sprint 33: Refresh BM25 index after adding documents
+        # This ensures BM25 keyword search is synchronized with Qdrant vector store
+        if not dry_run and (completed_docs - failed_docs) > 0:
+            try:
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Refreshing BM25 keyword index...'})}\n\n"
+
+                from src.api.v1.retrieval import get_hybrid_search
+
+                hybrid_search = get_hybrid_search()
+                bm25_stats = await hybrid_search.prepare_bm25_index()
+                bm25_corpus_size = bm25_stats.get("bm25_corpus_size", 0)
+
+                logger.info(
+                    "bm25_index_refreshed",
+                    corpus_size=bm25_corpus_size,
+                    documents_indexed=bm25_stats.get("documents_indexed", 0),
+                )
+
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'BM25 index refreshed ({bm25_corpus_size} documents)'})}\n\n"
+            except Exception as e:
+                logger.warning("bm25_refresh_failed", error=str(e))
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'BM25 refresh failed: {str(e)} (non-critical)'})}\n\n"
 
         # Completion
         elapsed_time = time.time() - start_time
@@ -575,6 +800,10 @@ async def add_documents_stream(
             total_chunks=total_chunks,
             elapsed_seconds=elapsed_time,
         )
+
+        # Sprint 33: Save last reindex timestamp
+        if not dry_run and success_count > 0:
+            await save_last_reindex_timestamp()
 
     except Exception as e:
         logger.error("add_documents_error", error=str(e), exc_info=True)
@@ -843,9 +1072,8 @@ async def get_system_stats() -> SystemStats:
         except Exception as e:
             logger.warning("failed_to_get_redis_stats", error=str(e), exc_info=True)
 
-        # Last reindex timestamp (TODO: Implement persistent storage for this)
-        # For now, return None - could be stored in Redis or a separate metadata store
-        last_reindex_timestamp = None
+        # Sprint 33: Get last reindex timestamp from Redis
+        last_reindex_timestamp = await get_last_reindex_timestamp()
 
         # TD-41: Log final stats assembly
         logger.info("stats_collection_phase", phase="assembly", status="starting")
@@ -1021,7 +1249,8 @@ async def reindex_with_vlm_enrichment(
             logger.info("recreated_qdrant_collection", collection=collection_name)
 
             # Clear BM25 cache
-            bm25_cache_path = Path("data/cache/bm25_model.pkl")
+            # Note: BM25Search uses "bm25_index.pkl" (not "bm25_model.pkl")
+            bm25_cache_path = Path("data/cache/bm25_index.pkl")
             if bm25_cache_path.exists():
                 bm25_cache_path.unlink()
                 logger.info("cleared_bm25_cache")
@@ -1130,6 +1359,25 @@ async def reindex_with_vlm_enrichment(
                 neo4j_entities = 0
                 neo4j_relations = 0
 
+            # Sprint 33: Refresh BM25 index after VLM reindexing
+            if total_chunks > 0:
+                try:
+                    yield f"data: {json.dumps({'status': 'validation', 'progress': 0.99, 'message': 'Refreshing BM25 keyword index...'})}\n\n"
+
+                    from src.api.v1.retrieval import get_hybrid_search
+
+                    hybrid_search = get_hybrid_search()
+                    bm25_stats = await hybrid_search.prepare_bm25_index()
+                    bm25_corpus_size = bm25_stats.get("bm25_corpus_size", 0)
+
+                    logger.info(
+                        "bm25_index_refreshed",
+                        corpus_size=bm25_corpus_size,
+                        documents_indexed=bm25_stats.get("documents_indexed", 0),
+                    )
+                except Exception as e:
+                    logger.warning("bm25_refresh_failed", error=str(e))
+
             # Completion
             total_time = time.time() - start_time
 
@@ -1168,6 +1416,10 @@ async def reindex_with_vlm_enrichment(
                 total_errors=total_errors,
                 duration_seconds=total_time,
             )
+
+            # Sprint 33: Save last reindex timestamp
+            if total_chunks > 0:
+                await save_last_reindex_timestamp()
 
         except Exception as e:
             logger.error("vlm_reindex_failed", error=str(e), exc_info=True)

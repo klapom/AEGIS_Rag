@@ -125,6 +125,9 @@ export function GraphModal({ entityNames, onClose }: GraphModalProps) {
           {!loading && !error && data && (
             <div className="w-full h-full">
               <GraphViewer
+                data={data}
+                loading={loading}
+                error={error}
                 maxNodes={100}
                 entityTypes={undefined}
                 highlightCommunities={undefined}

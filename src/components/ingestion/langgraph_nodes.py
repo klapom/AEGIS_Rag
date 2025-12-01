@@ -1810,6 +1810,16 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             relations_extracted=graph_stats.get("stats", {}).get("total_relations", 0),
         )
 
+        # Sprint 33 FIX: Wait for Neo4j to commit the entities before querying
+        # This prevents race conditions where MENTIONED_IN isn't visible yet
+        import asyncio
+        await asyncio.sleep(1.0)
+        logger.info(
+            "neo4j_commit_wait_complete",
+            stage="graph_extraction",
+            wait_seconds=1.0,
+        )
+
         # Sprint 34 Feature 34.1 & 34.2: Extract and store RELATES_TO relationships
         # After LightRAG stores entities, extract relations between them
         relation_extraction_start = time.perf_counter()
@@ -1827,29 +1837,56 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
         relation_extractor = RelationExtractor()
 
+        # Sprint 33 FIX: Query Neo4j for entities per chunk
+        # Get Neo4j client to query entities associated with each chunk via MENTIONED_IN
+        from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+        neo4j_client = get_neo4j_client()
+
         # Process each chunk: extract relations and store to Neo4j
         for doc in lightrag_docs:
             chunk_text = doc["text"]
             chunk_id = doc["id"]
 
-            # Get entities that were stored for this chunk
-            # These are the entities extracted by LightRAG that we need to relate
-            chunk_stats = [r for r in graph_stats.get("results", []) if r.get("doc_id") == chunk_id]
-            if not chunk_stats:
-                logger.debug("no_entities_for_chunk", chunk_id=chunk_id[:8])
-                continue
+            # Sprint 33 FIX: Query Neo4j for entities that MENTIONED_IN this chunk
+            # This replaces the broken empty entities list
+            try:
+                entity_query = """
+                MATCH (e:base)-[:MENTIONED_IN]->(c:chunk {chunk_id: $chunk_id})
+                RETURN e.entity_name AS name, e.entity_type AS type
+                """
+                entity_results = await neo4j_client.execute_read(
+                    entity_query, {"chunk_id": chunk_id}
+                )
+                entities = [
+                    {"name": r["name"], "type": r.get("type", "UNKNOWN")}
+                    for r in entity_results
+                    if r.get("name")  # Filter out None entity names
+                ]
 
-            # Extract entities list (we need entity names for RelationExtractor)
-            # This is a simplified approach - we assume entities were already extracted
-            # In real implementation, we'd query Neo4j or use the extraction results
-            # For now, we'll extract relations from all entities in the document
-            # TODO: Query Neo4j for entities associated with this chunk
-            entities = []  # Will be populated from LightRAG extraction results
+                logger.info(
+                    "chunk_entities_queried",
+                    chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                    entities_found=len(entities),
+                    entity_names=[e["name"] for e in entities[:5]],  # Log first 5
+                )
 
-            if not entities:
-                # Fallback: Extract relations using entity names from chunk metadata
-                # In production, this should query Neo4j for actual entities
-                logger.debug("extracting_relations_without_entity_list", chunk_id=chunk_id[:8])
+            except Exception as e:
+                logger.warning(
+                    "chunk_entity_query_failed",
+                    chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                    error=str(e),
+                )
+                entities = []
+
+            # Need at least 2 entities to find relations between them
+            if len(entities) < 2:
+                logger.debug(
+                    "skipping_relation_extraction",
+                    chunk_id=chunk_id[:8] if len(chunk_id) > 8 else chunk_id,
+                    reason="less_than_2_entities",
+                    entities_found=len(entities),
+                )
                 continue
 
             try:

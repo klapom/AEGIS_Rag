@@ -421,7 +421,7 @@ async def get_query_subgraph(request: QuerySubgraphRequest) -> dict[str, Any]:
 
         query = """
         MATCH (n:base)
-        WHERE n.name IN $entity_names
+        WHERE n.entity_name IN $entity_names
         WITH n
         OPTIONAL MATCH (n)-[r]-(m:base)
         RETURN n, r, m

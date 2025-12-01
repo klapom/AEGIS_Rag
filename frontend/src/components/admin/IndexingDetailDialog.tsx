@@ -55,6 +55,22 @@ export function IndexingDetailDialog({
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Loading State - shown when progress data not yet available */}
+          {!progress && (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-indigo-600"></div>
+              <div className="text-center">
+                <p className="text-lg font-medium text-gray-700">Warte auf Detaildaten...</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Detaillierte Fortschrittsinformationen werden angezeigt, sobald die Pipeline-Verarbeitung beginnt.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* All sections only shown when progress data is available */}
+          {progress && (
+            <>
           {/* Section 1: Document & Page Preview */}
           <section data-testid="detail-page-preview" className="space-y-4">
             <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
@@ -283,6 +299,8 @@ export function IndexingDetailDialog({
               </div>
             </div>
           </section>
+            </>
+          )}
         </div>
 
         {/* Footer */}

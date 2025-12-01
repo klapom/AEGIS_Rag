@@ -92,6 +92,7 @@ Example with Error Handling:
 """
 
 from pathlib import Path
+from collections.abc import AsyncGenerator
 from typing import Any
 
 import structlog
@@ -460,7 +461,7 @@ async def run_ingestion_pipeline_streaming(
     batch_index: int = 0,
     total_documents: int = 1,
     max_retries: int = 3,
-) -> None:
+) -> AsyncGenerator[dict[str, Any], None]:
     """Run ingestion pipeline with streaming progress updates (for SSE).
 
     This generator yields state updates after each node completes,

@@ -557,15 +557,13 @@ export function AdminIndexingPage() {
                     {/* Sprint 33 Feature 33.5: Error Tracking Button */}
                     <ErrorTrackingButton errors={errors} onExportCSV={handleExportCSV} />
 
-                    {/* Sprint 33 Feature 33.4: Details Button */}
+                    {/* Sprint 33 Feature 33.4: Details Button - Always enabled during indexing */}
                     <button
                       onClick={() => setIsDetailDialogOpen(true)}
-                      disabled={!detailedProgress}
                       className="
                         px-4 py-2 rounded-lg font-semibold text-sm
                         bg-indigo-600 text-white
                         hover:bg-indigo-700
-                        disabled:bg-gray-300 disabled:cursor-not-allowed
                         transition-all
                       "
                     >
