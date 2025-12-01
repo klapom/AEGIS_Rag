@@ -1,8 +1,8 @@
 # CONTEXT REFRESH MASTER GUIDE
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Timeless guide for achieving FULL context refresh in any session
-**Version:** 5.1 (Sprint-Independent, Reference-Based)
-**Last Updated:** 2025-11-18 (Sprint 28 Frontend UX)
+**Version:** 5.2 (Sprint-Independent, Reference-Based)
+**Last Updated:** 2025-11-29 (Sprint 33 VLM Pipeline Integration)
 
 ---
 
@@ -301,12 +301,14 @@ After ANY refresh, Claude Code should be able to confirm:
 ```
 - [ ] Frontend: React + TypeScript + Vite + Tailwind CSS
 - [ ] Backend: Python 3.12+, FastAPI
-- [ ] Orchestration: LangGraph
-- [ ] LLMs: Ollama (llama3.2, gemma, qwen)
+- [ ] Orchestration: LangGraph (6-node ingestion pipeline)
+- [ ] LLMs: Ollama (llama3.2, gemma, qwen) + Alibaba Cloud Qwen
+- [ ] VLM: Qwen3-VL (image enrichment in pipeline)
 - [ ] Embeddings: BGE-M3 (1024-dim, multilingual)
 - [ ] Vector: Qdrant
-- [ ] Graph: Neo4j
+- [ ] Graph: Neo4j (with Section nodes)
 - [ ] Memory: Redis
+- [ ] Document Parsing: Docling CUDA Container
 ```
 
 ### ✅ CURRENT STATE (Check SPRINT_PLAN.md for latest)
@@ -426,10 +428,16 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ## 🔄 Document Maintenance
 
 **This Document:**
-- **Version:** 5.0 (Sprint-Independent, Reference-Based)
+- **Version:** 5.2 (Sprint-Independent, Reference-Based)
 - **Created:** 2025-10-22
-- **Last Updated:** 2025-11-10
+- **Last Updated:** 2025-11-29
 - **Maintenance:** This document is TIMELESS - no sprint references
+
+**Recent Highlights (Sprint 33):**
+- VLM Pipeline Integration: 6-node LangGraph ingestion pipeline
+- Image Filtering: Optimized filters save ~50% VLM API calls
+- Multi-Format Sections: PDF, DOCX, PPTX with section_header support
+- Legacy Format Handling: .doc/.xls/.ppt explicitly rejected
 
 **Referenced Documents (Auto-Updated):**
 - **docs/CLAUDE.md** - Auto-updated with current sprint status
