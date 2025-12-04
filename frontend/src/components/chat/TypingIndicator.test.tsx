@@ -29,6 +29,11 @@ describe('TypingIndicator', () => {
     expect(screen.queryByTestId('typing-indicator-message')).not.toBeInTheDocument();
   });
 
+  it('shows text when showAvatar={false}', () => {
+    render(<TypingIndicator text="Suche läuft..." showAvatar={false} />);
+    expect(screen.getByText('Suche läuft...')).toBeInTheDocument();
+  });
+
   it('has three bouncing dots', () => {
     const { container } = render(<TypingIndicator showAvatar={false} />);
     const dots = container.querySelectorAll('.animate-bounce');

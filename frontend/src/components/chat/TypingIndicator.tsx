@@ -49,9 +49,14 @@ export function TypingIndicator({
     </div>
   );
 
-  // Inline version (no avatar, just dots)
+  // Inline version (no avatar, just dots and optional text)
   if (!showAvatar) {
-    return dotsElement;
+    return (
+      <div className="flex items-center gap-2">
+        {dotsElement}
+        {text && <span className="text-sm text-gray-500">{text}</span>}
+      </div>
+    );
   }
 
   // Full message layout with avatar (matches ChatMessage structure)
