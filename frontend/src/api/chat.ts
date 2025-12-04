@@ -178,11 +178,43 @@ export async function deleteSession(sessionId: string): Promise<void> {
 }
 
 // Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+// Sprint 35 Feature 35.4: Session Info Retrieval
+
+export interface SessionInfo {
+  session_id: string;
+  message_count: number;
+  last_activity: string | null;
+  created_at: string | null;
+  title: string | null;
+}
 
 export interface TitleResponse {
   session_id: string;
   title: string;
   generated_at: string;
+}
+
+/**
+ * Get session information including title
+ * Sprint 35 Feature 35.4
+ *
+ * @param sessionId Session ID to get info for
+ * @returns SessionInfo with title, message count, and timestamps
+ */
+export async function getSessionInfo(sessionId: string): Promise<SessionInfo> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
 }
 
 /**

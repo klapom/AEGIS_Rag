@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents.coordinator import CoordinatorAgent
 from src.agents.followup_generator import generate_followup_questions
+from src.api.v1.title_generator import generate_conversation_title
 from src.components.memory import get_unified_memory_api
 from src.core.exceptions import AegisRAGException
 from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
@@ -53,11 +54,13 @@ async def save_conversation_turn(
     intent: str | None = None,
     sources: list["SourceDocument"] | None = None,
     follow_up_questions: list[str] | None = None,
+    title: str | None = None,
 ) -> bool:
     """Save a conversation turn to Redis.
 
     Sprint 17 Feature 17.2: Conversation History Persistence
     Sprint 35 Feature 35.3: Follow-up Questions Redis Fix (TD-043)
+    Sprint 35 Feature 35.4: Auto-Generated Conversation Titles
 
     Args:
         session_id: Session ID
@@ -66,6 +69,7 @@ async def save_conversation_turn(
         intent: Query intent (vector, graph, hybrid)
         sources: Source documents used
         follow_up_questions: Generated follow-up questions (3-5)
+        title: Auto-generated or user-edited title (only for first message)
 
     Returns:
         True if saved successfully
@@ -136,12 +140,14 @@ async def save_conversation_turn(
 
         # Save updated conversation (7 days TTL)
         # Sprint 35 Feature 35.3: Include follow-up questions in conversation storage
+        # Sprint 35 Feature 35.4: Include title in conversation storage
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
             "updated_at": datetime.now(UTC).isoformat(),
             "message_count": len(messages),
             "follow_up_questions": follow_up_questions or [],
+            "title": title if title else (existing_conv.get("title") if existing_conv else None),
         }
 
         logger.info(
@@ -395,11 +401,29 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Sprint 17 Feature 17.2: Save conversation to Redis
         # Sprint 35 Feature 35.3: Generate and store follow-up questions
+        # Sprint 35 Feature 35.4: Generate title for first Q&A exchange
         follow_up_questions = await generate_followup_questions(
             query=request.query,
             answer=answer,
             sources=sources,
         )
+
+        # Sprint 35 Feature 35.4: Check if this is first message and generate title
+        from src.components.memory import get_redis_memory
+        redis_memory = get_redis_memory()
+        existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+        # Generate title only for first Q&A exchange
+        title = None
+        if not existing_conv or (
+            isinstance(existing_conv, dict)
+            and existing_conv.get("value", {}).get("message_count", 0) == 0
+        ):
+            title = await generate_conversation_title(
+                query=request.query,
+                answer=answer,
+            )
+            logger.info("title_generated_for_first_message", session_id=session_id, title=title)
 
         save_success = await save_conversation_turn(
             session_id=session_id,
@@ -408,6 +432,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             intent=result.get("intent"),
             sources=sources,
             follow_up_questions=follow_up_questions,
+            title=title,
         )
 
         if not save_success:
@@ -573,6 +598,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
             # Sprint 17 Feature 17.2: Save conversation after streaming completes
             # Sprint 35 Feature 35.3: Generate and store follow-up questions
+            # Sprint 35 Feature 35.4: Generate title for first Q&A exchange
             full_answer = "".join(collected_answer)
             if full_answer:
                 # Generate follow-up questions before saving
@@ -582,6 +608,23 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     sources=collected_sources,
                 )
 
+                # Sprint 35 Feature 35.4: Check if this is first message and generate title
+                from src.components.memory import get_redis_memory
+                redis_memory = get_redis_memory()
+                existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+                # Generate title only for first Q&A exchange
+                title = None
+                if not existing_conv or (
+                    isinstance(existing_conv, dict)
+                    and existing_conv.get("value", {}).get("message_count", 0) == 0
+                ):
+                    title = await generate_conversation_title(
+                        query=request.query,
+                        answer=full_answer,
+                    )
+                    logger.info("title_generated_for_first_message", session_id=session_id, title=title)
+
                 await save_conversation_turn(
                     session_id=session_id,
                     user_message=request.query,
@@ -589,11 +632,13 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     intent=collected_intent,
                     sources=collected_sources,
                     follow_up_questions=follow_up_questions,
+                    title=title,
                 )
                 logger.info(
                     "conversation_saved_after_streaming",
                     session_id=session_id,
-                    follow_up_count=len(follow_up_questions) if follow_up_questions else 0
+                    follow_up_count=len(follow_up_questions) if follow_up_questions else 0,
+                    title_generated=bool(title),
                 )
 
         except AegisRAGException as e:
@@ -698,6 +743,61 @@ async def list_sessions() -> SessionListResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to list sessions: {str(e)}",
+        ) from e
+
+
+@router.get("/sessions/{session_id}", response_model=SessionInfo)
+async def get_session_info(session_id: str) -> SessionInfo:
+    """Get session information including title.
+
+    Sprint 35 Feature 35.4: Get session info endpoint for title display
+
+    Args:
+        session_id: Session ID to retrieve info for
+
+    Returns:
+        SessionInfo with title, message count, and timestamps
+
+    Raises:
+        HTTPException: If session not found or retrieval fails
+    """
+    logger.info("session_info_requested", session_id=session_id)
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Retrieve conversation from Redis
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session '{session_id}' not found",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(conversation, dict) and "value" in conversation:
+            conversation = conversation["value"]
+
+        logger.info("session_info_retrieved", session_id=session_id)
+
+        return SessionInfo(
+            session_id=session_id,
+            message_count=conversation.get("message_count", 0),
+            last_activity=conversation.get("updated_at"),
+            created_at=conversation.get("created_at"),
+            title=conversation.get("title"),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("session_info_retrieval_failed", session_id=session_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve session info: {str(e)}",
         ) from e
 
 
@@ -885,51 +985,11 @@ async def generate_conversation_title(session_id: str) -> TitleResponse:
                 detail="Could not find first Q&A pair in conversation",
             )
 
-        # Generate title using Ollama
-        coordinator = get_coordinator()
-
-        # Truncate messages to avoid token limits
-        user_msg_short = first_user_msg[:200]
-        assistant_msg_short = first_assistant_msg[:300]
-
-        title_prompt = f"""Generate a very concise 3-5 word title for this conversation.
-The title should capture the main topic.
-Only return the title, nothing else.
-
-Question: {user_msg_short}
-Answer: {assistant_msg_short}
-
-Title:"""
-
-        try:
-            # Use coordinator's LLM to generate title
-            title_result = await coordinator.llm.ainvoke(
-                title_prompt, temperature=0.3, max_tokens=20
-            )
-
-            # Extract title from result
-            if hasattr(title_result, "content"):
-                generated_title = title_result.content.strip()
-            elif isinstance(title_result, str):
-                generated_title = title_result.strip()
-            else:
-                generated_title = str(title_result).strip()
-
-            # Clean up title (remove quotes, extra whitespace)
-            generated_title = generated_title.strip("\"'").strip()
-
-            # Fallback if title is empty or too long
-            if not generated_title or len(generated_title) > 100:
-                generated_title = user_msg_short[:50] + "..."
-
-        except Exception as llm_error:
-            logger.warning(
-                "title_generation_failed_fallback_to_question",
-                session_id=session_id,
-                error=str(llm_error),
-            )
-            # Fallback: Use first few words of question
-            generated_title = " ".join(first_user_msg.split()[:5])
+        # Sprint 35 Feature 35.4: Use AegisLLMProxy for title generation
+        generated_title = await generate_conversation_title(
+            query=first_user_msg,
+            answer=first_assistant_msg,
+        )
 
         # Save title to conversation metadata
         conversation_data["title"] = generated_title
