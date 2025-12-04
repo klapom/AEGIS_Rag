@@ -21,6 +21,7 @@ import { MarkdownWithCitations } from './MarkdownWithCitations';  // Sprint 32 F
 import { FollowUpQuestions } from './FollowUpQuestions';  // Sprint 28 Feature 28.1
 import { GraphModal } from '../graph/GraphModal';  // Sprint 29 Feature 29.2
 import { extractEntitiesFromSources } from '../../utils/entityExtractor';  // Sprint 29 Feature 29.2
+import { TypingIndicator } from './TypingIndicator';  // Sprint 35 Feature 35.6
 
 interface StreamingAnswerProps {
   query: string;
@@ -213,10 +214,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
               {intent}
             </span>
             {isStreaming && (
-              <span className="flex items-center space-x-1">
-                <LoadingDots />
-                <span>Suche läuft...</span>
-              </span>
+              <TypingIndicator text="Suche läuft..." showAvatar={false} />
             )}
           </div>
         )}
@@ -233,7 +231,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
         <SourceCardsScroll ref={sourceCardsRef} sources={sources} />
       )}
 
-      {/* Answer Content with Citations - Sprint 28 Feature 28.2, Sprint 32 Fix */}
+      {/* Answer Content with Citations - Sprint 28 Feature 28.2, Sprint 32 Fix, Sprint 35 Feature 35.6 */}
       <div className="prose prose-lg max-w-none">
         {answer ? (
           <>
@@ -280,7 +278,13 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
             })()}
             {isStreaming && <span className="animate-pulse text-primary">▊</span>}
           </>
+        ) : isStreaming ? (
+          // Sprint 35 Feature 35.6: Show TypingIndicator before first token arrives
+          <div className="py-4">
+            <TypingIndicator text="Thinking..." showAvatar={false} />
+          </div>
         ) : (
+          // Fallback skeleton for non-streaming states
           <div className="space-y-3">
             <SkeletonLine />
             <SkeletonLine />
@@ -375,16 +379,6 @@ function Tab({ active = false, icon, label }: TabProps) {
       <span>{icon}</span>
       <span>{label}</span>
     </button>
-  );
-}
-
-function LoadingDots() {
-  return (
-    <div className="flex space-x-1">
-      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-      <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-    </div>
   );
 }
 

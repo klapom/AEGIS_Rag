@@ -2,18 +2,20 @@
  * HomePage Component (Chat Interface)
  * Sprint 15 Feature 15.3: Landing page with SearchInput component
  * Sprint 31: Transformed into full chat interface for E2E test compatibility
+ * Sprint 35 Feature 35.5: Session History Sidebar
  *
  * Features:
  * - Message input with inline chat responses
  * - Conversation history display
- * - Session management
+ * - Session management with sidebar
  * - Citations and follow-up questions
  * - Welcome screen with quick prompts
  */
 
 import { useState, useCallback } from 'react';
 import { SearchInput, type SearchMode } from '../components/search';
-import { StreamingAnswer } from '../components/chat';
+import { StreamingAnswer, SessionSidebar } from '../components/chat';
+import { getConversation } from '../api/chat';
 import type { Source } from '../types/chat';
 
 interface Message {
@@ -28,6 +30,7 @@ export function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSearch = (query: string, mode: SearchMode) => {
     // Add user message to history
@@ -61,32 +64,71 @@ export function HomePage() {
     // It will be replaced when user asks a new question via handleSearch.
   }, []);
 
+  // Sprint 35 Feature 35.5: Session management handlers
+  const handleNewChat = () => {
+    setActiveSessionId(undefined);
+    setConversationHistory([]);
+    setCurrentQuery(null);
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    try {
+      const conversation = await getConversation(sessionId);
+      setActiveSessionId(sessionId);
+
+      // Convert messages to Message format
+      const messages: Message[] = conversation.messages.map((m: { role: 'user' | 'assistant'; content: string }) => ({
+        role: m.role,
+        content: m.content,
+        mode: 'hybrid' as SearchMode, // Default mode for loaded conversations
+      }));
+
+      setConversationHistory(messages);
+      setCurrentQuery(null); // Clear any active streaming
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      alert('Failed to load conversation');
+    }
+  };
+
   // Show welcome screen if no conversation yet
   const showWelcome = conversationHistory.length === 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Search Bar (Sticky) */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-5xl mx-auto py-4 px-6">
-          {activeSessionId && (
-            <div className="mb-2 text-xs text-gray-500">
-              <span>Session: </span>
-              <span data-testid="session-id" data-session-id={activeSessionId} className="font-mono">
-                {activeSessionId.slice(0, 8)}...
-              </span>
-            </div>
-          )}
-          <SearchInput
-            onSubmit={handleSearch}
-            placeholder={showWelcome ? "Fragen Sie alles über Ihre Dokumente..." : "Neue Frage..."}
-            autoFocus={showWelcome}
-          />
-        </div>
-      </div>
+    <div className="flex h-screen bg-gray-50">
+      {/* Session Sidebar */}
+      <SessionSidebar
+        currentSessionId={activeSessionId || null}
+        onNewChat={handleNewChat}
+        onSelectSession={handleSelectSession}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+      />
 
-      {/* Main Content Area */}
-      <div className="max-w-5xl mx-auto py-8 px-6">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Search Bar (Sticky) */}
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-5xl mx-auto py-4 px-6">
+            {activeSessionId && (
+              <div className="mb-2 text-xs text-gray-500">
+                <span>Session: </span>
+                <span data-testid="session-id" data-session-id={activeSessionId} className="font-mono">
+                  {activeSessionId.slice(0, 8)}...
+                </span>
+              </div>
+            )}
+            <SearchInput
+              onSubmit={handleSearch}
+              placeholder={showWelcome ? "Fragen Sie alles über Ihre Dokumente..." : "Neue Frage..."}
+              autoFocus={showWelcome}
+            />
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-5xl mx-auto py-8 px-6">
         {showWelcome ? (
           /* Welcome Screen with Quick Prompts */
           <div className="space-y-12">
@@ -186,6 +228,8 @@ export function HomePage() {
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

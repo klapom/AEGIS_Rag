@@ -614,6 +614,30 @@ class Settings(BaseSettings):
         default=3, description="Max retry count for Docling transient failures"
     )
 
+    # Embedding Backend Configuration (Sprint 35 Feature 35.8: Sentence-Transformers Migration)
+    embedding_backend: Literal["ollama", "sentence-transformers"] = Field(
+        default="ollama",
+        description=(
+            "Embedding service backend selection:\n"
+            "- 'ollama': Ollama HTTP API (default, backward compatible, ~50-100 emb/s)\n"
+            "- 'sentence-transformers': Direct GPU access (DGX Spark, ~500-1000 emb/s)"
+        ),
+    )
+    st_model_name: str = Field(
+        default="BAAI/bge-m3",
+        description="HuggingFace model for sentence-transformers backend (1024-dim)",
+    )
+    st_device: str = Field(
+        default="auto",
+        description="Device for sentence-transformers ('auto', 'cuda', 'cpu')",
+    )
+    st_batch_size: int = Field(
+        default=64,
+        ge=1,
+        le=512,
+        description="Batch size for sentence-transformers GPU processing",
+    )
+
     # Sprint 33 Performance: Parallel Ingestion Settings
     ingestion_parallel_files: int = Field(
         default=3,

@@ -3,10 +3,22 @@
  * Sprint 15 Feature 15.1: SSE Streaming Client (ADR-020)
  */
 
-import type { ChatRequest, ChatChunk, ChatResponse, SessionListResponse, ConversationHistoryResponse } from '../types/chat';
+import type { ChatRequest, ChatChunk, ChatResponse, SessionListResponse, ConversationHistoryResponse, SessionInfo } from '../types/chat';
 
 // Re-export types for easier imports
-export type { ChatChunk, ChatRequest, ChatResponse, SessionListResponse, ConversationHistoryResponse };
+export type { ChatChunk, ChatRequest, ChatResponse, SessionListResponse, ConversationHistoryResponse, SessionInfo };
+
+/**
+ * SessionSummary for SessionSidebar display
+ * Sprint 35 Feature 35.5
+ */
+export type SessionSummary = {
+  session_id: string;
+  title: string | null;
+  preview?: string;
+  updated_at: string;
+  message_count: number;
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -178,11 +190,36 @@ export async function deleteSession(sessionId: string): Promise<void> {
 }
 
 // Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
+// Sprint 35 Feature 35.4: Session Info Retrieval
+// Note: SessionInfo is imported from ../types/chat and re-exported above
 
 export interface TitleResponse {
   session_id: string;
   title: string;
   generated_at: string;
+}
+
+/**
+ * Get session information including title
+ * Sprint 35 Feature 35.4
+ *
+ * @param sessionId Session ID to get info for
+ * @returns SessionInfo with title, message count, and timestamps
+ */
+export async function getSessionInfo(sessionId: string): Promise<SessionInfo> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
 }
 
 /**
@@ -261,4 +298,27 @@ export async function getFollowUpQuestions(sessionId: string): Promise<string[]>
 
   const data: FollowUpQuestionsResponse = await response.json();
   return data.followup_questions || [];
+}
+
+/**
+ * Get full conversation for a session
+ * Sprint 35 Feature 35.5: Session History Sidebar
+ *
+ * @param sessionId Session ID to get conversation for
+ * @returns Conversation history with messages
+ */
+export async function getConversation(sessionId: string): Promise<ConversationHistoryResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/conversation`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
 }
