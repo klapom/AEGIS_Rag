@@ -52,10 +52,12 @@ async def save_conversation_turn(
     assistant_message: str,
     intent: str | None = None,
     sources: list["SourceDocument"] | None = None,
+    follow_up_questions: list[str] | None = None,
 ) -> bool:
     """Save a conversation turn to Redis.
 
     Sprint 17 Feature 17.2: Conversation History Persistence
+    Sprint 35 Feature 35.3: Follow-up Questions Redis Fix (TD-043)
 
     Args:
         session_id: Session ID
@@ -63,6 +65,7 @@ async def save_conversation_turn(
         assistant_message: Assistant's answer
         intent: Query intent (vector, graph, hybrid)
         sources: Source documents used
+        follow_up_questions: Generated follow-up questions (3-5)
 
     Returns:
         True if saved successfully
@@ -132,18 +135,21 @@ async def save_conversation_turn(
         )
 
         # Save updated conversation (7 days TTL)
+        # Sprint 35 Feature 35.3: Include follow-up questions in conversation storage
         conversation_data = {
             "messages": messages,
             "created_at": created_at,
             "updated_at": datetime.now(UTC).isoformat(),
             "message_count": len(messages),
+            "follow_up_questions": follow_up_questions or [],
         }
 
         logger.info(
             "storing_conversation_to_redis",
             session_id=session_id,
             message_count=len(messages),
-            sources_in_last_msg=len(serialized_sources)
+            sources_in_last_msg=len(serialized_sources),
+            follow_up_count=len(follow_up_questions) if follow_up_questions else 0
         )
 
         success = await redis_memory.store(
@@ -388,12 +394,20 @@ async def chat(request: ChatRequest) -> ChatResponse:
         )
 
         # Sprint 17 Feature 17.2: Save conversation to Redis
+        # Sprint 35 Feature 35.3: Generate and store follow-up questions
+        follow_up_questions = await generate_followup_questions(
+            query=request.query,
+            answer=answer,
+            sources=sources,
+        )
+
         save_success = await save_conversation_turn(
             session_id=session_id,
             user_message=request.query,
             assistant_message=answer,
             intent=result.get("intent"),
             sources=sources,
+            follow_up_questions=follow_up_questions,
         )
 
         if not save_success:
@@ -558,16 +572,29 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             logger.info("chat_stream_completed", session_id=session_id)
 
             # Sprint 17 Feature 17.2: Save conversation after streaming completes
+            # Sprint 35 Feature 35.3: Generate and store follow-up questions
             full_answer = "".join(collected_answer)
             if full_answer:
+                # Generate follow-up questions before saving
+                follow_up_questions = await generate_followup_questions(
+                    query=request.query,
+                    answer=full_answer,
+                    sources=collected_sources,
+                )
+
                 await save_conversation_turn(
                     session_id=session_id,
                     user_message=request.query,
                     assistant_message=full_answer,
                     intent=collected_intent,
                     sources=collected_sources,
+                    follow_up_questions=follow_up_questions,
                 )
-                logger.info("conversation_saved_after_streaming", session_id=session_id)
+                logger.info(
+                    "conversation_saved_after_streaming",
+                    session_id=session_id,
+                    follow_up_count=len(follow_up_questions) if follow_up_questions else 0
+                )
 
         except AegisRAGException as e:
             logger.error(
@@ -1252,6 +1279,21 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
         # Extract value from Redis wrapper
         if isinstance(conversation, dict) and "value" in conversation:
             conversation = conversation["value"]
+
+        # Sprint 35 Feature 35.3: Return stored follow-up questions if available
+        stored_questions = conversation.get("follow_up_questions", [])
+        if stored_questions:
+            logger.info(
+                "followup_questions_from_storage",
+                session_id=session_id,
+                count=len(stored_questions),
+            )
+            return FollowUpQuestionsResponse(
+                session_id=session_id,
+                followup_questions=stored_questions,
+                generated_at=conversation.get("updated_at", _get_iso_timestamp()),
+                from_cache=False,
+            )
 
         messages = conversation.get("messages", [])
 
