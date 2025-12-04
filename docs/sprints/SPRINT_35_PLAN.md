@@ -59,8 +59,9 @@ Sprint 35 fokussiert auf **Frontend User Experience Verbesserungen**. Nach erfol
 | 35.5 | Session History Sidebar | 8 | P1 | 35.4 |
 | 35.6 | Loading States & Animations | 5 | P2 | - |
 | 35.7 | Dark Mode Preparation | 5 | P2 | - |
+| 35.8 | Sentence-Transformers Embedding Migration (DGX Spark) | 5 | P2 | - |
 
-**Total: 52 SP**
+**Total: 57 SP**
 
 ---
 
@@ -451,6 +452,147 @@ function SessionSidebar() {
 - [ ] Dark Mode Toggle funktioniert
 - [ ] Farben wechseln korrekt
 - [ ] Preference wird gespeichert
+
+---
+
+### Feature 35.8: Sentence-Transformers Embedding Migration (5 SP)
+**Priority:** P2
+**Context:** DGX Spark Optimization
+
+**Problem:**
+Aktuell laeuft BGE-M3 Embedding ueber Ollama (HTTP API). Dies ist ineffizient:
+- Einzelne Text-pro-Request (kein Batching)
+- HTTP-Overhead pro Embedding
+- GPU-Auslastung nur ~30-50%
+- Durchsatz: ~50-100 embeddings/s
+
+**Loesung:**
+Migration zu `sentence-transformers` fuer direkte GPU-Nutzung:
+- Native Batch-Verarbeitung (100+ Texte parallel)
+- Kein HTTP-Overhead (direkter GPU-Zugriff)
+- GPU-Auslastung: ~90%+
+- Durchsatz: ~500-1000 embeddings/s (5-10x schneller)
+
+**Performance-Vergleich:**
+
+| Aspekt | Ollama | Sentence-Transformers |
+|--------|--------|----------------------|
+| Batch-Verarbeitung | Einzeln (1 Text/Call) | Native (100+ parallel) |
+| GPU-Auslastung | ~30-50% | ~90%+ |
+| Overhead | HTTP API pro Request | Direkter GPU-Zugriff |
+| Durchsatz | ~50-100 emb/s | ~500-1000 emb/s |
+
+**Implementation:**
+```python
+# src/components/shared/embedding_service.py - NEU (DGX Spark)
+from sentence_transformers import SentenceTransformer
+
+class SentenceTransformersEmbeddingService:
+    """High-performance embedding service using sentence-transformers.
+
+    Optimized for DGX Spark (128GB unified memory, Blackwell GPU).
+    5-10x faster than Ollama-based embeddings due to native batching.
+    """
+
+    def __init__(
+        self,
+        model_name: str = "BAAI/bge-m3",
+        device: str = "cuda",
+        batch_size: int = 64,
+    ):
+        self.model = SentenceTransformer(model_name, device=device)
+        self.batch_size = batch_size
+        self.embedding_dim = 1024  # BGE-M3
+        self.cache = LRUCache(max_size=10000)
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Embed batch of texts with GPU acceleration.
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of embedding vectors (1024-dim)
+        """
+        # Check cache first
+        uncached_texts = []
+        uncached_indices = []
+        results = [None] * len(texts)
+
+        for i, text in enumerate(texts):
+            cached = self.cache.get(self._cache_key(text))
+            if cached:
+                results[i] = cached
+            else:
+                uncached_texts.append(text)
+                uncached_indices.append(i)
+
+        # Batch encode uncached texts
+        if uncached_texts:
+            embeddings = self.model.encode(
+                uncached_texts,
+                batch_size=self.batch_size,
+                show_progress_bar=len(uncached_texts) > 100,
+                convert_to_numpy=True,
+            )
+
+            for idx, embedding in zip(uncached_indices, embeddings):
+                emb_list = embedding.tolist()
+                results[idx] = emb_list
+                self.cache.set(self._cache_key(texts[idx]), emb_list)
+
+        return results
+```
+
+**Konfiguration:**
+```python
+# src/core/config.py
+class Settings:
+    # Embedding Backend: "ollama" (default) or "sentence-transformers" (DGX Spark)
+    embedding_backend: str = "ollama"
+
+    # Sentence-Transformers Settings (nur wenn backend="sentence-transformers")
+    st_model_name: str = "BAAI/bge-m3"
+    st_device: str = "cuda"
+    st_batch_size: int = 64
+```
+
+**Environment Variable:**
+```bash
+# .env.dgx-spark.template
+EMBEDDING_BACKEND=sentence-transformers  # oder "ollama" fuer Standard
+ST_BATCH_SIZE=64  # Batch-Groesse fuer sentence-transformers
+```
+
+**Tasks:**
+- [ ] `SentenceTransformersEmbeddingService` Klasse implementieren
+- [ ] Factory-Pattern: `get_embedding_service()` waehlt Backend basierend auf Config
+- [ ] Batch-Embedding mit GPU-Acceleration
+- [ ] LRU-Cache Integration (bestehende Cache-Logik wiederverwenden)
+- [ ] Config-Option `EMBEDDING_BACKEND` hinzufuegen
+- [ ] Unit Tests fuer neuen Service
+- [ ] Performance-Benchmark: Ollama vs Sentence-Transformers
+- [ ] Dokumentation in `.env.dgx-spark.template`
+
+**Dependencies:**
+```toml
+# pyproject.toml - neue Dependency
+[tool.poetry.dependencies]
+sentence-transformers = "^2.2.0"  # Bereits vorhanden fuer Reranker
+```
+
+**Acceptance Criteria:**
+- [ ] Embedding-Backend konfigurierbar via Environment Variable
+- [ ] Sentence-Transformers Service mit Batch-Support
+- [ ] 5x+ Durchsatz-Verbesserung gegenueber Ollama (messbar)
+- [ ] Bestehende Tests bestehen (API-Kompatibilitaet)
+- [ ] Cache-Logik funktioniert identisch
+- [ ] GPU-Nutzung verifiziert auf DGX Spark
+
+**Backward Compatibility:**
+- Default bleibt `EMBEDDING_BACKEND=ollama` (keine Breaking Change)
+- DGX Spark nutzt `EMBEDDING_BACKEND=sentence-transformers`
+- API-Interface identisch (`embed_single()`, `embed_batch()`)
 
 ---
 
