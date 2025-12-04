@@ -1,0 +1,87 @@
+# =============================================================================
+# Dockerfile.docling-spark - Docling for NVIDIA DGX Spark (Grace Blackwell ARM64)
+# =============================================================================
+# Base: NVIDIA PyTorch container (ARM64 SBSA compatible)
+# Purpose: GPU-accelerated document parsing with EasyOCR
+#
+# Build:
+#   docker build -f docker/Dockerfile.docling-spark -t aegis-docling-spark:latest .
+#
+# Run:
+#   docker run --gpus=all -p 8080:5001 aegis-docling-spark:latest
+# =============================================================================
+
+# Use 25.01+ for Blackwell GB10 support (24.08 shows "GB10 not yet supported" warning)
+# ARM64 support confirmed: manifest shows arm64 platform
+FROM nvcr.io/nvidia/pytorch:25.01-py3
+
+LABEL maintainer="AegisRAG Team"
+LABEL description="Docling Document Parser for DGX Spark (ARM64)"
+LABEL version="1.0.0"
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies for Docling and EasyOCR
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # OpenCV dependencies
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    # PDF processing
+    poppler-utils \
+    # OCR fallback
+    tesseract-ocr \
+    tesseract-ocr-deu \
+    # Health check
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Install Docling with serve extras
+# IMPORTANT: NumPy/OpenCV compatibility fix for NVIDIA base image
+# The base image has pre-compiled binaries against NumPy 2.x
+# EasyOCR needs NumPy 1.x, so we must reinstall opencv after numpy downgrade
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip uninstall -y numpy opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true && \
+    pip install --no-cache-dir "numpy<2" && \
+    pip install --no-cache-dir --force-reinstall --no-deps opencv-python-headless && \
+    pip install --no-cache-dir \
+    "docling-serve" \
+    easyocr
+
+# Pre-download EasyOCR models (saves startup time)
+# Using || true to not fail build if download has issues
+RUN python -c "import easyocr; reader = easyocr.Reader(['en', 'de'], gpu=True); print('EasyOCR models downloaded')" || \
+    echo "WARN: EasyOCR preload skipped - models will download on first use"
+
+# Pre-download Docling models (layout, table structure)
+RUN python -c "from docling.document_converter import DocumentConverter; print('Docling initialized')" || \
+    echo "WARN: Docling preload skipped - models will download on first use"
+
+# Create cache directories with proper permissions
+RUN mkdir -p /root/.cache/huggingface /root/.EasyOCR
+
+# Environment variables for Docling
+ENV PORT=5001
+ENV DOCLING_LAZY_LOADING=true
+ENV DOCLING_OCR_ENGINE=easyocr
+ENV DOCLING_TABLE_STRUCTURE=true
+ENV DOCLING_LAYOUT_ANALYSIS=true
+ENV DOCLING_GENERATE_PICTURE_IMAGES=true
+ENV DOCLING_IMAGES_SCALE=2.0
+ENV LOG_LEVEL=INFO
+
+# Expose the API port
+EXPOSE 5001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:5001/health || exit 1
+
+# Run Docling serve (docling-serve run is the CLI command)
+CMD ["docling-serve", "run", "--host", "0.0.0.0", "--port", "5001"]
