@@ -1,9 +1,11 @@
 /**
  * ChatMessage Component
  * Sprint 35 Feature 35.1: Seamless Chat Flow (Claude/ChatGPT Style)
+ * Sprint 35 Feature 35.6: Loading States & Animations
  *
  * Renders a single chat message with avatar and content in a continuous flow layout.
  * Supports both user and assistant messages with Markdown rendering.
+ * Features smooth fade-in animation on mount.
  */
 
 import ReactMarkdown from 'react-markdown';
@@ -33,7 +35,7 @@ export function ChatMessage({ message, onCitationClick }: ChatMessageProps) {
 
   return (
     <div
-      className="flex gap-4 py-6 border-b border-gray-100 last:border-b-0"
+      className="flex gap-4 py-6 border-b border-gray-100 last:border-b-0 animate-fade-in"
       data-testid="chat-message"
       data-role={message.role}
     >
