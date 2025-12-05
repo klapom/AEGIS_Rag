@@ -53,11 +53,13 @@ from collections import OrderedDict
 from typing import Any
 
 import structlog
-from sentence_transformers import SentenceTransformer
 
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
+
+# Lazy import for optional dependency
+SentenceTransformer = None
 
 
 class LRUCache:
@@ -161,7 +163,7 @@ class SentenceTransformersEmbeddingService:
         self.device = device
         self.batch_size = batch_size
         self.embedding_dim = 1024  # BGE-M3 dimension
-        self._model: SentenceTransformer | None = None  # Lazy loading
+        self._model: Any = None  # Lazy loading - will be SentenceTransformer when loaded
         self.cache = LRUCache(max_size=cache_max_size)
 
         logger.info(
@@ -173,7 +175,7 @@ class SentenceTransformersEmbeddingService:
             cache_size=cache_max_size,
         )
 
-    def _load_model(self) -> SentenceTransformer:
+    def _load_model(self):
         """Load model lazily on first use.
 
         Returns:
@@ -185,8 +187,11 @@ class SentenceTransformersEmbeddingService:
             - Subsequent loads use cached model from disk
         """
         if self._model is None:
+            # Lazy import for optional dependency
+            from sentence_transformers import SentenceTransformer as ST
+
             load_start = time.perf_counter()
-            self._model = SentenceTransformer(self.model_name, device=self.device)
+            self._model = ST(self.model_name, device=self.device)
             load_duration_ms = (time.perf_counter() - load_start) * 1000
 
             logger.info(

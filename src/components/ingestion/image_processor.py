@@ -43,6 +43,7 @@ except ImportError:
     logger.warning("PIL (Pillow) not available. Install with: poetry install --with ingestion")
 
 # Sprint 23: Import DashScope VLM Client for cloud VLM routing
+# Sprint 36: Migrated to VLM Factory Pattern for local/cloud routing
 try:
     from src.components.llm_proxy.dashscope_vlm import get_dashscope_vlm_client
 
@@ -50,6 +51,15 @@ try:
 except ImportError:
     DASHSCOPE_VLM_AVAILABLE = False
     logger.warning("DashScope VLM not available, using direct Ollama only")
+
+# Sprint 36: Import VLM Factory for local/cloud routing
+try:
+    from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
+
+    VLM_FACTORY_AVAILABLE = True
+except ImportError:
+    VLM_FACTORY_AVAILABLE = False
+    logger.warning("VLM Factory not available, using legacy DashScope routing")
 
 # Sprint 25: Import AegisLLMProxy for VLM fallback
 try:
@@ -300,6 +310,131 @@ async def generate_vlm_description_with_dashscope(
         raise RuntimeError(f"DashScope VLM request failed: {e}") from e
 
 
+async def generate_vlm_description_with_factory(
+    image_path: Path,
+    prompt_template: str | None = None,
+    temperature: float = 0.7,
+    prefer_local: bool = True,
+) -> str:
+    """Generate image description using VLM Factory (Sprint 36 - Local-First).
+
+    Sprint 36: Uses VLM Factory Pattern for local/cloud routing
+    - Local-first: Try Ollama qwen3-vl:32b first, fallback to DashScope
+    - Cloud-first: Use DashScope directly (when prefer_local=False)
+
+    Args:
+        image_path: Path to image file
+        prompt_template: Custom prompt (optional)
+        temperature: Sampling temperature (0.0-1.0)
+        prefer_local: If True, try local Ollama first (default: True)
+
+    Returns:
+        VLM-generated description text
+
+    Raises:
+        RuntimeError: If VLM generation fails on all backends
+        FileNotFoundError: If image file doesn't exist
+
+    Examples:
+        >>> desc = await generate_vlm_description_with_factory(
+        ...     Path("/tmp/image.png")
+        ... )  # Local-first
+        >>> desc = await generate_vlm_description_with_factory(
+        ...     Path("/tmp/image.png"), prefer_local=False
+        ... )  # Cloud-only
+    """
+    if not VLM_FACTORY_AVAILABLE:
+        raise RuntimeError("VLM Factory not available, cannot use VLM routing")
+
+    if not image_path.exists():
+        raise FileNotFoundError(f"Image not found: {image_path}")
+
+    # Default prompt (Qwen3-VL best practice: simple and direct)
+    if prompt_template is None:
+        prompt = (
+            "Describe this image from a document in detail, including any text, "
+            "diagrams, charts, or important visual elements."
+        )
+    else:
+        prompt = prompt_template
+
+    # Local-first routing
+    if prefer_local:
+        # Try local Ollama first
+        try:
+            logger.info(
+                "Generating VLM description with local Ollama (VLM Factory)",
+                image_path=str(image_path),
+                backend="ollama",
+                temperature=temperature,
+            )
+
+            client = get_vlm_client(VLMBackend.OLLAMA)
+            description, metadata = await client.generate_image_description(
+                image_path=image_path,
+                prompt=prompt,
+                temperature=temperature,
+            )
+
+            logger.info(
+                "VLM description generated (local)",
+                model=metadata["model"],
+                tokens_total=metadata["tokens_total"],
+                cost_usd=metadata["cost_usd"],
+                description_length=len(description),
+            )
+
+            await client.close()
+            return description
+
+        except Exception as e:
+            logger.warning(
+                "Local Ollama VLM failed, falling back to cloud",
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+
+            # Fallback to cloud
+            if not DASHSCOPE_VLM_AVAILABLE:
+                raise RuntimeError(
+                    f"Local Ollama failed and DashScope unavailable: {e}"
+                ) from e
+
+    # Cloud routing (either prefer_local=False or local fallback)
+    try:
+        logger.info(
+            "Generating VLM description with DashScope (VLM Factory)",
+            image_path=str(image_path),
+            backend="dashscope",
+            temperature=temperature,
+        )
+
+        client = get_vlm_client(VLMBackend.DASHSCOPE)
+        description, metadata = await client.generate_image_description(
+            image_path=image_path,
+            prompt=prompt,
+            temperature=temperature,
+        )
+
+        logger.info(
+            "VLM description generated (cloud)",
+            model=metadata["model"],
+            tokens_total=metadata["tokens_total"],
+            description_length=len(description),
+        )
+
+        await client.close()
+        return description
+
+    except Exception as e:
+        logger.error(
+            "VLM description failed on all backends",
+            error=str(e),
+            image_path=str(image_path),
+        )
+        raise RuntimeError(f"VLM generation failed: {e}") from e
+
+
 async def generate_vlm_description_with_proxy(
     image_path: Path,
     temperature: float = 0.7,
@@ -484,14 +619,26 @@ class ImageProcessor:
             )
 
             # Generate VLM description
-            # Sprint 25 Feature 25.4: Direct async calls (no ThreadPoolExecutor complexity!)
-            if use_proxy and DASHSCOPE_VLM_AVAILABLE:
+            # Sprint 36 Feature 36.2: Use VLM Factory for local-first routing
+            if VLM_FACTORY_AVAILABLE:
                 logger.info(
-                    "Using DashScope VLM for description",
+                    "Using VLM Factory for description (local-first)",
+                    picture_index=picture_index,
+                    routing="vlm_factory_local_first",
+                )
+                # VLM Factory: Local Ollama → Cloud DashScope fallback
+                description = await generate_vlm_description_with_factory(
+                    image_path=temp_path,
+                    temperature=self.config.temperature,
+                    prefer_local=True,
+                )
+            elif use_proxy and DASHSCOPE_VLM_AVAILABLE:
+                logger.info(
+                    "Using DashScope VLM for description (legacy)",
                     picture_index=picture_index,
                     routing="cloud_vlm_with_fallback",
                 )
-                # Direct async call
+                # Legacy: Direct DashScope call
                 description = await generate_vlm_description_with_dashscope(
                     image_path=temp_path,
                     vl_high_resolution_images=False,
@@ -501,9 +648,9 @@ class ImageProcessor:
                     "Using AegisLLMProxy for VLM description (fallback)",
                     picture_index=picture_index,
                     routing="aegis_llm_proxy_fallback",
-                    reason="proxy_disabled" if not use_proxy else "dashscope_unavailable",
+                    reason="factory_unavailable",
                 )
-                # Direct async call to AegisLLMProxy
+                # Fallback: AegisLLMProxy
                 description = await generate_vlm_description_with_proxy(
                     image_path=temp_path,
                     temperature=self.config.temperature,

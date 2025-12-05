@@ -39,20 +39,23 @@ def mock_config():
     config = Mock(spec=LLMProxyConfig)
     config.providers = {
         "local_ollama": {"base_url": "http://localhost:11434", "timeout": 60},
-        "ollama_cloud": {
-            "base_url": "https://ollama.cloud",
-            "api_key": "test-key",
+        "alibaba_cloud": {
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "api_key": "test-key-alibaba",
             "timeout": 120,
         },
         "openai": {"api_key": "sk-test", "timeout": 60},
     }
     config.budgets = {
-        "monthly_limits": {"ollama_cloud": 120.0, "openai": 80.0},
+        "monthly_limits": {"alibaba_cloud": 120.0, "openai": 80.0},
         "alert_threshold": 0.8,
+    }
+    config.routing = {
+        "prefer_cloud": False,  # Added: routing config was missing
     }
     config.model_defaults = {
         "local_ollama": {"extraction": "gemma-3-4b-it-Q8_0"},
-        "ollama_cloud": {"extraction": "llama3-70b"},
+        "alibaba_cloud": {"extraction": "qwen3-32b"},
         "openai": {"extraction": "gpt-4o"},
     }
 
@@ -80,6 +83,7 @@ def proxy_with_all_providers(mock_config):
 def proxy_local_only(mock_config):
     """AegisLLMProxy with only local provider."""
     mock_config.providers = {"local_ollama": {"base_url": "http://localhost:11434"}}
+    mock_config.routing = {"prefer_cloud": False}  # Ensure routing exists
     mock_config.is_provider_enabled = Mock(side_effect=lambda p: p == "local_ollama")
 
     proxy = AegisLLMProxy(config=mock_config)
@@ -207,7 +211,7 @@ def test_routing_critical_quality_low_complexity_does_not_route_to_openai(proxy_
 
 
 def test_routing_high_quality_high_complexity_routes_to_ollama_cloud(proxy_with_all_providers):
-    """High quality + high complexity → Ollama Cloud (cost-effective)."""
+    """High quality + high complexity → Alibaba Cloud (cost-effective)."""
     task = LLMTask(
         task_type=TaskType.EXTRACTION,
         prompt="Extract entities from standard document...",
@@ -217,7 +221,7 @@ def test_routing_high_quality_high_complexity_routes_to_ollama_cloud(proxy_with_
 
     provider, reason = proxy_with_all_providers._route_task(task)
 
-    assert provider == "ollama_cloud"
+    assert provider == "alibaba_cloud"
     assert reason == "high_quality_high_complexity"
 
 
@@ -240,7 +244,7 @@ def test_routing_high_quality_medium_complexity_does_not_route_to_ollama(proxy_w
 
 
 def test_routing_batch_processing_large_routes_to_ollama_cloud(proxy_with_all_providers):
-    """Batch processing (>10 docs) → Ollama Cloud (parallel processing)."""
+    """Batch processing (>10 docs) → Alibaba Cloud (parallel processing)."""
     task = LLMTask(
         task_type=TaskType.EXTRACTION,
         prompt="Extract entities from batch...",
@@ -250,7 +254,7 @@ def test_routing_batch_processing_large_routes_to_ollama_cloud(proxy_with_all_pr
 
     provider, reason = proxy_with_all_providers._route_task(task)
 
-    assert provider == "ollama_cloud"
+    assert provider == "alibaba_cloud"
     assert reason == "batch_processing"
 
 
@@ -320,8 +324,8 @@ def test_routing_openai_not_available_falls_back(proxy_local_only):
     assert reason == "default_local"
 
 
-def test_routing_ollama_cloud_not_available_falls_back(proxy_local_only):
-    """If Ollama Cloud not available, fall back to local for batch."""
+def test_routing_alibaba_cloud_not_available_falls_back(proxy_local_only):
+    """If Alibaba Cloud not available, fall back to local for batch."""
     task = LLMTask(
         task_type=TaskType.EXTRACTION,
         prompt="Extract entities from batch...",
@@ -331,7 +335,7 @@ def test_routing_ollama_cloud_not_available_falls_back(proxy_local_only):
 
     provider, reason = proxy_local_only._route_task(task)
 
-    # Ollama Cloud not available → should use local
+    # Alibaba Cloud not available → should use local
     assert provider == "local_ollama"
     assert reason == "default_local"
 
@@ -356,7 +360,7 @@ def test_routing_public_legal_document_routes_to_openai(proxy_with_all_providers
 
 
 def test_routing_internal_document_high_quality_routes_to_ollama(proxy_with_all_providers):
-    """Internal document (not confidential) → Ollama Cloud if high quality."""
+    """Internal document (not confidential) → Alibaba Cloud if high quality."""
     task = LLMTask(
         task_type=TaskType.EXTRACTION,
         prompt="Extract data from internal report...",
@@ -367,7 +371,7 @@ def test_routing_internal_document_high_quality_routes_to_ollama(proxy_with_all_
 
     provider, reason = proxy_with_all_providers._route_task(task)
 
-    assert provider == "ollama_cloud"
+    assert provider == "alibaba_cloud"
     assert reason == "high_quality_high_complexity"
 
 
@@ -420,7 +424,7 @@ def test_routing_batch_size_10_threshold_does_not_route_to_ollama(proxy_with_all
 
 
 def test_routing_batch_size_11_routes_to_ollama(proxy_with_all_providers):
-    """Batch size 11 (> 10) should route to Ollama Cloud."""
+    """Batch size 11 (> 10) should route to Alibaba Cloud."""
     task = LLMTask(
         task_type=TaskType.EXTRACTION,
         prompt="Extract entities...",
@@ -429,7 +433,7 @@ def test_routing_batch_size_11_routes_to_ollama(proxy_with_all_providers):
 
     provider, reason = proxy_with_all_providers._route_task(task)
 
-    assert provider == "ollama_cloud"
+    assert provider == "alibaba_cloud"
     assert reason == "batch_processing"
 
 
@@ -492,30 +496,44 @@ def test_model_selection_uses_config_default(proxy_with_all_providers, mock_conf
 
 def test_cost_calculation_local_is_free(proxy_with_all_providers):
     """Local Ollama should have zero cost."""
-    cost = proxy_with_all_providers._calculate_cost("local_ollama", tokens=1000)
+    cost = proxy_with_all_providers._calculate_cost(
+        "local_ollama", tokens_input=500, tokens_output=500
+    )
     assert cost == 0.0
 
 
-def test_cost_calculation_ollama_cloud_correct(proxy_with_all_providers):
-    """Ollama Cloud should cost $0.001 per 1k tokens."""
-    cost = proxy_with_all_providers._calculate_cost("ollama_cloud", tokens=1000)
-    assert cost == pytest.approx(0.001, abs=1e-6)
+def test_cost_calculation_alibaba_cloud_correct(proxy_with_all_providers):
+    """Alibaba Cloud should cost $0.05 per 1M input + $0.2 per 1M output tokens."""
+    # 1000 input tokens + 1000 output tokens
+    cost = proxy_with_all_providers._calculate_cost(
+        "alibaba_cloud", tokens_input=1000, tokens_output=1000
+    )
+    # (1000/1M)*0.05 + (1000/1M)*0.2 = 0.00005 + 0.0002 = 0.00025
+    assert cost == pytest.approx(0.00025, abs=1e-6)
 
 
 def test_cost_calculation_openai_correct(proxy_with_all_providers):
-    """OpenAI should cost $0.015 per 1k tokens (avg)."""
-    cost = proxy_with_all_providers._calculate_cost("openai", tokens=1000)
-    assert cost == pytest.approx(0.015, abs=1e-6)
+    """OpenAI should cost $2.50 per 1M input + $10.00 per 1M output tokens."""
+    # 1000 input tokens + 1000 output tokens
+    cost = proxy_with_all_providers._calculate_cost(
+        "openai", tokens_input=1000, tokens_output=1000
+    )
+    # (1000/1M)*2.50 + (1000/1M)*10.00 = 0.0025 + 0.01 = 0.0125
+    assert cost == pytest.approx(0.0125, abs=1e-6)
 
 
 def test_cost_calculation_tracks_total(proxy_with_all_providers):
     """Total cost should accumulate across requests."""
     initial_total = proxy_with_all_providers._total_cost
 
-    proxy_with_all_providers._calculate_cost("openai", tokens=1000)  # +$0.015
-    proxy_with_all_providers._calculate_cost("ollama_cloud", tokens=1000)  # +$0.001
+    proxy_with_all_providers._calculate_cost(
+        "openai", tokens_input=1000, tokens_output=1000
+    )  # +$0.0125
+    proxy_with_all_providers._calculate_cost(
+        "alibaba_cloud", tokens_input=1000, tokens_output=1000
+    )  # +$0.00025
 
-    expected_total = initial_total + 0.015 + 0.001
+    expected_total = initial_total + 0.0125 + 0.00025
     assert proxy_with_all_providers._total_cost == pytest.approx(expected_total, abs=1e-6)
 
 

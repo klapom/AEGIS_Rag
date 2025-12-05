@@ -26,6 +26,7 @@ import tempfile
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.cost_tracker import CostTracker
 from src.components.llm_proxy.models import LLMTask, TaskType
+from src.components.llm_proxy.config import LLMProxyConfig
 
 
 # ============================================================================
@@ -43,6 +44,57 @@ def temp_db_path():
     # Cleanup
     if temp_path.exists():
         temp_path.unlink()
+
+
+@pytest.fixture
+def mock_llm_proxy_config():
+    """Create mock LLMProxyConfig for testing.
+
+    This fixture provides a minimal valid config to avoid loading from YAML files.
+    """
+    config = MagicMock(spec=LLMProxyConfig)
+
+    # Configure providers
+    config.providers = {
+        "local_ollama": {
+            "base_url": "http://localhost:11434",
+        },
+        "alibaba_cloud": {
+            "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+            "api_key": "test-key",
+        },
+        "openai": {
+            "base_url": "https://api.openai.com/v1",
+            "api_key": "test-key",
+        },
+    }
+
+    config.budgets = {
+        "monthly_limits": {
+            "alibaba_cloud": 10.0,
+            "openai": 20.0,
+        },
+    }
+
+    config.routing = {
+        "prefer_cloud": False,
+    }
+
+    config.model_defaults = {
+        "local_ollama": {"extraction": "gemma-3-4b-it-Q8_0"},
+        "alibaba_cloud": {"extraction": "qwen3-32b"},
+        "openai": {"extraction": "gpt-4o"},
+    }
+
+    config.fallback = {}
+    config.monitoring = {"enabled": True}
+
+    # Configure methods
+    config.is_provider_enabled = MagicMock(return_value=True)
+    config.get_budget_limit = MagicMock(return_value=10.0)
+    config.get_default_model = MagicMock(return_value="test-model")
+
+    return config
 
 
 @pytest.fixture
@@ -114,12 +166,14 @@ def mock_response_partial_usage():
 class TestTokenParsing:
     """Test accurate token parsing from ANY-LLM response."""
 
-    async def test_parse_tokens_with_complete_usage(self, mock_response_with_usage, temp_db_path):
+    async def test_parse_tokens_with_complete_usage(
+        self, mock_response_with_usage, temp_db_path, mock_llm_proxy_config
+    ):
         """Test parsing tokens when usage object is complete."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage
 
-            proxy = AegisLLMProxy()
+            proxy = AegisLLMProxy(config=mock_llm_proxy_config)
             proxy.cost_tracker = CostTracker(db_path=temp_db_path)
 
             task = LLMTask(
@@ -140,7 +194,7 @@ class TestTokenParsing:
                 assert stats["total_requests"] >= 1
 
     async def test_parse_tokens_fallback_without_usage(
-        self, mock_response_without_usage, temp_db_path
+        self, mock_response_without_usage, temp_db_path, mock_llm_proxy_config
     ):
         """Test fallback to 50/50 split when usage field missing."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
@@ -149,9 +203,11 @@ class TestTokenParsing:
             response.choices = [MagicMock()]
             response.choices[0].message.content = "Test response"
             response.usage = None  # No usage field
+            response.tokens_used = 100  # Set numeric value for fallback
+            response.total_tokens = None
             mock_acomp.return_value = response
 
-            proxy = AegisLLMProxy()
+            proxy = AegisLLMProxy(config=mock_llm_proxy_config)
             proxy.cost_tracker = CostTracker(db_path=temp_db_path)
 
             task = LLMTask(
@@ -165,18 +221,18 @@ class TestTokenParsing:
             assert result.tokens_used >= 0
 
     async def test_parse_tokens_with_zero_values(
-        self, mock_response_with_zero_tokens, temp_db_path
+        self, mock_response_with_zero_tokens, temp_db_path, mock_llm_proxy_config
     ):
         """Test handling of zero token responses."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_zero_tokens
 
-            proxy = AegisLLMProxy()
+            proxy = AegisLLMProxy(config=mock_llm_proxy_config)
             proxy.cost_tracker = CostTracker(db_path=temp_db_path)
 
             task = LLMTask(
                 task_type=TaskType.GENERATION,
-                prompt="",
+                prompt="Test prompt",  # Fixed: non-empty prompt (Pydantic validation requires min length 1)
             )
 
             result = await proxy.generate(task)
@@ -185,12 +241,14 @@ class TestTokenParsing:
             assert result.tokens_used == 0
             assert result.cost_usd == 0.0
 
-    async def test_parse_tokens_with_none_values(self, mock_response_partial_usage, temp_db_path):
+    async def test_parse_tokens_with_none_values(
+        self, mock_response_partial_usage, temp_db_path, mock_llm_proxy_config
+    ):
         """Test handling of None values in usage object."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_partial_usage
 
-            proxy = AegisLLMProxy()
+            proxy = AegisLLMProxy(config=mock_llm_proxy_config)
             proxy.cost_tracker = CostTracker(db_path=temp_db_path)
 
             task = LLMTask(
@@ -271,9 +329,9 @@ class TestCostCalculation:
             tokens_total=100000,  # 100k total
         )
 
-        # Expected: average rate ($0.125/1M) * 100k
-        # = 0.0125
-        expected = (100000 / 1_000_000) * 0.000125
+        # Expected: average rate ($0.125/1M) * 100k tokens
+        # = (100000/1000000) * 0.125 = 0.0125
+        expected = (100000 / 1_000_000) * 0.125
         assert abs(cost - expected) < 0.0001
 
     def test_calculate_cost_alibaba_vs_legacy(self):
@@ -307,7 +365,7 @@ class TestCostCalculation:
 
         # Verify calculations
         expected_accurate = (1000 / 1_000_000) * 0.05 + (4000 / 1_000_000) * 0.2
-        expected_legacy = (5000 / 1_000_000) * 0.000125
+        expected_legacy = (5000 / 1_000_000) * 0.125
         assert abs(cost_accurate - expected_accurate) < 0.0001
         assert abs(cost_legacy - expected_legacy) < 0.0001
 
@@ -445,12 +503,14 @@ class TestEdgeCases:
         assert abs(cost - expected) < 0.01
 
     @pytest.mark.asyncio
-    async def test_generate_preserves_token_accuracy(self, mock_response_with_usage, temp_db_path):
+    async def test_generate_preserves_token_accuracy(
+        self, mock_response_with_usage, temp_db_path, mock_llm_proxy_config
+    ):
         """Test that full generate() flow preserves token accuracy."""
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage
 
-            proxy = AegisLLMProxy()
+            proxy = AegisLLMProxy(config=mock_llm_proxy_config)
             proxy.cost_tracker = CostTracker(db_path=temp_db_path)
 
             task = LLMTask(

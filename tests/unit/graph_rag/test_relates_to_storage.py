@@ -135,14 +135,18 @@ async def test_store_relations_to_neo4j_missing_entities(mocker):
 
 
 @pytest.mark.asyncio
-async def test_store_relations_to_neo4j_not_initialized():
+async def test_store_relations_to_neo4j_not_initialized(mocker):
     """Test that method raises error when LightRAG not initialized."""
     client = LightRAGClient()
     client._initialized = False
+    client.rag = None  # Ensure rag is None
 
     relations = [{"source": "A", "target": "B", "description": "Related", "strength": 5}]
 
-    with pytest.raises(Exception):  # Should raise during _ensure_initialized or RuntimeError
+    # Mock _ensure_initialized to not set rag (simulate failed initialization)
+    mocker.patch.object(client, "_ensure_initialized", new_callable=mocker.AsyncMock)
+
+    with pytest.raises(RuntimeError, match="Neo4j storage not initialized"):
         await client._store_relations_to_neo4j(relations=relations, chunk_id="abc123")
 
 

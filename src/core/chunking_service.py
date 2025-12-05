@@ -1,34 +1,53 @@
-"""Unified Chunking Service.
+"""Unified Chunking Service - Single Source of Truth (Sprint 36 Feature 36.6).
 
-Sprint 16 Feature 16.1 - Unified Chunking Service
-ADR-022: Unified Chunking Service
-Sprint 24 Feature 24.15 - Lazy imports for optional llama_index dependency
+TD-054: Unified Chunking Service
+ADR-039: Adaptive Section-Aware Chunking
 
-This module provides a single source of truth for document chunking
-across all ingestion pipelines (Qdrant, BM25, LightRAG).
+This module provides a SINGLE SOURCE OF TRUTH for document chunking
+across ALL ingestion pipelines (Qdrant, BM25, LightRAG/Neo4j).
+
+Architecture:
+- ChunkingService class: Central chunking logic
+- Multiple strategies: adaptive (section-aware), fixed, sentence, paragraph
+- Unified Chunk model: Same chunks go to all indexes
+- Configuration-driven: ChunkStrategy for strategy selection
 
 Benefits:
 - Eliminates code duplication (70% reduction)
-- Guarantees consistent chunk boundaries
+- Guarantees consistent chunk boundaries across all indexes
 - SHA-256 chunk_id enables graph-vector alignment
-- Configuration-driven strategies
-- Prometheus metrics for observability
+- Section-aware chunking for better retrieval quality (ADR-039)
 
-Dependencies:
-- fixed strategy: tiktoken only (always available)
-- adaptive/paragraph strategies: llama_index (optional "ingestion" group)
-- sentence strategy: no dependencies (regex only)
+Consumers (ALL must use this service):
+- Qdrant (vector embeddings)
+- BM25 (keyword search)
+- Neo4j/LightRAG (graph nodes)
+
+Example:
+    >>> service = ChunkingService()
+    >>> chunks = await service.chunk_document(
+    ...     text="Sample document...",
+    ...     document_id="doc_123",
+    ...     sections=[...],  # From Docling section extraction
+    ... )
+    >>> # Same chunks go to all indexes
+    >>> await index_to_qdrant(chunks)
+    >>> await index_to_bm25(chunks)
+    >>> await index_to_neo4j(chunks)
 """
 
+import hashlib
 import re
 import time
+from enum import Enum
 from typing import TYPE_CHECKING
 
 import structlog
 import tiktoken
 from prometheus_client import Counter, Gauge, Histogram
+from pydantic import BaseModel, Field
 
-from src.core.chunk import Chunk, ChunkStrategy
+from src.core.chunk import Chunk
 
 # TYPE_CHECKING imports - needed for type hints (string literals)
 # Runtime imports are lazy-loaded in methods
@@ -64,153 +83,242 @@ documents_chunked_total = Counter(
 )
 
 
-class ChunkingService:
-    """Unified chunking service for all ingestion pipelines.
+# =============================================================================
+# CONFIGURATION MODELS
+# =============================================================================
 
-    Provides three chunking strategies:
-    1. **fixed**: Fixed-size chunks using tiktoken (token-based, used by LightRAG)
-    2. **adaptive**: Adaptive chunks using LlamaIndex SentenceSplitter (sentence-aware)
-    3. **paragraph**: Paragraph-based chunks with separator (semantic boundaries)
 
-    Example:
-        >>> service = ChunkingService(ChunkStrategy(method="adaptive", chunk_size=512))
-        >>> chunks = service.chunk_document("doc_001", "Sample text...", metadata={"source": "test.md"})
-        >>> len(chunks)
-        3
+class ChunkStrategyEnum(str, Enum):
+    """Available chunking strategies."""
+
+    ADAPTIVE = "adaptive"  # Section-aware, 800-1800 tokens (ADR-039)
+    FIXED = "fixed"  # Fixed-size chunks with tiktoken
+    SENTENCE = "sentence"  # Sentence-based splitting
+    PARAGRAPH = "paragraph"  # Paragraph-based splitting
+
+
+class ChunkingConfig(BaseModel):
+    """Configuration for chunking behavior."""
+
+    strategy: ChunkStrategyEnum = Field(
+        default=ChunkStrategyEnum.ADAPTIVE,
+        description="Chunking strategy to use",
+    )
+    min_tokens: int = Field(
+        default=800,
+        ge=100,
+        le=2000,
+        description="Minimum tokens per chunk (adaptive strategy)",
+    )
+    max_tokens: int = Field(
+        default=1800,
+        ge=500,
+        le=4000,
+        description="Maximum tokens per chunk",
+    )
+    overlap_tokens: int = Field(
+        default=100,
+        ge=0,
+        le=500,
+        description="Overlap between chunks in tokens",
+    )
+    preserve_sections: bool = Field(
+        default=True,
+        description="Preserve section boundaries (adaptive strategy)",
+    )
+    large_section_threshold: int = Field(
+        default=1200,
+        ge=500,
+        le=3000,
+        description="Threshold for standalone sections (adaptive strategy)",
+    )
+
+    class Config:
+        use_enum_values = True
+
+
+# =============================================================================
+# SECTION METADATA (from Docling extraction)
+# =============================================================================
+
+
+class SectionMetadata(BaseModel):
+    """Section metadata from Docling extraction.
+
+    This model represents a document section extracted from Docling JSON.
+    Used as input for section-aware adaptive chunking.
     """
 
-    def __init__(self, strategy: ChunkStrategy | None = None) -> None:
-        """Initialize chunking service with strategy.
+    heading: str = Field(..., description="Section heading text")
+    level: int = Field(default=1, ge=1, le=6, description="Heading level")
+    page_no: int = Field(default=0, ge=0, description="Page number")
+    bbox: dict[str, float] = Field(
+        default_factory=dict,
+        description="Bounding box coordinates",
+    )
+    text: str = Field(..., description="Section text content")
+    token_count: int = Field(default=0, ge=0, description="Token count")
+    metadata: dict = Field(default_factory=dict, description="Additional metadata")
+
+
+# =============================================================================
+# UNIFIED CHUNKING SERVICE
+# =============================================================================
+
+
+class ChunkingService:
+    """Unified chunking service for all consumers.
+
+    This is the SINGLE SOURCE OF TRUTH for chunking.
+    All consumers (Qdrant, BM25, Neo4j) MUST use this service.
+
+    Strategies:
+    1. **adaptive**: Section-aware chunking (800-1800 tokens, respects document structure)
+    2. **fixed**: Fixed-size chunks with tiktoken (token-accurate)
+    3. **sentence**: Sentence-based splitting with regex
+    4. **paragraph**: Paragraph-based splitting
+
+    Example:
+        >>> service = ChunkingService()
+        >>> chunks = await service.chunk_document(
+        ...     text="Sample document...",
+        ...     document_id="doc_123",
+        ...     sections=[...],  # From Docling
+        ... )
+        >>>
+        >>> # Same chunks go to all indexes
+        >>> await index_to_qdrant(chunks)
+        >>> await index_to_bm25(chunks)
+        >>> await index_to_neo4j(chunks)
+    """
+
+    def __init__(self, config: ChunkingConfig | None = None) -> None:
+        """Initialize chunking service.
 
         Args:
-            strategy: Chunking strategy configuration (default: adaptive with 512 tokens, 128 overlap)
+            config: Chunking configuration (uses defaults if None)
         """
-        self.strategy = strategy or ChunkStrategy()
-        self._chunker = self._init_chunker()
+        self.config = config or ChunkingConfig()
+
+        # Initialize tokenizer for token counting
+        try:
+            self._tokenizer = tiktoken.get_encoding("cl100k_base")
+        except Exception as e:
+            logger.warning("tiktoken_init_failed", error=str(e))
+            self._tokenizer = None
 
         logger.info(
             "chunking_service_initialized",
-            method=self.strategy.method,
-            chunk_size=self.strategy.chunk_size,
-            overlap=self.strategy.overlap,
+            strategy=self.config.strategy,
+            min_tokens=self.config.min_tokens,
+            max_tokens=self.config.max_tokens,
+            overlap=self.config.overlap_tokens,
         )
 
-    def _init_chunker(
-        self,
-    ) -> "SentenceSplitter | tiktoken.Encoding | None":  # String literal for type hint
-        """Initialize chunker based on strategy.
-
-        Sprint 24 Feature 24.15: Lazy import for adaptive/paragraph strategies.
-
-        Returns:
-            Chunker instance (SentenceSplitter for adaptive/paragraph, tiktoken for fixed, None for sentence)
-
-        Raises:
-            ImportError: If llama_index not installed for adaptive/paragraph strategies
-        """
-        if self.strategy.method == "fixed":
-            # Fixed-size chunking with tiktoken (token-accurate, used by LightRAG)
-            # NO llama_index needed!
-            try:
-                return tiktoken.get_encoding("cl100k_base")
-            except Exception as e:
-                logger.error("tiktoken_init_failed", error=str(e))
-                raise
-
-        elif self.strategy.method in ("adaptive", "paragraph"):
-            # ================================================================
-            # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
-            # ================================================================
-            # Adaptive/paragraph chunking requires SentenceSplitter from llama_index.
-            # Load it lazily only when these strategies are used.
-            # ================================================================
-            try:
-                from llama_index.core.node_parser import SentenceSplitter
-            except ImportError as e:
-                error_msg = (
-                    f"llama_index is required for '{self.strategy.method}' chunking strategy but is not installed.\n\n"
-                    "INSTALLATION OPTIONS:\n"
-                    "1. poetry install --with ingestion\n"
-                    "2. poetry install --all-extras\n\n"
-                    "ALTERNATIVE STRATEGIES (no llama_index needed):\n"
-                    "- 'fixed': Token-based chunking with tiktoken\n"
-                    "- 'sentence': Regex-based sentence chunking\n"
-                )
-                logger.error(
-                    "llamaindex_import_failed",
-                    strategy=self.strategy.method,
-                    error=str(e),
-                    install_command="poetry install --with ingestion",
-                )
-                raise ImportError(error_msg) from e
-
-            return SentenceSplitter(
-                chunk_size=self.strategy.chunk_size,
-                chunk_overlap=self.strategy.overlap,
-                separator=self.strategy.separator if self.strategy.method == "paragraph" else " ",
-            )
-
-        elif self.strategy.method == "sentence":
-            # Sentence-based chunking (simple regex, no external chunker needed)
-            # NO llama_index needed!
-            return None
-
-        else:
-            raise ValueError(f"Unknown chunking method: {self.strategy.method}")
-
-    def chunk_document(
-        self,
-        document_id: str,
-        content: str,
-        metadata: dict | None = None,
-    ) -> list[Chunk]:
-        """Chunk a document into uniform chunks.
+    def _count_tokens(self, text: str) -> int:
+        """Count tokens using tiktoken.
 
         Args:
-            document_id: Unique document identifier
-            content: Document text content
-            metadata: Additional metadata to attach to chunks
+            text: Text to count tokens for
 
         Returns:
-            List of Chunk objects with consistent IDs, boundaries, metadata
+            Token count
+        """
+        if self._tokenizer:
+            try:
+                return len(self._tokenizer.encode(text))
+            except Exception:
+                pass
+
+        # Fallback: approximate token count (avg 4 chars/token)
+        return max(1, len(text) // 4)
+
+    def _generate_chunk_id(
+        self, document_id: str, chunk_index: int, text: str
+    ) -> str:
+        """Generate unique chunk ID.
+
+        Format: UUID4-style (8-4-4-4-12 hex chars with dashes)
+        Hash ensures uniqueness even if content changes.
+
+        Args:
+            document_id: Document identifier
+            chunk_index: Chunk index within document
+            text: Chunk text content
+
+        Returns:
+            Unique chunk ID
+        """
+        return Chunk.generate_chunk_id(document_id, chunk_index, text)
+
+    async def chunk_document(
+        self,
+        text: str,
+        document_id: str,
+        sections: list[SectionMetadata] | list[dict] | None = None,
+        metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Chunk document using configured strategy.
+
+        This is the MAIN ENTRY POINT for all chunking.
+        ALL consumers must use this method.
+
+        Args:
+            text: Full document text
+            document_id: Unique document identifier
+            sections: Optional section information from Docling (for adaptive strategy)
+            metadata: Optional document-level metadata
+
+        Returns:
+            List of Chunk objects with consistent IDs and metadata
 
         Raises:
-            ValueError: If content is empty or chunking fails
+            ValueError: If text is empty
 
         Example:
             >>> service = ChunkingService()
-            >>> chunks = service.chunk_document("doc_001", "Sample text...", {"source": "test.md"})
-            >>> chunks[0].chunk_id
-            'a1b2c3d4e5f6g7h8'
+            >>> chunks = await service.chunk_document(
+            ...     text="Sample document...",
+            ...     document_id="doc_123",
+            ...     sections=[...],
+            ... )
         """
-        if not content or not content.strip():
+        if not text or not text.strip():
             raise ValueError("Content cannot be empty")
 
         logger.info(
             "chunking_document_start",
             document_id=document_id,
-            content_length=len(content),
-            method=self.strategy.method,
+            text_length=len(text),
+            strategy=self.config.strategy,
+            has_sections=sections is not None and len(sections or []) > 0,
         )
 
         # Measure chunking duration
         start_time = time.time()
 
+        # Convert dict sections to SectionMetadata if needed
+        if sections and isinstance(sections[0], dict):
+            sections = [SectionMetadata(**s) for s in sections]
+
         # Route to appropriate chunking method
-        if self.strategy.method == "fixed":
-            chunks = self._chunk_fixed(document_id, content, metadata)
-        elif self.strategy.method == "adaptive":
-            chunks = self._chunk_adaptive(document_id, content, metadata)
-        elif self.strategy.method == "paragraph":
-            chunks = self._chunk_paragraph(document_id, content, metadata)
-        elif self.strategy.method == "sentence":
-            chunks = self._chunk_sentence(document_id, content, metadata)
+        if self.config.strategy == ChunkStrategyEnum.ADAPTIVE:
+            chunks = await self._chunk_adaptive(
+                text, document_id, sections, metadata
+            )
+        elif self.config.strategy == ChunkStrategyEnum.FIXED:
+            chunks = await self._chunk_fixed(text, document_id, metadata)
+        elif self.config.strategy == ChunkStrategyEnum.SENTENCE:
+            chunks = await self._chunk_sentence(text, document_id, metadata)
+        elif self.config.strategy == ChunkStrategyEnum.PARAGRAPH:
+            chunks = await self._chunk_paragraph(text, document_id, metadata)
         else:
-            raise ValueError(f"Unknown chunking method: {self.strategy.method}")
+            raise ValueError(f"Unknown chunking strategy: {self.config.strategy}")
 
         # Record metrics
         duration = time.time() - start_time
-        strategy_label = self.strategy.method
+        # Handle both enum and string (use_enum_values=True converts to string)
+        strategy_label = self.config.strategy if isinstance(self.config.strategy, str) else self.config.strategy.value
 
         chunking_duration_seconds.labels(strategy=strategy_label).observe(duration)
         chunks_created_total.labels(strategy=strategy_label).inc(len(chunks))
@@ -224,380 +332,396 @@ class ChunkingService:
             "chunking_document_complete",
             document_id=document_id,
             chunks_created=len(chunks),
-            avg_tokens_per_chunk=sum(c.token_count for c in chunks) / len(chunks) if chunks else 0,
-            duration_seconds=duration,
+            avg_tokens_per_chunk=(
+                sum(c.token_count for c in chunks) / len(chunks) if chunks else 0
+            ),
+            duration_seconds=round(duration, 3),
         )
 
         return chunks
 
-    def _chunk_fixed(
+    async def _chunk_adaptive(
         self,
+        text: str,
         document_id: str,
-        content: str,
-        metadata: dict | None,
+        sections: list[SectionMetadata] | None = None,
+        metadata: dict | None = None,
     ) -> list[Chunk]:
-        """Fixed-size chunking using tiktoken (token-based).
+        """Section-aware adaptive chunking (ADR-039).
 
-        This method provides token-accurate chunking using tiktoken,
-        matching the behavior of LightRAG for consistency.
+        Strategy:
+        - Large sections (>large_section_threshold): Split at sentence boundaries
+        - Small sections (<min_tokens): Merge with neighbors
+        - Medium sections: Keep as-is
+        - Track multi-section metadata (section_headings, pages, bboxes)
 
         Args:
+            text: Document text
             document_id: Document identifier
-            content: Document text
-            metadata: Additional metadata
+            sections: Section metadata from Docling
+            metadata: Document metadata
 
         Returns:
-            List of fixed-size chunks
+            List of Chunk objects
         """
-        if not isinstance(self._chunker, tiktoken.Encoding):
-            raise RuntimeError("Fixed chunking requires tiktoken encoder")
-
-        encoder = self._chunker
-        tokens = encoder.encode(content)
-        total_tokens = len(tokens)
-
         chunks = []
+        metadata = metadata or {}
+
+        if sections and self.config.preserve_sections:
+            # Use section information for intelligent chunking
+            current_text = ""
+            current_headings: list[str] = []
+            current_pages: list[int] = []
+            current_bboxes: list[dict[str, float]] = []
+            current_tokens = 0
+
+            for section in sections:
+                section_text = section.text
+                section_heading = section.heading
+                section_page = section.page_no
+                section_bbox = section.bbox
+                section_tokens = section.token_count or self._count_tokens(
+                    section_text
+                )
+
+                # If adding this section would exceed max, flush current
+                if current_tokens + section_tokens > self.config.max_tokens:
+                    if current_text:
+                        chunk = self._create_chunk(
+                            text=current_text.strip(),
+                            document_id=document_id,
+                            chunk_index=len(chunks),
+                            section_headings=current_headings.copy(),
+                            pages=list(set(current_pages)),
+                            bboxes=current_bboxes.copy(),
+                            metadata=metadata,
+                        )
+                        chunks.append(chunk)
+
+                    # Start new chunk
+                    current_text = section_text
+                    current_headings = (
+                        [section_heading] if section_heading else []
+                    )
+                    current_pages = [section_page] if section_page else []
+                    current_bboxes = [section_bbox] if section_bbox else []
+                    current_tokens = section_tokens
+                else:
+                    # Merge into current chunk
+                    if current_text:
+                        current_text += "\n\n" + section_text
+                    else:
+                        current_text = section_text
+
+                    if section_heading:
+                        current_headings.append(section_heading)
+                    if section_page:
+                        current_pages.append(section_page)
+                    if section_bbox:
+                        current_bboxes.append(section_bbox)
+
+                    current_tokens += section_tokens
+
+            # Flush remaining
+            if current_text:
+                chunk = self._create_chunk(
+                    text=current_text.strip(),
+                    document_id=document_id,
+                    chunk_index=len(chunks),
+                    section_headings=current_headings,
+                    pages=list(set(current_pages)),
+                    bboxes=current_bboxes,
+                    metadata=metadata,
+                )
+                chunks.append(chunk)
+
+        else:
+            # No sections - fall back to fixed-size chunking
+            chunks = await self._chunk_fixed(text, document_id, metadata)
+
+        logger.info(
+            "adaptive_chunking_complete",
+            document_id=document_id,
+            sections_count=len(sections) if sections else 0,
+            chunks_count=len(chunks),
+            avg_sections_per_chunk=(
+                round(len(sections) / len(chunks), 2) if sections and chunks else 0
+            ),
+        )
+
+        return chunks
+
+    async def _chunk_fixed(
+        self,
+        text: str,
+        document_id: str,
+        metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Fixed-size chunking with overlap.
+
+        Args:
+            text: Document text
+            document_id: Document identifier
+            metadata: Document metadata
+
+        Returns:
+            List of Chunk objects
+        """
+        chunks = []
+        metadata = metadata or {}
+
+        # Approximate characters per chunk
+        chars_per_token = 4
+        chunk_size_chars = self.config.max_tokens * chars_per_token
+        overlap_chars = self.config.overlap_tokens * chars_per_token
+
+        start = 0
         chunk_index = 0
-        start_token = 0
 
-        while start_token < total_tokens:
-            # Calculate end token for this chunk
-            end_token = min(start_token + self.strategy.chunk_size, total_tokens)
+        while start < len(text):
+            end = start + chunk_size_chars
+            chunk_text = text[start:end]
 
-            # Extract chunk tokens
-            chunk_tokens = tokens[start_token:end_token]
-            chunk_text = encoder.decode(chunk_tokens)
+            # Try to break at word boundary
+            if end < len(text):
+                last_space = chunk_text.rfind(" ")
+                if last_space > chunk_size_chars * 0.8:
+                    chunk_text = chunk_text[:last_space]
+                    end = start + last_space
 
-            # Calculate character offsets (approximate, since tiktoken is token-based)
-            # We use the start of the decoded text in the original content
-            start_char = content.find(chunk_text[:50])  # Find first 50 chars
-            if start_char == -1:
-                start_char = 0
-            end_char = start_char + len(chunk_text)
+            if chunk_text.strip():
+                chunk = self._create_chunk(
+                    text=chunk_text.strip(),
+                    document_id=document_id,
+                    chunk_index=chunk_index,
+                    section_headings=[],
+                    pages=[],
+                    bboxes=[],
+                    metadata=metadata,
+                )
+                chunks.append(chunk)
+                chunk_index += 1
 
-            # Generate chunk_id
-            chunk_id = Chunk.generate_chunk_id(document_id, chunk_index, chunk_text)
-
-            # Calculate overlap tokens
-            overlap_tokens = self.strategy.overlap if chunk_index > 0 else 0
-
-            # Create chunk
-            chunk = Chunk(
-                chunk_id=chunk_id,
-                document_id=document_id,
-                chunk_index=chunk_index,
-                content=chunk_text,
-                start_char=start_char,
-                end_char=end_char,
-                metadata=metadata or {},
-                token_count=len(chunk_tokens),
-                overlap_tokens=overlap_tokens,
-            )
-
-            chunks.append(chunk)
-
-            # Move to next chunk with overlap
-            chunk_index += 1
-            start_token = end_token - self.strategy.overlap
-
-            # Prevent infinite loop on last small chunk
-            if start_token >= total_tokens - self.strategy.overlap:
+            # Move start with overlap
+            start = end - overlap_chars
+            if start <= 0 or start >= len(text):
                 break
 
         return chunks
 
-    def _chunk_adaptive(
+    async def _chunk_sentence(
         self,
+        text: str,
         document_id: str,
-        content: str,
-        metadata: dict | None,
-    ) -> list[Chunk]:
-        """Adaptive chunking using LlamaIndex SentenceSplitter (sentence-aware).
-
-        Sprint 24 Feature 24.15: Lazy import for llama_index types.
-
-        This method provides sentence-aware chunking that respects
-        sentence boundaries for better semantic coherence.
-
-        Args:
-            document_id: Document identifier
-            content: Document text
-            metadata: Additional metadata
-
-        Returns:
-            List of adaptive chunks
-
-        Raises:
-            ImportError: If llama_index not installed
-        """
-        # ====================================================================
-        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
-        # ====================================================================
-        # Document and TextNode are needed for adaptive chunking.
-        # SentenceSplitter is already lazy-loaded in _init_chunker().
-        # ====================================================================
-        try:
-            from llama_index.core import Document
-            from llama_index.core.node_parser import SentenceSplitter
-            from llama_index.core.schema import TextNode
-        except ImportError as e:
-            error_msg = (
-                "llama_index is required for adaptive chunking but is not installed.\n\n"
-                "INSTALLATION OPTIONS:\n"
-                "1. poetry install --with ingestion\n"
-                "2. poetry install --all-extras\n"
-            )
-            logger.error(
-                "llamaindex_import_failed",
-                method="_chunk_adaptive",
-                error=str(e),
-            )
-            raise ImportError(error_msg) from e
-
-        if not isinstance(self._chunker, SentenceSplitter):
-            raise RuntimeError("Adaptive chunking requires SentenceSplitter")
-
-        # Create LlamaIndex Document
-        doc = Document(text=content, metadata=metadata or {})
-
-        # Get nodes from SentenceSplitter
-        nodes: list[TextNode] = self._chunker.get_nodes_from_documents([doc])
-
-        chunks = []
-        for idx, node in enumerate(nodes):
-            chunk_text = node.get_content()
-
-            # Generate chunk_id
-            chunk_id = Chunk.generate_chunk_id(document_id, idx, chunk_text)
-
-            # Calculate overlap tokens (approximate from previous chunk)
-            overlap_tokens = self.strategy.overlap if idx > 0 else 0
-
-            # Estimate token count (simple whitespace split approximation)
-            token_count = len(chunk_text.split())
-
-            # Create chunk
-            chunk = Chunk(
-                chunk_id=chunk_id,
-                document_id=document_id,
-                chunk_index=idx,
-                content=chunk_text,
-                start_char=node.start_char_idx or 0,
-                end_char=node.end_char_idx or len(chunk_text),
-                metadata={**(metadata or {}), **node.metadata},
-                token_count=token_count,
-                overlap_tokens=overlap_tokens,
-            )
-
-            chunks.append(chunk)
-
-        return chunks
-
-    def _chunk_paragraph(
-        self,
-        document_id: str,
-        content: str,
-        metadata: dict | None,
-    ) -> list[Chunk]:
-        """Paragraph-based chunking with separator (semantic boundaries).
-
-        Sprint 24 Feature 24.15: Lazy import for llama_index types.
-
-        This method splits on paragraph boundaries (default: \\n\\n)
-        and groups paragraphs to meet target chunk size.
-
-        Args:
-            document_id: Document identifier
-            content: Document text
-            metadata: Additional metadata
-
-        Returns:
-            List of paragraph-based chunks
-
-        Raises:
-            ImportError: If llama_index not installed
-        """
-        # ====================================================================
-        # LAZY IMPORT: llama_index (Sprint 24 Feature 24.15)
-        # ====================================================================
-        # Document and TextNode are needed for paragraph chunking.
-        # SentenceSplitter is already lazy-loaded in _init_chunker().
-        # ====================================================================
-        try:
-            from llama_index.core import Document
-            from llama_index.core.node_parser import SentenceSplitter
-            from llama_index.core.schema import TextNode
-        except ImportError as e:
-            error_msg = (
-                "llama_index is required for paragraph chunking but is not installed.\n\n"
-                "INSTALLATION OPTIONS:\n"
-                "1. poetry install --with ingestion\n"
-                "2. poetry install --all-extras\n"
-            )
-            logger.error(
-                "llamaindex_import_failed",
-                method="_chunk_paragraph",
-                error=str(e),
-            )
-            raise ImportError(error_msg) from e
-
-        if not isinstance(self._chunker, SentenceSplitter):
-            raise RuntimeError("Paragraph chunking requires SentenceSplitter")
-
-        # SentenceSplitter with separator already configured in _init_chunker
-        doc = Document(text=content, metadata=metadata or {})
-        nodes: list[TextNode] = self._chunker.get_nodes_from_documents([doc])
-
-        chunks = []
-        for idx, node in enumerate(nodes):
-            chunk_text = node.get_content()
-
-            # Generate chunk_id
-            chunk_id = Chunk.generate_chunk_id(document_id, idx, chunk_text)
-
-            # Calculate overlap tokens
-            overlap_tokens = self.strategy.overlap if idx > 0 else 0
-
-            # Estimate token count
-            token_count = len(chunk_text.split())
-
-            # Create chunk
-            chunk = Chunk(
-                chunk_id=chunk_id,
-                document_id=document_id,
-                chunk_index=idx,
-                content=chunk_text,
-                start_char=node.start_char_idx or 0,
-                end_char=node.end_char_idx or len(chunk_text),
-                metadata={**(metadata or {}), **node.metadata},
-                token_count=token_count,
-                overlap_tokens=overlap_tokens,
-            )
-
-            chunks.append(chunk)
-
-        return chunks
-
-    def _chunk_sentence(
-        self,
-        document_id: str,
-        content: str,
-        metadata: dict | None,
+        metadata: dict | None = None,
     ) -> list[Chunk]:
         """Sentence-based chunking (simple regex).
 
-        This method splits on sentence boundaries (. ! ?)
-        and groups sentences to meet target chunk size.
-
         Args:
+            text: Document text
             document_id: Document identifier
-            content: Document text
-            metadata: Additional metadata
+            metadata: Document metadata
 
         Returns:
-            List of sentence-based chunks
+            List of Chunk objects
         """
         # Split into sentences using regex
         sentence_pattern = r"(?<=[.!?])\s+"
-        sentences = re.split(sentence_pattern, content)
+        sentences = re.split(sentence_pattern, text)
 
         chunks = []
         chunk_index = 0
         current_chunk = []
         current_tokens = 0
-        start_char = 0
+        metadata = metadata or {}
 
         for sentence in sentences:
-            sentence_tokens = len(sentence.split())
+            sentence_tokens = self._count_tokens(sentence)
 
             # Check if adding this sentence would exceed chunk_size
-            if current_tokens + sentence_tokens > self.strategy.chunk_size and current_chunk:
+            if (
+                current_tokens + sentence_tokens > self.config.max_tokens
+                and current_chunk
+            ):
                 # Create chunk from accumulated sentences
                 chunk_text = " ".join(current_chunk)
-                chunk_id = Chunk.generate_chunk_id(document_id, chunk_index, chunk_text)
-
-                chunk = Chunk(
-                    chunk_id=chunk_id,
+                chunk = self._create_chunk(
+                    text=chunk_text.strip(),
                     document_id=document_id,
                     chunk_index=chunk_index,
-                    content=chunk_text,
-                    start_char=start_char,
-                    end_char=start_char + len(chunk_text),
-                    metadata=metadata or {},
-                    token_count=current_tokens,
-                    overlap_tokens=self.strategy.overlap if chunk_index > 0 else 0,
+                    section_headings=[],
+                    pages=[],
+                    bboxes=[],
+                    metadata=metadata,
                 )
-
                 chunks.append(chunk)
 
-                # Start new chunk (with overlap if configured)
+                # Start new chunk
                 chunk_index += 1
-                start_char += len(chunk_text)
-
-                # Keep last few sentences for overlap (approximate)
-                overlap_sentences = []
-                overlap_tokens_count = 0
-                for s in reversed(current_chunk):
-                    s_tokens = len(s.split())
-                    if overlap_tokens_count + s_tokens <= self.strategy.overlap:
-                        overlap_sentences.insert(0, s)
-                        overlap_tokens_count += s_tokens
-                    else:
-                        break
-
-                current_chunk = overlap_sentences
-                current_tokens = overlap_tokens_count
-
-            # Add sentence to current chunk
-            current_chunk.append(sentence)
-            current_tokens += sentence_tokens
+                current_chunk = [sentence]
+                current_tokens = sentence_tokens
+            else:
+                # Add sentence to current chunk
+                current_chunk.append(sentence)
+                current_tokens += sentence_tokens
 
         # Add final chunk if there's remaining content
         if current_chunk:
             chunk_text = " ".join(current_chunk)
-            chunk_id = Chunk.generate_chunk_id(document_id, chunk_index, chunk_text)
-
-            chunk = Chunk(
-                chunk_id=chunk_id,
+            chunk = self._create_chunk(
+                text=chunk_text.strip(),
                 document_id=document_id,
                 chunk_index=chunk_index,
-                content=chunk_text,
-                start_char=start_char,
-                end_char=start_char + len(chunk_text),
-                metadata=metadata or {},
-                token_count=current_tokens,
-                overlap_tokens=self.strategy.overlap if chunk_index > 0 else 0,
+                section_headings=[],
+                pages=[],
+                bboxes=[],
+                metadata=metadata,
             )
-
             chunks.append(chunk)
 
         return chunks
 
+    async def _chunk_paragraph(
+        self,
+        text: str,
+        document_id: str,
+        metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Paragraph-based chunking.
 
-# Global singleton
+        Args:
+            text: Document text
+            document_id: Document identifier
+            metadata: Document metadata
+
+        Returns:
+            List of Chunk objects
+        """
+        # Split on double newlines (paragraph boundaries)
+        paragraphs = re.split(r"\n\n+", text)
+        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+
+        chunks = []
+        chunk_index = 0
+        current_paragraphs = []
+        current_tokens = 0
+        metadata = metadata or {}
+
+        for para in paragraphs:
+            para_tokens = self._count_tokens(para)
+
+            # Check if adding paragraph would exceed chunk_size
+            if (
+                current_tokens + para_tokens > self.config.max_tokens
+                and current_paragraphs
+            ):
+                # Create chunk from accumulated paragraphs
+                chunk_text = "\n\n".join(current_paragraphs)
+                chunk = self._create_chunk(
+                    text=chunk_text.strip(),
+                    document_id=document_id,
+                    chunk_index=chunk_index,
+                    section_headings=[],
+                    pages=[],
+                    bboxes=[],
+                    metadata=metadata,
+                )
+                chunks.append(chunk)
+
+                # Start new chunk
+                chunk_index += 1
+                current_paragraphs = [para]
+                current_tokens = para_tokens
+            else:
+                # Add paragraph to current chunk
+                current_paragraphs.append(para)
+                current_tokens += para_tokens
+
+        # Add final chunk
+        if current_paragraphs:
+            chunk_text = "\n\n".join(current_paragraphs)
+            chunk = self._create_chunk(
+                text=chunk_text.strip(),
+                document_id=document_id,
+                chunk_index=chunk_index,
+                section_headings=[],
+                pages=[],
+                bboxes=[],
+                metadata=metadata,
+            )
+            chunks.append(chunk)
+
+        return chunks
+
+    def _create_chunk(
+        self,
+        text: str,
+        document_id: str,
+        chunk_index: int,
+        section_headings: list[str] | None = None,
+        pages: list[int] | None = None,
+        bboxes: list[dict[str, float]] | None = None,
+        metadata: dict | None = None,
+    ) -> Chunk:
+        """Create a Chunk object with all metadata.
+
+        Args:
+            text: Chunk text content
+            document_id: Document identifier
+            chunk_index: Chunk index within document
+            section_headings: Section headings (for adaptive strategy)
+            pages: Page numbers (for adaptive strategy)
+            bboxes: Bounding boxes (for adaptive strategy)
+            metadata: Document metadata
+
+        Returns:
+            Chunk object
+        """
+        token_count = self._count_tokens(text)
+
+        return Chunk(
+            chunk_id=self._generate_chunk_id(document_id, chunk_index, text),
+            document_id=document_id,
+            chunk_index=chunk_index,
+            content=text,
+            start_char=0,  # TODO: Calculate actual start_char
+            end_char=len(text),  # TODO: Calculate actual end_char
+            metadata=metadata or {},
+            token_count=token_count,
+            overlap_tokens=self.config.overlap_tokens if chunk_index > 0 else 0,
+            section_headings=section_headings or [],
+            section_pages=pages or [],
+            section_bboxes=bboxes or [],
+        )
+
+
+# =============================================================================
+# GLOBAL SINGLETON
+# =============================================================================
+
 _chunking_service: ChunkingService | None = None
 
 
-def get_chunking_service(strategy: ChunkStrategy | None = None) -> ChunkingService:
-    """Get global chunking service instance.
+def get_chunking_service(config: ChunkingConfig | None = None) -> ChunkingService:
+    """Get chunking service instance (singleton pattern).
 
     Args:
-        strategy: Optional strategy to use (default: adaptive with 512 tokens, 128 overlap)
+        config: Optional config (only used on first call)
 
     Returns:
         ChunkingService instance
 
     Example:
         >>> service = get_chunking_service()
-        >>> chunks = service.chunk_document("doc_001", "Sample text...")
+        >>> chunks = await service.chunk_document("doc_123", "Sample text...")
     """
     global _chunking_service
 
-    # If strategy is provided, create new instance (don't use singleton)
-    if strategy is not None:
-        return ChunkingService(strategy)
+    # If config is provided, create new instance (don't use singleton)
+    if config is not None:
+        return ChunkingService(config)
 
-    # Otherwise, use singleton with default strategy
+    # Otherwise, use singleton with default config
     if _chunking_service is None:
         _chunking_service = ChunkingService()
 

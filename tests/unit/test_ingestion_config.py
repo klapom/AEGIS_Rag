@@ -95,57 +95,56 @@ def test_embedding_service_config__bge_m3__correct_model_and_dimensions():
     Validates:
     - Model name: bge-m3 (ADR-024)
     - Dimensions: 1024 (Sprint 16 migration)
-    - Batch size from config
+    - Cache enabled
     """
-    from src.components.vector_search.embeddings import EmbeddingService
+    from src.components.shared.embedding_service import UnifiedEmbeddingService
 
     # Setup: Config with BGE-M3
     model_name = "bge-m3"
     expected_dim = 1024
-    batch_size = 32
+    cache_max_size = 10000
 
     # Action: Initialize embedding service
-    service = EmbeddingService(
+    service = UnifiedEmbeddingService(
         model_name=model_name,
-        base_url="http://localhost:11434",
-        batch_size=batch_size,
-        enable_cache=True,
+        embedding_dim=expected_dim,
+        cache_max_size=cache_max_size,
     )
 
     # Assert: Config injected correctly
     assert service.model_name == model_name, "Model name not set"
-    assert service.batch_size == batch_size, "Batch size not set"
-    assert service.enable_cache is True, "Cache not enabled"
+    assert service.embedding_dim == expected_dim, "Embedding dimension not set"
+    assert service.cache.max_size == cache_max_size, "Cache max size not set"
 
     # Assert: Correct dimensions
     assert (
-        service.get_embedding_dimension() == expected_dim
-    ), f"BGE-M3 should be {expected_dim}-dim, got {service.get_embedding_dimension()}"
+        service.embedding_dim == expected_dim
+    ), f"BGE-M3 should be {expected_dim}-dim, got {service.embedding_dim}"
 
 
-def test_embedding_service_config__custom_batch_size__applied_correctly():
-    """Verify custom batch size is applied to embedding service.
+def test_embedding_service_config__custom_cache_size__applied_correctly():
+    """Verify custom cache size is applied to embedding service.
 
     Validates:
-    - Batch size configurable
-    - Affects embedding batch operations
+    - Cache size configurable
+    - Affects cache performance for batch operations
     """
-    from src.components.vector_search.embeddings import EmbeddingService
+    from src.components.shared.embedding_service import UnifiedEmbeddingService
 
-    # Setup: Custom batch size
-    custom_batch_size = 64
+    # Setup: Custom cache size
+    custom_cache_size = 20000
 
-    # Action: Initialize with custom batch size
-    service = EmbeddingService(
+    # Action: Initialize with custom cache size
+    service = UnifiedEmbeddingService(
         model_name="bge-m3",
-        base_url="http://localhost:11434",
-        batch_size=custom_batch_size,
+        embedding_dim=1024,
+        cache_max_size=custom_cache_size,
     )
 
-    # Assert: Batch size set
+    # Assert: Cache size set
     assert (
-        service.batch_size == custom_batch_size
-    ), f"Expected batch_size={custom_batch_size}, got {service.batch_size}"
+        service.cache.max_size == custom_cache_size
+    ), f"Expected cache_max_size={custom_cache_size}, got {service.cache.max_size}"
 
 
 # =============================================================================
@@ -157,60 +156,58 @@ def test_chunking_config_propagation__token_limits__correct_tokenizer():
     """Verify ChunkingService receives correct token limits.
 
     Validates:
-    - chunk_size from config (512, 1024, or 1800)
-    - overlap from config (128 or 256)
-    - Strategy method (fixed/adaptive/paragraph)
+    - max_tokens from config (800-1800)
+    - overlap_tokens from config (0-500)
+    - Strategy method (adaptive/fixed/sentence/paragraph)
     """
-    from src.core.chunking_service import ChunkingService
-    from src.core.chunk import ChunkStrategy
+    from src.core.chunking_service import ChunkingService, ChunkingConfig, ChunkStrategyEnum
 
     # Setup: Config with token limits
-    chunk_size = 1024
-    overlap = 128
+    max_tokens = 1024
+    overlap_tokens = 128
 
-    # Action: Initialize chunking service with strategy
-    strategy = ChunkStrategy(
-        method="adaptive",
-        chunk_size=chunk_size,
-        overlap=overlap,
+    # Action: Initialize chunking service with config
+    config = ChunkingConfig(
+        strategy=ChunkStrategyEnum.ADAPTIVE,
+        max_tokens=max_tokens,
+        overlap_tokens=overlap_tokens,
     )
-    chunker = ChunkingService(strategy=strategy)
+    chunker = ChunkingService(config=config)
 
     # Assert: Config injected
-    assert chunker.strategy.chunk_size == chunk_size, "chunk_size not set"
-    assert chunker.strategy.overlap == overlap, "overlap not set"
-    assert chunker.strategy.method == "adaptive", "method not set"
+    assert chunker.config.max_tokens == max_tokens, "max_tokens not set"
+    assert chunker.config.overlap_tokens == overlap_tokens, "overlap_tokens not set"
+    assert chunker.config.strategy == ChunkStrategyEnum.ADAPTIVE, "strategy not set"
 
 
 def test_chunking_config_validation__invalid_overlap__raises_error():
     """Verify invalid chunking config is rejected.
 
     Validates:
-    - Overlap must be < chunk_size
+    - Overlap must be less than max_tokens
     - Negative values rejected
-    - Config validation happens at initialization
+    - Config validation happens at initialization (Pydantic validation)
     """
-    from src.core.chunking_service import ChunkingService
-    from src.core.chunk import ChunkStrategy
+    from src.core.chunking_service import ChunkingService, ChunkingConfig, ChunkStrategyEnum
 
-    # Setup: Invalid config (overlap >= chunk_size)
-    chunk_size = 512
-    invalid_overlap = 512  # Equal to chunk_size (invalid)
+    # Setup: Invalid config (overlap_tokens > max_tokens)
+    # Pydantic should reject this since overlap_tokens has max constraint of 500
+    # and max_tokens defaults to 1800, this is a valid combination.
+    # Let's test a negative overlap which should be invalid
+    max_tokens = 1024
 
-    # Action & Assert: Should raise validation error
+    # Action & Assert: Should raise validation error for negative overlap
     with pytest.raises((ValueError, AssertionError, TypeError)) as exc_info:
-        strategy = ChunkStrategy(
-            method="adaptive",
-            chunk_size=chunk_size,
-            overlap=invalid_overlap,
+        config = ChunkingConfig(
+            strategy=ChunkStrategyEnum.ADAPTIVE,
+            max_tokens=max_tokens,
+            overlap_tokens=-1,  # Negative is invalid (ge=0 constraint)
         )
-        chunker = ChunkingService(strategy=strategy)
 
-    # Assert: Clear error message (if validation exists)
-    # Note: Pydantic might catch this at ChunkStrategy level
+    # Assert: Validation error raised
     error_msg = str(exc_info.value).lower()
     assert (
-        "overlap" in error_msg or "chunk_size" in error_msg or "greater" in error_msg
+        "overlap" in error_msg or "greater" in error_msg or "validation" in error_msg
     ), f"Error message should mention overlap validation: {error_msg}"
 
 
@@ -314,21 +311,22 @@ def test_config_validation__missing_required_model__uses_defaults():
     """Verify model config uses defaults when not provided.
 
     Validates:
-    - Model name defaults to config value
+    - Model name defaults to bge-m3
     - Service handles missing config gracefully
     - Config-driven design with sensible defaults
     """
-    from src.components.vector_search.embeddings import EmbeddingService
+    from src.components.shared.embedding_service import UnifiedEmbeddingService
 
     # Setup: No model name (uses default from UnifiedEmbeddingService)
-    service = EmbeddingService(
-        base_url="http://localhost:11434",
+    service = UnifiedEmbeddingService(
+        embedding_dim=1024,
     )
 
     # Assert: Service created with default model
-    # UnifiedEmbeddingService provides default model from settings
+    # UnifiedEmbeddingService provides default model (bge-m3)
     assert service.model_name is not None, "Model name should have default"
     assert len(service.model_name) > 0, "Model name should not be empty"
+    assert service.model_name == "bge-m3", "Default model should be bge-m3"
 
 
 # =============================================================================

@@ -196,7 +196,7 @@ class UnifiedMemoryAPI:
             }
 
         Raises:
-            MemoryError: If all layers fail (retries exhausted)
+            Exception: If all layers fail (retries exhausted)
 
         Example:
             >>> results = await api.retrieve("What did we discuss about pricing?")
@@ -206,55 +206,39 @@ class UnifiedMemoryAPI:
         start_time = time.time()
         session = session_id or self.session_id
 
-        try:
-            # Use memory router for intelligent layer selection
-            results = await self.memory_router.search_memory(
-                query=query,
-                session_id=session,
-                limit=limit,
-                time_window_hours=time_window_hours,
+        # Use memory router for intelligent layer selection
+        # Let exceptions propagate for retry decorator to handle
+        results = await self.memory_router.search_memory(
+            query=query,
+            session_id=session,
+            limit=limit,
+            time_window_hours=time_window_hours,
+        )
+
+        # Calculate total results
+        total_results = sum(len(layer_results) for layer_results in results.values())
+
+        # Add metadata
+        results["total_results"] = total_results
+        results["layers_searched"] = list(results.keys())
+        results["query"] = query
+        results["latency_ms"] = round((time.time() - start_time) * 1000, 2)
+
+        if self.enable_metrics:
+            self.retrieve_counter.labels(layer="multi", status="success").inc()
+            self.latency_histogram.labels(operation="retrieve", layer="multi").observe(
+                time.time() - start_time
             )
 
-            # Calculate total results
-            total_results = sum(len(layer_results) for layer_results in results.values())
+        logger.info(
+            "Retrieved memories across layers",
+            query=query[:100],
+            total_results=total_results,
+            layers=results["layers_searched"],
+            latency_ms=results["latency_ms"],
+        )
 
-            # Add metadata
-            results["total_results"] = total_results
-            results["layers_searched"] = list(results.keys())
-            results["query"] = query
-            results["latency_ms"] = round((time.time() - start_time) * 1000, 2)
-
-            if self.enable_metrics:
-                self.retrieve_counter.labels(layer="multi", status="success").inc()
-                self.latency_histogram.labels(operation="retrieve", layer="multi").observe(
-                    time.time() - start_time
-                )
-
-            logger.info(
-                "Retrieved memories across layers",
-                query=query[:100],
-                total_results=total_results,
-                layers=results["layers_searched"],
-                latency_ms=results["latency_ms"],
-            )
-
-            return results
-
-        except Exception as e:
-            if self.enable_metrics:
-                self.retrieve_counter.labels(layer="multi", status="error").inc()
-
-            logger.error("Memory retrieval failed", query=query, error=str(e))
-
-            # Graceful degradation: return empty results
-            return {
-                "short_term": [],
-                "long_term": [],
-                "episodic": [],
-                "total_results": 0,
-                "layers_searched": [],
-                "error": str(e),
-            }
+        return results
 
     async def search(
         self,

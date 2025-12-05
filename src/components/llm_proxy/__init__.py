@@ -39,6 +39,15 @@ from src.components.llm_proxy.models import (
     TaskType,
 )
 
+# VLM Factory (Sprint 36 - Feature 36.1)
+from src.components.llm_proxy.vlm_factory import (
+    VLMBackend,
+    close_shared_vlm_client,
+    get_shared_vlm_client,
+    get_vlm_backend_from_config,
+    get_vlm_client,
+)
+
 __all__ = [
     # Models
     "TaskType",
@@ -53,4 +62,10 @@ __all__ = [
     "get_aegis_llm_proxy",
     # Cost tracking
     "CostTracker",
+    # VLM Factory (Sprint 36 - Feature 36.1)
+    "VLMBackend",
+    "get_vlm_client",
+    "get_vlm_backend_from_config",
+    "get_shared_vlm_client",
+    "close_shared_vlm_client",
 ]

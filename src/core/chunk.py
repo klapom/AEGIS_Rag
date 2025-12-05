@@ -114,6 +114,20 @@ class Chunk(BaseModel):
         description="Number of tokens overlapping with previous chunk",
     )
 
+    # Section metadata (Sprint 36 Feature 36.6 - TD-054)
+    section_headings: list[str] = Field(
+        default_factory=list,
+        description="Section headings for this chunk (multi-section support)",
+    )
+    section_pages: list[int] = Field(
+        default_factory=list,
+        description="Page numbers where sections appear",
+    )
+    section_bboxes: list[dict[str, float]] = Field(
+        default_factory=list,
+        description="Bounding boxes for each section",
+    )
+
     @field_validator("end_char")
     @classmethod
     def validate_end_char(cls, v: int, info: ValidationInfo) -> int:
@@ -158,6 +172,9 @@ class Chunk(BaseModel):
             "start_char": self.start_char,
             "end_char": self.end_char,
             "token_count": self.token_count,
+            "section_headings": self.section_headings,
+            "section_pages": self.section_pages,
+            "section_bboxes": self.section_bboxes,
             **self.metadata,
         }
 

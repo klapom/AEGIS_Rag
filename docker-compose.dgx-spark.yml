@@ -108,7 +108,8 @@ services:
 
       # Model Configuration
       - DOCLING_LAZY_LOADING=true
-      - DOCLING_OCR_ENGINE=easyocr
+      # Use rapidocr for NumPy 2.x compatibility (easyocr requires NumPy 1.x)
+      - DOCLING_OCR_ENGINE=rapidocr
       - DOCLING_TABLE_STRUCTURE=true
       - DOCLING_LAYOUT_ANALYSIS=true
 
@@ -317,6 +318,148 @@ services:
       - aegis-network
     depends_on:
       - prometheus
+
+  # ============================================================================
+  # AEGIS RAG API - FastAPI Backend
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    image: aegis-rag-api:latest
+    container_name: aegis-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./config:/app/config:ro
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_WORKERS=4
+      # LLM Configuration
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL_GENERATION=qwen3:32b
+      - OLLAMA_MODEL_QUERY=qwen3:32b
+      - OLLAMA_MODEL_EXTRACTION=qwen3:32b
+      - OLLAMA_MODEL_VLM=qwen3-vl:32b
+      - VLM_BACKEND=ollama
+      - EMBEDDING_BACKEND=sentence-transformers
+      - ST_MODEL_NAME=BAAI/bge-m3
+      - ST_DEVICE=auto
+      - ST_BATCH_SIZE=64
+      # Databases
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_GRPC_PORT=6334
+      - QDRANT_COLLECTION=documents_v1
+      - QDRANT_USE_GRPC=true
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=aegis-rag-neo4j-password
+      - NEO4J_DATABASE=neo4j
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_TTL=3600
+      # Docling
+      - DOCLING_BASE_URL=http://docling:5001
+      - DOCLING_TIMEOUT_SECONDS=900
+      - DOCLING_MAX_RETRIES=3
+      # Observability
+      - LANGSMITH_TRACING=false
+      - PROMETHEUS_ENABLED=true
+      # MCP
+      - MCP_SERVER_PORT=3000
+      - MCP_AUTH_ENABLED=false
+    depends_on:
+      ollama:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - aegis-network
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+
+  # ============================================================================
+  # AEGIS RAG Test Runner - For running pytest in container
+  # ============================================================================
+  # Usage:
+  #   # Run all tests
+  #   docker compose -f docker-compose.dgx-spark.yml run --rm test
+  #
+  #   # Run specific test file
+  #   docker compose -f docker-compose.dgx-spark.yml run --rm test pytest tests/unit/components/llm_proxy/test_vlm_factory.py -v
+  #
+  #   # Run with coverage
+  #   docker compose -f docker-compose.dgx-spark.yml run --rm test pytest tests/ --cov=src --cov-report=term-missing
+  # ============================================================================
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api-test
+    image: aegis-rag-test:latest
+    container_name: aegis-test
+    profiles:
+      - test  # Only start when explicitly requested
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./config:/app/config:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      # LLM Configuration (same as api service)
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL_GENERATION=qwen3:32b
+      - OLLAMA_MODEL_QUERY=qwen3:32b
+      - OLLAMA_MODEL_EXTRACTION=qwen3:32b
+      - OLLAMA_MODEL_VLM=qwen3-vl:32b
+      - VLM_BACKEND=ollama
+      - EMBEDDING_BACKEND=sentence-transformers
+      - ST_MODEL_NAME=BAAI/bge-m3
+      # Databases
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=aegis-rag-neo4j-password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Test Configuration
+      - PYTEST_ADDOPTS=-v --tb=short
+    depends_on:
+      - ollama
+      - qdrant
+      - neo4j
+      - redis
+    networks:
+      - aegis-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
 
 # ============================================================================
 # Volumes

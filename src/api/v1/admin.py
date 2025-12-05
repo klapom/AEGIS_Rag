@@ -1273,7 +1273,8 @@ async def reindex_with_vlm_enrichment(
             total_vlm_images = 0
             total_errors = 0
 
-            yield f"data: {json.dumps({'status': 'ingestion', 'progress': 0.2, 'message': f'Starting VLM batch ingestion (batch_id={batch_id})...'})}\n\n"
+            msg = f"Starting VLM batch ingestion (batch_id={batch_id})..."
+            yield f'data: {json.dumps({"status": "ingestion", "progress": 0.2, "message": msg})}\n\n'
 
             async for result in run_batch_ingestion(doc_paths, batch_id):
                 completed_docs += 1
@@ -1295,10 +1296,11 @@ async def reindex_with_vlm_enrichment(
                     total_vlm_images += vlm_count
                     total_errors += error_count
 
-                    yield f"data: {json.dumps({
+                    doc_name = Path(doc_path).name
+                    data = {
                         'status': 'ingestion',
                         'progress': overall_progress,
-                        'message': f'Processed {Path(doc_path).name}',
+                        'message': f'Processed {doc_name}',
                         'document_id': doc_id,
                         'document_path': doc_path,
                         'completed_documents': completed_docs,
@@ -1308,7 +1310,8 @@ async def reindex_with_vlm_enrichment(
                         'vlm_images': vlm_count,
                         'errors': error_count,
                         'success': True,
-                    })}\n\n"
+                    }
+                    yield f'data: {json.dumps(data)}\n\n'
 
                     logger.info(
                         "vlm_document_indexed",
@@ -1323,10 +1326,11 @@ async def reindex_with_vlm_enrichment(
                     error_msg = result.get("error", "Unknown error")
                     total_errors += 1
 
-                    yield f"data: {json.dumps({
+                    doc_name = Path(doc_path).name
+                    error_data = {
                         'status': 'ingestion',
                         'progress': overall_progress,
-                        'message': f'FAILED: {Path(doc_path).name}',
+                        'message': f'FAILED: {doc_name}',
                         'document_id': doc_id,
                         'document_path': doc_path,
                         'completed_documents': completed_docs,
@@ -1334,7 +1338,8 @@ async def reindex_with_vlm_enrichment(
                         'batch_progress': batch_progress,
                         'success': False,
                         'error': error_msg,
-                    })}\n\n"
+                    }
+                    yield f'data: {json.dumps(error_data)}\n\n'
 
                     logger.error(
                         "vlm_document_failed",
@@ -1343,7 +1348,8 @@ async def reindex_with_vlm_enrichment(
                     )
 
             # Phase 4: Validation
-            yield f"data: {json.dumps({'status': 'validation', 'progress': 0.98, 'message': 'Validating indexes...'})}\n\n"
+            validation_data = {'status': 'validation', 'progress': 0.98, 'message': 'Validating indexes...'}
+            yield f'data: {json.dumps(validation_data)}\n\n'
 
             # Get final stats
             collection_info = await qdrant_client.get_collection_info(collection_name)
@@ -1392,7 +1398,7 @@ async def reindex_with_vlm_enrichment(
                 completion_message = f'VLM re-indexing completed successfully in {total_time:.1f}s'
                 completion_status = 'completed'
 
-            yield f"data: {json.dumps({
+            final_data = {
                 'status': completion_status,
                 'progress': 1.0,
                 'message': completion_message,
@@ -1406,7 +1412,8 @@ async def reindex_with_vlm_enrichment(
                 'neo4j_entities': neo4j_entities,
                 'neo4j_relations': neo4j_relations,
                 'duration_seconds': total_time,
-            })}\n\n"
+            }
+            yield f'data: {json.dumps(final_data)}\n\n'
 
             logger.info(
                 "vlm_reindex_completed",
@@ -1423,7 +1430,9 @@ async def reindex_with_vlm_enrichment(
 
         except Exception as e:
             logger.error("vlm_reindex_failed", error=str(e), exc_info=True)
-            yield f"data: {json.dumps({'status': 'error', 'message': f'VLM re-indexing failed: {str(e)}'})}\n\n"
+            error_msg = f'VLM re-indexing failed: {str(e)}'
+            error_response = {'status': 'error', 'message': error_msg}
+            yield f'data: {json.dumps(error_response)}\n\n'
 
     return StreamingResponse(
         vlm_reindex_stream(),

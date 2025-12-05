@@ -23,9 +23,10 @@ LABEL version="1.0.0"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # System dependencies for Docling and EasyOCR
+# Note: libgl1-mesa-glx is deprecated in Ubuntu 24.04, use libgl1 instead
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # OpenCV dependencies
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -43,33 +44,38 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install Docling with serve extras
-# IMPORTANT: NumPy/OpenCV compatibility fix for NVIDIA base image
-# The base image has pre-compiled binaries against NumPy 2.x
-# EasyOCR needs NumPy 1.x, so we must reinstall opencv after numpy downgrade
+# IMPORTANT: NumPy 2.x Compatibility for NVIDIA PyTorch 25.01 base image
+# The base image has PyTorch compiled against NumPy 2.x, so we MUST keep NumPy 2.x
+# The NGC cv2 was compiled against NumPy 1.x - we must completely remove it
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip uninstall -y numpy opencv-python opencv-python-headless opencv-contrib-python 2>/dev/null || true && \
-    pip install --no-cache-dir "numpy<2" && \
-    pip install --no-cache-dir --force-reinstall --no-deps opencv-python-headless && \
-    pip install --no-cache-dir \
-    "docling-serve" \
-    easyocr
+    # Completely remove all OpenCV packages from NGC base image
+    pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python cv2 2>/dev/null || true && \
+    # Remove the NGC cv2 shared library if it exists
+    rm -rf /usr/local/lib/python3.12/dist-packages/cv2* 2>/dev/null || true && \
+    # Install fresh OpenCV built for NumPy 2.x (headless for server use)
+    pip install --no-cache-dir --force-reinstall "opencv-python-headless>=4.10" && \
+    # Install docling-serve and dependencies
+    pip install --no-cache-dir "docling-serve" && \
+    # Install rapidocr with onnxruntime for CPU OCR (GPU OCR via docling models)
+    pip install --no-cache-dir rapidocr-onnxruntime
 
-# Pre-download EasyOCR models (saves startup time)
+# Pre-download RapidOCR models (saves startup time)
 # Using || true to not fail build if download has issues
-RUN python -c "import easyocr; reader = easyocr.Reader(['en', 'de'], gpu=True); print('EasyOCR models downloaded')" || \
-    echo "WARN: EasyOCR preload skipped - models will download on first use"
+RUN python -c "from rapidocr_onnxruntime import RapidOCR; ocr = RapidOCR(); print('RapidOCR initialized')" || \
+    echo "WARN: RapidOCR preload skipped - models will download on first use"
 
 # Pre-download Docling models (layout, table structure)
 RUN python -c "from docling.document_converter import DocumentConverter; print('Docling initialized')" || \
     echo "WARN: Docling preload skipped - models will download on first use"
 
 # Create cache directories with proper permissions
-RUN mkdir -p /root/.cache/huggingface /root/.EasyOCR
+RUN mkdir -p /root/.cache/huggingface /root/.cache/rapidocr
 
 # Environment variables for Docling
 ENV PORT=5001
 ENV DOCLING_LAZY_LOADING=true
-ENV DOCLING_OCR_ENGINE=easyocr
+# Use rapidocr for NumPy 2.x compatibility (easyocr requires NumPy 1.x)
+ENV DOCLING_OCR_ENGINE=rapidocr
 ENV DOCLING_TABLE_STRUCTURE=true
 ENV DOCLING_LAYOUT_ANALYSIS=true
 ENV DOCLING_GENERATE_PICTURE_IMAGES=true

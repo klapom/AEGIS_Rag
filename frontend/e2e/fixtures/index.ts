@@ -5,6 +5,7 @@ import { SettingsPage } from '../pom/SettingsPage';
 import { AdminIndexingPage } from '../pom/AdminIndexingPage';
 import { AdminGraphPage } from '../pom/AdminGraphPage';
 import { CostDashboardPage } from '../pom/CostDashboardPage';
+import { AdminLLMConfigPage } from '../pom/AdminLLMConfigPage';
 
 /**
  * Custom Playwright test fixtures for AEGIS RAG
@@ -20,6 +21,7 @@ type Fixtures = {
   adminIndexingPage: AdminIndexingPage;
   adminGraphPage: AdminGraphPage;
   costDashboardPage: CostDashboardPage;
+  adminLLMConfigPage: AdminLLMConfigPage;
 };
 
 export const test = base.extend<Fixtures>({
@@ -81,6 +83,16 @@ export const test = base.extend<Fixtures>({
     const costDashboardPage = new CostDashboardPage(page);
     // Tests handle navigation
     await use(costDashboardPage);
+  },
+
+  /**
+   * Admin LLM Config Page Fixture
+   * Navigates to /admin/llm-config and provides AdminLLMConfigPage object
+   */
+  adminLLMConfigPage: async ({ page }, use) => {
+    const adminLLMConfigPage = new AdminLLMConfigPage(page);
+    await adminLLMConfigPage.goto();
+    await use(adminLLMConfigPage);
   },
 });
 

@@ -36,7 +36,7 @@ def test_default_backend_is_ollama():
         ) else None
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
@@ -53,7 +53,7 @@ def test_ollama_backend_selection():
         mock_settings.embedding_backend = "ollama"
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
@@ -73,7 +73,7 @@ def test_sentence_transformers_backend_selection():
         mock_settings.st_batch_size = 64
 
         with patch(
-            "src.components.shared.embedding_factory.SentenceTransformersEmbeddingService"
+            "src.components.shared.sentence_transformers_embedding.SentenceTransformersEmbeddingService"
         ) as mock_st_service:
             mock_service = MagicMock()
             mock_st_service.return_value = mock_service
@@ -102,7 +102,7 @@ def test_sentence_transformers_with_default_config():
         ) else None
 
         with patch(
-            "src.components.shared.embedding_factory.SentenceTransformersEmbeddingService"
+            "src.components.shared.sentence_transformers_embedding.SentenceTransformersEmbeddingService"
         ) as mock_st_service:
             mock_service = MagicMock()
             mock_st_service.return_value = mock_service
@@ -136,7 +136,7 @@ def test_singleton_pattern():
         mock_settings.embedding_backend = "ollama"
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
@@ -154,7 +154,7 @@ def test_reset_forces_reinitialization():
         mock_settings.embedding_backend = "ollama"
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
@@ -175,7 +175,7 @@ def test_backend_switch_after_reset():
         mock_settings.embedding_backend = "ollama"
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
@@ -193,7 +193,7 @@ def test_backend_switch_after_reset():
         mock_settings.st_batch_size = 64
 
         with patch(
-            "src.components.shared.embedding_factory.SentenceTransformersEmbeddingService"
+            "src.components.shared.sentence_transformers_embedding.SentenceTransformersEmbeddingService"
         ) as mock_st_service:
             mock_service = MagicMock()
             mock_st_service.return_value = mock_service
@@ -215,7 +215,7 @@ def test_lazy_import_of_backends():
         # (This is implicit - if there were circular imports, test would fail during import)
 
         with patch(
-            "src.components.shared.embedding_factory.get_ollama_service"
+            "src.components.shared.embedding_service.get_embedding_service"
         ) as mock_get_ollama:
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service

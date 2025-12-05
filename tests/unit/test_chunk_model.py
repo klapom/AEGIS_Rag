@@ -166,7 +166,8 @@ class TestChunk:
 
         # Same inputs should generate same chunk_id
         assert chunk_id_1 == chunk_id_2
-        assert len(chunk_id_1) == 16  # SHA-256 prefix
+        # UUID4 format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (8-4-4-4-12)
+        assert len(chunk_id_1) == 36
 
         # Different inputs should generate different chunk_ids
         chunk_id_3 = Chunk.generate_chunk_id("doc_001", 1, "Sample text")

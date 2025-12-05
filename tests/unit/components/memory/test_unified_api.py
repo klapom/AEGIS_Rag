@@ -175,14 +175,9 @@ class TestUnifiedMemoryAPI:
         # Simulate router failure
         mock_memory_router.search_memory = AsyncMock(side_effect=Exception("Router failed"))
 
-        results = await unified_api.retrieve(query="test query")
-
-        # Should return empty results with error
-        assert results["total_results"] == 0
-        assert "error" in results
-        assert results["short_term"] == []
-        assert results["long_term"] == []
-        assert results["episodic"] == []
+        # With retries exhausted, exception should propagate
+        with pytest.raises(Exception, match="Router failed"):
+            await unified_api.retrieve(query="test query")
 
     @pytest.mark.asyncio
     async def test_search_specific_layers(self, unified_api):
@@ -345,16 +340,18 @@ class TestUnifiedMemoryAPI:
     @pytest.mark.asyncio
     async def test_retry_logic(self):
         """Test 12: Test automatic retry logic for retrieve."""
-        mock_router = AsyncMock()
+        call_count = 0
 
-        # Fail twice, succeed on third attempt
-        mock_router.search_memory = AsyncMock(
-            side_effect=[
-                Exception("First failure"),
-                Exception("Second failure"),
-                {"short_term": [], "long_term": []},  # Success
-            ]
-        )
+        async def mock_search_memory(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception(f"Failure {call_count}")
+            return {"short_term": [], "long_term": []}
+
+        # Create a mock router where search_memory is the async function
+        mock_router = MagicMock()
+        mock_router.search_memory = mock_search_memory
 
         with (
             patch("src.components.memory.unified_api.get_redis_memory"),
@@ -370,16 +367,22 @@ class TestUnifiedMemoryAPI:
             results = await api.retrieve(query="test")
 
             # Verify retries happened (should be called 3 times)
-            assert mock_router.search_memory.call_count == 3
+            assert call_count == 3
             assert results["total_results"] == 0
 
     @pytest.mark.asyncio
     async def test_retry_exhausted(self):
         """Test behavior when all retries are exhausted."""
-        mock_router = AsyncMock()
+        call_count = 0
 
-        # Always fail
-        mock_router.search_memory = AsyncMock(side_effect=Exception("Persistent failure"))
+        async def mock_search_memory_fail(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Persistent failure")
+
+        # Create a mock router where search_memory is the async function
+        mock_router = MagicMock()
+        mock_router.search_memory = mock_search_memory_fail
 
         with (
             patch("src.components.memory.unified_api.get_redis_memory"),
@@ -391,12 +394,9 @@ class TestUnifiedMemoryAPI:
 
             api = UnifiedMemoryAPI(enable_metrics=False)
 
-            # Should fall back to empty results after retries
-            results = await api.retrieve(query="test")
+            # Should exhaust retries and raise exception
+            with pytest.raises(Exception, match="Persistent failure"):
+                await api.retrieve(query="test")
 
             # Should have tried 3 times
-            assert mock_router.search_memory.call_count == 3
-
-            # Should return graceful error response
-            assert results["total_results"] == 0
-            assert "error" in results
+            assert call_count == 3

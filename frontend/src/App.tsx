@@ -17,6 +17,7 @@ import { Settings } from './pages/Settings';
 import { GraphAnalyticsPage } from './pages/admin/GraphAnalyticsPage';
 import { CostDashboardPage } from './pages/admin/CostDashboardPage';
 import { AdminIndexingPage } from './pages/admin/AdminIndexingPage';
+import { AdminLLMConfigPage } from './pages/admin/AdminLLMConfigPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -40,6 +41,7 @@ function App() {
             <Route path="/admin/indexing" element={<AdminIndexingPage />} />
             <Route path="/admin/graph" element={<GraphAnalyticsPage />} />
             <Route path="/admin/costs" element={<CostDashboardPage />} />
+            <Route path="/admin/llm-config" element={<AdminLLMConfigPage />} />
             <Route path="/dashboard/costs" element={<CostDashboardPage />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

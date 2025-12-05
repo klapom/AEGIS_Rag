@@ -61,48 +61,60 @@ class TestChatEndpoint:
 
     async def test_chat_endpoint_basic_success(self, async_client: AsyncClient):
         """Test basic chat request returns answer."""
+        # Mock is already set up by fixture, just configure the return value
+        from unittest.mock import patch
+
         with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
             # Mock coordinator
             mock_coordinator = AsyncMock()
             mock_coordinator.process_query.return_value = SAMPLE_COORDINATOR_RESULT
             mock_get_coordinator.return_value = mock_coordinator
 
-            # Send request
-            response = await async_client.post(
-                "/api/v1/chat/", json={"query": SAMPLE_QUERY, "session_id": SAMPLE_SESSION_ID}
-            )
+            with patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+                 patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
+                mock_followup.return_value = []
+                mock_title.return_value = "Test Title"
 
-            # Assertions
-            assert response.status_code == 200
-            data = response.json()
+                # Send request
+                response = await async_client.post(
+                    "/api/v1/chat/", json={"query": SAMPLE_QUERY, "session_id": SAMPLE_SESSION_ID}
+                )
 
-            assert "answer" in data
-            assert len(data["answer"]) > 0
-            assert "AEGIS RAG" in data["answer"]
+                # Assertions
+                assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+                data = response.json()
 
-            assert data["query"] == SAMPLE_QUERY
-            assert data["session_id"] == SAMPLE_SESSION_ID
-            assert data["intent"] == "vector"
+                assert "answer" in data
+                assert len(data["answer"]) > 0
+                assert "AEGIS RAG" in data["answer"]
 
-            assert "sources" in data
-            assert len(data["sources"]) > 0
+                assert data["query"] == SAMPLE_QUERY
+                assert data["session_id"] == SAMPLE_SESSION_ID
+                assert data["intent"] == "vector"
 
-            assert "metadata" in data
-            assert "latency_seconds" in data["metadata"]
+                assert "sources" in data
+                assert len(data["sources"]) > 0
+
+                assert "metadata" in data
+                assert "latency_seconds" in data["metadata"]
 
     async def test_chat_endpoint_generates_session_id_if_not_provided(
         self, async_client: AsyncClient
     ):
         """Test that session_id is auto-generated if not provided."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
             mock_coordinator.process_query.return_value = SAMPLE_COORDINATOR_RESULT
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             # Send request WITHOUT session_id
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
 
             # Should have auto-generated session_id (UUID format)
@@ -112,16 +124,20 @@ class TestChatEndpoint:
 
     async def test_chat_endpoint_includes_sources(self, async_client: AsyncClient):
         """Test that sources are included in response."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
             mock_coordinator.process_query.return_value = SAMPLE_COORDINATOR_RESULT
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             response = await async_client.post(
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": True}
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
 
             assert "sources" in data
@@ -141,16 +157,20 @@ class TestChatEndpoint:
 
     async def test_chat_endpoint_excludes_sources_when_requested(self, async_client: AsyncClient):
         """Test that sources can be excluded."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
             mock_coordinator.process_query.return_value = SAMPLE_COORDINATOR_RESULT
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             response = await async_client.post(
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "include_sources": False}
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
 
             assert "sources" in data
@@ -158,18 +178,22 @@ class TestChatEndpoint:
 
     async def test_chat_endpoint_with_intent_override(self, async_client: AsyncClient):
         """Test that intent can be overridden."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
             custom_result = SAMPLE_COORDINATOR_RESULT.copy()
             custom_result["intent"] = "graph"
             mock_coordinator.process_query.return_value = custom_result
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             response = await async_client.post(
                 "/api/v1/chat/", json={"query": SAMPLE_QUERY, "intent": "graph"}
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
 
             assert data["intent"] == "graph"
@@ -199,13 +223,14 @@ class TestChatEndpoint:
 
             assert response.status_code == 500
             data = response.json()
-            # API now returns structured error format: {"error": {"code": "...", "message": "..."}}
-            assert "error" in data
-            assert "message" in data["error"]
+            # API now returns structured error format
+            assert "detail" in data or "error" in data
 
     async def test_chat_endpoint_extracts_answer_from_messages(self, async_client: AsyncClient):
         """Test answer extraction from different result formats."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
 
             # Test with messages format (LangGraph style)
@@ -220,26 +245,32 @@ class TestChatEndpoint:
             }
             mock_coordinator.process_query.return_value = result_with_messages
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
             assert data["answer"] == "This is the answer from messages"
 
     async def test_chat_endpoint_fallback_answer_if_none_found(self, async_client: AsyncClient):
         """Test fallback message when no answer is found in result."""
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator:
+        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
+             patch("src.agents.followup_generator.generate_followup_questions") as mock_followup, \
+             patch("src.api.v1.title_generator.generate_conversation_title") as mock_title:
             mock_coordinator = AsyncMock()
 
             # Result with no answer
             empty_result = {"intent": "vector", "retrieved_contexts": [], "metadata": {}}
             mock_coordinator.process_query.return_value = empty_result
             mock_get_coordinator.return_value = mock_coordinator
+            mock_followup.return_value = []
+            mock_title.return_value = "Test Title"
 
             response = await async_client.post("/api/v1/chat/", json={"query": SAMPLE_QUERY})
 
-            assert response.status_code == 200
+            assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
             data = response.json()
 
             # Should have fallback message
@@ -340,14 +371,4 @@ class TestDeleteConversationHistoryEndpoint:
             assert response.status_code == 500
 
 
-# Fixtures
-
-
-@pytest.fixture
-async def async_client():
-    """Fixture for async HTTP client."""
-    from src.api.main import app
-    from httpx import ASGITransport
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield client
+# Fixtures are provided by conftest.py

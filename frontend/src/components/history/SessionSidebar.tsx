@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { listSessions } from '../../api/chat';
 import type { SessionInfo } from '../../types/chat';
 import { SessionGroup } from './SessionGroup';
@@ -21,6 +22,7 @@ interface SessionSidebarProps {
 }
 
 export function SessionSidebar({ isOpen, onToggle }: SessionSidebarProps) {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -158,6 +160,44 @@ export function SessionSidebar({ isOpen, onToggle }: SessionSidebarProps) {
               />
             ))
           )}
+        </div>
+
+        {/* Admin Section */}
+        <div className="pt-4 border-t border-gray-200 px-4">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+            Admin
+          </h3>
+          <div className="space-y-1">
+            <button
+              onClick={() => navigate('/admin/indexing')}
+              className="w-full py-2 px-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+            >
+              <span>📄</span>
+              <span>Indexing</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/graph')}
+              className="w-full py-2 px-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+            >
+              <span>🕸️</span>
+              <span>Graph Analytics</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/costs')}
+              className="w-full py-2 px-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+            >
+              <span>💰</span>
+              <span>Cost Dashboard</span>
+            </button>
+            <button
+              onClick={() => navigate('/admin/llm-config')}
+              className="w-full py-2 px-3 text-sm text-gray-700 hover:bg-gray-100 rounded-lg flex items-center space-x-2"
+              data-testid="sidebar-llm-config-link"
+            >
+              <span>🤖</span>
+              <span>LLM Configuration</span>
+            </button>
+          </div>
         </div>
       </div>
     </>

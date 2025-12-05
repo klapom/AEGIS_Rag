@@ -220,12 +220,12 @@ def test_image_processor__cleanup__removes_temp_files():
 @pytest.mark.asyncio
 async def test_process_image__valid_image__returns_description(sample_image):
     """Test successful VLM image processing (ASYNC - Sprint 25 Feature 25.4)."""
-    # Mock DashScope VLM response
+    # Mock VLM Factory response (preferred path since VLM_FACTORY_AVAILABLE is likely True)
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.return_value = "A red square image with dimensions 200x200 pixels."
+    ) as mock_factory:
+        mock_factory.return_value = "A red square image with dimensions 200x200 pixels."
 
         processor = ImageProcessor()
 
@@ -236,7 +236,7 @@ async def test_process_image__valid_image__returns_description(sample_image):
 
         assert description is not None
         assert "red square" in description.lower()
-        mock_vlm.assert_called_once()
+        mock_factory.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -255,10 +255,10 @@ async def test_process_image__filtered_image__returns_none(small_image):
 async def test_process_image__creates_temp_file(sample_image):
     """Test that temporary file is created during processing (ASYNC - Sprint 25 Feature 25.4)."""
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.return_value = "Test description"
+    ) as mock_factory:
+        mock_factory.return_value = "Test description"
 
         processor = ImageProcessor()
 
@@ -279,10 +279,10 @@ async def test_process_image__creates_temp_file(sample_image):
 async def test_process_image__vlm_error__returns_none(sample_image):
     """Test error handling when VLM fails (ASYNC - Sprint 25 Feature 25.4)."""
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.side_effect = Exception("VLM connection error")
+    ) as mock_factory:
+        mock_factory.side_effect = Exception("VLM connection error")
 
         processor = ImageProcessor()
 
@@ -307,10 +307,10 @@ def test_process_image__custom_prompt__used_in_request(sample_image):
 async def test_process_multiple_images__sequential__success():
     """Test processing multiple images sequentially."""
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.side_effect = [
+    ) as mock_factory:
+        mock_factory.side_effect = [
             "First image description",
             "Second image description",
             "Third image description",
@@ -331,7 +331,7 @@ async def test_process_multiple_images__sequential__success():
 
         assert len(descriptions) == 3
         assert all(desc is not None for desc in descriptions)
-        assert mock_vlm.call_count == 3
+        assert mock_factory.call_count == 3
         assert len(processor.temp_files) == 3
 
         # Cleanup
@@ -342,10 +342,10 @@ async def test_process_multiple_images__sequential__success():
 async def test_process_mixed_valid_invalid_images__filters_correctly():
     """Test processing mix of valid and invalid images."""
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.return_value = "Valid image"
+    ) as mock_factory:
+        mock_factory.return_value = "Valid image"
 
         processor = ImageProcessor()
 
@@ -366,7 +366,7 @@ async def test_process_mixed_valid_invalid_images__filters_correctly():
         # Only 2 valid images should be processed
         valid_descriptions = [d for d in descriptions if d is not None]
         assert len(valid_descriptions) == 2
-        assert mock_vlm.call_count == 2
+        assert mock_factory.call_count == 2
 
         # Cleanup
         processor.cleanup()
@@ -381,10 +381,10 @@ async def test_process_mixed_valid_invalid_images__filters_correctly():
 async def test_process_image__empty_response__handles_gracefully():
     """Test handling of empty VLM response."""
     with patch(
-        "src.components.ingestion.image_processor.generate_vlm_description_with_dashscope",
+        "src.components.ingestion.image_processor.generate_vlm_description_with_factory",
         new_callable=AsyncMock,
-    ) as mock_vlm:
-        mock_vlm.return_value = ""
+    ) as mock_factory:
+        mock_factory.return_value = ""
 
         processor = ImageProcessor()
 

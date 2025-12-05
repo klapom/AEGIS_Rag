@@ -43,11 +43,15 @@ budgets:
 # Routing configuration
 # Sprint 33: Cloud-First Strategy for Performance Testing
 # Set prefer_cloud: true to route extraction/generation to Alibaba Cloud Qwen
+# Sprint 36: VLM backend selection (Feature 36.8)
 routing:
   default_provider: local_ollama
   prefer_cloud: true  # NEW: Route extraction/generation to cloud when true
   quality_critical_provider: openai
   batch_processing_provider: alibaba_cloud
+
+  # VLM Backend Selection (Feature 36.8 - DGX Spark)
+  vlm_backend: ollama  # "ollama" (local qwen3-vl:32b) or "dashscope" (cloud qwen3-vl-30b)
 
   # Data classification overrides (GDPR/HIPAA compliance)
   # These classifications ALWAYS route to local (non-negotiable)

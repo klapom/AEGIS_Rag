@@ -264,6 +264,14 @@ class DashScopeVLMClient:
         """Close HTTP client."""
         await self.client.aclose()
 
+    async def __aenter__(self) -> "DashScopeVLMClient":
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()
+
 
 async def get_dashscope_vlm_client() -> DashScopeVLMClient:
     """Get DashScope VLM client (singleton pattern).
