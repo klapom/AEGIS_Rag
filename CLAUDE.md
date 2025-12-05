@@ -921,6 +921,13 @@ python -m cProfile -o profile.stats scripts/benchmark.py
 
 ## Additional Resources
 
+### Internal Documentation
+- [DGX Spark Deployment Guide](docs/operations/DGX_SPARK_DEPLOYMENT.md) - Container setup, GPU configuration, testing
+- [Context Refresh Guide](docs/CONTEXT_REFRESH.md) - Session continuity after context loss
+- [ADR Index](docs/adr/ADR_INDEX.md) - Architecture Decision Records
+- [Sprint Plans](docs/sprints/) - Sprint planning and status
+
+### External Documentation
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [LlamaIndex Docs](https://docs.llamaindex.ai/)
 - [Qdrant Documentation](https://qdrant.tech/documentation/)

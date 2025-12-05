@@ -249,6 +249,12 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 | **src/components/*/README.md** | Component architecture, usage, APIs | Task-specific | ✅ Complete |
 | **docs/api/**.md | API documentation (endpoints, SSE, errors) | API development | ✅ Complete |
 
+### Operations & Deployment
+
+| Document | What It Contains | Read When | Status |
+|----------|------------------|-----------|--------|
+| **docs/operations/DGX_SPARK_DEPLOYMENT.md** | DGX Spark setup, containers (API vs Test), GPU config, testing | Deployment/Testing | ✅ Complete |
+
 ### File Reading Order (Deep Refresh)
 
 ```
