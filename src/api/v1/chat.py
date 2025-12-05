@@ -924,7 +924,7 @@ class UpdateTitleRequest(BaseModel):
 
 
 @router.post("/sessions/{session_id}/generate-title", response_model=TitleResponse)
-async def generate_conversation_title(session_id: str) -> TitleResponse:
+async def generate_title_for_session(session_id: str) -> TitleResponse:
     """Auto-generate concise conversation title from first Q&A.
 
     Sprint 17 Feature 17.3: Auto-Generated Conversation Titles
