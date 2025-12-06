@@ -377,6 +377,14 @@ class Settings(BaseSettings):
         default=True, description="Continue with degraded features on non-critical failures"
     )
 
+    # Sprint 37 Feature 37.2: Worker Pool Configuration
+    graph_extraction_workers: int = Field(
+        default=4, ge=1, le=16, description="Number of parallel workers for graph extraction (Sprint 37)"
+    )
+    extraction_worker_timeout: int = Field(
+        default=120, ge=30, le=600, description="Timeout per chunk extraction in seconds (Sprint 37)"
+    )
+
     # Neo4j Graph Database
     neo4j_uri: str = Field(default="bolt://localhost:7687", description="Neo4j connection URI")
     neo4j_user: str = Field(default="neo4j", description="Neo4j username")
