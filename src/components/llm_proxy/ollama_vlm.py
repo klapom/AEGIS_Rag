@@ -97,11 +97,13 @@ class OllamaVLMClient:
         image_base64 = base64.b64encode(image_data).decode("utf-8")
 
         # Ollama /api/generate request payload
+        # Sprint 36: Add think=false to disable Qwen3 thinking mode (127x speedup)
         payload = {
             "model": model,
             "prompt": prompt,
             "images": [image_base64],
             "stream": False,
+            "think": False,  # Disable Qwen3 thinking mode for faster inference
             "options": {"num_predict": max_tokens, "temperature": temperature},
         }
 

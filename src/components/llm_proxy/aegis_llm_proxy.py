@@ -446,11 +446,14 @@ class AegisLLMProxy:
             "stream": stream,
         }
 
-        # Alibaba Cloud (DashScope) specific parameters via extra_body
+        # Provider-specific parameters via extra_body
+        #
         # Sprint 30 Feature 30.6: Fix DashScope enable_thinking parameter
+        # Sprint 36 Feature 36.x: Disable Qwen3 thinking mode for Ollama (127x speedup!)
         #
         # Background:
         #   - DashScope API requires enable_thinking parameter for non-streaming calls
+        #   - Ollama Qwen3 models have thinking mode ON by default, causing 5-min inference times
         #   - OpenAI Python SDK only accepts custom parameters via extra_body
         #   - ANY-LLM passes **kwargs to OpenAI SDK, but SDK filters unknown parameters
         #
@@ -460,12 +463,30 @@ class AegisLLMProxy:
         #   3. Custom parameters MUST be passed via extra_body={} for OpenAI-compatible APIs
         #
         # Solution:
-        #   - Non-thinking models (qwen3-32b): extra_body={"enable_thinking": False}
-        #   - Thinking models (qwen3-vl-30b-a3b-thinking): extra_body={"enable_thinking": True}
+        #   - Local Ollama Qwen3: think=False as DIRECT kwarg (ANY-LLM expects top-level param)
+        #   - DashScope non-thinking: extra_body={"enable_thinking": False}
+        #   - DashScope thinking: extra_body={"enable_thinking": True}
+        #
+        # IMPORTANT: ANY-LLM's Ollama provider expects `think` as a top-level parameter,
+        # NOT inside extra_body. See: any_llm/providers/ollama/ollama.py line ~200
+        #   think=completion_kwargs.pop("think", None)
         #
         # See: docs/adr/ADR-038-dashscope-extra-body-parameters.md
+
+        # Local Ollama: Disable Qwen3 thinking mode for faster inference
+        # Sprint 36: Without this, Qwen3 generates 200+ thinking tokens internally
+        # CRITICAL: Pass "think" directly, NOT via extra_body (ANY-LLM requirement)
+        if provider == "local_ollama" and "qwen3" in model.lower():
+            completion_kwargs["think"] = False
+            logger.info(
+                "ollama_thinking_disabled",
+                model=model,
+                reason="performance_optimization_127x_speedup",
+            )
+
+        # Alibaba Cloud (DashScope) specific parameters - these DO need extra_body
+        extra_body = {}
         if provider == "alibaba_cloud" and not stream:
-            extra_body = {}
             if "thinking" in model:
                 # Thinking models need enable_thinking=true for reasoning mode
                 extra_body["enable_thinking"] = True
@@ -473,7 +494,8 @@ class AegisLLMProxy:
                 # Non-thinking models need enable_thinking=false (DashScope requirement)
                 extra_body["enable_thinking"] = False
 
-            # Pass via extra_body (OpenAI SDK mechanism for provider-specific parameters)
+        # Pass via extra_body only for DashScope parameters
+        if extra_body:
             completion_kwargs["extra_body"] = extra_body
 
         # Call ANY-LLM acompletion function
