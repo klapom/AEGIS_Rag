@@ -219,3 +219,32 @@ export interface PipelineProgressData {
   };
   overall_progress_percent: number;
 }
+
+// ============================================================================
+// Sprint 37 Feature 37.7: Pipeline Worker Pool Configuration Types
+// ============================================================================
+
+export interface PipelineConfig {
+  // Document Processing
+  parallel_documents: number;
+  max_queue_size: number;
+
+  // VLM Workers
+  vlm_workers: number;
+  vlm_batch_size: number;
+  vlm_timeout: number;
+
+  // Embedding Workers
+  embedding_workers: number;
+  embedding_batch_size: number;
+  embedding_timeout: number;
+
+  // Extraction Workers
+  extraction_workers: number;
+  extraction_timeout: number;
+  extraction_max_retries: number;
+
+  // Resource Limits
+  max_concurrent_llm: number;
+  max_vram_mb: number;
+}
