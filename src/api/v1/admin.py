@@ -543,6 +543,12 @@ def _build_detailed_progress(
                 "description": None,
             })
 
+    # Sprint 36: Chunk-level extraction progress for entity/relation extraction
+    # During graph_extraction phase, chunks_processed = total (extraction is already done)
+    # The LangGraph pipeline extracts entities per-chunk internally
+    chunks_total = len(chunks)
+    chunks_processed = chunks_total if pipeline_phase in ["graph_extraction", "validation"] else 0
+
     return {
         "current_file": current_file,
         "current_page": 1,
@@ -562,6 +568,9 @@ def _build_detailed_progress(
             "total_entities": len(entities),
             "total_relations": len(relations),
         },
+        # Sprint 36: Chunk-level extraction progress
+        "chunks_total": chunks_total,
+        "chunks_processed": chunks_processed,
     }
 
 

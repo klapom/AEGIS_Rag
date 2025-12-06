@@ -142,6 +142,9 @@ export interface DetailedProgress {
     total_entities: number;
     total_relations: number;
   };
+  // Sprint 36: Chunk-level extraction progress
+  chunks_total?: number;
+  chunks_processed?: number;
 }
 
 // ============================================================================

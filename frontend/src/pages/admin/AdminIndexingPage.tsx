@@ -860,6 +860,18 @@ export function AdminIndexingPage() {
                   </div>
                 )}
 
+                {/* Sprint 36: Chunk Progress during Entity/Relation Extraction */}
+                {detailedProgress && detailedProgress.chunks_total !== undefined && detailedProgress.chunks_total > 0 && (
+                  <div data-testid="chunk-progress" className="text-sm text-gray-600 flex items-center space-x-4">
+                    <span>Chunks: {detailedProgress.chunks_processed || 0} / {detailedProgress.chunks_total}</span>
+                    {detailedProgress.entities && (
+                      <span className="text-indigo-600">
+                        Entities: {detailedProgress.entities.total_entities} | Relations: {detailedProgress.entities.total_relations}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Phase Badge */}
                 {progress.phase && (
                   <div className="flex items-center space-x-2">
