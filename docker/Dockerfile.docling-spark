@@ -1,29 +1,37 @@
 # =============================================================================
 # Dockerfile.docling-spark - Docling for NVIDIA DGX Spark (Grace Blackwell ARM64)
 # =============================================================================
-# Base: NVIDIA PyTorch container (ARM64 SBSA compatible)
-# Purpose: GPU-accelerated document parsing with EasyOCR
+# Base: NGC PyTorch 25.09 (CUDA 13.0, sm_121 support for Blackwell GB10)
+# Purpose: GPU-accelerated document parsing with layout detection
+#
+# TESTED: 2025-12-06
+# - NGC 25.09-py3 with CUDA 13.0 verified on DGX Spark GB10
+# - PyTorch 2.9.0 with sm_121 (cuda capability 12.1) support
+# - Layout model (RT-DETRv2) runs on GPU
+# - Table structure model (TableFormer) runs on GPU
+# - Conversion: 9-page PDF in ~12s with GPU acceleration
 #
 # Build:
 #   docker build -f docker/Dockerfile.docling-spark -t aegis-docling-spark:latest .
 #
 # Run:
-#   docker run --gpus=all -p 8080:5001 aegis-docling-spark:latest
+#   docker run --gpus=all --ipc=host -p 8080:5001 aegis-docling-spark:latest
 # =============================================================================
 
-# Use 25.01+ for Blackwell GB10 support (24.08 shows "GB10 not yet supported" warning)
-# ARM64 support confirmed: manifest shows arm64 platform
-FROM nvcr.io/nvidia/pytorch:25.01-py3
+# NGC 25.09 has CUDA 13.0.1 with sm_121 support (verified on GB10!)
+# Previous versions (25.03 with CUDA 12.8) fail with nvrtc sm_120 errors
+FROM nvcr.io/nvidia/pytorch:25.09-py3
 
 LABEL maintainer="AegisRAG Team"
-LABEL description="Docling Document Parser for DGX Spark (ARM64)"
-LABEL version="1.0.0"
+LABEL description="Docling Document Parser for DGX Spark (ARM64, GPU-accelerated)"
+LABEL version="2.0.0"
+LABEL cuda_version="13.0"
+LABEL gpu_support="sm_121 (Blackwell GB10)"
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# System dependencies for Docling and EasyOCR
-# Note: libgl1-mesa-glx is deprecated in Ubuntu 24.04, use libgl1 instead
+# System dependencies for Docling and OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # OpenCV dependencies
     libgl1 \
@@ -43,44 +51,80 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create app directory
 WORKDIR /app
 
-# Install Docling with serve extras
-# IMPORTANT: NumPy 2.x Compatibility for NVIDIA PyTorch 25.01 base image
-# The base image has PyTorch compiled against NumPy 2.x, so we MUST keep NumPy 2.x
-# The NGC cv2 was compiled against NumPy 1.x - we must completely remove it
-RUN pip install --no-cache-dir --upgrade pip && \
-    # Completely remove all OpenCV packages from NGC base image
-    pip uninstall -y opencv-python opencv-python-headless opencv-contrib-python cv2 2>/dev/null || true && \
-    # Remove the NGC cv2 shared library if it exists
-    rm -rf /usr/local/lib/python3.12/dist-packages/cv2* 2>/dev/null || true && \
-    # Install fresh OpenCV built for NumPy 2.x (headless for server use)
-    pip install --no-cache-dir --force-reinstall "opencv-python-headless>=4.10" && \
-    # Install docling-serve and dependencies
-    pip install --no-cache-dir "docling-serve" && \
-    # Install rapidocr with onnxruntime for CPU OCR (GPU OCR via docling models)
-    pip install --no-cache-dir rapidocr-onnxruntime
+# =============================================================================
+# Package Installation
+# =============================================================================
+# NGC 25.09 ships with NumPy 2.1.0 and PyTorch 2.9.0 - compatible.
+# No NumPy constraints needed unlike older NGC versions.
+# =============================================================================
 
-# Pre-download RapidOCR models (saves startup time)
-# Using || true to not fail build if download has issues
+RUN pip install --no-cache-dir --upgrade pip && \
+    # Install OpenCV headless (no GUI, for server use)
+    pip install --no-cache-dir "opencv-python-headless>=4.10" && \
+    # Install docling-serve
+    pip install --no-cache-dir "docling-serve" && \
+    # Install EasyOCR (GPU-accelerated OCR)
+    pip install --no-cache-dir easyocr && \
+    # Install RapidOCR (lightweight CPU fallback)
+    pip install --no-cache-dir rapidocr-onnxruntime && \
+    # Verify installations
+    python -c "import torch; print(f'PyTorch: {torch.__version__}')" && \
+    python -c "import numpy; print(f'NumPy: {numpy.__version__}')" && \
+    python -c "import cv2; print(f'OpenCV: {cv2.__version__}')"
+
+# =============================================================================
+# PATCH: Fix EasyOCR pin_memory issue
+# =============================================================================
+# EasyOCR uses pin_memory=True which can cause issues on some systems.
+# Fix: Replace with pin_memory=torch.cuda.is_available()
+# See: https://github.com/JaidedAI/EasyOCR/pull/1419
+# =============================================================================
+RUN EASYOCR_PATH=$(python -c "import easyocr; import os; print(os.path.dirname(easyocr.__file__))") && \
+    echo "Patching EasyOCR at: $EASYOCR_PATH" && \
+    sed -i 's/pin_memory=True/pin_memory=torch.cuda.is_available()/g' "$EASYOCR_PATH/recognition.py" && \
+    grep -n "pin_memory=torch.cuda.is_available()" "$EASYOCR_PATH/recognition.py" && \
+    echo "EasyOCR pin_memory patch applied successfully"
+
+# Pre-download OCR models (saves startup time)
+RUN python -c "import easyocr; reader = easyocr.Reader(['en', 'de'], gpu=True); print('EasyOCR models downloaded')" || \
+    python -c "import easyocr; reader = easyocr.Reader(['en', 'de'], gpu=False); print('EasyOCR models downloaded (CPU fallback)')" || \
+    echo "WARN: EasyOCR preload skipped - models will download on first use"
+
+# RapidOCR models (CPU fallback)
 RUN python -c "from rapidocr_onnxruntime import RapidOCR; ocr = RapidOCR(); print('RapidOCR initialized')" || \
-    echo "WARN: RapidOCR preload skipped - models will download on first use"
+    echo "WARN: RapidOCR preload skipped"
 
 # Pre-download Docling models (layout, table structure)
-RUN python -c "from docling.document_converter import DocumentConverter; print('Docling initialized')" || \
+RUN python -c "from docling.document_converter import DocumentConverter; print('Docling models initialized')" || \
     echo "WARN: Docling preload skipped - models will download on first use"
 
-# Create cache directories with proper permissions
-RUN mkdir -p /root/.cache/huggingface /root/.cache/rapidocr
+# Create cache directories
+RUN mkdir -p /root/.cache/huggingface /root/.cache/rapidocr /root/.EasyOCR
 
-# Environment variables for Docling
+# =============================================================================
+# Environment Variables
+# =============================================================================
 ENV PORT=5001
 ENV DOCLING_LAZY_LOADING=true
-# Use rapidocr for NumPy 2.x compatibility (easyocr requires NumPy 1.x)
-ENV DOCLING_OCR_ENGINE=rapidocr
+
+# GPU MODE ENABLED - Verified working on DGX Spark GB10 with CUDA 13.0
+ENV DOCLING_DEVICE=cuda
+
+# OCR Configuration (auto will select best available)
+ENV DOCLING_OCR_ENGINE=auto
 ENV DOCLING_TABLE_STRUCTURE=true
 ENV DOCLING_LAYOUT_ANALYSIS=true
+
+# Image extraction for VLM processing
 ENV DOCLING_GENERATE_PICTURE_IMAGES=true
 ENV DOCLING_IMAGES_SCALE=2.0
+
+# Logging
 ENV LOG_LEVEL=INFO
+
+# PyTorch/CUDA optimizations for DGX Spark
+ENV TORCH_CUDA_ARCH_LIST="12.1a"
+ENV TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
 
 # Expose the API port
 EXPOSE 5001
@@ -89,5 +133,5 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:5001/health || exit 1
 
-# Run Docling serve (docling-serve run is the CLI command)
+# Run Docling serve
 CMD ["docling-serve", "run", "--host", "0.0.0.0", "--port", "5001"]

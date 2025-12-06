@@ -210,6 +210,48 @@ export async function scanDirectory(
 }
 
 /**
+ * Upload Types (Sprint 35 Feature 35.10)
+ */
+export interface UploadFileInfo {
+  filename: string;
+  file_path: string;
+  file_size_bytes: number;
+  file_extension: string;
+}
+
+export interface UploadResponse {
+  upload_dir: string;
+  files: UploadFileInfo[];
+  total_size_bytes: number;
+}
+
+/**
+ * Upload files to the server for indexing
+ * Sprint 35 Feature 35.10: File Upload for Admin Indexing
+ *
+ * @param files Array of File objects to upload
+ * @returns UploadResponse with upload directory and file information
+ */
+export async function uploadFiles(files: File[]): Promise<UploadResponse> {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/indexing/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Stream document addition progress using Server-Sent Events (SSE)
  * ADD-only mode: Documents are added to existing index without deletion
  *

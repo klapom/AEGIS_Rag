@@ -5,13 +5,14 @@ Sprint 31 Feature 31.10a: Cost API Backend Implementation
 """
 
 import asyncio
+import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Literal
 
 import structlog
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
@@ -888,6 +889,163 @@ async def add_documents_to_index(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ============================================================================
+# Sprint 35 Feature 35.10: File Upload Endpoint
+# ============================================================================
+
+
+class UploadFileInfo(BaseModel):
+    """Information about an uploaded file."""
+
+    filename: str = Field(..., description="Original filename")
+    file_path: str = Field(..., description="Server path to uploaded file")
+    file_size_bytes: int = Field(..., description="File size in bytes")
+    file_extension: str = Field(..., description="File extension (e.g., 'pdf', 'docx')")
+
+
+class UploadResponse(BaseModel):
+    """Response from file upload endpoint."""
+
+    upload_dir: str = Field(..., description="Directory where files were uploaded")
+    files: List[UploadFileInfo] = Field(..., description="List of uploaded files")
+    total_size_bytes: int = Field(..., description="Total size of all uploaded files")
+
+
+# File size limit: 100MB per file
+MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
+
+
+@router.post(
+    "/indexing/upload",
+    response_model=UploadResponse,
+    summary="Upload files for indexing",
+    description="Upload one or more files to the server for subsequent indexing. Files are stored in data/uploads/{session_id}/",
+)
+async def upload_files(
+    files: List[UploadFile] = File(..., description="Files to upload")
+) -> UploadResponse:
+    """Upload files to server for indexing.
+
+    **Sprint 35 Feature 35.10: File Upload for Admin Indexing**
+
+    This endpoint:
+    1. Accepts multiple files via multipart/form-data
+    2. Validates file sizes (max 100MB per file)
+    3. Creates a unique upload directory (data/uploads/{uuid})
+    4. Saves files to the upload directory
+    5. Returns file paths for use with /indexing/add endpoint
+
+    **Workflow:**
+    1. User selects files in frontend
+    2. Frontend uploads files to this endpoint
+    3. Frontend receives upload_dir and file paths
+    4. Frontend calls /indexing/add with returned file paths
+    5. Backend indexes files via LangGraph pipeline
+
+    **Security:**
+    - File size validation (max 100MB per file)
+    - Files stored in isolated directory (data/uploads/{uuid})
+    - No filename validation (backend handles all file types)
+
+    **Example Usage:**
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/admin/indexing/upload" \\
+      -F "files=@document1.pdf" \\
+      -F "files=@document2.docx"
+    ```
+
+    Args:
+        files: List of files to upload (UploadFile objects)
+
+    Returns:
+        UploadResponse with upload directory and file information
+
+    Raises:
+        HTTPException 400: If no files provided or file too large
+        HTTPException 500: If upload fails
+    """
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided",
+        )
+
+    # Create unique upload directory
+    upload_session_id = str(uuid.uuid4())
+    upload_dir = Path("data/uploads") / upload_session_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "file_upload_started",
+        session_id=upload_session_id,
+        file_count=len(files),
+        feature="sprint_35_feature_35.10",
+    )
+
+    uploaded_files = []
+    total_size = 0
+
+    try:
+        for file in files:
+            # Validate file size
+            file_content = await file.read()
+            file_size = len(file_content)
+
+            if file_size > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"File {file.filename} exceeds maximum size of {MAX_FILE_SIZE_BYTES / 1024 / 1024:.0f}MB",
+                )
+
+            # Save file
+            file_path = upload_dir / file.filename
+            with open(file_path, "wb") as f:
+                f.write(file_content)
+
+            # Get file extension
+            file_ext = Path(file.filename).suffix.lower().lstrip(".")
+
+            uploaded_files.append(
+                UploadFileInfo(
+                    filename=file.filename,
+                    file_path=str(file_path),
+                    file_size_bytes=file_size,
+                    file_extension=file_ext,
+                )
+            )
+            total_size += file_size
+
+            logger.info(
+                "file_uploaded",
+                filename=file.filename,
+                size_bytes=file_size,
+                path=str(file_path),
+            )
+
+        logger.info(
+            "file_upload_completed",
+            session_id=upload_session_id,
+            file_count=len(uploaded_files),
+            total_size_bytes=total_size,
+        )
+
+        return UploadResponse(
+            upload_dir=str(upload_dir),
+            files=uploaded_files,
+            total_size_bytes=total_size,
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error("file_upload_failed", session_id=upload_session_id, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File upload failed: {str(e)}",
+        ) from e
 
 
 # ============================================================================

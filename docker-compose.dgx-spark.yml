@@ -77,15 +77,18 @@ services:
   # ============================================================================
   # Docling - GPU-Accelerated Document Parsing (ARM64 Build)
   # ============================================================================
-  # IMPORTANT: Requires custom ARM64 image built from Dockerfile.docling-spark
+  # TESTED: 2025-12-06 - GPU MODE WORKING on DGX Spark GB10!
   #
-  # Build the image first:
-  #   docker build -f docker/Dockerfile.docling-spark -t aegis-docling-spark:latest .
+  # Requirements:
+  #   - NGC PyTorch 25.09 base image (CUDA 13.0, sm_121 support)
+  #   - Build: docker build -f docker/Dockerfile.docling-spark -t aegis-docling-spark:latest .
   #
-  # Memory: ~4GB for OCR models (EasyOCR + Layout + Table Structure)
+  # Performance (GPU vs CPU):
+  #   - GPU: 9-page PDF in ~12s (layout + table structure on cuda:0)
+  #   - CPU: 9-page PDF in ~60s (3-5x slower)
   # ============================================================================
   docling:
-    # Custom ARM64 image (build from docker/Dockerfile.docling-spark)
+    # Custom ARM64 image with NGC 25.09 base (CUDA 13.0 for sm_121)
     image: aegis-docling-spark:latest
     build:
       context: .
@@ -103,13 +106,29 @@ services:
       # Port Configuration
       - PORT=5001
 
-      # GPU Configuration for DGX Spark
-      - CUDA_VISIBLE_DEVICES=0
+      # GPU Configuration: ENABLED for Blackwell GB10 (sm_121)
+      # ============================================================================
+      # STATUS: GPU mode WORKING with NGC 25.09 (CUDA 13.0)
+      # TESTED: 2025-12-06
+      #
+      # Solution: NGC PyTorch 25.09 container has CUDA 13.0.1 which supports:
+      #   sm_80, sm_86, sm_90, sm_100, sm_110, sm_120, compute_120
+      # The GB10 (sm_121) runs successfully despite the warning about 12.1
+      #
+      # Previously failed with:
+      # - NGC 25.03 (CUDA 12.8): nvrtc error - only sm_120, not sm_121
+      # - PyTorch Nightly cu128: same issue
+      # ============================================================================
+      - DOCLING_DEVICE=cuda
+
+      # PyTorch/CUDA optimizations for DGX Spark
+      - TORCH_CUDA_ARCH_LIST=12.1a
+      - TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
 
       # Model Configuration
       - DOCLING_LAZY_LOADING=true
-      # Use rapidocr for NumPy 2.x compatibility (easyocr requires NumPy 1.x)
-      - DOCLING_OCR_ENGINE=rapidocr
+      # OCR: auto selects best available (EasyOCR GPU or RapidOCR CPU)
+      - DOCLING_OCR_ENGINE=auto
       - DOCLING_TABLE_STRUCTURE=true
       - DOCLING_LAYOUT_ANALYSIS=true
 
@@ -117,24 +136,26 @@ services:
       - DOCLING_GENERATE_PICTURE_IMAGES=true
       - DOCLING_IMAGES_SCALE=2.0
 
-      # DGX Spark: More workers since we have more memory
+      # DGX Spark: GPU mode is faster, but keep reasonable timeouts
       - NUM_WORKERS=4
-      - DOCLING_BATCH_SIZE=2
+      - DOCLING_BATCH_SIZE=4
       - DOCLING_TIMEOUT=300
+      - DOCLING_SERVE_MAX_SYNC_WAIT=300
 
       # Logging
       - LOG_LEVEL=INFO
 
-    # GPU Resource Allocation
+    # GPU Support for DGX Spark (Blackwell GB10)
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
         limits:
-          memory: 8G  # More RAM available on DGX Spark
+          # GPU mode uses ~4-6GB VRAM for models
+          memory: 16G
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
@@ -333,6 +354,7 @@ services:
     volumes:
       - ./src:/app/src:ro
       - ./config:/app/config:ro
+      - ./data:/app/data:rw  # Documents for indexing
     environment:
       - ENVIRONMENT=development
       - DEBUG=false

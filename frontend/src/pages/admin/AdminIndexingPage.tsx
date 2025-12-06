@@ -20,8 +20,8 @@
  * All data-testid attributes match E2E test expectations from AdminIndexingPage POM
  */
 
-import { useState, useCallback } from 'react';
-import { scanDirectory, streamAddDocuments } from '../../api/admin';
+import { useState, useCallback, useRef } from 'react';
+import { scanDirectory, streamAddDocuments, uploadFiles } from '../../api/admin';
 import type {
   ReindexProgressChunk,
   ScanDirectoryResponse,
@@ -31,45 +31,27 @@ import type {
 } from '../../types/admin';
 import { IndexingDetailDialog } from '../../components/admin/IndexingDetailDialog';
 import { ErrorTrackingButton } from '../../components/admin/ErrorTrackingButton';
+import {
+  getFileSupportStatus,
+  isFileSupported,
+  formatFileSize,
+  FILE_SUPPORT_CONFIG,
+} from '../../constants/fileSupport';
 
-// File type configuration for color coding
-const FILE_TYPE_CONFIG = {
-  docling: {
-    color: 'bg-green-700',
-    textColor: 'text-green-700',
-    badgeColor: 'bg-green-700 text-white',
-    label: 'Docling',
-    description: 'GPU-accelerated OCR (optimal)',
-  },
-  llamaindex: {
-    color: 'bg-green-400',
-    textColor: 'text-green-600',
-    badgeColor: 'bg-green-400 text-green-900',
-    label: 'LlamaIndex',
-    description: 'Fallback parser',
-  },
-  unsupported: {
-    color: 'bg-red-500',
-    textColor: 'text-red-500',
-    badgeColor: 'bg-red-500 text-white',
-    label: 'Nicht unterstützt',
-    description: 'Wird übersprungen',
-  },
-};
-
-// Helper function to format file size
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
+// Alias for backward compatibility with existing code
+const FILE_TYPE_CONFIG = FILE_SUPPORT_CONFIG;
 
 export function AdminIndexingPage() {
   // Form state
   const [directory, setDirectory] = useState('data/sample_documents');
   const [recursive, setRecursive] = useState(false);
+
+  // Sprint 35 Feature 35.10: File upload state
+  const [selectedLocalFiles, setSelectedLocalFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scan state
   const [isScanning, setIsScanning] = useState(false);
@@ -125,6 +107,57 @@ export function AdminIndexingPage() {
     }
   }, [directory, recursive]);
 
+  // Sprint 35 Feature 35.10: File upload handlers
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setSelectedLocalFiles(files);
+    setUploadError(null);
+  }, []);
+
+  const handleRemoveFile = useCallback((index: number) => {
+    setSelectedLocalFiles((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleUploadFiles = useCallback(async () => {
+    if (selectedLocalFiles.length === 0) {
+      setUploadError('Bitte wählen Sie mindestens eine Datei aus');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const response = await uploadFiles(selectedLocalFiles);
+
+      // Extract uploaded file paths
+      const filePaths = response.files.map((f) => f.file_path);
+      setUploadedFiles(filePaths);
+
+      // Auto-select uploaded files for indexing
+      setSelectedFiles(new Set(filePaths));
+
+      // Clear local file selection
+      setSelectedLocalFiles([]);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // Show success message
+      console.log(`Uploaded ${response.files.length} files to ${response.upload_dir}`);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setUploadError(err instanceof Error ? err.message : 'Datei-Upload fehlgeschlagen');
+    } finally {
+      setIsUploading(false);
+    }
+  }, [selectedLocalFiles]);
+
+  const handleClearUploads = useCallback(() => {
+    setUploadedFiles([]);
+    setSelectedFiles(new Set());
+  }, []);
+
   // File selection handlers
   const handleSelectAll = useCallback(() => {
     if (scanResult) {
@@ -158,20 +191,33 @@ export function AdminIndexingPage() {
   }, []);
 
   const handleStartIndexing = useCallback(async () => {
-    // Validation
-    if (!directory.trim()) {
-      setError('Bitte geben Sie einen Verzeichnispfad ein');
-      return;
-    }
+    // Sprint 35: Support both directory scanning and file upload workflows
+    // Priority: uploaded files > scanned files > auto-scan directory
 
-    // Sprint 33: Auto-scan if not already scanned (backward compatibility for E2E tests)
-    if (!scanResult) {
+    // If uploaded files exist, use them
+    if (uploadedFiles.length > 0) {
+      if (selectedFiles.size === 0) {
+        setError('Bitte wählen Sie mindestens eine Datei aus');
+        return;
+      }
+      // Continue with uploaded files
+    }
+    // If scanned files exist, use them
+    else if (scanResult) {
+      if (selectedFiles.size === 0) {
+        setError('Bitte wählen Sie mindestens eine Datei aus');
+        return;
+      }
+      // Continue with scanned files
+    }
+    // Otherwise, validate directory and auto-scan (backward compatibility)
+    else if (directory.trim()) {
       await handleScanDirectory();
       return; // handleScanDirectory will auto-select supported files
     }
-
-    if (selectedFiles.size === 0) {
-      setError('Bitte wählen Sie mindestens eine Datei aus');
+    // No files selected and no directory provided
+    else {
+      setError('Bitte wählen Sie Dateien hoch oder geben Sie einen Verzeichnispfad ein');
       return;
     }
 
@@ -240,7 +286,7 @@ export function AdminIndexingPage() {
       setIsIndexing(false);
       setAbortController(null);
     }
-  }, [directory, selectedFiles, scanResult, handleScanDirectory]);
+  }, [directory, selectedFiles, scanResult, uploadedFiles, handleScanDirectory]);
 
   const handleCancelIndexing = useCallback(() => {
     if (abortController) {
@@ -302,15 +348,211 @@ export function AdminIndexingPage() {
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-gray-900">Document Indexing</h1>
           <p className="text-gray-600">
-            Indizieren Sie Dokumente aus einem Verzeichnis in die Wissensdatenbank
+            Indizieren Sie Dokumente durch Datei-Upload oder aus einem Serververzeichnis
           </p>
+        </div>
+
+        {/* Sprint 35 Feature 35.10: File Upload Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Option 1: Dateien hochladen
+          </h2>
+          <p className="text-sm text-gray-600">
+            Laden Sie Dateien von Ihrem Computer hoch. Unterstützte Formate: PDF, DOCX, PPTX,
+            TXT, MD, HTML und mehr.
+          </p>
+
+          {/* File Input */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              disabled={isIndexing || isUploading}
+              className="hidden"
+              id="file-upload-input"
+              data-testid="file-upload-input"
+            />
+            <label
+              htmlFor="file-upload-input"
+              className={`
+                inline-flex items-center px-6 py-3 rounded-lg font-semibold
+                bg-indigo-600 text-white cursor-pointer
+                hover:bg-indigo-700 transition-all
+                ${isIndexing || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
+            >
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              Dateien auswählen
+            </label>
+            <span className="ml-4 text-sm text-gray-600">
+              {selectedLocalFiles.length > 0
+                ? `${selectedLocalFiles.length} Datei(en) ausgewählt`
+                : 'Keine Dateien ausgewählt'}
+            </span>
+          </div>
+
+          {/* Selected Files List */}
+          {selectedLocalFiles.length > 0 && (
+            <div className="space-y-4">
+              <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
+                {selectedLocalFiles.map((file, index) => {
+                  const supportStatus = getFileSupportStatus(file.name);
+                  const config = FILE_TYPE_CONFIG[supportStatus];
+                  const supported = isFileSupported(file.name);
+
+                  return (
+                    <div
+                      key={index}
+                      data-testid={`upload-file-${file.name}`}
+                      className={`flex items-center space-x-3 px-4 py-3 ${
+                        !supported ? 'opacity-60' : ''
+                      }`}
+                    >
+                      {/* Support Status Indicator */}
+                      <div
+                        className={`w-2 h-2 rounded-full ${config.color}`}
+                        title={config.description}
+                      />
+
+                      {/* File Name */}
+                      <span className="flex-1 text-sm font-medium text-gray-900 truncate">
+                        {file.name}
+                      </span>
+
+                      {/* Support Badge */}
+                      <span
+                        className={`px-2 py-0.5 text-xs font-semibold rounded ${config.badgeColor}`}
+                      >
+                        {config.label}
+                      </span>
+
+                      {/* File Size */}
+                      <span className="text-xs text-gray-500 w-16 text-right">
+                        {formatFileSize(file.size)}
+                      </span>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => handleRemoveFile(index)}
+                        disabled={isUploading}
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                        aria-label="Datei entfernen"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Upload Button */}
+              <button
+                data-testid="upload-files-button"
+                onClick={handleUploadFiles}
+                disabled={isUploading || selectedLocalFiles.length === 0}
+                className="
+                  px-6 py-3 rounded-lg font-semibold
+                  bg-indigo-600 text-white
+                  hover:bg-indigo-700
+                  disabled:bg-gray-300 disabled:cursor-not-allowed
+                  transition-all
+                  flex items-center space-x-2
+                "
+              >
+                {isUploading ? (
+                  <>
+                    <LoadingSpinner />
+                    <span>Wird hochgeladen...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                      />
+                    </svg>
+                    <span>Hochladen ({selectedLocalFiles.length} Datei{selectedLocalFiles.length !== 1 ? 'en' : ''})</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Uploaded Files Summary */}
+          {uploadedFiles.length > 0 && (
+            <div
+              data-testid="uploaded-files-summary"
+              className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+            >
+              <SuccessIcon />
+              <span className="text-sm font-medium text-green-800 flex-1">
+                {uploadedFiles.length} Datei(en) erfolgreich hochgeladen und bereit zur
+                Indizierung
+              </span>
+              <button
+                onClick={handleClearUploads}
+                className="text-sm text-green-700 hover:text-green-900 font-medium"
+              >
+                Zurücksetzen
+              </button>
+            </div>
+          )}
+
+          {/* Upload Error */}
+          {uploadError && (
+            <div
+              data-testid="upload-error"
+              className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg"
+            >
+              <ErrorIcon />
+              <span className="text-sm font-medium text-red-800">{uploadError}</span>
+            </div>
+          )}
         </div>
 
         {/* Directory Selection Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            Schritt 1: Verzeichnis auswählen
+            Option 2: Serververzeichnis scannen
           </h2>
+          <p className="text-sm text-gray-600">
+            Scannen Sie ein Verzeichnis auf dem Server nach Dokumenten. Ideal für große Mengen
+            bereits vorhandener Dateien.
+          </p>
 
           {/* Directory Input */}
           <div>
@@ -482,16 +724,24 @@ export function AdminIndexingPage() {
         {/* Indexing Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            {scanResult && selectedFiles.size > 0
+            {uploadedFiles.length > 0
+              ? 'Schritt 2: Hochgeladene Dateien indizieren'
+              : scanResult && selectedFiles.size > 0
               ? 'Schritt 3: Indizierung starten'
               : 'Indizierung starten'
             }
           </h2>
 
-          {!scanResult && (
+          {!scanResult && uploadedFiles.length === 0 && (
             <p className="text-sm text-gray-600">
-              Geben Sie einen Verzeichnispfad ein und klicken Sie auf "Indizierung starten".
-              Das System wird automatisch das Verzeichnis durchsuchen und die Dateien indizieren.
+              Laden Sie Dateien hoch oder geben Sie einen Verzeichnispfad ein, um zu beginnen.
+            </p>
+          )}
+
+          {uploadedFiles.length > 0 && (
+            <p className="text-sm text-gray-600">
+              {uploadedFiles.length} Datei(en) hochgeladen und bereit zur Indizierung.
+              Klicken Sie auf "Indizierung starten", um fortzufahren.
             </p>
           )}
 
@@ -500,7 +750,11 @@ export function AdminIndexingPage() {
             <button
               data-testid="start-indexing"
               onClick={handleStartIndexing}
-              disabled={!directory.trim() || isIndexing || (scanResult !== null && selectedSupportedCount === 0)}
+              disabled={
+                isIndexing ||
+                (uploadedFiles.length === 0 && !directory.trim()) ||
+                (uploadedFiles.length === 0 && scanResult !== null && selectedSupportedCount === 0)
+              }
               className="
                 flex-1 px-6 py-3 rounded-lg font-semibold
                 bg-blue-600 text-white
@@ -515,6 +769,11 @@ export function AdminIndexingPage() {
                   <LoadingSpinner />
                   <span>Indizierung läuft...</span>
                 </>
+              ) : uploadedFiles.length > 0 ? (
+                <span>
+                  Indizierung starten ({uploadedFiles.length} hochgeladene Datei
+                  {uploadedFiles.length !== 1 ? 'en' : ''})
+                </span>
               ) : scanResult ? (
                 <span>
                   Indizierung starten ({selectedSupportedCount} Datei

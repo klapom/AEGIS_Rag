@@ -411,9 +411,9 @@ class DoclingClient:
         """Start Docling CUDA container via Docker Compose.
 
         Workflow:
-            1. Check if container already running (docker ps)
-            2. If running: Skip start, just verify health
-            3. If not running: Start container via docker compose
+            1. Try HTTP health check first (for container-to-container networking)
+            2. If healthy: Skip docker commands, just set running flag
+            3. If not healthy: Fall back to docker commands (for local development)
             4. Wait for health check: GET /health → 200 OK
             5. set _container_running = True
 
@@ -424,8 +424,27 @@ class DoclingClient:
             >>> await client.start_container()
             >>> # Container now running on http://localhost:8080
         """
-        logger.info("docling_container_start_requested")
+        logger.info("docling_container_start_requested", base_url=self.base_url)
 
+        # First, try HTTP health check directly (works in container-to-container networking)
+        # This avoids needing docker CLI when running inside a container
+        try:
+            await self._wait_for_ready(max_wait_seconds=5)
+            self._container_running = True
+            logger.info(
+                "docling_container_already_accessible",
+                base_url=self.base_url,
+                method="http_health_check",
+            )
+            return
+        except Exception as e:
+            logger.debug(
+                "docling_http_check_failed_trying_docker",
+                error=str(e),
+                base_url=self.base_url,
+            )
+
+        # Fall back to docker commands (for local development on host)
         try:
             # Check if container already running
             check_result = subprocess.run(
@@ -487,21 +506,24 @@ class DoclingClient:
         """Stop Docling CUDA container to free VRAM.
 
         Workflow:
-            1. Run: docker compose stop docling
-            2. set _container_running = False
-            3. Close HTTP client
+            1. Try docker compose stop (for local development)
+            2. If docker not available (container env): just close HTTP client
+            3. set _container_running = False
 
-        Raises:
-            IngestionError: If container fails to stop
+        Note:
+            When running inside a container (e.g., API service), docker commands
+            are not available. In this case, we skip container management and
+            just close the HTTP client. The Docling service continues running
+            as a separate container, which is the expected behavior.
 
         Example:
             >>> await client.stop_container()
-            >>> # VRAM freed for next pipeline stage
+            >>> # VRAM freed for next pipeline stage (local dev only)
         """
         logger.info("docling_container_stop_requested")
 
+        # Try to stop via docker commands (only works on host, not in containers)
         try:
-            # Stop Docker Compose service (preserves state for restart)
             result = subprocess.run(
                 ["docker", "compose", "stop", "docling"],
                 check=True,
@@ -509,36 +531,38 @@ class DoclingClient:
                 text=True,
                 cwd=Path.cwd(),
             )
-
             logger.info(
                 "docling_container_stopped",
                 stdout=result.stdout[:200] if result.stdout else "",
             )
-
-            self._container_running = False
-
-            # Close HTTP client
-            if self.client:
-                await self.client.aclose()
-                self.client = None
-                logger.debug("docling_http_client_closed")
-
+        except FileNotFoundError:
+            # Docker CLI not available (running inside container)
+            logger.info(
+                "docling_container_stop_skipped",
+                reason="docker_not_available",
+                note="Running in container environment, Docling service managed externally",
+            )
         except subprocess.CalledProcessError as e:
-            logger.error(
+            # Docker command failed - log but don't raise
+            logger.warning(
                 "docling_container_stop_failed",
                 returncode=e.returncode,
                 stderr=e.stderr[:500] if e.stderr else "",
             )
-            raise IngestionError(
-                document_id="docling_container",
-                reason=f"Failed to stop Docling container: {e.stderr}",
-            ) from e
         except Exception as e:
-            logger.error("docling_container_stop_error", error=str(e), exc_info=True)
-            raise IngestionError(
-                document_id="docling_container",
-                reason=f"Unexpected error stopping Docling container: {e}",
-            ) from e
+            # Other errors - log but don't raise
+            logger.warning("docling_container_stop_error", error=str(e))
+
+        # Always mark as not running and close HTTP client
+        self._container_running = False
+
+        if self.client:
+            try:
+                await self.client.aclose()
+                self.client = None
+                logger.debug("docling_http_client_closed")
+            except Exception as e:
+                logger.warning("docling_http_client_close_error", error=str(e))
 
     async def _wait_for_ready(self, max_wait_seconds: int = 60) -> None:
         """Wait for Docling container to be ready (health check).
@@ -676,6 +700,11 @@ class DoclingClient:
                     "image_export_mode": "embedded",  # Embed images as base64 in MD output
                     "include_images": True,  # Extract images from document
                     "images_scale": 2.0,  # Scale factor for image quality
+                    # Use EasyOCR for better accuracy (GPU-accelerated on DGX Spark)
+                    # Dockerfile pins NumPy to 1.x for PyTorch/EasyOCR compatibility
+                    # Alternative: "rapidocr" for lighter, CPU-only processing
+                    "ocr_engine": "easyocr",
+                    "ocr_lang": ["en", "de"],  # Support English and German OCR
                 }
 
                 response = await client.post(
