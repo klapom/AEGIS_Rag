@@ -4,6 +4,11 @@ import { BasePage } from './BasePage';
 /**
  * Page Object for Admin Indexing
  * Handles document indexing, directory management, and progress tracking
+ *
+ * Sprint 35 Feature 35.10: File Upload Support
+ * - File selection from local computer
+ * - Color-coded file support status
+ * - Upload progress and error handling
  */
 export class AdminIndexingPage extends BasePage {
   readonly indexButton: Locator;
@@ -18,6 +23,13 @@ export class AdminIndexingPage extends BasePage {
   readonly cancelButton: Locator;
   readonly advancedOptionsToggle: Locator;
 
+  // Sprint 35 Feature 35.10: File Upload locators
+  readonly fileUploadInput: Locator;
+  readonly uploadFilesButton: Locator;
+  readonly uploadedFilesSummary: Locator;
+  readonly uploadError: Locator;
+  readonly selectedFilesList: Locator;
+
   constructor(page: Page) {
     super(page);
     this.indexButton = page.locator('[data-testid="start-indexing"]');
@@ -31,6 +43,13 @@ export class AdminIndexingPage extends BasePage {
     this.successMessage = page.locator('[data-testid="success-message"]');
     this.cancelButton = page.locator('[data-testid="cancel-indexing"]');
     this.advancedOptionsToggle = page.locator('[data-testid="advanced-options"]');
+
+    // Sprint 35 Feature 35.10: File Upload
+    this.fileUploadInput = page.locator('[data-testid="file-upload-input"]');
+    this.uploadFilesButton = page.locator('[data-testid="upload-files-button"]');
+    this.uploadedFilesSummary = page.locator('[data-testid="uploaded-files-summary"]');
+    this.uploadError = page.locator('[data-testid="upload-error"]');
+    this.selectedFilesList = page.locator('[data-testid^="upload-file-"]');
   }
 
   /**
@@ -552,6 +571,208 @@ export class AdminIndexingPage extends BasePage {
       return files;
     } catch {
       return [];
+    }
+  }
+
+  // ============================================================================
+  // Sprint 35 Feature 35.10: File Upload Methods
+  // ============================================================================
+
+  /**
+   * Upload files from local computer
+   * Uses the hidden file input to simulate file selection
+   */
+  async uploadLocalFiles(filePaths: string[]): Promise<void> {
+    // Set files on the hidden input
+    await this.fileUploadInput.setInputFiles(filePaths);
+    await this.page.waitForTimeout(500);
+  }
+
+  /**
+   * Click the upload button to start upload
+   */
+  async clickUploadButton(): Promise<void> {
+    await this.uploadFilesButton.click();
+    await this.page.waitForTimeout(1000);
+  }
+
+  /**
+   * Check if file upload section is visible
+   */
+  async isFileUploadSectionVisible(): Promise<boolean> {
+    try {
+      return await this.fileUploadInput.isVisible({ timeout: 2000 });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get count of selected local files
+   */
+  async getSelectedLocalFilesCount(): Promise<number> {
+    try {
+      const items = await this.selectedFilesList.all();
+      return items.length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Check if upload was successful
+   */
+  async isUploadSuccessful(): Promise<boolean> {
+    try {
+      return await this.uploadedFilesSummary.isVisible({ timeout: 5000 });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get upload success message
+   */
+  async getUploadSuccessMessage(): Promise<string | null> {
+    try {
+      return await this.uploadedFilesSummary.textContent({ timeout: 2000 });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if upload error occurred
+   */
+  async hasUploadError(): Promise<boolean> {
+    try {
+      return await this.uploadError.isVisible({ timeout: 2000 });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get upload error message
+   */
+  async getUploadErrorMessage(): Promise<string | null> {
+    try {
+      return await this.uploadError.textContent({ timeout: 2000 });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if upload button is enabled
+   */
+  async isUploadButtonEnabled(): Promise<boolean> {
+    try {
+      return await this.uploadFilesButton.isEnabled({ timeout: 2000 });
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get file support status color for a selected file
+   * Returns 'docling' (dark green), 'llamaindex' (light green), or 'unsupported' (red)
+   */
+  async getFileSupportStatus(
+    fileName: string
+  ): Promise<'docling' | 'llamaindex' | 'unsupported' | null> {
+    try {
+      const fileItem = this.page.locator(`[data-testid="upload-file-${fileName}"]`);
+      const isVisible = await fileItem.isVisible({ timeout: 2000 });
+
+      if (!isVisible) return null;
+
+      // Check for Docling badge
+      const doclingBadge = fileItem.locator('text=Docling');
+      if (await doclingBadge.isVisible().catch(() => false)) {
+        return 'docling';
+      }
+
+      // Check for LlamaIndex badge
+      const llamaindexBadge = fileItem.locator('text=LlamaIndex');
+      if (await llamaindexBadge.isVisible().catch(() => false)) {
+        return 'llamaindex';
+      }
+
+      // Check for unsupported badge
+      const unsupportedBadge = fileItem.locator('text=Nicht unterstützt');
+      if (await unsupportedBadge.isVisible().catch(() => false)) {
+        return 'unsupported';
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Remove a file from the selected files list
+   */
+  async removeSelectedFile(fileName: string): Promise<void> {
+    try {
+      const fileItem = this.page.locator(`[data-testid="upload-file-${fileName}"]`);
+      const removeButton = fileItem.locator('button');
+      await removeButton.click();
+      await this.page.waitForTimeout(300);
+    } catch {
+      // File may not exist or already removed
+    }
+  }
+
+  /**
+   * Wait for upload to complete (success or error)
+   */
+  async waitForUploadComplete(timeout = 30000): Promise<'success' | 'error' | 'timeout'> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      if (await this.isUploadSuccessful()) {
+        return 'success';
+      }
+      if (await this.hasUploadError()) {
+        return 'error';
+      }
+      await this.page.waitForTimeout(500);
+    }
+
+    return 'timeout';
+  }
+
+  /**
+   * Full upload workflow: select files, upload, and verify
+   */
+  async uploadFilesWorkflow(
+    filePaths: string[]
+  ): Promise<{ success: boolean; message: string | null }> {
+    // Select files
+    await this.uploadLocalFiles(filePaths);
+
+    // Verify files are selected
+    const count = await this.getSelectedLocalFilesCount();
+    if (count === 0) {
+      return { success: false, message: 'No files selected' };
+    }
+
+    // Click upload
+    await this.clickUploadButton();
+
+    // Wait for result
+    const result = await this.waitForUploadComplete();
+
+    if (result === 'success') {
+      const message = await this.getUploadSuccessMessage();
+      return { success: true, message };
+    } else if (result === 'error') {
+      const message = await this.getUploadErrorMessage();
+      return { success: false, message };
+    } else {
+      return { success: false, message: 'Upload timeout' };
     }
   }
 }

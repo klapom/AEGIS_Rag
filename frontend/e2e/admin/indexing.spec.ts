@@ -1,4 +1,7 @@
 import { test, expect } from '../fixtures';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 /**
  * E2E Tests for Admin Indexing Workflows
@@ -17,6 +20,12 @@ import { test, expect } from '../fixtures';
  * - Live progress display with ETA calculation
  * - Detail dialog with page preview, VLM images, chunks, pipeline status
  * - Error tracking with dialog and CSV export
+ *
+ * Feature 35.10 (Sprint 35): File Upload from Local Computer
+ * - File selection with color-coded support status
+ * - Upload to server with progress tracking
+ * - Integration with indexing pipeline
+ * - Error handling for unsupported files
  *
  * Backend: Gemma-3 4B via Ollama (FREE - no cloud LLM costs)
  * VLM: Alibaba Cloud DashScope for PDF/image extraction (~$0.30/run)
@@ -887,5 +896,247 @@ test.describe('Feature 33.5 - Error Tracking', () => {
     } catch {
       // May not display in test environment
     }
+  });
+});
+
+/**
+ * Feature 35.10 (Sprint 35): File Upload from Local Computer
+ * Tests for uploading files directly from user's computer
+ */
+test.describe('Feature 35.10 - File Upload from Local Computer', () => {
+  // Helper to create a temporary test file
+  const createTempFile = (filename: string, content: string): string => {
+    const tempDir = os.tmpdir();
+    const filePath = path.join(tempDir, filename);
+    fs.writeFileSync(filePath, content);
+    return filePath;
+  };
+
+  // Cleanup temp files after tests
+  const cleanupTempFile = (filePath: string) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
+  };
+
+  test('should display file upload section', async ({ adminIndexingPage }) => {
+    // File upload input should be present (may be hidden)
+    const uploadInput = adminIndexingPage.fileUploadInput;
+    await expect(uploadInput).toBeAttached();
+  });
+
+  test('should show selected files after file selection', async ({
+    adminIndexingPage,
+  }) => {
+    // Create a temp PDF file for testing
+    const tempFile = createTempFile('test-document.pdf', '%PDF-1.4 test content');
+
+    try {
+      // Select the file
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+
+      // Verify file appears in the list
+      const count = await adminIndexingPage.getSelectedLocalFilesCount();
+      expect(count).toBeGreaterThan(0);
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should display color-coded file support status for PDF (Docling)', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('supported-doc.pdf', '%PDF-1.4 test');
+
+    try {
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+
+      // Check for Docling support badge
+      const status = await adminIndexingPage.getFileSupportStatus('supported-doc.pdf');
+      expect(status).toBe('docling');
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should display color-coded file support status for TXT (LlamaIndex)', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('text-file.txt', 'Plain text content');
+
+    try {
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+
+      // Check for LlamaIndex support badge
+      const status = await adminIndexingPage.getFileSupportStatus('text-file.txt');
+      expect(status).toBe('llamaindex');
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should display unsupported status for EXE files', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('program.exe', 'MZ fake exe content');
+
+    try {
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+
+      // Check for unsupported badge
+      const status = await adminIndexingPage.getFileSupportStatus('program.exe');
+      expect(status).toBe('unsupported');
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should enable upload button when files are selected', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('doc.pdf', '%PDF-1.4 content');
+
+    try {
+      // Initially upload button should be disabled or hidden
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+
+      // After selection, upload button should be enabled
+      const isEnabled = await adminIndexingPage.isUploadButtonEnabled();
+      expect(isEnabled).toBe(true);
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should allow removing files from selection', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile1 = createTempFile('file1.pdf', '%PDF-1.4');
+    const tempFile2 = createTempFile('file2.pdf', '%PDF-1.4');
+
+    try {
+      // Select multiple files
+      await adminIndexingPage.uploadLocalFiles([tempFile1, tempFile2]);
+
+      // Get initial count
+      const initialCount = await adminIndexingPage.getSelectedLocalFilesCount();
+      expect(initialCount).toBe(2);
+
+      // Remove one file
+      await adminIndexingPage.removeSelectedFile('file1.pdf');
+
+      // Verify count decreased
+      const newCount = await adminIndexingPage.getSelectedLocalFilesCount();
+      expect(newCount).toBe(1);
+    } finally {
+      cleanupTempFile(tempFile1);
+      cleanupTempFile(tempFile2);
+    }
+  });
+
+  test('should upload files successfully to server', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('upload-test.pdf', '%PDF-1.4 test document');
+
+    try {
+      // Full upload workflow
+      const result = await adminIndexingPage.uploadFilesWorkflow([tempFile]);
+
+      // Verify upload succeeded
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('erfolgreich');
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should show upload success message after upload', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('success-test.pdf', '%PDF-1.4');
+
+    try {
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+      await adminIndexingPage.clickUploadButton();
+
+      // Wait for success
+      const result = await adminIndexingPage.waitForUploadComplete();
+      expect(result).toBe('success');
+
+      // Verify success message is visible
+      const isSuccessVisible = await adminIndexingPage.isUploadSuccessful();
+      expect(isSuccessVisible).toBe(true);
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should handle multiple file upload', async ({ adminIndexingPage }) => {
+    const tempFile1 = createTempFile('multi1.pdf', '%PDF-1.4');
+    const tempFile2 = createTempFile('multi2.docx', 'PK fake docx');
+    const tempFile3 = createTempFile('multi3.txt', 'text content');
+
+    try {
+      // Upload multiple files
+      await adminIndexingPage.uploadLocalFiles([tempFile1, tempFile2, tempFile3]);
+
+      // Verify all files are selected
+      const count = await adminIndexingPage.getSelectedLocalFilesCount();
+      expect(count).toBe(3);
+
+      // Upload all
+      await adminIndexingPage.clickUploadButton();
+      const result = await adminIndexingPage.waitForUploadComplete();
+      expect(result).toBe('success');
+    } finally {
+      cleanupTempFile(tempFile1);
+      cleanupTempFile(tempFile2);
+      cleanupTempFile(tempFile3);
+    }
+  });
+
+  test('should integrate uploaded files with indexing workflow', async ({
+    adminIndexingPage,
+  }) => {
+    const tempFile = createTempFile('index-test.pdf', '%PDF-1.4 content for indexing');
+
+    try {
+      // Upload file
+      await adminIndexingPage.uploadLocalFiles([tempFile]);
+      await adminIndexingPage.clickUploadButton();
+      await adminIndexingPage.waitForUploadComplete();
+
+      // Verify upload was successful
+      const isSuccess = await adminIndexingPage.isUploadSuccessful();
+      expect(isSuccess).toBe(true);
+
+      // Start indexing button should be available after upload
+      await expect(adminIndexingPage.indexButton).toBeEnabled();
+
+      // Note: Actually starting indexing with dummy PDFs would fail
+      // because the content is not valid. The test verifies the workflow
+      // is available after upload, not that dummy files can be indexed.
+    } finally {
+      cleanupTempFile(tempFile);
+    }
+  });
+
+  test('should preserve directory scanning as alternative workflow', async ({
+    adminIndexingPage,
+  }) => {
+    // Directory input should still be available
+    await expect(adminIndexingPage.directorySelectorInput).toBeVisible();
+    await expect(adminIndexingPage.directorySelectorInput).toBeEnabled();
+
+    // Can set directory path
+    await adminIndexingPage.setDirectoryPath('./data/sample_documents');
+
+    // Index button should be enabled
+    await expect(adminIndexingPage.indexButton).toBeEnabled();
   });
 });
