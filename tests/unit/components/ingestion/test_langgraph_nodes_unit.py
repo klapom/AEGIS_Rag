@@ -27,6 +27,13 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+# Check if psutil is available for memory tests
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
+
 from src.components.ingestion.ingestion_state import create_initial_state
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
@@ -103,6 +110,7 @@ def sample_chunks():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
 async def test_memory_check_node_success(sample_state):
     """Test memory_check_node with sufficient RAM and VRAM."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -127,6 +135,7 @@ async def test_memory_check_node_success(sample_state):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
 async def test_memory_check_node_vram_leak_detected(sample_state):
     """Test memory_check_node detects VRAM leak (>5.5GB)."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -151,6 +160,7 @@ async def test_memory_check_node_vram_leak_detected(sample_state):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
 async def test_memory_check_node_insufficient_ram(sample_state):
     """Test memory_check_node fails with insufficient RAM (<500MB)."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -170,6 +180,7 @@ async def test_memory_check_node_insufficient_ram(sample_state):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
 async def test_memory_check_node_no_gpu(sample_state):
     """Test memory_check_node handles missing nvidia-smi gracefully."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -561,6 +572,7 @@ async def test_graph_extraction_node_lightrag_error(sample_state, sample_chunks)
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
 async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
     """Test all 5 nodes execute in sequence with state updates."""
     from src.components.ingestion.docling_client import DoclingParsedDocument

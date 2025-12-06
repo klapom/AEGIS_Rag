@@ -419,52 +419,42 @@ class TestLightRAGWrapperSprint16:
                 assert call_kwargs["chunk_overlap_token_size"] == 0
 
     def test_chunk_text_with_unified_service(self):
-        """Test that _chunk_text_with_metadata uses ChunkingService.
+        """Test that _chunk_text_with_metadata uses direct tiktoken chunking.
 
-        Sprint 16 Feature 16.1: Unified chunking across all pipelines.
-        Verifies that LightRAG now uses ChunkingService instead of
-        internal tiktoken-based chunking.
+        Sprint 16.7: Refactored to use direct tiktoken chunking instead of
+        ChunkingService for simplicity and to avoid async issues in mixed contexts.
+        Verifies that:
+        1. Chunks are created with proper chunk_id
+        2. Text is properly tokenized and chunked
+        3. Chunk metadata is complete
         """
         wrapper = LightRAGWrapper()
 
-        # Mock ChunkingService
-        with patch(
-            "src.components.graph_rag.lightrag_wrapper.get_chunking_service"
-        ) as mock_get_service:
-            mock_chunking_service = MagicMock()
-            mock_chunk = MagicMock()
-            mock_chunk.to_lightrag_format.return_value = {
-                "chunk_id": "abc123",
-                "text": "Sample chunk text",
-                "document_id": "doc_001",
-                "chunk_index": 0,
-                "tokens": 50,
-                "start_token": 0,
-                "end_token": 50,
-            }
-            mock_chunking_service.chunk_document.return_value = [mock_chunk]
-            mock_get_service.return_value = mock_chunking_service
+        # Call _chunk_text_with_metadata
+        chunks = wrapper._chunk_text_with_metadata(
+            text="This is a test document for chunking. " * 100,  # ~800 tokens
+            document_id="doc_001",
+            chunk_token_size=600,
+            chunk_overlap_token_size=100,
+        )
 
-            # Call _chunk_text_with_metadata
-            chunks = wrapper._chunk_text_with_metadata(
-                text="This is a test document for chunking.",
-                document_id="doc_001",
-                chunk_token_size=600,
-                chunk_overlap_token_size=100,
-            )
+        # Verify chunks were created
+        assert len(chunks) >= 1
 
-            # Verify ChunkingService was used
-            mock_get_service.assert_called_once()
-            mock_chunking_service.chunk_document.assert_called_once_with(
-                document_id="doc_001",
-                content="This is a test document for chunking.",
-                metadata={},
-            )
+        # Verify chunk structure
+        first_chunk = chunks[0]
+        assert "chunk_id" in first_chunk
+        assert "text" in first_chunk
+        assert "content" in first_chunk
+        assert "tokens" in first_chunk
+        assert "token_count" in first_chunk
+        assert "document_id" in first_chunk
+        assert "chunk_index" in first_chunk
 
-            # Verify chunks were converted to LightRAG format
-            assert len(chunks) == 1
-            assert chunks[0]["chunk_id"] == "abc123"
-            assert chunks[0]["text"] == "Sample chunk text"
+        # Verify chunk_id format
+        assert first_chunk["document_id"] == "doc_001"
+        assert first_chunk["chunk_index"] == 0
+        assert "doc_001" in first_chunk["chunk_id"] or "chunk-0" in first_chunk["chunk_id"]
 
     @pytest.mark.asyncio
     async def test_chunk_id_provenance_tracking(self, mock_lightrag_instance):

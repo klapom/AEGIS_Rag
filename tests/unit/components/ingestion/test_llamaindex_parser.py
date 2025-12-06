@@ -31,6 +31,13 @@ import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+# Check if llama_index is available
+try:
+    import llama_index
+    HAS_LLAMA_INDEX = True
+except ImportError:
+    HAS_LLAMA_INDEX = False
+
 from src.components.ingestion.ingestion_state import create_initial_state
 from src.components.ingestion.langgraph_nodes import llamaindex_parse_node
 from src.core.exceptions import IngestionError
@@ -84,6 +91,7 @@ def mock_llama_documents():
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserBasic:
     """Test basic LlamaIndex parser functionality."""
 
@@ -161,6 +169,7 @@ class TestLlamaIndexParserBasic:
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserStateCompatibility:
     """Test IngestionState compatibility (parser-agnostic output)."""
 
@@ -251,6 +260,7 @@ class TestLlamaIndexParserStateCompatibility:
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserErrorHandling:
     """Test error handling for edge cases."""
 
@@ -332,6 +342,7 @@ class TestLlamaIndexParserErrorHandling:
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserFormats:
     """Test parsing of different LlamaIndex-exclusive formats."""
 
@@ -407,6 +418,7 @@ class TestLlamaIndexParserFormats:
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserPerformance:
     """Test performance characteristics of LlamaIndex parser."""
 
@@ -453,6 +465,7 @@ class TestLlamaIndexParserPerformance:
 # =============================================================================
 
 
+@pytest.mark.skipif(not HAS_LLAMA_INDEX, reason="llama_index not installed - install with: poetry install --with ingestion")
 class TestLlamaIndexParserDownstreamCompatibility:
     """Test compatibility with downstream nodes (chunking, embedding)."""
 
