@@ -161,3 +161,61 @@ export interface IngestionError {
   message: string;
   details?: string;
 }
+
+// ============================================================================
+// Sprint 37 Feature 37.4: Pipeline Progress Visualization Types
+// ============================================================================
+
+export type StageStatus = 'pending' | 'in_progress' | 'completed' | 'error';
+
+export interface StageProgress {
+  name: string;
+  status: StageStatus;
+  processed: number;
+  total: number;
+  in_flight: number;
+  progress_percent: number;
+  duration_ms: number;
+  is_complete: boolean;
+}
+
+export type WorkerStatus = 'idle' | 'processing' | 'error';
+
+export interface WorkerInfo {
+  id: number;
+  status: WorkerStatus;
+  current_chunk: string | null;
+  progress_percent: number;
+}
+
+export interface PipelineProgressData {
+  document_id: string;
+  document_name: string;
+  total_chunks: number;
+  total_images: number;
+  stages: {
+    parsing: StageProgress;
+    vlm: StageProgress;
+    chunking: StageProgress;
+    embedding: StageProgress;
+    extraction: StageProgress;
+  };
+  worker_pool: {
+    active: number;
+    max: number;
+    queue_depth: number;
+    workers: WorkerInfo[];
+  };
+  metrics: {
+    entities_total: number;
+    relations_total: number;
+    neo4j_writes: number;
+    qdrant_writes: number;
+  };
+  timing: {
+    started_at: number;
+    elapsed_ms: number;
+    estimated_remaining_ms: number;
+  };
+  overall_progress_percent: number;
+}

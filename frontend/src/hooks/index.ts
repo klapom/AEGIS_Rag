@@ -2,6 +2,7 @@
  * Custom Hooks Export Index
  * Sprint 29: Graph Visualization Hooks
  * Sprint 35: Dark Mode Hook
+ * Sprint 37: Pipeline Progress Hook
  */
 
 export { useGraphData } from './useGraphData';
@@ -10,3 +11,4 @@ export type { GraphSearchFilters } from './useGraphSearch';
 export { useDocumentsByNode } from './useDocumentsByNode';
 export { useDarkMode } from './useDarkMode';
 export type { UseDarkModeReturn } from './useDarkMode';
+export { usePipelineProgress } from './usePipelineProgress';
