@@ -6,11 +6,12 @@
 providers:
   local_ollama:
     base_url: "${OLLAMA_BASE_URL:-http://localhost:11434}"
-    timeout: 60
+    timeout: 120  # Increased for large models like qwen3:32b
     models:
-      - hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M  # Default extraction/generation model
+      - qwen3:32b            # DGX Spark: Qwen3 32B for extraction/generation
+      - qwen3-vl:32b         # DGX Spark: Qwen3 VL for vision tasks
       - bge-m3               # Embeddings (always local)
-      - llava:7b-v1.6-mistral-q2_K  # Vision model
+      - hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M  # Fallback extraction model
 
   alibaba_cloud:
     base_url: "${ALIBABA_CLOUD_BASE_URL:-https://dashscope-intl.aliyuncs.com/compatible-mode/v1}"
@@ -46,7 +47,7 @@ budgets:
 # Sprint 36: VLM backend selection (Feature 36.8)
 routing:
   default_provider: local_ollama
-  prefer_cloud: true  # NEW: Route extraction/generation to cloud when true
+  prefer_cloud: false  # DGX Spark: Use local qwen3:32b instead of cloud
   quality_critical_provider: openai
   batch_processing_provider: alibaba_cloud
 
@@ -76,8 +77,8 @@ routing:
 # Model selection per provider (defaults)
 model_defaults:
   local_ollama:
-    extraction: hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M
-    generation: hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M
+    extraction: qwen3:32b   # DGX Spark: Qwen3 32B for entity extraction
+    generation: qwen3:32b   # DGX Spark: Qwen3 32B for generation
     embedding: bge-m3
   alibaba_cloud:
     extraction: qwen3-32b      # High quality extraction (32B params)

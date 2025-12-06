@@ -368,6 +368,8 @@ services:
       - OLLAMA_MODEL_QUERY=qwen3:32b
       - OLLAMA_MODEL_EXTRACTION=qwen3:32b
       - OLLAMA_MODEL_VLM=qwen3-vl:32b
+      - LIGHTRAG_LLM_MODEL=qwen3:32b
+      - GEMMA_MODEL=qwen3:32b
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=sentence-transformers
       - ST_MODEL_NAME=BAAI/bge-m3
@@ -458,6 +460,8 @@ services:
       - OLLAMA_MODEL_QUERY=qwen3:32b
       - OLLAMA_MODEL_EXTRACTION=qwen3:32b
       - OLLAMA_MODEL_VLM=qwen3-vl:32b
+      - LIGHTRAG_LLM_MODEL=qwen3:32b
+      - GEMMA_MODEL=qwen3:32b
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=sentence-transformers
       - ST_MODEL_NAME=BAAI/bge-m3

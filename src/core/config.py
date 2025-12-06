@@ -327,9 +327,10 @@ class Settings(BaseSettings):
     )
 
     # Gemma Relation Extraction (Sprint 13: ADR-018)
+    # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
     gemma_model: str = Field(
-        default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
-        description="Gemma model for relation extraction (Ollama)",
+        default="qwen3:32b",
+        description="LLM model for relation extraction (Ollama) - use GEMMA_MODEL env var to override",
     )
     gemma_temperature: float = Field(
         default=0.1, ge=0.0, le=2.0, description="Temperature for Gemma relation extraction"
@@ -499,9 +500,10 @@ class Settings(BaseSettings):
     )
 
     # LightRAG LLM Configuration
+    # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
     lightrag_llm_model: str = Field(
-        default="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q8_0",
-        description="Ollama LLM model for LightRAG entity extraction (requires good instruction following)",
+        default="qwen3:32b",
+        description="Ollama LLM model for LightRAG entity extraction - use LIGHTRAG_LLM_MODEL env var to override",
     )
     lightrag_llm_temperature: float = Field(
         default=0.1,
