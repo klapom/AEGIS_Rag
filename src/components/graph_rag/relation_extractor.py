@@ -116,7 +116,7 @@ class RelationExtractor:
 
     def __init__(
         self,
-        model: str = "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
+        model: str = "qwen3:32b",  # Sprint 36: Updated for DGX Spark
         temperature: float = 0.1,
         num_predict: int = 2000,
         num_ctx: int = 16384,
@@ -329,7 +329,7 @@ def create_relation_extractor_from_config(config) -> RelationExtractor:
     """
     # Sprint 23: No longer need Ollama client - AegisLLMProxy handles routing
     return RelationExtractor(
-        model=getattr(config, "gemma_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"),
+        model=getattr(config, "gemma_model", "qwen3:32b"),  # Sprint 36: Updated for DGX Spark
         temperature=getattr(config, "gemma_temperature", 0.1),
         num_predict=getattr(config, "gemma_num_predict", 2000),
         num_ctx=getattr(config, "gemma_num_ctx", 16384),

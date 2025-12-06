@@ -544,28 +544,43 @@ class LightRAGClient:
             chunk_overlap=chunk_overlap_token_size,
         )
 
-        # Sprint 16.7: Use unified ChunkingService with adaptive strategy
-        # ALIGNED with Qdrant pipeline for maximum synergie (same chunk_ids!)
-        chunking_service = get_chunking_service(
-            strategy=ChunkStrategy(
-                method="adaptive",  # Changed from "fixed" to "adaptive" for better entity extraction
-                chunk_size=chunk_token_size,
-                overlap=chunk_overlap_token_size,
-            )
-        )
+        # Sprint 16.7: Simple tiktoken-based chunking for LightRAG
+        # Direct synchronous chunking to avoid async issues in mixed contexts
+        import tiktoken
+        import hashlib
 
-        # Get chunks from ChunkingService
-        chunks_obj = chunking_service.chunk_document(
-            document_id=document_id,
-            content=text,
-            metadata={},
-        )
+        try:
+            encoding = tiktoken.encoding_for_model("gpt-4")
+        except Exception:
+            encoding = tiktoken.get_encoding("cl100k_base")
 
-        # Convert Chunk objects to LightRAG format
+        tokens = encoding.encode(text)
         chunks = []
-        for chunk_obj in chunks_obj:
-            chunk = chunk_obj.to_lightrag_format()
-            chunks.append(chunk)
+
+        # Simple token-based chunking with overlap
+        start = 0
+        chunk_idx = 0
+        while start < len(tokens):
+            end = min(start + chunk_token_size, len(tokens))
+            chunk_tokens = tokens[start:end]
+            chunk_text = encoding.decode(chunk_tokens)
+
+            # Generate chunk_id compatible with Qdrant
+            chunk_hash = hashlib.md5(f"{document_id}:{chunk_idx}:{chunk_text[:100]}".encode()).hexdigest()[:8]
+            chunk_id = f"{document_id[:8]}-chunk-{chunk_idx}-{chunk_hash}"
+
+            chunks.append({
+                "chunk_id": chunk_id,
+                "text": chunk_text,  # LightRAG expects 'text' key
+                "content": chunk_text,  # Alias for compatibility
+                "tokens": len(chunk_tokens),  # LightRAG expects 'tokens' key
+                "token_count": len(chunk_tokens),  # Alias for compatibility
+                "document_id": document_id,
+                "chunk_index": chunk_idx,
+            })
+
+            chunk_idx += 1
+            start = end - chunk_overlap_token_size if end < len(tokens) else end
 
         logger.info(
             "chunking_complete_unified_service",

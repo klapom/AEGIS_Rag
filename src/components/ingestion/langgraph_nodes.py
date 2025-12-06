@@ -1244,16 +1244,21 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 )
 
             # Use legacy ChunkingService as fallback
-            chunk_strategy = ChunkStrategy(
-                method="adaptive",
-                chunk_size=1800,
-                overlap=300,
+            from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
+            chunk_config = ChunkingConfig(
+                strategy=ChunkStrategyEnum.ADAPTIVE,
+                min_tokens=800,
+                max_tokens=1800,
+                overlap_tokens=300,
             )
-            chunking_service = get_chunking_service(strategy=chunk_strategy)
-            legacy_chunks = chunking_service.chunk_document(
-                document_id=state["document_id"],
-                content=content,
-                metadata=state.get("parsed_metadata", {}),
+            chunking_service = get_chunking_service(config=chunk_config)
+            import asyncio
+            legacy_chunks = asyncio.get_event_loop().run_until_complete(
+                chunking_service.chunk_document(
+                    text=content,
+                    document_id=state["document_id"],
+                    metadata=state.get("parsed_metadata", {}),
+                )
             )
             # Convert to enhanced format (no image annotations)
             state["chunks"] = [{"chunk": c, "image_bboxes": []} for c in legacy_chunks]

@@ -77,12 +77,14 @@ class DocumentIngestionPipeline:
 
         # Sprint 16.7: Unified chunking strategy (600 tokens, adaptive, 150 overlap)
         # Aligned with Neo4j/LightRAG for maximum synergie
-        chunk_strategy = ChunkStrategy(
-            method="adaptive",  # Sentence-aware chunking
-            chunk_size=600,  # Optimized for entity extraction (was: 512)
-            overlap=150,  # 25% overlap for context bridges (was: 128)
+        from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
+        chunk_config = ChunkingConfig(
+            strategy=ChunkStrategyEnum.ADAPTIVE,  # Sentence-aware chunking
+            min_tokens=400,  # Minimum chunk size
+            max_tokens=600,  # Optimized for entity extraction (was: 512)
+            overlap_tokens=150,  # 25% overlap for context bridges (was: 128)
         )
-        self.chunking_service = get_chunking_service(strategy=chunk_strategy)
+        self.chunking_service = get_chunking_service(config=chunk_config)
 
         logger.info(
             "Document ingestion pipeline initialized",
@@ -267,11 +269,14 @@ class DocumentIngestionPipeline:
                 # Clean metadata to reduce size (especially for PPTX files)
                 cleaned_metadata = self._clean_metadata(metadata)
 
-                # Use ChunkingService for unified chunking
-                chunks = self.chunking_service.chunk_document(
-                    document_id=doc_id,
-                    content=content,
-                    metadata=cleaned_metadata,
+                # Use ChunkingService for unified chunking (async method)
+                import asyncio
+                chunks = asyncio.get_event_loop().run_until_complete(
+                    self.chunking_service.chunk_document(
+                        text=content,
+                        document_id=doc_id,
+                        metadata=cleaned_metadata,
+                    )
                 )
 
                 all_chunks.extend(chunks)
