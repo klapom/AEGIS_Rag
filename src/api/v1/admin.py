@@ -12,12 +12,13 @@ from pathlib import Path
 from typing import List, Literal
 
 import structlog
-from fastapi import APIRouter, HTTPException, Query, UploadFile, File, status
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile, File, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
 
 from src.api.models.cost_stats import BudgetStatus, CostHistory, CostStats, ModelCost, ProviderCost
+from src.api.models.pipeline_progress import PipelineProgressEvent
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.llm_proxy.cost_tracker import get_cost_tracker
 from src.components.shared.embedding_service import get_embedding_service
@@ -252,9 +253,7 @@ async def reindex_progress_stream(
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30 + (completed_docs / total_docs) * 30, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
 
             points_indexed = total_chunks
-            message = (
-                f"Indexed {points_indexed} chunks from {completed_docs} documents into Qdrant + Neo4j"
-            )
+            message = f"Indexed {points_indexed} chunks from {completed_docs} documents into Qdrant + Neo4j"
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': message})}\n\n"
 
             # NOTE: Neo4j graph indexing is handled automatically by LangGraph pipeline
@@ -323,12 +322,12 @@ async def reindex_progress_stream(
         if not dry_run and failed_docs > 0:
             # Some documents failed - report partial success
             success_docs = total_docs - failed_docs
-            completion_message = f'Re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s'
-            completion_status = 'completed_with_errors'
+            completion_message = f"Re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s"
+            completion_status = "completed_with_errors"
         else:
             # All documents succeeded (or dry run)
-            completion_message = f'Re-indexing completed successfully in {total_time:.1f}s'
-            completion_status = 'completed'
+            completion_message = f"Re-indexing completed successfully in {total_time:.1f}s"
+            completion_status = "completed"
 
         yield f"data: {json.dumps({'status': completion_status, 'phase': 'completed', 'progress_percent': 100, 'documents_processed': total_docs, 'documents_total': total_docs, 'documents_failed': failed_docs if not dry_run else 0, 'message': completion_message})}\n\n"
 
@@ -468,13 +467,15 @@ def _build_detailed_progress(
     chunk_infos = []
     for i, chunk in enumerate(chunks[:10]):  # Limit to first 10 chunks for display
         chunk_text = chunk.get("text", "") if isinstance(chunk, dict) else str(chunk)
-        chunk_infos.append({
-            "chunk_id": f"chunk_{i}",
-            "text_preview": chunk_text[:100] + "..." if len(chunk_text) > 100 else chunk_text,
-            "token_count": len(chunk_text.split()) * 1.3,  # Rough token estimate
-            "section_name": chunk.get("section", "Main") if isinstance(chunk, dict) else "Main",
-            "has_image": False,
-        })
+        chunk_infos.append(
+            {
+                "chunk_id": f"chunk_{i}",
+                "text_preview": chunk_text[:100] + "..." if len(chunk_text) > 100 else chunk_text,
+                "token_count": len(chunk_text.split()) * 1.3,  # Rough token estimate
+                "section_name": chunk.get("section", "Main") if isinstance(chunk, dict) else "Main",
+                "has_image": False,
+            }
+        )
 
     # Extract entities info
     entities = state.get("entities", [])
@@ -486,15 +487,21 @@ def _build_detailed_progress(
     for phase in phases:
         if phase == pipeline_phase:
             status = pipeline_status
-        elif phases.index(phase) < phases.index(pipeline_phase) if pipeline_phase in phases else False:
+        elif (
+            phases.index(phase) < phases.index(pipeline_phase)
+            if pipeline_phase in phases
+            else False
+        ):
             status = "completed"
         else:
             status = "pending"
-        pipeline_statuses.append({
-            "phase": phase,
-            "status": status,
-            "duration_ms": None,
-        })
+        pipeline_statuses.append(
+            {
+                "phase": phase,
+                "status": status,
+                "duration_ms": None,
+            }
+        )
 
     # Sprint 33 Fix: Read actual detected elements from Docling parsing state
     parsed_tables = state.get("parsed_tables", [])
@@ -513,8 +520,10 @@ def _build_detailed_progress(
         total_pictures = len(parsed_images)
 
     # Calculate word count from parsed content (more accurate than chunk-based)
-    word_count = len(parsed_content.split()) if parsed_content else sum(
-        len(c.get("text", "").split()) if isinstance(c, dict) else 0 for c in chunks
+    word_count = (
+        len(parsed_content.split())
+        if parsed_content
+        else sum(len(c.get("text", "").split()) if isinstance(c, dict) else 0 for c in chunks)
     )
 
     # Build VLM images status from vlm_metadata in state
@@ -526,22 +535,28 @@ def _build_detailed_progress(
     total_vlm_images = total_pictures
 
     for idx, meta in enumerate(vlm_metadata):
-        vlm_images.append({
-            "image_id": f"img_{idx:03d}",
-            "thumbnail_url": None,  # Thumbnails not generated yet
-            "status": "completed",
-            "description": meta.get("description", "")[:100] if meta.get("description") else None,
-        })
+        vlm_images.append(
+            {
+                "image_id": f"img_{idx:03d}",
+                "thumbnail_url": None,  # Thumbnails not generated yet
+                "status": "completed",
+                "description": (
+                    meta.get("description", "")[:100] if meta.get("description") else None
+                ),
+            }
+        )
 
     # Add pending images that haven't been processed yet
     if enrichment_status == "running" and total_vlm_images > len(vlm_metadata):
         for idx in range(len(vlm_metadata), total_vlm_images):
-            vlm_images.append({
-                "image_id": f"img_{idx:03d}",
-                "thumbnail_url": None,
-                "status": "pending",
-                "description": None,
-            })
+            vlm_images.append(
+                {
+                    "image_id": f"img_{idx:03d}",
+                    "thumbnail_url": None,
+                    "status": "pending",
+                    "description": None,
+                }
+            )
 
     # Sprint 36: Chunk-level extraction progress for entity/relation extraction
     # During graph_extraction phase, chunks_processed = total (extraction is already done)
@@ -564,7 +579,9 @@ def _build_detailed_progress(
         "pipeline_status": pipeline_statuses,
         "entities": {
             "new_entities": [e.get("name", str(e))[:30] for e in entities[:5]] if entities else [],
-            "new_relations": [r.get("type", str(r))[:30] for r in relations[:5]] if relations else [],
+            "new_relations": (
+                [r.get("type", str(r))[:30] for r in relations[:5]] if relations else []
+            ),
             "total_entities": len(entities),
             "total_relations": len(relations),
         },
@@ -673,7 +690,9 @@ async def add_documents_stream(
                         last_state = state
 
                         # Get phase info
-                        phase_info = NODE_PHASES.get(node_name, ("indexing", f"Processing {node_name}..."))
+                        phase_info = NODE_PHASES.get(
+                            node_name, ("indexing", f"Processing {node_name}...")
+                        )
                         node_progress = NODE_PROGRESS.get(node_name, 0.5)
 
                         # Calculate overall progress
@@ -702,7 +721,11 @@ async def add_documents_stream(
                     if last_state and last_state.get("errors"):
                         failed_docs += 1
                         error_list = last_state.get("errors", [])
-                        error_msg = error_list[0].get("message", "Unknown error") if error_list else "Unknown error"
+                        error_msg = (
+                            error_list[0].get("message", "Unknown error")
+                            if error_list
+                            else "Unknown error"
+                        )
                         logger.error("add_document_failed", document_path=doc_path, error=error_msg)
 
                         error_info = {
@@ -1050,11 +1073,366 @@ async def upload_files(
         # Re-raise HTTP exceptions
         raise
     except Exception as e:
-        logger.error("file_upload_failed", session_id=upload_session_id, error=str(e), exc_info=True)
+        logger.error(
+            "file_upload_failed", session_id=upload_session_id, error=str(e), exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload failed: {str(e)}",
         ) from e
+
+
+# ============================================================================
+# Sprint 37 Feature 37.8: Parallel Batch Indexing
+# ============================================================================
+
+
+class BatchIndexingRequest(BaseModel):
+    """Request model for parallel batch indexing.
+
+    Sprint 37 Feature 37.8: Multi-Document Parallelization
+    """
+
+    file_paths: List[str] = Field(..., description="List of file paths to index")
+
+
+class BatchIndexingResponse(BaseModel):
+    """Response model for batch indexing job.
+
+    Sprint 37 Feature 37.8: Multi-Document Parallelization
+    """
+
+    batch_id: str = Field(..., description="Unique batch identifier")
+    total_documents: int = Field(..., description="Total number of documents to process")
+    parallel_limit: int = Field(..., description="Maximum concurrent documents (default 3)")
+    status: str = Field(..., description="Batch status (started, in_progress, completed, error)")
+
+
+@router.post(
+    "/indexing/batch",
+    response_model=BatchIndexingResponse,
+    summary="Start parallel batch indexing",
+    description="Process multiple documents concurrently (up to 3 at a time) using ParallelIngestionOrchestrator.",
+)
+async def start_batch_indexing(
+    request: BatchIndexingRequest,
+) -> BatchIndexingResponse:
+    """Start parallel batch indexing for multiple documents.
+
+    **Sprint 37 Feature 37.8: Multi-Document Parallelization**
+
+    This endpoint:
+    1. Accepts a list of file paths to index
+    2. Uses ParallelIngestionOrchestrator to process up to 3 documents concurrently
+    3. Tracks per-document progress via MultiDocProgressManager
+    4. Returns batch ID for progress streaming via /indexing/batch/{batch_id}/stream
+
+    **Parallelization:**
+    - File-level: Process 3 files concurrently (PARALLEL_FILES=3)
+    - Chunk-level: Generate 10 embeddings concurrently (PARALLEL_CHUNKS=10)
+    - Error isolation: One file error doesn't stop others
+
+    **Example Request:**
+    ```json
+    {
+      "file_paths": [
+        "/data/uploads/abc123/report.pdf",
+        "/data/uploads/abc123/slides.pptx",
+        "/data/uploads/abc123/notes.docx"
+      ]
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "batch_id": "batch-xyz789",
+      "total_documents": 3,
+      "parallel_limit": 3,
+      "status": "started"
+    }
+    ```
+
+    **Next Steps:**
+    - Poll /indexing/batch/{batch_id}/stream for progress updates
+
+    Args:
+        request: BatchIndexingRequest with file paths
+
+    Returns:
+        BatchIndexingResponse with batch ID and status
+
+    Raises:
+        HTTPException 400: If no valid file paths provided
+        HTTPException 500: If batch initialization fails
+    """
+    # Validate file paths exist
+    valid_paths = []
+    for fp in request.file_paths:
+        path = Path(fp)
+        if path.exists() and path.is_file():
+            valid_paths.append(str(path))
+        else:
+            logger.warning("batch_indexing_invalid_path", path=fp)
+
+    if not valid_paths:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid file paths provided",
+        )
+
+    batch_id = str(uuid.uuid4())
+
+    logger.info(
+        "batch_indexing_started",
+        batch_id=batch_id,
+        total_documents=len(valid_paths),
+        parallel_limit=3,
+        feature="sprint_37_feature_37.8",
+    )
+
+    # Initialize multi-doc progress tracking
+    from src.components.ingestion.multi_doc_progress import get_multi_doc_progress_manager
+
+    progress_manager = get_multi_doc_progress_manager()
+    documents = [
+        {"id": f"{batch_id}-{i}", "name": Path(p).name, "path": p}
+        for i, p in enumerate(valid_paths)
+    ]
+    progress_manager.start_batch(batch_id, documents, parallel_limit=3)
+
+    # Start parallel processing in background
+    asyncio.create_task(_run_parallel_batch(batch_id, valid_paths, progress_manager))
+
+    return BatchIndexingResponse(
+        batch_id=batch_id,
+        total_documents=len(valid_paths),
+        parallel_limit=3,
+        status="started",
+    )
+
+
+async def _run_parallel_batch(
+    batch_id: str,
+    file_paths: list[str],
+    progress_manager,
+) -> None:
+    """Background task to run parallel document processing.
+
+    Sprint 37 Feature 37.8: Multi-Document Parallelization
+
+    Args:
+        batch_id: Unique batch identifier
+        file_paths: List of file paths to process
+        progress_manager: MultiDocProgressManager instance
+
+    Notes:
+        - Uses ParallelIngestionOrchestrator for concurrent processing
+        - Updates progress_manager with per-document progress
+        - Errors in one document don't stop others
+    """
+    from src.components.ingestion.parallel_orchestrator import get_parallel_orchestrator
+    from src.components.ingestion.job_tracker import get_job_tracker
+
+    orchestrator = get_parallel_orchestrator()
+    job_tracker = get_job_tracker()
+    files = [Path(p) for p in file_paths]
+
+    # Create ingestion job for tracking
+    job_id = await job_tracker.create_job(
+        directory_path=str(files[0].parent),
+        recursive=False,
+        total_files=len(files),
+    )
+
+    try:
+        async for progress in orchestrator.process_files_parallel(
+            files, job_tracker=job_tracker, job_id=job_id
+        ):
+            # Extract file index from progress
+            file_path = progress.get("file_path", "")
+            doc_id = None
+            for i, fp in enumerate(file_paths):
+                if fp == file_path:
+                    doc_id = f"{batch_id}-{i}"
+                    break
+
+            if not doc_id:
+                continue
+
+            # Determine status from progress
+            if progress.get("status") == "completed":
+                status = "completed"
+            elif progress.get("status") == "error":
+                status = "error"
+            else:
+                status = "processing"
+
+            # Update document progress
+            progress_manager.update_document(
+                batch_id=batch_id,
+                document_id=doc_id,
+                status=status,
+                progress_percent=progress.get("progress_percent", 0),
+                chunks_created=progress.get("chunks_created"),
+                entities_extracted=progress.get("entities_extracted"),
+                relations_extracted=progress.get("relations_extracted"),
+                error=progress.get("error"),
+            )
+
+            logger.debug(
+                "batch_document_progress",
+                batch_id=batch_id,
+                document_id=doc_id,
+                status=status,
+                progress_percent=progress.get("progress_percent", 0),
+            )
+
+    except Exception as e:
+        logger.error("batch_processing_failed", batch_id=batch_id, error=str(e), exc_info=True)
+        # Mark all pending/processing documents as error
+        batch = progress_manager.get_batch(batch_id)
+        if batch:
+            for doc in batch.documents.values():
+                if doc.status in ("pending", "processing"):
+                    progress_manager.update_document(
+                        batch_id=batch_id,
+                        document_id=doc.document_id,
+                        status="error",
+                        error=str(e),
+                    )
+
+
+@router.get(
+    "/indexing/batch/{batch_id}/stream",
+    summary="Stream batch progress via SSE",
+    description="Stream real-time progress updates for a batch indexing job via Server-Sent Events.",
+)
+async def stream_batch_progress(
+    batch_id: str,
+    request: Request,
+) -> StreamingResponse:
+    """Stream batch progress via SSE.
+
+    **Sprint 37 Feature 37.8: Multi-Document Parallelization**
+
+    This endpoint:
+    1. Streams real-time progress updates via Server-Sent Events (SSE)
+    2. Sends batch_progress events with aggregated statistics
+    3. Sends complete event when all documents finished
+    4. Auto-disconnects if client disconnects
+
+    **SSE Event Format:**
+    ```
+    event: batch_progress
+    data: {
+      "batch_id": "batch-xyz789",
+      "total_documents": 3,
+      "parallel_limit": 3,
+      "completed": 1,
+      "in_progress": 2,
+      "failed": 0,
+      "overall_progress_percent": 33.3,
+      "documents": [
+        {
+          "document_id": "batch-xyz789-0",
+          "document_name": "report.pdf",
+          "status": "completed",
+          "progress_percent": 100.0,
+          "chunks_created": 42,
+          "entities_extracted": 15,
+          "error": null
+        },
+        ...
+      ]
+    }
+
+    event: complete
+    data: {}
+    ```
+
+    **Example Usage:**
+    ```javascript
+    const eventSource = new EventSource('/api/v1/admin/indexing/batch/batch-xyz789/stream');
+    eventSource.addEventListener('batch_progress', (e) => {
+      const data = JSON.parse(e.data);
+      console.log(`Overall: ${data.overall_progress_percent}%`);
+    });
+    eventSource.addEventListener('complete', () => {
+      eventSource.close();
+    });
+    ```
+
+    Args:
+        batch_id: Batch identifier from /indexing/batch response
+        request: FastAPI Request object (for disconnect detection)
+
+    Returns:
+        StreamingResponse with text/event-stream content type
+
+    Raises:
+        HTTPException 404: If batch ID not found
+    """
+    import json
+    from src.components.ingestion.multi_doc_progress import get_multi_doc_progress_manager
+
+    progress_manager = get_multi_doc_progress_manager()
+
+    # Verify batch exists
+    batch = progress_manager.get_batch(batch_id)
+    if not batch:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Batch {batch_id} not found",
+        )
+
+    async def event_generator():
+        """Generate SSE events for batch progress."""
+        try:
+            while True:
+                # Check if client disconnected
+                if await request.is_disconnected():
+                    logger.info("batch_stream_disconnected", batch_id=batch_id)
+                    break
+
+                # Get current batch state
+                batch = progress_manager.get_batch(batch_id)
+                if batch:
+                    event = batch.to_sse_event()
+                    yield f"event: {event['type']}\n"
+                    yield f"data: {json.dumps(event['data'])}\n\n"
+
+                    # Check if batch completed
+                    if batch.overall_progress_percent >= 100:
+                        yield "event: complete\ndata: {}\n\n"
+                        logger.info(
+                            "batch_completed",
+                            batch_id=batch_id,
+                            completed=batch.completed_count,
+                            failed=batch.failed_count,
+                        )
+                        break
+                else:
+                    # Batch removed (likely completed and cleaned up)
+                    yield "event: complete\ndata: {}\n\n"
+                    break
+
+                # Wait before next update (2 updates per second)
+                await asyncio.sleep(0.5)
+
+        except Exception as e:
+            logger.error("batch_stream_error", batch_id=batch_id, error=str(e), exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ============================================================================
@@ -1465,20 +1843,20 @@ async def reindex_with_vlm_enrichment(
 
                     doc_name = Path(doc_path).name
                     data = {
-                        'status': 'ingestion',
-                        'progress': overall_progress,
-                        'message': f'Processed {doc_name}',
-                        'document_id': doc_id,
-                        'document_path': doc_path,
-                        'completed_documents': completed_docs,
-                        'total_documents': total_docs,
-                        'batch_progress': batch_progress,
-                        'chunks': chunk_count,
-                        'vlm_images': vlm_count,
-                        'errors': error_count,
-                        'success': True,
+                        "status": "ingestion",
+                        "progress": overall_progress,
+                        "message": f"Processed {doc_name}",
+                        "document_id": doc_id,
+                        "document_path": doc_path,
+                        "completed_documents": completed_docs,
+                        "total_documents": total_docs,
+                        "batch_progress": batch_progress,
+                        "chunks": chunk_count,
+                        "vlm_images": vlm_count,
+                        "errors": error_count,
+                        "success": True,
                     }
-                    yield f'data: {json.dumps(data)}\n\n'
+                    yield f"data: {json.dumps(data)}\n\n"
 
                     logger.info(
                         "vlm_document_indexed",
@@ -1495,18 +1873,18 @@ async def reindex_with_vlm_enrichment(
 
                     doc_name = Path(doc_path).name
                     error_data = {
-                        'status': 'ingestion',
-                        'progress': overall_progress,
-                        'message': f'FAILED: {doc_name}',
-                        'document_id': doc_id,
-                        'document_path': doc_path,
-                        'completed_documents': completed_docs,
-                        'total_documents': total_docs,
-                        'batch_progress': batch_progress,
-                        'success': False,
-                        'error': error_msg,
+                        "status": "ingestion",
+                        "progress": overall_progress,
+                        "message": f"FAILED: {doc_name}",
+                        "document_id": doc_id,
+                        "document_path": doc_path,
+                        "completed_documents": completed_docs,
+                        "total_documents": total_docs,
+                        "batch_progress": batch_progress,
+                        "success": False,
+                        "error": error_msg,
                     }
-                    yield f'data: {json.dumps(error_data)}\n\n'
+                    yield f"data: {json.dumps(error_data)}\n\n"
 
                     logger.error(
                         "vlm_document_failed",
@@ -1515,8 +1893,12 @@ async def reindex_with_vlm_enrichment(
                     )
 
             # Phase 4: Validation
-            validation_data = {'status': 'validation', 'progress': 0.98, 'message': 'Validating indexes...'}
-            yield f'data: {json.dumps(validation_data)}\n\n'
+            validation_data = {
+                "status": "validation",
+                "progress": 0.98,
+                "message": "Validating indexes...",
+            }
+            yield f"data: {json.dumps(validation_data)}\n\n"
 
             # Get final stats
             collection_info = await qdrant_client.get_collection_info(collection_name)
@@ -1558,29 +1940,29 @@ async def reindex_with_vlm_enrichment(
             if failed_docs > 0:
                 # Some documents failed - report partial success
                 success_docs = total_docs - failed_docs
-                completion_message = f'VLM re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s'
-                completion_status = 'completed_with_errors'
+                completion_message = f"VLM re-indexing completed with {failed_docs} failed document(s). Successfully indexed: {success_docs}/{total_docs} documents in {total_time:.1f}s"
+                completion_status = "completed_with_errors"
             else:
                 # All documents succeeded
-                completion_message = f'VLM re-indexing completed successfully in {total_time:.1f}s'
-                completion_status = 'completed'
+                completion_message = f"VLM re-indexing completed successfully in {total_time:.1f}s"
+                completion_status = "completed"
 
             final_data = {
-                'status': completion_status,
-                'progress': 1.0,
-                'message': completion_message,
-                'total_documents': total_docs,
-                'completed_documents': completed_docs,
-                'documents_failed': failed_docs,
-                'total_chunks': total_chunks,
-                'total_vlm_images': total_vlm_images,
-                'total_errors': total_errors,
-                'qdrant_points': qdrant_points,
-                'neo4j_entities': neo4j_entities,
-                'neo4j_relations': neo4j_relations,
-                'duration_seconds': total_time,
+                "status": completion_status,
+                "progress": 1.0,
+                "message": completion_message,
+                "total_documents": total_docs,
+                "completed_documents": completed_docs,
+                "documents_failed": failed_docs,
+                "total_chunks": total_chunks,
+                "total_vlm_images": total_vlm_images,
+                "total_errors": total_errors,
+                "qdrant_points": qdrant_points,
+                "neo4j_entities": neo4j_entities,
+                "neo4j_relations": neo4j_relations,
+                "duration_seconds": total_time,
             }
-            yield f'data: {json.dumps(final_data)}\n\n'
+            yield f"data: {json.dumps(final_data)}\n\n"
 
             logger.info(
                 "vlm_reindex_completed",
@@ -1597,9 +1979,9 @@ async def reindex_with_vlm_enrichment(
 
         except Exception as e:
             logger.error("vlm_reindex_failed", error=str(e), exc_info=True)
-            error_msg = f'VLM re-indexing failed: {str(e)}'
-            error_response = {'status': 'error', 'message': error_msg}
-            yield f'data: {json.dumps(error_response)}\n\n'
+            error_msg = f"VLM re-indexing failed: {str(e)}"
+            error_response = {"status": "error", "message": error_msg}
+            yield f"data: {json.dumps(error_response)}\n\n"
 
     return StreamingResponse(
         vlm_reindex_stream(),
@@ -1820,7 +2202,9 @@ async def get_cost_stats(
                 limit_usd=alibaba_limit,
                 spent_usd=alibaba_spent,
                 utilization_percent=alibaba_util,
-                status="ok" if alibaba_util < 80 else ("warning" if alibaba_util < 100 else "critical"),
+                status=(
+                    "ok" if alibaba_util < 80 else ("warning" if alibaba_util < 100 else "critical")
+                ),
                 remaining_usd=max(0, alibaba_limit - alibaba_spent),
             )
 
@@ -1834,7 +2218,9 @@ async def get_cost_stats(
                 limit_usd=openai_limit,
                 spent_usd=openai_spent,
                 utilization_percent=openai_util,
-                status="ok" if openai_util < 80 else ("warning" if openai_util < 100 else "critical"),
+                status=(
+                    "ok" if openai_util < 80 else ("warning" if openai_util < 100 else "critical")
+                ),
                 remaining_usd=max(0, openai_limit - openai_spent),
             )
 
@@ -2286,7 +2672,9 @@ class IngestionJobResponse(BaseModel):
     id: str = Field(..., description="Job ID")
     started_at: str = Field(..., description="Job start timestamp (ISO 8601)")
     completed_at: str | None = Field(None, description="Job completion timestamp (ISO 8601)")
-    status: Literal["running", "completed", "failed", "cancelled"] = Field(..., description="Job status")
+    status: Literal["running", "completed", "failed", "cancelled"] = Field(
+        ..., description="Job status"
+    )
     directory_path: str = Field(..., description="Directory being indexed")
     recursive: bool = Field(..., description="Whether scan is recursive")
     total_files: int = Field(..., description="Total number of files")
@@ -2327,7 +2715,9 @@ class IngestionFileResponse(BaseModel):
     file_type: str = Field(..., description="File extension")
     file_size_bytes: int | None = Field(None, description="File size in bytes")
     parser_used: str | None = Field(None, description="Parser type (docling/llamaindex)")
-    status: Literal["pending", "processing", "completed", "failed", "skipped"] = Field(..., description="File status")
+    status: Literal["pending", "processing", "completed", "failed", "skipped"] = Field(
+        ..., description="File status"
+    )
     pages_total: int | None = Field(None, description="Total pages")
     pages_processed: int = Field(..., description="Pages processed")
     chunks_created: int = Field(..., description="Chunks created")
@@ -2720,8 +3110,7 @@ async def delete_ingestion_job(job_id: str) -> dict:
             conn.commit()
 
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: delete_job(sqlite3.connect(tracker.db_path, check_same_thread=False))
+            None, lambda: delete_job(sqlite3.connect(tracker.db_path, check_same_thread=False))
         )
 
         logger.info("job_deleted", job_id=job_id)
@@ -2735,4 +3124,474 @@ async def delete_ingestion_job(job_id: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete job: {str(e)}",
+        ) from e
+
+
+@router.get("/ingestion/jobs/{job_id}/progress")
+async def stream_pipeline_progress(
+    job_id: str,
+    request: Request,
+) -> StreamingResponse:
+    """Stream pipeline progress via SSE.
+
+    **Sprint 37 Feature 37.5: Backend SSE Streaming Updates**
+
+    Returns Server-Sent Events with real-time pipeline progress including:
+    - Stage progress (parsing, vlm, chunking, embedding, extraction)
+    - Worker pool status (active workers, queue depth)
+    - Live metrics (entities, relations, Neo4j/Qdrant writes)
+    - Timing (elapsed, estimated remaining)
+
+    **Event Format:**
+    ```
+    event: pipeline_progress
+    data: {"document_id": "...", "stages": {...}, "worker_pool": {...}, ...}
+
+    event: complete
+    data: {}
+    ```
+
+    **Example Request:**
+    ```bash
+    curl -N "http://localhost:8000/api/v1/admin/ingestion/jobs/job_123/progress" \
+      -H "Accept: text/event-stream"
+    ```
+
+    **Frontend Integration:**
+    ```typescript
+    const eventSource = new EventSource(
+      `/api/v1/admin/ingestion/jobs/${jobId}/progress`
+    );
+
+    eventSource.addEventListener('pipeline_progress', (event) => {
+      const data: PipelineProgressData = JSON.parse(event.data);
+      // Update UI with progress data
+    });
+
+    eventSource.addEventListener('complete', () => {
+      eventSource.close();
+    });
+    ```
+
+    Args:
+        job_id: Job ID to stream progress for
+        request: FastAPI request object (for disconnect detection)
+
+    Returns:
+        StreamingResponse with text/event-stream content type
+
+    Raises:
+        HTTPException: If job not found in progress manager
+    """
+    import json
+    from src.components.ingestion.progress_manager import get_progress_manager
+
+    async def event_generator():
+        """Generate SSE events for pipeline progress."""
+        progress_manager = get_progress_manager()
+
+        # Check if job exists
+        initial_event = progress_manager.get_sse_event(job_id)
+        if not initial_event:
+            # Job not found in progress manager
+            # Return error event and close stream
+            error_event = {
+                "type": "error",
+                "data": {
+                    "message": f"Job not found: {job_id}",
+                    "job_id": job_id,
+                },
+            }
+            yield f"event: error\n"
+            yield f"data: {json.dumps(error_event['data'])}\n\n"
+            return
+
+        logger.info(
+            "sse_stream_started",
+            job_id=job_id,
+            client_ip=request.client.host if request.client else "unknown",
+        )
+
+        try:
+            while True:
+                # Check if client disconnected
+                if await request.is_disconnected():
+                    logger.info("sse_client_disconnected", job_id=job_id)
+                    break
+
+                # Get current progress
+                event = progress_manager.get_sse_event(job_id)
+
+                if event:
+                    # Format as SSE (event type + data)
+                    yield f"event: {event['type']}\n"
+                    yield f"data: {json.dumps(event['data'])}\n\n"
+
+                    # Check if complete (100% progress)
+                    overall_progress = event["data"].get("overall_progress_percent", 0)
+                    if overall_progress >= 100:
+                        logger.info(
+                            "sse_stream_completed",
+                            job_id=job_id,
+                            overall_progress=overall_progress,
+                        )
+                        # Send complete event
+                        yield "event: complete\n"
+                        yield "data: {}\n\n"
+                        break
+
+                # Throttle updates (~500ms interval)
+                # Progress manager already throttles at 500ms, but we add a small
+                # sleep to prevent tight loop when no updates available
+                await asyncio.sleep(0.5)
+
+        except asyncio.CancelledError:
+            logger.info("sse_stream_cancelled", job_id=job_id)
+            raise
+        except Exception as e:
+            logger.error("sse_stream_error", job_id=job_id, error=str(e), exc_info=True)
+            # Send error event
+            error_data = {
+                "message": f"Stream error: {str(e)}",
+                "job_id": job_id,
+            }
+            yield "event: error\n"
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",  # CORS for SSE
+        },
+    )
+
+
+# ============================================================================
+# Sprint 37 Feature 37.7: Pipeline Worker Pool Configuration
+# ============================================================================
+
+REDIS_KEY_PIPELINE_CONFIG = "admin:pipeline_config"
+
+
+class PipelineConfigSchema(BaseModel):
+    """Pipeline configuration schema for worker pool settings.
+
+    Sprint 37 Feature 37.7: Admin UI for Worker Pool Configuration
+
+    This schema defines all configurable parameters for the parallel
+    ingestion pipeline worker pools, including:
+    - VLM Workers (GPU-bound, 1-2 workers)
+    - Embedding Workers (1-4 workers)
+    - Extraction Workers (LLM calls, 1-8 workers)
+    - Resource limits and timeouts
+
+    All fields have Pydantic validation ranges matching frontend sliders.
+    """
+
+    # Document Processing
+    parallel_documents: int = Field(
+        default=2, ge=1, le=4, description="Number of documents to process in parallel"
+    )
+    max_queue_size: int = Field(
+        default=10, ge=5, le=50, description="Maximum number of chunks in processing queue"
+    )
+
+    # VLM Workers (GPU-bound)
+    vlm_workers: int = Field(
+        default=1, ge=1, le=2, description="Number of parallel VLM workers (GPU memory limited)"
+    )
+    vlm_batch_size: int = Field(
+        default=4, ge=1, le=8, description="Number of images processed per batch"
+    )
+    vlm_timeout: int = Field(
+        default=180, ge=60, le=300, description="Timeout for VLM processing per image (seconds)"
+    )
+
+    # Embedding Workers
+    embedding_workers: int = Field(
+        default=2, ge=1, le=4, description="Number of parallel embedding workers"
+    )
+    embedding_batch_size: int = Field(
+        default=8, ge=4, le=32, description="Number of chunks embedded per batch"
+    )
+    embedding_timeout: int = Field(
+        default=60, ge=30, le=120, description="Timeout for embedding generation (seconds)"
+    )
+
+    # Extraction Workers (LLM calls)
+    extraction_workers: int = Field(
+        default=4, ge=1, le=8, description="Number of parallel entity/relation extraction workers"
+    )
+    extraction_timeout: int = Field(
+        default=120, ge=60, le=300, description="Timeout for LLM extraction calls (seconds)"
+    )
+    extraction_max_retries: int = Field(
+        default=2, ge=0, le=3, description="Maximum retry attempts for failed extractions"
+    )
+
+    # Resource Limits
+    max_concurrent_llm: int = Field(
+        default=8, ge=4, le=16, description="Global limit for concurrent LLM API calls"
+    )
+    max_vram_mb: int = Field(
+        default=5500, ge=4000, le=8000, description="Maximum VRAM allocation for VLM workers (MB)"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "parallel_documents": 2,
+                "max_queue_size": 10,
+                "vlm_workers": 1,
+                "vlm_batch_size": 4,
+                "vlm_timeout": 180,
+                "embedding_workers": 2,
+                "embedding_batch_size": 8,
+                "embedding_timeout": 60,
+                "extraction_workers": 4,
+                "extraction_timeout": 120,
+                "extraction_max_retries": 2,
+                "max_concurrent_llm": 8,
+                "max_vram_mb": 5500,
+            }
+        }
+    }
+
+
+@router.get("/pipeline/config", response_model=PipelineConfigSchema)
+async def get_pipeline_config() -> PipelineConfigSchema:
+    """Get current pipeline worker pool configuration.
+
+    **Sprint 37 Feature 37.7: Pipeline Configuration API**
+
+    Loads configuration from Redis or returns defaults if not set.
+    Configuration controls parallel worker pools for VLM, Embedding,
+    and Extraction operations.
+
+    **Example Request:**
+    ```bash
+    curl "http://localhost:8000/api/v1/admin/pipeline/config"
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "parallel_documents": 2,
+      "max_queue_size": 10,
+      "vlm_workers": 1,
+      "vlm_batch_size": 4,
+      "vlm_timeout": 180,
+      "embedding_workers": 2,
+      "embedding_batch_size": 8,
+      "embedding_timeout": 60,
+      "extraction_workers": 4,
+      "extraction_timeout": 120,
+      "extraction_max_retries": 2,
+      "max_concurrent_llm": 8,
+      "max_vram_mb": 5500
+    }
+    ```
+
+    Returns:
+        Current pipeline configuration (from Redis or defaults)
+    """
+    import json
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        # Try to load from Redis
+        config_json = await redis_client.get(REDIS_KEY_PIPELINE_CONFIG)
+
+        if config_json:
+            # Redis returns bytes, decode to string
+            config_str = (
+                config_json.decode("utf-8") if isinstance(config_json, bytes) else config_json
+            )
+            config_dict = json.loads(config_str)
+            logger.info("pipeline_config_loaded_from_redis", config=config_dict)
+            return PipelineConfigSchema(**config_dict)
+
+        # Return defaults if not in Redis
+        logger.info("pipeline_config_using_defaults")
+        return PipelineConfigSchema()
+
+    except Exception as e:
+        logger.warning("failed_to_load_pipeline_config", error=str(e))
+        # Return defaults on error
+        return PipelineConfigSchema()
+
+
+@router.post("/pipeline/config", response_model=PipelineConfigSchema)
+async def update_pipeline_config(config: PipelineConfigSchema) -> PipelineConfigSchema:
+    """Update pipeline worker pool configuration.
+
+    **Sprint 37 Feature 37.7: Pipeline Configuration API**
+
+    Validates and persists configuration to Redis.
+    Configuration is immediately active for new indexing jobs.
+
+    **Example Request:**
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/admin/pipeline/config" \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "parallel_documents": 3,
+        "extraction_workers": 6,
+        "max_concurrent_llm": 12
+      }'
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "parallel_documents": 3,
+      "max_queue_size": 10,
+      "vlm_workers": 1,
+      "vlm_batch_size": 4,
+      "vlm_timeout": 180,
+      "embedding_workers": 2,
+      "embedding_batch_size": 8,
+      "embedding_timeout": 60,
+      "extraction_workers": 6,
+      "extraction_timeout": 120,
+      "extraction_max_retries": 2,
+      "max_concurrent_llm": 12,
+      "max_vram_mb": 5500
+    }
+    ```
+
+    Args:
+        config: Pipeline configuration to save
+
+    Returns:
+        Saved configuration (validated and persisted)
+
+    Raises:
+        HTTPException: If validation fails or Redis save fails
+    """
+    import json
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        # Save to Redis
+        config_json = config.model_dump_json()
+        await redis_client.set(REDIS_KEY_PIPELINE_CONFIG, config_json)
+
+        logger.info("pipeline_config_saved", config=config.model_dump())
+
+        return config
+
+    except Exception as e:
+        logger.error("failed_to_save_pipeline_config", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save pipeline configuration: {str(e)}",
+        ) from e
+
+
+@router.post("/pipeline/config/preset/{preset_name}", response_model=PipelineConfigSchema)
+async def apply_config_preset(
+    preset_name: Literal["conservative", "balanced", "aggressive"]
+) -> PipelineConfigSchema:
+    """Apply a predefined configuration preset.
+
+    **Sprint 37 Feature 37.7: Configuration Presets**
+
+    Applies one of three predefined configurations:
+    - **conservative**: Minimal resources, stable (1 parallel doc, 2 extraction workers)
+    - **balanced**: Default, recommended (2 parallel docs, 4 extraction workers)
+    - **aggressive**: Maximum performance (3 parallel docs, 6 extraction workers)
+
+    **Example Request:**
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/admin/pipeline/config/preset/aggressive"
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "parallel_documents": 3,
+      "extraction_workers": 6,
+      "embedding_workers": 3,
+      "vlm_workers": 1,
+      "max_concurrent_llm": 12,
+      "vlm_batch_size": 6,
+      "embedding_batch_size": 16,
+      ...
+    }
+    ```
+
+    Args:
+        preset_name: Preset to apply (conservative, balanced, aggressive)
+
+    Returns:
+        Applied configuration
+
+    Raises:
+        HTTPException: If preset is invalid or save fails
+    """
+    import json
+
+    presets = {
+        "conservative": PipelineConfigSchema(
+            parallel_documents=1,
+            extraction_workers=2,
+            embedding_workers=1,
+            vlm_workers=1,
+            max_concurrent_llm=4,
+            vlm_batch_size=2,
+            embedding_batch_size=4,
+        ),
+        "balanced": PipelineConfigSchema(),  # defaults
+        "aggressive": PipelineConfigSchema(
+            parallel_documents=3,
+            extraction_workers=6,
+            embedding_workers=3,
+            vlm_workers=1,
+            max_concurrent_llm=12,
+            vlm_batch_size=6,
+            embedding_batch_size=16,
+        ),
+    }
+
+    config = presets.get(preset_name)
+    if not config:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid preset: {preset_name}. Must be one of: conservative, balanced, aggressive",
+        )
+
+    # Save the preset
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        config_json = config.model_dump_json()
+        await redis_client.set(REDIS_KEY_PIPELINE_CONFIG, config_json)
+
+        logger.info(
+            "pipeline_config_preset_applied", preset=preset_name, config=config.model_dump()
+        )
+
+        return config
+
+    except Exception as e:
+        logger.error("failed_to_apply_preset", preset=preset_name, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to apply preset: {str(e)}",
         ) from e
