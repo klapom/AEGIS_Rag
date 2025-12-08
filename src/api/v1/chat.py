@@ -1235,6 +1235,248 @@ def _get_iso_timestamp() -> str:
     return datetime.now(UTC).isoformat()
 
 
+# Sprint 38 Feature 38.3: Share Conversation Links
+
+
+class ShareSettings(BaseModel):
+    """Share link settings model."""
+
+    expiry_hours: int = Field(
+        default=24, ge=1, le=168, description="Hours until share link expires (1h to 7 days)"
+    )
+
+
+class ShareLinkResponse(BaseModel):
+    """Share link response model."""
+
+    share_url: str = Field(..., description="Full public URL for shared conversation")
+    share_token: str = Field(..., description="Share token (URL-safe)")
+    expires_at: str = Field(..., description="ISO timestamp when link expires")
+    session_id: str = Field(..., description="Session ID being shared")
+
+
+class SharedConversationResponse(BaseModel):
+    """Shared conversation response (public, no auth required)."""
+
+    session_id: str = Field(..., description="Session ID")
+    title: str | None = Field(default=None, description="Conversation title")
+    messages: list[dict[str, Any]] = Field(..., description="Conversation messages")
+    message_count: int = Field(..., description="Number of messages")
+    created_at: str | None = Field(default=None, description="When conversation was created")
+    shared_at: str = Field(..., description="When link was generated")
+    expires_at: str = Field(..., description="When link expires")
+
+
+@router.post("/sessions/{session_id}/share", response_model=ShareLinkResponse)
+async def create_share_link(
+    session_id: str, settings: ShareSettings = ShareSettings()
+) -> ShareLinkResponse:
+    """Generate public share link for conversation.
+
+    Sprint 38 Feature 38.3: Share Conversation Links
+
+    This endpoint:
+    1. Validates that session exists
+    2. Generates secure URL-safe token
+    3. Stores share metadata in Redis with TTL
+    4. Returns full share URL and metadata
+
+    Args:
+        session_id: Session ID to share
+        settings: Share settings (expiry duration)
+
+    Returns:
+        ShareLinkResponse with share URL and token
+
+    Raises:
+        HTTPException: If session not found or share creation fails
+
+    Example Request:
+        POST /chat/sessions/abc-123/share
+        {
+            "expiry_hours": 24
+        }
+
+    Example Response:
+        {
+            "share_url": "http://localhost:5173/share/Xk9f2mZ_pQrT1aB3",
+            "share_token": "Xk9f2mZ_pQrT1aB3",
+            "expires_at": "2025-12-09T10:30:00Z",
+            "session_id": "abc-123"
+        }
+    """
+    logger.info("share_link_requested", session_id=session_id, expiry_hours=settings.expiry_hours)
+
+    try:
+        import secrets
+
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Verify session exists
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session '{session_id}' not found",
+            )
+
+        # Generate secure token (16 bytes = 22 chars URL-safe)
+        share_token = secrets.token_urlsafe(16)
+
+        # Calculate expiry
+        from datetime import timedelta
+
+        expires_at_dt = datetime.now(UTC) + timedelta(hours=settings.expiry_hours)
+        expires_at = expires_at_dt.isoformat()
+
+        # Store share metadata in Redis
+        share_data = {
+            "session_id": session_id,
+            "created_at": _get_iso_timestamp(),
+            "expires_at": expires_at,
+        }
+
+        ttl_seconds = settings.expiry_hours * 3600
+
+        await redis_memory.store(
+            key=share_token, value=share_data, ttl_seconds=ttl_seconds, namespace="share"
+        )
+
+        # Build share URL (derive from settings or request)
+        # For now, use a configurable base URL or default
+        base_url = settings.api_host if settings.api_host != "0.0.0.0" else "http://localhost"
+        share_url = f"{base_url}:5173/share/{share_token}"
+
+        logger.info(
+            "share_link_created",
+            session_id=session_id,
+            share_token=share_token,
+            expires_at=expires_at,
+        )
+
+        return ShareLinkResponse(
+            share_url=share_url,
+            share_token=share_token,
+            expires_at=expires_at,
+            session_id=session_id,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("share_link_creation_failed", session_id=session_id, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create share link: {str(e)}",
+        ) from e
+
+
+@router.get("/share/{share_token}", response_model=SharedConversationResponse)
+async def get_shared_conversation(share_token: str) -> SharedConversationResponse:
+    """Get shared conversation (no auth required).
+
+    Sprint 38 Feature 38.3: Share Conversation Links
+
+    This endpoint:
+    1. Looks up share token in Redis
+    2. Retrieves conversation data
+    3. Returns read-only conversation view
+    4. No authentication required (public link)
+
+    Args:
+        share_token: Share token from URL
+
+    Returns:
+        SharedConversationResponse with conversation data
+
+    Raises:
+        HTTPException: If token not found, expired, or invalid
+
+    Example Request:
+        GET /chat/share/Xk9f2mZ_pQrT1aB3
+
+    Example Response:
+        {
+            "session_id": "abc-123",
+            "title": "Discussion about AEGIS RAG",
+            "messages": [
+                {"role": "user", "content": "What is AEGIS RAG?", ...},
+                {"role": "assistant", "content": "AEGIS RAG is...", ...}
+            ],
+            "message_count": 2,
+            "created_at": "2025-12-08T10:00:00Z",
+            "shared_at": "2025-12-08T10:30:00Z",
+            "expires_at": "2025-12-09T10:30:00Z"
+        }
+    """
+    logger.info("shared_conversation_requested", share_token=share_token[:8])
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Lookup share token
+        share_data = await redis_memory.retrieve(
+            key=share_token, namespace="share", track_access=False
+        )
+
+        if not share_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Share link not found or expired",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(share_data, dict) and "value" in share_data:
+            share_data = share_data["value"]
+
+        session_id = share_data.get("session_id")
+        if not session_id:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid share data",
+            )
+
+        # Retrieve conversation
+        conversation = await redis_memory.retrieve(
+            key=session_id, namespace="conversation", track_access=False
+        )
+
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Shared conversation no longer exists",
+            )
+
+        # Extract value from Redis wrapper
+        if isinstance(conversation, dict) and "value" in conversation:
+            conversation = conversation["value"]
+
+        logger.info("shared_conversation_retrieved", session_id=session_id)
+
+        return SharedConversationResponse(
+            session_id=session_id,
+            title=conversation.get("title"),
+            messages=conversation.get("messages", []),
+            message_count=conversation.get("message_count", 0),
+            created_at=conversation.get("created_at"),
+            shared_at=share_data.get("created_at"),
+            expires_at=share_data.get("expires_at"),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("shared_conversation_retrieval_failed", share_token=share_token[:8], error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve shared conversation: {str(e)}",
+        ) from e
+
+
 # Sprint 27 Feature 27.5: Follow-up Question Suggestions
 
 
