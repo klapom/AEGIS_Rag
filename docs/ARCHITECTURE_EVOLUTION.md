@@ -1,7 +1,7 @@
 # ARCHITECTURE EVOLUTION - Sprint 1-21 Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete architectural history from foundation to production-ready system
-**Last Updated:** 2025-12-01 (Sprint 34 - Knowledge Graph Enhancement & Graph Visualization)
+**Last Updated:** 2025-12-08 (Sprint 37 - Streaming Pipeline Architecture)
 
 ---
 
@@ -65,6 +65,9 @@
 | 32 | Section-Aware Chunking | ADR-039, Neo4j Section Nodes, Adaptive Merging | ✅ COMPLETE |
 | 33 | Directory Indexing | TD-044 Fix, Multi-Format Sections, VLM Pipeline Integration | ✅ COMPLETE |
 | 34 | Knowledge Graph Enhancement | RELATES_TO Relationships, Graph Visualization, E2E Tests | ✅ COMPLETE |
+| 35 | Seamless Chat Flow | Multi-turn conversations, UX improvements | ✅ COMPLETE |
+| 36 | Advanced Search & Export | Faceted search, multi-format export | ✅ COMPLETE |
+| 37 | Streaming Pipeline | AsyncIO queues, SSE progress, worker pools | ✅ COMPLETE |
 
 ---
 

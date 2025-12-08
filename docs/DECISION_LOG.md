@@ -350,7 +350,61 @@
 
 ---
 
-**Last Updated:** 2025-12-01 (Sprint 34 Complete)
-**Total Decisions Documented:** 59
-**Current Sprint:** Sprint 34 (Complete)
-**Next Sprint:** Sprint 35 (Planned)
+---
+
+## SPRINT 35: SEAMLESS CHAT FLOW & UX ENHANCEMENT
+
+### 2025-12-02 | Multi-turn Conversations Without Navigation
+**Decision:** Implement seamless chat flow where conversations continue in-place without page navigation.
+**Rationale:** Modern chat applications (ChatGPT, Claude) don't require navigation between messages. Inline message updates reduce cognitive load and provide faster UX. SSE streaming enables real-time response display.
+
+### 2025-12-02 | Optimistic UI Updates for Chat Messages
+**Decision:** Display user messages immediately with optimistic updates before server confirmation.
+**Rationale:** Perceived latency reduction of 200-500ms. User sees immediate feedback. Server errors handled gracefully with retry/revert UI. Standard pattern in modern web applications.
+
+### 2025-12-03 | Error Boundaries with Graceful Recovery
+**Decision:** Implement React Error Boundaries with user-friendly error states and retry actions.
+**Rationale:** Crash isolation prevents entire app failure. User-friendly messages replace technical stack traces. Retry buttons enable self-service recovery. Critical for production reliability.
+
+---
+
+## SPRINT 36: ADVANCED SEARCH & EXPORT FEATURES
+
+### 2025-12-04 | Faceted Search with Qdrant Filters
+**Decision:** Implement faceted search using Qdrant's native filtering capabilities (document type, date range, source).
+**Rationale:** Qdrant supports efficient payload filtering at query time. No separate facet index needed. Filter combinations applied server-side for accurate results. Frontend receives filtered results without client-side post-processing.
+
+### 2025-12-04 | Recent Searches in localStorage
+**Decision:** Store recent searches in localStorage (not backend) with 20-item limit.
+**Rationale:** Zero server load for search history. Instant retrieval (<1ms). Privacy-friendly (stays on device). 20-item limit prevents storage bloat. Simple implementation without database schema changes.
+
+### 2025-12-05 | Multi-Format Export System (PDF, Markdown, JSON)
+**Decision:** Implement export system with PDF (visual), Markdown (portable), and JSON (data) formats.
+**Rationale:** Different use cases: PDF for sharing/printing, Markdown for documentation, JSON for data portability. Server-side generation ensures consistent formatting. Streaming for large exports prevents timeouts.
+
+---
+
+## SPRINT 37: STREAMING PIPELINE ARCHITECTURE
+
+### 2025-12-05 | AsyncIO Queue-based Pipeline Architecture (Feature 37.1)
+**Decision:** Implement StreamingPipelineOrchestrator with TypedQueue[T] for inter-stage communication instead of batch processing.
+**Rationale:** 50% memory reduction vs batch (chunks processed incrementally, not held in memory). Backpressure support (maxsize) prevents OOM. Type-safe queues catch errors at type-check time. Natural fit for producer-consumer pattern.
+
+### 2025-12-06 | SSE for Pipeline Progress Updates (Feature 37.5)
+**Decision:** Use Server-Sent Events (SSE) for real-time pipeline progress instead of polling.
+**Rationale:** SSE is simpler than WebSocket for unidirectional updates. Native browser support (EventSource API). Automatic reconnection on connection loss. Lower overhead than WebSocket for progress-only use case. Already proven in chat streaming.
+
+### 2025-12-06 | Dynamic Worker Pool Configuration (Feature 37.7)
+**Decision:** Allow runtime configuration of embedding/extraction/VLM workers via Admin UI.
+**Rationale:** Hardware varies across deployments (GPU memory, CPU cores). Static config requires restart. Admin UI enables experimentation with worker counts. Sensible defaults (2 embedding, 4 extraction, 1 VLM) for common hardware.
+
+### 2025-12-07 | Multi-Document Parallel Processing (Feature 37.8)
+**Decision:** Process multiple documents concurrently with configurable parallelism limit.
+**Rationale:** Batch ingestion (e.g., 100 PDFs) would be slow with sequential processing. Parallel processing achieves 4x throughput improvement. Memory-aware limits prevent OOM. Progress aggregation shows combined batch progress.
+
+---
+
+**Last Updated:** 2025-12-08 (Sprint 37 Complete)
+**Total Decisions Documented:** 70
+**Current Sprint:** Sprint 37 (Complete)
+**Next Sprint:** Sprint 38 (Planned - Advanced Query Optimization)

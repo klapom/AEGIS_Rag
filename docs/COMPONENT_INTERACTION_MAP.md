@@ -1,7 +1,7 @@
 # COMPONENT INTERACTION MAP
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete data flow documentation - how components communicate
-**Last Updated:** 2025-11-18 (Sprint 28 - Post Sprint 28 Architecture Alignment)
+**Last Updated:** 2025-12-08 (Sprint 37 - Streaming Pipeline Architecture)
 
 ---
 
@@ -93,6 +93,10 @@
 | GraphViewer | Neo4j API | HTTP/REST | JSON | Edge filtering, relationship queries |
 | All Agents | AegisLLMProxy | Python Call | Pydantic | Multi-cloud LLM routing (Sprint 25) |
 | AegisLLMProxy | Ollama/Cloud | HTTP | JSON | LLM inference (local → Alibaba → OpenAI) |
+| StreamingPipelineOrchestrator | TypedQueue[ChunkQueueItem] | AsyncIO Queue | Pydantic | Inter-stage chunk communication (Sprint 37) |
+| StreamingPipelineOrchestrator | TypedQueue[EmbeddedChunkItem] | AsyncIO Queue | Pydantic | Embedding stage output queue (Sprint 37) |
+| Admin UI | FastAPI SSE Endpoint | SSE | JSON | Real-time pipeline progress updates (Sprint 37) |
+| Worker Pool | StreamingPipelineOrchestrator | Python Call | Pydantic | Dynamic worker configuration (Sprint 37) |
 
 ---
 

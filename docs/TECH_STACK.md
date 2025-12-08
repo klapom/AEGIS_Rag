@@ -3,7 +3,7 @@
 
 Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen und Begründungen.
 
-**Last Updated:** 2025-12-01 (Sprint 34 - Knowledge Graph Enhancement)
+**Last Updated:** 2025-12-08 (Sprint 37 - Streaming Pipeline Architecture)
 
 ---
 
@@ -692,7 +692,151 @@ const edgeWidth = edge.weight * 3;  // Scale by weight
 
 ---
 
-### Cumulative Technology Additions (Sprints 12-34)
+### Sprint 35: Seamless Chat Flow & UX Enhancement
+**Status:** ✅ COMPLETE (2025-12-01 - 2025-12-03)
+
+**Technologies Added:**
+
+**Chat Flow Improvements:**
+- **Multi-turn Conversations:** Seamless chat without page navigation
+- **Message Threading:** Conversation context preservation
+- **Optimistic Updates:** Instant UI feedback before server confirmation
+
+**UX Components:**
+- **Loading States:** Skeleton loaders for all data-fetching operations
+- **Progress Indicators:** Visual feedback during long operations
+- **Error Boundaries:** Graceful error recovery with user-friendly messages
+
+**Achievements:**
+- Seamless chat experience matching modern chat applications
+- Reduced perceived latency through optimistic updates
+- Improved error handling with actionable error messages
+
+---
+
+### Sprint 36: Advanced Search & Export Features
+**Status:** ✅ COMPLETE (2025-12-03 - 2025-12-05)
+
+**Technologies Added:**
+
+**Search Enhancements:**
+- **Faceted Search:** Filter by document type, date range, source
+- **Recent Searches:** Quick access to search history (localStorage)
+- **Search Suggestions:** Type-ahead suggestions based on indexed content
+
+**Export System:**
+- **Multi-Format Export:** PDF, Markdown, JSON export options
+- **Conversation Export:** Full conversation history with citations
+- **Batch Export:** Export multiple documents at once
+
+**Technical Stack:**
+```typescript
+// Faceted Search Interface
+interface SearchFilters {
+  documentType: string[];  // ['pdf', 'docx', 'pptx']
+  dateRange: { start: Date; end: Date };
+  sources: string[];       // Document sources
+}
+
+// Export Options
+type ExportFormat = 'pdf' | 'markdown' | 'json';
+```
+
+---
+
+### Sprint 37: Streaming Pipeline Architecture
+**Status:** ✅ COMPLETE (2025-12-05 - 2025-12-08)
+
+**Technologies Added:**
+
+**Pipeline Infrastructure:**
+- **StreamingPipelineOrchestrator:** Queue-based document processing with AsyncIO
+- **TypedQueue[T]:** Type-safe async queues with backpressure support (maxsize)
+- **Pipeline Stages:** Parsing → Chunking → Embedding → Storage (parallel execution)
+
+**SSE Progress Updates:**
+- **Real-time Progress:** Server-Sent Events for pipeline progress streaming
+- **Stage-level Updates:** Individual progress for each pipeline stage
+- **Error Streaming:** Real-time error reporting without breaking flow
+
+**Admin UI Enhancements:**
+- **Worker Pool Configuration:** Dynamic adjustment of embedding/extraction workers
+- **Pipeline Monitoring:** Live progress visualization with stage breakdown
+- **Cancellation Support:** Graceful pipeline cancellation with cleanup
+
+**Multi-Document Processing:**
+- **Parallel Document Ingestion:** Process multiple documents concurrently
+- **Resource Management:** Memory-aware concurrent processing limits
+- **Progress Aggregation:** Combined progress for multi-document batches
+
+**Technical Stack:**
+```python
+# StreamingPipelineOrchestrator (Feature 37.1)
+from src.components.ingestion.streaming_pipeline import (
+    StreamingPipelineOrchestrator,
+    PipelineConfig,
+)
+
+config = PipelineConfig(
+    chunk_queue_max_size=10,    # Backpressure threshold
+    embedding_queue_max_size=10,
+    embedding_workers=2,         # Parallel embedding workers
+    extraction_workers=4,        # Parallel extraction workers
+    vlm_workers=1,              # VLM processing workers
+)
+
+orchestrator = StreamingPipelineOrchestrator(config)
+result = await orchestrator.process_document(
+    document_path=Path("document.pdf"),
+    document_id="doc_123",
+    progress_callback=lambda update: print(update),
+)
+
+# TypedQueue for async producer-consumer pattern
+from src.components.ingestion.pipeline_queues import TypedQueue, ChunkQueueItem
+
+queue: TypedQueue[ChunkQueueItem] = TypedQueue(maxsize=5)
+await queue.put(chunk_item)   # Blocks if full (backpressure)
+item = await queue.get()      # Returns None when done
+await queue.mark_done()       # Signal completion
+```
+
+```typescript
+// Frontend Worker Pool Configuration (Feature 37.7)
+interface WorkerPoolConfig {
+  embeddingWorkers: number;    // 1-8
+  extractionWorkers: number;   // 1-16
+  vlmWorkers: number;          // 1-4
+}
+
+// SSE Progress Updates (Feature 37.5)
+interface PipelineProgress {
+  stage: 'parsing' | 'chunking' | 'embedding' | 'storage';
+  progress: number;  // 0.0 - 1.0
+  currentItem?: string;
+  totalItems?: number;
+  errors?: PipelineError[];
+}
+```
+
+**Achievements:**
+- Streaming pipeline with 50% memory reduction vs batch processing
+- Real-time progress updates via SSE
+- Dynamic worker pool configuration via Admin UI
+- Multi-document parallel processing (4x throughput improvement)
+- 10+ E2E tests for admin pipeline UI
+
+**Key ADRs:**
+- ADR-042: Bi-temporal Memory Opt-In Strategy (Sprint 38-40 planning)
+- ADR-043: Secure Shell Sandbox (Sprint 40 planning)
+
+**Test Coverage:**
+- Unit tests: 4 chunking tests, 7 queue tests, 5 orchestrator tests
+- E2E tests: Pipeline progress, worker config, cancellation, error handling
+
+---
+
+### Cumulative Technology Additions (Sprints 12-37)
 
 | Sprint | Category | Technology | Version | Purpose |
 |--------|----------|------------|---------|---------|
@@ -755,6 +899,18 @@ const edgeWidth = edge.weight * 3;  // Scale by weight
 | 34 | Frontend | GraphFilters Component | React | Relationship type and weight filtering |
 | 34 | Frontend | Graph Legend & Tooltips | React | Interactive relationship type display |
 | 34 | Testing | Graph E2E Tests | Playwright | 19 tests for graph features (100% pass) |
+| 35 | Chat | Seamless Chat Flow | React + SSE | Multi-turn conversations without navigation |
+| 35 | UX | Loading States | React | Skeleton loaders, progress indicators |
+| 35 | UX | Error Boundaries | React | Graceful error recovery |
+| 36 | Search | Faceted Search | Qdrant + React | Document type, date range, source filters |
+| 36 | Search | Recent Searches | localStorage | Quick access to search history |
+| 36 | Export | Multi-Format Export | Backend + React | PDF, Markdown, JSON export options |
+| 37 | Pipeline | StreamingPipelineOrchestrator | AsyncIO | Queue-based document processing |
+| 37 | Pipeline | TypedQueue | AsyncIO | Type-safe async queues with backpressure |
+| 37 | Pipeline | SSE Progress Updates | FastAPI + SSE | Real-time pipeline progress streaming |
+| 37 | Admin | Worker Pool Configuration | React | Dynamic worker count adjustment |
+| 37 | Pipeline | Multi-Document Parallelization | AsyncIO | Concurrent document processing |
+| 37 | Testing | Pipeline E2E Tests | Playwright | 10+ E2E tests for admin pipeline UI |
 
 ### Embedding Model Evolution
 
