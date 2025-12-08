@@ -49,6 +49,11 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 036 | Settings Management via localStorage | Accepted | 2025-11-16 |
 | 037 | Alibaba Cloud Extraction (Complexity.HIGH Routing) | Accepted | 2025-11-19 |
 | 038 | DashScope Custom Parameters via OpenAI SDK extra_body | Accepted | 2025-11-19 |
+| 039 | Adaptive Section-Aware Chunking | Accepted | 2025-11-24 |
+| 040 | Graph Enhancement - Semantic Relationships | Accepted | 2025-11-28 |
+| 041 | Graph Visualization Edge Filtering | Accepted | 2025-11-28 |
+| 042 | Bi-Temporal Queries - Opt-In Strategy | Accepted | 2025-12-08 |
+| 043 | Secure Shell Sandbox for Tool Execution | Accepted | 2025-12-08 |
 
 ---
 
