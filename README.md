@@ -1,54 +1,52 @@
 # AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-**Status:** Sprint 34 Complete (2025-12-01)
-**Version:** 1.0.0 (Production-Ready)
+**Status:** Sprint 37 Complete (2025-12-08)
+**Version:** 1.1.0 (Production-Ready)
 
 Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, and GPU-accelerated ingestion.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 **New to the project?**
-1. Read [docs/CLAUDE.md](docs/CLAUDE.md) - Complete project context
+1. Read [CLAUDE.md](CLAUDE.md) - Complete project context
 2. Review [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md) - Context refresh strategies
 3. Check [docs/sprints/SPRINT_PLAN.md](docs/sprints/SPRINT_PLAN.md) - Current sprint status
 
 **Ready to develop?**
 1. Follow [docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md](docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md)
 2. Review [docs/NAMING_CONVENTIONS.md](docs/NAMING_CONVENTIONS.md)
-3. Read [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 30 Architecture Decisions
+3. Read [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) - 43 Architecture Decisions
 
 ---
 
-## 📋 Current Sprint Status
+## Current Sprint Status
 
-### Sprint 34: Knowledge Graph Enhancement ✅ COMPLETE
-**Duration:** 2025-11-28 → 2025-12-01
+### Sprint 37: Streaming Pipeline Architecture (COMPLETE)
+**Duration:** 2025-12-05 - 2025-12-08
 
 **Key Achievements:**
-- ✅ RELATES_TO Relationship Extraction (Alibaba Cloud qwen3-32b)
-- ✅ Frontend Graph Visualization (Edge colors, widths, legend, tooltips)
-- ✅ Graph Edge Filtering (Relationship checkboxes, weight threshold slider)
-- ✅ 19 New E2E Tests for Graph Visualization
-- ✅ 21 Data-Testid Attributes Added
-- ✅ Neo4j Integration for Semantic Relationships
+- StreamingPipelineOrchestrator with AsyncIO queues
+- SSE Progress Updates for real-time pipeline monitoring
+- Worker Pool Configuration (embedding, extraction, VLM workers)
+- Multi-Document Parallel Processing
+- Pipeline E2E Tests (10+ tests)
 
 **Architecture Decisions:**
-- ADR-040: RELATES_TO Semantic Relationship Extraction
-- ADR-041: Graph Visualization Enhancement
+- ADR-042: Bi-temporal Memory Opt-In Strategy
+- ADR-043: Secure Shell Sandbox (Bubblewrap)
 
-### Sprint 35: Frontend UX Enhancement 📋 PLANNED
-**Planned (52 SP):**
-- Seamless Chat Flow (Claude/ChatGPT style)
-- Admin Indexing Side-by-Side Layout
-- Follow-up Questions Fix (TD-043)
-- Session History Sidebar
-- Auto-generated Conversation Titles
+### Sprint 38: Authentication & GraphRAG (PLANNED)
+**Planned (25 SP):**
+- JWT Authentication Frontend (Login UI, Protected Routes)
+- Conversation Search UI (Semantic Search)
+- Share Conversation Links (Temporary public links)
+- GraphRAG Multi-Hop Integration
 
 ---
 
-## 🛠️ Technology Stack (Sprint 21)
+## Technology Stack
 
 ### Core Components
 - **Backend:** Python 3.12.7, FastAPI, Pydantic v2
@@ -61,52 +59,41 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 - **Graph DB:** Neo4j 5.24 Community (knowledge graph)
 - **Memory Cache:** Redis 7.x (short-term memory)
 
-### AI Models (Local & Cost-Free)
-- **Query Understanding:** llama3.2:3b (Ollama)
-- **Answer Generation:** llama3.2:8b (Ollama)
-- **Entity Extraction:** gemma-3-4b-it-Q8_0 (Ollama, ADR-026)
-- **Vision (VLM):** llava:7b-v1.6-mistral-q2_K (Sprint 21)
-- **Vision (Alt):** qwen3-vl:4b (Sprint 21)
+### AI Models
+- **LLM Routing:** AegisLLMProxy - fully configurable (ADR-033)
+- **Current Runtime:** DGX Spark (vLLM/Ollama with cu130)
+- **Fallback:** Alibaba Cloud DashScope, OpenAI
 - **Embeddings:** BGE-M3 (1024-dim, multilingual, ADR-024)
 
 ### Infrastructure
-- **Container Runtime:** Docker + NVIDIA Container Toolkit (CUDA 12.4)
+- **Container Runtime:** Docker + NVIDIA Container Toolkit
 - **CI/CD:** GitHub Actions
-- **GPU:** NVIDIA RTX 3060 (12GB VRAM, Sprint 21 Feature 21.6)
+- **DGX Spark:** NVIDIA GB10 (sm_121), CUDA 13.0, 128GB Unified Memory
 
 ---
 
-## 📚 Documentation Structure
+## Documentation Structure
 
-### Core Docs (docs/ root) - 9 files
-Essential reference documentation:
+### Core Docs (Root & docs/)
 - **CLAUDE.md** - Project context for Claude Code
-- **CONTEXT_REFRESH.md** - Context refresh strategies (Quick/Standard/Deep)
-- **TECH_STACK.md** - Complete technology stack (Sprint 1-21)
-- **ARCHITECTURE_EVOLUTION.md** - Sprint-by-sprint architecture history
-- **DEPENDENCY_RATIONALE.md** - Dependency justifications
-- **SUBAGENTS.md** - 6 specialized subagents
+- **CONTEXT_REFRESH.md** - Context refresh strategies
+- **TECH_STACK.md** - Complete technology stack
+- **ARCHITECTURE_EVOLUTION.md** - Sprint architecture history
 - **NAMING_CONVENTIONS.md** - Code standards
-- **DECISION_LOG.md** - Decision log
 - **COMPONENT_INTERACTION_MAP.md** - Component interactions
 
-### Organized Subdirectories - 12 categories
-- **docs/adr/** - Architecture Decision Records (ADR-001 to ADR-030)
+### Organized Subdirectories
+- **docs/adr/** - Architecture Decision Records (ADR-001 to ADR-043)
 - **docs/api/** - API endpoint documentation
 - **docs/architecture/** - Architecture diagrams
-- **docs/core/** - Core project documentation
 - **docs/guides/** - Setup & how-to guides
-- **docs/reference/** - Technical references
-- **docs/evaluations/** - Comparisons & evaluations
-- **docs/planning/** - Planning documents
-- **docs/examples/** - Code examples
 - **docs/sprints/** - Sprint plans & reports
-- **docs/troubleshooting/** - Debugging guides
-- **docs/archive/** - Obsolete/historical docs
+- **docs/operations/** - DGX Spark deployment guides
+- **docs/technical-debt/** - Technical debt tracking
 
 ---
 
-## 🏗️ Architecture Highlights
+## Architecture Highlights
 
 ### Hybrid RAG System
 - **Vector Search:** Qdrant + BGE-M3 embeddings
@@ -126,26 +113,24 @@ Essential reference documentation:
 - **Memory Agent:** Graphiti retrieval
 - **Action Agent:** Tool execution (MCP)
 
-### Ingestion Pipeline (Sprint 21)
+### Ingestion Pipeline (Streaming)
 **6-Node LangGraph State Machine:**
 1. **Docling Parse:** GPU-accelerated OCR (95% accuracy)
 2. **VLM Enrichment:** Image descriptions with BBox provenance
-3. **Chunking:** HybridChunker (1024 tokens, BGE-M3 optimized)
+3. **Chunking:** Section-aware (800-1800 tokens, ADR-039)
 4. **Embedding:** BGE-M3 batch embeddings
-5. **Graph Extraction:** Pure LLM (gemma-3-4b-it-Q8_0, ADR-026)
+5. **Graph Extraction:** Pure LLM (ADR-026)
 6. **Validation:** Schema validation, provenance checks
 
 ---
 
-## 🤖 Claude Code Integration
+## Claude Code Integration
 
-**6 Specialized Subagents:**
+**4 Specialized Subagents:**
 1. **backend-agent** - Core business logic, LangGraph agents
 2. **infrastructure-agent** - Docker, CI/CD, Kubernetes
 3. **api-agent** - FastAPI endpoints, OpenAPI docs
 4. **testing-agent** - Unit, integration, E2E tests
-5. **documentation-agent** - ADRs, API docs, guides
-6. **subagent-architect** - Agent configuration design
 
 **Usage:**
 - See [docs/SUBAGENTS.md](docs/SUBAGENTS.md) for delegation strategies
@@ -153,33 +138,32 @@ Essential reference documentation:
 
 ---
 
-## 📊 Project Status
+## Project Status
 
 ### Sprint Completion
-- **Sprints 1-34:** ✅ COMPLETE (Knowledge graph enhancement with semantic relationships)
-- **Sprint 35:** 📋 PLANNED (Frontend UX enhancement, 52 SP)
+- **Sprints 1-37:** COMPLETE (Streaming pipeline architecture)
+- **Sprint 38:** PLANNED (Authentication & GraphRAG, 25 SP)
 
 ### Test Coverage
-- **Unit Tests:** 112+ tests
-- **Integration Tests:** 51+ tests (including 31 for Docling)
-- **E2E Tests:** 28+ tests
+- **Unit Tests:** 467+ tests
+- **Integration Tests:** 100+ tests
+- **E2E Tests:** 111 Playwright tests
 - **Total Coverage:** >80%
 
 ### Documentation
-- **ADRs:** 41+ Architecture Decision Records (ADR-001 to ADR-041)
-- **Sprint Reports:** 34+ sprint completion reports
-- **Component READMEs:** 10+ component documentation files
+- **ADRs:** 43 Architecture Decision Records
+- **Sprint Reports:** 37 sprint completion reports
 - **Total Docs:** 150+ markdown files
 
 ---
 
-## 🔒 Security & Compliance
+## Security & Compliance
 
 ### Local-First Strategy (ADR-002)
-- **100% Ollama:** No cloud dependencies
-- **Offline Capable:** Air-gapped deployment
-- **DSGVO Compliant:** No data leaves local network
-- **Cost-Free:** Zero API costs in development
+- **Ollama Primary:** Zero cloud dependencies for dev
+- **Multi-Cloud Option:** AegisLLMProxy (Alibaba, OpenAI)
+- **DSGVO Compliant:** Data stays local by default
+- **Cost Tracking:** SQLite database, $120/month budget
 
 ### Security Features
 - SHA-256 hashing for chunk IDs
@@ -189,41 +173,41 @@ Essential reference documentation:
 
 ---
 
-## 📦 Dependencies
+## Dependencies
 
 **Runtime:**
-- Python 3.11+
+- Python 3.12+
 - Docker + NVIDIA Container Toolkit
-- Ollama (7 models: llama3.2, gemma-3, llava, qwen3-vl, BGE-M3)
+- Ollama (llama3.2, gemma-3, BGE-M3)
 - Poetry (dependency management)
 
 **GPU Requirements:**
-- NVIDIA GPU with CUDA 12.4 support
+- NVIDIA GPU with CUDA 12.4+ support
 - 12GB+ VRAM recommended (for VLM + Docling)
-- RTX 3060 / RTX 3070 / RTX 4060 or better
+- DGX Spark: CUDA 13.0, PyTorch cu130
 
 ---
 
-## 🚀 Next Steps
+## Next Steps
 
 ### For Developers
-1. Read [docs/CLAUDE.md](docs/CLAUDE.md) - Project context
+1. Read [CLAUDE.md](CLAUDE.md) - Project context
 2. Review [docs/NAMING_CONVENTIONS.md](docs/NAMING_CONVENTIONS.md)
-3. Check [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md) for architecture decisions
+3. Check [docs/adr/ADR_INDEX.md](docs/adr/ADR_INDEX.md)
 
 ### For Architects
 1. Study [docs/ARCHITECTURE_EVOLUTION.md](docs/ARCHITECTURE_EVOLUTION.md)
-2. Review ADR-026 through ADR-030 (Sprint 21 decisions)
-3. Read [docs/TECH_STACK.md](docs/TECH_STACK.md) for complete stack
+2. Review ADR-039 to ADR-043 (Recent decisions)
+3. Read [docs/TECH_STACK.md](docs/TECH_STACK.md)
 
 ### For DevOps
 1. Follow [docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md](docs/guides/PRODUCTION_DEPLOYMENT_GUIDE.md)
-2. Review [docs/guides/GPU_REQUIREMENTS.md](docs/guides/GPU_REQUIREMENTS.md)
+2. Review [docs/operations/DGX_SPARK_DEPLOYMENT.md](docs/operations/DGX_SPARK_DEPLOYMENT.md)
 3. Check [docs/guides/CI_CD_GUIDE.md](docs/guides/CI_CD_GUIDE.md)
 
 ---
 
-## 📞 Resources
+## Resources
 
 - **GitHub:** [github.com/klapom/AEGIS_Rag](https://github.com/klapom/AEGIS_Rag)
 - **Documentation:** [docs/](docs/)
@@ -232,5 +216,5 @@ Essential reference documentation:
 
 ---
 
-**Last Updated:** 2025-12-01 (Sprint 34 Complete)
+**Last Updated:** 2025-12-08 (Sprint 37 Complete)
 **Maintainer:** AEGIS RAG Team

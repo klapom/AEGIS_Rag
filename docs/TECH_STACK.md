@@ -7,6 +7,47 @@ Vollständiger Überblick über gewählte Technologien, Versionen, Alternativen 
 
 ---
 
+## DGX Spark Deployment (sm_121)
+
+### Hardware Context
+| Component | Specification |
+|-----------|---------------|
+| GPU | NVIDIA GB10 (Blackwell, sm_121) |
+| CUDA | 13.0, Driver 580.95.05 |
+| Memory | 128GB Unified |
+| CPU | 20 ARM Cortex (aarch64) |
+| OS | Ubuntu 24.04 |
+
+### Framework Compatibility
+
+| Framework | Status | Notes |
+|-----------|--------|-------|
+| **PyTorch cu130** | ✅ Works | `pip install torch --index-url https://download.pytorch.org/whl/cu130` |
+| **NGC Container** | ✅ Works | `nvcr.io/nvidia/pytorch:25.09-py3` or newer |
+| **llama.cpp** | ✅ Works | Native CUDA compilation |
+| **Triton** | ⚠️ Build | Must build from source for sm_121a |
+| PyTorch cu128 | ❌ Fails | `nvrtc: error: invalid value for --gpu-architecture` |
+| TensorFlow | ❌ Unsupported | Not supported on DGX Spark |
+| TensorRT | ❌ Fails | No sm_121 support (only up to sm_120) |
+| PaddlePaddle | ❌ Fails | No ARM64 support |
+| ONNX Runtime | ⚠️ Compile | Must self-compile wheels |
+
+### Required Environment Variables
+```bash
+export TORCH_CUDA_ARCH_LIST="12.1a"
+export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+export CUDACXX=/usr/local/cuda-13.0/bin/nvcc
+```
+
+### Flash Attention Workaround
+```python
+import torch
+torch.backends.cuda.enable_flash_sdp(False)
+torch.backends.cuda.enable_mem_efficient_sdp(True)
+```
+
+---
+
 ## Core Stack Overview
 
 | Category | Primary Choice | Version | Alternative 1 | Alternative 2 | Decision Basis |
