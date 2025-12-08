@@ -434,16 +434,40 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 ## 🔄 Document Maintenance
 
 **This Document:**
-- **Version:** 5.2 (Sprint-Independent, Reference-Based)
+- **Version:** 5.3 (Sprint-Independent, Reference-Based)
 - **Created:** 2025-10-22
-- **Last Updated:** 2025-11-29
+- **Last Updated:** 2025-12-07
 - **Maintenance:** This document is TIMELESS - no sprint references
 
-**Recent Highlights (Sprint 33):**
+**Recent Highlights (Sprint 35-37):**
+
+### Sprint 37 - Streaming Pipeline & Visual Progress (2025-12-07)
+- **Streaming Pipeline Architecture:** AsyncIO Queue-based streaming (chunks flow through stages without waiting)
+- **Worker Pool Configuration:** Configurable VLM/Embedding/Extraction workers via Admin UI
+- **Visual Pipeline Progress:** Real-time 5-stage visualization (Parsing→VLM→Chunking→Embedding→Extraction)
+- **Multi-Document Parallelization:** `ParallelIngestionOrchestrator` integration for 2-3 concurrent documents
+- **SSE Streaming Updates:** Throttled SSE events (500ms) with stage progress, worker status, entity metrics
+- **E2E Tests:** 28 tests (21 pass, 7 skipped for timing/viewport edge cases)
+
+### Sprint 36 - Performance Optimization (2025-12-05)
+- **Qwen3 Thinking Mode Fix:** 12.9x faster (650s → 50.5s) by passing `think=False` as direct kwarg
+- **Graph RAG Chunking Simplification:** Direct tiktoken chunking, removed async ChunkingService dependency
+- **Admin Chunk Progress:** Real-time `chunks_processed/chunks_total` display during extraction
+- **DGX Spark Configuration:** Optimized settings for NVIDIA GB10 (8GB VRAM)
+
+### Sprint 35 - Frontend UX Enhancement (2025-12-01)
+- **Seamless Chat Flow:** Claude/ChatGPT-style chat interface with Avatar icons
+- **Admin Side-by-Side Layout:** Log and Details in 50%/50% split view
+- **Follow-up Questions Fix:** TD-043 Redis storage fix
+- **Auto-Generated Titles:** LLM-based conversation title generation
+- **Session History Sidebar:** Conversation history management
+- **Dark Mode Preparation:** CSS variables and theme infrastructure
+
+### Sprint 33-34 - Knowledge Graph Enhancement
 - VLM Pipeline Integration: 6-node LangGraph ingestion pipeline
 - Image Filtering: Optimized filters save ~50% VLM API calls
-- Multi-Format Sections: PDF, DOCX, PPTX with section_header support
-- Legacy Format Handling: .doc/.xls/.ppt explicitly rejected
+- RELATES_TO Extraction: Semantic relationships via Alibaba Cloud qwen3-32b
+- Graph Edge Filtering UI: Real-time edge type and weight threshold filters
 
 **Referenced Documents (Auto-Updated):**
 - **docs/CLAUDE.md** - Auto-updated with current sprint status
