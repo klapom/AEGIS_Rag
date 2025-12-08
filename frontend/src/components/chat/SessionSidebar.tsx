@@ -1,8 +1,10 @@
 /**
  * SessionSidebar Component
  * Sprint 35 Feature 35.5: Session History Sidebar
+ * Sprint 38 Feature 38.2: Conversation Search Integration
  *
  * Features:
+ * - Conversation search at the top
  * - List conversation history with titles and previews
  * - Date-based grouping (Today, Yesterday, Last Week, Older)
  * - New Chat button
@@ -12,8 +14,10 @@
  */
 
 import { useState } from 'react';
-import { Plus, Trash2, MessageSquare, Menu, X } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, Menu, X, Share2 } from 'lucide-react';
+import { ShareModal } from './ShareModal';
 import { useSessions } from '../../hooks/useSessions';
+import { ConversationSearch } from './ConversationSearch';
 import type { SessionSummary } from '../../api/chat';
 
 interface SessionSidebarProps {
@@ -30,9 +34,10 @@ interface SessionGroupProps {
   currentSessionId: string | null;
   onSelect: (sessionId: string) => void;
   onDelete: (sessionId: string) => void;
+  onShare: (sessionId: string) => void;
 }
 
-function SessionGroup({ title, sessions, currentSessionId, onSelect, onDelete }: SessionGroupProps) {
+function SessionGroup({ title, sessions, currentSessionId, onSelect, onDelete, onShare }: SessionGroupProps) {
   if (sessions.length === 0) return null;
 
   return (
@@ -48,6 +53,7 @@ function SessionGroup({ title, sessions, currentSessionId, onSelect, onDelete }:
             isActive={session.session_id === currentSessionId}
             onSelect={() => onSelect(session.session_id)}
             onDelete={() => onDelete(session.session_id)}
+            onShare={() => onShare(session.session_id)}
           />
         ))}
       </div>
@@ -60,10 +66,11 @@ interface SessionItemProps {
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onShare: () => void;
 }
 
-function SessionItem({ session, isActive, onSelect, onDelete }: SessionItemProps) {
-  const [showDelete, setShowDelete] = useState(false);
+function SessionItem({ session, isActive, onSelect, onDelete, onShare }: SessionItemProps) {
+  const [showActions, setShowActions] = useState(false);
 
   return (
     <div
@@ -73,8 +80,8 @@ function SessionItem({ session, isActive, onSelect, onDelete }: SessionItemProps
           : 'text-gray-300 hover:bg-gray-800'
       }`}
       onClick={onSelect}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
       data-testid="session-item"
     >
       <MessageSquare className="w-4 h-4 flex-shrink-0" />
@@ -88,17 +95,31 @@ function SessionItem({ session, isActive, onSelect, onDelete }: SessionItemProps
           </div>
         )}
       </div>
-      {showDelete && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="p-1 text-gray-400 hover:text-red-400 transition-colors"
-          data-testid="delete-session"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+      {showActions && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare();
+            }}
+            className="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+            data-testid="share-session"
+            title="Share conversation"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+            data-testid="delete-session"
+            title="Delete conversation"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -112,6 +133,8 @@ export function SessionSidebar({
   onToggle,
 }: SessionSidebarProps) {
   const { groupedSessions, isLoading, removeSession } = useSessions();
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareSessionId, setShareSessionId] = useState<string | null>(null);
 
   const handleDelete = async (sessionId: string) => {
     if (confirm('Delete this conversation?')) {
@@ -120,6 +143,16 @@ export function SessionSidebar({
         onNewChat();
       }
     }
+  };
+
+  const handleShare = (sessionId: string) => {
+    setShareSessionId(sessionId);
+    setShareModalOpen(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setShareModalOpen(false);
+    setShareSessionId(null);
   };
 
   return (
@@ -156,6 +189,17 @@ export function SessionSidebar({
             </button>
           </div>
 
+          {/* Conversation Search - Sprint 38 Feature 38.2 */}
+          <div className="p-4 border-b border-gray-700">
+            <ConversationSearch
+              onSelectResult={(sessionId) => {
+                onSelectSession(sessionId);
+                onToggle();
+              }}
+              placeholder="Search conversations..."
+            />
+          </div>
+
           {/* Session List */}
           <div className="flex-1 overflow-y-auto p-2">
             {isLoading ? (
@@ -171,6 +215,7 @@ export function SessionSidebar({
                     onToggle();
                   }}
                   onDelete={handleDelete}
+                  onShare={handleShare}
                 />
                 <SessionGroup
                   title="Yesterday"
@@ -181,6 +226,7 @@ export function SessionSidebar({
                     onToggle();
                   }}
                   onDelete={handleDelete}
+                  onShare={handleShare}
                 />
                 <SessionGroup
                   title="Last 7 Days"
@@ -191,6 +237,7 @@ export function SessionSidebar({
                     onToggle();
                   }}
                   onDelete={handleDelete}
+                  onShare={handleShare}
                 />
                 <SessionGroup
                   title="Older"
@@ -201,6 +248,7 @@ export function SessionSidebar({
                     onToggle();
                   }}
                   onDelete={handleDelete}
+                  onShare={handleShare}
                 />
               </>
             )}
@@ -220,6 +268,15 @@ export function SessionSidebar({
         <div
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={onToggle}
+        />
+      )}
+
+      {/* Share Modal - Sprint 38 Feature 38.3 */}
+      {shareSessionId && (
+        <ShareModal
+          sessionId={shareSessionId}
+          isOpen={shareModalOpen}
+          onClose={handleCloseShareModal}
         />
       )}
     </>

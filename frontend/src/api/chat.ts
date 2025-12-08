@@ -322,3 +322,163 @@ export async function getConversation(sessionId: string): Promise<ConversationHi
 
   return response.json();
 }
+
+// Sprint 38 Feature 38.2: Conversation Search
+
+export interface ConversationSearchRequest {
+  query: string;
+  limit?: number;
+  min_score?: number;
+}
+
+export interface ConversationSearchResult {
+  session_id: string;
+  title: string;
+  snippet: string;
+  archived_at: string;
+  score: number;
+}
+
+export interface ConversationSearchResponse {
+  results: ConversationSearchResult[];
+  total: number;
+}
+
+/**
+ * Search conversations by query
+ * Sprint 38 Feature 38.2
+ *
+ * @param query Search query
+ * @param limit Maximum number of results (default: 10)
+ * @param minScore Minimum relevance score (default: 0.5)
+ * @returns Search results with relevance scores
+ */
+export async function searchConversations(
+  query: string,
+  limit: number = 10,
+  minScore: number = 0.5
+): Promise<ConversationSearchResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, limit, min_score: minScore }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}
+
+export interface ArchiveConversationResponse {
+  success: boolean;
+  archived_at: string;
+}
+
+/**
+ * Archive a conversation
+ * Sprint 38 Feature 38.2
+ *
+ * @param sessionId Session ID to archive
+ * @returns Archive response with timestamp
+ */
+export async function archiveConversation(sessionId: string): Promise<ArchiveConversationResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/archive`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}
+
+// Sprint 38 Feature 38.3: Share Conversation Links
+
+export interface ShareLinkRequest {
+  expiry_hours: number;
+}
+
+export interface ShareLinkResponse {
+  share_url: string;
+  share_token: string;
+  expires_at: string;
+  session_id: string;
+}
+
+export interface SharedConversationResponse {
+  session_id: string;
+  title: string | null;
+  messages: Array<{
+    role: string;
+    content: string;
+    timestamp: string;
+    intent?: string;
+    source_count?: number;
+    sources?: any[];
+  }>;
+  message_count: number;
+  created_at: string | null;
+  shared_at: string;
+  expires_at: string;
+}
+
+/**
+ * Create a public share link for a conversation
+ * Sprint 38 Feature 38.3
+ *
+ * @param sessionId Session ID to share
+ * @param expiryHours Hours until link expires (1-168)
+ * @returns Share link response with URL and token
+ */
+export async function createShareLink(
+  sessionId: string,
+  expiryHours: number = 24
+): Promise<ShareLinkResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/share`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ expiry_hours: expiryHours }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get shared conversation by token (public, no auth required)
+ * Sprint 38 Feature 38.3
+ *
+ * @param shareToken Share token from URL
+ * @returns Shared conversation data
+ */
+export async function getSharedConversation(shareToken: string): Promise<SharedConversationResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/share/${shareToken}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return response.json();
+}
