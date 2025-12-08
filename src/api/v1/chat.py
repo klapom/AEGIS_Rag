@@ -1344,9 +1344,16 @@ async def create_share_link(
             key=share_token, value=share_data, ttl_seconds=ttl_seconds, namespace="share"
         )
 
-        # Build share URL (derive from settings or request)
-        # For now, use a configurable base URL or default
-        base_url = settings.api_host if settings.api_host != "0.0.0.0" else "http://localhost"
+        # Build share URL (derive from app settings)
+        # Use app settings for API host, default to localhost for local development
+        from src.core.config import get_settings as get_app_settings
+
+        app_settings = get_app_settings()
+        base_url = (
+            f"http://{app_settings.api_host}"
+            if app_settings.api_host not in ("0.0.0.0", "localhost")
+            else "http://localhost"
+        )
         share_url = f"{base_url}:5173/share/{share_token}"
 
         logger.info(

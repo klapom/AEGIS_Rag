@@ -207,18 +207,17 @@ class TestGraphRAGRetriever:
         # Mock Neo4j entity extraction (no entities found)
         retriever.neo4j_client.execute_query = AsyncMock(return_value=[])
 
-        # Mock LLM answer generation
-        with patch("src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy") as mock_proxy:
-            mock_llm = MagicMock()
-            mock_llm.generate = AsyncMock(return_value=MagicMock(
-                content="RAG stands for Retrieval Augmented Generation.",
-                provider="local_ollama",
-                tokens_used=50,
-            ))
-            mock_proxy.return_value = mock_llm
+        # Mock LLM answer generation - patch the retriever's llm_proxy directly
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(return_value=MagicMock(
+            content="RAG stands for Retrieval Augmented Generation.",
+            provider="local_ollama",
+            tokens_used=50,
+        ))
+        retriever.llm_proxy = mock_llm
 
-            # Execute retrieval
-            result = await retriever.retrieve(query="What is RAG?", max_hops=2)
+        # Execute retrieval
+        result = await retriever.retrieve(query="What is RAG?", max_hops=2)
 
         # Assertions
         assert isinstance(result, GraphRAGResult)
@@ -346,23 +345,38 @@ class TestGraphRAGRetriever:
             },
         ])
 
-        # Mock Neo4j entity extraction
-        retriever.neo4j_client.execute_query = AsyncMock(return_value=[
+        # Mock Neo4j - entity extraction returns entity info, graph expansion returns path data
+        entity_extraction_response = [
             {"name": "Facebook", "type": "Organization", "properties": {}},
+        ]
+        graph_expansion_response = [
+            {
+                "name": "Mark Zuckerberg",
+                "type": "Person",
+                "hops": 1,
+                "rel_types": ["FOUNDED"],
+                "path_nodes": ["Facebook", "Mark Zuckerberg"],
+            },
+        ]
+        # Use side_effect to return different data for different calls
+        retriever.neo4j_client.execute_query = AsyncMock(side_effect=[
+            entity_extraction_response,  # First call: entity extraction
+            graph_expansion_response,    # Second call: graph expansion
+            entity_extraction_response,  # Third call: entity extraction for second subquery
+            graph_expansion_response,    # Fourth call: graph expansion
         ])
 
-        # Mock LLM answer generation
-        with patch("src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy") as mock_proxy:
-            mock_llm = MagicMock()
-            mock_llm.generate = AsyncMock(return_value=MagicMock(
-                content="Facebook (now Meta) developed RAG through FAIR. Facebook was founded by Mark Zuckerberg.",
-                provider="local_ollama",
-                tokens_used=100,
-            ))
-            mock_proxy.return_value = mock_llm
+        # Mock LLM answer generation - patch retriever.llm_proxy directly
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(return_value=MagicMock(
+            content="Facebook (now Meta) developed RAG through FAIR. Facebook was founded by Mark Zuckerberg.",
+            provider="local_ollama",
+            tokens_used=100,
+        ))
+        retriever.llm_proxy = mock_llm
 
-            # Execute retrieval
-            result = await retriever.retrieve(query="Who founded the company that developed RAG?", max_hops=2)
+        # Execute retrieval
+        result = await retriever.retrieve(query="Who founded the company that developed RAG?", max_hops=2)
 
         # Assertions
         assert result.query_type == QueryType.MULTI_HOP
@@ -422,7 +436,9 @@ class TestGraphRAGRetriever:
 
         # Assertions
         assert len(context.entities) == 2  # Acme Corp, Bob
-        assert len(context.relationships) == 3  # Alice->Acme, Acme->Bob relationships
+        # Relationships are deduplicated: Alice->Acme appears in both paths, so only counted once
+        # Total: Alice->Acme (from 1st path) + Acme->Bob (from 2nd path) = 2 unique relationships
+        assert len(context.relationships) == 2
         assert len(context.paths) == 2  # 1-hop and 2-hop paths
 
     @pytest.mark.asyncio
@@ -437,17 +453,16 @@ class TestGraphRAGRetriever:
             source="hr_db.txt",
         ))
 
-        # Mock LLM answer generation
-        with patch("src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy") as mock_proxy:
-            mock_llm = MagicMock()
-            mock_llm.generate = AsyncMock(return_value=MagicMock(
-                content="Alice is a software engineer.",
-                provider="local_ollama",
-                tokens_used=50,
-            ))
-            mock_proxy.return_value = mock_llm
+        # Mock LLM answer generation - patch retriever.llm_proxy directly
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(return_value=MagicMock(
+            content="Alice is a software engineer.",
+            provider="local_ollama",
+            tokens_used=50,
+        ))
+        retriever.llm_proxy = mock_llm
 
-            answer = await retriever._generate_answer(query="What is Alice's job?", context=context)
+        answer = await retriever._generate_answer(query="What is Alice's job?", context=context)
 
         assert "Alice" in answer
         assert "engineer" in answer.lower()

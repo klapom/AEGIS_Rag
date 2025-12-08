@@ -71,9 +71,9 @@ class TestCreateShareLink:
         mock_redis_memory.retrieve.return_value = {"value": sample_conversation_data}
         mock_redis_memory.store.return_value = True
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 24},
             )
 
@@ -109,9 +109,9 @@ class TestCreateShareLink:
         mock_redis_memory.retrieve.return_value = {"value": sample_conversation_data}
         mock_redis_memory.store.return_value = True
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 168},  # 7 days (max)
             )
 
@@ -139,14 +139,14 @@ class TestCreateShareLink:
         # Mock Redis memory retrieve (session not found)
         mock_redis_memory.retrieve.return_value = None
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 24},
             )
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "not found" in response.json()["detail"].lower()
+        assert "not found" in response.json()["error"]["message"].lower()
 
     @pytest.mark.asyncio
     async def test_create_share_link_invalid_expiry(self, test_client, mock_redis_memory, sample_conversation_data):
@@ -155,17 +155,17 @@ class TestCreateShareLink:
 
         mock_redis_memory.retrieve.return_value = {"value": sample_conversation_data}
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
             # Test expiry too low
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 0},  # Invalid: must be >= 1
             )
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
             # Test expiry too high
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 200},  # Invalid: must be <= 168
             )
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -178,14 +178,14 @@ class TestCreateShareLink:
         mock_redis_memory.retrieve.return_value = {"value": sample_conversation_data}
         mock_redis_memory.store.side_effect = Exception("Redis connection error")
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
             response = test_client.post(
-                f"/v1/chat/sessions/{session_id}/share",
+                f"/api/v1/chat/sessions/{session_id}/share",
                 json={"expiry_hours": 24},
             )
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "Failed to create share link" in response.json()["detail"]
+        assert "Failed to create share link" in response.json()["error"]["message"]
 
 
 class TestGetSharedConversation:
@@ -221,8 +221,8 @@ class TestGetSharedConversation:
 
         mock_redis_memory.retrieve.side_effect = mock_retrieve
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
-            response = test_client.get(f"/v1/chat/share/{share_token}")
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
+            response = test_client.get(f"/api/v1/chat/share/{share_token}")
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -248,11 +248,11 @@ class TestGetSharedConversation:
         # Mock Redis memory retrieve (token not found)
         mock_redis_memory.retrieve.return_value = None
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
-            response = test_client.get(f"/v1/chat/share/{share_token}")
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
+            response = test_client.get(f"/api/v1/chat/share/{share_token}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "not found or expired" in response.json()["detail"].lower()
+        assert "not found or expired" in response.json()["error"]["message"].lower()
 
     @pytest.mark.asyncio
     async def test_get_shared_conversation_invalid_share_data(self, test_client, mock_redis_memory):
@@ -269,11 +269,11 @@ class TestGetSharedConversation:
 
         mock_redis_memory.retrieve.return_value = share_data
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
-            response = test_client.get(f"/v1/chat/share/{share_token}")
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
+            response = test_client.get(f"/api/v1/chat/share/{share_token}")
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "Invalid share data" in response.json()["detail"]
+        assert "Invalid share data" in response.json()["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_get_shared_conversation_deleted(self, test_client, mock_redis_memory):
@@ -300,11 +300,11 @@ class TestGetSharedConversation:
 
         mock_redis_memory.retrieve.side_effect = mock_retrieve
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
-            response = test_client.get(f"/v1/chat/share/{share_token}")
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
+            response = test_client.get(f"/api/v1/chat/share/{share_token}")
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "no longer exists" in response.json()["detail"].lower()
+        assert "no longer exists" in response.json()["error"]["message"].lower()
 
     @pytest.mark.asyncio
     async def test_get_shared_conversation_no_tracking(self, test_client, mock_redis_memory, sample_conversation_data):
@@ -331,8 +331,8 @@ class TestGetSharedConversation:
 
         mock_redis_memory.retrieve.side_effect = mock_retrieve
 
-        with patch("src.api.v1.chat.get_redis_memory", return_value=mock_redis_memory):
-            response = test_client.get(f"/v1/chat/share/{share_token}")
+        with patch("src.components.memory.get_redis_memory", return_value=mock_redis_memory):
+            response = test_client.get(f"/api/v1/chat/share/{share_token}")
 
         assert response.status_code == status.HTTP_200_OK
 
