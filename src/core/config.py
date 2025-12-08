@@ -180,6 +180,19 @@ class Settings(BaseSettings):
         description="Admin password for token endpoint (CHANGE IN PRODUCTION)",
     )
 
+    # JWT Configuration (Sprint 38 Feature 38.1a: JWT Authentication Backend)
+    jwt_secret_key: SecretStr | None = Field(
+        default=None,
+        description="JWT secret key (auto-generated if not set, min 32 chars for production)",
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
+    access_token_expire_minutes: int = Field(
+        default=30, ge=1, le=1440, description="Access token expiration in minutes"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, ge=1, le=30, description="Refresh token expiration in days"
+    )
+
     # Ollama LLM (Primary)
     ollama_base_url: str = Field(default="http://localhost:11434", description="Ollama server URL")
     ollama_model_generation: str = Field(
@@ -806,6 +819,28 @@ class Settings(BaseSettings):
         """
         password = f":{self.redis_password.get_secret_value()}@" if self.redis_password else ""
         return f"redis://{password}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def jwt_secret(self) -> str:
+        """
+        Get JWT secret key, using api_secret_key as fallback.
+
+        Returns:
+            JWT secret key string
+
+        Notes:
+            - Uses jwt_secret_key if set
+            - Falls back to api_secret_key for backward compatibility
+            - For production, ALWAYS set JWT_SECRET_KEY environment variable
+
+        Example:
+            >>> settings.jwt_secret
+            'your-secret-key-here'
+        """
+        if self.jwt_secret_key:
+            return self.jwt_secret_key.get_secret_value()
+        # Fallback to api_secret_key for backward compatibility
+        return self.api_secret_key.get_secret_value()
 
 
 @lru_cache
