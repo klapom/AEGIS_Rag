@@ -152,13 +152,13 @@ class TestStreamingPipelineOrchestrator:
 
         results = {"chunks": [], "errors": []}
 
-        # Mock section extraction and chunking
+        # Mock section extraction and chunking (patch at source modules due to lazy imports)
         with (
             patch(
-                "src.components.ingestion.streaming_pipeline.extract_section_hierarchy"
+                "src.components.ingestion.section_extraction.extract_section_hierarchy"
             ) as mock_extract,
             patch(
-                "src.components.ingestion.streaming_pipeline.adaptive_section_chunking"
+                "src.components.ingestion.langgraph_nodes.adaptive_section_chunking"
             ) as mock_chunk,
         ):
 
@@ -200,7 +200,15 @@ class TestStreamingPipelineOrchestrator:
             assert results["chunks"][0].text == "Test chunk 1"
             assert results["chunks"][1].text == "Test chunk 2"
 
-            # Verify queue was marked done
+            # Verify queue has chunks and then None sentinel
+            # Drain the queue - chunks were also put on queue for downstream consumers
+            chunk1 = await orchestrator._chunk_queue.get()
+            assert chunk1 is not None
+            assert chunk1.text == "Test chunk 1"
+            chunk2 = await orchestrator._chunk_queue.get()
+            assert chunk2 is not None
+            assert chunk2.text == "Test chunk 2"
+            # Now queue should be marked done
             item = await orchestrator._chunk_queue.get()
             assert item is None  # Queue should be done
 

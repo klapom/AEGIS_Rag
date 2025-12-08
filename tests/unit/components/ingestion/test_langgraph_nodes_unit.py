@@ -327,9 +327,9 @@ async def test_chunking_node_success(sample_state, sample_chunks):
     sample_state["parsed_metadata"] = {"pages": 10}
 
     with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
-        # Mock chunking service
+        # Mock chunking service (async method requires AsyncMock)
         mock_service = Mock()
-        mock_service.chunk_document = Mock(return_value=sample_chunks)
+        mock_service.chunk_document = AsyncMock(return_value=sample_chunks)
         mock_get_service.return_value = mock_service
 
         # Run node
@@ -349,7 +349,7 @@ async def test_chunking_node_success(sample_state, sample_chunks):
         mock_service.chunk_document.assert_called_once()
         call_args = mock_service.chunk_document.call_args[1]
         assert call_args["document_id"] == "test_doc_001"
-        assert call_args["content"] == sample_state["parsed_content"]
+        assert call_args["text"] == sample_state["parsed_content"]
 
 
 @pytest.mark.asyncio
@@ -370,18 +370,18 @@ async def test_chunking_node_uses_1800_token_chunks(sample_state):
 
     with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
         mock_service = Mock()
-        mock_service.chunk_document = Mock(return_value=[])
+        mock_service.chunk_document = AsyncMock(return_value=[])
         mock_get_service.return_value = mock_service
 
         # Run node
         await chunking_node(sample_state)
 
-        # Verify ChunkStrategy parameters (1800 tokens, 300 overlap)
+        # Verify ChunkingConfig parameters (800-1800 tokens, 300 overlap)
         call_args = mock_get_service.call_args
-        chunk_strategy = call_args[1]["strategy"]
-        assert chunk_strategy.chunk_size == 1800  # Feature 21.4: 3x increase
-        assert chunk_strategy.overlap == 300  # 1/6 ratio
-        assert chunk_strategy.method == "adaptive"
+        chunk_config = call_args[1]["config"]
+        assert chunk_config.max_tokens == 1800  # Feature 21.4: 3x increase
+        assert chunk_config.overlap_tokens == 300  # 1/6 ratio
+        assert chunk_config.strategy == "adaptive" or chunk_config.strategy.value == "adaptive"
 
 
 # =============================================================================
@@ -616,7 +616,7 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
         mock_docling_class.return_value = mock_docling
 
         mock_chunking_service = Mock()
-        mock_chunking_service.chunk_document = Mock(return_value=sample_chunks)
+        mock_chunking_service.chunk_document = AsyncMock(return_value=sample_chunks)
         mock_get_chunking.return_value = mock_chunking_service
 
         mock_embedding_service = AsyncMock()

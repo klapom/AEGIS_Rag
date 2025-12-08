@@ -1252,13 +1252,10 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 overlap_tokens=300,
             )
             chunking_service = get_chunking_service(config=chunk_config)
-            import asyncio
-            legacy_chunks = asyncio.get_event_loop().run_until_complete(
-                chunking_service.chunk_document(
-                    text=content,
-                    document_id=state["document_id"],
-                    metadata=state.get("parsed_metadata", {}),
-                )
+            legacy_chunks = await chunking_service.chunk_document(
+                text=content,
+                document_id=state["document_id"],
+                metadata=state.get("parsed_metadata", {}),
             )
             # Convert to enhanced format (no image annotations)
             state["chunks"] = [{"chunk": c, "image_bboxes": []} for c in legacy_chunks]
