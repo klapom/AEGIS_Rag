@@ -137,3 +137,71 @@ export interface CommunityDocumentsResponse {
   community?: Community;
   total: number;
 }
+
+// Sprint 39 Feature 39.5-39.7: Bi-Temporal Knowledge Graph Types
+
+export interface EntitySnapshot {
+  id: string;
+  name: string;
+  type: string;
+  properties: Record<string, any>;
+  valid_from: string;
+  valid_to: string | null;
+  version_number: number;
+}
+
+export interface TemporalQueryResponse {
+  entities: EntitySnapshot[];
+  as_of: string;
+  total_count: number;
+  changed_count?: number;
+  new_count?: number;
+  graphData?: GraphData;
+}
+
+export interface ChangeEvent {
+  id: string;
+  timestamp: string;
+  changedBy: string;
+  changeType: 'create' | 'update' | 'delete' | 'relation_added' | 'relation_removed';
+  changedFields: string[];
+  oldValues: Record<string, unknown>;
+  newValues: Record<string, unknown>;
+  reason: string;
+  version: number;
+}
+
+export interface ChangelogResponse {
+  changes: ChangeEvent[];
+  total: number;
+}
+
+export interface EntityVersion {
+  version: number;
+  timestamp: string;
+  changedBy: string;
+  properties: Record<string, any>;
+  relationships: Array<{
+    type: string;
+    target: string;
+    weight?: number;
+  }>;
+}
+
+export interface FieldChange {
+  field: string;
+  oldValue?: unknown;
+  newValue?: unknown;
+  changeType: 'added' | 'removed' | 'changed';
+}
+
+export interface VersionDiff {
+  versionA: EntityVersion;
+  versionB: EntityVersion;
+  changes: {
+    added: FieldChange[];
+    removed: FieldChange[];
+    changed: FieldChange[];
+  };
+  summary: string;
+}

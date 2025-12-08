@@ -487,6 +487,18 @@ class Settings(BaseSettings):
         default="second", description="Temporal precision (second or millisecond)"
     )
 
+    # Sprint 39 Feature 39.1: Bi-Temporal Queries Feature Flag (ADR-042)
+    temporal_queries_enabled: bool = Field(
+        default=False,
+        description="Enable bi-temporal queries (Opt-In per ADR-042) - requires temporal indexes",
+    )
+    temporal_version_retention: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Max versions per entity before cleanup (Sprint 39)",
+    )
+
     # Redis Cache
     redis_host: str = Field(default="localhost", description="Redis host")
     redis_port: int = Field(default=6379, description="Redis port")

@@ -12,6 +12,10 @@ import type {
   GraphStatistics,
   Community,
   NodeDocumentsResponse,
+  TemporalQueryResponse,
+  ChangelogResponse,
+  EntityVersion,
+  VersionDiff,
 } from '../types/graph';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -174,6 +178,161 @@ export async function fetchDocumentsByNode(
       top_k: topK,
     }),
   });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Query knowledge graph state at a specific point in time
+ * Sprint 39 Feature 39.5: Time Travel Tab
+ *
+ * @param timestamp ISO timestamp to query
+ * @param entityFilter Optional entity name filter
+ * @param limit Maximum number of entities (default: 100)
+ * @returns Temporal query response with entity snapshots
+ */
+export async function fetchPointInTime(
+  timestamp: string,
+  entityFilter?: string,
+  limit: number = 100
+): Promise<TemporalQueryResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/temporal/point-in-time`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      timestamp,
+      entity_filter: entityFilter,
+      limit,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch changelog for a specific entity
+ * Sprint 39 Feature 39.6: Entity Changelog Panel
+ *
+ * @param entityId Entity ID
+ * @param limit Maximum number of changes (default: 50)
+ * @returns List of change events
+ */
+export async function fetchEntityChangelog(
+  entityId: string,
+  limit: number = 50
+): Promise<ChangelogResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/entities/${encodeURIComponent(entityId)}/changelog?limit=${limit}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Fetch all versions of an entity
+ * Sprint 39 Feature 39.7: Version Comparison View
+ *
+ * @param entityId Entity ID
+ * @returns List of entity versions
+ */
+export async function fetchEntityVersions(entityId: string): Promise<EntityVersion[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/entities/${encodeURIComponent(entityId)}/versions`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Compare two versions of an entity
+ * Sprint 39 Feature 39.7: Version Comparison View
+ *
+ * @param entityId Entity ID
+ * @param versionA First version number
+ * @param versionB Second version number
+ * @returns Version diff with changes
+ */
+export async function fetchVersionDiff(
+  entityId: string,
+  versionA: number,
+  versionB: number
+): Promise<VersionDiff> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/entities/${encodeURIComponent(entityId)}/versions/${versionA}/compare/${versionB}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`HTTP ${response.status}: ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Revert entity to a previous version
+ * Sprint 39 Feature 39.7: Version Comparison View
+ *
+ * @param entityId Entity ID
+ * @param version Version number to revert to
+ * @param reason Reason for revert
+ * @returns New entity version after revert
+ */
+export async function revertToVersion(
+  entityId: string,
+  version: number,
+  reason: string
+): Promise<EntityVersion> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/entities/${encodeURIComponent(entityId)}/versions/${version}/revert`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();
