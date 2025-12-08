@@ -1448,13 +1448,14 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
 
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
-
+# PLANNED FOR SPRINT 38: Frontend UI integration for conversation archiving
 
 @router.post("/sessions/{session_id}/archive", status_code=status.HTTP_200_OK)
 async def archive_conversation(session_id: str) -> dict[str, Any]:
     """Archive a conversation to Qdrant for semantic search.
 
     Sprint 17 Feature 17.4 Phase 1: Manual Archive Trigger
+    Sprint 38 TODO: Integrate archive button in frontend conversation history
 
     This endpoint:
     1. Loads conversation from Redis
@@ -1510,6 +1511,7 @@ async def archive_conversation(session_id: str) -> dict[str, Any]:
         ) from e
 
 
+# PLANNED FOR SPRINT 38: Frontend search UI for archived conversations
 @router.post("/search", status_code=status.HTTP_200_OK)
 async def search_archived_conversations(
     request: ConversationSearchRequest,
@@ -1517,6 +1519,7 @@ async def search_archived_conversations(
     """Search archived conversations using semantic similarity.
 
     Sprint 17 Feature 17.4 Phase 1: Semantic Conversation Search
+    Sprint 38 TODO: Implement search bar UI in conversation history sidebar
 
     This endpoint:
     1. Generates embedding from search query

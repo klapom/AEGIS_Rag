@@ -1,5 +1,12 @@
 """Authentication API endpoints.
 
+DEPRECATED: This entire router is not called from the frontend (identified 2025-12-07).
+Authentication system was planned but never implemented in the React frontend.
+All endpoints in this file are unused.
+
+Consider removal of this entire file in next major version OR
+complete the auth implementation with frontend integration.
+
 Sprint Context: Sprint 22 (2025-11-11) - Feature 22.2: API Security Hardening
 Task: 22.2.4 - Standardize Authentication Across All Endpoints
 

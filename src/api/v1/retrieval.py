@@ -1,5 +1,12 @@
 """Retrieval API Endpoints - Sprint 2.
 
+DEPRECATED: This entire router is not called from the frontend (identified 2025-12-07).
+All retrieval functionality has been migrated to:
+- CoordinatorAgent (for search/query)
+- /api/v1/admin/indexing/* (for document ingestion)
+
+Consider removal of this entire file in next major version.
+
 FastAPI endpoints for document ingestion and hybrid search retrieval.
 
 Sprint 22 Feature 22.2.2: Using standardized error responses with custom exceptions.

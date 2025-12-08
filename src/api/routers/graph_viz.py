@@ -275,9 +275,15 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Export failed: {e}") from e
 
 
+# DEPRECATED: Not called from frontend (identified 2025-12-07)
+# Export formats hardcoded in frontend - endpoint unnecessary
 @router.get("/export/formats")
 async def get_export_formats() -> dict[str, list[str]]:
     """Get supported export formats.
+
+    DEPRECATED: This endpoint is not called from the frontend.
+    Export formats are hardcoded in frontend code.
+    Consider removal in next major version.
 
     Returns:
         list of supported formats with descriptions
@@ -296,9 +302,15 @@ async def get_export_formats() -> dict[str, list[str]]:
 # ============================================================================
 
 
+# DEPRECATED: Not called from frontend (identified 2025-12-07)
+# Graph filtering done client-side - server-side endpoint unnecessary
 @router.post("/filter")
 async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
     """Filter graph by entity types and properties.
+
+    DEPRECATED: This endpoint is not called from the frontend.
+    Graph filtering is performed client-side in React components.
+    Consider removal in next major version.
 
     Sprint 12: Advanced filtering with degree and community support.
 
@@ -347,11 +359,17 @@ async def filter_graph(request: GraphFilterRequest) -> dict[str, Any]:
 # ============================================================================
 
 
+# DEPRECATED: Not called from frontend (identified 2025-12-07)
+# Community highlighting done client-side - server-side endpoint unnecessary
 @router.post("/communities/highlight")
 async def highlight_communities(
     request: CommunityHighlightRequest,
 ) -> dict[str, Any]:
     """Highlight specific communities in graph.
+
+    DEPRECATED: This endpoint is not called from the frontend.
+    Community highlighting is performed client-side in React components.
+    Consider removal in next major version.
 
     Sprint 12: Community-based subgraph extraction.
 
@@ -669,9 +687,15 @@ async def get_community_documents(community_id: str, limit: int = 50) -> Communi
 # ============================================================================
 
 
+# DEPRECATED: Not called from frontend (identified 2025-12-07)
+# Sprint 34 Multi-Hop feature not integrated in frontend - endpoint unused
 @router.post("/multi-hop", response_model=MultiHopResponse)
 async def get_multi_hop_subgraph(request: MultiHopRequest) -> MultiHopResponse:
     """Get entities connected within N hops via RELATES_TO relationships.
+
+    DEPRECATED: This endpoint is not called from the frontend.
+    Sprint 34 Multi-Hop Query feature was implemented but never integrated in UI.
+    Consider removal in next major version or complete UI integration.
 
     Sprint 34 Feature 34.5: Multi-Hop Query Support
 
@@ -802,9 +826,15 @@ async def get_multi_hop_subgraph(request: MultiHopRequest) -> MultiHopResponse:
         ) from e
 
 
+# DEPRECATED: Not called from frontend (identified 2025-12-07)
+# Sprint 34 Shortest Path feature not integrated in frontend - endpoint unused
 @router.post("/shortest-path", response_model=ShortestPathResponse)
 async def get_shortest_path(request: ShortestPathRequest) -> ShortestPathResponse:
     """Find shortest path between two entities via RELATES_TO.
+
+    DEPRECATED: This endpoint is not called from the frontend.
+    Sprint 34 Shortest Path feature was implemented but never integrated in UI.
+    Consider removal in next major version or complete UI integration.
 
     Sprint 34 Feature 34.5: Multi-Hop Query Support
 
