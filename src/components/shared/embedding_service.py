@@ -234,9 +234,7 @@ class UnifiedEmbeddingService:
             logger.error("embedding_generation_failed", text_preview=text[:50], error=str(e))
             raise LLMError(f"Failed to generate embedding: {e}") from e
 
-    async def embed_batch(
-        self, texts: list[str], max_concurrent: int = 10
-    ) -> list[list[float]]:
+    async def embed_batch(self, texts: list[str], max_concurrent: int = 10) -> list[list[float]]:
         """Embed batch of texts with caching and parallel processing.
 
         Sprint 41 Optimization: Parallel embedding generation to improve GPU utilization.
