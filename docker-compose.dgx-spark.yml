@@ -52,6 +52,9 @@ services:
       - OLLAMA_NUM_CTX=8192
       # Use all available CPU cores for prompt processing
       - OLLAMA_NUM_THREAD=20
+      # Force ALL model layers to GPU (DGX Spark unified memory)
+      # -1 = use all available GPU layers, prevents CPU fallback
+      - OLLAMA_NUM_GPU=-1
     # GPU Support for DGX Spark (Blackwell GPU)
     deploy:
       resources:
@@ -389,6 +392,8 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - REDIS_TTL=3600
+      # Redis Memory URL for working memory (must use Docker service name!)
+      - REDIS_MEMORY_URL=redis://redis:6379/0
       # Docling
       - DOCLING_BASE_URL=http://docling:5001
       - DOCLING_TIMEOUT_SECONDS=900

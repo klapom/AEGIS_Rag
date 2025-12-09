@@ -2,7 +2,7 @@
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Timeless guide for achieving FULL context refresh in any session
 **Version:** 5.2 (Sprint-Independent, Reference-Based)
-**Last Updated:** 2025-11-29 (Sprint 33 VLM Pipeline Integration)
+**Last Updated:** 2025-11-29 
 
 ---
 
@@ -54,100 +54,9 @@ Gib mir einen Executive Summary mit 5 Bulletpoints:
 
 ---
 
-## 🚨 WHEN TO REFRESH
+## 🔄 REFRESH STRATEGY
 
-### ⚠️ Trigger Signals (PERFORM REFRESH IMMEDIATELY)
-
-| Symptom | What It Means | Refresh Type |
-|---------|---------------|--------------|
-| "I don't have access to..." | File context lost | Quick Refresh |
-| PascalCase statt snake_case | Standards forgotten | Quick Refresh |
-| Keine Subagenten-Delegation | Workflow context lost | Standard Refresh |
-| Fragen nach Tech Stack | Technical context lost | Standard Refresh |
-| Keine ADR-Referenzen | Architecture context lost | Deep Refresh |
-| Sprint-Ziel unklar | Planning context lost | Deep Refresh |
-| "Was ist AEGIS RAG?" | COMPLETE context loss | Deep Refresh |
-
-### ✅ Proactive Refresh Schedule
-
-```
-Session Start (Neue Session):        → Standard Refresh
-Nach langer Pause (>1 Tag):          → Standard Refresh
-Montag / Sprint-Start:                → Deep Refresh
-Alle 20-30 Messages (lange Session): → Quick Check
-Vor kritischen Tasks:                 → Quick Check + relevante Docs
-Nach Kompaktierung:                   → Minimum Quick Refresh
-Team-Übergabe:                        → Deep Refresh
-```
-
----
-
-## 🔄 THREE REFRESH STRATEGIES
-
-### Strategy 1: Quick Refresh (1 Minute)
-
-**Copy-Paste Prompt:**
-```
-Context Refresh: Lies CLAUDE.md (inkl. Subagent Responsibilities),
-docs/sprints/SPRINT_PLAN.md (aktueller Sprint), docs/NAMING_CONVENTIONS.md.
-Bestätige kurz (3 Sätze).
-```
-
-**What Gets Refreshed:**
-- ✅ Projekt-Name & Architektur
-- ✅ Aktueller Sprint & Ziele
-- ✅ Subagenten-Responsibilities
-- ✅ Naming Conventions
-
-**When to Use:**
-- Nach kompakter Kompaktierung
-- Task-Continuity wichtig
-- Nur leichter Context Loss (Naming, Subagenten)
-
----
-
-### Strategy 2: Standard Refresh (2-3 Minuten)
-
-**Copy-Paste Prompt:**
-```
-🔄 STANDARD CONTEXT REFRESH
-
-Bitte reaktiviere vollständigen Projekt-Context:
-
-📖 CORE:
-1. CLAUDE.md - Projekt & Architektur (inkl. Subagent Responsibilities)
-2. docs/sprints/SPRINT_PLAN.md - Sprint-Übersicht
-3. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
-4. docs/NAMING_CONVENTIONS.md - Code Standards
-
-📚 TECH & DECISIONS:
-5. docs/TECH_STACK.md - Tech Stack Updates
-6. docs/adr/ADR_INDEX.md - Architecture Decisions
-7. README.md - Project overview
-
-Bestätige mit Zusammenfassung (5 Bulletpoints):
-- Projekt-Ziel & 3-Layer Architecture
-- Aktueller Sprint & Status
-- Tech Stack Highlights
-- Next Priority
-- Key ADRs (3-5)
-```
-
-**What Gets Refreshed:**
-- ✅ Vollständiger Projekt-Context
-- ✅ Aktueller Sprint-Plan & Status
-- ✅ Tech Stack & Recent Updates
-- ✅ Subagent Workflow
-- ✅ Important ADRs
-
-**When to Use:**
-- Nach größerer Kompaktierung
-- Vor kritischen Tasks
-- Session nach >1 Tag Pause
-
----
-
-### Strategy 3: Deep Refresh (5-7 Minuten)
+### Deep Refresh (5-7 Minuten)
 
 **Copy-Paste Prompt:**
 ```
@@ -163,21 +72,17 @@ Neue Session / Major Context Loss. Vollständiger Architektur-Context benötigt:
 
 🏗️ ARCHITECTURE & TECH STACK:
 5. docs/TECH_STACK.md - Complete stack
-6. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design (falls vorhanden)
-7. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows & API contracts (falls vorhanden)
-8. docs/DEPENDENCY_RATIONALE.md - Library choice justifications (falls vorhanden)
 
 👥 WORKFLOW & STANDARDS:
-9. docs/NAMING_CONVENTIONS.md - Code Standards
-10. docs/TECHNICAL_DEBT_SUMMARY.md - Current TD status (falls vorhanden)
+6. docs/NAMING_CONVENTIONS.md - Code Standards
 
 🎯 ADRs (Architecture Decisions):
-12. docs/adr/ADR_INDEX.md - Alle ADRs mit Querverweisen
-13. Relevante ADRs basierend auf aktuellem Sprint
+7. docs/adr/ADR_INDEX.md - Alle ADRs mit Querverweisen
+8. Relevante ADRs basierend auf aktuellem Sprint
 
 📊 CURRENT SPRINT STATUS:
-14. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
-15. Neueste SPRINT_*_SUMMARY.md - Sprint-Abschluss (falls completed)
+9. Neueste SPRINT_*_PLAN.md - Aktueller Sprint
+10. Neueste SPRINT_*_SUMMARY.md - Sprint-Abschluss (falls completed)
 
 Gib mir einen Executive Summary (7 Bulletpoints):
 - Projekt-Ziel & Architektur (3-Layer Memory)
@@ -185,26 +90,8 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 - Nächster Sprint Focus
 - Key Architectural Patterns
 - Tech Stack (Full-stack)
-- Top 5 Important ADRs
 - Top 3 Immediate Priorities
 ```
-
-**What Gets Refreshed:**
-- ✅ COMPLETE Project Context
-- ✅ Full Sprint History & Status
-- ✅ All Architecture Decisions (ADRs)
-- ✅ Complete Tech Stack & Dependencies
-- ✅ Architecture Evolution & Learnings
-- ✅ Component Interactions & Data Flows
-- ✅ Technical Debt Status
-
-**When to Use:**
-- Montag-Morgen / Wochenstart
-- Nach langer Pause (>3 Tage)
-- Major Context Loss (kompletter Reset)
-- Team-Übergabe
-- Sprint-Start
-
 ---
 
 ## 📚 CORE DOCUMENTATION MAP
@@ -242,13 +129,6 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 | **docs/adr/ADR_INDEX.md** | ADR index and quick reference with cross-references | Standard/Deep refresh | ✅ Auto-updated |
 | **docs/adr/ADR-*.md** | Individual Architecture Decision Records | Task-specific | 🔄 Growing |
 
-### Component-Specific Documentation
-
-| Document | What It Contains | Read When | Status |
-|----------|------------------|-----------|--------|
-| **src/components/*/README.md** | Component architecture, usage, APIs | Task-specific | ✅ Complete |
-| **docs/api/**.md | API documentation (endpoints, SSE, errors) | API development | ✅ Complete |
-
 ### Operations & Deployment
 
 | Document | What It Contains | Read When | Status |
@@ -260,214 +140,21 @@ Gib mir einen Executive Summary (7 Bulletpoints):
 ```
 Priority 1 (MUST READ - ALWAYS CURRENT):
 1. README.md - Project status
-2. docs/CLAUDE.md - Full context
+2. CLAUDE.md - Full context
 3. docs/sprints/SPRINT_PLAN.md - Sprint overview (check CURRENT sprint)
 4. Latest SPRINT_*_PLAN.md - Current sprint details
 
 Priority 2 (SHOULD READ - Architecture):
 5. docs/TECH_STACK.md - Tech stack
 6. docs/ARCHITECTURE_EVOLUTION.md - Sprint journey
-7. docs/architecture/ARCHITECTURE_OVERVIEW.md - System design
-8. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows
+7. docs/architecture/COMPONENT_INTERACTION_MAP.md - Data flows
 
 Priority 3 (SHOULD READ - Workflow):
-9. docs/NAMING_CONVENTIONS.md - Code standards
-10. docs/adr/ADR_INDEX.md - Architecture decisions
-
-Priority 4 (OPTIONAL - Task-Specific):
-12. Specific ADRs based on task (from ADR_INDEX.md)
-13. Component READMEs (src/components/*/README.md)
-14. API Documentation (docs/api/*.md)
-```
-
----
-
-## ✅ VERIFICATION CHECKLIST
-
-After ANY refresh, Claude Code should be able to confirm:
-
-### ✅ PROJECT CONTEXT
-```
-- [ ] Projekt-Name: AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-- [ ] Purpose: Enterprise-grade Hybrid RAG
-- [ ] 3-Layer Memory: Redis → Qdrant/BM25/LightRAG → Graphiti
-- [ ] Status: Aktueller Sprint klar (aus SPRINT_PLAN.md)
-```
-
-### ✅ ARCHITECTURE
-```
-- [ ] Layer 1: Redis (short-term memory)
-- [ ] Layer 2: Qdrant (vector) + BM25 (keyword) + LightRAG (graph)
-- [ ] Layer 3: Graphiti (episodic memory)
-- [ ] Orchestration: LangGraph with multi-agent state management
-- [ ] LLM Strategy: 100% local (Ollama), zero API costs
-```
-
-### ✅ TECH STACK (Check docs/TECH_STACK.md for current versions)
-```
-- [ ] Frontend: React + TypeScript + Vite + Tailwind CSS
-- [ ] Backend: Python 3.12+, FastAPI
-- [ ] Orchestration: LangGraph (6-node ingestion pipeline)
-- [ ] LLMs: Ollama (llama3.2, gemma, qwen) + Alibaba Cloud Qwen
-- [ ] VLM: Qwen3-VL (image enrichment in pipeline)
-- [ ] Embeddings: BGE-M3 (1024-dim, multilingual)
-- [ ] Vector: Qdrant
-- [ ] Graph: Neo4j (with Section nodes)
-- [ ] Memory: Redis
-- [ ] Document Parsing: Docling CUDA Container
-```
-
-### ✅ CURRENT STATE (Check SPRINT_PLAN.md for latest)
-```
-- [ ] Aktueller Sprint bekannt (Sprint N)
-- [ ] Sprint-Ziel klar
-- [ ] Nächste Priorität identifiziert
-- [ ] Wichtigste ADRs für aktuellen Sprint bekannt (3-5)
-```
-
-### ✅ WORKFLOW & STANDARDS
-```
-- [ ] 4 Subagenten: Backend, Infrastructure, API, Testing (see CLAUDE.md)
-- [ ] Naming Conventions:
-      - Functions/variables: snake_case
-      - Classes: PascalCase
-      - Constants: SCREAMING_SNAKE_CASE
-- [ ] 1 Feature = 1 Commit workflow
-```
-
----
-
-## 🎯 BEST PRACTICES
-
-### DO ✅
+8. docs/NAMING_CONVENTIONS.md - Code standards
+9. docs/adr/ADR_INDEX.md - Architecture decisions
 
 ```
-✅ Context Refresh bei JEDEM Zeichen von Context Loss
-✅ Deep Refresh am Montag / Sprint-Start
-✅ Standard Refresh am Session-Start (nach >1 Tag)
-✅ Quick Check alle 20-30 Nachrichten
-✅ Lies CLAUDE.md für Subagent Responsibilities
-✅ Lies docs/sprints/SPRINT_PLAN.md für aktuellen Sprint-Status
-✅ Lies docs/ARCHITECTURE_EVOLUTION.md für vollständigen Context
-✅ Lies docs/TECH_STACK.md für aktuelle Versionen
-✅ Nutze die Copy-Paste Prompts aus diesem Guide
-✅ Bestätige Verständnis mit Verification Checklist
-```
 
-### DON'T ❌
-
-```
-❌ Weitermachen wenn Naming Conventions ignoriert werden
-❌ Hoffen dass Context "von selbst zurückkommt"
-❌ Quick Refresh bei Major Context Loss (nutze Deep Refresh!)
-❌ CLAUDE.md skippen (immer lesen!)
-❌ SPRINT_PLAN.md ignorieren (prüfe aktuellen Sprint!)
-❌ Alte Sprint-spezifische Details im Gedächtnis behalten
-❌ Hardcoded Sprint-Nummern annehmen (immer nachschlagen!)
-```
-
-### Timing Guidelines
-
-```
-Session Duration    | Recommended Refreshes
---------------------|------------------------
-<30 messages        | 0-1 (nur bei Context Loss)
-30-60 messages      | 1-2 (Quick Check @ 30, Refresh @ 60)
-60-100 messages     | 2-3 (Quick Check @ 30, 60, Refresh @ 90)
->100 messages       | Consider new session + Deep Refresh
-```
-
----
-
-## 🔔 PROACTIVE CHECKS (Checklist)
-
-### Every 20-30 Messages (Long Sessions)
-```
-Quick Check: Aktueller Sprint noch klar? Feature N.M next?
-Subagenten-Delegation OK? Naming Conventions (snake_case) befolgt?
-Falls unsicher → Quick Refresh.
-```
-
-### Before Critical Tasks
-```
-Context Check: Lies docs/CLAUDE.md + docs/sprints/SPRINT_PLAN.md
-für diese Task. Architektur klar? ADRs bekannt?
-```
-
-### After Kompaktierung (Always)
-```
-Minimum: Quick Refresh (Strategy 1)
-Falls Major Kompaktierung: Standard Refresh (Strategy 2)
-```
-
-### Monday / Sprint-Start
-```
-Deep Refresh (Strategy 3) durchführen.
-Verify: Aktueller Sprint-Status aus SPRINT_PLAN.md.
-Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
-```
-
----
-
-## 💡 REMEMBER
-
-```
-╔════════════════════════════════════════════════════════════════╗
-║                                                                ║
-║  Context Refresh ist NORMAL und WICHTIG!                       ║
-║                                                                ║
-║  Besser 2-7 Minuten für vollständigen Context investieren      ║
-║  als 30-60 Minuten mit suboptimalem/falschem Context arbeiten. ║
-║                                                                ║
-║  SPRINT_PLAN.md = ALWAYS CHECK CURRENT SPRINT!                 ║
-║  CLAUDE.md = ALWAYS UPDATED PROJECT CONTEXT!                   ║
-║                                                                ║
-║  Deep Refresh = ARCHITECTURE_EVOLUTION.md + TECH_STACK.md!     ║
-║                                                                ║
-║                    Happy Coding! 🚀                            ║
-║                                                                ║
-╚════════════════════════════════════════════════════════════════╝
-```
-
----
-
-## 🔄 Document Maintenance
-
-**This Document:**
-- **Version:** 5.3 (Sprint-Independent, Reference-Based)
-- **Created:** 2025-10-22
-- **Last Updated:** 2025-12-07
-- **Maintenance:** This document is TIMELESS - no sprint references
-
-**Recent Highlights (Sprint 35-37):**
-
-### Sprint 37 - Streaming Pipeline & Visual Progress (2025-12-07)
-- **Streaming Pipeline Architecture:** AsyncIO Queue-based streaming (chunks flow through stages without waiting)
-- **Worker Pool Configuration:** Configurable VLM/Embedding/Extraction workers via Admin UI
-- **Visual Pipeline Progress:** Real-time 5-stage visualization (Parsing→VLM→Chunking→Embedding→Extraction)
-- **Multi-Document Parallelization:** `ParallelIngestionOrchestrator` integration for 2-3 concurrent documents
-- **SSE Streaming Updates:** Throttled SSE events (500ms) with stage progress, worker status, entity metrics
-- **E2E Tests:** 28 tests (21 pass, 7 skipped for timing/viewport edge cases)
-
-### Sprint 36 - Performance Optimization (2025-12-05)
-- **Qwen3 Thinking Mode Fix:** 12.9x faster (650s → 50.5s) by passing `think=False` as direct kwarg
-- **Graph RAG Chunking Simplification:** Direct tiktoken chunking, removed async ChunkingService dependency
-- **Admin Chunk Progress:** Real-time `chunks_processed/chunks_total` display during extraction
-- **DGX Spark Configuration:** Optimized settings for NVIDIA GB10 (8GB VRAM)
-
-### Sprint 35 - Frontend UX Enhancement (2025-12-01)
-- **Seamless Chat Flow:** Claude/ChatGPT-style chat interface with Avatar icons
-- **Admin Side-by-Side Layout:** Log and Details in 50%/50% split view
-- **Follow-up Questions Fix:** TD-043 Redis storage fix
-- **Auto-Generated Titles:** LLM-based conversation title generation
-- **Session History Sidebar:** Conversation history management
-- **Dark Mode Preparation:** CSS variables and theme infrastructure
-
-### Sprint 33-34 - Knowledge Graph Enhancement
-- VLM Pipeline Integration: 6-node LangGraph ingestion pipeline
-- Image Filtering: Optimized filters save ~50% VLM API calls
-- RELATES_TO Extraction: Semantic relationships via Alibaba Cloud qwen3-32b
-- Graph Edge Filtering UI: Real-time edge type and weight threshold filters
 
 **Referenced Documents (Auto-Updated):**
 - **docs/CLAUDE.md** - Auto-updated with current sprint status
@@ -478,7 +165,6 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 **How to Find Current Sprint:**
 1. Read `docs/sprints/SPRINT_PLAN.md` (look for "Current Sprint" section)
 2. Find latest `SPRINT_N_PLAN.md` (highest N)
-3. Check `docs/CLAUDE.md` (Current Project State section)
 
 ---
 
@@ -489,5 +175,3 @@ Lies ARCHITECTURE_EVOLUTION.md für vollständigen Context.
 - Tech Stack: Read `docs/TECH_STACK.md`
 - All ADRs: Read `docs/adr/ADR_INDEX.md`
 - Naming Standards: Read `docs/NAMING_CONVENTIONS.md`
-- Quick Refresh: Use Strategy 1 prompt above
-- Deep Refresh: Use Strategy 3 prompt above
