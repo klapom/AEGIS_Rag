@@ -26,7 +26,11 @@ from src.components.graph_rag.extraction_factory import (
 
 @pytest.fixture
 def mock_config_three_phase():
-    """Mock config for three_phase pipeline."""
+    """Mock config for three_phase/llm_extraction pipeline.
+
+    Note: three_phase was renamed to llm_extraction in Sprint 20.
+    The config includes lightrag_* attributes used by ExtractionService.
+    """
     config = Mock()
     config.extraction_pipeline = "three_phase"
     config.enable_semantic_dedup = True
@@ -35,6 +39,10 @@ def mock_config_three_phase():
     config.neo4j_user = "neo4j"
     config.neo4j_password = Mock()
     config.neo4j_password.get_secret_value.return_value = "testpassword"
+    # Attributes needed by _create_llm_extraction (Sprint 20)
+    config.lightrag_llm_model = "llama3.2:8b"
+    config.ollama_base_url = "http://localhost:11434"
+    config.lightrag_llm_max_tokens = 4000
     return config
 
 
@@ -175,6 +183,10 @@ def test_factory_reads_enable_semantic_dedup_false():
     config = Mock()
     config.extraction_pipeline = "three_phase"
     config.enable_semantic_dedup = False
+    # Attributes needed by _create_llm_extraction
+    config.lightrag_llm_model = "llama3.2:8b"
+    config.ollama_base_url = "http://localhost:11434"
+    config.lightrag_llm_max_tokens = 4000
 
     with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
         mock_service.return_value = Mock()
@@ -194,6 +206,10 @@ def test_factory_defaults_semantic_dedup_to_true():
     config = Mock()
     config.extraction_pipeline = "three_phase"
     del config.enable_semantic_dedup  # Simulate missing attribute
+    # Attributes needed by _create_llm_extraction
+    config.lightrag_llm_model = "llama3.2:8b"
+    config.ollama_base_url = "http://localhost:11434"
+    config.lightrag_llm_max_tokens = 4000
 
     with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
         mock_service.return_value = Mock()
@@ -314,6 +330,10 @@ def test_convenience_function_with_config():
     """
     config = Mock()
     config.extraction_pipeline = "three_phase"
+    # Attributes needed by _create_llm_extraction
+    config.lightrag_llm_model = "llama3.2:8b"
+    config.ollama_base_url = "http://localhost:11434"
+    config.lightrag_llm_max_tokens = 4000
 
     with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
         mock_service.return_value = Mock(spec=ExtractionPipeline)
@@ -335,6 +355,10 @@ def test_convenience_function_without_config():
     ) as mock_service:
         mock_config = Mock()
         mock_config.extraction_pipeline = "three_phase"
+        # Attributes needed by _create_llm_extraction
+        mock_config.lightrag_llm_model = "llama3.2:8b"
+        mock_config.ollama_base_url = "http://localhost:11434"
+        mock_config.lightrag_llm_max_tokens = 4000
         mock_settings.return_value = mock_config
         mock_service.return_value = Mock(spec=ExtractionPipeline)
 
@@ -399,6 +423,10 @@ def test_factory_handles_missing_config_attributes():
     # Remove all optional attributes
     del config.enable_semantic_dedup
     del config.extraction_max_retries
+    # Attributes needed by _create_llm_extraction
+    config.lightrag_llm_model = "llama3.2:8b"
+    config.ollama_base_url = "http://localhost:11434"
+    config.lightrag_llm_max_tokens = 4000
 
     with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
         mock_service.return_value = Mock(spec=ExtractionPipeline)
