@@ -16,6 +16,11 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
+# Skip entire module if sentence-transformers not installed
+pytest.importorskip(
+    "sentence_transformers", reason="sentence-transformers not installed (optional reranking group)"
+)
+
 from src.components.retrieval.reranker import CrossEncoderReranker, RerankResult
 
 # ============================================================================
