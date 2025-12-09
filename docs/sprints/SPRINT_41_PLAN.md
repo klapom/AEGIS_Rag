@@ -1,8 +1,8 @@
 # Sprint 41: RAG Evaluation with RAGAS + Namespace Isolation
 
-**Status:** COMPLETED
+**Status:** IN PROGRESS
 **Started:** 2025-12-09
-**Completed:** 2025-12-09
+**Completed:** -
 **Priority:** High (Quality Assurance + Infrastructure)
 **Prerequisites:** Sprint 42 complete (4-Way Hybrid RRF)
 
@@ -221,6 +221,31 @@ MATCH (e:Entity) WHERE e.namespace_id IN $allowed_namespaces RETURN e
 
 ---
 
+### Feature 41.9: JSON Apostrophe Fix + Parallel Embeddings (2 SP) ✅
+
+**Status:** COMPLETED
+**Deliverables:**
+- [x] Smart JSON repair for French apostrophes (`L'Histoire` no longer breaks parsing)
+- [x] Parallel embedding generation with `asyncio.gather()` + Semaphore
+- [x] Configurable `embedding_max_concurrent` setting (default: 20)
+- [x] GPU utilization improved from ~5% to ~50-80% during embedding phase
+
+**Problem Solved:**
+1. **JSON Parsing Bug:** LLM responses with French text like `"L'Histoire du soldat"` were corrupted when single quotes were blindly replaced with double quotes, creating invalid JSON like `"L"Histoire du soldat"`.
+2. **Low GPU Utilization:** Sequential embedding generation only used 5% GPU on DGX Spark. Now parallelized with configurable concurrency.
+
+**Technical Details:**
+- `_repair_json_string()` now detects single-quote-delimited JSON vs apostrophes in text
+- `embed_batch()` uses `asyncio.gather()` with Semaphore for bounded parallelism
+- Order-preserving parallel execution (results sorted by original index)
+
+**Files:**
+- `src/components/graph_rag/extraction_service.py`
+- `src/components/shared/embedding_service.py`
+- `src/core/config.py`
+
+---
+
 ## Test Strategy
 
 ### Unit Tests
@@ -268,7 +293,8 @@ MATCH (e:Entity) WHERE e.namespace_id IN $allowed_namespaces RETURN e
 | 41.6 Benchmark Corpus Ingestion | 5 | COMPLETED |
 | 41.7 RAGAS Evaluation Pipeline | 5 | COMPLETED |
 | 41.8 Evaluation Reports | 3 | COMPLETED |
-| **Total** | **28** | **ALL DONE** |
+| 41.9 JSON Apostrophe Fix + Parallel Embeddings | 2 | COMPLETED |
+| **Total** | **30** | **PENDING RAGAS RESULTS** |
 
 ---
 

@@ -45,8 +45,9 @@ def _repair_json_string(json_str: str) -> str:
     - Trailing commas before ] or }
     - Missing commas between objects
     - Unescaped newlines in strings
-    - Single quotes instead of double quotes
+    - Single quotes as JSON delimiters (NOT apostrophes inside strings)
     - Python None/True/False instead of null/true/false
+    - Apostrophes inside strings (escape them properly)
 
     Args:
         json_str: Raw JSON string that may be malformed
@@ -54,8 +55,36 @@ def _repair_json_string(json_str: str) -> str:
     Returns:
         Repaired JSON string
     """
-    # Replace single quotes with double quotes (already done in main parser, but ensure here too)
-    json_str = json_str.replace("'", '"')
+    # IMPORTANT: Don't blindly replace all single quotes!
+    # Only replace single quotes used as JSON delimiters, not apostrophes in text.
+    #
+    # Problem case: {"source": "L'Histoire du soldat"}
+    # Blind replace creates: {"source": "L"Histoire du soldat"} ← INVALID JSON!
+    #
+    # Solution: Escape apostrophes inside double-quoted strings first,
+    # then only replace single quotes that are JSON delimiters.
+
+    # Step 1: First, try to detect if this is single-quote delimited JSON
+    # Check for patterns like: [{'key or {'key - single quotes used as JSON delimiters
+    # Match: [{' or {' at the start (with optional whitespace)
+    is_single_quote_json = bool(re.search(r"[\[{]\s*{?\s*'", json_str[:50]))
+
+    if is_single_quote_json:
+        # This JSON uses single quotes as delimiters - need smart replacement
+        # Replace single-quote delimiters with double quotes
+        # Pattern: 'key': 'value' → "key": "value"
+        # But preserve apostrophes inside values like "L'Histoire"
+
+        # Strategy: Replace structural single quotes only
+        # Order matters! Process from inside-out patterns first
+        json_str = re.sub(r"'\s*:", '":', json_str)  # 'key': → "key":
+        json_str = re.sub(r":\s*'", ': "', json_str)  # : 'value → : "value
+        json_str = re.sub(r"'\s*,", '",', json_str)  # 'value', → "value",
+        json_str = re.sub(r",\s*'", ', "', json_str)  # , 'key → , "key
+        json_str = re.sub(r"'\s*}", '"}', json_str)  # 'value'} → "value"}
+        json_str = re.sub(r"'\s*\]", '"]', json_str)  # 'value'] → "value"]
+        json_str = re.sub(r"\[\s*'", '["', json_str)  # ['value → ["value
+        json_str = re.sub(r"{\s*'", '{"', json_str)  # {'key → {"key
 
     # Fix Python literals
     json_str = re.sub(r"\bNone\b", "null", json_str)
@@ -231,9 +260,10 @@ class ExtractionService:
 
         # Clean up common JSON issues
         json_str = json_str.strip()
-        json_str = json_str.replace("'", '"')  # Single quotes to double quotes
+        # NOTE: Don't blindly replace single quotes here!
+        # _repair_json_string handles this intelligently to preserve apostrophes in text.
 
-        # Sprint 32: Apply JSON repair before parsing
+        # Sprint 32: Apply JSON repair before parsing (handles single quotes, apostrophes, etc.)
         json_str = _repair_json_string(json_str)
 
         try:

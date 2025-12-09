@@ -692,6 +692,13 @@ class Settings(BaseSettings):
         le=50,
         description="Maximum concurrent chunk embeddings to generate (default 10)",
     )
+    embedding_max_concurrent: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Maximum concurrent embedding requests in batch operations (default 20). "
+        "DGX Spark with 128GB unified memory can handle 50+. Smaller GPUs use 10.",
+    )
     ingestion_max_concurrent_vlm: int = Field(
         default=5,
         ge=1,

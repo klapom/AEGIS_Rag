@@ -234,32 +234,50 @@ class UnifiedEmbeddingService:
             logger.error("embedding_generation_failed", text_preview=text[:50], error=str(e))
             raise LLMError(f"Failed to generate embedding: {e}") from e
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Embed batch of texts with caching.
+    async def embed_batch(
+        self, texts: list[str], max_concurrent: int = 10
+    ) -> list[list[float]]:
+        """Embed batch of texts with caching and parallel processing.
+
+        Sprint 41 Optimization: Parallel embedding generation to improve GPU utilization.
+        DGX Spark was only at 5% GPU usage with sequential embedding - now uses asyncio.gather
+        with configurable concurrency to maximize throughput.
 
         Args:
             texts: list of texts to embed
+            max_concurrent: Maximum concurrent embedding requests (default: 10)
+                           Higher values improve throughput but may cause OOM on smaller GPUs.
+                           DGX Spark (128GB unified memory) can handle 20-50 concurrent.
 
         Returns:
-            list of embedding vectors
+            list of embedding vectors (order preserved)
         """
+        import asyncio
+
         batch_start = time.perf_counter()
-        embeddings = []
-        cache_hits = 0
-        cache_misses = 0
         total_chars = sum(len(t) for t in texts)
+        hits_before = self.cache._hits
 
-        for _idx, text in enumerate(texts):
-            # Track cache state before embed
-            hits_before = self.cache._hits
-            embedding = await self.embed_single(text)
-            embeddings.append(embedding)
+        # Use semaphore to limit concurrent requests
+        semaphore = asyncio.Semaphore(max_concurrent)
 
-            # Track cache hit/miss
-            if self.cache._hits > hits_before:
-                cache_hits += 1
-            else:
-                cache_misses += 1
+        async def embed_with_semaphore(text: str, idx: int) -> tuple[int, list[float]]:
+            """Embed single text with semaphore control, preserving order."""
+            async with semaphore:
+                embedding = await self.embed_single(text)
+                return (idx, embedding)
+
+        # Launch all embeddings in parallel (semaphore limits concurrency)
+        tasks = [embed_with_semaphore(text, idx) for idx, text in enumerate(texts)]
+        results = await asyncio.gather(*tasks)
+
+        # Sort by index to preserve order
+        results.sort(key=lambda x: x[0])
+        embeddings = [emb for _, emb in results]
+
+        # Calculate cache hits (difference in cache hits counter)
+        cache_hits = self.cache._hits - hits_before
+        cache_misses = len(texts) - cache_hits
 
         batch_end = time.perf_counter()
         batch_duration_ms = (batch_end - batch_start) * 1000
@@ -278,6 +296,7 @@ class UnifiedEmbeddingService:
             throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
             throughput_chars_per_sec=round(chars_per_sec, 0),
             avg_ms_per_embedding=round(batch_duration_ms / len(texts), 2) if texts else 0,
+            max_concurrent=max_concurrent,
         )
 
         return embeddings
