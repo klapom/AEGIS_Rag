@@ -7,6 +7,7 @@ Sprint 7 Feature 7.6: Memory API
 - Validates full API integration
 
 CRITICAL: All tests marked with @pytest.mark.integration
+NOTE: These tests require real LLM (Ollama) for memory operations
 """
 
 import time
@@ -14,7 +15,8 @@ from datetime import datetime
 
 import pytest
 
-pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
+# Skip in CI - requires real Ollama LLM for memory search operations
+pytestmark = [pytest.mark.asyncio, pytest.mark.integration, pytest.mark.requires_llm]
 
 
 # Unified Memory Search Tests

@@ -8,6 +8,10 @@ Tests the GET /api/v1/chat/sessions/{session_id}/followup-questions endpoint:
 - Session not found (404)
 - Insufficient messages (empty list)
 - Error handling
+
+NOTE: These tests require proper Redis mocking which depends on real LLM services
+being available for the generate_followup_questions function.
+Marked as requires_llm to skip in CI without Ollama.
 """
 
 from datetime import UTC, datetime
@@ -18,6 +22,9 @@ from fastapi.testclient import TestClient
 
 from src.api.main import app
 
+# Skip all tests in this module in CI (requires real LLM for question generation)
+pytestmark = pytest.mark.requires_llm
+
 
 @pytest.fixture
 def client():
@@ -27,7 +34,11 @@ def client():
 
 @pytest.fixture
 def mock_redis_memory():
-    """Mock Redis memory for testing."""
+    """Mock Redis memory for testing.
+
+    NOTE: Must patch at source module (src.components.memory) because
+    get_redis_memory is imported lazily inside the function body.
+    """
     with patch("src.components.memory.get_redis_memory") as mock:
         yield mock
 
