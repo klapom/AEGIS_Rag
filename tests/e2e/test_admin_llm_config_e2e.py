@@ -12,11 +12,20 @@ Usage:
   pytest tests/e2e/test_admin_llm_config_e2e.py -v
   pytest tests/e2e/test_admin_llm_config_e2e.py -k "persistence" -v
   pytest -m "e2e and not slow" tests/e2e/
+
+Note:
+  Requires playwright package: pip install playwright && playwright install
+  Skipped automatically if playwright is not installed (e.g., on DGX Spark).
 """
 
 import json
 import pytest
-from playwright.async_api import async_playwright, Page, expect
+
+# Skip entire module if playwright is not installed (e.g., on DGX Spark)
+playwright_async = pytest.importorskip("playwright.async_api", reason="playwright not installed")
+async_playwright = playwright_async.async_playwright
+Page = playwright_async.Page
+expect = playwright_async.expect
 
 
 class TestAdminLLMConfigE2E:

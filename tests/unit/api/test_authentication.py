@@ -30,30 +30,40 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 from src.api.main import app
-from src.core.auth import JWT_ALGORITHM, User, create_access_token, decode_access_token
+from src.core.auth import User, create_access_token, create_token_pair, decode_access_token
 from src.core.config import settings
+
+# JWT_ALGORITHM moved to settings in Sprint 38 refactoring
+JWT_ALGORITHM = settings.jwt_algorithm
 
 client = TestClient(app)
 
 
 class TestTokenCreation:
-    """Test JWT token creation."""
+    """Test JWT token creation.
+
+    Note: Sprint 38 refactored auth API:
+    - create_access_token() now returns str (just the access token)
+    - create_token_pair() returns Token object (access + refresh)
+    """
 
     def test_create_access_token__valid_user__returns_token(self):
         """Verify token creation with valid user data."""
-        token = create_access_token("user_001", "john_doe", "user")
+        # Sprint 38: create_access_token returns str, create_token_pair returns Token
+        token_pair = create_token_pair("user_001", "john_doe", "user")
 
-        assert token.access_token is not None
-        assert token.token_type == "bearer"
-        assert token.expires_in == 3600  # 60 minutes in seconds
+        assert token_pair.access_token is not None
+        assert token_pair.token_type == "bearer"
+        assert token_pair.expires_in == settings.access_token_expire_minutes * 60
 
     def test_create_access_token__admin_role__includes_role_in_token(self):
         """Verify admin role is encoded in token."""
-        token = create_access_token("user_admin", "admin", "admin")
+        # Sprint 38: create_access_token returns str directly
+        access_token = create_access_token("user_admin", "admin", "admin")
 
         # Decode token to verify role
         secret_key = settings.api_secret_key.get_secret_value()
-        payload = jwt.decode(token.access_token, secret_key, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(access_token, secret_key, algorithms=[JWT_ALGORITHM])
 
         assert payload["role"] == "admin"
         assert payload["username"] == "admin"
@@ -61,18 +71,20 @@ class TestTokenCreation:
 
     def test_create_access_token__expiration__set_correctly(self):
         """Verify token expiration is set correctly."""
-        token = create_access_token("user_001", "john_doe", "user")
+        # Sprint 38: create_access_token returns str directly
+        access_token = create_access_token("user_001", "john_doe", "user")
 
         secret_key = settings.api_secret_key.get_secret_value()
-        payload = jwt.decode(token.access_token, secret_key, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(access_token, secret_key, algorithms=[JWT_ALGORITHM])
 
         exp_timestamp = payload["exp"]
         exp_datetime = datetime.utcfromtimestamp(exp_timestamp)
         now = datetime.utcnow()
 
-        # Expiration should be ~60 minutes from now (allow 5 second tolerance)
+        # Expiration should be ~access_token_expire_minutes from now (allow 5 second tolerance)
+        expected_seconds = settings.access_token_expire_minutes * 60
         time_diff = (exp_datetime - now).total_seconds()
-        assert 3595 <= time_diff <= 3605  # 60 minutes ± 5 seconds
+        assert expected_seconds - 5 <= time_diff <= expected_seconds + 5
 
 
 class TestTokenValidation:
@@ -80,8 +92,9 @@ class TestTokenValidation:
 
     def test_decode_access_token__valid_token__returns_token_data(self):
         """Verify valid token decodes successfully."""
-        token = create_access_token("user_001", "john_doe", "user")
-        token_data = decode_access_token(token.access_token)
+        # Sprint 38: create_access_token returns str directly
+        access_token = create_access_token("user_001", "john_doe", "user")
+        token_data = decode_access_token(access_token)
 
         assert token_data.user_id == "user_001"
         assert token_data.username == "john_doe"
@@ -131,27 +144,34 @@ class TestTokenValidation:
         assert exc_info.value.status_code == 401
 
 
+@pytest.mark.integration
 class TestLoginEndpoint:
-    """Test login endpoint."""
+    """Test login endpoint.
+
+    Note: These tests require Redis with seeded users.
+    Marked as integration tests - run with: pytest -m integration
+
+    Sprint 38: Changed password validation to min_length=8.
+    """
 
     def test_login__valid_credentials__returns_token(self):
         """Verify login with valid credentials returns JWT token."""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "user", "password": "user123"},
+            json={"username": "user", "password": "user12345"},  # Sprint 38: min 8 chars
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
-        assert data["expires_in"] == 3600
+        assert data["expires_in"] == settings.access_token_expire_minutes * 60
 
     def test_login__admin_credentials__returns_admin_token(self):
         """Verify login as admin returns token with admin role."""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": "admin", "password": "admin12345"},  # Sprint 38: min 8 chars
         )
 
         assert response.status_code == 200
@@ -166,7 +186,7 @@ class TestLoginEndpoint:
         """Verify login with invalid username returns 401."""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "nonexistent", "password": "password"},
+            json={"username": "nonexistent", "password": "password123"},  # Sprint 38: min 8 chars
         )
 
         assert response.status_code == 401
@@ -180,7 +200,7 @@ class TestLoginEndpoint:
         """Verify login with invalid password returns 401."""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "user", "password": "wrongpassword"},
+            json={"username": "user", "password": "wrongpass123"},  # Sprint 38: min 8 chars
         )
 
         assert response.status_code == 401
@@ -189,7 +209,7 @@ class TestLoginEndpoint:
         """Verify login with empty username returns 422 validation error."""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "", "password": "password"},
+            json={"username": "", "password": "password123"},  # Sprint 38: min 8 chars
         )
 
         assert response.status_code == 422
@@ -204,8 +224,13 @@ class TestLoginEndpoint:
         assert response.status_code == 422
 
 
+@pytest.mark.integration
 class TestProtectedEndpoints:
-    """Test protected endpoints require authentication."""
+    """Test protected endpoints require authentication.
+
+    Note: Tests requiring login need Redis with seeded users.
+    Marked as integration tests - run with: pytest -m integration
+    """
 
     def test_protected_endpoint__no_token__returns_401(self):
         """Verify protected endpoints reject unauthenticated requests."""
@@ -221,7 +246,7 @@ class TestProtectedEndpoints:
         # Login to get token
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"username": "user", "password": "user123"},
+            json={"username": "user", "password": "user12345"},
         )
         token = login_response.json()["access_token"]
 
@@ -274,8 +299,13 @@ class TestProtectedEndpoints:
         assert response.status_code == 401
 
 
+@pytest.mark.integration
 class TestAdminEndpoints:
-    """Test admin-only endpoints."""
+    """Test admin-only endpoints.
+
+    Note: These tests require Redis with seeded users.
+    Marked as integration tests - run with: pytest -m integration
+    """
 
     def test_admin_endpoint__regular_user__returns_403(self):
         """Verify admin endpoints reject non-admin users.
@@ -289,7 +319,7 @@ class TestAdminEndpoints:
         # Login as regular user
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"username": "user", "password": "user123"},
+            json={"username": "user", "password": "user12345"},
         )
         token = login_response.json()["access_token"]
 
@@ -309,7 +339,7 @@ class TestAdminEndpoints:
         # Login as admin
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": "admin", "password": "admin12345"},
         )
         token = login_response.json()["access_token"]
 
@@ -355,15 +385,20 @@ class TestUserModel:
         assert user.is_admin() is False
 
 
+@pytest.mark.integration
 class TestMeEndpoint:
-    """Test /auth/me endpoint."""
+    """Test /auth/me endpoint.
+
+    Note: These tests require Redis with seeded users.
+    Marked as integration tests - run with: pytest -m integration
+    """
 
     def test_me__authenticated__returns_user_info(self):
         """Verify /me endpoint returns current user information."""
         # Login
         login_response = client.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
+            json={"username": "admin", "password": "admin12345"},
         )
         token = login_response.json()["access_token"]
 
