@@ -168,6 +168,7 @@ class BenchmarkCorpusIngestionPipeline:
         """Get LightRAG wrapper (lazy async initialization)."""
         if self._lightrag_wrapper is None:
             from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+
             self._lightrag_wrapper = await get_lightrag_wrapper_async()
         return self._lightrag_wrapper
 
