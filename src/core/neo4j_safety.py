@@ -162,10 +162,7 @@ class Neo4jQueryValidator:
         Returns:
             True if query contains write operations
         """
-        for pattern in cls.WRITE_PATTERNS:
-            if re.search(pattern, query, re.IGNORECASE):
-                return True
-        return False
+        return any(re.search(pattern, query, re.IGNORECASE) for pattern in cls.WRITE_PATTERNS)
 
 
 class SecureNeo4jClient:

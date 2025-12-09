@@ -34,12 +34,9 @@ from src.components.retrieval.filters import MetadataFilters
 from src.components.retrieval.intent_classifier import (
     Intent,
     IntentClassificationResult,
-    IntentWeights,
     classify_intent,
-    get_intent_classifier,
 )
 from src.components.vector_search.hybrid_search import HybridSearch
-from src.core.config import settings
 from src.core.namespace import DEFAULT_NAMESPACE
 from src.utils.fusion import weighted_reciprocal_rank_fusion
 

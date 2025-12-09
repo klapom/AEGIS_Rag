@@ -24,7 +24,6 @@ import re
 import time
 from dataclasses import dataclass
 from enum import Enum
-from functools import lru_cache
 
 import httpx
 import structlog

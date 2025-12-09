@@ -272,11 +272,11 @@ async def connect_server(
     # Validate transport type
     try:
         transport = TransportType(request.transport.lower())
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid transport type: {request.transport}. Must be 'stdio' or 'http'",
-        )
+        ) from e
 
     # Create server configuration
     server = MCPServer(
@@ -332,7 +332,7 @@ async def connect_server(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to connect to server: {str(e)}",
-        )
+        ) from e
 
 
 @router.post("/servers/{server_name}/disconnect")
@@ -385,7 +385,7 @@ async def disconnect_server(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to disconnect: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/tools", response_model=list[MCPToolInfo])
@@ -570,7 +570,7 @@ async def execute_tool(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Tool execution failed: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/health")

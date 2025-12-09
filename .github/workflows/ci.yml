@@ -556,10 +556,12 @@ jobs:
 
   # ============================================================
   # JOB 9: FRONTEND E2E TESTS (Sprint 18)
+  # DISABLED: E2E tests run locally only (DGX Spark with Playwright)
   # ============================================================
   frontend-e2e-tests:
     name: 🎭 Frontend E2E Tests
     runs-on: ubuntu-latest
+    if: false  # Disabled - E2E tests run locally only
     continue-on-error: true  # Optional if frontend doesn't exist
 
     services:

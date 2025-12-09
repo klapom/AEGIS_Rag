@@ -41,6 +41,8 @@ from typing import Any
 
 import structlog
 
+# Sprint 42: Community Detection for 4-Way Hybrid RRF
+from src.components.graph_rag.community_detector import get_community_detector
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.docling_client import DoclingContainerClient
 from src.components.ingestion.image_processor import ImageProcessor
@@ -51,13 +53,9 @@ from src.components.ingestion.ingestion_state import (
 )
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
-from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import IngestionError
-
-# Sprint 42: Community Detection for 4-Way Hybrid RRF
-from src.components.graph_rag.community_detector import get_community_detector
 
 logger = structlog.get_logger(__name__)
 
@@ -876,9 +874,9 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
             try:
                 from src.core.config import settings
 
-                MAX_CONCURRENT_VLM = settings.ingestion_max_concurrent_vlm
+                max_concurrent_vlm = settings.ingestion_max_concurrent_vlm
             except Exception:
-                MAX_CONCURRENT_VLM = 5  # Conservative default
+                max_concurrent_vlm = 5  # Conservative default
 
             vlm_start_time = time.time()
 
@@ -943,11 +941,11 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                 "vlm_parallel_processing_prepared",
                 images_prepared=len(image_tasks_data),
                 images_total=pictures_count,
-                max_concurrent=MAX_CONCURRENT_VLM,
+                max_concurrent=max_concurrent_vlm,
             )
 
             # Step 3b: Process images in parallel batches using asyncio.Semaphore
-            semaphore = asyncio.Semaphore(MAX_CONCURRENT_VLM)
+            semaphore = asyncio.Semaphore(max_concurrent_vlm)
 
             async def process_single_image(task_data: dict) -> dict | None:
                 """Process single image with semaphore concurrency control."""
@@ -990,7 +988,7 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
             vlm_results = await asyncio.gather(*vlm_tasks, return_exceptions=True)
 
             # Step 3c: Process results and update DoclingDocument
-            for task_data, result in zip(image_tasks_data, vlm_results):
+            for task_data, result in zip(image_tasks_data, vlm_results, strict=True):
                 # Handle exceptions from gather
                 if isinstance(result, Exception):
                     logger.warning(
@@ -1040,7 +1038,7 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                 images_processed=len(vlm_metadata),
                 duration_seconds=round(vlm_duration, 2),
                 images_per_second=round(len(vlm_metadata) / vlm_duration, 2) if vlm_duration > 0 else 0,
-                max_concurrent=MAX_CONCURRENT_VLM,
+                max_concurrent=max_concurrent_vlm,
             )
 
         finally:
@@ -1371,9 +1369,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         )
 
         # Convert AdaptiveChunk to enhanced_chunks format (backward compatible)
-        # Map VLM metadata to chunks
-        vlm_metadata = state.get("vlm_metadata", [])
-        vlm_lookup = {vm["picture_ref"]: vm for vm in vlm_metadata}
+        # Map VLM metadata to chunks (currently unused as section-aware chunking doesn't have picture refs)
+        # vlm_metadata = state.get("vlm_metadata", [])
+        # Note: VLM metadata mapping can be added here when needed
 
         merged_chunks = []
         for adaptive_chunk in adaptive_chunks:

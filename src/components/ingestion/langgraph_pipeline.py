@@ -91,8 +91,8 @@ Example with Error Handling:
     ...     print(f"Graph extraction succeeded: {len(final_state['entities'])} entities")
 """
 
-from pathlib import Path
 from collections.abc import AsyncGenerator
+from pathlib import Path
 from typing import Any
 
 import structlog

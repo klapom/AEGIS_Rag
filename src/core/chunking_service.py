@@ -36,7 +36,6 @@ Example:
     >>> await index_to_neo4j(chunks)
 """
 
-import hashlib
 import re
 import time
 from enum import Enum
@@ -52,7 +51,7 @@ from src.core.chunk import Chunk
 # TYPE_CHECKING imports - needed for type hints (string literals)
 # Runtime imports are lazy-loaded in methods
 if TYPE_CHECKING:
-    from llama_index.core.node_parser import SentenceSplitter
+    pass
 
 logger = structlog.get_logger(__name__)
 

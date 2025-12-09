@@ -77,9 +77,8 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_email(cls, v: str | None) -> str | None:
         """Basic email validation."""
-        if v is not None and v != "":
-            if "@" not in v or "." not in v.split("@")[-1]:
-                raise ValueError("Invalid email format")
+        if v is not None and v != "" and ("@" not in v or "." not in v.split("@")[-1]):
+            raise ValueError("Invalid email format")
         return v
 
 

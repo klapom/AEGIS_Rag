@@ -563,7 +563,7 @@ class ReportGenerator:
                     "current": results[scenario].model_dump(),
                     "baseline": self.baseline_results[scenario].model_dump(),
                 }
-                for scenario in results.keys()
+                for scenario in results
                 if scenario in self.baseline_results
             }
 

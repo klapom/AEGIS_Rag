@@ -20,6 +20,9 @@ class NamingChecker:
         "function": re.compile(
             r"^[a-z0-9]+(?:_[a-z0-9]+)*_?$"
         ),  # Allow trailing _ for keyword avoidance, numbers for acronyms
+        "test_function": re.compile(
+            r"^test_[a-z0-9]+(?:__?[a-z0-9]+)*$"
+        ),  # Allow single and double underscores in test functions (Given-When-Then pattern)
         "constant": re.compile(r"^[A-Z0-9]+(?:_[A-Z0-9]+)*$"),  # Allow numbers in constants
         "variable": re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$"),  # Allow numbers in variables
     }
@@ -82,19 +85,25 @@ class NamingChecker:
         for line_no, line in enumerate(lines, 1):
             line = line.strip()
 
+            # Skip comment lines
+            if line.startswith("#"):
+                continue
+
             # Check class definitions
             if line.startswith("class "):
                 match = re.match(r"class\s+(\w+)", line)
                 if match:
                     class_name = match.group(1)
-                    if not self.PATTERNS["class"].match(class_name):
-                        self.errors.append(
-                            (
-                                str(filepath),
-                                line_no,
-                                f"Class name '{class_name}' doesn't follow PascalCase convention",
+                    # Skip private classes (starting with _)
+                    if not class_name.startswith("_"):
+                        if not self.PATTERNS["class"].match(class_name):
+                            self.errors.append(
+                                (
+                                    str(filepath),
+                                    line_no,
+                                    f"Class name '{class_name}' doesn't follow PascalCase convention",
+                                )
                             )
-                        )
 
             # Check function definitions
             elif line.startswith("def "):
@@ -107,7 +116,17 @@ class NamingChecker:
                     func_name = match.group(1)
                     # Skip magic methods and private methods
                     if not func_name.startswith("_"):
-                        if not self.PATTERNS["function"].match(func_name):
+                        # Test functions can use double underscores (Given-When-Then pattern)
+                        if func_name.startswith("test_"):
+                            if not self.PATTERNS["test_function"].match(func_name):
+                                self.errors.append(
+                                    (
+                                        str(filepath),
+                                        line_no,
+                                        f"Test function name '{func_name}' doesn't follow snake_case or test pattern convention",
+                                    )
+                                )
+                        elif not self.PATTERNS["function"].match(func_name):
                             self.errors.append(
                                 (
                                     str(filepath),
@@ -118,7 +137,12 @@ class NamingChecker:
 
             # Check constants (heuristic: all caps assignments at module level)
             elif "=" in line and line.split("=")[0].strip().isupper():
-                const_name = line.split("=")[0].strip()
+                # Skip if this looks like it's inside a string (contains quotes before =)
+                before_equals = line.split("=")[0]
+                if '"' in before_equals or "'" in before_equals:
+                    continue
+
+                const_name = before_equals.strip()
                 if not self.PATTERNS["constant"].match(const_name):
                     self.errors.append(
                         (

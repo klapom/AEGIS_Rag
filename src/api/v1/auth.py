@@ -60,7 +60,6 @@ from src.core.auth import (
     Token,
     User,
     create_token_pair,
-    decode_access_token,
     decode_refresh_token,
 )
 from src.core.user_store import UserCreate, UserPublic, UserStore

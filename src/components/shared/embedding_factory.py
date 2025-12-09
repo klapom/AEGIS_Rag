@@ -127,7 +127,9 @@ def get_embedding_service() -> EmbeddingServiceProtocol:
 
     elif backend == "ollama":
         # Import lazily to avoid circular imports
-        from src.components.shared.embedding_service import get_embedding_service as get_ollama_service
+        from src.components.shared.embedding_service import (
+            get_embedding_service as get_ollama_service,
+        )
 
         logger.info("embedding_backend_selected", backend="ollama")
 

@@ -54,8 +54,6 @@ from typing import Any
 
 import structlog
 
-from src.core.config import settings
-
 logger = structlog.get_logger(__name__)
 
 # Lazy import for optional dependency
@@ -188,10 +186,10 @@ class SentenceTransformersEmbeddingService:
         """
         if self._model is None:
             # Lazy import for optional dependency
-            from sentence_transformers import SentenceTransformer as ST
+            from sentence_transformers import SentenceTransformer
 
             load_start = time.perf_counter()
-            self._model = ST(self.model_name, device=self.device)
+            self._model = SentenceTransformer(self.model_name, device=self.device)
             load_duration_ms = (time.perf_counter() - load_start) * 1000
 
             logger.info(

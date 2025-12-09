@@ -176,11 +176,11 @@ def _detect_heading_strategy(texts: list[dict[str, Any]]) -> str:
     # - "title" → Document title / Slide title (PPTX)
     # - "section_header" → Word heading styles (Heading 1, 2, etc.) with level attribute
     # - "subtitle-level-1", "subtitle-level-2" → PowerPoint subtitles
-    HEADING_LABELS = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
+    heading_labels_const = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
 
     label_headings = sum(
         1 for t in texts
-        if t.get("label", "") in HEADING_LABELS
+        if t.get("label", "") in heading_labels_const
     )
 
     formatting_headings = sum(
@@ -301,10 +301,10 @@ def _extract_from_texts_array(
 
     # Heading labels that start new sections (for label-based strategy)
     # Includes section_header for DOCX with proper Word heading styles
-    HEADING_LABELS = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
+    heading_labels = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
 
     # Content labels to accumulate in sections
-    CONTENT_LABELS = {"paragraph", "list_item", "text"}
+    content_labels = {"paragraph", "list_item", "text"}
 
     for text_item in texts:
         texts_processed += 1
@@ -332,7 +332,7 @@ def _extract_from_texts_array(
         is_heading = False
         if heading_strategy == "labels":
             # PPTX/PDF: Use explicit labels
-            is_heading = label in HEADING_LABELS
+            is_heading = label in heading_labels
         elif heading_strategy == "formatting":
             # DOCX: Use formatting-based detection
             is_heading = _is_likely_heading_by_formatting(text_item)
@@ -346,7 +346,7 @@ def _extract_from_texts_array(
             # Pass text_item for section_header to extract level attribute
             current_section = section_metadata_class(
                 heading=text_content,
-                level=_get_heading_level(label, text_item) if label in HEADING_LABELS else 1,
+                level=_get_heading_level(label, text_item) if label in heading_labels else 1,
                 page_no=page_no or 0,
                 bbox=bbox or {"l": 0.0, "t": 0.0, "r": 0.0, "b": 0.0},
                 text="",
@@ -363,7 +363,7 @@ def _extract_from_texts_array(
                 strategy=heading_strategy,
             )
 
-        elif label in CONTENT_LABELS and text_content:
+        elif label in content_labels and text_content:
             # Accumulate content in current section
             if current_section:
                 current_section.text += text_content + "\n\n"
@@ -477,10 +477,7 @@ def _extract_from_body_tree(
             return
 
         # Get label
-        if is_dict:
-            label = node.get("label", None)
-        else:
-            label = getattr(node, "label", None)
+        label = node.get("label", None) if is_dict else getattr(node, "label", None)
 
         if label and isinstance(label, str):
             label_str = label

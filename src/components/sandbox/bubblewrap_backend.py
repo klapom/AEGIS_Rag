@@ -408,9 +408,7 @@ class BubblewrapSandboxBackend:
             File contents as string, or error message
         """
         # Normalize path
-        if file_path.startswith("/repo"):
-            actual_path = file_path
-        elif file_path.startswith("/workspace"):
+        if file_path.startswith("/repo") or file_path.startswith("/workspace"):
             actual_path = file_path
         else:
             actual_path = f"/repo/{file_path}"
@@ -435,8 +433,7 @@ class BubblewrapSandboxBackend:
             )
 
         # Use heredoc for safe content writing
-        # Escape single quotes in content
-        escaped_content = content.replace("'", "'\"'\"'")
+        # Note: We use heredoc with 'AEGIS_EOF' delimiter, so no escaping needed
 
         # Use cat with heredoc to write content safely
         result = self.execute(

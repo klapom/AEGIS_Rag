@@ -42,10 +42,9 @@ from typing import Any
 
 import structlog
 from datasets import Dataset
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from pydantic import BaseModel, Field
 from ragas import evaluate
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import (
     AnswerRelevancy,
     ContextPrecision,
@@ -56,8 +55,6 @@ from ragas.metrics import (
 from src.components.llm_proxy.aegis_llm_proxy import get_aegis_llm_proxy
 from src.components.llm_proxy.models import LLMTask, TaskType
 from src.components.retrieval.four_way_hybrid_search import get_four_way_hybrid_search
-from src.components.retrieval.intent_classifier import Intent
-from src.components.shared.embedding_service import get_embedding_service
 from src.core.exceptions import EvaluationError
 
 logger = structlog.get_logger(__name__)
@@ -127,110 +124,10 @@ class EvaluationResults:
 
 
 # =============================================================================
-# LangChain Wrapper for Ollama (RAGAS Compatibility)
+# Ollama Configuration for RAGAS
 # =============================================================================
 
-
-class OllamaLangChainLLM:
-    """LangChain-compatible LLM wrapper for AegisLLMProxy.
-
-    RAGAS requires LangChain LLM interface. This wrapper adapts
-    AegisLLMProxy to meet that requirement.
-    """
-
-    def __init__(self, model: str = "llama3.2:8b"):
-        """Initialize LLM wrapper.
-
-        Args:
-            model: Ollama model name for evaluation
-        """
-        self.model = model
-        self.llm_proxy = get_aegis_llm_proxy()
-
-    async def agenerate(self, prompts: list[str], **kwargs: Any) -> list[str]:
-        """Generate responses for multiple prompts (async).
-
-        Args:
-            prompts: List of prompts to generate responses for
-            **kwargs: Additional generation parameters
-
-        Returns:
-            List of generated responses
-        """
-        results = []
-        for prompt in prompts:
-            task = LLMTask(
-                task_type=TaskType.GENERATION,
-                prompt=prompt,
-                model_local=self.model,
-            )
-            response = await self.llm_proxy.generate(task)
-            results.append(response.content)
-        return results
-
-    def generate(self, prompts: list[str], **kwargs: Any) -> list[str]:
-        """Generate responses (sync wrapper).
-
-        Args:
-            prompts: List of prompts
-            **kwargs: Additional parameters
-
-        Returns:
-            List of responses
-        """
-        return asyncio.run(self.agenerate(prompts, **kwargs))
-
-
-class OllamaEmbeddings:
-    """LangChain-compatible embeddings wrapper for UnifiedEmbeddingService."""
-
-    def __init__(self):
-        """Initialize embeddings wrapper."""
-        self.embedding_service = get_embedding_service()
-
-    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed documents (async).
-
-        Args:
-            texts: List of texts to embed
-
-        Returns:
-            List of embedding vectors
-        """
-        return await self.embedding_service.embed_batch(texts)
-
-    async def aembed_query(self, text: str) -> list[float]:
-        """Embed single query (async).
-
-        Args:
-            text: Query text
-
-        Returns:
-            Embedding vector
-        """
-        return await self.embedding_service.embed_single(text)
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed documents (sync wrapper).
-
-        Args:
-            texts: List of texts
-
-        Returns:
-            List of embedding vectors
-        """
-        return asyncio.run(self.aembed_documents(texts))
-
-    def embed_query(self, text: str) -> list[float]:
-        """Embed query (sync wrapper).
-
-        Args:
-            text: Query text
-
-        Returns:
-            Embedding vector
-        """
-        return asyncio.run(self.aembed_query(text))
+OLLAMA_BASE_URL = "http://localhost:11434"
 
 
 # =============================================================================
@@ -270,18 +167,21 @@ class RAGASEvaluator:
     def __init__(
         self,
         namespace: str = "eval_benchmark",
-        llm_model: str = "llama3.2:8b",
+        llm_model: str = "qwen3:8b",
+        embedding_model: str = "bge-m3:latest",
         metrics: list[str] | None = None,
     ):
         """Initialize RAGAS evaluator.
 
         Args:
             namespace: Namespace for benchmark data (default: "eval_benchmark")
-            llm_model: LLM model for RAGAS evaluation (default: llama3.2:8b)
+            llm_model: LLM model for RAGAS evaluation (default: qwen3:8b)
+            embedding_model: Embedding model for RAGAS (default: bge-m3:latest)
             metrics: List of metrics to compute (default: all 4 metrics)
         """
         self.namespace = namespace
         self.llm_model = llm_model
+        self.embedding_model = embedding_model
         self.metrics_list = metrics or [
             "context_precision",
             "context_recall",
@@ -293,14 +193,25 @@ class RAGASEvaluator:
         self.search_engine = get_four_way_hybrid_search()
         self.llm_proxy = get_aegis_llm_proxy()
 
-        # Create LangChain wrappers for RAGAS
-        self.llm = LangchainLLMWrapper(OllamaLangChainLLM(model=llm_model))
-        self.embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings())
+        # Create LangChain Ollama instances for RAGAS (native support)
+        # Long timeout for RAGAS metric evaluation (complex prompts)
+        self.llm = ChatOllama(
+            model=llm_model,
+            base_url=OLLAMA_BASE_URL,
+            temperature=0.1,
+            timeout=300,  # 5 minutes timeout for RAGAS evaluation
+            num_ctx=4096,  # Context window for complex prompts
+        )
+        self.embeddings = OllamaEmbeddings(
+            model=embedding_model,
+            base_url=OLLAMA_BASE_URL,
+        )
 
         logger.info(
             "ragas_evaluator_initialized",
             namespace=namespace,
             llm_model=llm_model,
+            embedding_model=embedding_model,
             metrics=self.metrics_list,
         )
 
@@ -484,11 +395,18 @@ Answer: """
                 question=sample.question[:50],
             )
 
-            # Retrieve contexts if not provided
-            if not sample.contexts:
-                contexts = await self.retrieve_contexts(sample.question, top_k=top_k)
-            else:
-                contexts = sample.contexts
+            # ALWAYS retrieve contexts from Qdrant for RAG evaluation
+            # This tests the actual retrieval system, not pre-defined contexts
+            contexts = await self.retrieve_contexts(sample.question, top_k=top_k)
+
+            # Log if we retrieved fewer contexts than expected
+            if len(contexts) < top_k:
+                logger.warning(
+                    "fewer_contexts_retrieved",
+                    question=sample.question[:50],
+                    expected=top_k,
+                    retrieved=len(contexts),
+                )
 
             # Generate answer if not provided
             if not sample.answer:
@@ -518,6 +436,15 @@ Answer: """
 
         logger.info("running_ragas_evaluation", num_samples=len(evaluated_samples))
 
+        # Configure RAGAS run settings with increased timeout for local Ollama
+        from ragas.run_config import RunConfig
+        run_config = RunConfig(
+            timeout=600,  # 10 minutes per operation (Ollama on DGX Spark can be slow)
+            max_retries=3,
+            max_wait=120,
+            max_workers=4,  # Limit concurrency for local Ollama
+        )
+
         # Run RAGAS evaluation (blocking, so run in executor)
         try:
             loop = asyncio.get_event_loop()
@@ -528,6 +455,7 @@ Answer: """
                     metrics=metrics,
                     llm=self.llm,
                     embeddings=self.embeddings,
+                    run_config=run_config,
                 ),
             )
         except Exception as e:

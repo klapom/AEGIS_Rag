@@ -23,14 +23,11 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.core.chunk import ChunkStrategy
-from src.core.chunking_service import get_chunking_service
-from src.core.config import settings
-from src.core.models import GraphQueryResult
-
 # Sprint 32 FIX: Use ExtractionPipelineFactory instead of deprecated ThreePhaseExtractor
 # The ThreePhaseExtractor was removed in Sprint 25 (ADR-026) and caused 'NoneType' is not callable errors
 from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
+from src.core.config import settings
+from src.core.models import GraphQueryResult
 
 logger = structlog.get_logger(__name__)
 
@@ -546,8 +543,9 @@ class LightRAGClient:
 
         # Sprint 16.7: Simple tiktoken-based chunking for LightRAG
         # Direct synchronous chunking to avoid async issues in mixed contexts
-        import tiktoken
         import hashlib
+
+        import tiktoken
 
         try:
             encoding = tiktoken.encoding_for_model("gpt-4")

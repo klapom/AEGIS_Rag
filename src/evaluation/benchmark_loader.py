@@ -43,7 +43,6 @@ Performance:
     - Sample size control: Default 1000 (Track A), 100 (Track B)
 """
 
-import hashlib
 from typing import Any, Literal
 
 import structlog
@@ -280,27 +279,40 @@ class BenchmarkDatasetLoader:
     ) -> dict[str, Any] | None:
         """Normalize Natural Questions sample.
 
-        Schema:
-        - question: dict with 'text' field
-        - annotations: list of dicts with 'short_answers' and 'yes_no_answer'
-        - document: dict with 'tokens' and 'html'
+        Schema (HuggingFace 2024+):
+        - question: dict with 'text' and 'tokens' fields
+        - annotations: dict with parallel lists: 'id', 'long_answer', 'short_answers', 'yes_no_answer'
+        - document: dict with 'tokens' (list), 'html', 'title', 'url'
         """
         try:
-            question = sample.get("question", {}).get("text", "")
+            # Extract question text
+            question_data = sample.get("question", {})
+            question = question_data.get("text", "") if isinstance(question_data, dict) else ""
             if not question:
                 return None
 
-            # Extract answer (prefer short_answer over yes/no)
-            annotations = sample.get("annotations", [{}])[0]
-            short_answers = annotations.get("short_answers", [])
+            # Extract answer from annotations (new dict format with parallel lists)
+            annotations = sample.get("annotations", {})
+            answer = ""
 
-            if short_answers:
-                # Use first short answer
-                answer = short_answers[0].get("text", "")
-            else:
-                # Fallback to yes_no_answer
-                yes_no = annotations.get("yes_no_answer", "")
-                answer = yes_no if yes_no in ["YES", "NO"] else ""
+            # Check short_answers first (list of dicts with 'text' lists)
+            short_answers = annotations.get("short_answers", [])
+            if short_answers and isinstance(short_answers, list) and len(short_answers) > 0:
+                first_short = short_answers[0]
+                if isinstance(first_short, dict):
+                    text_list = first_short.get("text", [])
+                    if text_list and isinstance(text_list, list) and len(text_list) > 0:
+                        answer = text_list[0]
+
+            # Fallback to yes_no_answer
+            if not answer:
+                yes_no_list = annotations.get("yes_no_answer", [])
+                if yes_no_list and isinstance(yes_no_list, list) and len(yes_no_list) > 0:
+                    yes_no = yes_no_list[0]
+                    if yes_no == 1:
+                        answer = "YES"
+                    elif yes_no == 0:
+                        answer = "NO"
 
             if not answer:
                 return None
@@ -309,8 +321,13 @@ class BenchmarkDatasetLoader:
             document = sample.get("document", {})
             tokens = document.get("tokens", [])
 
-            # Join tokens to form context (limit to reasonable length)
-            context = " ".join(tokens[:2000]) if tokens else ""
+            # Handle tokens as list of strings directly
+            if tokens and isinstance(tokens, list):
+                # Filter out HTML tags and join
+                clean_tokens = [t for t in tokens[:2000] if not (t.startswith("<") and t.endswith(">"))]
+                context = " ".join(clean_tokens)
+            else:
+                context = ""
 
             return {
                 "question": question,
@@ -330,11 +347,11 @@ class BenchmarkDatasetLoader:
     ) -> dict[str, Any] | None:
         """Normalize HotpotQA sample.
 
-        Schema:
+        Schema (HuggingFace 2024+):
         - question: str
         - answer: str
-        - supporting_facts: list of [title, sentence_id] pairs
-        - context: list of [title, sentences] pairs
+        - supporting_facts: dict with 'title' (list) and 'sent_id' (list)
+        - context: dict with 'title' (list) and 'sentences' (list of lists)
         """
         try:
             question = sample.get("question", "")
@@ -343,25 +360,38 @@ class BenchmarkDatasetLoader:
             if not question or not answer:
                 return None
 
-            # Extract supporting contexts
+            # Extract supporting contexts (new dict format)
             contexts = []
-            context_data = sample.get("context", [])
-            supporting_facts = sample.get("supporting_facts", [])
+            context_data = sample.get("context", {})
+            supporting_facts = sample.get("supporting_facts", {})
+
+            # New format: context is dict with 'title' and 'sentences' lists
+            titles = context_data.get("title", [])
+            sentences_list = context_data.get("sentences", [])
 
             # Build map of title -> sentences
-            context_map = {title: sentences for title, sentences in context_data}
+            context_map = {}
+            for i, title in enumerate(titles):
+                if i < len(sentences_list):
+                    context_map[title] = sentences_list[i]
+
+            # Extract supporting facts (new format: dict with parallel lists)
+            sf_titles = supporting_facts.get("title", [])
+            sf_sent_ids = supporting_facts.get("sent_id", [])
 
             # Extract supporting sentences
-            for title, sent_id in supporting_facts:
-                if title in context_map:
+            for i, title in enumerate(sf_titles):
+                if title in context_map and i < len(sf_sent_ids):
+                    sent_id = sf_sent_ids[i]
                     sentences = context_map[title]
                     if sent_id < len(sentences):
                         contexts.append(sentences[sent_id])
 
             # Fallback: if no supporting facts, use first few sentences from contexts
-            if not contexts and context_data:
-                for title, sentences in context_data[:2]:  # First 2 documents
-                    contexts.extend(sentences[:3])  # First 3 sentences each
+            if not contexts and titles:
+                for i, _title in enumerate(titles[:2]):  # First 2 documents
+                    if i < len(sentences_list):
+                        contexts.extend(sentences_list[i][:3])  # First 3 sentences each
 
             return {
                 "question": question,
@@ -381,9 +411,9 @@ class BenchmarkDatasetLoader:
     ) -> dict[str, Any] | None:
         """Normalize MS MARCO sample.
 
-        Schema:
+        Schema (HuggingFace 2024+):
         - query: str
-        - passages: list of dicts with 'passage_text' and 'is_selected'
+        - passages: dict with 'is_selected' (list), 'passage_text' (list), 'url' (list)
         - answers: list of str (generated answers)
         """
         try:
@@ -395,18 +425,24 @@ class BenchmarkDatasetLoader:
             answers = sample.get("answers", [])
             answer = answers[0] if answers else ""
 
-            # Extract relevant passages (prefer selected passages)
-            passages = sample.get("passages", [])
+            # Extract relevant passages (new dict format with parallel lists)
+            passages = sample.get("passages", {})
             contexts = []
 
+            # New format: passages is dict with 'is_selected', 'passage_text', 'url' lists
+            is_selected_list = passages.get("is_selected", [])
+            passage_texts = passages.get("passage_text", [])
+
             # First, try to get selected passages
-            for passage in passages:
-                if passage.get("is_selected", 0) == 1:
-                    contexts.append(passage.get("passage_text", ""))
+            for i, is_selected in enumerate(is_selected_list):
+                if is_selected == 1 and i < len(passage_texts):
+                    text = passage_texts[i]
+                    if text:
+                        contexts.append(text)
 
             # If no selected passages, use first few passages
-            if not contexts:
-                contexts = [p.get("passage_text", "") for p in passages[:3]]
+            if not contexts and passage_texts:
+                contexts = [p for p in passage_texts[:3] if p]
 
             # Filter empty contexts
             contexts = [c for c in contexts if c]

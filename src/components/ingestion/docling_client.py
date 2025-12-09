@@ -212,7 +212,7 @@ def _extract_pictures_from_markdown(
 
     for idx, match in enumerate(matches):
         try:
-            alt_text = match.group(1)
+            _alt_text = match.group(1)  # Alt text not currently used but part of markdown syntax
             image_type = match.group(2)  # png, jpeg, etc.
             base64_data = match.group(3)
 
@@ -657,9 +657,9 @@ class DoclingClient:
             raise FileNotFoundError(f"Document not found: {file_path}")
 
         # Sprint 33: Reject legacy Office formats (not supported by Docling)
-        LEGACY_FORMATS = {".doc", ".xls", ".ppt"}
+        legacy_formats = {".doc", ".xls", ".ppt"}
         file_ext = file_path.suffix.lower()
-        if file_ext in LEGACY_FORMATS:
+        if file_ext in legacy_formats:
             raise IngestionError(
                 f"Legacy Office format '{file_ext}' is NOT SUPPORTED. "
                 f"Please convert to modern format (.docx, .xlsx, .pptx) before processing. "

@@ -1,9 +1,16 @@
-"""Tests for RAGAS evaluation module."""
+"""Tests for RAGAS evaluation module.
+
+Note: Requires langchain_openai which may have version conflicts.
+Skipped automatically if import fails.
+"""
 
 import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Skip if langchain dependencies have version conflicts
+pytest.importorskip("langchain_openai", reason="langchain_openai not available or version conflict")
 
 from src.evaluation.ragas_eval import (
     EvaluationDataset,

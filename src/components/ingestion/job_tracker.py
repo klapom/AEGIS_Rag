@@ -56,8 +56,6 @@ from typing import Any, Literal
 
 import structlog
 
-from src.core.config import settings
-
 logger = structlog.get_logger(__name__)
 
 # Database path (relative to project root)

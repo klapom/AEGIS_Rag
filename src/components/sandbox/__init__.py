@@ -30,7 +30,7 @@ Example:
 """
 
 from src.components.sandbox.bubblewrap_backend import BubblewrapSandboxBackend
-from src.components.sandbox.progress import ProgressTracker, ProgressState, SessionInfo
+from src.components.sandbox.progress import ProgressState, ProgressTracker, SessionInfo
 from src.components.sandbox.protocol import (
     EditResult,
     ExecuteResult,

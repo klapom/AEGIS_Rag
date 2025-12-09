@@ -12,13 +12,13 @@ from src.api.models.cost_stats import (
     ProviderCost,
 )
 from src.api.models.pipeline_progress import (
+    MetricsSchema,
     PipelineProgressEvent,
     PipelineProgressEventData,
     StageProgressSchema,
+    TimingSchema,
     WorkerInfoSchema,
     WorkerPoolSchema,
-    MetricsSchema,
-    TimingSchema,
 )
 
 __all__ = [

@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
-from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError

@@ -33,10 +33,9 @@ Performance:
     - Memory usage: <512MB per batch
 """
 
-import asyncio
 import time
 import uuid
-from typing import Any, Literal
+from typing import Any
 
 import structlog
 from qdrant_client.models import Distance, PointStruct, VectorParams
@@ -46,7 +45,6 @@ from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 from src.core.namespace import NamespaceManager, get_namespace_manager
 from src.evaluation.benchmark_loader import (
-    BenchmarkDatasetLoader,
     DatasetName,
     get_benchmark_loader,
 )
@@ -403,7 +401,7 @@ class BenchmarkCorpusIngestionPipeline:
 
                 # Create Qdrant points
                 points = []
-                for ctx, embedding in zip(batch, embeddings):
+                for ctx, embedding in zip(batch, embeddings, strict=True):
                     point_id = str(uuid.uuid4())
                     metadata = ctx["metadata"]
 

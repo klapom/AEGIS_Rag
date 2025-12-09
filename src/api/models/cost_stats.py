@@ -48,7 +48,7 @@ See Also:
     - src/api/v1/admin.py: Admin endpoints using these models
 """
 
-from typing import Dict, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -193,9 +193,9 @@ class CostStats(BaseModel):
     total_tokens: int = Field(..., description="Total tokens processed (input + output)")
     total_calls: int = Field(..., description="Total API calls")
     avg_cost_per_call: float = Field(..., description="Average cost per call")
-    by_provider: Dict[str, ProviderCost] = Field(..., description="Cost by provider")
-    by_model: Dict[str, ModelCost] = Field(..., description="Cost by model (provider/model)")
-    budgets: Dict[str, BudgetStatus] = Field(..., description="Budget status per provider")
+    by_provider: dict[str, ProviderCost] = Field(..., description="Cost by provider")
+    by_model: dict[str, ModelCost] = Field(..., description="Cost by model (provider/model)")
+    budgets: dict[str, BudgetStatus] = Field(..., description="Budget status per provider")
     time_range: str = Field(..., description="Time range filter applied (7d, 30d, all)")
 
 

@@ -9,16 +9,15 @@ import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Literal
+from typing import Literal
 
 import structlog
-from fastapi import APIRouter, HTTPException, Query, Request, UploadFile, File, status
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
 
 from src.api.models.cost_stats import BudgetStatus, CostHistory, CostStats, ModelCost, ProviderCost
-from src.api.models.pipeline_progress import PipelineProgressEvent
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.llm_proxy.cost_tracker import get_cost_tracker
 from src.components.shared.embedding_service import get_embedding_service
@@ -592,7 +591,7 @@ def _build_detailed_progress(
 
 
 async def add_documents_stream(
-    file_paths: List[str],
+    file_paths: list[str],
     dry_run: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Stream progress updates during document addition (ADD-only, no deletion).
@@ -605,8 +604,8 @@ async def add_documents_stream(
         SSE-formatted progress messages (JSON)
     """
     import json
-    import time
     import os
+    import time
 
     start_time = time.time()
     total_docs = len(file_paths)
@@ -627,20 +626,21 @@ async def add_documents_stream(
             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10, 'message': f'Indexing {total_docs} document(s)...'})}\n\n"
 
             # Import LangGraph streaming pipeline (lazy import)
-            from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline_streaming
             import hashlib
+
+            from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline_streaming
 
             batch_id = f"add_batch_{int(time.time())}"
             total_chunks = 0
             completed_docs = 0
             failed_docs = 0
-            all_entities: List[dict] = []
-            all_relations: List[dict] = []
+            all_entities: list[dict] = []
+            all_relations: list[dict] = []
 
             # Node name to human-readable phase mapping
             # NOTE: Node names from LangGraph have NO "_node" suffix!
             # See langgraph_pipeline.py: graph.add_node("memory_check", ...)
-            NODE_PHASES = {
+            node_phases = {
                 "memory_check": ("memory_check", "Checking document memory..."),
                 "parse": ("parse", "Parsing document..."),
                 "image_enrichment": ("image_enrichment", "Processing images with VLM..."),
@@ -650,7 +650,7 @@ async def add_documents_stream(
             }
 
             # Node name to progress percentage (within document: 10% to 90% of doc's share)
-            NODE_PROGRESS = {
+            node_progress = {
                 "memory_check": 0.05,
                 "parse": 0.25,
                 "image_enrichment": 0.40,
@@ -690,13 +690,13 @@ async def add_documents_stream(
                         last_state = state
 
                         # Get phase info
-                        phase_info = NODE_PHASES.get(
+                        phase_info = node_phases.get(
                             node_name, ("indexing", f"Processing {node_name}...")
                         )
-                        node_progress = NODE_PROGRESS.get(node_name, 0.5)
+                        node_progress_val = node_progress.get(node_name, 0.5)
 
                         # Calculate overall progress
-                        overall_progress = doc_base_progress + (node_progress * doc_progress_range)
+                        overall_progress = doc_base_progress + (node_progress_val * doc_progress_range)
 
                         # Build detailed progress
                         detailed_progress = _build_detailed_progress(
@@ -849,7 +849,7 @@ async def add_documents_stream(
     description="Add selected documents to the existing index without deleting anything. Progress tracked via SSE.",
 )
 async def add_documents_to_index(
-    file_paths: List[str] = Query(
+    file_paths: list[str] = Query(
         default=[],
         description="List of file paths to add to index",
     ),
@@ -941,7 +941,7 @@ class UploadResponse(BaseModel):
     """Response from file upload endpoint."""
 
     upload_dir: str = Field(..., description="Directory where files were uploaded")
-    files: List[UploadFileInfo] = Field(..., description="List of uploaded files")
+    files: list[UploadFileInfo] = Field(..., description="List of uploaded files")
     total_size_bytes: int = Field(..., description="Total size of all uploaded files")
 
 
@@ -956,7 +956,7 @@ MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024  # 100MB
     description="Upload one or more files to the server for subsequent indexing. Files are stored in data/uploads/{session_id}/",
 )
 async def upload_files(
-    files: List[UploadFile] = File(..., description="Files to upload")
+    files: list[UploadFile] = File(..., description="Files to upload")
 ) -> UploadResponse:
     """Upload files to server for indexing.
 
@@ -1093,7 +1093,7 @@ class BatchIndexingRequest(BaseModel):
     Sprint 37 Feature 37.8: Multi-Document Parallelization
     """
 
-    file_paths: List[str] = Field(..., description="List of file paths to index")
+    file_paths: list[str] = Field(..., description="List of file paths to index")
 
 
 class BatchIndexingResponse(BaseModel):
@@ -1231,8 +1231,8 @@ async def _run_parallel_batch(
         - Updates progress_manager with per-document progress
         - Errors in one document don't stop others
     """
-    from src.components.ingestion.parallel_orchestrator import get_parallel_orchestrator
     from src.components.ingestion.job_tracker import get_job_tracker
+    from src.components.ingestion.parallel_orchestrator import get_parallel_orchestrator
 
     orchestrator = get_parallel_orchestrator()
     job_tracker = get_job_tracker()
@@ -1374,6 +1374,7 @@ async def stream_batch_progress(
         HTTPException 404: If batch ID not found
     """
     import json
+
     from src.components.ingestion.multi_doc_progress import get_multi_doc_progress_manager
 
     progress_manager = get_multi_doc_progress_manager()
@@ -2251,13 +2252,13 @@ async def get_cost_stats(
         ) from e
 
 
-@router.get("/costs/history", response_model=List[CostHistory])
+@router.get("/costs/history", response_model=list[CostHistory])
 async def get_cost_history(
     time_range: Literal["7d", "30d", "all"] = Query(
         default="7d",
         description="Time range for cost history (7d=last 7 days, 30d=last 30 days, all=all time)",
     )
-) -> List[CostHistory]:
+) -> list[CostHistory]:
     """Get historical cost data grouped by day for charting.
 
     **Sprint 31 Feature 31.10a: Cost Dashboard Backend**
@@ -2449,7 +2450,7 @@ class ScanDirectoryResponse(BaseModel):
 
     path: str = Field(..., description="Scanned directory path")
     recursive: bool = Field(..., description="Whether scan was recursive")
-    files: List[FileInfo] = Field(..., description="List of files found")
+    files: list[FileInfo] = Field(..., description="List of files found")
     statistics: DirectoryScanStatistics = Field(..., description="Aggregated statistics")
 
 
@@ -2525,10 +2526,9 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
     """
     # Import format definitions (lazy import to avoid circular dependencies)
     from src.components.ingestion.format_router import (
-        ALL_FORMATS,
         DOCLING_FORMATS,
-        LLAMAINDEX_EXCLUSIVE,
         LEGACY_UNSUPPORTED,
+        LLAMAINDEX_EXCLUSIVE,
         SHARED_FORMATS,
     )
 
@@ -2556,7 +2556,7 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
 
     try:
         # Scan directory for files
-        files: List[FileInfo] = []
+        files: list[FileInfo] = []
         stats = {
             "total": 0,
             "docling_supported": 0,
@@ -2568,10 +2568,7 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
         }
 
         # Get file iterator based on recursive flag
-        if request.recursive:
-            file_iterator = dir_path.rglob("*")
-        else:
-            file_iterator = dir_path.glob("*")
+        file_iterator = dir_path.rglob("*") if request.recursive else dir_path.glob("*")
 
         for file_path in file_iterator:
             # Skip directories
@@ -2731,14 +2728,14 @@ class IngestionFileResponse(BaseModel):
     completed_at: str | None = Field(None, description="File processing completion timestamp")
 
 
-@router.get("/ingestion/jobs", response_model=List[IngestionJobResponse])
+@router.get("/ingestion/jobs", response_model=list[IngestionJobResponse])
 async def list_ingestion_jobs(
     status_filter: Literal["running", "completed", "failed", "cancelled"] | None = Query(
         None, alias="status", description="Filter by job status"
     ),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-) -> List[IngestionJobResponse]:
+) -> list[IngestionJobResponse]:
     """List all ingestion jobs with optional filtering.
 
     **Sprint 33 Feature 33.7: Job Tracking API**
@@ -2865,14 +2862,14 @@ async def get_ingestion_job(job_id: str) -> IngestionJobResponse:
         ) from e
 
 
-@router.get("/ingestion/jobs/{job_id}/events", response_model=List[IngestionEventResponse])
+@router.get("/ingestion/jobs/{job_id}/events", response_model=list[IngestionEventResponse])
 async def get_job_events(
     job_id: str,
     level_filter: Literal["INFO", "DEBUG", "WARN", "ERROR"] | None = Query(
         None, alias="level", description="Filter by event level"
     ),
     limit: int = Query(1000, ge=1, le=10000, description="Maximum number of events"),
-) -> List[IngestionEventResponse]:
+) -> list[IngestionEventResponse]:
     """Get ingestion events for job.
 
     **Sprint 33 Feature 33.7: Event Logging API**
@@ -2934,8 +2931,8 @@ async def get_job_events(
         ) from e
 
 
-@router.get("/ingestion/jobs/{job_id}/errors", response_model=List[IngestionEventResponse])
-async def get_job_errors(job_id: str) -> List[IngestionEventResponse]:
+@router.get("/ingestion/jobs/{job_id}/errors", response_model=list[IngestionEventResponse])
+async def get_job_errors(job_id: str) -> list[IngestionEventResponse]:
     """Get only ERROR-level events for job.
 
     **Sprint 33 Feature 33.7: Error Logging API**
@@ -3184,6 +3181,7 @@ async def stream_pipeline_progress(
         HTTPException: If job not found in progress manager
     """
     import json
+
     from src.components.ingestion.progress_manager import get_progress_manager
 
     async def event_generator():
@@ -3202,7 +3200,7 @@ async def stream_pipeline_progress(
                     "job_id": job_id,
                 },
             }
-            yield f"event: error\n"
+            yield "event: error\n"
             yield f"data: {json.dumps(error_event['data'])}\n\n"
             return
 
@@ -3477,7 +3475,6 @@ async def update_pipeline_config(config: PipelineConfigSchema) -> PipelineConfig
     Raises:
         HTTPException: If validation fails or Redis save fails
     """
-    import json
 
     try:
         from src.components.memory import get_redis_memory
@@ -3542,7 +3539,6 @@ async def apply_config_preset(
     Raises:
         HTTPException: If preset is invalid or save fails
     """
-    import json
 
     presets = {
         "conservative": PipelineConfigSchema(

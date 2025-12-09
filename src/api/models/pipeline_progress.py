@@ -81,7 +81,6 @@ See Also:
     - frontend/src/types/admin.ts: Frontend interface (PipelineProgressData)
 """
 
-from typing import Dict
 
 from pydantic import BaseModel, Field
 
@@ -280,7 +279,7 @@ class PipelineProgressEventData(BaseModel):
     document_name: str = Field(..., description="Document name")
     total_chunks: int = Field(..., description="Total number of chunks")
     total_images: int = Field(..., description="Total number of images")
-    stages: Dict[str, StageProgressSchema] = Field(..., description="Stage progress")
+    stages: dict[str, StageProgressSchema] = Field(..., description="Stage progress")
     worker_pool: WorkerPoolSchema = Field(..., description="Worker pool status")
     metrics: MetricsSchema = Field(..., description="Live metrics")
     timing: TimingSchema = Field(..., description="Timing information")

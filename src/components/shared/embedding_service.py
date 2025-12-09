@@ -249,7 +249,7 @@ class UnifiedEmbeddingService:
         cache_misses = 0
         total_chars = sum(len(t) for t in texts)
 
-        for idx, text in enumerate(texts):
+        for _idx, text in enumerate(texts):
             # Track cache state before embed
             hits_before = self.cache._hits
             embedding = await self.embed_single(text)
