@@ -430,10 +430,17 @@ class TestLogout:
 class TestProtectedRoutes:
     """Test protected route access with authentication."""
 
+    @patch("src.api.v1.auth.UserStore")
     def test_protected_route_with_valid_token(
-        self, client: TestClient, sample_user: UserInDB
+        self, mock_user_store_class: MagicMock, client: TestClient, sample_user: UserInDB
     ) -> None:
         """Test accessing protected route with valid token."""
+        # Setup mock UserStore
+        mock_store = MagicMock()
+        mock_store.get_user = AsyncMock(return_value=sample_user)
+        mock_store.close = AsyncMock()
+        mock_user_store_class.return_value = mock_store
+
         # Create valid token
         tokens = create_token_pair(sample_user.user_id, sample_user.username, sample_user.role)
 

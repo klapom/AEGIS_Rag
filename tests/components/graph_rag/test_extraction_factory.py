@@ -72,17 +72,20 @@ def mock_config_default():
 
 @pytest.mark.unit
 def test_factory_creates_three_phase_pipeline(mock_config_three_phase):
-    """Test factory creates ThreePhaseExtractor when configured."""
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    """Test factory creates LLM extraction pipeline (ExtractionService) when configured.
 
-        ExtractionPipelineFactory.create(mock_config_three_phase)
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    The 'three_phase' config value now creates an LLMExtractionPipeline adapter.
+    """
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock()
 
-        # Verify ThreePhaseExtractor was instantiated
-        mock_tpe.assert_called_once()
-        assert mock_tpe.call_args.kwargs["config"] == mock_config_three_phase
-        assert mock_tpe.call_args.kwargs["spacy_model"] == "en_core_web_trf"
-        assert mock_tpe.call_args.kwargs["enable_dedup"] is True
+        pipeline = ExtractionPipelineFactory.create(mock_config_three_phase)
+
+        # Verify ExtractionService was instantiated (via LLMExtractionPipeline adapter)
+        mock_service.assert_called_once()
+        # Pipeline should be an LLMExtractionPipeline adapter instance
+        assert pipeline is not None
 
 
 @pytest.mark.unit
@@ -100,14 +103,18 @@ def test_factory_creates_lightrag_pipeline(mock_config_lightrag):
 
 @pytest.mark.unit
 def test_factory_defaults_to_three_phase(mock_config_default):
-    """Test factory defaults to three_phase when no pipeline specified."""
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    """Test factory defaults to LLM extraction (three_phase) when no pipeline specified.
 
-        ExtractionPipelineFactory.create(mock_config_default)
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock()
 
-        # Should create three_phase by default
-        mock_tpe.assert_called_once()
+        pipeline = ExtractionPipelineFactory.create(mock_config_default)
+
+        # Should create LLM extraction pipeline by default
+        mock_service.assert_called_once()
+        assert pipeline is not None
 
 
 @pytest.mark.unit

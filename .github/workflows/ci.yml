@@ -281,10 +281,13 @@ jobs:
 
   # ============================================================
   # JOB 6: INTEGRATION TESTS (with Docker Services)
+  # DISABLED: Integration tests require Docling container and Ollama
+  # Run locally on DGX Spark with full infrastructure
   # ============================================================
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
+    if: false  # Disabled - requires Docling container + Ollama
 
     services:
       qdrant:

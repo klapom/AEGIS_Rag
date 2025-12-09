@@ -8,12 +8,18 @@ Test Coverage:
     - Batch text embedding with GPU acceleration
     - Cache hit/miss tracking
     - Statistics reporting
+
+NOTE: Requires 'reranking' optional dependency group (sentence-transformers).
+Skipped in CI where only core dependencies are installed.
 """
 
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+
+# Skip if sentence_transformers not available (optional dependency)
+pytest.importorskip("sentence_transformers", reason="sentence-transformers not installed (optional reranking group)")
 
 from src.components.shared.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingService,

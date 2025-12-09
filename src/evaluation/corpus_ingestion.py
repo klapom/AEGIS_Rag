@@ -46,6 +46,7 @@ import structlog
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from src.components.shared.embedding_service import get_embedding_service
+from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 from src.core.namespace import NamespaceManager, get_namespace_manager
