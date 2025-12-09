@@ -77,17 +77,18 @@ export function GraphViewer({
     if (!data) return null;
 
     // Default edge filters: show all edges
-    const filters = edgeFilters || { showRelatesTo: true, showMentionedIn: true, minWeight: 0 };
+    const filters = edgeFilters || { showRelatesTo: true, showCoOccurs: true, showMentionedIn: true, minWeight: 0 };
 
     const filteredLinks = data.links.filter((link) => {
       const linkType = (link.label || '').toUpperCase();
 
       // Filter by type
       if (linkType === 'RELATES_TO' && !filters.showRelatesTo) return false;
+      if (linkType === 'CO_OCCURS' && !filters.showCoOccurs) return false;
       if (linkType === 'MENTIONED_IN' && !filters.showMentionedIn) return false;
 
-      // Filter by weight (only for RELATES_TO which has meaningful weights)
-      if (linkType === 'RELATES_TO' && link.weight !== undefined) {
+      // Filter by weight (for RELATES_TO and CO_OCCURS which have meaningful weights)
+      if ((linkType === 'RELATES_TO' || linkType === 'CO_OCCURS') && link.weight !== undefined) {
         if (link.weight < filters.minWeight) return false;
       }
 
@@ -129,6 +130,8 @@ export function GraphViewer({
           return '#ec4899'; // Pink
         case 'PRODUCT':
           return '#8b5cf6'; // Purple
+        case 'CHUNK':
+          return '#06b6d4'; // Cyan - Document chunks
         default:
           return '#6b7280'; // Gray
       }
@@ -196,6 +199,8 @@ export function GraphViewer({
       switch (linkType) {
         case 'RELATES_TO':
           return '#3B82F6'; // Blue
+        case 'CO_OCCURS':
+          return '#8B5CF6'; // Purple - entities mentioned together
         case 'MENTIONED_IN':
           return '#9CA3AF'; // Gray
         case 'HAS_SECTION':
@@ -285,8 +290,8 @@ export function GraphViewer({
 
       {/* Node Info Overlay (when node is selected or hovered) */}
       {(selectedNode || hoveredNode) && (
-        <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 border border-gray-200 max-w-xs">
-          <div className="space-y-2">
+        <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg p-4 border border-gray-200 max-w-sm max-h-96 overflow-y-auto">
+          <div className="space-y-3">
             <div className="font-semibold text-gray-900 text-lg">
               {(selectedNode || hoveredNode)?.label}
             </div>
@@ -306,6 +311,69 @@ export function GraphViewer({
                 </div>
               )}
             </div>
+
+            {/* Connected Nodes List (only for selected node) */}
+            {selectedNode && filteredData && (
+              <div className="border-t border-gray-200 pt-2 mt-2">
+                <div className="font-semibold text-gray-900 text-sm mb-2">Connected Nodes</div>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {filteredData.links
+                    .filter((link) => {
+                      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                      return sourceId === selectedNode.id || targetId === selectedNode.id;
+                    })
+                    .slice(0, 20)
+                    .map((link, idx) => {
+                      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                      const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                      const connectedId = sourceId === selectedNode.id ? targetId : sourceId;
+                      const connectedNode = filteredData.nodes.find((n) => n.id === connectedId);
+                      const linkType = link.label || 'RELATES_TO';
+                      return (
+                        <div key={idx} className="flex items-center text-xs space-x-2 py-0.5">
+                          <span
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor:
+                                linkType === 'CO_OCCURS' ? '#8B5CF6' :
+                                linkType === 'MENTIONED_IN' ? '#9CA3AF' : '#3B82F6'
+                            }}
+                          />
+                          <span className="text-gray-500 flex-shrink-0">{linkType}</span>
+                          <span className="text-gray-400">→</span>
+                          <span className="text-gray-800 truncate font-medium">
+                            {connectedNode?.label || connectedId}
+                          </span>
+                          <span className="text-gray-400 text-[10px]">
+                            ({connectedNode?.type || '?'})
+                          </span>
+                        </div>
+                      );
+                    })}
+                  {filteredData.links.filter((link) => {
+                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                    return sourceId === selectedNode.id || targetId === selectedNode.id;
+                  }).length > 20 && (
+                    <div className="text-xs text-gray-400 italic">
+                      +{filteredData.links.filter((link) => {
+                        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                        return sourceId === selectedNode.id || targetId === selectedNode.id;
+                      }).length - 20} more...
+                    </div>
+                  )}
+                  {filteredData.links.filter((link) => {
+                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                    return sourceId === selectedNode.id || targetId === selectedNode.id;
+                  }).length === 0 && (
+                    <div className="text-xs text-gray-400 italic">No visible connections</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -348,11 +416,22 @@ export function GraphViewer({
               <div className="w-3 h-3 rounded-full bg-amber-500"></div>
               <span className="text-gray-600">Event</span>
             </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+              <span className="text-gray-600">Chunk</span>
+            </div>
           </div>
 
           <div className="border-t border-gray-200 pt-2 mt-2">
             <div className="font-semibold text-gray-900">Relationships</div>
             <div className="space-y-1 mt-1">
+              <div
+                className="flex items-center space-x-2"
+                data-testid="legend-item-co-occurs"
+              >
+                <div className="w-6 h-0.5 bg-purple-500"></div>
+                <span className="text-gray-600">CO_OCCURS</span>
+              </div>
               <div
                 className="flex items-center space-x-2"
                 data-testid="legend-item-relates-to"
@@ -366,20 +445,6 @@ export function GraphViewer({
               >
                 <div className="w-6 h-0.5 bg-gray-400"></div>
                 <span className="text-gray-600">MENTIONED_IN</span>
-              </div>
-              <div
-                className="flex items-center space-x-2"
-                data-testid="legend-item-has-section"
-              >
-                <div className="w-6 h-0.5 bg-green-500"></div>
-                <span className="text-gray-600">HAS_SECTION</span>
-              </div>
-              <div
-                className="flex items-center space-x-2"
-                data-testid="legend-item-defines"
-              >
-                <div className="w-6 h-0.5 bg-amber-500"></div>
-                <span className="text-gray-600">DEFINES</span>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthMocking } from '../../fixtures';
 
 /**
  * E2E Tests for Version Comparison View - Sprint 39 Feature 39.7
@@ -19,6 +20,8 @@ import { test, expect } from '@playwright/test';
  *   - GET /api/v1/entities/{entity_id}/versions/{v1}/compare/{v2}
  *   - POST /api/v1/entities/{entity_id}/versions/{version}/revert
  * Required: Backend running on http://localhost:8000
+ *
+ * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
 test.describe('Version Comparison View - Feature 39.7', () => {
@@ -80,7 +83,10 @@ test.describe('Version Comparison View - Feature 39.7', () => {
   };
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:5173/graph/entity/kubernetes/versions/compare');
+    // Setup authentication mocking for protected routes
+    await setupAuthMocking(page);
+
+    await page.goto('/graph/entity/kubernetes/versions/compare');
     await page.waitForLoadState('networkidle');
   });
 

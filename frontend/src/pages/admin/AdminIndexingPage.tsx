@@ -210,6 +210,8 @@ export function AdminIndexingPage() {
     const files = Array.from(event.target.files || []);
     setSelectedLocalFiles(files);
     setUploadError(null);
+    // Clear previous upload state when selecting new files (Sprint 38 UX fix)
+    setUploadedFiles([]);
   }, []);
 
   const handleRemoveFile = useCallback((index: number) => {
@@ -1045,24 +1047,6 @@ export function AdminIndexingPage() {
           )}
         </div>
 
-        {/* Advanced Options (Optional - for future enhancements) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <details>
-            <summary
-              data-testid="advanced-options"
-              className="cursor-pointer text-lg font-semibold text-gray-900 hover:text-blue-600"
-            >
-              Erweiterte Optionen
-            </summary>
-            <div className="mt-4 space-y-4 text-sm text-gray-600">
-              <p>Erweiterte Indizierungsoptionen werden in einer zukünftigen Version verfügbar sein.</p>
-              <p>
-                Aktuelle Einstellungen: BGE-M3 Embeddings, 1800-Token Chunks, Gemma-3-4B
-                Extraktion
-              </p>
-            </div>
-          </details>
-        </div>
       </div>
 
       {/* Sprint 33 Feature 33.4: Detail Dialog */}

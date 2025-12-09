@@ -428,7 +428,7 @@ function PipelinePhaseCard({ phase }: PipelinePhaseCardProps) {
         {phase.status.replace('_', ' ')}
       </div>
 
-      {phase.duration_ms !== undefined && (
+      {phase.duration_ms != null && phase.duration_ms > 0 && (
         <div className="text-xs mt-1 opacity-70">
           {phase.duration_ms < 1000
             ? `${phase.duration_ms}ms`

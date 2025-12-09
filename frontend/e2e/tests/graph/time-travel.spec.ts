@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupAuthMocking } from '../../fixtures';
 
 /**
  * E2E Tests for Time Travel Tab - Sprint 39 Feature 39.5
@@ -16,12 +17,17 @@ import { test, expect } from '@playwright/test';
  *
  * Backend: POST /api/v1/temporal/point-in-time
  * Required: Backend running on http://localhost:8000
+ *
+ * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
 test.describe('Time Travel Tab - Feature 39.5', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to graph page (adjust URL as needed)
-    await page.goto('http://localhost:5173/graph');
+    // Setup authentication mocking for protected routes
+    await setupAuthMocking(page);
+
+    // Navigate to graph page
+    await page.goto('/graph');
     await page.waitForLoadState('networkidle');
   });
 

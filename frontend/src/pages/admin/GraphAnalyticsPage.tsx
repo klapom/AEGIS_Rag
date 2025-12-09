@@ -16,7 +16,7 @@ import { CommunityHighlight } from '../../components/graph/CommunityHighlight';
 import { GraphExportButton } from '../../components/graph/GraphExportButton';
 import { useGraphStatistics } from '../../hooks/useGraphStatistics';
 import { useCommunities } from '../../hooks/useCommunities';
-import type { GraphFilters as GraphFiltersType } from '../../types/graph';
+import type { GraphFilters as GraphFiltersType, EdgeFilters } from '../../types/graph';
 
 /**
  * Admin Graph Analytics Page
@@ -46,6 +46,14 @@ export function GraphAnalyticsPage() {
   });
 
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
+
+  // Edge filter state for relationship type filtering
+  const [edgeFilters, setEdgeFilters] = useState<EdgeFilters>({
+    showRelatesTo: true,
+    showCoOccurs: true,
+    showMentionedIn: true,
+    minWeight: 0,
+  });
 
   // Update entity types when statistics load
   useEffect(() => {
@@ -159,6 +167,8 @@ export function GraphAnalyticsPage() {
                 entityTypes={availableEntityTypes}
                 value={filters}
                 onChange={setFilters}
+                edgeFilters={edgeFilters}
+                onEdgeFilterChange={setEdgeFilters}
               />
             </section>
 
@@ -204,6 +214,7 @@ export function GraphAnalyticsPage() {
             maxNodes={filters.maxNodes}
             entityTypes={filters.entityTypes}
             highlightCommunities={selectedCommunity ? [selectedCommunity] : undefined}
+            edgeFilters={edgeFilters}
           />
 
           {/* Collapse Button (Desktop) */}

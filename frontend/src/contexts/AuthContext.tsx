@@ -3,7 +3,8 @@
  * Sprint 38 Feature 38.1b: JWT Authentication Frontend
  */
 
-import { createContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import type { AuthContextType, User } from '../types/auth';
 import { apiClient } from '../lib/api';
 

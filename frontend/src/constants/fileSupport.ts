@@ -13,11 +13,8 @@
 export const DOCLING_SUPPORTED_FORMATS = [
   '.pdf',
   '.docx',
-  '.doc',
   '.pptx',
-  '.ppt',
   '.xlsx',
-  '.xls',
   '.html',
   '.htm',
   '.md',

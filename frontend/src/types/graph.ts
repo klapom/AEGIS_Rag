@@ -34,6 +34,7 @@ export interface GraphFilters {
 // Sprint 34 Feature 34.6: Edge Filter Types
 export interface EdgeFilters {
   showRelatesTo: boolean;
+  showCoOccurs: boolean;
   showMentionedIn: boolean;
   minWeight: number;
 }

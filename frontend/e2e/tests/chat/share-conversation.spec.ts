@@ -9,9 +9,12 @@
  * - Copy to clipboard functionality
  * - Shared conversation page (public access)
  * - Expired/invalid link handling
+ *
+ * Sprint 38: Uses setupAuthMocking for JWT authentication on protected routes
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { setupAuthMocking } from '../../fixtures';
 
 const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -20,11 +23,14 @@ test.describe('Share Conversation Links', () => {
   let shareToken: string;
 
   test.beforeEach(async ({ page }) => {
+    // Setup authentication mocking for protected routes
+    await setupAuthMocking(page);
+
     // Navigate to home page
     await page.goto('/');
 
     // Create a test conversation
-    const messageInput = page.locator('input[placeholder*="Ask"]');
+    const messageInput = page.locator('[data-testid="message-input"]');
     await messageInput.fill('What is AEGIS RAG?');
     await messageInput.press('Enter');
 
@@ -250,7 +256,7 @@ test.describe('Share Conversation Links', () => {
 
     // Verify navigation to home page
     await page.waitForURL('/');
-    await expect(page.locator('input[placeholder*="Ask"]')).toBeVisible();
+    await expect(page.locator('[data-testid="message-input"]')).toBeVisible();
   });
 
   test('should handle share modal for different expiry durations', async ({ page }) => {

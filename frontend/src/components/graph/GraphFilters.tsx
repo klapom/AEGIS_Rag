@@ -59,7 +59,7 @@ export function GraphFilters({
 }: GraphFiltersProps) {
   const [localFilters, setLocalFilters] = useState(value);
   const [localEdgeFilters, setLocalEdgeFilters] = useState<EdgeFilters>(
-    edgeFilters || { showRelatesTo: true, showMentionedIn: true, minWeight: 0 }
+    edgeFilters || { showRelatesTo: true, showCoOccurs: true, showMentionedIn: true, minWeight: 0 }
   );
 
   // Update local state when external value changes
@@ -197,6 +197,25 @@ export function GraphFilters({
         <h4 className="text-sm font-semibold text-gray-900 mb-3">Relationship Types</h4>
 
         <div className="space-y-2" data-testid="edge-type-filter">
+          <label className="flex items-center space-x-2 cursor-pointer group" data-testid="edge-filter-co-occurs">
+            <input
+              type="checkbox"
+              checked={localEdgeFilters.showCoOccurs}
+              onChange={(e) => handleEdgeFilterChange({
+                ...localEdgeFilters,
+                showCoOccurs: e.target.checked
+              })}
+              className="w-4 h-4 text-primary border-2 border-gray-300 rounded
+                         focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 cursor-pointer"
+              aria-label="Show CO_OCCURS relationships"
+              data-testid="edge-filter-co-occurs-checkbox"
+            />
+            <div className="w-4 h-0.5 bg-purple-500"></div>
+            <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium">
+              Co-Occurs
+            </span>
+          </label>
+
           <label className="flex items-center space-x-2 cursor-pointer group" data-testid="edge-filter-relates-to">
             <input
               type="checkbox"
@@ -292,6 +311,7 @@ export function GraphFilters({
           };
           const defaultEdgeFilters: EdgeFilters = {
             showRelatesTo: true,
+            showCoOccurs: true,
             showMentionedIn: true,
             minWeight: 0,
           };

@@ -3,7 +3,8 @@
  * Sprint 38 Feature 38.1b: JWT Authentication Frontend
  */
 
-import { useState, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Lock, User, AlertCircle, Loader2 } from 'lucide-react';

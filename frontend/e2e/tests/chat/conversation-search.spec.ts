@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures';
+import { test, expect, setupAuthMocking } from '../../fixtures';
 
 /**
  * E2E Tests for Conversation Search UI - Sprint 38 Feature 38.2
@@ -15,12 +15,13 @@ import { test, expect } from '../../fixtures';
  *
  * Backend: POST /api/v1/chat/search
  * Required: Backend running on http://localhost:8000
+ *
+ * Sprint 38: Uses authChatPage fixture for JWT authentication
  */
 
 test.describe('Conversation Search UI - Feature 38.2', () => {
-  test('should render search bar in sidebar', async ({ chatPage, page }) => {
-    // Wait for page to load
-    await chatPage.goto();
+  test('should render search bar in sidebar', async ({ authChatPage, page }) => {
+    // Wait for page to load (authChatPage already navigated with auth)
     await page.waitForLoadState('networkidle');
 
     // Open sidebar (if not already open)
@@ -39,10 +40,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should require minimum 3 characters to trigger search', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
     await page.waitForLoadState('networkidle');
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
@@ -79,10 +80,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should display loading spinner while searching', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
     await page.waitForLoadState('networkidle');
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
@@ -103,12 +104,12 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should search and display results with correct metadata', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
     // First, create a conversation with specific content
-    await chatPage.sendMessage('What is machine learning?');
-    await chatPage.waitForResponse();
+    await authChatPage.sendMessage('What is machine learning?');
+    await authChatPage.waitForResponse();
 
     await page.waitForTimeout(1000);
 
@@ -149,12 +150,12 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should navigate to conversation when clicking search result', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
     // Create a conversation
-    await chatPage.sendMessage('Explain neural networks');
-    await chatPage.waitForResponse();
+    await authChatPage.sendMessage('Explain neural networks');
+    await authChatPage.waitForResponse();
 
     // Search for it
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
@@ -192,10 +193,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should close dropdown when clicking outside', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
     await searchInput.waitFor({ state: 'visible' });
@@ -220,10 +221,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should display error message when search fails', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
     await searchInput.waitFor({ state: 'visible' });
@@ -246,10 +247,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should handle empty search results gracefully', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
     await searchInput.waitFor({ state: 'visible' });
@@ -265,10 +266,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
   });
 
   test('should clear search when starting new conversation', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
-    await chatPage.goto();
+    // authChatPage already navigated with auth
 
     const searchInput = page.locator('[data-testid="conversation-search-input"]');
     await searchInput.waitFor({ state: 'visible' });
@@ -290,10 +291,10 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
     await expect(dropdown).not.toBeVisible();
   });
 
-  test('should show relevance scores in results', async ({ chatPage, page }) => {
+  test('should show relevance scores in results', async ({ authChatPage, page }) => {
     // Create a conversation
-    await chatPage.sendMessage('What is deep learning?');
-    await chatPage.waitForResponse();
+    await authChatPage.sendMessage('What is deep learning?');
+    await authChatPage.waitForResponse();
 
     await page.waitForTimeout(1000);
 
@@ -325,12 +326,12 @@ test.describe('Conversation Search UI - Feature 38.2', () => {
  */
 test.describe('Archive Button - Feature 38.2', () => {
   test('should show archive button on session hover', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
     // Create a conversation first
-    await chatPage.sendMessage('Test conversation for archiving');
-    await chatPage.waitForResponse();
+    await authChatPage.sendMessage('Test conversation for archiving');
+    await authChatPage.waitForResponse();
 
     await page.waitForTimeout(1000);
 
@@ -349,15 +350,15 @@ test.describe('Archive Button - Feature 38.2', () => {
   });
 
   test('should show confirmation dialog when archive clicked', async ({
-    chatPage,
+    authChatPage,
     page,
   }) => {
     // This test assumes ArchiveButton is integrated into the session list
     // Currently, the ArchiveButton component exists but may not be integrated
     // This test documents the expected flow
 
-    await chatPage.sendMessage('Test conversation');
-    await chatPage.waitForResponse();
+    await authChatPage.sendMessage('Test conversation');
+    await authChatPage.waitForResponse();
 
     await page.waitForTimeout(1000);
 

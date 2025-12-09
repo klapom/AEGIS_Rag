@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import { ChatPage } from '../pom/ChatPage';
 import { HistoryPage } from '../pom/HistoryPage';
 import { SettingsPage } from '../pom/SettingsPage';
@@ -12,7 +12,64 @@ import { AdminLLMConfigPage } from '../pom/AdminLLMConfigPage';
  *
  * These fixtures provide Page Object Models pre-configured for each page
  * usage: test('test name', async ({ chatPage, historyPage, ... }) => { ... })
+ *
+ * Sprint 38: Added authentication support for protected routes
  */
+
+/**
+ * Mock auth data for test user
+ */
+const TEST_USER = {
+  username: 'testuser',
+  email: 'test@example.com',
+  created_at: '2024-01-01T00:00:00Z',
+};
+
+const TEST_TOKEN = {
+  access_token: 'test-jwt-token-for-e2e-tests',
+  token_type: 'bearer',
+  expires_in: 3600,
+  user: TEST_USER,
+};
+
+/**
+ * Setup authentication mocking for a page
+ * This mocks the auth endpoints and sets up localStorage with auth token
+ *
+ * IMPORTANT: Token storage key is 'aegis_auth_token' (from src/lib/api.ts)
+ * Token is stored as JSON with access_token, refresh_token, and expires_at fields
+ */
+async function setupAuthMocking(page: Page): Promise<void> {
+  // Mock /auth/me endpoint for auth check
+  await page.route('**/api/v1/auth/me', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(TEST_USER),
+    });
+  });
+
+  // Mock /auth/refresh endpoint
+  await page.route('**/api/v1/auth/refresh', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(TEST_TOKEN),
+    });
+  });
+
+  // Set auth token in localStorage before navigation
+  // Key: 'aegis_auth_token' (see src/lib/api.ts TOKEN_STORAGE_KEY)
+  // Format: JSON with access_token, refresh_token, expires_at
+  await page.addInitScript(() => {
+    const tokenData = {
+      access_token: 'test-jwt-token-for-e2e-tests',
+      refresh_token: 'test-refresh-token-for-e2e-tests',
+      expires_at: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 hour from now
+    };
+    localStorage.setItem('aegis_auth_token', JSON.stringify(tokenData));
+  });
+}
 
 type Fixtures = {
   chatPage: ChatPage;
@@ -22,6 +79,10 @@ type Fixtures = {
   adminGraphPage: AdminGraphPage;
   costDashboardPage: CostDashboardPage;
   adminLLMConfigPage: AdminLLMConfigPage;
+  /** Authenticated page - use for protected routes */
+  authenticatedPage: Page;
+  /** Authenticated chat page - with auth mocking */
+  authChatPage: ChatPage;
 };
 
 export const test = base.extend<Fixtures>({
@@ -58,8 +119,10 @@ export const test = base.extend<Fixtures>({
   /**
    * Admin Indexing Page Fixture
    * Navigates to /admin/indexing and provides AdminIndexingPage object
+   * Sprint 38: Added authentication mocking for protected admin route
    */
   adminIndexingPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const adminIndexingPage = new AdminIndexingPage(page);
     await adminIndexingPage.goto();
     await use(adminIndexingPage);
@@ -68,8 +131,10 @@ export const test = base.extend<Fixtures>({
   /**
    * Admin Graph Page Fixture
    * Navigates to /admin/graph and provides AdminGraphPage object
+   * Sprint 38: Added authentication mocking for protected admin route
    */
   adminGraphPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const adminGraphPage = new AdminGraphPage(page);
     await adminGraphPage.goto();
     await use(adminGraphPage);
@@ -78,8 +143,10 @@ export const test = base.extend<Fixtures>({
   /**
    * Cost Dashboard Page Fixture
    * Navigates to /dashboard/costs and provides CostDashboardPage object
+   * Sprint 38: Added authentication mocking for protected admin route
    */
   costDashboardPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const costDashboardPage = new CostDashboardPage(page);
     // Tests handle navigation
     await use(costDashboardPage);
@@ -88,12 +155,37 @@ export const test = base.extend<Fixtures>({
   /**
    * Admin LLM Config Page Fixture
    * Navigates to /admin/llm-config and provides AdminLLMConfigPage object
+   * Sprint 38: Added authentication mocking for protected admin route
    */
   adminLLMConfigPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const adminLLMConfigPage = new AdminLLMConfigPage(page);
     await adminLLMConfigPage.goto();
     await use(adminLLMConfigPage);
   },
+
+  /**
+   * Authenticated Page Fixture
+   * Sets up auth mocking for protected routes
+   * Sprint 38: JWT Authentication support
+   */
+  authenticatedPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
+    await use(page);
+  },
+
+  /**
+   * Authenticated Chat Page Fixture
+   * Chat page with auth mocking for protected routes
+   * Sprint 38: JWT Authentication support
+   */
+  authChatPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
+    const chatPage = new ChatPage(page);
+    await chatPage.goto();
+    await use(chatPage);
+  },
 });
 
-export { expect };
+// Export setupAuthMocking for use in individual test files
+export { expect, setupAuthMocking };
