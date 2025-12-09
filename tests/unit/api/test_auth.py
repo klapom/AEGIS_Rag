@@ -435,9 +435,9 @@ class TestProtectedRoutes:
         self, mock_user_store_class: MagicMock, client: TestClient, sample_user: UserInDB
     ) -> None:
         """Test accessing protected route with valid token."""
-        # Setup mock UserStore
+        # Setup mock UserStore with proper async methods
         mock_store = MagicMock()
-        mock_store.get_user = AsyncMock(return_value=sample_user)
+        mock_store.get_user_by_id = AsyncMock(return_value=sample_user)
         mock_store.close = AsyncMock()
         mock_user_store_class.return_value = mock_store
 
@@ -450,8 +450,8 @@ class TestProtectedRoutes:
             headers={"Authorization": f"Bearer {tokens.access_token}"},
         )
 
-        # Should not get 401 (exact status depends on endpoint implementation)
-        assert response.status_code != status.HTTP_401_UNAUTHORIZED
+        # Should get 200 OK with user data
+        assert response.status_code == status.HTTP_200_OK
 
     def test_protected_route_without_token(self, client: TestClient) -> None:
         """Test accessing protected route without token."""
