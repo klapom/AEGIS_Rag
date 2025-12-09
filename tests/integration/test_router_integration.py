@@ -10,12 +10,18 @@ Tests cover:
 Prerequisites:
 - Ollama running on localhost:11434
 - llama3.2:3b model pulled (ollama pull llama3.2:3b)
+
+Note: These tests require real Ollama/LLM and are skipped in CI.
+Run locally with: pytest tests/integration/test_router_integration.py -v
 """
 
 import asyncio
 import time
 
 import pytest
+
+# Mark all tests in this module as requiring real LLM
+pytestmark = pytest.mark.requires_llm
 
 from src.agents.router import (
     IntentClassifier,

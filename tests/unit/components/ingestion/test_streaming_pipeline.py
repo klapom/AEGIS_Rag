@@ -264,7 +264,12 @@ class TestStreamingPipelineOrchestrator:
             assert len(results["embeddings"]) == 5
             assert all(len(emb) == 1024 for emb in results["embeddings"])
 
-            # Verify embedding queue was marked done
+            # Verify embedding queue has all items, then None sentinel
+            for i in range(5):
+                item = await orchestrator._embedding_queue.get()
+                assert item is not None
+                assert item.chunk_id == f"chunk_{i}"
+            # Now should get None (queue done)
             item = await orchestrator._embedding_queue.get()
             assert item is None
 
@@ -283,12 +288,13 @@ class TestStreamingPipelineOrchestrator:
         mock_doc = MagicMock()
         results = {"chunks": [], "errors": []}
 
+        # Patch at source modules due to lazy imports
         with (
             patch(
-                "src.components.ingestion.streaming_pipeline.extract_section_hierarchy"
+                "src.components.ingestion.section_extraction.extract_section_hierarchy"
             ) as mock_extract,
             patch(
-                "src.components.ingestion.streaming_pipeline.adaptive_section_chunking"
+                "src.components.ingestion.langgraph_nodes.adaptive_section_chunking"
             ) as mock_chunk,
         ):
 
@@ -350,7 +356,7 @@ class TestStreamingPipelineOrchestrator:
             "src.components.ingestion.streaming_pipeline.get_embedding_service"
         ) as mock_service:
             mock_instance = AsyncMock()
-            mock_instance.embed = mock_embed
+            mock_instance.embed_single = mock_embed  # Fixed: use embed_single not embed
             mock_service.return_value = mock_instance
 
             # Run embedding stage

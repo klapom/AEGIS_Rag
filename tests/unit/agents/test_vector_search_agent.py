@@ -154,6 +154,7 @@ async def test_process_success(mock_hybrid_search, sample_state):
         query="What is RAG?",
         top_k=5,
         use_reranking=True,
+        filters=None,
     )
 
     # Check state updates

@@ -6,9 +6,15 @@ Tests the new insert_documents_optimized() method that provides:
 - Per-chunk extraction with Three-Phase Pipeline
 - Graph-based provenance tracking (:chunk nodes + MENTIONED_IN relationships)
 - LightRAG compatibility (embeddings + query)
+
+Note: These tests require real Ollama/LLM and Neo4j, skipped in CI.
+Run locally with: pytest tests/integration/test_lightrag_provenance.py -v
 """
 
 import pytest
+
+# Mark all tests in this module as requiring real LLM
+pytestmark = pytest.mark.requires_llm
 from neo4j import AsyncGraphDatabase
 
 from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper

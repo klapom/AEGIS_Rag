@@ -129,9 +129,14 @@ class TypedQueue(Generic[T]):
 
         Returns:
             Item from queue, or None if queue is done (QUEUE_DONE sentinel received)
+
+        Note: When QUEUE_DONE is received, it is re-posted to the queue so that
+        multiple consumers can all receive the termination signal.
         """
         item = await self._queue.get()
         if item is QUEUE_DONE:
+            # Re-post sentinel for other consumers waiting on this queue
+            await self._queue.put(QUEUE_DONE)
             return None
         return item  # type: ignore[return-value]
 

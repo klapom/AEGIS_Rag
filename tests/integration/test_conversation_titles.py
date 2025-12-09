@@ -7,11 +7,17 @@ Tests:
 2. Title storage in conversation metadata
 3. Title update endpoint
 4. Title retrieval via GET /sessions/{session_id}
+
+Note: These tests require real LLM responses to validate title generation quality.
+Run locally with Ollama, skipped in CI (marked with @pytest.mark.requires_llm).
 """
 
 import pytest
 
 from src.api.v1.title_generator import generate_conversation_title
+
+# Mark all tests in this module as requiring real LLM
+pytestmark = pytest.mark.requires_llm
 
 
 @pytest.mark.asyncio

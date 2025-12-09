@@ -191,29 +191,13 @@ jobs:
           find src -name "*.py" -type f -exec python scripts/check_naming.py {} +
 
   # ============================================================
-  # JOB 4: ADR VALIDATION
+  # JOB 4: ADR VALIDATION (DISABLED)
   # ============================================================
-  adr-validation:
-    name: 📚 ADR Validation
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for diff
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Check if ADR needed
-        run: |
-          echo "Checking if ADR is required..."
-          python scripts/check_adr.py
-        continue-on-error: true  # Warning only, not blocking
+  # Disabled: ADR validation runs manually when needed
+  # adr-validation:
+  #   name: 📚 ADR Validation
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
 
   # ============================================================
   # JOB 5: UNIT TESTS
@@ -418,9 +402,11 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           # NOTE: No Ollama in CI - tests auto-mocked via tests/integration/conftest.py
+          # Tests marked with @pytest.mark.requires_llm need real Ollama and are skipped
         run: |
-          echo "Running integration tests..."
+          echo "Running integration tests (excluding LLM-dependent tests)..."
           poetry run pytest tests/integration/ \
+            -m "not requires_llm and not cloud" \
             --cov=src \
             --cov-report=xml \
             --cov-report=html \
@@ -846,7 +832,7 @@ jobs:
       - code-quality
       - python-import-validation
       - naming-conventions
-      - adr-validation
+      # - adr-validation  # Disabled
       - unit-tests
       - integration-tests
       - frontend-build
@@ -878,10 +864,11 @@ jobs:
             ALL_PASSED=false
           fi
 
-          if [[ "${{ needs.adr-validation.result }}" != "success" && "${{ needs.adr-validation.result }}" != "skipped" ]]; then
-            echo "❌ ADR Validation failed"
-            ALL_PASSED=false
-          fi
+          # ADR Validation disabled
+          # if [[ "${{ needs.adr-validation.result }}" != "success" && "${{ needs.adr-validation.result }}" != "skipped" ]]; then
+          #   echo "❌ ADR Validation failed"
+          #   ALL_PASSED=false
+          # fi
 
           if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
             echo "❌ Unit Tests failed"

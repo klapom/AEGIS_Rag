@@ -10,22 +10,25 @@ Requirements:
 - Ollama running on localhost:11434
 - Model: hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M
 
+Note: These tests require real Ollama/LLM and are skipped in CI.
+Run locally with: pytest tests/integration/test_gemma_retry_integration.py -v
+
 Author: Claude Code
 Date: 2025-10-27
 """
 
-import asyncio
 import time
 
 import pytest
-from ollama import Client
+
+# Mark all tests in this module as requiring real LLM
+pytestmark = pytest.mark.requires_llm
 
 from src.components.graph_rag.relation_extractor import (
     RelationExtractor,
     create_relation_extractor_from_config,
 )
 from src.core.config import get_settings
-
 
 # ============================================================================
 # Integration Tests - Real Ollama Service
@@ -105,7 +108,7 @@ async def test_extractor_handles_complex_entities():
 @pytest.mark.asyncio
 async def test_extractor_retry_config_from_settings():
     """Test that retry configuration is properly loaded from settings."""
-    settings = get_settings()
+    get_settings()
 
     # Create extractor with custom retry settings
     extractor = RelationExtractor(
@@ -324,7 +327,7 @@ async def test_e2e_graceful_degradation_on_service_issues():
     in integration tests. For now, we verify the extractor handles
     edge cases gracefully.
     """
-    settings = get_settings()
+    get_settings()
 
     # Create extractor with very short retry settings
     extractor = RelationExtractor(

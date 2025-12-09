@@ -10,18 +10,23 @@ Requirements:
 - Neo4j running on localhost:7687
 - Models: nomic-embed-text, gemma-3-4b-it
 
+Note: These tests require real Ollama/LLM and are skipped in CI.
+Run locally with: pytest tests/integration/test_extraction_factory_integration.py -v
+
 Author: Claude Code
 Date: 2025-10-27
 """
 
 import pytest
 
+# Mark all tests in this module as requiring real LLM
+pytestmark = pytest.mark.requires_llm
+
 from src.components.graph_rag.extraction_factory import (
     ExtractionPipelineFactory,
     create_extraction_pipeline_from_config,
 )
 from src.core.config import get_settings
-
 
 # ============================================================================
 # Integration Tests - Real Services
