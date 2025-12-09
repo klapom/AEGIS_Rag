@@ -66,6 +66,7 @@ Title:"""
             complexity=Complexity.LOW,  # Lightweight generation
             max_tokens=20,  # Very short output
             temperature=0.3,  # Low temperature for consistency
+            model_local="qwen3:8b",  # Fast Qwen3 8B for titles (DGX Spark)
         )
 
         response = await llm_proxy.generate(task)

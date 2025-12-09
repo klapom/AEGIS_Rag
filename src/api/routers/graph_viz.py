@@ -243,24 +243,77 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
     try:
         neo4j = get_neo4j_client()
 
-        # Build filter query
-        type_filter = ""
+        # Build filter conditions (without WHERE keyword)
+        type_condition = ""
         if request.entity_types:
-            type_filter = f"WHERE n.entity_type IN {request.entity_types}"
+            type_condition = f"n.entity_type IN {request.entity_types}"
 
-        # Query nodes and relationships
-        query = f"""
+        # Query nodes - entities
+        node_query = f"""
         MATCH (n:base)
-        {type_filter}
-        WITH n
+        {f'WHERE {type_condition}' if type_condition else ''}
+        RETURN n
         LIMIT {request.max_nodes}
-        OPTIONAL MATCH (n)-[r]->(m:base)
-        RETURN n, r, m
+        """
+
+        # Query entity-to-entity connections via shared chunks (co-occurrence)
+        # Two entities are connected if they are MENTIONED_IN the same chunk
+        co_occurs_condition = type_condition.replace('n.', 'e1.') if type_condition else ""
+        edge_query = f"""
+        MATCH (e1:base)-[:MENTIONED_IN]->(c:chunk)<-[:MENTIONED_IN]-(e2:base)
+        WHERE id(e1) < id(e2) {f'AND {co_occurs_condition}' if co_occurs_condition else ''}
+        WITH e1, e2, count(c) as shared_chunks
+        RETURN e1, e2, shared_chunks
+        LIMIT 500
+        """
+
+        # Query MENTIONED_IN relationships (entity -> chunk)
+        mentioned_query = f"""
+        MATCH (n:base)-[r:MENTIONED_IN]->(c:chunk)
+        {f'WHERE {type_condition}' if type_condition else ''}
+        RETURN n, r, c
+        LIMIT 500
         """
 
         async with neo4j.driver.session() as session:
-            result = await session.run(query)
-            records = await result.data()
+            # Get nodes (entities)
+            node_result = await session.run(node_query)
+            node_records = await node_result.data()
+
+            # Get CO_OCCURS edges (entity co-occurrence)
+            edge_result = await session.run(edge_query)
+            edge_records = await edge_result.data()
+
+            # Get MENTIONED_IN edges (entity -> chunk)
+            mentioned_result = await session.run(mentioned_query)
+            mentioned_records = await mentioned_result.data()
+
+        # Combine into records format expected by _export_json
+        records = []
+        for rec in node_records:
+            records.append({"n": rec["n"], "r": None, "m": None})
+
+        # Add CO_OCCURS edges (entity-to-entity via shared chunks)
+        for rec in edge_records:
+            records.append({
+                "n": rec["e1"],
+                "r": {"type": "CO_OCCURS", "weight": min(1.0, rec["shared_chunks"] / 5.0)},
+                "m": rec["e2"],
+            })
+
+        # Add MENTIONED_IN edges (entity -> chunk)
+        for rec in mentioned_records:
+            # Add chunk as a node too
+            chunk = rec["c"]
+            records.append({
+                "n": rec["n"],
+                "r": {"type": "MENTIONED_IN"},
+                "m": {
+                    "entity_name": chunk.get("chunk_id", chunk.get("id", "chunk")),
+                    "entity_type": "CHUNK",
+                    **chunk
+                },
+            })
 
         # Format based on export type
         if request.format == "json":
@@ -269,6 +322,9 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
             return _export_graphml(records)
         elif request.format == "cytoscape":
             return _export_cytoscape(records)
+
+        # Fallback (should not reach here)
+        return _export_json(records, request.include_communities)
 
     except Exception as e:
         logger.error("graph_export_failed", error=str(e), format=request.format)

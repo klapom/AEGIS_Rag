@@ -114,19 +114,19 @@ class QueryDecomposer:
 
     Attributes:
         proxy: AegisLLMProxy instance
-        model_name: Preferred local model name (default: llama3.2)
+        model_name: Preferred local model name (default: qwen3:8b for DGX Spark)
         classification_threshold: Minimum confidence for complex queries
     """
 
     def __init__(
         self,
-        model_name: str = "llama3.2",
+        model_name: str = "qwen3:8b",
         classification_threshold: float = 0.7,
     ) -> None:
         """Initialize query decomposer.
 
         Args:
-            model_name: Preferred local model name (default: llama3.2)
+            model_name: Preferred local model name (default: qwen3:8b for DGX Spark)
             classification_threshold: Confidence threshold for complex queries
         """
         # Sprint 23: Use AegisLLMProxy for multi-cloud routing

@@ -38,17 +38,17 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
+import bcrypt
 import redis.asyncio as redis
 import structlog
-from passlib.context import CryptContext
 from pydantic import BaseModel, Field, field_validator
 
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
-# Bcrypt password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Bcrypt cost factor for password hashing
+BCRYPT_ROUNDS = 12
 
 
 class UserCreate(BaseModel):
@@ -196,7 +196,8 @@ class UserStore:
             >>> hash.startswith("$2b$")
             True
         """
-        return pwd_context.hash(password)  # type: ignore[no-any-return]
+        salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+        return bcrypt.hashpw(password.encode(), salt).decode()
 
     async def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash.
@@ -215,7 +216,7 @@ class UserStore:
             >>> await self.verify_password("wrong", hash)
             False
         """
-        return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
+        return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
     def _user_key(self, user_id: str) -> str:
         """Generate Redis key for user data.

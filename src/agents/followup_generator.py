@@ -122,7 +122,7 @@ Output ONLY a JSON array of question strings (no other text):
             complexity=Complexity.LOW,  # Simple task
             max_tokens=512,
             temperature=0.7,  # Some creativity for diverse questions
-            model_local="llama3.2:3b",  # Fast 3B model
+            model_local="qwen3:8b",  # Fast Qwen3 8B model (DGX Spark)
         )
 
         proxy = get_aegis_llm_proxy()
