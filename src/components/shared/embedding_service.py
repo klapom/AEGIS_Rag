@@ -214,7 +214,7 @@ class UnifiedEmbeddingService:
             embedding = response.get("embedding", [])
 
             if not embedding:
-                raise LLMError(f"Empty embedding returned for text: {text[:100]}")
+                raise LLMError("embed_single", f"Empty embedding returned for text: {text[:100]}")
 
             # Cache result
             self.cache.set(cache_key, embedding)
@@ -232,7 +232,7 @@ class UnifiedEmbeddingService:
 
         except Exception as e:
             logger.error("embedding_generation_failed", text_preview=text[:50], error=str(e))
-            raise LLMError(f"Failed to generate embedding: {e}") from e
+            raise LLMError("embed_single", f"Failed to generate embedding: {e}") from e
 
     async def embed_batch(self, texts: list[str], max_concurrent: int = 10) -> list[list[float]]:
         """Embed batch of texts with caching and parallel processing.
