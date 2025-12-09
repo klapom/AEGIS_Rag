@@ -51,7 +51,8 @@ jobs:
 
       - name: Install Dependencies (Code Quality Only)
         run: |
-          poetry install --only dev --no-root
+          poetry install --without monitoring --only dev --no-root
+
       
       - name: Run Ruff Linter
         run: |
@@ -117,7 +118,8 @@ jobs:
 
       - name: Install Dependencies (Core + Ingestion + Reranking for Import Validation)
         run: |
-          poetry install --with ingestion,reranking --no-interaction
+          poetry install --without monitoring --only dev --no-root
+
 
       - name: Validate All Python Imports
         run: |
@@ -234,7 +236,8 @@ jobs:
 
       - name: Install Dependencies (Core + Dev)
         run: |
-          poetry install --with dev --no-interaction --no-ansi
+          poetry install --without monitoring --with dev --no-interaction --no-ansi
+
 
       - name: Clear Python Bytecode Cache
         run: |
@@ -364,7 +367,8 @@ jobs:
 
       - name: Install Dependencies (Core + Dev + Ingestion for Integration)
         run: |
-          poetry install --with dev,ingestion --no-interaction --no-ansi
+          poetry install --without monitoring --with dev,ingestion --no-interaction --no-ansi
+
 
       - name: Wait for Services
         run: |
@@ -607,7 +611,8 @@ jobs:
           poetry config virtualenvs.in-project true
 
       - name: Install Backend Dependencies (Core + Ingestion for E2E)
-        run: poetry install --with ingestion --no-interaction
+        run: poetry install --without monitoring --with ingestion --no-interaction
+
 
       - name: Wait for Services
         run: |
@@ -690,7 +695,8 @@ jobs:
           poetry config virtualenvs.in-project true
 
       - name: Install Dependencies (Core for API Contract)
-        run: poetry install --no-interaction
+        run: poetry install --without monitoring --no-interaction
+
 
       - name: Generate OpenAPI Schema
         run: |
@@ -984,7 +990,8 @@ jobs:
 
       - name: Install Dependencies (All Features for Performance)
         run: |
-          poetry install --all-extras --no-interaction --no-ansi
+          poetry install --without monitoring --all-extras --no-interaction --no-ansi
+
 
       - name: Run Benchmarks
         run: |
