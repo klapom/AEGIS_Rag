@@ -60,6 +60,7 @@ class AgentState(MessagesState):
         search_mode: Search mode to use
         graph_query_result: Results from graph RAG query (Sprint 5)
         metadata: Additional metadata for execution tracking
+        namespaces: List of namespaces to search in (Sprint 41 Feature 41.4)
     """
 
     query: str = Field(default="", description="Original user query")
@@ -90,6 +91,10 @@ class AgentState(MessagesState):
     citation_map: dict[int, dict[str, Any]] = Field(
         default_factory=dict,
         description="Map of citation numbers to source metadata (Sprint 27 Feature 27.10)",
+    )
+    namespaces: list[str] | None = Field(
+        default=None,
+        description='Namespaces to search in. Defaults to ["default", "general"] (Sprint 41 Feature 41.4)',
     )
 
 
@@ -128,12 +133,15 @@ class QueryMetadata(BaseModel):
     )
 
 
-def create_initial_state(query: str, intent: str = "hybrid") -> dict[str, Any]:
+def create_initial_state(
+    query: str, intent: str = "hybrid", namespaces: list[str] | None = None
+) -> dict[str, Any]:
     """Create initial agent state from user query.
 
     Args:
         query: User's query string
         intent: Detected intent (default: "hybrid")
+        namespaces: Namespaces to search in (default: None, will use ["default", "general"])
 
     Returns:
         Dictionary representing the initial AgentState
@@ -144,6 +152,7 @@ def create_initial_state(query: str, intent: str = "hybrid") -> dict[str, Any]:
         "intent": intent,
         "retrieved_contexts": [],
         "search_mode": intent if intent in ["vector", "graph", "hybrid"] else "hybrid",
+        "namespaces": namespaces,
         "metadata": {
             "timestamp": datetime.now(UTC).isoformat(),
             "agent_path": [],

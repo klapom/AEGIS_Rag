@@ -41,7 +41,7 @@ export default defineConfig({
 
   use: {
     /* Use base URL for all requests */
-    baseURL: 'http://localhost:5179',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5179',
 
     /* Collect trace when retrying failed tests */
     trace: 'retain-on-failure',

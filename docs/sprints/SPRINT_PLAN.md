@@ -1280,6 +1280,78 @@ See: `docs/sprints/SPRINT_34_PLAN.md`
 
 ---
 
+## Sprint 41: RAG Evaluation with RAGAS
+**Status:** PLANNED
+**Branch:** `sprint-41-ragas-evaluation`
+**Estimated Story Points:** 21 SP
+**Prerequisites:** Sprint 42 (4-Way Hybrid RRF) complete
+
+### Context
+Evaluate the current AEGIS RAG system using RAGAS (Retrieval Augmented Generation Assessment). Compare the new 4-Way Hybrid RRF against the Sprint 3 baseline (0.88 average) and identify optimization opportunities.
+
+### Features
+| # | Feature | SP | Priority |
+|---|---------|-----|----------|
+| 41.1 | Evaluation Dataset Creation | 8 | High |
+| 41.2 | RAGAS Evaluation Pipeline | 5 | High |
+| 41.3 | Comparative Analysis (4-Way vs 2-Way) | 5 | Medium |
+| 41.4 | Evaluation Dashboard/Reports | 3 | Medium |
+
+### Key Deliverables
+- Custom Q&A dataset (50-100 triplets) with intent coverage
+- RAGAS integration with 4-Way Hybrid Search
+- Per-intent metric breakdown (factual, keyword, exploratory, summary)
+- Comparative analysis: 4-Way vs 2-Way (Vector+BM25)
+- CLI report generation with regression detection
+
+### Success Criteria
+| Metric | Target | Baseline (Sprint 3) |
+|--------|--------|---------------------|
+| Context Precision | ≥0.90 | 0.91 |
+| Context Recall | ≥0.90 | 0.87 |
+| Faithfulness | ≥0.88 | 0.88 |
+| Answer Relevancy | ≥0.85 | N/A |
+| **Average** | **≥0.88** | **0.88** |
+
+### Dependencies
+- RAGAS 0.3.7 (existing in pyproject.toml)
+- Datasets 4.0.0 (existing in pyproject.toml)
+- Sprint 42: 4-Way Hybrid RRF (COMPLETED)
+
+### Full Plan
+See: `docs/sprints/SPRINT_41_PLAN.md`
+
+---
+
+## Sprint 42: 4-Way Hybrid RRF with Intent-Weighted Scoring
+**Status:** COMPLETED
+**Actual Duration:** 1 day (2025-12-09)
+**Story Points:** 28 SP (Delivered)
+
+### Features Delivered
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 42.1 | Intent Classifier (LLM + rule-based fallback) | 8 | ✅ |
+| 42.2 | 4-Way Hybrid Search Engine | 13 | ✅ |
+| 42.3 | Automatic Community Detection | 5 | ✅ |
+| 42.4 | DGX Spark Compatibility Fix | 2 | ✅ |
+
+### Key Deliverables
+- `IntentClassifier` with 4 intent types (factual, keyword, exploratory, summary)
+- `FourWayHybridSearch` with Vector + BM25 + Graph Local + Graph Global
+- Intent-weighted RRF fusion formula
+- Community Detection integration in ingestion pipeline
+
+### Test Results
+- 95 unit tests passed (0.95s)
+- 100% intent classification accuracy on test queries
+- Graceful degradation verified
+
+### Full Plan
+See: `docs/sprints/SPRINT_42_PLAN.md`
+
+---
+
 ## Post-Sprint 17: Continuous Improvement Backlog
 
 ### High Priority

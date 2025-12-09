@@ -41,6 +41,7 @@ class MetadataFilters(BaseModel):
         source_not_in: Exclude these sources
         doc_type_in: Include only these document types (OR logic)
         tags_contains: Documents must have ALL these tags (AND logic)
+        namespace: Filter by namespace(s) (Sprint 41 Feature 41.4)
     """
 
     created_after: datetime | None = Field(
@@ -58,6 +59,10 @@ class MetadataFilters(BaseModel):
     )
     tags_contains: list[str] | None = Field(
         None, description="Documents must have ALL these tags (AND logic)"
+    )
+    namespace: list[str] | None = Field(
+        None,
+        description='Filter by namespace(s). Defaults to ["default", "general"] (Sprint 41 Feature 41.4)',
     )
 
     @field_validator("doc_type_in")
@@ -208,6 +213,16 @@ class MetadataFilterEngine:
                     )
                 )
             logger.debug("filter_tags_contains", tags=filters.tags_contains)
+
+        # Namespace filter (Sprint 41 Feature 41.4)
+        if filters.namespace is not None and len(filters.namespace) > 0:
+            conditions.append(
+                FieldCondition(
+                    key="namespace",
+                    match=MatchAny(any=filters.namespace),
+                )
+            )
+            logger.debug("filter_namespace", namespaces=filters.namespace)
 
         # Build must_not conditions
         must_not_conditions = []

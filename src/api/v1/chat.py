@@ -202,6 +202,10 @@ class ChatRequest(BaseModel):
     include_tool_calls: bool = Field(
         default=False, description="Include MCP tool call information in response"
     )
+    namespaces: list[str] | None = Field(
+        default=None,
+        description='Namespaces to search in. Defaults to ["default", "general"] if not specified.',
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -210,6 +214,7 @@ class ChatRequest(BaseModel):
                 "session_id": "user-123-session",
                 "include_sources": True,
                 "include_tool_calls": False,
+                "namespaces": ["default", "general"],
             }
         }
     )
@@ -361,7 +366,10 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Process query through multi-agent system
         result = await coordinator.process_query(
-            query=request.query, session_id=session_id, intent=request.intent
+            query=request.query,
+            session_id=session_id,
+            intent=request.intent,
+            namespaces=request.namespaces,
         )
 
         # Extract answer from result
@@ -526,7 +534,10 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             if hasattr(coordinator, "process_query_stream"):
                 # Stream from CoordinatorAgent
                 async for chunk in coordinator.process_query_stream(
-                    query=request.query, session_id=session_id, intent=request.intent
+                    query=request.query,
+                    session_id=session_id,
+                    intent=request.intent,
+                    namespaces=request.namespaces,
                 ):
                     # Sprint 17 Feature 17.2: Collect tokens and sources
                     if isinstance(chunk, dict):
@@ -547,7 +558,10 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
                 # Process query normally
                 result = await coordinator.process_query(
-                    query=request.query, session_id=session_id, intent=request.intent
+                    query=request.query,
+                    session_id=session_id,
+                    intent=request.intent,
+                    namespaces=request.namespaces,
                 )
 
                 # Extract answer, intent, and citation_map (Sprint 27 Feature 27.10)

@@ -257,3 +257,20 @@ class FileTooLargeError(AegisRAGException):
             status_code=413,
             details={"filename": filename, "size_mb": size_mb, "max_size_mb": max_size_mb},
         )
+
+
+class EvaluationError(AegisRAGException):
+    """Raised when evaluation operation fails.
+
+    Sprint 41 Feature 41.7: Used by RAGAS evaluator when evaluation fails.
+    """
+
+    def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
+        from src.core.models import ErrorCode
+
+        super().__init__(
+            message=message,
+            error_code=ErrorCode.INTERNAL_SERVER_ERROR,
+            status_code=500,
+            details=details or {},
+        )

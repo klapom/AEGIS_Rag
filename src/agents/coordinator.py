@@ -72,6 +72,7 @@ class CoordinatorAgent:
         query: str,
         session_id: str | None = None,
         intent: str | None = None,
+        namespaces: list[str] | None = None,
     ) -> dict[str, Any]:
         """Process a user query through the multi-agent system.
 
@@ -86,6 +87,7 @@ class CoordinatorAgent:
             session_id: Optional session ID for conversation persistence.
                        If None, a new session is created.
             intent: Optional intent override (default: let router decide)
+            namespaces: Optional list of namespaces to search in (default: ["default", "general"])
 
         Returns:
             Final state dictionary containing:
@@ -102,7 +104,8 @@ class CoordinatorAgent:
             >>> coordinator = CoordinatorAgent()
             >>> result = await coordinator.process_query(
             ...     query="What is RAG?",
-            ...     session_id="user123_session456"
+            ...     session_id="user123_session456",
+            ...     namespaces=["default", "project_docs"]
             ... )
             >>> print(f"Retrieved {len(result['retrieved_contexts'])} docs")
         """
@@ -114,12 +117,14 @@ class CoordinatorAgent:
                 query=query[:100],
                 session_id=session_id,
                 intent=intent,
+                namespaces=namespaces,
             )
 
             # Create initial state
             initial_state = create_initial_state(
                 query=query,
                 intent=intent or "hybrid",
+                namespaces=namespaces,
             )
 
             # Create session config

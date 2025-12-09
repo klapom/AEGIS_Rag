@@ -90,8 +90,11 @@ class VectorSearchAgent(BaseAgent):
         timing = self._measure_latency()
 
         try:
+            # Get namespaces from state (Sprint 41 Feature 41.4)
+            namespaces = state.get("namespaces")
+
             # Perform hybrid search with retry logic
-            search_result = await self._search_with_retry(query)
+            search_result = await self._search_with_retry(query, namespaces=namespaces)
 
             # Convert results to dict format for state
             retrieved_contexts = [
@@ -159,11 +162,14 @@ class VectorSearchAgent(BaseAgent):
         retry=retry_if_exception_type(VectorSearchError),
         reraise=True,
     )
-    async def _search_with_retry(self, query: str) -> dict[str, Any]:
+    async def _search_with_retry(
+        self, query: str, namespaces: list[str] | None = None
+    ) -> dict[str, Any]:
         """Perform hybrid search with retry logic.
 
         Args:
             query: Search query
+            namespaces: Optional list of namespaces to search in
 
         Returns:
             Search results from HybridSearch
@@ -172,16 +178,25 @@ class VectorSearchAgent(BaseAgent):
             VectorSearchError: If search fails after retries
         """
         try:
+            # Build filters for namespace filtering (Sprint 41 Feature 41.4)
+            filters = None
+            if namespaces:
+                from src.components.retrieval.filters import MetadataFilters
+
+                filters = MetadataFilters(namespace=namespaces)
+
             return await self.hybrid_search.hybrid_search(
                 query=query,
                 top_k=self.top_k,
                 use_reranking=self.use_reranking,
+                filters=filters,
             )
         except Exception as e:
             self.logger.warning(
                 "Search attempt failed, will retry",
                 error=str(e),
                 query_length=len(query),
+                namespaces=namespaces,
             )
             raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
 

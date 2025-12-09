@@ -56,6 +56,21 @@ Frontend:
 
 **Hardware:** NVIDIA GB10 (Blackwell), CUDA 13.0, 128GB Unified Memory, ARM64
 
+### Running Services (alle auf DGX Spark!)
+```yaml
+Backend:   http://localhost:8000  # FastAPI (uvicorn)
+Frontend:  http://localhost:5179  # Vite dev server
+Qdrant:    localhost:6333/6334    # Vector DB (gRPC on 6334)
+Neo4j:     bolt://localhost:7687  # Graph DB (Browser: 7474)
+Redis:     localhost:6379         # Memory/Cache
+Ollama:    http://localhost:11434 # LLM (llama3.2:8b)
+```
+
+**WICHTIG:** Alle Services laufen lokal auf der DGX Spark, NICHT in Docker!
+- Backend/Frontend: Direkt mit poetry/npm gestartet
+- Datenbanken: Native Installation auf DGX Spark
+- Docling Container: Muss separat gestartet werden für PDF-Ingestion
+
 ### Framework Compatibility
 | Framework | Status | Notes |
 |-----------|--------|-------|
