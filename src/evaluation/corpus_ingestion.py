@@ -46,7 +46,6 @@ import structlog
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from src.components.shared.embedding_service import get_embedding_service
-from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 from src.core.namespace import NamespaceManager, get_namespace_manager
@@ -102,6 +101,8 @@ class BenchmarkCorpusIngestionPipeline:
         namespace_manager: NamespaceManager | None = None,
         collection_name: str | None = None,
         batch_size: int = 50,
+        enable_bm25: bool = True,
+        enable_graph: bool = True,
     ) -> None:
         """Initialize benchmark corpus ingestion pipeline.
 
@@ -111,19 +112,27 @@ class BenchmarkCorpusIngestionPipeline:
             namespace_manager: Namespace manager (lazy-loaded if None)
             collection_name: Target collection (default: from settings)
             batch_size: Batch size for embedding and upsert (default: 50)
+            enable_bm25: Enable BM25 index update (Sprint 43, default: True)
+            enable_graph: Enable graph extraction to Neo4j (Sprint 43, default: True)
         """
         self._qdrant_client = qdrant_client
         self._embedding_service = embedding_service
         self._namespace_manager = namespace_manager
         self._benchmark_loader = get_benchmark_loader()
+        self._bm25_search: BM25Search | None = None
+        self._lightrag_wrapper: Any = None
 
         self.collection_name = collection_name or settings.qdrant_collection
         self.batch_size = batch_size
+        self.enable_bm25 = enable_bm25
+        self.enable_graph = enable_graph
 
         logger.info(
             "BenchmarkCorpusIngestionPipeline initialized",
             collection=self.collection_name,
             batch_size=self.batch_size,
+            enable_bm25=self.enable_bm25,
+            enable_graph=self.enable_graph,
         )
 
     @property
@@ -146,6 +155,20 @@ class BenchmarkCorpusIngestionPipeline:
         if self._namespace_manager is None:
             self._namespace_manager = get_namespace_manager()
         return self._namespace_manager
+
+    @property
+    def bm25_search(self) -> BM25Search:
+        """Get BM25 search (lazy initialization)."""
+        if self._bm25_search is None:
+            self._bm25_search = BM25Search()
+        return self._bm25_search
+
+    async def get_lightrag_wrapper(self) -> Any:
+        """Get LightRAG wrapper (lazy async initialization)."""
+        if self._lightrag_wrapper is None:
+            from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+            self._lightrag_wrapper = await get_lightrag_wrapper_async()
+        return self._lightrag_wrapper
 
     def _get_namespace_id(self, dataset_name: str) -> str:
         """Get namespace ID for a dataset.
@@ -361,7 +384,12 @@ class BenchmarkCorpusIngestionPipeline:
         contexts: list[dict[str, Any]],
         namespace_id: str,
     ) -> dict[str, Any]:
-        """Batch process contexts: embed and upsert to Qdrant.
+        """Batch process contexts: embed, upsert to Qdrant, BM25, and Graph.
+
+        Sprint 43 Feature 43.1: Full Pipeline Integration
+        - Qdrant: Vector embeddings for semantic search
+        - BM25: Keyword index for exact matching
+        - Neo4j: Entity extraction for graph-based retrieval
 
         Args:
             contexts: List of context dicts with metadata
@@ -375,6 +403,8 @@ class BenchmarkCorpusIngestionPipeline:
             "contexts_ingested": 0,
             "contexts_failed": 0,
             "batches_processed": 0,
+            "bm25_indexed": 0,
+            "graph_entities_extracted": 0,
         }
 
         # Process in batches
@@ -455,6 +485,84 @@ class BenchmarkCorpusIngestionPipeline:
                     error=str(e),
                 )
                 stats["contexts_failed"] += len(batch)
+
+        # Sprint 43: BM25 Index Update (after all Qdrant batches)
+        if self.enable_bm25 and contexts:
+            try:
+                bm25_start = time.perf_counter()
+
+                # Prepare documents for BM25
+                bm25_documents = [
+                    {
+                        "text": ctx["text"],
+                        "namespace_id": namespace_id,
+                        "chunk_id": ctx["metadata"]["chunk_id"],
+                    }
+                    for ctx in contexts
+                ]
+
+                # Fit BM25 model on corpus
+                self.bm25_search.fit(bm25_documents, text_field="text")
+
+                bm25_duration_ms = (time.perf_counter() - bm25_start) * 1000
+                stats["bm25_indexed"] = len(contexts)
+
+                logger.info(
+                    "BM25 index updated",
+                    namespace=namespace_id,
+                    documents=len(contexts),
+                    duration_ms=round(bm25_duration_ms, 2),
+                )
+
+            except Exception as e:
+                logger.warning(
+                    "BM25 indexing failed (non-fatal)",
+                    namespace=namespace_id,
+                    error=str(e),
+                )
+
+        # Sprint 43: Graph Extraction (optional, can be slow)
+        if self.enable_graph and contexts:
+            try:
+                graph_start = time.perf_counter()
+
+                # Get LightRAG wrapper
+                lightrag = await self.get_lightrag_wrapper()
+
+                # Prepare documents for graph extraction
+                graph_documents = [
+                    {
+                        "text": ctx["text"],
+                        "id": ctx["metadata"]["chunk_id"],
+                        "metadata": {
+                            "namespace_id": namespace_id,
+                            "source": ctx["metadata"]["source"],
+                        },
+                    }
+                    for ctx in contexts
+                ]
+
+                # Insert documents for entity extraction
+                # Note: This uses the optimized three-phase pipeline
+                result = await lightrag.insert_documents_optimized(graph_documents)
+
+                graph_duration_ms = (time.perf_counter() - graph_start) * 1000
+                stats["graph_entities_extracted"] = result.get("entities_created", 0)
+
+                logger.info(
+                    "Graph extraction complete",
+                    namespace=namespace_id,
+                    documents=len(contexts),
+                    entities=stats["graph_entities_extracted"],
+                    duration_ms=round(graph_duration_ms, 2),
+                )
+
+            except Exception as e:
+                logger.warning(
+                    "Graph extraction failed (non-fatal)",
+                    namespace=namespace_id,
+                    error=str(e),
+                )
 
         return stats
 

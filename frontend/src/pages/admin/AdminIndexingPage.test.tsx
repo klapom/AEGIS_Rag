@@ -151,7 +151,8 @@ describe('AdminIndexingPage', () => {
       const scanButton = screen.getByTestId('scan-directory');
       await userEvent.click(scanButton);
 
-      expect(screen.getByText(/Scanne/i)).toBeInTheDocument();
+      // Check loading spinner in button (use getAllByText since "Scannen" appears in description too)
+      expect(screen.getByText('Scanne...')).toBeInTheDocument();
 
       await waitFor(() => {
         expect(screen.getByTestId('file-list')).toBeInTheDocument();
