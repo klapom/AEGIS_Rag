@@ -232,9 +232,7 @@ class ChunkingService:
         # Fallback: approximate token count (avg 4 chars/token)
         return max(1, len(text) // 4)
 
-    def _generate_chunk_id(
-        self, document_id: str, chunk_index: int, text: str
-    ) -> str:
+    def _generate_chunk_id(self, document_id: str, chunk_index: int, text: str) -> str:
         """Generate unique chunk ID.
 
         Format: UUID4-style (8-4-4-4-12 hex chars with dashes)
@@ -302,9 +300,7 @@ class ChunkingService:
 
         # Route to appropriate chunking method
         if self.config.strategy == ChunkStrategyEnum.ADAPTIVE:
-            chunks = await self._chunk_adaptive(
-                text, document_id, sections, metadata
-            )
+            chunks = await self._chunk_adaptive(text, document_id, sections, metadata)
         elif self.config.strategy == ChunkStrategyEnum.FIXED:
             chunks = await self._chunk_fixed(text, document_id, metadata)
         elif self.config.strategy == ChunkStrategyEnum.SENTENCE:
@@ -317,7 +313,11 @@ class ChunkingService:
         # Record metrics
         duration = time.time() - start_time
         # Handle both enum and string (use_enum_values=True converts to string)
-        strategy_label = self.config.strategy if isinstance(self.config.strategy, str) else self.config.strategy.value
+        strategy_label = (
+            self.config.strategy
+            if isinstance(self.config.strategy, str)
+            else self.config.strategy.value
+        )
 
         chunking_duration_seconds.labels(strategy=strategy_label).observe(duration)
         chunks_created_total.labels(strategy=strategy_label).inc(len(chunks))
@@ -379,9 +379,7 @@ class ChunkingService:
                 section_heading = section.heading
                 section_page = section.page_no
                 section_bbox = section.bbox
-                section_tokens = section.token_count or self._count_tokens(
-                    section_text
-                )
+                section_tokens = section.token_count or self._count_tokens(section_text)
 
                 # If adding this section would exceed max, flush current
                 if current_tokens + section_tokens > self.config.max_tokens:
@@ -399,9 +397,7 @@ class ChunkingService:
 
                     # Start new chunk
                     current_text = section_text
-                    current_headings = (
-                        [section_heading] if section_heading else []
-                    )
+                    current_headings = [section_heading] if section_heading else []
                     current_pages = [section_page] if section_page else []
                     current_bboxes = [section_bbox] if section_bbox else []
                     current_tokens = section_tokens
@@ -538,10 +534,7 @@ class ChunkingService:
             sentence_tokens = self._count_tokens(sentence)
 
             # Check if adding this sentence would exceed chunk_size
-            if (
-                current_tokens + sentence_tokens > self.config.max_tokens
-                and current_chunk
-            ):
+            if current_tokens + sentence_tokens > self.config.max_tokens and current_chunk:
                 # Create chunk from accumulated sentences
                 chunk_text = " ".join(current_chunk)
                 chunk = self._create_chunk(
@@ -610,10 +603,7 @@ class ChunkingService:
             para_tokens = self._count_tokens(para)
 
             # Check if adding paragraph would exceed chunk_size
-            if (
-                current_tokens + para_tokens > self.config.max_tokens
-                and current_paragraphs
-            ):
+            if current_tokens + para_tokens > self.config.max_tokens and current_paragraphs:
                 # Create chunk from accumulated paragraphs
                 chunk_text = "\n\n".join(current_paragraphs)
                 chunk = self._create_chunk(

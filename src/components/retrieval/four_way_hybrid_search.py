@@ -250,7 +250,7 @@ class FourWayHybridSearch:
         if use_reranking and fused_results:
             reranked = await self.hybrid_search.reranker.rerank(
                 query=query,
-                documents=fused_results[:top_k * 2],
+                documents=fused_results[: top_k * 2],
                 top_k=top_k,
             )
             final_results = []
@@ -260,11 +260,13 @@ class FourWayHybridSearch:
                     None,
                 )
                 if original:
-                    final_results.append({
-                        **original,
-                        "rerank_score": rerank_result.rerank_score,
-                        "final_rank": rerank_result.final_rank,
-                    })
+                    final_results.append(
+                        {
+                            **original,
+                            "rerank_score": rerank_result.rerank_score,
+                            "final_rank": rerank_result.final_rank,
+                        }
+                    )
         else:
             final_results = fused_results[:top_k]
 
@@ -373,17 +375,21 @@ class FourWayHybridSearch:
         # Format results
         formatted_results = []
         for rank, result in enumerate(results, start=1):
-            formatted_results.append({
-                "id": str(result["id"]),
-                "text": result["payload"].get("content", result["payload"].get("text", "")),
-                "score": result["score"],
-                "source": result["payload"].get("document_path", result["payload"].get("source", "unknown")),
-                "document_id": result["payload"].get("document_id", ""),
-                "namespace_id": result["payload"].get("namespace_id", DEFAULT_NAMESPACE),
-                "rank": rank,
-                "search_type": "vector",
-                "source_channel": "vector",
-            })
+            formatted_results.append(
+                {
+                    "id": str(result["id"]),
+                    "text": result["payload"].get("content", result["payload"].get("text", "")),
+                    "score": result["score"],
+                    "source": result["payload"].get(
+                        "document_path", result["payload"].get("source", "unknown")
+                    ),
+                    "document_id": result["payload"].get("document_id", ""),
+                    "namespace_id": result["payload"].get("namespace_id", DEFAULT_NAMESPACE),
+                    "rank": rank,
+                    "search_type": "vector",
+                    "source_channel": "vector",
+                }
+            )
 
         logger.debug(
             "vector_search_with_namespaces",
@@ -429,7 +435,9 @@ class FourWayHybridSearch:
         else:
             # No filtering, add default namespace
             for result in results:
-                result["namespace_id"] = result.get("metadata", {}).get("namespace_id", DEFAULT_NAMESPACE)
+                result["namespace_id"] = result.get("metadata", {}).get(
+                    "namespace_id", DEFAULT_NAMESPACE
+                )
 
         # Add source channel marker
         for r in results:
@@ -522,18 +530,20 @@ class FourWayHybridSearch:
             # Format results for RRF
             formatted = []
             for rank, record in enumerate(results, start=1):
-                formatted.append({
-                    "id": record["id"],
-                    "text": record["text"] or "",
-                    "document_id": record.get("document_id", ""),
-                    "source": record.get("source", ""),
-                    "namespace_id": record.get("namespace_id", DEFAULT_NAMESPACE),
-                    "score": record.get("relevance", 1),  # Entity match count as score
-                    "rank": rank,
-                    "search_type": "graph_local",
-                    "source_channel": "graph_local",
-                    "matched_entities": record.get("entities", []),
-                })
+                formatted.append(
+                    {
+                        "id": record["id"],
+                        "text": record["text"] or "",
+                        "document_id": record.get("document_id", ""),
+                        "source": record.get("source", ""),
+                        "namespace_id": record.get("namespace_id", DEFAULT_NAMESPACE),
+                        "score": record.get("relevance", 1),  # Entity match count as score
+                        "rank": rank,
+                        "search_type": "graph_local",
+                        "source_channel": "graph_local",
+                        "matched_entities": record.get("entities", []),
+                    }
+                )
 
             logger.debug(
                 "graph_local_search_completed",
@@ -641,18 +651,20 @@ class FourWayHybridSearch:
             # Format results for RRF
             formatted = []
             for rank, record in enumerate(results, start=1):
-                formatted.append({
-                    "id": record["id"],
-                    "text": record["text"] or "",
-                    "document_id": record.get("document_id", ""),
-                    "source": record.get("source", ""),
-                    "namespace_id": record.get("namespace_id", DEFAULT_NAMESPACE),
-                    "score": record.get("relevance", 1),
-                    "rank": rank,
-                    "search_type": "graph_global",
-                    "source_channel": "graph_global",
-                    "community_id": record.get("community_id"),
-                })
+                formatted.append(
+                    {
+                        "id": record["id"],
+                        "text": record["text"] or "",
+                        "document_id": record.get("document_id", ""),
+                        "source": record.get("source", ""),
+                        "namespace_id": record.get("namespace_id", DEFAULT_NAMESPACE),
+                        "score": record.get("relevance", 1),
+                        "rank": rank,
+                        "search_type": "graph_global",
+                        "source_channel": "graph_global",
+                        "community_id": record.get("community_id"),
+                    }
+                )
 
             logger.debug(
                 "graph_global_search_completed",

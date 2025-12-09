@@ -181,8 +181,7 @@ def get_vlm_client(backend: VLMBackend | None = None) -> VLMClient:
 
     else:
         raise ValueError(
-            f"Invalid VLM backend: {backend}. "
-            f"Must be VLMBackend.OLLAMA or VLMBackend.DASHSCOPE"
+            f"Invalid VLM backend: {backend}. " f"Must be VLMBackend.OLLAMA or VLMBackend.DASHSCOPE"
         )
 
 

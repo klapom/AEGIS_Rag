@@ -696,7 +696,9 @@ async def add_documents_stream(
                         node_progress_val = node_progress.get(node_name, 0.5)
 
                         # Calculate overall progress
-                        overall_progress = doc_base_progress + (node_progress_val * doc_progress_range)
+                        overall_progress = doc_base_progress + (
+                            node_progress_val * doc_progress_range
+                        )
 
                         # Build detailed progress
                         detailed_progress = _build_detailed_progress(

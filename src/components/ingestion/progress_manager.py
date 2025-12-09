@@ -97,9 +97,7 @@ class PipelineProgress:
     vlm: StageProgress = field(default_factory=lambda: StageProgress(name="vlm"))
     chunking: StageProgress = field(default_factory=lambda: StageProgress(name="chunking"))
     embedding: StageProgress = field(default_factory=lambda: StageProgress(name="embedding"))
-    extraction: StageProgress = field(
-        default_factory=lambda: StageProgress(name="extraction")
-    )
+    extraction: StageProgress = field(default_factory=lambda: StageProgress(name="extraction"))
 
     # Worker pool info
     workers: list[WorkerInfo] = field(default_factory=list)
@@ -125,16 +123,12 @@ class PipelineProgress:
     def overall_progress_percent(self) -> float:
         """Calculate overall progress across all stages."""
         stages = [self.parsing, self.vlm, self.chunking, self.embedding, self.extraction]
-        total_weight = sum(
-            1 for s in stages if s.total > 0 or s.status != StageStatus.PENDING
-        )
+        total_weight = sum(1 for s in stages if s.total > 0 or s.status != StageStatus.PENDING)
         if total_weight == 0:
             return 0.0
 
         weighted_sum = sum(
-            s.progress_percent
-            for s in stages
-            if s.total > 0 or s.status != StageStatus.PENDING
+            s.progress_percent for s in stages if s.total > 0 or s.status != StageStatus.PENDING
         )
         return weighted_sum / total_weight
 
@@ -324,17 +318,12 @@ class PipelineProgressManager:
             if in_flight is not None:
                 stage.in_flight = in_flight
             if status is not None:
-                if (
-                    stage.status == StageStatus.PENDING
-                    and status == StageStatus.IN_PROGRESS
-                ):
+                if stage.status == StageStatus.PENDING and status == StageStatus.IN_PROGRESS:
                     stage.started_at = time.time()
                 elif status == StageStatus.COMPLETED:
                     stage.completed_at = time.time()
                     if stage.started_at:
-                        stage.duration_ms = int(
-                            (stage.completed_at - stage.started_at) * 1000
-                        )
+                        stage.duration_ms = int((stage.completed_at - stage.started_at) * 1000)
                 stage.status = status
             if error:
                 stage.errors.append(error)

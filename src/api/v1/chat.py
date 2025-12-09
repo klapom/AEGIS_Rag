@@ -78,7 +78,7 @@ async def save_conversation_turn(
         logger.info(
             "save_conversation_turn_start",
             session_id=session_id,
-            sources_count=len(sources) if sources else 0
+            sources_count=len(sources) if sources else 0,
         )
         from src.components.memory import get_redis_memory
 
@@ -117,15 +117,15 @@ async def save_conversation_turn(
                 if isinstance(source, dict):
                     # Already a dict, use as-is
                     serialized_sources.append(source)
-                elif hasattr(source, 'model_dump'):
+                elif hasattr(source, "model_dump"):
                     # Pydantic v2
                     serialized_sources.append(source.model_dump())
-                elif hasattr(source, 'dict'):
+                elif hasattr(source, "dict"):
                     # Pydantic v1
                     serialized_sources.append(source.dict())
                 else:
                     # Fallback: try to convert to dict
-                    serialized_sources.append(dict(source) if hasattr(source, '__iter__') else {})
+                    serialized_sources.append(dict(source) if hasattr(source, "__iter__") else {})
 
         messages.append(
             {
@@ -155,7 +155,7 @@ async def save_conversation_turn(
             session_id=session_id,
             message_count=len(messages),
             sources_in_last_msg=len(serialized_sources),
-            follow_up_count=len(follow_up_questions) if follow_up_questions else 0
+            follow_up_count=len(follow_up_questions) if follow_up_questions else 0,
         )
 
         success = await redis_memory.store(
@@ -172,10 +172,7 @@ async def save_conversation_turn(
                 message_count=len(messages),
             )
         else:
-            logger.error(
-                "conversation_save_failed_redis_returned_false",
-                session_id=session_id
-            )
+            logger.error("conversation_save_failed_redis_returned_false", session_id=session_id)
 
         return success
 
@@ -418,6 +415,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Sprint 35 Feature 35.4: Check if this is first message and generate title
         from src.components.memory import get_redis_memory
+
         redis_memory = get_redis_memory()
         existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
@@ -447,7 +445,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             logger.warning(
                 "conversation_save_failed_nonstreaming",
                 session_id=session_id,
-                message="save_conversation_turn returned False"
+                message="save_conversation_turn returned False",
             )
 
         return response
@@ -624,8 +622,11 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
                 # Sprint 35 Feature 35.4: Check if this is first message and generate title
                 from src.components.memory import get_redis_memory
+
                 redis_memory = get_redis_memory()
-                existing_conv = await redis_memory.retrieve(key=session_id, namespace="conversation")
+                existing_conv = await redis_memory.retrieve(
+                    key=session_id, namespace="conversation"
+                )
 
                 # Generate title only for first Q&A exchange
                 title = None
@@ -637,7 +638,9 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                         query=request.query,
                         answer=full_answer,
                     )
-                    logger.info("title_generated_for_first_message", session_id=session_id, title=title)
+                    logger.info(
+                        "title_generated_for_first_message", session_id=session_id, title=title
+                    )
 
                 await save_conversation_turn(
                     session_id=session_id,
@@ -1491,7 +1494,9 @@ async def get_shared_conversation(share_token: str) -> SharedConversationRespons
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("shared_conversation_retrieval_failed", share_token=share_token[:8], error=str(e))
+        logger.error(
+            "shared_conversation_retrieval_failed", share_token=share_token[:8], error=str(e)
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve shared conversation: {str(e)}",
@@ -1712,6 +1717,7 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
 
 # Sprint 17 Feature 17.4 Phase 1: Conversation Archiving Pipeline
 # PLANNED FOR SPRINT 38: Frontend UI integration for conversation archiving
+
 
 @router.post("/sessions/{session_id}/archive", status_code=status.HTTP_200_OK)
 async def archive_conversation(session_id: str) -> dict[str, Any]:

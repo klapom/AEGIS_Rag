@@ -196,7 +196,7 @@ def _extract_pictures_from_markdown(
     # Pattern to match markdown images with base64 data
     # ![Image](data:image/png;base64,...)
     # ![Image](data:image/jpeg;base64,...)
-    pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)'
+    pattern = r"!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]+)\)"
 
     matches = list(re.finditer(pattern, md_content))
 
@@ -870,7 +870,9 @@ class DoclingClient:
             )
 
             # Calculate throughput metrics
-            throughput_kb_per_sec = (file_size_bytes / 1024) / (parse_time / 1000) if parse_time > 0 else 0
+            throughput_kb_per_sec = (
+                (file_size_bytes / 1024) / (parse_time / 1000) if parse_time > 0 else 0
+            )
 
             logger.info(
                 "TIMING_docling_parse_complete",
@@ -1133,10 +1135,7 @@ def is_docling_container_prewarmed() -> bool:
     Returns:
         True if container is pre-warmed and running, False otherwise
     """
-    return (
-        _prewarmed_docling_client is not None
-        and _prewarmed_docling_client._container_running
-    )
+    return _prewarmed_docling_client is not None and _prewarmed_docling_client._container_running
 
 
 async def shutdown_docling_container() -> None:

@@ -258,7 +258,7 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
 
         # Query entity-to-entity connections via shared chunks (co-occurrence)
         # Two entities are connected if they are MENTIONED_IN the same chunk
-        co_occurs_condition = type_condition.replace('n.', 'e1.') if type_condition else ""
+        co_occurs_condition = type_condition.replace("n.", "e1.") if type_condition else ""
         edge_query = f"""
         MATCH (e1:base)-[:MENTIONED_IN]->(c:chunk)<-[:MENTIONED_IN]-(e2:base)
         WHERE id(e1) < id(e2) {f'AND {co_occurs_condition}' if co_occurs_condition else ''}
@@ -295,25 +295,29 @@ async def export_graph(request: GraphExportRequest) -> dict[str, Any]:
 
         # Add CO_OCCURS edges (entity-to-entity via shared chunks)
         for rec in edge_records:
-            records.append({
-                "n": rec["e1"],
-                "r": {"type": "CO_OCCURS", "weight": min(1.0, rec["shared_chunks"] / 5.0)},
-                "m": rec["e2"],
-            })
+            records.append(
+                {
+                    "n": rec["e1"],
+                    "r": {"type": "CO_OCCURS", "weight": min(1.0, rec["shared_chunks"] / 5.0)},
+                    "m": rec["e2"],
+                }
+            )
 
         # Add MENTIONED_IN edges (entity -> chunk)
         for rec in mentioned_records:
             # Add chunk as a node too
             chunk = rec["c"]
-            records.append({
-                "n": rec["n"],
-                "r": {"type": "MENTIONED_IN"},
-                "m": {
-                    "entity_name": chunk.get("chunk_id", chunk.get("id", "chunk")),
-                    "entity_type": "CHUNK",
-                    **chunk
-                },
-            })
+            records.append(
+                {
+                    "n": rec["n"],
+                    "r": {"type": "MENTIONED_IN"},
+                    "m": {
+                        "entity_name": chunk.get("chunk_id", chunk.get("id", "chunk")),
+                        "entity_type": "CHUNK",
+                        **chunk,
+                    },
+                }
+            )
 
         # Format based on export type
         if request.format == "json":
@@ -877,9 +881,7 @@ async def get_multi_hop_subgraph(request: MultiHopRequest) -> MultiHopResponse:
 
     except Exception as e:
         logger.error("multi_hop_query_failed", error=str(e), entity=request.entity_id)
-        raise HTTPException(
-            status_code=500, detail=f"Multi-hop query failed: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Multi-hop query failed: {e}") from e
 
 
 # DEPRECATED: Not called from frontend (identified 2025-12-07)
@@ -955,9 +957,7 @@ async def get_shortest_path(request: ShortestPathRequest) -> ShortestPathRespons
             source=request.source_entity,
             target=request.target_entity,
         )
-        raise HTTPException(
-            status_code=500, detail=f"Shortest path query failed: {e}"
-        ) from e
+        raise HTTPException(status_code=500, detail=f"Shortest path query failed: {e}") from e
 
 
 # ============================================================================
@@ -979,7 +979,13 @@ def _export_json(records: list[dict], include_communities: bool = True) -> dict[
         if "n" in record and record["n"]:
             node = record["n"]
             # Use entity_id or entity_name as unique identifier (standard in AegisRAG schema)
-            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
+            node_id = (
+                node.get("entity_id")
+                or node.get("entity_name")
+                or node.get("name")
+                or node.get("id")
+                or str(id(node))
+            )
             nodes[node_id] = {
                 "id": node_id,
                 "label": node.get("entity_name") or node.get("name") or "Unknown",
@@ -991,7 +997,13 @@ def _export_json(records: list[dict], include_communities: bool = True) -> dict[
         # Add target node (m) if present
         if "m" in record and record["m"]:
             target_node = record["m"]
-            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            target_id = (
+                target_node.get("entity_id")
+                or target_node.get("entity_name")
+                or target_node.get("name")
+                or target_node.get("id")
+                or str(id(target_node))
+            )
             if target_id not in nodes:
                 nodes[target_id] = {
                     "id": target_id,
@@ -1009,8 +1021,22 @@ def _export_json(records: list[dict], include_communities: bool = True) -> dict[
             # We need to get source/target from the node data in the same record
             source_node = record.get("n", {})
             target_node = record.get("m", {})
-            source_id = source_node.get("entity_id") or source_node.get("entity_name") or source_node.get("name") or source_node.get("id") if source_node else None
-            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") if target_node else None
+            source_id = (
+                source_node.get("entity_id")
+                or source_node.get("entity_name")
+                or source_node.get("name")
+                or source_node.get("id")
+                if source_node
+                else None
+            )
+            target_id = (
+                target_node.get("entity_id")
+                or target_node.get("entity_name")
+                or target_node.get("name")
+                or target_node.get("id")
+                if target_node
+                else None
+            )
 
             if source_id and target_id:
                 # Get relationship type - may be stored as 'type' or as a tuple with type info
@@ -1047,14 +1073,26 @@ def _export_graphml(records: list[dict]) -> dict[str, str]:
     for record in records:
         if "n" in record and record["n"]:
             node = record["n"]
-            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
+            node_id = (
+                node.get("entity_id")
+                or node.get("entity_name")
+                or node.get("name")
+                or node.get("id")
+                or str(id(node))
+            )
             if node_id not in seen_nodes:
                 seen_nodes.add(node_id)
                 graphml += f'    <node id="{node_id}"/>\n'
 
         if "m" in record and record["m"]:
             target_node = record["m"]
-            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            target_id = (
+                target_node.get("entity_id")
+                or target_node.get("entity_name")
+                or target_node.get("name")
+                or target_node.get("id")
+                or str(id(target_node))
+            )
             if target_id not in seen_nodes:
                 seen_nodes.add(target_id)
                 graphml += f'    <node id="{target_id}"/>\n'
@@ -1076,7 +1114,13 @@ def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
         # Add node
         if "n" in record and record["n"]:
             node = record["n"]
-            node_id = node.get("entity_id") or node.get("entity_name") or node.get("name") or node.get("id") or str(id(node))
+            node_id = (
+                node.get("entity_id")
+                or node.get("entity_name")
+                or node.get("name")
+                or node.get("id")
+                or str(id(node))
+            )
             if node_id not in seen_nodes:
                 seen_nodes.add(node_id)
                 elements.append(
@@ -1092,14 +1136,22 @@ def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
         # Add target node
         if "m" in record and record["m"]:
             target_node = record["m"]
-            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") or str(id(target_node))
+            target_id = (
+                target_node.get("entity_id")
+                or target_node.get("entity_name")
+                or target_node.get("name")
+                or target_node.get("id")
+                or str(id(target_node))
+            )
             if target_id not in seen_nodes:
                 seen_nodes.add(target_id)
                 elements.append(
                     {
                         "data": {
                             "id": target_id,
-                            "label": target_node.get("entity_name") or target_node.get("name") or "Unknown",
+                            "label": target_node.get("entity_name")
+                            or target_node.get("name")
+                            or "Unknown",
                             "type": target_node.get("entity_type") or "Entity",
                         }
                     }
@@ -1109,8 +1161,22 @@ def _export_cytoscape(records: list[dict]) -> dict[str, Any]:
         if "r" in record and record["r"]:
             source_node = record.get("n", {})
             target_node = record.get("m", {})
-            source_id = source_node.get("entity_id") or source_node.get("entity_name") or source_node.get("name") or source_node.get("id") if source_node else None
-            target_id = target_node.get("entity_id") or target_node.get("entity_name") or target_node.get("name") or target_node.get("id") if target_node else None
+            source_id = (
+                source_node.get("entity_id")
+                or source_node.get("entity_name")
+                or source_node.get("name")
+                or source_node.get("id")
+                if source_node
+                else None
+            )
+            target_id = (
+                target_node.get("entity_id")
+                or target_node.get("entity_name")
+                or target_node.get("name")
+                or target_node.get("id")
+                if target_node
+                else None
+            )
 
             if source_id and target_id:
                 rel = record["r"]

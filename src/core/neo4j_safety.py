@@ -66,35 +66,35 @@ class Neo4jQueryValidator:
     # Patterns that indicate valid namespace filtering
     VALID_PATTERNS = [
         # Property filter patterns
-        r"namespace_id\s*IN\s*\$",              # namespace_id IN $allowed
-        r"namespace_id\s*=\s*\$",               # namespace_id = $ns
-        r"\.namespace_id\s*IN\s*\$",            # n.namespace_id IN $allowed
-        r"\.namespace_id\s*=\s*\$",             # n.namespace_id = $ns
+        r"namespace_id\s*IN\s*\$",  # namespace_id IN $allowed
+        r"namespace_id\s*=\s*\$",  # namespace_id = $ns
+        r"\.namespace_id\s*IN\s*\$",  # n.namespace_id IN $allowed
+        r"\.namespace_id\s*=\s*\$",  # n.namespace_id = $ns
         # Property match patterns
-        r"\{[^}]*namespace_id\s*:",             # {namespace_id: $ns}
-        r"\{\s*namespace_id\s*:",               # { namespace_id: $ns}
+        r"\{[^}]*namespace_id\s*:",  # {namespace_id: $ns}
+        r"\{\s*namespace_id\s*:",  # { namespace_id: $ns}
         # SET patterns (for creating new nodes with namespace)
-        r"SET\s+\w+\.namespace_id\s*=",         # SET n.namespace_id =
+        r"SET\s+\w+\.namespace_id\s*=",  # SET n.namespace_id =
     ]
 
     # Queries that are allowed WITHOUT namespace filter (admin operations)
     ADMIN_PATTERNS = [
-        r"^\s*CREATE\s+(INDEX|CONSTRAINT)",     # Index/Constraint creation
-        r"^\s*DROP\s+(INDEX|CONSTRAINT)",       # Index/Constraint deletion
-        r"^\s*SHOW\s+",                         # SHOW INDEXES, SHOW CONSTRAINTS, etc.
-        r"^\s*CALL\s+db\.",                     # DB procedures
-        r"^\s*CALL\s+apoc\.",                   # APOC procedures
-        r"^\s*RETURN\s+1\s+AS\s+health",        # Health check
-        r"^\s*:schema",                         # Schema info
+        r"^\s*CREATE\s+(INDEX|CONSTRAINT)",  # Index/Constraint creation
+        r"^\s*DROP\s+(INDEX|CONSTRAINT)",  # Index/Constraint deletion
+        r"^\s*SHOW\s+",  # SHOW INDEXES, SHOW CONSTRAINTS, etc.
+        r"^\s*CALL\s+db\.",  # DB procedures
+        r"^\s*CALL\s+apoc\.",  # APOC procedures
+        r"^\s*RETURN\s+1\s+AS\s+health",  # Health check
+        r"^\s*:schema",  # Schema info
     ]
 
     # Write operations that MUST have namespace
     WRITE_PATTERNS = [
-        r"\bCREATE\s+\(",                       # CREATE (n)
-        r"\bMERGE\s+\(",                        # MERGE (n)
-        r"\bDELETE\s+",                         # DELETE
-        r"\bSET\s+",                            # SET (property update)
-        r"\bREMOVE\s+",                         # REMOVE
+        r"\bCREATE\s+\(",  # CREATE (n)
+        r"\bMERGE\s+\(",  # MERGE (n)
+        r"\bDELETE\s+",  # DELETE
+        r"\bSET\s+",  # SET (property update)
+        r"\bREMOVE\s+",  # REMOVE
     ]
 
     @classmethod

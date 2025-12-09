@@ -77,6 +77,7 @@ class DocumentIngestionPipeline:
         # Sprint 16.7: Unified chunking strategy (600 tokens, adaptive, 150 overlap)
         # Aligned with Neo4j/LightRAG for maximum synergie
         from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
+
         chunk_config = ChunkingConfig(
             strategy=ChunkStrategyEnum.ADAPTIVE,  # Sentence-aware chunking
             min_tokens=400,  # Minimum chunk size
@@ -270,6 +271,7 @@ class DocumentIngestionPipeline:
 
                 # Use ChunkingService for unified chunking (async method)
                 import asyncio
+
                 chunks = asyncio.get_event_loop().run_until_complete(
                     self.chunking_service.chunk_document(
                         text=content,

@@ -415,21 +415,25 @@ Answer: """
                 answer = sample.answer
 
             # Store evaluated sample
-            evaluated_samples.append({
-                "question": sample.question,
-                "contexts": contexts,
-                "answer": answer,
-                "ground_truth": sample.ground_truth,
-                "metadata": sample.metadata,
-            })
+            evaluated_samples.append(
+                {
+                    "question": sample.question,
+                    "contexts": contexts,
+                    "answer": answer,
+                    "ground_truth": sample.ground_truth,
+                    "metadata": sample.metadata,
+                }
+            )
 
         # Convert to RAGAS dataset format
-        ragas_dataset = Dataset.from_dict({
-            "question": [s["question"] for s in evaluated_samples],
-            "contexts": [s["contexts"] for s in evaluated_samples],
-            "answer": [s["answer"] for s in evaluated_samples],
-            "ground_truth": [s["ground_truth"] for s in evaluated_samples],
-        })
+        ragas_dataset = Dataset.from_dict(
+            {
+                "question": [s["question"] for s in evaluated_samples],
+                "contexts": [s["contexts"] for s in evaluated_samples],
+                "answer": [s["answer"] for s in evaluated_samples],
+                "ground_truth": [s["ground_truth"] for s in evaluated_samples],
+            }
+        )
 
         # Get RAGAS metrics
         metrics = self._get_ragas_metrics()
@@ -438,6 +442,7 @@ Answer: """
 
         # Configure RAGAS run settings with increased timeout for local Ollama
         from ragas.run_config import RunConfig
+
         run_config = RunConfig(
             timeout=600,  # 10 minutes per operation (Ollama on DGX Spark can be slow)
             max_retries=3,

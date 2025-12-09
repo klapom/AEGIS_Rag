@@ -328,16 +328,18 @@ class BenchmarkCorpusIngestionPipeline:
                 seen_contexts.add(context_hash)
 
                 # Create context dict with metadata
-                contexts.append({
-                    "text": context_text,
-                    "metadata": {
-                        "namespace_id": namespace_id,
-                        "source": source,
-                        "question_id": question_id,
-                        "context_index": ctx_idx,
-                        "chunk_id": f"{question_id}_ctx_{ctx_idx}",
-                    },
-                })
+                contexts.append(
+                    {
+                        "text": context_text,
+                        "metadata": {
+                            "namespace_id": namespace_id,
+                            "source": source,
+                            "question_id": question_id,
+                            "context_index": ctx_idx,
+                            "chunk_id": f"{question_id}_ctx_{ctx_idx}",
+                        },
+                    }
+                )
 
         logger.info(
             "Context extraction complete",
@@ -530,9 +532,7 @@ class BenchmarkCorpusIngestionPipeline:
             track = dataset_info.get("track", "A")
 
             # Determine sample size based on track
-            sample_size = (
-                track_b_sample_size if track == "B" else track_a_sample_size
-            )
+            sample_size = track_b_sample_size if track == "B" else track_a_sample_size
 
             logger.info(
                 "Ingesting benchmark dataset",

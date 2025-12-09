@@ -14,11 +14,7 @@ from src.components.llm_proxy.models import Complexity, LLMTask, QualityRequirem
 logger = structlog.get_logger(__name__)
 
 
-async def generate_conversation_title(
-    query: str,
-    answer: str,
-    max_length: int = 5
-) -> str:
+async def generate_conversation_title(query: str, answer: str, max_length: int = 5) -> str:
     """Generate a concise 3-5 word title for the conversation.
 
     Uses AegisLLMProxy with LOW complexity routing (typically local Ollama)

@@ -288,7 +288,9 @@ class HybridSearch:
                         "id": str(result["id"]),
                         "text": result["payload"].get("content", result["payload"].get("text", "")),
                         "score": result["score"],
-                        "source": result["payload"].get("document_path", result["payload"].get("source", "unknown")),
+                        "source": result["payload"].get(
+                            "document_path", result["payload"].get("source", "unknown")
+                        ),
                         "document_id": result["payload"].get("document_id", ""),
                         "rank": rank,
                         "search_type": "vector",
@@ -575,7 +577,12 @@ class HybridSearch:
                         "id": str(point.id),
                         "text": text,
                         "source": (
-                            str(point.payload.get("document_path", point.payload.get("file_name", point.payload.get("source", ""))))
+                            str(
+                                point.payload.get(
+                                    "document_path",
+                                    point.payload.get("file_name", point.payload.get("source", "")),
+                                )
+                            )
                             if point.payload
                             else ""
                         ),

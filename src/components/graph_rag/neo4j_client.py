@@ -395,7 +395,9 @@ class Neo4jClient:
                     document_id=document_id,
                 )
                 section_record = await section_create_result.single()
-                sections_created = section_record["sections_created"] if section_record else len(sections)
+                sections_created = (
+                    section_record["sections_created"] if section_record else len(sections)
+                )
                 has_section_rels = sections_created  # One HAS_SECTION per section
 
                 logger.info(
@@ -410,10 +412,12 @@ class Neo4jClient:
                 chunk_section_mappings = []
                 for chunk in chunks:
                     for section_heading in chunk.section_headings:
-                        chunk_section_mappings.append({
-                            "section_heading": section_heading,
-                            "chunk_text_preview": chunk.text[:100] if chunk.text else "",
-                        })
+                        chunk_section_mappings.append(
+                            {
+                                "section_heading": section_heading,
+                                "chunk_text_preview": chunk.text[:100] if chunk.text else "",
+                            }
+                        )
 
                 if chunk_section_mappings:
                     contains_result = await session.run(

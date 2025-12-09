@@ -302,9 +302,7 @@ class NamespaceManager:
 
         if additional_filter and additional_filter.must:
             # Combine namespace filter with existing filter
-            return Filter(
-                must=[namespace_condition, *additional_filter.must]
-            )
+            return Filter(must=[namespace_condition, *additional_filter.must])
         else:
             return Filter(must=[namespace_condition])
 
@@ -446,18 +444,20 @@ class NamespaceManager:
 
         formatted = []
         for rank, record in enumerate(results, start=1):
-            formatted.append({
-                "id": record["id"],
-                "text": record["text"] or "",
-                "document_id": record.get("document_id", ""),
-                "source": record.get("source", ""),
-                "source_namespace": record.get("namespace_id", DEFAULT_NAMESPACE),
-                "score": record.get("relevance", 1),
-                "rank": rank,
-                "search_type": "graph_local",
-                "source_channel": "graph_local",
-                "matched_entities": record.get("entities", []),
-            })
+            formatted.append(
+                {
+                    "id": record["id"],
+                    "text": record["text"] or "",
+                    "document_id": record.get("document_id", ""),
+                    "source": record.get("source", ""),
+                    "source_namespace": record.get("namespace_id", DEFAULT_NAMESPACE),
+                    "score": record.get("relevance", 1),
+                    "rank": rank,
+                    "search_type": "graph_local",
+                    "source_channel": "graph_local",
+                    "matched_entities": record.get("entities", []),
+                }
+            )
 
         return formatted
 
@@ -521,18 +521,20 @@ class NamespaceManager:
 
         formatted = []
         for rank, record in enumerate(results, start=1):
-            formatted.append({
-                "id": record["id"],
-                "text": record["text"] or "",
-                "document_id": record.get("document_id", ""),
-                "source": record.get("source", ""),
-                "source_namespace": record.get("namespace_id", DEFAULT_NAMESPACE),
-                "score": record.get("relevance", 1),
-                "rank": rank,
-                "search_type": "graph_global",
-                "source_channel": "graph_global",
-                "community_id": record.get("community_id"),
-            })
+            formatted.append(
+                {
+                    "id": record["id"],
+                    "text": record["text"] or "",
+                    "document_id": record.get("document_id", ""),
+                    "source": record.get("source", ""),
+                    "source_namespace": record.get("namespace_id", DEFAULT_NAMESPACE),
+                    "score": record.get("relevance", 1),
+                    "rank": rank,
+                    "search_type": "graph_global",
+                    "source_channel": "graph_global",
+                    "community_id": record.get("community_id"),
+                }
+            )
 
         return formatted
 

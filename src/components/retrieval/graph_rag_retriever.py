@@ -521,7 +521,11 @@ class GraphRAGRetriever:
 
             # Extract entities and expand graph
             entities = await self._extract_entities_from_results(
-                [doc for doc in context.documents if doc not in context.documents[:-len(search_result["results"])]]
+                [
+                    doc
+                    for doc in context.documents
+                    if doc not in context.documents[: -len(search_result["results"])]
+                ]
             )
             for entity in entities:
                 context.add_entity(entity)
@@ -681,7 +685,9 @@ class GraphRAGRetriever:
 
         except Exception as e:
             logger.error("graph_expand_failed", error=str(e))
-            raise GraphQueryError(query=f"Graph expansion for {entity_names[:3]}", reason=str(e)) from e
+            raise GraphQueryError(
+                query=f"Graph expansion for {entity_names[:3]}", reason=str(e)
+            ) from e
 
     async def _generate_answer(
         self,

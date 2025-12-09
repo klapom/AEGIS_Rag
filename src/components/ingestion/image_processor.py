@@ -165,6 +165,7 @@ def count_unique_colors(image: Image.Image, sample_size: int = 10000) -> int:
     # Sample if image is large (performance optimization)
     if len(pixels) > sample_size:
         import random
+
         pixels = random.sample(pixels, sample_size)
 
     # Count unique colors
@@ -396,9 +397,7 @@ async def generate_vlm_description_with_factory(
 
             # Fallback to cloud
             if not DASHSCOPE_VLM_AVAILABLE:
-                raise RuntimeError(
-                    f"Local Ollama failed and DashScope unavailable: {e}"
-                ) from e
+                raise RuntimeError(f"Local Ollama failed and DashScope unavailable: {e}") from e
 
     # Cloud routing (either prefer_local=False or local fallback)
     try:

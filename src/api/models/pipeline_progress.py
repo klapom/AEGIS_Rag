@@ -81,7 +81,6 @@ See Also:
     - frontend/src/types/admin.ts: Frontend interface (PipelineProgressData)
 """
 
-
 from pydantic import BaseModel, Field
 
 

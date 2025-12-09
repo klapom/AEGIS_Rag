@@ -339,9 +339,7 @@ class SentenceTransformersEmbeddingService:
 
         batch_end = time.perf_counter()
         batch_duration_ms = (batch_end - batch_start) * 1000
-        embeddings_per_sec = (
-            len(texts) / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
-        )
+        embeddings_per_sec = len(texts) / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
         chars_per_sec = total_chars / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
 
         logger.info(

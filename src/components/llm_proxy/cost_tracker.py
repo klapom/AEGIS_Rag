@@ -479,5 +479,7 @@ def get_cost_tracker() -> CostTracker:
     global _cost_tracker_instance
     if _cost_tracker_instance is None:
         _cost_tracker_instance = CostTracker()
-        logger.info("cost_tracker_singleton_initialized", db_path=str(_cost_tracker_instance.db_path))
+        logger.info(
+            "cost_tracker_singleton_initialized", db_path=str(_cost_tracker_instance.db_path)
+        )
     return _cost_tracker_instance

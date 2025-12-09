@@ -173,9 +173,7 @@ class ProgressTracker:
             return self.state
 
         except Exception as e:
-            logger.exception(
-                "progress_load_error", file=str(self.progress_file), error=str(e)
-            )
+            logger.exception("progress_load_error", file=str(self.progress_file), error=str(e))
             return None
 
     def save(self) -> bool:
@@ -213,9 +211,7 @@ class ProgressTracker:
             return True
 
         except Exception as e:
-            logger.exception(
-                "progress_save_error", file=str(self.progress_file), error=str(e)
-            )
+            logger.exception("progress_save_error", file=str(self.progress_file), error=str(e))
             return False
 
     def init_session(
@@ -354,9 +350,7 @@ class ProgressTracker:
         self.state.status = "completed"
         self.state.sessions.append(
             SessionInfo(
-                session_id=self.state.sessions[-1].session_id
-                if self.state.sessions
-                else "unknown",
+                session_id=self.state.sessions[-1].session_id if self.state.sessions else "unknown",
                 timestamp=datetime.utcnow().isoformat(),
                 action="completed",
                 files_processed=0,

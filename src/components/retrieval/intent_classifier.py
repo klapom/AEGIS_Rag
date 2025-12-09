@@ -258,7 +258,9 @@ class IntentClassifier:
         intent = self._parse_intent(raw_response)
 
         # Confidence based on whether response was clean
-        confidence = 1.0 if raw_response in ["factual", "keyword", "exploratory", "summary"] else 0.8
+        confidence = (
+            1.0 if raw_response in ["factual", "keyword", "exploratory", "summary"] else 0.8
+        )
 
         return intent, confidence
 

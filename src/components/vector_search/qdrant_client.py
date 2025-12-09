@@ -235,7 +235,9 @@ class QdrantClient:
 
             upsert_end = time.perf_counter()
             total_duration_ms = (upsert_end - upsert_start) * 1000
-            points_per_sec = len(points) / (total_duration_ms / 1000) if total_duration_ms > 0 else 0
+            points_per_sec = (
+                len(points) / (total_duration_ms / 1000) if total_duration_ms > 0 else 0
+            )
             avg_batch_ms = sum(batch_timings) / len(batch_timings) if batch_timings else 0
 
             logger.info(

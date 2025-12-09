@@ -151,9 +151,19 @@ def _is_likely_heading_by_formatting(text_item: dict[str, Any]) -> bool:
 
     # Tertiary criterion: Short paragraph with section keywords
     section_keywords = [
-        "kapitel", "abschnitt", "teil", "section", "chapter",
-        "overview", "introduction", "zusammenfassung", "fazit",
-        "anhang", "appendix", "inhaltsverzeichnis", "agenda",
+        "kapitel",
+        "abschnitt",
+        "teil",
+        "section",
+        "chapter",
+        "overview",
+        "introduction",
+        "zusammenfassung",
+        "fazit",
+        "anhang",
+        "appendix",
+        "inhaltsverzeichnis",
+        "agenda",
     ]
     if is_short and no_period and starts_upper and no_bullet:
         text_lower = text.lower()
@@ -178,15 +188,9 @@ def _detect_heading_strategy(texts: list[dict[str, Any]]) -> str:
     # - "subtitle-level-1", "subtitle-level-2" → PowerPoint subtitles
     heading_labels_const = {"title", "section_header", "subtitle-level-1", "subtitle-level-2"}
 
-    label_headings = sum(
-        1 for t in texts
-        if t.get("label", "") in heading_labels_const
-    )
+    label_headings = sum(1 for t in texts if t.get("label", "") in heading_labels_const)
 
-    formatting_headings = sum(
-        1 for t in texts
-        if _is_likely_heading_by_formatting(t)
-    )
+    formatting_headings = sum(1 for t in texts if _is_likely_heading_by_formatting(t))
 
     # If we have explicit title labels, use them
     if label_headings > 0:
@@ -694,9 +698,7 @@ def extract_section_hierarchy(
         sections_with_text=sum(1 for s in sections if s.text.strip()),
         total_tokens=total_tokens,
         total_text_chars=total_text_chars,
-        avg_tokens_per_section=(
-            round(total_tokens / len(sections), 1) if sections else 0
-        ),
+        avg_tokens_per_section=(round(total_tokens / len(sections), 1) if sections else 0),
         throughput_sections_per_sec=(
             round(len(sections) / (extraction_duration_ms / 1000), 2)
             if extraction_duration_ms > 0

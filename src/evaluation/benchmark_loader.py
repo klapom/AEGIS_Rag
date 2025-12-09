@@ -252,9 +252,7 @@ class BenchmarkDatasetLoader:
         """
         normalizer = getattr(self, f"_normalize_{dataset_name}", None)
         if not normalizer:
-            raise NotImplementedError(
-                f"No normalizer implemented for dataset: {dataset_name}"
-            )
+            raise NotImplementedError(f"No normalizer implemented for dataset: {dataset_name}")
 
         normalized = []
         for idx, sample in enumerate(raw_dataset):
@@ -324,7 +322,9 @@ class BenchmarkDatasetLoader:
             # Handle tokens as list of strings directly
             if tokens and isinstance(tokens, list):
                 # Filter out HTML tags and join
-                clean_tokens = [t for t in tokens[:2000] if not (t.startswith("<") and t.endswith(">"))]
+                clean_tokens = [
+                    t for t in tokens[:2000] if not (t.startswith("<") and t.endswith(">"))
+                ]
                 context = " ".join(clean_tokens)
             else:
                 context = ""

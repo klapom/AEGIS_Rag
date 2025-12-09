@@ -348,9 +348,7 @@ class BubblewrapSandboxBackend:
                 truncated=truncated,
             )
 
-            return ExecuteResult(
-                stdout=stdout, stderr=stderr, exit_code=result.returncode
-            )
+            return ExecuteResult(stdout=stdout, stderr=stderr, exit_code=result.returncode)
 
         except subprocess.TimeoutExpired:
             duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -391,9 +389,7 @@ class BubblewrapSandboxBackend:
                 command_hash=command_hash,
                 error=str(e),
             )
-            return ExecuteResult(
-                stdout="", stderr=f"Sandbox execution error: {e}", exit_code=-3
-            )
+            return ExecuteResult(stdout="", stderr=f"Sandbox execution error: {e}", exit_code=-3)
 
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> str:
         """
@@ -428,17 +424,13 @@ class BubblewrapSandboxBackend:
             WriteResult indicating success or failure
         """
         if not file_path.startswith("/workspace"):
-            return WriteResult(
-                success=False, error="Writes only allowed in /workspace"
-            )
+            return WriteResult(success=False, error="Writes only allowed in /workspace")
 
         # Use heredoc for safe content writing
         # Note: We use heredoc with 'AEGIS_EOF' delimiter, so no escaping needed
 
         # Use cat with heredoc to write content safely
-        result = self.execute(
-            f"cat > '{file_path}' << 'AEGIS_EOF'\n{content}\nAEGIS_EOF"
-        )
+        result = self.execute(f"cat > '{file_path}' << 'AEGIS_EOF'\n{content}\nAEGIS_EOF")
 
         return WriteResult(
             success=result.exit_code == 0,
@@ -466,9 +458,7 @@ class BubblewrapSandboxBackend:
             return EditResult(success=False, error=content)
 
         if old_string not in content:
-            return EditResult(
-                success=False, error=f"String not found: {old_string[:50]}..."
-            )
+            return EditResult(success=False, error=f"String not found: {old_string[:50]}...")
 
         # Replace and write back
         new_content = content.replace(old_string, new_string, 1)

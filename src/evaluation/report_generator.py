@@ -68,7 +68,9 @@ class ReportMetadata(BaseModel):
         default_factory=lambda: datetime.now(UTC).isoformat(), description="Report timestamp"
     )
     scenarios: list[str] = Field(..., description="Evaluated scenarios")
-    has_baseline: bool = Field(default=False, description="Whether baseline comparison is available")
+    has_baseline: bool = Field(
+        default=False, description="Whether baseline comparison is available"
+    )
     additional_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
@@ -494,7 +496,9 @@ class ReportGenerator:
             )
 
             if result.metadata:
-                lines.extend(["**Metadata:**", "```json", json.dumps(result.metadata, indent=2), "```", ""])
+                lines.extend(
+                    ["**Metadata:**", "```json", json.dumps(result.metadata, indent=2), "```", ""]
+                )
 
         # Footer
         lines.extend(

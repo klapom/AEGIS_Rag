@@ -564,18 +564,22 @@ class LightRAGClient:
             chunk_text = encoding.decode(chunk_tokens)
 
             # Generate chunk_id compatible with Qdrant
-            chunk_hash = hashlib.md5(f"{document_id}:{chunk_idx}:{chunk_text[:100]}".encode()).hexdigest()[:8]
+            chunk_hash = hashlib.md5(
+                f"{document_id}:{chunk_idx}:{chunk_text[:100]}".encode()
+            ).hexdigest()[:8]
             chunk_id = f"{document_id[:8]}-chunk-{chunk_idx}-{chunk_hash}"
 
-            chunks.append({
-                "chunk_id": chunk_id,
-                "text": chunk_text,  # LightRAG expects 'text' key
-                "content": chunk_text,  # Alias for compatibility
-                "tokens": len(chunk_tokens),  # LightRAG expects 'tokens' key
-                "token_count": len(chunk_tokens),  # Alias for compatibility
-                "document_id": document_id,
-                "chunk_index": chunk_idx,
-            })
+            chunks.append(
+                {
+                    "chunk_id": chunk_id,
+                    "text": chunk_text,  # LightRAG expects 'text' key
+                    "content": chunk_text,  # Alias for compatibility
+                    "tokens": len(chunk_tokens),  # LightRAG expects 'tokens' key
+                    "token_count": len(chunk_tokens),  # Alias for compatibility
+                    "document_id": document_id,
+                    "chunk_index": chunk_idx,
+                }
+            )
 
             chunk_idx += 1
             start = end - chunk_overlap_token_size if end < len(tokens) else end
@@ -1320,7 +1324,9 @@ class LightRAGClient:
                     converted_relations=len(lightrag_relations),
                     converted_chunks=len(lightrag_chunks),
                     sample_entity_raw=entities[0] if entities else "NO_ENTITIES",
-                    sample_entity_converted=lightrag_entities[0] if lightrag_entities else "NO_ENTITIES",
+                    sample_entity_converted=(
+                        lightrag_entities[0] if lightrag_entities else "NO_ENTITIES"
+                    ),
                 )
 
                 # PHASE 6: Insert into LightRAG (embeddings + storage)

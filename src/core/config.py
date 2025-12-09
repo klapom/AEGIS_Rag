@@ -392,10 +392,16 @@ class Settings(BaseSettings):
 
     # Sprint 37 Feature 37.2: Worker Pool Configuration
     graph_extraction_workers: int = Field(
-        default=4, ge=1, le=16, description="Number of parallel workers for graph extraction (Sprint 37)"
+        default=4,
+        ge=1,
+        le=16,
+        description="Number of parallel workers for graph extraction (Sprint 37)",
     )
     extraction_worker_timeout: int = Field(
-        default=120, ge=30, le=600, description="Timeout per chunk extraction in seconds (Sprint 37)"
+        default=120,
+        ge=30,
+        le=600,
+        description="Timeout per chunk extraction in seconds (Sprint 37)",
     )
 
     # Neo4j Graph Database

@@ -83,6 +83,7 @@ def check_temporal_enabled() -> None:
 
 # Pydantic Models
 
+
 class PointInTimeRequest(BaseModel):
     """Point-in-time query request.
 
@@ -322,7 +323,11 @@ async def query_at_point_in_time(
 
             # Convert datetime fields
             for field in ["valid_from", "valid_to", "transaction_from", "transaction_to"]:
-                if field in entity_data and entity_data[field] and hasattr(entity_data[field], "isoformat"):
+                if (
+                    field in entity_data
+                    and entity_data[field]
+                    and hasattr(entity_data[field], "isoformat")
+                ):
                     entity_data[field] = entity_data[field].isoformat()
 
             entities.append(

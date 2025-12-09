@@ -512,7 +512,9 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
             for page_key, page_info in pages_data.items():
                 if isinstance(page_info, dict):
                     # page_no from PageItem, fallback to dict key as int
-                    page_no = page_info.get("page_no", int(page_key) if page_key.isdigit() else None)
+                    page_no = page_info.get(
+                        "page_no", int(page_key) if page_key.isdigit() else None
+                    )
                     size = page_info.get("size", {})
                     if page_no is not None and size:
                         page_dimensions[page_no] = {
@@ -921,12 +923,14 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                                 },
                             }
 
-                    image_tasks_data.append({
-                        "idx": idx,
-                        "picture_item": picture_item,
-                        "pil_image": pil_image,
-                        "enhanced_bbox": enhanced_bbox,
-                    })
+                    image_tasks_data.append(
+                        {
+                            "idx": idx,
+                            "picture_item": picture_item,
+                            "pil_image": pil_image,
+                            "enhanced_bbox": enhanced_bbox,
+                        }
+                    )
 
                 except Exception as e:
                     logger.warning(
@@ -1037,7 +1041,9 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
                 images_total=pictures_count,
                 images_processed=len(vlm_metadata),
                 duration_seconds=round(vlm_duration, 2),
-                images_per_second=round(len(vlm_metadata) / vlm_duration, 2) if vlm_duration > 0 else 0,
+                images_per_second=(
+                    round(len(vlm_metadata) / vlm_duration, 2) if vlm_duration > 0 else 0
+                ),
                 max_concurrent=max_concurrent_vlm,
             )
 
@@ -1252,6 +1258,7 @@ async def chunking_node(state: IngestionState) -> IngestionState:
 
             # Use legacy ChunkingService as fallback
             from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
+
             chunk_config = ChunkingConfig(
                 strategy=ChunkStrategyEnum.ADAPTIVE,
                 min_tokens=800,
@@ -1347,7 +1354,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 "chunking_fallback_section_created",
                 document_id=state["document_id"],
                 fallback_section_length=len(doc_text),
-                fallback_section_preview=doc_text[:200] + "..." if len(doc_text) > 200 else doc_text,
+                fallback_section_preview=(
+                    doc_text[:200] + "..." if len(doc_text) > 200 else doc_text
+                ),
             )
 
         # Apply adaptive chunking (800-1800 tokens, section-aware)
@@ -1365,7 +1374,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             duration_ms=round(adaptive_chunking_ms, 2),
             input_sections=len(sections),
             output_chunks=len(adaptive_chunks),
-            compression_ratio=round(len(sections) / len(adaptive_chunks), 2) if adaptive_chunks else 0,
+            compression_ratio=(
+                round(len(sections) / len(adaptive_chunks), 2) if adaptive_chunks else 0
+            ),
         )
 
         # Convert AdaptiveChunk to enhanced_chunks format (backward compatible)
@@ -1424,7 +1435,9 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             adaptive_chunks=len(adaptive_chunks),
             final_chunks=len(merged_chunks),
             total_tokens=total_tokens,
-            avg_tokens_per_chunk=round(total_tokens / len(merged_chunks), 1) if merged_chunks else 0,
+            avg_tokens_per_chunk=(
+                round(total_tokens / len(merged_chunks), 1) if merged_chunks else 0
+            ),
             chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
             total_image_annotations=sum(len(c["image_bboxes"]) for c in merged_chunks),
             timing_breakdown={
@@ -1822,6 +1835,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         # Sprint 33 FIX: Wait for Neo4j to commit the entities before querying
         # This prevents race conditions where MENTIONED_IN isn't visible yet
         import asyncio
+
         await asyncio.sleep(1.0)
         logger.info(
             "neo4j_commit_wait_complete",

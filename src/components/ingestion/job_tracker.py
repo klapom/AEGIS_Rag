@@ -149,7 +149,8 @@ class IngestionJobTracker:
                 cursor = conn.cursor()
 
                 # Table 1: ingestion_jobs
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS ingestion_jobs (
                         id TEXT PRIMARY KEY,
                         started_at TIMESTAMP NOT NULL,
@@ -163,10 +164,12 @@ class IngestionJobTracker:
                         total_warnings INTEGER DEFAULT 0,
                         config TEXT
                     )
-                """)
+                """
+                )
 
                 # Table 2: ingestion_events
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS ingestion_events (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         job_id TEXT NOT NULL REFERENCES ingestion_jobs(id) ON DELETE CASCADE,
@@ -179,10 +182,12 @@ class IngestionJobTracker:
                         message TEXT NOT NULL,
                         details TEXT
                     )
-                """)
+                """
+                )
 
                 # Table 3: ingestion_files
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS ingestion_files (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         job_id TEXT NOT NULL REFERENCES ingestion_jobs(id) ON DELETE CASCADE,
@@ -204,15 +209,28 @@ class IngestionJobTracker:
                         started_at TIMESTAMP,
                         completed_at TIMESTAMP
                     )
-                """)
+                """
+                )
 
                 # Indexes for performance
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON ingestion_jobs(status)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_jobs_started ON ingestion_jobs(started_at)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_job ON ingestion_events(job_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_level ON ingestion_events(level)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_files_job ON ingestion_files(job_id)")
-                cursor.execute("CREATE INDEX IF NOT EXISTS idx_files_status ON ingestion_files(status)")
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_jobs_status ON ingestion_jobs(status)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_jobs_started ON ingestion_jobs(started_at)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_events_job ON ingestion_events(job_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_events_level ON ingestion_events(level)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_files_job ON ingestion_files(job_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_files_status ON ingestion_files(status)"
+                )
 
                 conn.commit()
 
@@ -220,8 +238,7 @@ class IngestionJobTracker:
 
             # Run in thread pool (SQLite blocks async event loop)
             await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: init_schema(sqlite3.connect(self.db_path, check_same_thread=False))
+                None, lambda: init_schema(sqlite3.connect(self.db_path, check_same_thread=False))
             )
 
             self._initialized = True
@@ -258,6 +275,7 @@ class IngestionJobTracker:
 
         # Generate job ID with timestamp
         from datetime import datetime
+
         job_id = f"job_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}"
 
         started_at = datetime.now()
@@ -271,13 +289,20 @@ class IngestionJobTracker:
                     id, started_at, status, directory_path, recursive, total_files, config
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, started_at, "running", directory_path, recursive, total_files, config_json)
+                (
+                    job_id,
+                    started_at,
+                    "running",
+                    directory_path,
+                    recursive,
+                    total_files,
+                    config_json,
+                ),
             )
             conn.commit()
 
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: insert_job(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: insert_job(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
         logger.info(
@@ -341,8 +366,7 @@ class IngestionJobTracker:
             conn.commit()
 
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: update_job(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: update_job(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
         logger.info(
@@ -399,13 +423,22 @@ class IngestionJobTracker:
                     job_id, timestamp, level, phase, file_name, page_number, chunk_id, message, details
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, timestamp, level, phase, file_name, page_number, chunk_id, message, details_json)
+                (
+                    job_id,
+                    timestamp,
+                    level,
+                    phase,
+                    file_name,
+                    page_number,
+                    chunk_id,
+                    message,
+                    details_json,
+                ),
             )
             conn.commit()
 
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: insert_event(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: insert_event(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
         # Log ERROR events to structlog
@@ -461,14 +494,22 @@ class IngestionJobTracker:
                     status, started_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, file_path, file_name, file_type, file_size_bytes, parser_used, "pending", datetime.now())
+                (
+                    job_id,
+                    file_path,
+                    file_name,
+                    file_type,
+                    file_size_bytes,
+                    parser_used,
+                    "pending",
+                    datetime.now(),
+                ),
             )
             conn.commit()
             return cursor.lastrowid
 
         file_id = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: insert_file(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: insert_file(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
         return file_id
@@ -560,8 +601,7 @@ class IngestionJobTracker:
             conn.commit()
 
         await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: update_file_record(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: update_file_record(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
     async def get_job(self, job_id: str) -> dict[str, Any] | None:
@@ -598,8 +638,7 @@ class IngestionJobTracker:
             return job_dict
 
         return await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: fetch_job(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: fetch_job(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
     async def get_jobs(
@@ -648,8 +687,7 @@ class IngestionJobTracker:
             return jobs
 
         return await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: fetch_jobs(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: fetch_jobs(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
     async def get_events(
@@ -680,7 +718,9 @@ class IngestionJobTracker:
                 query = "SELECT * FROM ingestion_events WHERE job_id = ? AND level = ? ORDER BY timestamp ASC LIMIT ?"
                 cursor.execute(query, (job_id, level, limit))
             else:
-                query = "SELECT * FROM ingestion_events WHERE job_id = ? ORDER BY timestamp ASC LIMIT ?"
+                query = (
+                    "SELECT * FROM ingestion_events WHERE job_id = ? ORDER BY timestamp ASC LIMIT ?"
+                )
                 cursor.execute(query, (job_id, limit))
 
             rows = cursor.fetchall()
@@ -696,8 +736,7 @@ class IngestionJobTracker:
             return events
 
         return await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: fetch_events(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: fetch_events(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
     async def get_errors(self, job_id: str) -> list[dict[str, Any]]:
@@ -739,7 +778,7 @@ class IngestionJobTracker:
             # Delete jobs older than cutoff (CASCADE deletes events/files)
             cursor.execute(
                 "DELETE FROM ingestion_jobs WHERE started_at < ? AND status IN ('completed', 'failed', 'cancelled')",
-                (cutoff_date,)
+                (cutoff_date,),
             )
             deleted_count = cursor.rowcount
             conn.commit()
@@ -747,8 +786,7 @@ class IngestionJobTracker:
             return deleted_count
 
         deleted = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: delete_old_jobs(sqlite3.connect(self.db_path, check_same_thread=False))
+            None, lambda: delete_old_jobs(sqlite3.connect(self.db_path, check_same_thread=False))
         )
 
         logger.info(
