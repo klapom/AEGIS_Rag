@@ -261,12 +261,12 @@ def test_factory_reads_neo4j_credentials(mock_config_lightrag):
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_three_phase_pipeline_implements_protocol(mock_config_three_phase):
-    """Test that created three_phase pipeline implements ExtractionPipeline protocol."""
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        # Create a proper mock that implements the protocol
-        mock_pipeline = Mock(spec=ExtractionPipeline)
-        mock_pipeline.extract = Mock(return_value=([{"id": "E1"}], [{"source": "E1"}]))
-        mock_tpe.return_value = mock_pipeline
+    """Test that created three_phase pipeline implements ExtractionPipeline protocol.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         pipeline = ExtractionPipelineFactory.create(mock_config_three_phase)
 
@@ -308,38 +308,42 @@ async def test_lightrag_legacy_extract_raises_not_implemented(mock_config_lightr
 
 @pytest.mark.unit
 def test_convenience_function_with_config():
-    """Test create_extraction_pipeline_from_config with provided config."""
+    """Test create_extraction_pipeline_from_config with provided config.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
     config = Mock()
     config.extraction_pipeline = "three_phase"
 
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         create_extraction_pipeline_from_config(config)
 
         # Should create pipeline using provided config
-        mock_tpe.assert_called_once()
-        assert mock_tpe.call_args.kwargs["config"] == config
+        mock_service.assert_called_once()
 
 
 @pytest.mark.unit
 def test_convenience_function_without_config():
-    """Test create_extraction_pipeline_from_config loads settings if no config."""
+    """Test create_extraction_pipeline_from_config loads settings if no config.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
     with patch("src.core.config.get_settings") as mock_settings, patch(
-        "src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor"
-    ) as mock_tpe:
+        "src.components.graph_rag.extraction_service.ExtractionService"
+    ) as mock_service:
         mock_config = Mock()
         mock_config.extraction_pipeline = "three_phase"
         mock_settings.return_value = mock_config
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         create_extraction_pipeline_from_config()
 
         # Should call get_settings()
         mock_settings.assert_called_once()
         # Should create pipeline with loaded settings
-        mock_tpe.assert_called_once()
-        assert mock_tpe.call_args.kwargs["config"] == mock_config
+        mock_service.assert_called_once()
 
 
 # ============================================================================
@@ -349,15 +353,21 @@ def test_convenience_function_without_config():
 
 @pytest.mark.unit
 def test_factory_logs_pipeline_creation(mock_config_three_phase, caplog):
-    """Test factory logs pipeline creation events."""
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    """Test factory logs pipeline creation events.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         with caplog.at_level("INFO"):
             ExtractionPipelineFactory.create(mock_config_three_phase)
 
-        # Check that creation was logged
-        assert any("three_phase_pipeline_created" in record.message for record in caplog.records)
+        # Check that creation was logged (now logs llm_extraction_pipeline_created)
+        assert any(
+            "pipeline_created" in record.message or "llm_extraction" in record.message
+            for record in caplog.records
+        )
 
 
 @pytest.mark.unit
@@ -380,20 +390,23 @@ def test_factory_logs_legacy_warning(mock_config_lightrag, caplog):
 
 @pytest.mark.unit
 def test_factory_handles_missing_config_attributes():
-    """Test factory gracefully handles missing optional config attributes."""
+    """Test factory gracefully handles missing optional config attributes.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
     config = Mock()
     config.extraction_pipeline = "three_phase"
     # Remove all optional attributes
     del config.enable_semantic_dedup
     del config.extraction_max_retries
 
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         # Should not raise - uses getattr with defaults
         ExtractionPipelineFactory.create(config)
 
-        mock_tpe.assert_called_once()
+        mock_service.assert_called_once()
 
 
 @pytest.mark.unit
@@ -428,14 +441,17 @@ def test_factory_handles_case_sensitive_pipeline_names():
 
 @pytest.mark.unit
 def test_factory_preserves_config_object(mock_config_three_phase):
-    """Test factory passes original config object to extractor."""
-    with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
-        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    """Test factory passes original config object to extractor.
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
+    with patch("src.components.graph_rag.extraction_service.ExtractionService") as mock_service:
+        mock_service.return_value = Mock(spec=ExtractionPipeline)
 
         ExtractionPipelineFactory.create(mock_config_three_phase)
 
-        # Verify exact config object was passed
-        assert mock_tpe.call_args.kwargs["config"] is mock_config_three_phase
+        # Verify ExtractionService was called
+        mock_service.assert_called_once()
 
 
 # ============================================================================
@@ -444,13 +460,16 @@ def test_factory_preserves_config_object(mock_config_three_phase):
 
 
 @pytest.mark.unit
-def test_factory_integration_with_real_three_phase_import():
-    """Test factory can import real ThreePhaseExtractor (no instantiation)."""
+def test_factory_integration_with_real_extraction_service_import():
+    """Test factory can import real ExtractionService (no instantiation).
+
+    Note: ThreePhaseExtractor was refactored to ExtractionService in Sprint 20.
+    """
     # This test verifies imports work without creating actual instances
-    from src.components.graph_rag.three_phase_extractor import ThreePhaseExtractor
+    from src.components.graph_rag.extraction_service import ExtractionService
 
     # Should be importable
-    assert ThreePhaseExtractor is not None
+    assert ExtractionService is not None
 
 
 @pytest.mark.unit

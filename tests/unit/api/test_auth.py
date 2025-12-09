@@ -439,6 +439,17 @@ class TestProtectedRoutes:
         mock_store = MagicMock()
         mock_store.get_user_by_id = AsyncMock(return_value=sample_user)
         mock_store.close = AsyncMock()
+        # Mock to_public to return a dict that can be serialized to UserPublic
+        mock_store.to_public = MagicMock(
+            return_value={
+                "user_id": sample_user.user_id,
+                "username": sample_user.username,
+                "email": sample_user.email,
+                "role": sample_user.role,
+                "created_at": sample_user.created_at.isoformat(),
+                "is_active": sample_user.is_active,
+            }
+        )
         mock_user_store_class.return_value = mock_store
 
         # Create valid token
