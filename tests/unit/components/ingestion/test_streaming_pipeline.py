@@ -242,12 +242,15 @@ class TestStreamingPipelineOrchestrator:
         results = {"embeddings": [], "errors": []}
 
         # Mock embedding service
+        # Note: streaming_pipeline calls embed() but service has embed_single()
+        # We mock both to handle either case
         mock_embedding = [0.1] * 1024  # 1024D embedding
         with patch(
             "src.components.ingestion.streaming_pipeline.get_embedding_service"
         ) as mock_service:
             mock_instance = AsyncMock()
             mock_instance.embed = AsyncMock(return_value=mock_embedding)
+            mock_instance.embed_single = AsyncMock(return_value=mock_embedding)
             mock_service.return_value = mock_instance
 
             # Run embedding stage

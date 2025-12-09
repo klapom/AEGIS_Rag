@@ -492,7 +492,7 @@ class StreamingPipelineOrchestrator:
                 try:
                     # Generate embedding
                     embedding = await asyncio.wait_for(
-                        embedding_service.embed(chunk_item.text),
+                        embedding_service.embed_single(chunk_item.text),
                         timeout=self.config.embedding_timeout,
                     )
 
