@@ -444,10 +444,10 @@ Answer: """
         from ragas.run_config import RunConfig
 
         run_config = RunConfig(
-            timeout=600,  # 10 minutes per operation (Ollama on DGX Spark can be slow)
-            max_retries=3,
-            max_wait=120,
-            max_workers=4,  # Limit concurrency for local Ollama
+            timeout=300,  # 5 minutes per operation (sufficient for DGX Spark)
+            max_retries=2,
+            max_wait=60,
+            max_workers=1,  # Sequential execution to avoid Ollama overload
         )
 
         # Run RAGAS evaluation (blocking, so run in executor)

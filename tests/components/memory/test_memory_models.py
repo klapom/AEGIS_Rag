@@ -12,7 +12,6 @@ import pytest
 
 from src.components.memory.models import MemoryEntry, MemorySearchResult
 
-
 # ============================================================================
 # MemoryEntry Tests
 # ============================================================================

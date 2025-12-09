@@ -1,8 +1,9 @@
 """Unit tests for VersionManager."""
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.graph_rag.version_manager import VersionManager, get_version_manager
 

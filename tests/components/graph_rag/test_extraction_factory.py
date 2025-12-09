@@ -9,7 +9,7 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -18,7 +18,6 @@ from src.components.graph_rag.extraction_factory import (
     ExtractionPipelineFactory,
     create_extraction_pipeline_from_config,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -77,7 +76,7 @@ def test_factory_creates_three_phase_pipeline(mock_config_three_phase):
     with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
         mock_tpe.return_value = Mock(spec=ExtractionPipeline)
 
-        pipeline = ExtractionPipelineFactory.create(mock_config_three_phase)
+        ExtractionPipelineFactory.create(mock_config_three_phase)
 
         # Verify ThreePhaseExtractor was instantiated
         mock_tpe.assert_called_once()
@@ -90,7 +89,7 @@ def test_factory_creates_three_phase_pipeline(mock_config_three_phase):
 def test_factory_creates_lightrag_pipeline(mock_config_lightrag):
     """Test factory creates LightRAG legacy wrapper when configured."""
     with patch("src.components.graph_rag.lightrag_wrapper.LightRAGWrapper") as mock_wrapper:
-        pipeline = ExtractionPipelineFactory.create(mock_config_lightrag)
+        ExtractionPipelineFactory.create(mock_config_lightrag)
 
         # Verify LightRAGWrapper was instantiated inside the adapter
         mock_wrapper.assert_called_once()
@@ -105,7 +104,7 @@ def test_factory_defaults_to_three_phase(mock_config_default):
     with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
         mock_tpe.return_value = Mock(spec=ExtractionPipeline)
 
-        pipeline = ExtractionPipelineFactory.create(mock_config_default)
+        ExtractionPipelineFactory.create(mock_config_default)
 
         # Should create three_phase by default
         mock_tpe.assert_called_once()
@@ -294,7 +293,7 @@ def test_convenience_function_with_config():
     with patch("src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor") as mock_tpe:
         mock_tpe.return_value = Mock(spec=ExtractionPipeline)
 
-        pipeline = create_extraction_pipeline_from_config(config)
+        create_extraction_pipeline_from_config(config)
 
         # Should create pipeline using provided config
         mock_tpe.assert_called_once()
@@ -304,22 +303,21 @@ def test_convenience_function_with_config():
 @pytest.mark.unit
 def test_convenience_function_without_config():
     """Test create_extraction_pipeline_from_config loads settings if no config."""
-    with patch("src.core.config.get_settings") as mock_settings:
-        with patch(
-            "src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor"
-        ) as mock_tpe:
-            mock_config = Mock()
-            mock_config.extraction_pipeline = "three_phase"
-            mock_settings.return_value = mock_config
-            mock_tpe.return_value = Mock(spec=ExtractionPipeline)
+    with patch("src.core.config.get_settings") as mock_settings, patch(
+        "src.components.graph_rag.three_phase_extractor.ThreePhaseExtractor"
+    ) as mock_tpe:
+        mock_config = Mock()
+        mock_config.extraction_pipeline = "three_phase"
+        mock_settings.return_value = mock_config
+        mock_tpe.return_value = Mock(spec=ExtractionPipeline)
 
-            pipeline = create_extraction_pipeline_from_config()
+        create_extraction_pipeline_from_config()
 
-            # Should call get_settings()
-            mock_settings.assert_called_once()
-            # Should create pipeline with loaded settings
-            mock_tpe.assert_called_once()
-            assert mock_tpe.call_args.kwargs["config"] == mock_config
+        # Should call get_settings()
+        mock_settings.assert_called_once()
+        # Should create pipeline with loaded settings
+        mock_tpe.assert_called_once()
+        assert mock_tpe.call_args.kwargs["config"] == mock_config
 
 
 # ============================================================================
@@ -371,7 +369,7 @@ def test_factory_handles_missing_config_attributes():
         mock_tpe.return_value = Mock(spec=ExtractionPipeline)
 
         # Should not raise - uses getattr with defaults
-        pipeline = ExtractionPipelineFactory.create(config)
+        ExtractionPipelineFactory.create(config)
 
         mock_tpe.assert_called_once()
 

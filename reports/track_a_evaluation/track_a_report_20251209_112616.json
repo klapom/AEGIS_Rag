@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "timestamp": "20251209_112616",
+    "total_duration_seconds": 1.69,
+    "sample_size_per_dataset": 3,
+    "datasets": [
+      "hotpotqa"
+    ],
+    "track": "A"
+  },
+  "services": {
+    "qdrant": true,
+    "ollama": true,
+    "neo4j": true
+  },
+  "ingestion": {},
+  "evaluation": {
+    "hotpotqa": {
+      "error": "sentence-transformers is required for reranking. Install with: poetry install --with reranking"
+    }
+  },
+  "summary": {}
+}

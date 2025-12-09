@@ -11,13 +11,13 @@ Tests cover:
 - Error handling and cleanup
 """
 
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+
+import pytest
 
 from src.components.memory.graphiti_wrapper import GraphitiClient, OllamaLLMClient
-from src.core.exceptions import MemoryError, LLMError
+from src.core.exceptions import LLMError, MemoryError
 
 
 @pytest.fixture
@@ -77,17 +77,15 @@ async def graphiti_client(mock_graphiti_instance, mock_neo4j_client, mock_aegis_
     """GraphitiClient with mocked dependencies."""
     with patch(
         "src.components.memory.graphiti_wrapper.Graphiti", return_value=mock_graphiti_instance
+    ), patch(
+        "src.components.memory.graphiti_wrapper.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.memory.graphiti_wrapper.get_aegis_llm_proxy",
+        return_value=mock_aegis_llm_proxy,
     ):
-        with patch(
-            "src.components.memory.graphiti_wrapper.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.memory.graphiti_wrapper.get_aegis_llm_proxy",
-                return_value=mock_aegis_llm_proxy,
-            ):
-                client = GraphitiClient()
-                return client
+        client = GraphitiClient()
+        return client
 
 
 # ============================================================================
@@ -179,7 +177,7 @@ async def test_graphiti_search_with_time_window(graphiti_client):
     query = "Recent events"
     time_window_hours = 24
 
-    results = await graphiti_client.search(query=query, time_window_hours=time_window_hours)
+    await graphiti_client.search(query=query, time_window_hours=time_window_hours)
 
     # Verify search was executed with time filter
     assert graphiti_client.graphiti.search.called

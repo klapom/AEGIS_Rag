@@ -107,7 +107,6 @@ async def test_embed_text_cache_disabled():
     # Clear cache first (shared state from other tests)
     service.clear_cache()
 
-    text = "Test document for cache disable test"
 
     # Note: This will actually call Ollama API if running without mocks
     # In a full test environment, we'd mock the UnifiedEmbeddingService
@@ -127,7 +126,6 @@ async def test_embed_text_cache_disabled():
 @pytest.mark.asyncio
 async def test_embed_text_with_mocked_unified_service():
     """Test embedding with mocked UnifiedEmbeddingService."""
-    from unittest.mock import patch
 
     service = EmbeddingService()
     mock_embedding = [0.2] * 1024
@@ -144,7 +142,6 @@ async def test_embed_text_with_mocked_unified_service():
 @pytest.mark.asyncio
 async def test_embed_batch_with_mocked_unified_service():
     """Test batch embedding with mocked UnifiedEmbeddingService."""
-    from unittest.mock import patch
 
     service = EmbeddingService()
     mock_embeddings = [[0.1 + i * 0.01] * 1024 for i in range(3)]
@@ -253,7 +250,6 @@ async def test_embed_batch_failure():
     Since we're mocking embed_single directly, the retry decorator is bypassed,
     so we expect LLMError (not RetryError).
     """
-    from unittest.mock import patch
     from src.core.exceptions import LLMError
 
     service = EmbeddingService()

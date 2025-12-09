@@ -12,12 +12,12 @@ Tests cover:
 - Edge cases and error handling
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
-from src.components.vector_search.hybrid_search import HybridSearch
+import pytest
+
 from src.components.retrieval.filters import MetadataFilters
+from src.components.vector_search.hybrid_search import HybridSearch
 from src.core.exceptions import VectorSearchError
 
 

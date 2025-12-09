@@ -1,6 +1,5 @@
 """Pytest configuration for LLM proxy tests - isolated from global conftest."""
 
-import pytest
 
 
 # Override global conftest to prevent loading the full API

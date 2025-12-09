@@ -21,17 +21,16 @@ Run tests:
 """
 
 import asyncio
+import contextlib
 import subprocess
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.components.ingestion.docling_client import DoclingContainerClient
 from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # Test 1.1: Container Start/Stop Lifecycle
@@ -59,7 +58,7 @@ async def test_container_start_stop_lifecycle__complete_cycle__no_resource_leaks
         text=True,
         check=True,
     )
-    initial_containers = result.stdout.strip()
+    result.stdout.strip()
 
     try:
         # Action 1: Start container
@@ -102,10 +101,8 @@ async def test_container_start_stop_lifecycle__complete_cycle__no_resource_leaks
 
     finally:
         # Cleanup: Ensure container stopped
-        try:
+        with contextlib.suppress(Exception):
             await client.stop_container()
-        except Exception:
-            pass
 
 
 @pytest.mark.integration
@@ -280,7 +277,7 @@ async def test_container_context_manager__exception_in_block__still_cleanup():
     - Exception propagated correctly
     """
     try:
-        async with DoclingContainerClient(base_url="http://localhost:8080") as client:
+        async with DoclingContainerClient(base_url="http://localhost:8080"):
             # Assert: Container started
             result = subprocess.run(
                 ["docker", "ps", "--filter", "name=aegis-docling", "--format", "{{.Names}}"],
@@ -348,7 +345,7 @@ async def test_pipeline_manages_container_lifecycle__full_pipeline__auto_cleanup
 
         # Assert: Container stopped after pipeline (check after grace period)
         await asyncio.sleep(5)
-        result = subprocess.run(
+        subprocess.run(
             ["docker", "ps", "--filter", "name=aegis-docling", "--format", "{{.Names}}"],
             capture_output=True,
             text=True,

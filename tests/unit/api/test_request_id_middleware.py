@@ -26,7 +26,6 @@ Expected Coverage: 100% of RequestIDMiddleware
 import uuid
 
 import pytest
-import structlog
 from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
 

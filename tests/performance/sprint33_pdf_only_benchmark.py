@@ -64,8 +64,9 @@ async def run_pdf_benchmark():
     start_time = time.perf_counter()
 
     try:
-        from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
         import uuid
+
+        from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
         document_id = f"bench_pdf_{uuid.uuid4().hex[:8]}"
         batch_id = f"sprint33_pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}"

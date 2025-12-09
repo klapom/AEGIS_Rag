@@ -40,7 +40,6 @@ from src.components.ingestion.docling_client import (
 )
 from src.core.exceptions import IngestionError
 
-
 # =============================================================================
 # Pytest Configuration
 # =============================================================================
@@ -477,7 +476,7 @@ async def test_extract_tables_images_layout_from_pdf():
                 print(f"    First image: ref={image['ref']}, page={image['page_no']}")
 
             # Feature 21.5: Verify layout extraction
-            print(f"  Layout info:")
+            print("  Layout info:")
             assert isinstance(parsed.layout, dict), "Layout should be a dict"
             assert "schema_name" in parsed.layout, "Layout should have 'schema_name'"
             assert "version" in parsed.layout, "Layout should have 'version'"

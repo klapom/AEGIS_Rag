@@ -15,20 +15,19 @@ Coverage Target: 100% of _route_task() method
 Test Count: 30 tests
 """
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
 
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
+from src.components.llm_proxy.config import LLMProxyConfig
 from src.components.llm_proxy.models import (
     Complexity,
     DataClassification,
-    ExecutionLocation,
     LLMTask,
     QualityRequirement,
     TaskType,
 )
-from src.components.llm_proxy.config import LLMProxyConfig
-
 
 # Fixtures
 

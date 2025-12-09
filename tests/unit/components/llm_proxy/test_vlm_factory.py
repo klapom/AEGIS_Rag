@@ -17,15 +17,16 @@ IMPORTANT: Lazy Import Pattern
 """
 
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
 
 from src.components.llm_proxy.vlm_factory import (
     VLMBackend,
+    close_shared_vlm_client,
+    get_shared_vlm_client,
     get_vlm_backend_from_config,
     get_vlm_client,
-    get_shared_vlm_client,
-    close_shared_vlm_client,
     reset_vlm_client,
 )
 
@@ -162,7 +163,7 @@ class TestGetVLMClient:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
-                client = get_vlm_client()
+                get_vlm_client()
 
                 mock_class.assert_called_once()
 
@@ -282,11 +283,11 @@ class TestSharedVLMClientSingleton:
 
             with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
                 # First instance
-                client1 = await get_shared_vlm_client()
+                await get_shared_vlm_client()
                 await close_shared_vlm_client()
 
                 # Second instance after reconnect
-                client2 = await get_shared_vlm_client()
+                await get_shared_vlm_client()
 
                 assert mock_class.call_count == 2
                 mock_client1.close.assert_called_once()

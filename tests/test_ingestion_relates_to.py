@@ -1,15 +1,16 @@
 """Test ingestion to debug RELATES_TO extraction."""
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 async def main():
     from pathlib import Path
-    from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
+
     from src.components.graph_rag.neo4j_client import get_neo4j_client
+    from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
     # Count RELATES_TO before
     client = get_neo4j_client()
@@ -31,7 +32,7 @@ async def main():
             document_id=document_id,
             batch_id=batch_id,
         )
-        print(f"\nIngestion completed!")
+        print("\nIngestion completed!")
         print(f"Result keys: {result.keys() if isinstance(result, dict) else type(result)}")
 
         if isinstance(result, dict):

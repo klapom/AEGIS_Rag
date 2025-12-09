@@ -12,12 +12,11 @@ Tests cover:
 - Section metadata preservation (headings, pages, bboxes)
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
 
-from src.components.ingestion.langgraph_nodes import SectionMetadata, AdaptiveChunk
-
+from src.components.ingestion.langgraph_nodes import AdaptiveChunk, SectionMetadata
 
 # ============================================================================
 # Fixtures

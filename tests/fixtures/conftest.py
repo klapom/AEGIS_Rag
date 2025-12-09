@@ -5,9 +5,9 @@ Sprint 25 - Feature 25.2: LangGraph Integration Tests
 Provides sample documents and common test utilities.
 """
 
-import pytest
 from pathlib import Path
-from io import BytesIO
+
+import pytest
 from PIL import Image
 
 
@@ -62,7 +62,7 @@ def sample_image_with_text(fixtures_dir: Path) -> Path:
     Returns path to generated image file.
     """
     # Create simple image with text
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import ImageDraw
 
     img = Image.new("RGB", (800, 400), color="white")
     draw = ImageDraw.Draw(img)
@@ -96,8 +96,8 @@ def sample_pdf_path(fixtures_dir: Path, sample_text: str) -> Path:
     """
     try:
         from reportlab.lib.pagesizes import letter
-        from reportlab.pdfgen import canvas
         from reportlab.lib.units import inch
+        from reportlab.pdfgen import canvas
     except ImportError:
         # ReportLab not installed - return None
         return None

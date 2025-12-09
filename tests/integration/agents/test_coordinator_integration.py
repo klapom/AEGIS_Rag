@@ -11,11 +11,10 @@ Tests cover:
 - Multi-turn conversation flows
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
-from langgraph.graph import StateGraph
+import pytest
+
 from src.agents.router import IntentClassifier, QueryIntent
 from src.core.models import DocumentChunk
 
@@ -221,7 +220,6 @@ async def test_coordinator_error_recovery(mock_vector_agent):
 @pytest.mark.asyncio
 async def test_coordinator_partial_failure_handling(mock_vector_agent, mock_graph_agent):
     """Test handling when one agent fails but others succeed."""
-    import asyncio
 
     # Vector agent succeeds, graph agent fails
     mock_graph_agent.query = AsyncMock(side_effect=Exception("Graph query failed"))
@@ -302,7 +300,7 @@ async def test_full_coordinator_flow(mock_vector_agent, mock_graph_agent, mock_m
     fused_context = {"memory": memory_context, "vector": vector_results, "graph": graph_results}
 
     # Step 4: Generate response (mocked)
-    final_response = f"Based on context, hybrid search combines vector and keyword retrieval."
+    final_response = "Based on context, hybrid search combines vector and keyword retrieval."
 
     assert "vector" in fused_context
     assert "graph" in fused_context

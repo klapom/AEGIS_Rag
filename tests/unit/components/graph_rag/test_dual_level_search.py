@@ -9,7 +9,6 @@ import pytest
 
 from src.components.graph_rag.dual_level_search import (
     DualLevelSearch,
-    SearchMode,
     get_dual_level_search,
 )
 from src.core.models import GraphEntity, GraphQueryResult, GraphRelationship, Topic

@@ -30,7 +30,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.components.sandbox import BubblewrapSandboxBackend, ExecuteResult
+from src.components.sandbox import BubblewrapSandboxBackend
 
 
 @pytest.fixture

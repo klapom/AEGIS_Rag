@@ -32,7 +32,6 @@ from src.components.ingestion.format_router import (
     initialize_format_router,
 )
 
-
 # =============================================================================
 # TEST FORMAT SET DEFINITIONS
 # =============================================================================
@@ -77,7 +76,7 @@ class TestFormatSets:
         assert len(ALL_FORMATS) == 27
         # Verify ALL_FORMATS is union of all three sets
         expected_all = DOCLING_FORMATS | LLAMAINDEX_EXCLUSIVE | SHARED_FORMATS
-        assert ALL_FORMATS == expected_all
+        assert expected_all == ALL_FORMATS
 
     def test_format_sets__shared_not_in_exclusive_sets(self):
         """Verify shared formats are not in exclusive sets."""

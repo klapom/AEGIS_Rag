@@ -7,8 +7,8 @@ Tests: PDF, DOCX, PPTX, XLSX (Docling-supported formats)
 import asyncio
 import sys
 import time
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -193,7 +193,7 @@ async def main():
     total_size_kb = sum(r.file_size_kb for r in results)
     total_parse_time = sum(r.parse_time_s for r in results)
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Files tested:     {len(results)}")
     print(f"  Successful:       {success_count}/{len(results)}")
     print(f"  Total size:       {total_size_kb/1024:.2f} MB")
@@ -204,12 +204,12 @@ async def main():
 
     # Performance metrics
     if total_parse_time > 0:
-        print(f"\nPerformance:")
+        print("\nPerformance:")
         print(f"  Throughput:       {total_size_kb/total_parse_time:.1f} KB/s")
         print(f"  Avg time/file:    {total_parse_time/len(results):.2f}s")
 
     # Format breakdown
-    print(f"\nBy Format:")
+    print("\nBy Format:")
     format_stats = {}
     for r in results:
         if r.format not in format_stats:
@@ -226,7 +226,7 @@ async def main():
     # Errors
     errors = [r for r in results if r.error]
     if errors:
-        print(f"\nErrors:")
+        print("\nErrors:")
         for r in errors:
             print(f"  {r.file_name}: {r.error}")
 

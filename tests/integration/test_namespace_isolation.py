@@ -14,11 +14,10 @@ Run with:
     poetry run pytest tests/integration/test_namespace_isolation.py -v --tb=short
 """
 
-import asyncio
 import os
-import pytest
 import uuid
-from pathlib import Path
+
+import pytest
 
 # Override hosts for local testing
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"
@@ -26,15 +25,12 @@ os.environ["QDRANT_HOST"] = "localhost"
 os.environ["QDRANT_PORT"] = "6333"
 os.environ["QDRANT_GRPC_PORT"] = "6334"
 
-from qdrant_client.models import PointStruct, Distance, VectorParams, PayloadSchemaType
+from qdrant_client.models import Distance, PayloadSchemaType, PointStruct, VectorParams
 
 from src.core.namespace import (
     NamespaceManager,
-    DEFAULT_NAMESPACE,
-    get_namespace_manager,
 )
 from src.core.neo4j_safety import (
-    SecureNeo4jClient,
     NamespaceSecurityError,
     get_secure_neo4j_client,
 )
@@ -165,7 +161,7 @@ class TestNamespaceIsolationNeo4j:
         )
 
         # Should see entities from both namespaces
-        namespaces_found = set(r["namespace"] for r in result)
+        namespaces_found = {r["namespace"] for r in result}
         assert test_namespaces["ns_a"] in namespaces_found or test_namespaces["ns_b"] in namespaces_found
 
 
@@ -274,7 +270,7 @@ class TestNamespaceIsolationQdrant:
             )
 
             # Should find documents from both namespaces
-            namespaces_found = set(r["payload"]["namespace_id"] for r in results)
+            namespaces_found = {r["payload"]["namespace_id"] for r in results}
             assert test_namespaces["ns_a"] in namespaces_found
             assert test_namespaces["general"] in namespaces_found
             assert test_namespaces["ns_b"] not in namespaces_found

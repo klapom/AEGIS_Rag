@@ -8,10 +8,9 @@ They test the helper methods and integration logic using mocks.
 Note: Full UI tests will be added in Sprint 11 with Playwright + React.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import httpx
 
+import pytest
 
 # Skip all tests if gradio is not installed
 pytestmark = pytest.mark.skipif(

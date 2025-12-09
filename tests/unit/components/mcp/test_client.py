@@ -9,7 +9,6 @@ Tests cover:
 - Statistics tracking
 """
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -18,12 +17,10 @@ import pytest
 
 from src.components.mcp import (
     MCPClient,
-    MCPClientError,
     MCPConnectionError,
     MCPServer,
     MCPTool,
     MCPToolCall,
-    MCPToolError,
     ServerStatus,
     TransportType,
 )

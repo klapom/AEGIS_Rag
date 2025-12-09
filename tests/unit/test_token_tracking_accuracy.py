@@ -18,16 +18,16 @@ Test Strategy:
 - Aim for >80% code coverage
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
+from src.components.llm_proxy.config import LLMProxyConfig
 from src.components.llm_proxy.cost_tracker import CostTracker
 from src.components.llm_proxy.models import LLMTask, TaskType
-from src.components.llm_proxy.config import LLMProxyConfig
-
 
 # ============================================================================
 # Test Fixtures

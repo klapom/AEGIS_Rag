@@ -4,14 +4,13 @@ Tests directory scanning, job tracking, and indexing job management APIs.
 Integrates with real FastAPI app and mocked backend services.
 """
 
+import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch, MagicMock
-import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
-
 
 # ============================================================================
 # Directory Scanning Endpoint Tests

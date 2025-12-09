@@ -5,13 +5,13 @@ Check if formatting (bold, etc.) can be used to detect headings.
 """
 
 import json
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 json_path = Path(__file__).parent / "results" / "multi_format_test" / "docx_DE-D-AdvancedAdministration_0368_raw.json"
 
 print(f"Loading: {json_path}")
-with open(json_path, "r", encoding="utf-8") as f:
+with open(json_path, encoding="utf-8") as f:
     data = json.load(f)
 
 texts = data.get("texts", [])

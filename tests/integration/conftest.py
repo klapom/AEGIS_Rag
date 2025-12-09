@@ -9,8 +9,9 @@ Local development with real Ollama is unaffected (CI=true not set locally).
 """
 
 import os
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 @pytest.fixture(autouse=True)

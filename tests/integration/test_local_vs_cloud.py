@@ -15,9 +15,10 @@ Test Coverage:
 """
 
 import os
-import pytest
 from pathlib import Path
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestLocalVsCloudVLMMetadata:
@@ -49,7 +50,7 @@ class TestLocalVsCloudVLMMetadata:
         - cost_usd: float = 0.0
         - tokens_total: int
         """
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         with patch("src.components.llm_proxy.ollama_vlm.httpx.AsyncClient") as mock_http:
             mock_response = AsyncMock()
@@ -95,7 +96,7 @@ class TestLocalVsCloudVLMMetadata:
         if not os.getenv("ALIBABA_CLOUD_API_KEY"):
             pytest.skip("Cloud API key not configured")
 
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         client = get_vlm_client(VLMBackend.DASHSCOPE)
 
@@ -123,7 +124,7 @@ class TestLocalVsCloudVLMMetadata:
 
         Both backends should return metadata with same structure and field names.
         """
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         # Mock Ollama response
         with patch("src.components.llm_proxy.ollama_vlm.httpx.AsyncClient") as mock_http:
@@ -168,7 +169,7 @@ class TestLocalVsCloudCostTracking:
     @pytest.mark.asyncio
     async def test_local_vlm_zero_cost(self, test_image):
         """Test local Ollama VLM reports zero cost."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         with patch("src.components.llm_proxy.ollama_vlm.httpx.AsyncClient") as mock_http:
             mock_response = AsyncMock()
@@ -199,7 +200,7 @@ class TestLocalVsCloudCostTracking:
         if not os.getenv("ALIBABA_CLOUD_API_KEY"):
             pytest.skip("Cloud API key not configured")
 
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         client = get_vlm_client(VLMBackend.DASHSCOPE)
 
@@ -219,7 +220,7 @@ class TestLocalVsCloudCostTracking:
     @pytest.mark.asyncio
     async def test_cost_tracking_consistency(self, test_image):
         """Test cost tracking reports consistent values across calls."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         with patch("src.components.llm_proxy.ollama_vlm.httpx.AsyncClient") as mock_http:
             mock_response = AsyncMock()
@@ -251,8 +252,9 @@ class TestConfigurationDrivenBehavior:
 
     def test_llm_config_has_vlm_backend_setting(self):
         """Test llm_config.yml contains vlm_backend configuration."""
-        import yaml
         from pathlib import Path
+
+        import yaml
 
         config_path = Path("/home/admin/projects/aegisrag/AEGIS_Rag/config/llm_config.yml")
         if config_path.exists():
@@ -280,8 +282,8 @@ class TestConfigurationDrivenBehavior:
     def test_vlm_backend_selection_precedence(self, monkeypatch):
         """Test VLM backend selection follows correct precedence."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         # Test 1: Environment variable has highest priority
@@ -299,8 +301,8 @@ class TestConfigurationDrivenBehavior:
     def test_invalid_vlm_backend_falls_back_to_default(self, monkeypatch):
         """Test invalid VLM backend configuration falls back to default."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         monkeypatch.setenv("VLM_BACKEND", "invalid_backend_name")
@@ -347,7 +349,7 @@ class TestVLMProtocolInterface:
     @pytest.mark.asyncio
     async def test_vlm_client_protocol_methods(self):
         """Test all VLM clients have required protocol methods."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         client = get_vlm_client(VLMBackend.OLLAMA)
 
@@ -358,7 +360,7 @@ class TestVLMProtocolInterface:
     @pytest.mark.asyncio
     async def test_vlm_client_response_signature(self, tmp_path):
         """Test VLM client response signature is consistent."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         image_path = tmp_path / "test.png"
         image_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 50)
@@ -395,7 +397,7 @@ class TestVLMFallbackBehavior:
     @pytest.mark.asyncio
     async def test_local_to_cloud_fallback_pattern(self):
         """Test pattern for falling back from local to cloud VLM."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         # Simulate local failure
         local_client = get_vlm_client(VLMBackend.OLLAMA)
@@ -409,8 +411,8 @@ class TestVLMFallbackBehavior:
     async def test_vlm_backend_isolation(self):
         """Test that switching VLM backends doesn't interfere with other components."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_client,
             VLMBackend,
+            get_vlm_client,
         )
 
         # Get both backends

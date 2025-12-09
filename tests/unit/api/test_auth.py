@@ -20,7 +20,6 @@ Test Strategy:
     - Verify error handling and status codes
 """
 
-import json
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 

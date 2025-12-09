@@ -7,7 +7,6 @@ End-to-end tests validating the complete Feature 14.1 implementation:
 - Provenance queries for entity traceability
 """
 
-import asyncio
 import pytest
 from neo4j import AsyncGraphDatabase
 
@@ -238,10 +237,10 @@ async def test_chunking_and_provenance_accuracy_e2e(lightrag_wrapper, cleanup_da
         "id": "chunking_test",
         "text": " ".join(
             [
-                f"Apple Inc is a technology company founded by Steve Jobs in California. "
-                f"Microsoft Corporation was founded by Bill Gates in Washington. "
-                f"Amazon was started by Jeff Bezos in Seattle. "
-                f"Tesla Motors is led by Elon Musk and produces electric vehicles. "
+                "Apple Inc is a technology company founded by Steve Jobs in California. "
+                "Microsoft Corporation was founded by Bill Gates in Washington. "
+                "Amazon was started by Jeff Bezos in Seattle. "
+                "Tesla Motors is led by Elon Musk and produces electric vehicles. "
                 for i in range(25)  # Repeat to create multiple chunks
             ]
         ),

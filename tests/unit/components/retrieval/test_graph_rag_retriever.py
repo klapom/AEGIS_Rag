@@ -9,8 +9,9 @@ These tests verify:
 - Mock-based retrieval flows
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.retrieval.graph_rag_retriever import (
     Document,
@@ -28,7 +29,6 @@ from src.components.retrieval.query_decomposition import (
     QueryType,
     SubQuery,
 )
-
 
 # ============================================================================
 # Test GraphContext

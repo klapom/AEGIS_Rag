@@ -14,7 +14,7 @@ from datetime import datetime
 
 import pytest
 
-from src.core.exceptions import LLMError, MemoryError
+from src.core.exceptions import LLMError
 
 # Mark all tests in this module as integration tests
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]

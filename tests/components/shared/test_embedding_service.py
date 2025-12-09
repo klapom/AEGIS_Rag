@@ -1,6 +1,7 @@
 """Tests for unified embedding service."""
 
 import pytest
+
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 
 

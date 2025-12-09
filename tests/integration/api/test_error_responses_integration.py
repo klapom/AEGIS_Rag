@@ -272,10 +272,7 @@ def test_error_response__json_serialization__no_errors(client):
     ]
 
     for endpoint, method in test_endpoints:
-        if method == "GET":
-            response = client.get(endpoint)
-        else:
-            response = client.post(endpoint, json={})
+        response = client.get(endpoint) if method == "GET" else client.post(endpoint, json={})
 
         # Should be valid JSON
         try:

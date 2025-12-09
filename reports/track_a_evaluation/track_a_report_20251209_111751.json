@@ -1,0 +1,49 @@
+{
+  "metadata": {
+    "timestamp": "20251209_111751",
+    "total_duration_seconds": 189.56,
+    "sample_size_per_dataset": 3,
+    "datasets": [
+      "hotpotqa"
+    ],
+    "track": "A"
+  },
+  "services": {
+    "qdrant": true,
+    "ollama": true,
+    "neo4j": true
+  },
+  "ingestion": {},
+  "evaluation": {
+    "hotpotqa": {
+      "namespace": "eval_hotpotqa",
+      "sample_count": 3,
+      "duration_seconds": 188.49567471601767,
+      "metrics": {
+        "context_precision": NaN,
+        "context_recall": 1.0,
+        "faithfulness": NaN,
+        "answer_relevancy": NaN
+      },
+      "per_intent": [
+        {
+          "intent": "unknown",
+          "sample_count": 3,
+          "context_precision": NaN,
+          "context_recall": 1.0,
+          "faithfulness": NaN,
+          "answer_relevancy": NaN
+        }
+      ]
+    }
+  },
+  "summary": {
+    "datasets_evaluated": 1,
+    "average_metrics": {
+      "context_precision": NaN,
+      "context_recall": 1.0,
+      "faithfulness": NaN,
+      "answer_relevancy": NaN
+    }
+  }
+}

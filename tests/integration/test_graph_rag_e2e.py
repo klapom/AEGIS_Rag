@@ -12,19 +12,18 @@ Note: These tests require Neo4j and Qdrant to be running.
 They will be skipped if the services are unavailable.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.components.retrieval.graph_rag_retriever import (
     Document,
-    Entity,
     GraphContext,
     GraphRAGRetriever,
     get_graph_rag_retriever,
 )
 from src.core.exceptions import DatabaseConnectionError
-
 
 # ============================================================================
 # Fixtures

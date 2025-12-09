@@ -35,7 +35,6 @@ Dependencies:
 import json
 import random
 import uuid
-from typing import Any
 
 from locust import HttpUser, between, task
 

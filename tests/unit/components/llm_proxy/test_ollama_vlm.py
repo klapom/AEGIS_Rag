@@ -10,10 +10,11 @@ Tests:
 """
 
 import base64
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 from src.components.llm_proxy.ollama_vlm import OllamaVLMClient
 
@@ -324,7 +325,7 @@ class TestGenerateImageDescription:
 
         # Verify correct endpoint was called
         call_args = client.client.post.call_args
-        endpoint = call_args[0][0] if call_args[0] else call_args.kwargs.get("url", "")
+        call_args[0][0] if call_args[0] else call_args.kwargs.get("url", "")
         # The endpoint should contain the base URL and /api/generate
         assert "http://custom:11434" in client.base_url
         assert "/api/generate" in call_args[0][0]

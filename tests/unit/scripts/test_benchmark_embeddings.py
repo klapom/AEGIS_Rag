@@ -9,24 +9,23 @@ Tests cover:
 - Results saving and comparison
 """
 
-import pytest
 import json
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from dataclasses import asdict
 
 # Mock qdrant_client before importing benchmark script
 import sys
-from unittest.mock import MagicMock
+from dataclasses import asdict
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
 
 sys.modules["qdrant_client"] = MagicMock()
 sys.modules["qdrant_client.models"] = MagicMock()
 
 from scripts.benchmark_embeddings import (
     BenchmarkConfig,
-    EmbeddingMetrics,
     EmbeddingBenchmark,
+    EmbeddingMetrics,
 )
 
 
@@ -78,7 +77,7 @@ class TestEmbeddingMetrics:
         assert metrics.model_name == "bge-m3"
         assert metrics.embedding_dim == 1024
         assert metrics.single_embedding_latency_ms == 25.5
-        assert metrics.cross_layer_similarity_possible == False  # default
+        assert not metrics.cross_layer_similarity_possible  # default
 
     def test_metrics_with_retrieval_quality(self):
         """Test metrics with retrieval quality scores."""
@@ -267,7 +266,7 @@ class TestEmbeddingBenchmark:
             assert output_path.exists()
 
             # Verify content
-            with open(output_path, "r") as f:
+            with open(output_path) as f:
                 saved_results = json.load(f)
 
             assert "nomic-embed-text" in saved_results

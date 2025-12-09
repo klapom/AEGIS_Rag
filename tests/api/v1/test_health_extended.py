@@ -7,10 +7,8 @@ Date: 2025-10-27
 """
 
 import pytest
-from pydantic import ValidationError
 
 from src.api.v1.health import DependencyHealth, DetailedHealthResponse, HealthStatus
-
 
 # ============================================================================
 # HealthStatus Model Tests

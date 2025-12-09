@@ -27,11 +27,8 @@ Run tests:
 Coverage target: >80% for src/components/ingestion/langgraph_pipeline.py
 """
 
-import asyncio
-import time
 from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -53,7 +50,7 @@ if not DOCLING_AVAILABLE:
         reason="docling_core not installed (optional dependency for ingestion tests)"
     )
 
-from src.components.ingestion.ingestion_state import IngestionState, create_initial_state
+from src.components.ingestion.ingestion_state import create_initial_state
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
     docling_parse_node,
@@ -64,13 +61,11 @@ from src.components.ingestion.langgraph_nodes import (
 )
 from src.components.ingestion.langgraph_pipeline import (
     create_ingestion_graph,
-    initialize_pipeline_router,
     run_batch_ingestion,
     run_ingestion_pipeline,
     run_ingestion_pipeline_streaming,
 )
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # Test Fixtures

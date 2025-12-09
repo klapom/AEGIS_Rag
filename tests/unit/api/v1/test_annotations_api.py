@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
-from qdrant_client.models import PointStruct, ScoredPoint
+from qdrant_client.models import ScoredPoint
 
 from src.api.v1.annotations import (
     BBoxAbsolute,
@@ -24,7 +24,6 @@ from src.api.v1.annotations import (
     get_chunk_annotations,
     get_document_annotations,
 )
-
 
 # =============================================================================
 # FIXTURES
@@ -223,7 +222,7 @@ async def test_get_document_annotations__filter_by_chunk_ids(
     mock_qdrant_class.return_value = client
 
     # Call with chunk_ids filter
-    response = await get_document_annotations(
+    await get_document_annotations(
         document_id="test-doc-123",
         chunk_ids=["test-chunk-123", "test-chunk-456"],
         page_no=None,

@@ -17,9 +17,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.components.ingestion.docling_client import DoclingContainerClient
-from src.components.ingestion.section_extraction import extract_section_hierarchy
 from src.components.ingestion.langgraph_nodes import SectionMetadata
-
+from src.components.ingestion.section_extraction import extract_section_hierarchy
 
 # Test documents - one of each format
 TEST_DOCUMENTS = {
@@ -138,13 +137,13 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
 
     try:
         # Parse with Docling
-        print(f"  Parsing with Docling...")
+        print("  Parsing with Docling...")
         client = DoclingContainerClient()
         parsed = await client.parse_document(doc_path)
 
         # Check if we got json_content
         if not hasattr(parsed, "json_content") or not parsed.json_content:
-            print(f"  ERROR: No json_content in parsed document!")
+            print("  ERROR: No json_content in parsed document!")
             result["error"] = "No json_content"
             return result
 
@@ -161,12 +160,12 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
         result["json_size_kb"] = json_path.stat().st_size / 1024
 
         # Analyze JSON structure
-        print(f"  Analyzing JSON structure...")
+        print("  Analyzing JSON structure...")
         analysis = analyze_json_structure(json_content, format_name)
         result["analysis"] = analysis
 
         # Print analysis summary
-        print(f"\n  === JSON Structure Analysis ===")
+        print("\n  === JSON Structure Analysis ===")
         print(f"  Top-level keys: {', '.join(analysis['top_level_keys'])}")
         print(f"  Pages: {analysis['pages_count']} ({analysis['pages_type']})")
         print(f"  Texts: {analysis['texts_count']} items")
@@ -174,16 +173,16 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
         print(f"  Pictures: {analysis['pictures_count']}, Tables: {analysis['tables_count']}")
 
         if analysis.get("text_labels"):
-            print(f"\n  === Text Labels ===")
+            print("\n  === Text Labels ===")
             for label, count in sorted(analysis["text_labels"].items(), key=lambda x: -x[1]):
                 print(f"    {label}: {count}x")
 
         if analysis.get("body_uses_refs"):
             print(f"\n  WARNING: body.children uses $ref pointers ({analysis['body_children_refs']} refs)")
-            print(f"           Section extraction must use 'texts' array!")
+            print("           Section extraction must use 'texts' array!")
 
         # Test section extraction
-        print(f"\n  === Section Extraction Test ===")
+        print("\n  === Section Extraction Test ===")
         try:
             sections = extract_section_hierarchy(parsed, SectionMetadata)
             result["sections_extracted"] = len(sections)
@@ -193,25 +192,25 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
             print(f"  Sections with text: {result['sections_with_text']}")
 
             if sections:
-                print(f"\n  First 5 sections:")
+                print("\n  First 5 sections:")
                 for i, s in enumerate(sections[:5]):
                     text_preview = s.text[:50].replace("\n", " ") if s.text else "(empty)"
                     print(f"    [{i+1}] L{s.level} p{s.page_no}: '{s.heading[:40]}' -> '{text_preview}...'")
             else:
-                print(f"  WARNING: No sections extracted!")
+                print("  WARNING: No sections extracted!")
 
                 # Debug: Check if texts array has headings
                 if analysis["heading_count"] > 0:
                     print(f"  ISSUE: texts array has {analysis['heading_count']} headings but extraction failed!")
                 else:
-                    print(f"  Note: No heading labels found in texts array")
+                    print("  Note: No heading labels found in texts array")
 
         except Exception as e:
             print(f"  ERROR in section extraction: {e}")
             result["section_extraction_error"] = str(e)
 
         # Check for expected structure
-        print(f"\n  === Structure Validation ===")
+        print("\n  === Structure Validation ===")
         issues = []
 
         if not analysis["has_texts"]:
@@ -226,12 +225,12 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
             issues.append("body uses $ref but no texts array available")
 
         if issues:
-            print(f"  ISSUES FOUND:")
+            print("  ISSUES FOUND:")
             for issue in issues:
                 print(f"    - {issue}")
             result["issues"] = issues
         else:
-            print(f"  OK: Structure looks correct")
+            print("  OK: Structure looks correct")
             result["issues"] = []
 
         result["success"] = True

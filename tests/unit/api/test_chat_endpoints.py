@@ -11,9 +11,10 @@ Tests cover:
 - Source citation retrieval
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
-from unittest.mock import AsyncMock, patch, MagicMock
 
 # Test data
 SAMPLE_QUERY = "Was ist AEGIS RAG?"

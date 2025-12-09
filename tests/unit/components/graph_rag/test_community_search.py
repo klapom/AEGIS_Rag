@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.components.graph_rag.community_search import CommunitySearch
-from src.core.models import Community, CommunitySearchResult, GraphEntity
+from src.core.models import Community, CommunitySearchResult
 
 
 @pytest.fixture
@@ -30,7 +30,6 @@ def mock_aegis_llm_proxy():
 @pytest.fixture
 def search(mock_neo4j_client, mock_aegis_llm_proxy):
     """Create CommunitySearch instance with mocked clients."""
-    from unittest.mock import patch
 
     # Mock get_aegis_llm_proxy to return our mock
     with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy") as mock_get_proxy:

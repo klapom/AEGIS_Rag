@@ -2,9 +2,9 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -23,7 +23,7 @@ async def analyze_json_structure():
 
     json_content = parsed.json_content
 
-    print(f"\nTop-level keys in json_content:")
+    print("\nTop-level keys in json_content:")
     for key in sorted(json_content.keys()):
         value = json_content[key]
         if isinstance(value, list):
@@ -68,13 +68,13 @@ async def analyze_json_structure():
 
     # Dump a sample group for detailed inspection
     if "groups" in json_content and json_content["groups"]:
-        print(f"\n\nFirst group detailed structure:")
+        print("\n\nFirst group detailed structure:")
         print("-" * 80)
         print(json.dumps(json_content["groups"][0], indent=2, default=str)[:2000])
 
     # Dump a sample text for detailed inspection
     if "texts" in json_content and json_content["texts"]:
-        print(f"\n\nFirst text detailed structure:")
+        print("\n\nFirst text detailed structure:")
         print("-" * 80)
         print(json.dumps(json_content["texts"][0], indent=2, default=str)[:2000])
 

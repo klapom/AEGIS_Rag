@@ -18,7 +18,6 @@ from src.components.ingestion.section_extraction import (
     extract_section_hierarchy,
 )
 
-
 # =============================================================================
 # TEST: HEADING LEVEL MAPPING
 # =============================================================================

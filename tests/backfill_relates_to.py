@@ -3,17 +3,17 @@
 Run with: poetry run python tests/backfill_relates_to.py
 """
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 async def backfill_relates_to():
     """Create RELATES_TO relationships for all chunks in Neo4j."""
+    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
     from src.components.graph_rag.neo4j_client import get_neo4j_client
     from src.components.graph_rag.relation_extractor import RelationExtractor
-    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 
     print("=" * 60)
     print("Backfilling RELATES_TO Relationships for ALL Chunks")
@@ -21,7 +21,7 @@ async def backfill_relates_to():
 
     # Get Neo4j client
     neo4j_client = get_neo4j_client()
-    print(f"\n1. Neo4j client initialized")
+    print("\n1. Neo4j client initialized")
 
     # Get all chunks from Neo4j
     chunk_query = "MATCH (c:chunk) RETURN c.chunk_id as chunk_id, c.text as text"

@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "timestamp": "20251209_093848",
+    "total_duration_seconds": 21.92,
+    "sample_size_per_dataset": 3,
+    "datasets": [
+      "hotpotqa"
+    ],
+    "track": "A"
+  },
+  "services": {
+    "qdrant": true,
+    "ollama": true,
+    "neo4j": true
+  },
+  "ingestion": {
+    "hotpotqa": {
+      "total_contexts": 0,
+      "contexts_ingested": 0,
+      "contexts_failed": 0,
+      "batches_processed": 0,
+      "duration_sec": 19.35,
+      "dataset": "hotpotqa",
+      "namespace": "eval_hotpotqa"
+    }
+  },
+  "evaluation": {
+    "hotpotqa": {
+      "error": "No valid samples in dataset: reports/track_a_evaluation/datasets/hotpotqa_eval.jsonl"
+    }
+  },
+  "summary": {}
+}

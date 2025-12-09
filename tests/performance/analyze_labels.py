@@ -1,11 +1,11 @@
 """Analyze text labels in parsed JSON."""
 
 import json
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 json_path = Path(__file__).parent / "results" / "docling_parsed_sample.json"
-with open(json_path, "r", encoding="utf-8") as f:
+with open(json_path, encoding="utf-8") as f:
     data = json.load(f)
 
 print("=== Alle Text-Labels und deren Haeufigkeit ===")

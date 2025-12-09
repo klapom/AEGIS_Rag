@@ -1,6 +1,5 @@
 """Unit tests for TemporalQueryBuilder."""
 
-import pytest
 from datetime import datetime, timedelta
 
 from src.components.graph_rag.temporal_query_builder import (

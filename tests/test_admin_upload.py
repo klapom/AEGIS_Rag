@@ -5,7 +5,6 @@ for subsequent indexing via the LangGraph pipeline.
 """
 
 import shutil
-import uuid
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch

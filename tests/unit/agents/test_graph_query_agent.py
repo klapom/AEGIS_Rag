@@ -20,7 +20,6 @@ from src.components.graph_rag.dual_level_search import (
     SearchMode,
 )
 
-
 # ============================================================================
 # Test classify_search_mode function
 # ============================================================================
@@ -372,7 +371,7 @@ class TestGraphQueryNode:
         state = {}
 
         with patch("src.agents.graph_query_agent.GraphQueryAgent", return_value=mock_agent):
-            updated_state = await graph_query_node(state)
+            await graph_query_node(state)
 
         # Should still process without error
         mock_agent.process.assert_called_once()

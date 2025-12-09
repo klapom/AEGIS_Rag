@@ -18,16 +18,11 @@ Run tests:
     pytest tests/unit/test_ingestion_config.py -v
 """
 
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.components.ingestion.docling_client import DoclingContainerClient
-from src.components.ingestion.ingestion_state import create_initial_state
-from src.components.ingestion.langgraph_pipeline import create_ingestion_graph
-from src.core.config import Settings, get_settings
-from src.core.exceptions import IngestionError
-
+from src.core.config import Settings
 
 # =============================================================================
 # Test 3.1: Docling Config Injection
@@ -160,7 +155,7 @@ def test_chunking_config_propagation__token_limits__correct_tokenizer():
     - overlap_tokens from config (0-500)
     - Strategy method (adaptive/fixed/sentence/paragraph)
     """
-    from src.core.chunking_service import ChunkingService, ChunkingConfig, ChunkStrategyEnum
+    from src.core.chunking_service import ChunkingConfig, ChunkingService, ChunkStrategyEnum
 
     # Setup: Config with token limits
     max_tokens = 1024
@@ -188,7 +183,7 @@ def test_chunking_config_validation__invalid_overlap__raises_error():
     - Negative values rejected
     - Config validation happens at initialization (Pydantic validation)
     """
-    from src.core.chunking_service import ChunkingService, ChunkingConfig, ChunkStrategyEnum
+    from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum
 
     # Setup: Invalid config (overlap_tokens > max_tokens)
     # Pydantic should reject this since overlap_tokens has max constraint of 500
@@ -198,7 +193,7 @@ def test_chunking_config_validation__invalid_overlap__raises_error():
 
     # Action & Assert: Should raise validation error for negative overlap
     with pytest.raises((ValueError, AssertionError, TypeError)) as exc_info:
-        config = ChunkingConfig(
+        ChunkingConfig(
             strategy=ChunkStrategyEnum.ADAPTIVE,
             max_tokens=max_tokens,
             overlap_tokens=-1,  # Negative is invalid (ge=0 constraint)
@@ -279,7 +274,7 @@ def test_config_validation__invalid_extraction_pipeline__raises_error():
     """
     # Setup: Invalid extraction_pipeline value
     with pytest.raises((ValueError, AssertionError)) as exc_info:
-        settings = Settings(extraction_pipeline="invalid_pipeline_type")  # Invalid value
+        Settings(extraction_pipeline="invalid_pipeline_type")  # Invalid value
 
     # Assert: Validation error with clear message
     # Pydantic should catch this at Settings initialization

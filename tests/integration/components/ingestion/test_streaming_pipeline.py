@@ -19,33 +19,26 @@ Architecture Under Test:
 
 import asyncio
 import time
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.components.ingestion.extraction_worker_pool import (
-    ExtractionResult,
     GraphExtractionWorkerPool,
     WorkerPoolConfig,
     WorkerStatus,
 )
+from src.components.ingestion.pipeline_queues import (
+    ChunkQueueItem,
+    TypedQueue,
+)
 from src.components.ingestion.progress_manager import (
-    PipelineProgressManager,
-    StageProgress,
     StageStatus,
     get_progress_manager,
 )
-from src.components.ingestion.pipeline_queues import (
-    ChunkQueueItem,
-    EmbeddedChunkItem,
-    TypedQueue,
-)
 from src.components.ingestion.streaming_pipeline import (
     PipelineConfig,
-    StreamingPipelineOrchestrator,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -653,7 +646,7 @@ class TestQueueBackpressure:
             )
             put_completed = True
 
-        task = asyncio.create_task(try_put())
+        asyncio.create_task(try_put())
         await asyncio.sleep(0.1)
 
         assert not put_completed  # Should still be blocked

@@ -26,13 +26,12 @@ Sprint Context:
 - ADR-028: LlamaIndex Strategic Fallback
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from src.components.ingestion.format_router import FormatRouter, ParserType
 from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
-
 
 # =============================================================================
 # FIXTURES

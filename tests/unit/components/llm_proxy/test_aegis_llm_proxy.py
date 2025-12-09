@@ -3,18 +3,19 @@
 This module tests token tracking accuracy with proper input/output token parsing.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.config import LLMProxyConfig
 from src.components.llm_proxy.models import (
-    LLMTask,
-    TaskType,
-    QualityRequirement,
     Complexity,
     DataClassification,
+    LLMTask,
+    QualityRequirement,
+    TaskType,
 )
 
 

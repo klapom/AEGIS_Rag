@@ -18,7 +18,6 @@ from src.agents.checkpointer import (
     get_conversation_history,
 )
 
-
 # ============================================================================
 # create_checkpointer Function Tests
 # ============================================================================
@@ -36,7 +35,7 @@ def test_create_checkpointer_returns_memory_saver():
 def test_create_checkpointer_logs_initialization():
     """Test create_checkpointer logs checkpointer creation."""
     with patch("src.agents.checkpointer.logger") as mock_logger:
-        checkpointer = create_checkpointer()
+        create_checkpointer()
 
         # Should log creation
         assert mock_logger.info.call_count >= 1
@@ -239,8 +238,9 @@ def test_create_redis_checkpointer_creates_instance():
 @pytest.mark.unit
 def test_create_redis_checkpointer_with_password():
     """Test create_redis_checkpointer handles Redis password."""
-    from src.agents.checkpointer import create_redis_checkpointer
     from pydantic import SecretStr
+
+    from src.agents.checkpointer import create_redis_checkpointer
 
     with patch("src.agents.checkpointer.settings") as mock_settings:
         mock_settings.redis_host = "localhost"
@@ -251,7 +251,7 @@ def test_create_redis_checkpointer_with_password():
             mock_client = MagicMock()
             mock_redis.return_value = mock_client
 
-            checkpointer = create_redis_checkpointer()
+            create_redis_checkpointer()
 
             # Verify password was included in URL
             call_args = mock_redis.call_args[0][0]

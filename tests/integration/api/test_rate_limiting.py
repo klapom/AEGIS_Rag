@@ -48,7 +48,7 @@ def test_rate_limit__exceed_global_limit__returns_429(client):
     # Global limit is 100/minute from config
     # Make 101 requests to exceed limit
     responses = []
-    for i in range(settings.rate_limit_per_minute + 1):
+    for _i in range(settings.rate_limit_per_minute + 1):
         response = client.get("/api/v1/health")
         responses.append(response)
 
@@ -90,7 +90,7 @@ def test_rate_limit__endpoint_specific_limits__enforced(client):
     # So we'll test a public endpoint instead
 
     # Make a few requests to verify the limit is applied
-    for i in range(5):
+    for _i in range(5):
         response = client.get("/api/v1/health")
         assert response.status_code == 200
 
@@ -116,7 +116,7 @@ def test_rate_limit__error_response__includes_request_id(client):
     This test ensures integration with Feature 22.2.1 (Request ID Tracking).
     """
     # Exceed rate limit
-    for i in range(settings.rate_limit_per_minute + 1):
+    for _i in range(settings.rate_limit_per_minute + 1):
         response = client.get("/api/v1/health")
         if response.status_code == 429:
             break
@@ -137,7 +137,7 @@ def test_rate_limit__error_response__includes_request_id(client):
 def test_rate_limit__retry_after_header__valid_value(client):
     """Verify Retry-After header contains valid value."""
     # Exceed rate limit
-    for i in range(settings.rate_limit_per_minute + 1):
+    for _i in range(settings.rate_limit_per_minute + 1):
         response = client.get("/api/v1/health")
         if response.status_code == 429:
             break

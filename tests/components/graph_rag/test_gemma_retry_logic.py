@@ -10,18 +10,14 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-import asyncio
-import time
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
-from tenacity import RetryError
 
 from src.components.graph_rag.relation_extractor import (
     RelationExtractor,
     create_relation_extractor_from_config,
 )
-
 
 # ============================================================================
 # Fixtures

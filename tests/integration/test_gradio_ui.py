@@ -22,7 +22,6 @@ import asyncio
 import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
-from uuid import uuid4
 
 import pandas as pd
 import pytest
@@ -43,7 +42,7 @@ async def gradio_app():
     This fixture provides a fresh GradioApp instance with mocked HTTP client
     to avoid actual backend dependencies during testing.
     """
-    with patch("src.ui.gradio_app.httpx.AsyncClient") as mock_client:
+    with patch("src.ui.gradio_app.httpx.AsyncClient"):
         # Create app instance
         from src.ui.gradio_app import GradioApp
 
@@ -1072,7 +1071,7 @@ async def test_upload_progress_tracking(gradio_app, temp_test_file, mock_upload_
     mock_progress = Mock(side_effect=progress_tracker)
 
     # Upload with progress
-    result = await gradio_app.upload_document(file_obj, progress=mock_progress)
+    await gradio_app.upload_document(file_obj, progress=mock_progress)
 
     # Verify progress was called
     assert len(progress_calls) > 0

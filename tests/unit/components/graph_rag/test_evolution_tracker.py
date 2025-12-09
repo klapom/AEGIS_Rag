@@ -1,8 +1,9 @@
 """Unit tests for EvolutionTracker."""
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.components.graph_rag.evolution_tracker import (
     ChangeEvent,

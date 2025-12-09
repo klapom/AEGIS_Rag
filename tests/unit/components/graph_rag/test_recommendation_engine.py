@@ -1,7 +1,8 @@
 """Tests for Graph Recommendation Engine."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from src.components.graph_rag.recommendation_engine import (
     RecommendationEngine,
@@ -201,7 +202,7 @@ class TestRecommendationEngine:
         """Test recommend_similar_entities with custom top_k."""
         mock_neo4j_client.execute_query.return_value = sample_recommendation_data
 
-        recommendations = await engine.recommend_similar_entities("entity_1", top_k=1)
+        await engine.recommend_similar_entities("entity_1", top_k=1)
 
         mock_neo4j_client.execute_query.assert_called_once()
         call_args = mock_neo4j_client.execute_query.call_args

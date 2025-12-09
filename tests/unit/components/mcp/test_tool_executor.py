@@ -10,13 +10,12 @@ Tests cover:
 Sprint 9 Feature 9.7: Tool Execution Handler
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.components.mcp.client import MCPClient
-from src.components.mcp.models import MCPTool, MCPToolCall, MCPToolResult
+from src.components.mcp.models import MCPTool, MCPToolResult
 from src.components.mcp.tool_executor import ToolExecutor
 
 

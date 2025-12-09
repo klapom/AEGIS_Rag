@@ -8,7 +8,6 @@ Tests cover:
 - Strategy pattern implementation
 """
 
-import asyncio
 import time
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -201,7 +200,7 @@ class TestRouteQuery:
                     router = EnhancedMemoryRouter(session_id="test-session")
 
                     metadata = {"timestamp": datetime.now(UTC)}
-                    layers = await router.route_query("test query", metadata)
+                    await router.route_query("test query", metadata)
 
                     # Should include session_id in metadata
                     assert "session_id" in metadata or router.session_id

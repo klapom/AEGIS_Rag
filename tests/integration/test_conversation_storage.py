@@ -9,18 +9,18 @@ This test suite verifies:
 4. Session persistence across browser refreshes
 """
 
-import pytest
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
-from datetime import datetime, UTC
 
-from src.api.v1.chat import save_conversation_turn, FollowUpQuestionsResponse
+import pytest
+
+from src.api.v1.chat import FollowUpQuestionsResponse, save_conversation_turn
 from src.components.memory import get_redis_memory
 
 
 @pytest.fixture
 async def redis_memory():
     """Get Redis memory manager for testing."""
-    from src.components.memory import get_redis_memory
     redis = get_redis_memory()
     yield redis
     # Cleanup is handled by test teardown
@@ -299,8 +299,9 @@ class TestFollowUpQuestionsEndpoint:
     @pytest.mark.asyncio
     async def test_get_followup_questions_session_not_found(self):
         """Test that endpoint returns 404 for non-existent session."""
-        from src.api.v1.chat import get_followup_questions
         from fastapi import HTTPException
+
+        from src.api.v1.chat import get_followup_questions
 
         non_existent_session = "non_existent_session_12345"
 
@@ -371,8 +372,9 @@ class TestRedisConnectionHandling:
     @pytest.mark.asyncio
     async def test_retrieve_handles_none_result(self, redis_memory):
         """Test that retrieve handles None results correctly."""
-        from src.api.v1.chat import get_followup_questions
         from fastapi import HTTPException
+
+        from src.api.v1.chat import get_followup_questions
 
         # Try to get follow-ups for session that doesn't exist
         with pytest.raises(HTTPException) as exc_info:

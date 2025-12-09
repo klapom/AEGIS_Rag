@@ -10,16 +10,16 @@ Tests the NamespaceManager to ensure:
 5. Cross-namespace queries are supported
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from qdrant_client.models import Filter, FieldCondition, MatchAny
+import pytest
+from qdrant_client.models import FieldCondition, Filter, MatchAny
 
 from src.core.namespace import (
-    NamespaceManager,
-    NamespaceInfo,
     DEFAULT_NAMESPACE,
     NAMESPACE_PREFIXES,
+    NamespaceInfo,
+    NamespaceManager,
     get_namespace_manager,
 )
 
@@ -448,7 +448,7 @@ class TestNamespaceIsolation:
         )
 
         # Search only in "general"
-        results = await manager_with_mocks.search_qdrant(
+        await manager_with_mocks.search_qdrant(
             query_vector=[0.1] * 1024,
             allowed_namespaces=["general"],
         )

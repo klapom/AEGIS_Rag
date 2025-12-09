@@ -10,11 +10,10 @@ Tests cover:
 - Time range filtering (7d, 30d, all)
 """
 
-import sqlite3
+from collections.abc import Generator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -59,7 +58,7 @@ def temp_cost_db(tmp_path: Path) -> Generator[Path, None, None]:
 
     # Day 1-5: Ollama only (free)
     for day in range(5):
-        timestamp = (now - timedelta(days=30 - day)).isoformat()
+        (now - timedelta(days=30 - day)).isoformat()
         tracker.track_request(
             provider="local_ollama",
             model="gemma-3-4b-it",
@@ -73,7 +72,7 @@ def temp_cost_db(tmp_path: Path) -> Generator[Path, None, None]:
 
     # Day 6-15: Mix of Ollama and Alibaba Cloud
     for day in range(5, 15):
-        timestamp_offset = 30 - day
+        30 - day
 
         # Ollama request
         tracker.track_request(
@@ -294,7 +293,7 @@ def test_get_cost_stats_provider_aggregation(client: TestClient, mock_cost_track
     by_provider = data["by_provider"]
 
     # Check each provider
-    for provider, stats in by_provider.items():
+    for _provider, stats in by_provider.items():
         assert "cost_usd" in stats
         assert "tokens" in stats
         assert "calls" in stats

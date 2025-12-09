@@ -17,7 +17,6 @@ from src.components.graph_rag.dual_level_search import (
     SearchMode,
 )
 
-
 # ============================================================================
 # Test E2E Graph Query Flow
 # ============================================================================
@@ -316,7 +315,7 @@ class TestGraphQueryAgentErrorHandling:
 
         state = create_initial_state(query="", intent="graph")
 
-        updated_state = await agent.process(state)
+        await agent.process(state)
 
         # Should return unchanged (search not called)
         mock_search.local_search.assert_not_called()

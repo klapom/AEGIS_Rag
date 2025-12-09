@@ -15,9 +15,10 @@ Test Coverage:
 """
 
 import os
-import pytest
 from pathlib import Path
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestVLMFactoryPattern:
@@ -45,8 +46,8 @@ class TestVLMFactoryPattern:
     def test_vlm_factory_get_ollama_client(self):
         """Test VLM Factory creates Ollama client."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_client,
             VLMBackend,
+            get_vlm_client,
         )
 
         client = get_vlm_client(VLMBackend.OLLAMA)
@@ -57,8 +58,8 @@ class TestVLMFactoryPattern:
     def test_vlm_factory_get_dashscope_client_requires_api_key(self):
         """Test VLM Factory raises error for DashScope without API key."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_client,
             VLMBackend,
+            get_vlm_client,
         )
 
         # Test requires ALIBABA_CLOUD_API_KEY to be set
@@ -73,8 +74,8 @@ class TestVLMFactoryPattern:
     def test_vlm_backend_from_env_var(self, monkeypatch):
         """Test VLM backend selection from environment variable."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         # Test with OLLAMA
@@ -95,8 +96,8 @@ class TestVLMFactoryPattern:
     def test_vlm_backend_from_config_file(self, monkeypatch, tmp_path):
         """Test VLM backend selection from config file."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         # Create temp config file
@@ -116,8 +117,8 @@ routing:
     def test_vlm_factory_defaults_to_ollama(self, monkeypatch):
         """Test VLM Factory defaults to Ollama (local-first)."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         # Clear environment variable
@@ -133,8 +134,8 @@ routing:
     def test_vlm_singleton_pattern(self):
         """Test VLM singleton caching pattern."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_client,
             VLMBackend,
+            get_vlm_client,
         )
 
         client1 = get_vlm_client(VLMBackend.OLLAMA)
@@ -308,7 +309,7 @@ class TestImageProcessorVLMIntegration:
             pytest.skip("VLM Factory not available")
 
         with patch("src.components.ingestion.image_processor.get_vlm_client") as mock_factory:
-            with patch.object(mock_factory, "__call__") as mock_call:
+            with patch.object(mock_factory, "__call__"):
                 mock_client = AsyncMock()
                 mock_client.generate_image_description = AsyncMock(
                     return_value=("Description", {"local": True})
@@ -344,8 +345,8 @@ class TestVLMConfiguration:
     def test_vlm_backend_env_variable_invalid_ignored(self, monkeypatch):
         """Test invalid VLM_BACKEND env var is handled gracefully."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         monkeypatch.setenv("VLM_BACKEND", "invalid")
@@ -360,8 +361,8 @@ class TestVLMConfiguration:
     def test_vlm_factory_respects_priority_order(self, monkeypatch):
         """Test VLM Factory respects priority: env > config > default."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         # Priority 1: Environment variable should win

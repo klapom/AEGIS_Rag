@@ -5,7 +5,8 @@ Tests conversation state persistence in Redis.
 """
 
 import pytest
-from src.agents.checkpointer import get_checkpointer, create_thread_config
+
+from src.agents.checkpointer import create_thread_config, get_checkpointer
 from src.core.config import settings
 
 

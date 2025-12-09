@@ -15,21 +15,20 @@ Test Coverage:
 - Edge cases (empty queries, special characters, etc.)
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+import pytest
 
 from src.components.retrieval.intent_classifier import (
-    Intent,
-    IntentClassifier,
-    IntentClassificationResult,
-    IntentWeights,
     INTENT_WEIGHT_PROFILES,
-    INTENT_CLASSIFICATION_PROMPT,
+    Intent,
+    IntentClassificationResult,
+    IntentClassifier,
+    IntentWeights,
     classify_intent,
     get_intent_classifier,
 )
-
 
 # ============================================================================
 # Test IntentWeights Validation
@@ -456,7 +455,7 @@ class TestCaching:
         query1 = "What is the answer?"
         query2 = "  What is the answer?  "
 
-        result1 = await classifier.classify(query1)
+        await classifier.classify(query1)
         result2 = await classifier.classify(query2)
 
         # Second should be cache hit

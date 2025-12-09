@@ -19,7 +19,7 @@ Mocking Strategy:
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -115,69 +115,68 @@ async def test_citations_e2e_flow_with_mocked_llm():
 
 async def _run_citation_e2e_test(expected_contexts: list[dict[str, Any]]) -> None:
     """Helper function to run citation E2E test."""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        async with client.stream(
-            "POST",
-            "/api/v1/chat/stream",
-            json={"query": "What is AEGIS RAG and what does it use?", "include_sources": True},
-            headers={"Accept": "text/event-stream"},
-        ) as response:
-            assert response.status_code == 200
+    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
+        "POST",
+        "/api/v1/chat/stream",
+        json={"query": "What is AEGIS RAG and what does it use?", "include_sources": True},
+        headers={"Accept": "text/event-stream"},
+    ) as response:
+        assert response.status_code == 200
 
-            # Collect all messages
-            answer_tokens = []
-            citation_map = None
-            sources = []
+        # Collect all messages
+        answer_tokens = []
+        citation_map = None
+        sources = []
 
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str == "[DONE]":
-                        break
-                    try:
-                        message = json.loads(data_str)
+        async for line in response.aiter_lines():
+            if line.startswith("data: "):
+                data_str = line[6:]
+                if data_str == "[DONE]":
+                    break
+                try:
+                    message = json.loads(data_str)
 
-                        # Collect answer tokens
-                        if message.get("type") == "token":
-                            answer_tokens.append(message.get("content", ""))
+                    # Collect answer tokens
+                    if message.get("type") == "token":
+                        answer_tokens.append(message.get("content", ""))
 
-                        # Collect citation_map
-                        if message.get("type") == "metadata" and "data" in message:
-                            data = message["data"]
-                            if "citation_map" in data:
-                                citation_map = data["citation_map"]
-                                logger.info(f"Citation map received: {len(citation_map)} citations")
+                    # Collect citation_map
+                    if message.get("type") == "metadata" and "data" in message:
+                        data = message["data"]
+                        if "citation_map" in data:
+                            citation_map = data["citation_map"]
+                            logger.info(f"Citation map received: {len(citation_map)} citations")
 
-                        # Collect sources
-                        if message.get("type") == "source":
-                            sources.append(message.get("source"))
+                    # Collect sources
+                    if message.get("type") == "source":
+                        sources.append(message.get("source"))
 
-                    except json.JSONDecodeError:
-                        pass
+                except json.JSONDecodeError:
+                    pass
 
-            # Verify answer contains citations
-            full_answer = "".join(answer_tokens)
-            assert "[1]" in full_answer, f"Answer missing [1] citation: {full_answer}"
-            assert "[2]" in full_answer, f"Answer missing [2] citation: {full_answer}"
+        # Verify answer contains citations
+        full_answer = "".join(answer_tokens)
+        assert "[1]" in full_answer, f"Answer missing [1] citation: {full_answer}"
+        assert "[2]" in full_answer, f"Answer missing [2] citation: {full_answer}"
 
-            # Verify citation_map was sent
-            assert citation_map is not None, "Citation map was not sent in SSE"
-            assert len(citation_map) >= 1, "Citation map should have at least 1 citation"
+        # Verify citation_map was sent
+        assert citation_map is not None, "Citation map was not sent in SSE"
+        assert len(citation_map) >= 1, "Citation map should have at least 1 citation"
 
-            # Verify citation_map structure
-            # Note: Keys are strings in JSON (not integers)
-            assert "1" in citation_map or 1 in citation_map, "Citation map missing citation 1"
+        # Verify citation_map structure
+        # Note: Keys are strings in JSON (not integers)
+        assert "1" in citation_map or 1 in citation_map, "Citation map missing citation 1"
 
-            # Get first citation (handle both string and int keys)
-            citation_1 = citation_map.get("1") or citation_map.get(1)
-            assert citation_1 is not None, "Citation 1 is None"
-            assert "text" in citation_1, "Citation 1 missing text field"
-            assert "source" in citation_1, "Citation 1 missing source field"
-            assert "title" in citation_1, "Citation 1 missing title field"
-            assert "score" in citation_1, "Citation 1 missing score field"
+        # Get first citation (handle both string and int keys)
+        citation_1 = citation_map.get("1") or citation_map.get(1)
+        assert citation_1 is not None, "Citation 1 is None"
+        assert "text" in citation_1, "Citation 1 missing text field"
+        assert "source" in citation_1, "Citation 1 missing source field"
+        assert "title" in citation_1, "Citation 1 missing title field"
+        assert "score" in citation_1, "Citation 1 missing score field"
 
-            # Verify text is truncated to 500 chars
-            assert len(citation_1["text"]) <= 500, "Citation text not truncated to 500 chars"
+        # Verify text is truncated to 500 chars
+        assert len(citation_1["text"]) <= 500, "Citation text not truncated to 500 chars"
 
 
 @pytest.mark.e2e
@@ -213,7 +212,6 @@ async def test_citations_e2e_with_vector_intent():
                 ) as response:
                     assert response.status_code == 200
 
-                    citation_map_received = False
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
                             data_str = line[6:]
@@ -223,7 +221,6 @@ async def test_citations_e2e_with_vector_intent():
                                 message = json.loads(data_str)
                                 if message.get("type") == "metadata" and "data" in message:
                                     if "citation_map" in message["data"]:
-                                        citation_map_received = True
                                         break
                             except json.JSONDecodeError:
                                 pass
@@ -297,7 +294,6 @@ async def test_citations_e2e_empty_contexts_fallback():
         ) as response:
             assert response.status_code == 200
 
-            citation_map = None
             async for line in response.aiter_lines():
                 if line.startswith("data: "):
                     data_str = line[6:]
@@ -308,7 +304,7 @@ async def test_citations_e2e_empty_contexts_fallback():
                         if message.get("type") == "metadata" and "data" in message:
                             data = message["data"]
                             if "citation_map" in data:
-                                citation_map = data["citation_map"]
+                                data["citation_map"]
                     except json.JSONDecodeError:
                         pass
 

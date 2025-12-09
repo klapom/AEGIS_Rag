@@ -15,7 +15,7 @@ print(f"Loading: {json_path}")
 print(f"File size: {json_path.stat().st_size / 1024:.1f} KB")
 print()
 
-with open(json_path, "r", encoding="utf-8") as f:
+with open(json_path, encoding="utf-8") as f:
     data = json.load(f)
 
 # 1. Analyze all labels in texts array

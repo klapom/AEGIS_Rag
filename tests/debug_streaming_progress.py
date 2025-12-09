@@ -23,7 +23,7 @@ async def test_streaming_progress():
         # Try to find any PDF in sample_documents
         sample_dir = r"C:\Projekte\AEGISRAG\data\sample_documents"
         if os.path.exists(sample_dir):
-            for root, dirs, files in os.walk(sample_dir):
+            for root, _dirs, files in os.walk(sample_dir):
                 for f in files:
                     if f.endswith(".pdf"):
                         test_file = os.path.join(root, f)
@@ -33,7 +33,7 @@ async def test_streaming_progress():
                     break
 
     print(f"\n{'='*60}")
-    print(f"Testing run_ingestion_pipeline_streaming()")
+    print("Testing run_ingestion_pipeline_streaming()")
     print(f"File: {test_file}")
     print(f"{'='*60}\n")
 

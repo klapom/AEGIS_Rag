@@ -10,8 +10,7 @@ Tests the GET /api/v1/chat/sessions/{session_id}/followup-questions endpoint:
 - Error handling
 """
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -41,12 +40,12 @@ def sample_conversation():
             {
                 "role": "user",
                 "content": "What is AEGIS RAG?",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "assistant",
                 "content": "AEGIS RAG is an agentic RAG system with vector search and graph reasoning.",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "intent": "vector",
                 "source_count": 2,
                 "sources": [
@@ -55,8 +54,8 @@ def sample_conversation():
                 ],
             },
         ],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
         "message_count": 2,
     }
 
@@ -166,10 +165,10 @@ def test_get_followup_questions_insufficient_messages(client, mock_redis_memory)
             {
                 "role": "user",
                 "content": "Hello",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         ],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "message_count": 1,
     }
 
@@ -202,15 +201,15 @@ def test_get_followup_questions_no_qa_pair(client, mock_redis_memory):
             {
                 "role": "user",
                 "content": "Query 1",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "user",
                 "content": "Query 2",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         ],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "message_count": 2,
     }
 
@@ -298,26 +297,26 @@ def test_get_followup_questions_multi_turn_conversation(client, mock_redis_memor
             {
                 "role": "user",
                 "content": "First query",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "assistant",
                 "content": "First answer",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "user",
                 "content": "Second query",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "assistant",
                 "content": "Second answer",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "sources": [{"text": "Source for second answer", "source": "doc.pdf"}],
             },
         ],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "message_count": 4,
     }
 
@@ -357,16 +356,16 @@ def test_get_followup_questions_no_sources(client, mock_redis_memory):
             {
                 "role": "user",
                 "content": "Query",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "assistant",
                 "content": "Answer without sources",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 # No sources field
             },
         ],
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "message_count": 2,
     }
 

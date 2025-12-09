@@ -3,8 +3,9 @@
 Sprint 5: Feature 5.1 - LightRAG Core Integration
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.components.graph_rag.lightrag_wrapper import (
     LightRAGWrapper,

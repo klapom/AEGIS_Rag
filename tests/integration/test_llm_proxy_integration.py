@@ -21,19 +21,13 @@ Test Strategy:
 - Aim for >80% code coverage
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
 from src.agents.answer_generator import AnswerGenerator
 from src.components.graph_rag.relation_extractor import RelationExtractor
 from src.components.retrieval.query_decomposition import QueryDecomposer, QueryType
-from src.components.llm_proxy.models import (
-    Complexity,
-    QualityRequirement,
-    TaskType,
-)
-
 
 # ============================================================================
 # Test Fixtures
@@ -335,7 +329,7 @@ class TestRelationExtractorIntegration:
                 temperature=0.2,
                 num_predict=3000,
             )
-            relations = await extractor.extract(
+            await extractor.extract(
                 text="Alex and Jordan work at TechCorp.",
                 entities=sample_entities,
             )

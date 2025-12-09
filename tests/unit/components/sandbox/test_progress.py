@@ -346,7 +346,7 @@ class TestErrorHandling:
         temp_progress_file.parent.mkdir(parents=True, exist_ok=True)
         temp_progress_file.write_text('{"status": "in_progress"}')
 
-        state = tracker.load()
+        tracker.load()
 
         # Should handle gracefully (may be None or partial state)
         # Implementation dependent

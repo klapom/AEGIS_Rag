@@ -19,13 +19,11 @@ Test Scenarios:
 Related ADR: ADR-027 (Docling Container), ADR-033 (AegisLLMProxy)
 """
 
-import asyncio
-import pytest
 import sqlite3
 from pathlib import Path
-from unittest.mock import patch, AsyncMock, MagicMock
-from datetime import datetime
-from typing import Optional
+from unittest.mock import MagicMock, patch
+
+import pytest
 import structlog
 
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -381,7 +379,7 @@ class TestCostTracking:
         - Database is accessible
         """
         db_path = tmp_path / "test_cost_tracking.db"
-        tracker = CostTracker(db_path=db_path)
+        CostTracker(db_path=db_path)
 
         # Verify database exists
         assert db_path.exists()

@@ -5,9 +5,9 @@ These tests cover critical user workflows that were planned but not implemented.
 """
 
 import asyncio
-import pytest
-from pathlib import Path
 import time
+
+import pytest
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.e2e]
 
@@ -88,10 +88,8 @@ async def test_query_decomposition_with_filters_e2e(api_client, cleanup_database
     from datetime import datetime, timedelta
 
     today = datetime.now().isoformat()
-    yesterday = (datetime.now() - timedelta(days=1)).isoformat()
+    (datetime.now() - timedelta(days=1)).isoformat()
 
-    doc1 = {"content": "LangGraph tutorial 2024", "metadata": {"date": today, "source": "docs"}}
-    doc2 = {"content": "Old LangGraph guide", "metadata": {"date": yesterday, "source": "blog"}}
 
     # Query with filter
     response = await api_client.post(

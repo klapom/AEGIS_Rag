@@ -4,7 +4,7 @@ Sprint 5: Feature 5.3 - Entity & Relationship Extraction
 """
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 

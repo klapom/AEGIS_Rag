@@ -7,7 +7,7 @@ Tests cover:
 - Error handling and graceful degradation
 """
 
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -19,7 +19,6 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
-from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.langgraph_nodes import image_enrichment_node
 
 # Skip all tests in this module if PIL is not available
@@ -422,7 +421,7 @@ async def test_image_enrichment_node__with_caption__combines_caption_and_descrip
     state["document"] = mock_doc
     state["page_dimensions"] = page_dimensions
 
-    result_state = await image_enrichment_node(state)
+    await image_enrichment_node(state)
 
     # Caption + VLM description combined
     assert (
@@ -452,7 +451,7 @@ async def test_image_enrichment_node__no_caption__uses_description_only(
     state["document"] = mock_doc
     state["page_dimensions"] = page_dimensions
 
-    result_state = await image_enrichment_node(state)
+    await image_enrichment_node(state)
 
     # Only VLM description
     assert picture.text == "This is a red diagram showing system architecture."

@@ -350,7 +350,7 @@ async def test_generate_followup_questions_truncates_long_inputs():
         mock_proxy.generate = AsyncMock(return_value=mock_response)
         mock_get_proxy.return_value = mock_proxy
 
-        questions = await generate_followup_questions(query, answer)
+        await generate_followup_questions(query, answer)
 
         # Verify truncation occurred in prompt
         task = mock_proxy.generate.call_args[0][0]

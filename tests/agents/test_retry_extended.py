@@ -6,7 +6,7 @@ Author: Claude Code
 Date: 2025-10-27
 """
 
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -18,7 +18,6 @@ from src.agents.retry import (
     retry_on_failure,
     retry_with_fallback,
 )
-
 
 # ============================================================================
 # Retry Callback Tests

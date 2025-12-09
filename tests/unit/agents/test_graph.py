@@ -4,16 +4,17 @@ Sprint 4 Feature 4.1: Base Graph Tests
 Sprint 27 Feature 27.10: Citation tests for llm_answer_node
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from langgraph.graph import StateGraph
 
 from src.agents.graph import (
     compile_graph,
     create_base_graph,
+    llm_answer_node,
     route_query,
     router_node,
-    llm_answer_node,
 )
 from src.agents.state import create_initial_state
 

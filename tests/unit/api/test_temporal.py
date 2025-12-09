@@ -17,7 +17,7 @@ Test Coverage:
 - Error handling and edge cases
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,7 +26,6 @@ from fastapi.testclient import TestClient
 
 from src.api.main import app
 from src.core.auth import User
-
 
 # Test Fixtures
 
@@ -93,7 +92,7 @@ def test_check_temporal_enabled_when_enabled(mock_settings_temporal_enabled):
 @pytest.mark.asyncio
 async def test_point_in_time_query_success(mock_user, mock_settings_temporal_enabled):
     """Test successful point-in-time query."""
-    from src.api.v1.temporal import query_at_point_in_time, PointInTimeRequest
+    from src.api.v1.temporal import PointInTimeRequest, query_at_point_in_time
 
     # Mock dependencies
     mock_builder = MagicMock()
@@ -145,7 +144,7 @@ async def test_point_in_time_query_success(mock_user, mock_settings_temporal_ena
 @pytest.mark.asyncio
 async def test_point_in_time_query_with_filter(mock_user, mock_settings_temporal_enabled):
     """Test point-in-time query with entity filter."""
-    from src.api.v1.temporal import query_at_point_in_time, PointInTimeRequest
+    from src.api.v1.temporal import PointInTimeRequest, query_at_point_in_time
 
     mock_builder = MagicMock()
     mock_neo4j = AsyncMock()
@@ -178,7 +177,7 @@ async def test_point_in_time_query_with_filter(mock_user, mock_settings_temporal
 @pytest.mark.asyncio
 async def test_point_in_time_query_error_handling(mock_user, mock_settings_temporal_enabled):
     """Test point-in-time query error handling."""
-    from src.api.v1.temporal import query_at_point_in_time, PointInTimeRequest
+    from src.api.v1.temporal import PointInTimeRequest, query_at_point_in_time
 
     mock_builder = MagicMock()
     mock_neo4j = AsyncMock()
@@ -213,7 +212,7 @@ async def test_point_in_time_query_error_handling(mock_user, mock_settings_tempo
 @pytest.mark.asyncio
 async def test_entity_history_success(mock_user, mock_settings_temporal_enabled):
     """Test successful entity history retrieval."""
-    from src.api.v1.temporal import get_entity_history, EntityHistoryRequest
+    from src.api.v1.temporal import EntityHistoryRequest, get_entity_history
 
     mock_version_manager = AsyncMock()
 
@@ -260,7 +259,7 @@ async def test_entity_history_success(mock_user, mock_settings_temporal_enabled)
 @pytest.mark.asyncio
 async def test_entity_history_with_date_range(mock_user, mock_settings_temporal_enabled):
     """Test entity history with date range filter."""
-    from src.api.v1.temporal import get_entity_history, EntityHistoryRequest
+    from src.api.v1.temporal import EntityHistoryRequest, get_entity_history
 
     mock_version_manager = AsyncMock()
 
@@ -303,7 +302,7 @@ async def test_entity_history_with_date_range(mock_user, mock_settings_temporal_
 @pytest.mark.asyncio
 async def test_entity_history_not_found(mock_user, mock_settings_temporal_enabled):
     """Test entity history for non-existent entity."""
-    from src.api.v1.temporal import get_entity_history, EntityHistoryRequest
+    from src.api.v1.temporal import EntityHistoryRequest, get_entity_history
 
     mock_version_manager = AsyncMock()
     mock_version_manager.get_versions.return_value = []
@@ -534,7 +533,7 @@ async def test_compare_entity_versions_not_found(mock_user, mock_settings_tempor
 @pytest.mark.asyncio
 async def test_revert_entity_success(mock_user, mock_settings_temporal_enabled):
     """Test successful entity rollback."""
-    from src.api.v1.temporal import revert_entity_to_version, RevertRequest
+    from src.api.v1.temporal import RevertRequest, revert_entity_to_version
 
     mock_version_manager = AsyncMock()
 
@@ -576,7 +575,7 @@ async def test_revert_entity_success(mock_user, mock_settings_temporal_enabled):
 @pytest.mark.asyncio
 async def test_revert_entity_version_not_found(mock_user, mock_settings_temporal_enabled):
     """Test rollback with non-existent version."""
-    from src.api.v1.temporal import revert_entity_to_version, RevertRequest
+    from src.api.v1.temporal import RevertRequest, revert_entity_to_version
 
     mock_version_manager = AsyncMock()
     mock_version_manager.revert_to_version.side_effect = ValueError("Version v999 not found")
@@ -600,7 +599,7 @@ async def test_revert_entity_version_not_found(mock_user, mock_settings_temporal
 @pytest.mark.asyncio
 async def test_revert_entity_error_handling(mock_user, mock_settings_temporal_enabled):
     """Test rollback error handling."""
-    from src.api.v1.temporal import revert_entity_to_version, RevertRequest
+    from src.api.v1.temporal import RevertRequest, revert_entity_to_version
 
     mock_version_manager = AsyncMock()
     mock_version_manager.revert_to_version.side_effect = Exception("Database error")
@@ -660,7 +659,7 @@ async def test_changelog_with_jwt_auth_integration(mock_user, mock_settings_temp
 @pytest.mark.asyncio
 async def test_revert_with_jwt_auth_integration(mock_user, mock_settings_temporal_enabled):
     """Test that revert properly uses JWT auth context for changed_by field."""
-    from src.api.v1.temporal import revert_entity_to_version, RevertRequest
+    from src.api.v1.temporal import RevertRequest, revert_entity_to_version
 
     mock_version_manager = AsyncMock()
 

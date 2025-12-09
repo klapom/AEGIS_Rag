@@ -19,7 +19,6 @@ All timing logs with prefix TIMING_* will be captured and summarized.
 import asyncio
 import json
 import logging
-import os
 import sys
 import time
 from datetime import datetime
@@ -133,7 +132,7 @@ class BenchmarkResults:
                 "total_calls": len(self.llm_calls),
                 "total_tokens": sum(c["tokens"] for c in self.llm_calls),
                 "total_cost_usd": sum(c["cost_usd"] for c in self.llm_calls),
-                "providers_used": list(set(c["provider"] for c in self.llm_calls)),
+                "providers_used": list({c["provider"] for c in self.llm_calls}),
             },
             "vlm_summary": {
                 "total_calls": len(self.vlm_calls),
@@ -173,21 +172,22 @@ async def run_pipeline_benchmark(doc_config: dict) -> dict:
 
     try:
         # Import pipeline
-        from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
         import uuid
+
+        from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
         # Generate unique IDs
         document_id = f"bench_{uuid.uuid4().hex[:8]}"
         batch_id = f"sprint33_cloud_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        print(f"[INFO] Starting pipeline...")
+        print("[INFO] Starting pipeline...")
         print(f"[INFO] Document ID: {document_id}")
         print(f"[INFO] Batch ID: {batch_id}")
-        print(f"[INFO] Cloud routing: ENABLED (prefer_cloud=true)")
+        print("[INFO] Cloud routing: ENABLED (prefer_cloud=true)")
         print()
 
         # Track stage timing
-        stage_start = time.perf_counter()
+        time.perf_counter()
 
         # Run pipeline
         pipeline_result = await run_ingestion_pipeline(

@@ -4,7 +4,6 @@ Sprint 22 Feature 22.2.2: Test all error response formats and exception handlers
 """
 
 import pytest
-from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 

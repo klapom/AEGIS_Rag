@@ -16,9 +16,9 @@ Use test/mock data when possible.
 """
 
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
 
 # Mark all tests in this module as cloud tests
 pytestmark = pytest.mark.cloud
@@ -211,7 +211,7 @@ class TestVLMFactoryCloud:
     @pytest.mark.asyncio
     async def test_factory_creates_dashscope_client(self, skip_without_alibaba_key):
         """Test that VLM Factory can create DashScope client."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         client = get_vlm_client(VLMBackend.DASHSCOPE)
 
@@ -222,7 +222,7 @@ class TestVLMFactoryCloud:
     @pytest.mark.asyncio
     async def test_factory_creates_ollama_client(self):
         """Test that VLM Factory can create Ollama client."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         client = get_vlm_client(VLMBackend.OLLAMA)
 
@@ -234,8 +234,8 @@ class TestVLMFactoryCloud:
     async def test_factory_respects_env_var(self):
         """Test factory respects VLM_BACKEND environment variable."""
         from src.components.llm_proxy.vlm_factory import (
-            get_vlm_backend_from_config,
             VLMBackend,
+            get_vlm_backend_from_config,
         )
 
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}):
@@ -245,7 +245,7 @@ class TestVLMFactoryCloud:
     @pytest.mark.asyncio
     async def test_factory_switches_backends(self, skip_without_alibaba_key):
         """Test factory can switch between backends."""
-        from src.components.llm_proxy.vlm_factory import get_vlm_client, VLMBackend
+        from src.components.llm_proxy.vlm_factory import VLMBackend, get_vlm_client
 
         # Create Ollama client
         ollama_client = get_vlm_client(VLMBackend.OLLAMA)
@@ -274,8 +274,8 @@ class TestCloudLLMRouting:
         from src.components.llm_proxy.aegis_llm_proxy import get_aegis_llm_proxy
         from src.components.llm_proxy.models import (
             LLMTask,
-            TaskType,
             QualityRequirement,
+            TaskType,
         )
 
         proxy = get_aegis_llm_proxy()
@@ -303,8 +303,8 @@ class TestCloudLLMRouting:
         from src.components.llm_proxy.aegis_llm_proxy import get_aegis_llm_proxy
         from src.components.llm_proxy.models import (
             LLMTask,
-            TaskType,
             QualityRequirement,
+            TaskType,
         )
 
         proxy = get_aegis_llm_proxy()
@@ -338,8 +338,8 @@ class TestSharedVLMClientCloud:
     async def test_shared_client_with_cloud_backend(self, skip_without_alibaba_key):
         """Test shared VLM client works with cloud backend."""
         from src.components.llm_proxy.vlm_factory import (
-            get_shared_vlm_client,
             close_shared_vlm_client,
+            get_shared_vlm_client,
             reset_vlm_client,
         )
 
@@ -357,8 +357,8 @@ class TestSharedVLMClientCloud:
     async def test_shared_client_reconnect(self):
         """Test shared VLM client can reconnect after close."""
         from src.components.llm_proxy.vlm_factory import (
-            get_shared_vlm_client,
             close_shared_vlm_client,
+            get_shared_vlm_client,
             reset_vlm_client,
         )
 
@@ -445,8 +445,9 @@ class TestCloudErrorHandling:
     @pytest.mark.asyncio
     async def test_connection_timeout_handling(self, create_minimal_test_image):
         """Test handling of connection timeouts."""
-        from src.components.llm_proxy.ollama_vlm import OllamaVLMClient
         import httpx
+
+        from src.components.llm_proxy.ollama_vlm import OllamaVLMClient
 
         client = OllamaVLMClient(base_url="http://nonexistent-host:11434")
         client.client = AsyncMock()
@@ -465,8 +466,9 @@ class TestCloudErrorHandling:
     @pytest.mark.asyncio
     async def test_rate_limit_handling(self, skip_without_alibaba_key, create_minimal_test_image):
         """Test handling of rate limit errors."""
-        from src.components.llm_proxy.dashscope_vlm import DashScopeVLMClient
         import httpx
+
+        from src.components.llm_proxy.dashscope_vlm import DashScopeVLMClient
 
         client = DashScopeVLMClient()
         client.client = AsyncMock()

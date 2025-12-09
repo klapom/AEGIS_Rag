@@ -22,26 +22,20 @@ Run tests:
     pytest tests/integration/test_ingestion_error_handling.py -v -m integration
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.components.ingestion.ingestion_state import IngestionState, create_initial_state
+from src.components.ingestion.ingestion_state import create_initial_state
 from src.components.ingestion.langgraph_nodes import (
-    chunking_node,
     docling_parse_node,
-    embedding_node,
     graph_extraction_node,
-    memory_check_node,
 )
 from src.components.ingestion.langgraph_pipeline import (
     create_ingestion_graph,
-    run_ingestion_pipeline,
 )
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # Test 2.1: Docling Parse Error Propagation
@@ -188,7 +182,7 @@ async def test_vlm_enrichment_failure__service_unavailable__pipeline_continues()
     test_doc.write_text("Test document for VLM failure.")
 
     try:
-        state = create_initial_state(
+        create_initial_state(
             document_path=str(test_doc),
             document_id="vlm_test_doc",
             batch_id="test_batch",

@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.action_agent import ActionAgent, ActionAgentState
+from src.agents.action_agent import ActionAgent
 from src.components.mcp.client import MCPClient
 from src.components.mcp.models import MCPTool, MCPToolResult
 from src.components.mcp.tool_executor import ToolExecutor

@@ -18,13 +18,12 @@ Target Coverage: 70%
 
 import time
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Histogram, Info
 
 from src.monitoring import metrics
-
 
 # ============================================================================
 # Fixtures
@@ -164,7 +163,7 @@ class TestCounterIncrements:
     def test_record_extraction_entities_increments_counter(self):
         """Test record_extraction_entities increments counter by specified count."""
         # Get initial value (may not be 0 if other tests ran)
-        initial_metric = metrics.extraction_entities_total.labels(
+        metrics.extraction_entities_total.labels(
             entity_type="PERSON", pipeline_type="test"
         )
 
@@ -499,7 +498,7 @@ class TestMetricsIntegration:
 
         def record_metrics(thread_id: int):
             """Record various metrics from a single thread."""
-            for i in range(100):
+            for _i in range(100):
                 metrics.record_extraction_duration("phase1_spacy", "three_phase", 0.5)
                 metrics.record_extraction_entities("PERSON", "three_phase", 1)
                 metrics.record_extraction_relations("three_phase", 1)
@@ -520,7 +519,7 @@ class TestMetricsIntegration:
     def test_metrics_workflow_extraction_pipeline(self):
         """Test complete extraction pipeline metrics workflow."""
         # Simulate extraction pipeline
-        start_time = time.time()
+        time.time()
 
         # Phase 1: SpaCy
         metrics.record_extraction_duration("phase1_spacy", "three_phase", 0.5)
@@ -664,7 +663,7 @@ class TestMetricsPerformance:
         iterations = 1000
 
         start_time = time.time()
-        for i in range(iterations):
+        for _i in range(iterations):
             metrics.record_extraction_duration("phase1_spacy", "three_phase", 1.0)
             metrics.record_extraction_entities("PERSON", "three_phase", 10)
             metrics.record_extraction_relations("three_phase", 5)
@@ -692,7 +691,7 @@ class TestMetricsPerformance:
         iterations = 1000
 
         start_time = time.time()
-        for i in range(iterations):
+        for _i in range(iterations):
             metrics.record_extraction_entities("PERSON", "three_phase", 1)
         elapsed = time.time() - start_time
 

@@ -16,11 +16,9 @@ Target Coverage: 60%+ (20+ tests)
 """
 
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
-from src.core.exceptions import ConfigurationError
 
 # ============================================================================
 # Fixtures

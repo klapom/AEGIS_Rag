@@ -42,17 +42,13 @@ Mocking Strategy:
 - Mock cost tracking calls for cloud providers
 """
 
-import asyncio
-import json
 import logging
 import time
-from datetime import datetime
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +155,7 @@ def redis_available():
 
 
 @pytest.fixture
-def test_documents() -> List[Dict[str, Any]]:
+def test_documents() -> list[dict[str, Any]]:
     """Sample test documents for indexing."""
     return [
         {
@@ -202,7 +198,7 @@ def test_documents() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def test_entities() -> List[Dict[str, Any]]:
+def test_entities() -> list[dict[str, Any]]:
     """Test entities for graph construction."""
     return [
         {"id": "RAG", "type": "SYSTEM", "name": "Retrieval-Augmented Generation"},
@@ -214,7 +210,7 @@ def test_entities() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def test_relations() -> List[Dict[str, Any]]:
+def test_relations() -> list[dict[str, Any]]:
     """Test relations for graph construction."""
     return [
         {
@@ -319,7 +315,7 @@ class TestHybridSearchE2E:
             # Index documents
             for doc in test_documents:
                 embedding = await embedding_service.embed(doc["text"])
-                assert len(embedding) == 1024, f"BGE-M3 should return 1024-dim embeddings"
+                assert len(embedding) == 1024, "BGE-M3 should return 1024-dim embeddings"
 
                 await qdrant.upsert_points(
                     collection_name=collection_name,
@@ -403,10 +399,10 @@ class TestHybridSearchE2E:
         # Verify results differ between queries
         all_results = [r for results in results_by_query.values() for r in results]
         assert (
-            len(set(r["text"][:50] for r in all_results)) > 1
+            len({r["text"][:50] for r in all_results}) > 1
         ), "Different queries should return different docs"
 
-        logger.info(f"Multiple BM25 queries tested successfully")
+        logger.info("Multiple BM25 queries tested successfully")
 
 
 # ============================================================================
@@ -438,7 +434,7 @@ class TestMultiCloudRoutingE2E:
             assert hasattr(proxy, "_monthly_spending")
             assert isinstance(proxy._monthly_spending, dict)
 
-            logger.info(f"AegisLLMProxy initialized successfully")
+            logger.info("AegisLLMProxy initialized successfully")
         except ImportError as e:
             pytest.skip(f"AegisLLMProxy not available: {e}")
 
@@ -483,7 +479,7 @@ class TestMultiCloudRoutingE2E:
             # Verify provider entries exist
             assert "alibaba_cloud" in proxy._monthly_spending or len(proxy._monthly_spending) == 0
 
-            logger.info(f"Budget limits infrastructure verified")
+            logger.info("Budget limits infrastructure verified")
         except ImportError as e:
             pytest.skip(f"AegisLLMProxy not available: {e}")
 
@@ -580,9 +576,9 @@ class TestFullPipelineE2E:
         - Results can be combined
         - Latency is acceptable
         """
+        from src.components.vector_search.bm25_search import BM25Search
         from src.components.vector_search.embeddings import EmbeddingService
         from src.components.vector_search.qdrant_client import QdrantClientWrapper
-        from src.components.vector_search.bm25_search import BM25Search
 
         collection_name = f"test_chain_{uuid4().hex[:8]}"
         embedding_service = EmbeddingService()
@@ -631,7 +627,7 @@ class TestFullPipelineE2E:
             assert elapsed < 3.0, f"Retrieval chain took {elapsed:.2f}s, should be < 3s"
 
             logger.info(
-                f"Retrieval chain successful",
+                "Retrieval chain successful",
                 vector_results=len(vector_results),
                 bm25_results=len(bm25_results),
                 elapsed_seconds=elapsed,

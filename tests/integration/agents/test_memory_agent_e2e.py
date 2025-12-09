@@ -10,7 +10,9 @@ CRITICAL: All tests marked with @pytest.mark.integration
 """
 
 import time
+
 import pytest
+
 from src.agents.memory_agent import MemoryAgent, memory_node
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]

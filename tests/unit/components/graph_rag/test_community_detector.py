@@ -6,8 +6,7 @@ Neo4j GDS and NetworkX fallback.
 Sprint 6.3: Feature - Community Detection & Clustering
 """
 
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from neo4j.exceptions import ClientError

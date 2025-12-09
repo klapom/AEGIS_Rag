@@ -12,7 +12,6 @@ import pytest
 
 from src.components.vector_search.embeddings import EmbeddingService, get_embedding_service
 
-
 # ============================================================================
 # EmbeddingService Tests
 # ============================================================================

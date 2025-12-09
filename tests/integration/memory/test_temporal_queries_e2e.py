@@ -15,8 +15,6 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.core.exceptions import MemoryError
-
 # Mark all tests in this module as integration tests
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -594,7 +592,7 @@ async def test_temporal_query_complex_history_performance_e2e(temporal_query, ne
 
     # When: Get full history
     start = time.time()
-    history = await temporal_query.get_entity_history(
+    await temporal_query.get_entity_history(
         entity_name=entity_name,
         limit=100,
     )

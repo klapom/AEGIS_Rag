@@ -11,9 +11,9 @@ Tests cover:
 - Error propagation handling
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from typing import Any
+
+import pytest
 
 
 @pytest.fixture

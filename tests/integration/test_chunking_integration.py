@@ -4,7 +4,6 @@ Sprint 16 Feature 16.1 - Unified Chunking Service
 Tests end-to-end chunking integration with Qdrant and LightRAG.
 """
 
-import pytest
 
 from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service, reset_chunking_service
@@ -133,7 +132,7 @@ class TestChunkingServiceIntegration:
 
         # Verify deterministic chunk_ids
         assert len(qdrant_chunks) == len(qdrant_chunks2)
-        for c1, c2 in zip(qdrant_chunks, qdrant_chunks2):
+        for c1, c2 in zip(qdrant_chunks, qdrant_chunks2, strict=False):
             assert c1.chunk_id == c2.chunk_id
             assert c1.content == c2.content
 

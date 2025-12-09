@@ -1,15 +1,20 @@
 """Benchmark Corpus Ingestion Pipeline.
 
 Sprint 41 Feature 41.6: Benchmark Corpus Ingestion
+Sprint 43 Feature 43.1: Full Pipeline Integration (BM25 + Graph Extraction)
 
-This module ingests benchmark dataset contexts into namespace-isolated Qdrant
-collections for evaluation purposes. Each dataset gets its own namespace to
-enable fair comparison and prevent cross-contamination.
+This module ingests benchmark dataset contexts into namespace-isolated storage
+for evaluation purposes. Each dataset gets its own namespace to enable fair
+comparison and prevent cross-contamination.
 
-Architecture:
+Architecture (Full Pipeline):
     Benchmark Loader → Context Extraction → Embedding → Qdrant Ingestion
                                               ↓
                                     Namespace Isolation
+                                              ↓
+                                    BM25 Index Update (Sprint 43)
+                                              ↓
+                                    Graph Extraction → Neo4j (Sprint 43)
 
 Namespace Strategy:
     - eval_nq: Natural Questions contexts
@@ -41,6 +46,7 @@ import structlog
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from src.components.shared.embedding_service import get_embedding_service
+from src.components.vector_search.bm25_search import BM25Search
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
 from src.core.namespace import NamespaceManager, get_namespace_manager

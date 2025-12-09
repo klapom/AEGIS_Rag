@@ -9,19 +9,19 @@ Tests verify that:
 4. System metrics (Qdrant, Neo4j) can be updated
 """
 
-import pytest
-from fastapi.testclient import TestClient
-from prometheus_client import REGISTRY
 from unittest.mock import AsyncMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from src.api.main import app
-from src.components.llm_proxy.models import LLMTask, TaskType, QualityRequirement
+from src.components.llm_proxy.models import LLMTask, QualityRequirement, TaskType
 from src.core.metrics import (
-    track_llm_request,
     track_llm_error,
+    track_llm_request,
     update_budget_metrics,
-    update_qdrant_metrics,
     update_neo4j_metrics,
+    update_qdrant_metrics,
 )
 
 
@@ -67,8 +67,7 @@ class TestLLMMetricsTracking:
     def test_track_llm_request_updates_counter(self, client):
         """Test that track_llm_request updates metrics."""
         # Get initial state
-        response_before = client.get("/metrics")
-        content_before = response_before.text
+        client.get("/metrics")
 
         # Track a request
         track_llm_request(
@@ -327,9 +326,8 @@ class TestMetricsIntegrationWithLLMProxy:
         with patch(
             "src.components.llm_proxy.aegis_llm_proxy.acompletion",
             side_effect=Exception("Provider error"),
-        ):
-            with pytest.raises(Exception):
-                await proxy.generate(task)
+        ), pytest.raises(Exception):
+            await proxy.generate(task)
 
         # Verify error was tracked (proxy should still record the error even if it raises)
         # Note: Current implementation may not track errors if exception is raised

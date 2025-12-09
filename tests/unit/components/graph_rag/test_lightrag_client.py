@@ -11,9 +11,9 @@ Tests cover:
 - Statistics retrieval
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+
+import pytest
 
 from src.components.graph_rag.lightrag_wrapper import LightRAGClient
 from src.core.models import GraphQueryResult
@@ -327,24 +327,22 @@ async def test_lightrag_concurrent_insertions(lightrag_client):
 async def test_lightrag_lazy_initialization():
     """Test lazy initialization of LightRAG."""
     # Patch at the source module where LightRAG is imported from (lazy import)
-    with patch("lightrag.LightRAG") as mock_lightrag_cls:
-        with patch(
-            "lightrag.kg.shared_storage.initialize_pipeline_status",
-            new_callable=AsyncMock,
-        ):
-            with patch("src.components.llm_proxy.get_aegis_llm_proxy"):
-                mock_instance = MagicMock()
-                mock_instance.initialize_storages = AsyncMock()
-                mock_instance.chunk_entity_relation_graph = MagicMock()
-                mock_instance.chunk_entity_relation_graph._driver = MagicMock()
-                mock_lightrag_cls.return_value = mock_instance
+    with patch("lightrag.LightRAG") as mock_lightrag_cls, patch(
+        "lightrag.kg.shared_storage.initialize_pipeline_status",
+        new_callable=AsyncMock,
+    ), patch("src.components.llm_proxy.get_aegis_llm_proxy"):
+        mock_instance = MagicMock()
+        mock_instance.initialize_storages = AsyncMock()
+        mock_instance.chunk_entity_relation_graph = MagicMock()
+        mock_instance.chunk_entity_relation_graph._driver = MagicMock()
+        mock_lightrag_cls.return_value = mock_instance
 
-                client = LightRAGClient()
-                assert not client._initialized
+        client = LightRAGClient()
+        assert not client._initialized
 
-                await client._ensure_initialized()
-                assert client._initialized
-                assert mock_lightrag_cls.called
+        await client._ensure_initialized()
+        assert client._initialized
+        assert mock_lightrag_cls.called
 
 
 @pytest.mark.asyncio

@@ -13,12 +13,12 @@ the complete integration with the Neo4j backend.
 Sprint 32 Feature 32.4: Neo4j Section Nodes - Integration Tests
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 from typing import Any
+from unittest.mock import AsyncMock
 
-from src.components.ingestion.langgraph_nodes import SectionMetadata, AdaptiveChunk
+import pytest
 
+from src.components.ingestion.langgraph_nodes import AdaptiveChunk, SectionMetadata
 
 # ============================================================================
 # Fixtures for Integration Testing

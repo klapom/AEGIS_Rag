@@ -142,8 +142,6 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
 
     This is the main integration test for Feature 21.6.
     """
-    from src.components.ingestion.docling_client import DoclingContainerClient
-    from src.components.ingestion.image_processor import ImageProcessor
     from src.components.ingestion.ingestion_state import IngestionState
     from src.components.ingestion.langgraph_nodes import (
         chunking_node,
@@ -175,7 +173,7 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
     assert state["docling_status"] == "completed"
     assert "document" in state
     assert "page_dimensions" in state
-    print(f"✓ Docling extraction completed")
+    print("✓ Docling extraction completed")
     print(f"  Pages: {len(state['page_dimensions'])}")
     print(
         f"  Images: {len(state['document'].pictures) if hasattr(state['document'], 'pictures') else 0}"
@@ -191,7 +189,7 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
         assert state["enrichment_status"] in ["completed", "failed"]
         if state["enrichment_status"] == "completed":
             assert len(state["vlm_metadata"]) > 0
-            print(f"✓ VLM enrichment completed")
+            print("✓ VLM enrichment completed")
             print(f"  Images processed: {len(state['vlm_metadata'])}/{images_before}")
 
             # Verify VLM text was inserted into document
@@ -210,7 +208,7 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
     state = await chunking_node(state)
     assert state["chunking_status"] == "completed"
     assert len(state["chunks"]) > 0
-    print(f"✓ Chunking completed")
+    print("✓ Chunking completed")
     print(f"  Chunks created: {len(state['chunks'])}")
 
     # Check for image annotations in chunks
@@ -222,14 +220,14 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
     state = await embedding_node(state)
     assert state["embedding_status"] == "completed"
     assert len(state["embedded_chunk_ids"]) > 0
-    print(f"✓ Embedding completed")
+    print("✓ Embedding completed")
     print(f"  Points uploaded to Qdrant: {len(state['embedded_chunk_ids'])}")
 
     # NODE 5: Graph extraction with minimal provenance
     print("\n=== NODE 5: Graph Extraction (Neo4j) ===")
     state = await graph_extraction_node(state)
     assert state["graph_status"] == "completed"
-    print(f"✓ Graph extraction completed")
+    print("✓ Graph extraction completed")
 
     # VERIFICATION: Check Qdrant
     print("\n=== VERIFICATION: Qdrant ===")
@@ -250,7 +248,7 @@ async def test_full_image_pipeline__pdf_with_images__success(test_pdf_with_image
 
         if points and len(points) > 0:
             payload = points[0].payload
-            print(f"✓ Sample chunk retrieved from Qdrant")
+            print("✓ Sample chunk retrieved from Qdrant")
             print(f"  Contains images: {payload.get('contains_images', False)}")
             print(f"  Image annotations: {len(payload.get('image_annotations', []))}")
 
@@ -312,6 +310,7 @@ async def test_qdrant__connection__success(docker_services):
 async def test_neo4j__connection__success(docker_services):
     """Test Neo4j connection."""
     from neo4j import AsyncGraphDatabase
+
     from src.core.config import get_settings
 
     settings = get_settings()
@@ -341,6 +340,7 @@ async def test_neo4j__connection__success(docker_services):
 async def test_vlm_processing__performance__acceptable_latency(docker_services):
     """Test VLM processing latency is acceptable (<30s per image)."""
     from PIL import Image
+
     from src.components.ingestion.image_processor import ImageProcessor
 
     processor = ImageProcessor()
@@ -399,7 +399,7 @@ async def test_full_pipeline__memory_usage__within_limits(test_pdf_with_images, 
     mem_after = process.memory_info().rss / 1024 / 1024  # MB
     mem_increase = mem_after - mem_before
 
-    print(f"✓ Memory usage:")
+    print("✓ Memory usage:")
     print(f"  Before: {mem_before:.0f}MB")
     print(f"  After: {mem_after:.0f}MB")
     print(f"  Increase: {mem_increase:.0f}MB")
@@ -439,9 +439,11 @@ async def test_pipeline__invalid_pdf__handles_gracefully(docker_services, tmp_pa
 @pytest.mark.asyncio
 async def test_vlm_enrichment__no_ollama__fails_gracefully(docker_services):
     """Test VLM enrichment handles Ollama unavailability."""
-    from src.components.ingestion.image_processor import ImageProcessor
-    from PIL import Image
     from unittest.mock import patch
+
+    from PIL import Image
+
+    from src.components.ingestion.image_processor import ImageProcessor
 
     processor = ImageProcessor()
 

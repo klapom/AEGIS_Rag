@@ -542,6 +542,7 @@ async def redis_checkpointer():
     Sprint 12: Ensures Redis connections closed before event loop shutdown.
     """
     import structlog
+
     from src.agents.checkpointer import create_redis_checkpointer
 
     logger = structlog.get_logger(__name__)
@@ -677,8 +678,9 @@ async def redis_memory_manager(redis_client):
     Returns:
         RedisMemoryManager instance
     """
-    from src.components.memory import RedisMemoryManager
     import structlog
+
+    from src.components.memory import RedisMemoryManager
 
     logger = structlog.get_logger(__name__)
 
@@ -709,8 +711,9 @@ async def graphiti_wrapper(neo4j_driver, ollama_client_real):
     Returns:
         GraphitiWrapper instance
     """
-    from src.components.memory import GraphitiWrapper
     import structlog
+
+    from src.components.memory import GraphitiWrapper
 
     logger = structlog.get_logger(__name__)
 
@@ -863,8 +866,9 @@ async def lightrag_instance():
     """
     logger.info("=== LIGHTRAG FIXTURE START ===")
 
-    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
     from neo4j import AsyncGraphDatabase
+
+    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
     from src.core.config import settings
 
     # Clean Neo4j, LightRAG caches, AND reset singleton BEFORE test
@@ -885,8 +889,8 @@ async def lightrag_instance():
         )
         async with driver.session() as session:
             result = await session.run("MATCH (n) DETACH DELETE n")
-            summary = await result.consume()
-            logger.info(f"Neo4j cleanup complete: deleted nodes/relationships")
+            await result.consume()
+            logger.info("Neo4j cleanup complete: deleted nodes/relationships")
         await driver.close()
         logger.info("Neo4j driver closed")
 

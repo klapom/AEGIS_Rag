@@ -19,6 +19,7 @@ Note:
 """
 
 import json
+
 import pytest
 
 # Skip entire module if playwright is not installed (e.g., on DGX Spark)
@@ -542,7 +543,7 @@ class TestVLMIntegrationE2E:
                 )
 
                 # Look for provider badge
-                badge = vlm_selector.locator("span").filter(
+                vlm_selector.locator("span").filter(
                     has_text="Local"
                 ) or vlm_selector.locator("span").filter(has_text="Cloud")
 

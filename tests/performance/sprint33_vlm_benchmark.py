@@ -72,14 +72,15 @@ async def run_vlm_benchmark():
         start_time = time.perf_counter()
 
         try:
-            from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
             import uuid
+
+            from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
             document_id = f"vlm_bench_{uuid.uuid4().hex[:8]}"
             batch_id = f"sprint33_vlm_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             print(f"[INFO] Document ID: {document_id}")
-            print(f"[INFO] Starting pipeline with VLM enrichment...")
+            print("[INFO] Starting pipeline with VLM enrichment...")
 
             result = await run_ingestion_pipeline(
                 document_path=str(test_file),

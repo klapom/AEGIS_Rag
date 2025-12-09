@@ -9,18 +9,11 @@ Tests cover:
 - Error handling (not found, expired)
 """
 
-import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import status
-
-from src.api.v1.chat import (
-    ShareLinkResponse,
-    ShareSettings,
-    SharedConversationResponse,
-)
 
 
 @pytest.fixture

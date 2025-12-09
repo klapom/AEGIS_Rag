@@ -1,7 +1,8 @@
 """Tests for Graph Visualization Export Module."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.components.graph_rag.visualization_export import (
     GraphVisualizationExporter,

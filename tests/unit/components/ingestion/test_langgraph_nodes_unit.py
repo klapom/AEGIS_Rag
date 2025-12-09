@@ -21,8 +21,6 @@ Run tests:
     pytest tests/unit/components/ingestion/test_langgraph_nodes_unit.py -v
 """
 
-import time
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -44,7 +42,6 @@ from src.components.ingestion.langgraph_nodes import (
 )
 from src.core.chunk import Chunk
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # Fixtures
@@ -275,7 +272,7 @@ async def test_docling_parse_node_with_container_restart(sample_state):
         mock_client.parse_document = AsyncMock(return_value=mock_parsed)
 
         # Run node
-        updated_state = await docling_parse_node(sample_state)
+        await docling_parse_node(sample_state)
 
         # Verify container restart logic
         # Should stop first (to clear leak), then start

@@ -183,7 +183,7 @@ async def test_store_relations_to_neo4j_default_strength(mocker):
     chunk_id = "abc123"
 
     # Call method
-    result = await client._store_relations_to_neo4j(relations=relations, chunk_id=chunk_id)
+    await client._store_relations_to_neo4j(relations=relations, chunk_id=chunk_id)
 
     # Verify default strength is 5
     call_args = mock_session.run.call_args
@@ -224,7 +224,7 @@ async def test_store_relations_to_neo4j_default_description(mocker):
     chunk_id = "abc123"
 
     # Call method
-    result = await client._store_relations_to_neo4j(relations=relations, chunk_id=chunk_id)
+    await client._store_relations_to_neo4j(relations=relations, chunk_id=chunk_id)
 
     # Verify default description is empty string
     call_args = mock_session.run.call_args

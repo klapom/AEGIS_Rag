@@ -6,8 +6,9 @@ Integration tests that verify citation generation works end-to-end
 with real LLM proxy (mocked responses).
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from src.agents.answer_generator import AnswerGenerator
 from src.components.llm_proxy.models import LLMResponse

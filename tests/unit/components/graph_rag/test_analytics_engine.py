@@ -1,8 +1,9 @@
 """Tests for Graph Analytics Engine."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
 import networkx as nx
+import pytest
 
 from src.components.graph_rag.analytics_engine import (
     GraphAnalyticsEngine,

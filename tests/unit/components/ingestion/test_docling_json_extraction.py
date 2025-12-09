@@ -8,7 +8,6 @@ Sprint 21 Feature 21.5: Extract rich metadata from Docling JSON.
 
 import pytest
 
-
 # =============================================================================
 # Test Data: Mock Docling JSON Content
 # =============================================================================

@@ -13,8 +13,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.components.ingestion.section_extraction import (
     _detect_heading_strategy,
-    _is_likely_heading_by_formatting,
     _extract_from_texts_array,
+    _is_likely_heading_by_formatting,
 )
 
 
@@ -45,7 +45,7 @@ def main():
     json_path = Path(__file__).parent / "results" / "multi_format_test" / "docx_DE-D-AdvancedAdministration_0368_raw.json"
     print(f"\nLoading: {json_path.name}")
 
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
     texts = data.get("texts", [])
@@ -102,7 +102,7 @@ def main():
 
     pptx_path = Path(__file__).parent / "results" / "multi_format_test" / "pptx_PerformanceTuning_textonly_raw.json"
     if pptx_path.exists():
-        with open(pptx_path, "r", encoding="utf-8") as f:
+        with open(pptx_path, encoding="utf-8") as f:
             pptx_data = json.load(f)
 
         pptx_texts = pptx_data.get("texts", [])

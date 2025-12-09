@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "timestamp": "20251209_130905",
+    "total_duration_seconds": 2134.71,
+    "ingest_size_per_dataset": 50,
+    "eval_size_per_dataset": 10,
+    "datasets": [
+      "hotpotqa"
+    ],
+    "track": "A"
+  },
+  "services": {
+    "qdrant": true,
+    "ollama": true,
+    "neo4j": true
+  },
+  "ingestion": {
+    "hotpotqa": {
+      "total_contexts": 129,
+      "contexts_ingested": 129,
+      "contexts_failed": 0,
+      "batches_processed": 13,
+      "duration_sec": 16.89,
+      "dataset": "hotpotqa",
+      "namespace": "eval_hotpotqa"
+    }
+  },
+  "evaluation": {
+    "hotpotqa": {
+      "namespace": "eval_hotpotqa",
+      "sample_count": 10,
+      "duration_seconds": 2113.352672484005,
+      "metrics": {
+        "context_precision": 0.6499999999416667,
+        "context_recall": 0.9,
+        "faithfulness": 0.6041666666666666,
+        "answer_relevancy": 0.7238258831677502
+      },
+      "per_intent": [
+        {
+          "intent": "unknown",
+          "sample_count": 10,
+          "context_precision": 0.6499999999416667,
+          "context_recall": 0.9,
+          "faithfulness": 0.6041666666666666,
+          "answer_relevancy": 0.7238258831677502
+        }
+      ]
+    }
+  },
+  "summary": {
+    "datasets_evaluated": 1,
+    "average_metrics": {
+      "context_precision": 0.6499999999416667,
+      "context_recall": 0.9,
+      "faithfulness": 0.6041666666666666,
+      "answer_relevancy": 0.7238258831677502
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "timestamp": "20251209_095915",
+    "total_duration_seconds": 833.71,
+    "sample_size_per_dataset": 10,
+    "datasets": [
+      "hotpotqa",
+      "msmarco"
+    ],
+    "track": "A"
+  },
+  "services": {
+    "qdrant": true,
+    "ollama": true,
+    "neo4j": true
+  },
+  "ingestion": {
+    "hotpotqa": {
+      "total_contexts": 30,
+      "contexts_ingested": 30,
+      "contexts_failed": 0,
+      "batches_processed": 3,
+      "duration_sec": 5.92,
+      "dataset": "hotpotqa",
+      "namespace": "eval_hotpotqa"
+    },
+    "msmarco": {
+      "total_contexts": 12,
+      "contexts_ingested": 12,
+      "contexts_failed": 0,
+      "batches_processed": 2,
+      "duration_sec": 2.71,
+      "dataset": "msmarco",
+      "namespace": "eval_msmarco"
+    }
+  },
+  "evaluation": {
+    "hotpotqa": {
+      "namespace": "eval_hotpotqa",
+      "sample_count": 10,
+      "duration_seconds": 396.94046732300194,
+      "metrics": {
+        "context_precision": NaN,
+        "context_recall": NaN,
+        "faithfulness": NaN,
+        "answer_relevancy": NaN
+      },
+      "per_intent": [
+        {
+          "intent": "unknown",
+          "sample_count": 10,
+          "context_precision": NaN,
+          "context_recall": NaN,
+          "faithfulness": NaN,
+          "answer_relevancy": NaN
+        }
+      ]
+    },
+    "msmarco": {
+      "namespace": "eval_msmarco",
+      "sample_count": 10,
+      "duration_seconds": 424.83496134902816,
+      "metrics": {
+        "context_precision": NaN,
+        "context_recall": NaN,
+        "faithfulness": NaN,
+        "answer_relevancy": NaN
+      },
+      "per_intent": [
+        {
+          "intent": "unknown",
+          "sample_count": 10,
+          "context_precision": NaN,
+          "context_recall": NaN,
+          "faithfulness": NaN,
+          "answer_relevancy": NaN
+        }
+      ]
+    }
+  },
+  "summary": {
+    "datasets_evaluated": 2,
+    "average_metrics": {
+      "context_precision": NaN,
+      "context_recall": NaN,
+      "faithfulness": NaN,
+      "answer_relevancy": NaN
+    }
+  }
+}

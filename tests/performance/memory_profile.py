@@ -38,7 +38,6 @@ Dependencies:
 
 import asyncio
 import json
-import os
 import subprocess
 import sys
 import time
@@ -174,7 +173,7 @@ class MemoryProfiler:
         with report_path.open("w") as f:
             json.dump(results, f, indent=2)
 
-        print(f"\nMemory profiling complete!")
+        print("\nMemory profiling complete!")
         print(f"  Report saved to: {report_path}")
         print(f"  Flame graph: {self.output_dir / 'memory_profile_sprint_28.svg'}")
 
@@ -378,11 +377,11 @@ async def main() -> None:
         print(f"  Growth:   {growth['absolute_mb']} MB ({growth['percent']}%)")
 
     if analysis.get("memory_leak_suspected"):
-        print(f"\n  WARNING: Potential memory leak detected!")
+        print("\n  WARNING: Potential memory leak detected!")
         print(f"  Severity: {analysis.get('leak_severity', 'UNKNOWN')}")
 
     if "peak_memory_mb" in analysis:
-        print(f"\nMemory Statistics:")
+        print("\nMemory Statistics:")
         print(f"  Peak:       {analysis['peak_memory_mb']} MB")
         print(f"  Average:    {analysis['avg_memory_mb']} MB")
         print(f"  Volatility: {analysis['memory_volatility']} MB")

@@ -252,7 +252,7 @@ class TestLargeGraphPerformance:
         mock_neo4j_client.execute_read.side_effect = [entities, relationships]
 
         start_time = time.perf_counter()
-        communities = await detector._detect_with_networkx(algorithm="louvain", resolution=1.0)
+        await detector._detect_with_networkx(algorithm="louvain", resolution=1.0)
         cached_time_ms = (time.perf_counter() - start_time) * 1000
 
         # Cached query should be fast (< 300ms allows for system load, vs seconds for real query)

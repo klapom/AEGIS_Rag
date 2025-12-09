@@ -232,6 +232,7 @@ def extract_stage_timings(timing_logs: list[dict]) -> dict[str, dict]:
 async def run_full_pipeline(file_path: Path, timing_capture: TimingLogCapture) -> dict:
     """Run the complete ingestion pipeline for a single document."""
     import uuid
+
     from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
     timing_capture.current_document = file_path.name
@@ -249,7 +250,7 @@ async def run_full_pipeline(file_path: Path, timing_capture: TimingLogCapture) -
 
     try:
         # Run the full pipeline with required parameters
-        result = await run_ingestion_pipeline(
+        await run_ingestion_pipeline(
             document_path=str(file_path),
             document_id=document_id,
             batch_id=batch_id,

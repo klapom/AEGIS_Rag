@@ -18,9 +18,8 @@ Test Coverage:
 - Async context manager
 """
 
-import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
@@ -31,7 +30,6 @@ from src.components.ingestion.docling_client import (
     parse_document_with_docling,
 )
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # Fixtures

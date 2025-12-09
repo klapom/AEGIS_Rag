@@ -6,8 +6,7 @@ Tests the SSE format helper functions without requiring full app.
 """
 
 import json
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def _format_sse_message(data: dict) -> str:
@@ -17,7 +16,7 @@ def _format_sse_message(data: dict) -> str:
 
 def _get_iso_timestamp() -> str:
     """Get current timestamp in ISO 8601 format."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def test_format_sse_message_simple():

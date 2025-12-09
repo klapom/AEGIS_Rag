@@ -27,9 +27,9 @@ Architecture:
 - Ensures compatibility with downstream nodes (chunking, embedding)
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Check if llama_index is available
 try:
@@ -38,10 +38,11 @@ try:
 except ImportError:
     HAS_LLAMA_INDEX = False
 
+import contextlib
+
 from src.components.ingestion.ingestion_state import create_initial_state
 from src.components.ingestion.langgraph_nodes import llamaindex_parse_node
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # FIXTURES
@@ -326,10 +327,8 @@ class TestLlamaIndexParserErrorHandling:
             total_documents=1,
         )
 
-        try:
+        with contextlib.suppress(IngestionError):
             await llamaindex_parse_node(state)
-        except IngestionError:
-            pass
 
         # Status should be set to failed
         assert state["docling_status"] == "failed"

@@ -4,6 +4,7 @@ Sprint 11: Feature 11.1 - LLM-Based Answer Generation
 """
 
 import pytest
+
 from src.agents.answer_generator import AnswerGenerator
 
 

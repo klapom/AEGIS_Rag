@@ -24,12 +24,11 @@ Test Strategy:
 - Target: 5-10 comprehensive E2E tests
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from pathlib import Path
 
 from src.components.llm_proxy.models import TaskType
-
 
 # ============================================================================
 # Test Fixtures
@@ -365,7 +364,6 @@ class TestProviderRoutingE2E:
 
             # Verify local provider was used
             assert mock_acomp.called
-            call_kwargs = mock_acomp.call_args.kwargs
             # Provider routing happens in AegisLLMProxy._route_task
 
     async def test_routing_high_quality_complexity(self, mock_llm_response_factory):
@@ -374,10 +372,9 @@ class TestProviderRoutingE2E:
         # This test verifies the routing infrastructure exists
         from src.components.llm_proxy import get_aegis_llm_proxy
         from src.components.llm_proxy.models import (
-            LLMTask,
-            TaskType,
-            QualityRequirement,
             Complexity,
+            LLMTask,
+            QualityRequirement,
         )
 
         with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:

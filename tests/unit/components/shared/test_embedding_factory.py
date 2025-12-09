@@ -159,12 +159,12 @@ def test_reset_forces_reinitialization():
             mock_ollama_service = MagicMock()
             mock_get_ollama.return_value = mock_ollama_service
 
-            service1 = get_embedding_service()
+            get_embedding_service()
             assert mock_get_ollama.call_count == 1
 
             reset_embedding_service()
 
-            service2 = get_embedding_service()
+            get_embedding_service()
             assert mock_get_ollama.call_count == 2  # Called again after reset
 
 

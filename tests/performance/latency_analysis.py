@@ -101,7 +101,7 @@ class LatencyAnalyzer:
             return {"status": "error", "error": str(e)}
 
     def calculate_percentiles(
-        self, values: list[float], percentiles: list[int] = [50, 95, 99]
+        self, values: list[float], percentiles: list[int] = None
     ) -> dict[str, float]:
         """Calculate percentiles from a list of values.
 
@@ -112,6 +112,8 @@ class LatencyAnalyzer:
         Returns:
             Dictionary with percentile values
         """
+        if percentiles is None:
+            percentiles = [50, 95, 99]
         if not values:
             return {f"p{p}": 0.0 for p in percentiles}
 
@@ -145,7 +147,7 @@ class LatencyAnalyzer:
             return self._simulate_endpoint_latency(endpoint)
 
         # Extract latency values from histogram
-        data = result.get("data", {}).get("result", [])
+        result.get("data", {}).get("result", [])
 
         # For now, simulate data (Prometheus might not have data yet)
         return self._simulate_endpoint_latency(endpoint)
@@ -307,7 +309,7 @@ class LatencyAnalyzer:
         with report_path.open("w") as f:
             json.dump(results, f, indent=2)
 
-        print(f"\nLatency analysis complete!")
+        print("\nLatency analysis complete!")
         print(f"  Report saved to: {report_path}")
 
         # Print summary

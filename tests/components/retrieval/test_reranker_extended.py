@@ -14,7 +14,6 @@ import pytest
 
 from src.components.retrieval.reranker import CrossEncoderReranker, RerankResult
 
-
 # ============================================================================
 # RerankResult Tests
 # ============================================================================

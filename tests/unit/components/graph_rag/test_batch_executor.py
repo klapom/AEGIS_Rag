@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.components.graph_rag.batch_executor import BatchQueryExecutor, BatchQueryResult
+from src.components.graph_rag.batch_executor import BatchQueryExecutor
 
 
 class TestBatchQueryExecutor:

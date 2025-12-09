@@ -809,5 +809,4 @@ async def test_create_section_nodes_hierarchical_structure(
     assert stats["sections_created"] == 2
 
     # Verify run was called with batch operations
-    calls = mock_neo4j_session.run.call_args_list
     # Batch operations should include order parameter in section data

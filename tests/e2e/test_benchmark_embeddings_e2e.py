@@ -6,15 +6,13 @@ These tests require:
 - Ollama running with nomic-embed-text and bge-m3 models
 """
 
-import pytest
 import json
-import asyncio
-from pathlib import Path
-import tempfile
 
 # Mock qdrant_client import for unit test environment
 import sys
 from unittest.mock import MagicMock
+
+import pytest
 
 if "qdrant_client" not in sys.modules:
     sys.modules["qdrant_client"] = MagicMock()
@@ -73,12 +71,12 @@ class TestBenchmarkE2E:
 
         # Verify cross-layer compatibility
         assert (
-            metrics.cross_layer_similarity_possible == False
+            not metrics.cross_layer_similarity_possible
         )  # 768-dim not compatible with Graphiti
 
         # Verify output file created
         assert output_path.exists()
-        with open(output_path, "r") as f:
+        with open(output_path) as f:
             saved_data = json.load(f)
         assert "nomic-embed-text" in saved_data
 
@@ -120,7 +118,7 @@ class TestBenchmarkE2E:
         assert metrics.collection_size_mb > 0
 
         # Verify cross-layer compatibility
-        assert metrics.cross_layer_similarity_possible == True  # 1024-dim compatible with Graphiti
+        assert metrics.cross_layer_similarity_possible  # 1024-dim compatible with Graphiti
 
     @pytest.mark.skip(reason="Requires Qdrant and Ollama running")
     async def test_benchmark_comparison(self, tmp_path):
@@ -163,12 +161,12 @@ class TestBenchmarkE2E:
         assert bge_metrics.model_size_mb > nomic_metrics.model_size_mb
 
         # Verify cross-layer compatibility difference
-        assert nomic_metrics.cross_layer_similarity_possible == False
-        assert bge_metrics.cross_layer_similarity_possible == True
+        assert not nomic_metrics.cross_layer_similarity_possible
+        assert bge_metrics.cross_layer_similarity_possible
 
         # Verify output file has both results
         assert output_path.exists()
-        with open(output_path, "r") as f:
+        with open(output_path) as f:
             saved_data = json.load(f)
         assert len(saved_data) == 2
 
@@ -336,7 +334,7 @@ class TestBenchmarkE2E:
         await benchmark.run()
 
         # Verify JSON structure
-        with open(output_path, "r") as f:
+        with open(output_path) as f:
             data = json.load(f)
 
         assert isinstance(data, dict)
@@ -369,6 +367,7 @@ class TestBenchmarkCLI:
     async def test_cli_default_args(self, tmp_path):
         """Test CLI with default arguments."""
         import sys
+
         from scripts.benchmark_embeddings import main
 
         # Mock sys.argv
@@ -387,6 +386,7 @@ class TestBenchmarkCLI:
     async def test_cli_custom_models(self, tmp_path):
         """Test CLI with custom model list."""
         import sys
+
         from scripts.benchmark_embeddings import main
 
         sys.argv = [
@@ -402,7 +402,7 @@ class TestBenchmarkCLI:
         await main()
 
         # Verify only bge-m3 results
-        with open(tmp_path / "cli_custom.json", "r") as f:
+        with open(tmp_path / "cli_custom.json") as f:
             data = json.load(f)
         assert len(data) == 1
         assert "bge-m3" in data

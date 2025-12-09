@@ -5,8 +5,6 @@ Tests job creation, status updates, event logging, file tracking, and cleanup.
 """
 
 import asyncio
-import json
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -14,13 +12,7 @@ import pytest
 
 from src.components.ingestion.job_tracker import (
     IngestionJobTracker,
-    JobStatus,
-    EventLevel,
-    Phase,
-    ParserType,
-    FileStatus,
 )
-
 
 # ============================================================================
 # Job Creation Tests
@@ -689,7 +681,7 @@ async def test_cleanup_preserves_running_jobs(tmp_path: Path) -> None:
     job_id = await tracker.create_job("/test", True, 1)
 
     # Cleanup with 0 days retention
-    deleted = await tracker.cleanup_old_jobs(retention_days=0)
+    await tracker.cleanup_old_jobs(retention_days=0)
 
     # Running job should still exist
     job = await tracker.get_job(job_id)

@@ -6,18 +6,15 @@ Sprint Context: Sprint 25, Feature 25.10
 Related ADR: ADR-033 (Mozilla ANY-LLM Integration)
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 # Skip entire module if ragas is not installed (optional evaluation dependency)
 pytest.importorskip("ragas", reason="RAGAS evaluation tests skipped (optional dependency)")
 
 from src.components.llm_proxy.models import (
     LLMResponse,
-    LLMTask,
-    TaskType,
-    QualityRequirement,
-    Complexity,
 )
 from src.evaluation.custom_metrics import CustomMetricsEvaluator
 

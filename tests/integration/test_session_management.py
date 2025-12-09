@@ -4,8 +4,9 @@ Sprint 35 Feature 35.5: Session History Sidebar
 Tests for list sessions, get conversation, and delete session endpoints.
 """
 
-import pytest
 from datetime import UTC, datetime
+
+import pytest
 from httpx import AsyncClient
 
 from src.api.main import app

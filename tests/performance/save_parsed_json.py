@@ -2,9 +2,9 @@
 
 import asyncio
 import json
+import sys
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.components.ingestion.docling_client import DoclingContainerClient

@@ -1,11 +1,12 @@
 """Tests for Graph Analytics API endpoints."""
 
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 from src.api.main import app
-from src.core.models import CentralityMetrics, GraphStatistics, Recommendation, GraphEntity
+from src.core.models import CentralityMetrics, GraphEntity, GraphStatistics, Recommendation
 
 
 @pytest.fixture

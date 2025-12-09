@@ -2,10 +2,11 @@
 
 import asyncio
 import json
-from pathlib import Path
 
 # Import directly to avoid pipeline overhead
 import sys
+from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -28,7 +29,7 @@ async def analyze_body_structure():
     try:
         parsed = await client.parse_document(pptx_file)
 
-        print(f"\nDoclingParsedDocument attributes:")
+        print("\nDoclingParsedDocument attributes:")
         print(f"  - has .body: {hasattr(parsed, 'body')}")
         print(f"  - has .document: {hasattr(parsed, 'document')}")
         print(f"  - .body is None: {parsed.body is None}")
@@ -39,9 +40,9 @@ async def analyze_body_structure():
             print("\nERROR: body is None!")
             return
 
-        print(f"\n\nBody structure (top-level keys):")
+        print("\n\nBody structure (top-level keys):")
         if isinstance(body, dict):
-            for key in body.keys():
+            for key in body:
                 print(f"  - {key}: {type(body[key])}")
 
         # Recursively analyze the body
@@ -63,7 +64,7 @@ async def analyze_body_structure():
             else:
                 print(f"{indent}{path}: type={type(node)}, value={str(node)[:50]}...")
 
-        print(f"\n\nBody tree structure (first 50 nodes):")
+        print("\n\nBody tree structure (first 50 nodes):")
         print("-" * 80)
 
         nodes_printed = [0]  # Use list to allow mutation in nested function
@@ -94,7 +95,7 @@ async def analyze_body_structure():
 
         # Also dump first child for detailed inspection
         if isinstance(body, dict) and body.get("children"):
-            print(f"\n\nFirst child detailed structure:")
+            print("\n\nFirst child detailed structure:")
             print("-" * 80)
             first_child = body["children"][0] if body["children"] else None
             if first_child:

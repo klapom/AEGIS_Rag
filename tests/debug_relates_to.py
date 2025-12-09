@@ -1,16 +1,16 @@
 """Debug script to test RELATES_TO extraction directly."""
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 async def test_relates_to_extraction():
     """Test the RELATES_TO extraction directly."""
+    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
     from src.components.graph_rag.neo4j_client import get_neo4j_client
     from src.components.graph_rag.relation_extractor import RelationExtractor
-    from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 
     print("=" * 60)
     print("Testing RELATES_TO Extraction")
@@ -66,7 +66,7 @@ async def test_relates_to_extraction():
     relation_extractor = RelationExtractor()
 
     try:
-        full_text = chunks[0]["text"] if "text" in chunks[0] else chunk_text
+        full_text = chunks[0].get("text", chunk_text)
         relations = await relation_extractor.extract(full_text, entities)
         print(f"   Relations extracted: {len(relations) if relations else 0}")
         if relations:

@@ -285,7 +285,7 @@ def test_device_auto_selection():
         mock_model_class
     ):
         service = SentenceTransformersEmbeddingService(device="auto")
-        model = service._load_model()
+        service._load_model()
 
         # Verify model was loaded with 'auto' device
         mock_model_class.assert_called_once_with("BAAI/bge-m3", device="auto")

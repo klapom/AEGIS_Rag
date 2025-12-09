@@ -10,10 +10,8 @@ Tests cover:
 - Performance requirements (<10ms for read/write)
 """
 
-import asyncio
 import json
 import time
-from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

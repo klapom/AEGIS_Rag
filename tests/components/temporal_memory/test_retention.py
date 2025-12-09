@@ -1,14 +1,15 @@
 """Tests for temporal memory retention policy."""
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
-from src.core.config import settings
+import pytest
+
 from src.components.temporal_memory.retention import (
     purge_old_temporal_versions,
     start_retention_scheduler,
 )
+from src.core.config import settings
 
 
 def test_retention_config():
@@ -102,7 +103,7 @@ async def test_retention_cutoff_date_calculation():
             await purge_old_temporal_versions()
 
             # Calculate expected cutoff (365 days ago)
-            expected_cutoff = before_purge - timedelta(days=365)
+            before_purge - timedelta(days=365)
 
             # Verify the calculation is approximately correct (within 1 second tolerance)
             # Since we can't directly check the cutoff_date inside the function,

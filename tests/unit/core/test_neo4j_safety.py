@@ -9,12 +9,13 @@ Tests the Neo4jQueryValidator and SecureNeo4jClient to ensure:
 4. The SecureNeo4jClient wrapper enforces validation
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from src.core.neo4j_safety import (
-    Neo4jQueryValidator,
     NamespaceSecurityError,
+    Neo4jQueryValidator,
     SecureNeo4jClient,
     get_secure_neo4j_client,
 )

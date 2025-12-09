@@ -3,19 +3,16 @@
 Tests semaphore-bounded parallelism without mocking lazy imports.
 """
 
-import asyncio
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from src.components.ingestion.parallel_orchestrator import (
-    ParallelIngestionOrchestrator,
-    PARALLEL_FILES,
     PARALLEL_CHUNKS,
+    PARALLEL_FILES,
+    ParallelIngestionOrchestrator,
     get_parallel_orchestrator,
 )
-
 
 # ============================================================================
 # Orchestrator Initialization Tests
