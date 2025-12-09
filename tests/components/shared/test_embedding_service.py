@@ -1,10 +1,15 @@
-"""Tests for unified embedding service."""
+"""Tests for unified embedding service.
+
+These tests require Ollama running with bge-m3 model.
+Marked with requires_llm to skip in CI.
+"""
 
 import pytest
 
 from src.components.shared.embedding_service import UnifiedEmbeddingService
 
 
+@pytest.mark.requires_llm
 @pytest.mark.asyncio
 async def test_embed_single():
     """Test single text embedding."""
@@ -15,6 +20,7 @@ async def test_embed_single():
     assert all(isinstance(x, float) for x in embedding)
 
 
+@pytest.mark.requires_llm
 @pytest.mark.asyncio
 async def test_embed_batch():
     """Test batch embedding."""
@@ -27,6 +33,7 @@ async def test_embed_batch():
     assert all(len(emb) == 1024 for emb in embeddings)
 
 
+@pytest.mark.requires_llm
 @pytest.mark.asyncio
 async def test_caching():
     """Test embedding cache."""
@@ -42,6 +49,7 @@ async def test_caching():
     assert emb1 == emb2
 
 
+@pytest.mark.requires_llm
 @pytest.mark.asyncio
 async def test_cache_sharing():
     """Test cache sharing across components."""
