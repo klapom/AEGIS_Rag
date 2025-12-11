@@ -5,9 +5,11 @@ The graph orchestrates query routing and agent coordination.
 
 Sprint 4 Features 4.1-4.4: Base Graph Structure with State Persistence
 Sprint 5 Feature 5.5: Graph Query Agent Integration
+Sprint 42: True Hybrid Mode - Vector + Graph parallel execution
 Implements the foundational graph with optional checkpointing for conversation history.
 """
 
+import asyncio
 from typing import Any, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -100,13 +102,88 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-def route_query(state: dict[str, Any]) -> Literal["vector_search", "graph", "memory", "end"]:
+async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
+    """Execute Vector + Graph search in parallel and merge results.
+
+    Sprint 42: True Hybrid Mode - combines vector semantic search with
+    graph entity/relationship search for comprehensive retrieval.
+
+    Args:
+        state: Current agent state
+
+    Returns:
+        State with merged retrieved_contexts from both searches
+    """
+    logger.info("hybrid_search_node_start", query=state.get("query", "")[:100])
+
+    # Run both searches in parallel
+    vector_task = asyncio.create_task(vector_search_node(state.copy()))
+    graph_task = asyncio.create_task(graph_query_node(state.copy()))
+
+    # Wait for both to complete
+    vector_result, graph_result = await asyncio.gather(
+        vector_task, graph_task, return_exceptions=True
+    )
+
+    # Merge retrieved contexts
+    merged_contexts = []
+
+    # Add vector results
+    if isinstance(vector_result, dict):
+        vector_contexts = vector_result.get("retrieved_contexts", [])
+        for ctx in vector_contexts:
+            ctx["search_type"] = "vector"
+            merged_contexts.append(ctx)
+        logger.info("hybrid_vector_results", count=len(vector_contexts))
+    else:
+        logger.warning("hybrid_vector_failed", error=str(vector_result))
+
+    # Add graph results
+    if isinstance(graph_result, dict):
+        graph_contexts = graph_result.get("retrieved_contexts", [])
+        for ctx in graph_contexts:
+            ctx["search_type"] = "graph"
+            merged_contexts.append(ctx)
+        logger.info("hybrid_graph_results", count=len(graph_contexts))
+    else:
+        logger.warning("hybrid_graph_failed", error=str(graph_result))
+
+    # Deduplicate by text content (keep first occurrence)
+    seen_texts = set()
+    unique_contexts = []
+    for ctx in merged_contexts:
+        text = ctx.get("text", "")[:200]  # Use first 200 chars for dedup
+        if text not in seen_texts:
+            seen_texts.add(text)
+            unique_contexts.append(ctx)
+
+    state["retrieved_contexts"] = unique_contexts
+
+    # Update metadata
+    if "metadata" not in state:
+        state["metadata"] = {}
+    state["metadata"]["hybrid_search"] = {
+        "vector_count": len(vector_result.get("retrieved_contexts", [])) if isinstance(vector_result, dict) else 0,
+        "graph_count": len(graph_result.get("retrieved_contexts", [])) if isinstance(graph_result, dict) else 0,
+        "merged_count": len(unique_contexts),
+    }
+
+    logger.info(
+        "hybrid_search_node_complete",
+        total_contexts=len(unique_contexts),
+    )
+
+    return state
+
+
+def route_query(state: dict[str, Any]) -> Literal["hybrid_search", "vector_search", "graph", "memory", "end"]:
     """Determine the next node based on intent.
 
     This is a conditional edge function that determines routing.
+    Sprint 42: Routes HYBRID to parallel vector+graph search.
     Routes GRAPH intent to graph_query node (Sprint 5 Feature 5.5).
     Routes MEMORY intent to memory node (Sprint 7 Feature 7.4).
-    Routes HYBRID/VECTOR intents to vector_search node (Sprint 10 Fix).
+    Routes VECTOR to vector_search only.
 
     Args:
         state: Current agent state
@@ -119,6 +196,11 @@ def route_query(state: dict[str, Any]) -> Literal["vector_search", "graph", "mem
 
     logger.info("routing_decision", intent=intent, route=route_decision)
 
+    # Sprint 42: Route HYBRID to parallel vector+graph search
+    if route_decision.lower() == "hybrid":
+        logger.info("routing_to_hybrid_search", intent=intent)
+        return "hybrid_search"
+
     # Sprint 5: Route GRAPH intent to graph_query node
     if route_decision.lower() == "graph":
         logger.info("routing_to_graph_query", intent=intent)
@@ -129,7 +211,7 @@ def route_query(state: dict[str, Any]) -> Literal["vector_search", "graph", "mem
         logger.info("routing_to_memory", intent=intent)
         return "memory"
 
-    # Sprint 10 Fix: Route hybrid/vector to vector_search node
+    # Route vector to vector_search node only
     logger.info("routing_to_vector_search", intent=intent)
     return "vector_search"
 
@@ -140,12 +222,12 @@ def create_base_graph() -> StateGraph:
     This creates the foundational graph with:
     - START node
     - Router node for query classification
+    - Hybrid search node (Sprint 42: parallel vector+graph)
+    - Vector search node
     - Graph query node (Sprint 5 Feature 5.5)
     - Memory node (Sprint 7 Feature 7.4)
     - Conditional edges for routing
     - END node
-
-    Additional agent nodes will be added in future sprints.
 
     Returns:
         Compiled StateGraph ready for execution
@@ -157,6 +239,9 @@ def create_base_graph() -> StateGraph:
 
     # Add router node
     graph.add_node("router", router_node)
+
+    # Sprint 42: Add hybrid search node (parallel vector+graph)
+    graph.add_node("hybrid_search", hybrid_search_node)
 
     # Sprint 4: Add vector search node
     graph.add_node("vector_search", vector_search_node)
@@ -178,17 +263,21 @@ def create_base_graph() -> StateGraph:
         "router",
         route_query,
         {
-            "vector_search": "vector_search",  # Sprint 10: Route hybrid/vector to vector search
-            "graph": "graph_query",  # Sprint 5: Route to graph query agent
-            "memory": "memory",  # Sprint 7: Route to memory agent
+            "hybrid_search": "hybrid_search",  # Sprint 42: Parallel vector+graph
+            "vector_search": "vector_search",  # Vector only
+            "graph": "graph_query",  # Sprint 5: Graph only
+            "memory": "memory",  # Sprint 7: Memory agent
             "end": END,
         },
     )
 
+    # Sprint 42: Connect hybrid_search to answer generator
+    graph.add_edge("hybrid_search", "answer")
+
     # Sprint 10: Connect vector_search to answer generator
     graph.add_edge("vector_search", "answer")
 
-    # Sprint 5: Connect graph_query to END
+    # Sprint 5: Connect graph_query to END (has its own answer generation)
     graph.add_edge("graph_query", END)
 
     # Sprint 7: Connect memory to END
@@ -198,7 +287,8 @@ def create_base_graph() -> StateGraph:
     graph.add_edge("answer", END)
 
     logger.info(
-        "base_graph_created", nodes=["router", "vector_search", "graph_query", "memory", "answer"]
+        "base_graph_created",
+        nodes=["router", "hybrid_search", "vector_search", "graph_query", "memory", "answer"],
     )
 
     return graph

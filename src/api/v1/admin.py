@@ -1661,6 +1661,74 @@ async def get_system_stats() -> SystemStats:
 
 
 # ============================================================================
+# Sprint 42: Namespace Management API
+# ============================================================================
+
+
+class NamespaceResponse(BaseModel):
+    """Response model for namespace information."""
+
+    namespace_id: str = Field(..., description="Unique namespace identifier")
+    namespace_type: str = Field(..., description="Type: general, project, evaluation, test")
+    document_count: int = Field(..., description="Number of documents in namespace")
+    description: str = Field(default="", description="Optional namespace description")
+
+
+class NamespaceListResponse(BaseModel):
+    """Response model for namespace list."""
+
+    namespaces: list[NamespaceResponse] = Field(..., description="List of available namespaces")
+    total_count: int = Field(..., description="Total number of namespaces")
+
+
+@router.get(
+    "/namespaces",
+    response_model=NamespaceListResponse,
+    summary="List available namespaces",
+    description="Get all available namespaces with document counts for project/search filtering.",
+)
+async def list_namespaces() -> NamespaceListResponse:
+    """List all available namespaces.
+
+    Sprint 42: Namespace selection for search UI.
+
+    Returns:
+        NamespaceListResponse with all namespaces and their document counts.
+    """
+    logger.info("listing_namespaces")
+
+    try:
+        from src.core.namespace import NamespaceManager
+
+        manager = NamespaceManager()
+        namespace_infos = await manager.list_namespaces()
+
+        namespaces = [
+            NamespaceResponse(
+                namespace_id=ns.namespace_id,
+                namespace_type=ns.namespace_type,
+                document_count=ns.document_count,
+                description=ns.description,
+            )
+            for ns in namespace_infos
+        ]
+
+        logger.info("namespaces_listed", count=len(namespaces))
+
+        return NamespaceListResponse(
+            namespaces=namespaces,
+            total_count=len(namespaces),
+        )
+
+    except Exception as e:
+        logger.error("failed_to_list_namespaces", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list namespaces: {str(e)}",
+        ) from e
+
+
+# ============================================================================
 # Sprint 30: VLM-Enhanced Re-Indexing with Image Descriptions
 # ============================================================================
 

@@ -34,7 +34,7 @@ class VectorSearchAgent(BaseAgent):
         self,
         hybrid_search: HybridSearch | None = None,
         top_k: int | None = None,
-        use_reranking: bool = True,
+        use_reranking: bool = False,  # TD-059: Disabled by default
         max_retries: int = 3,
     ) -> None:
         """Initialize Vector Search Agent.
@@ -42,12 +42,13 @@ class VectorSearchAgent(BaseAgent):
         Args:
             hybrid_search: HybridSearch instance (created if None)
             top_k: Number of results to retrieve (default from settings)
-            use_reranking: Whether to apply reranking (default: True)
+            use_reranking: Whether to apply reranking (default from settings)
             max_retries: Maximum retry attempts on failure (default: 3)
         """
         super().__init__(name="VectorSearchAgent")
         self.hybrid_search = hybrid_search or HybridSearch()
         self.top_k = top_k or settings.retrieval_top_k
+        # TD-059: Reranking disabled by default (sentence-transformers not in container)
         self.use_reranking = use_reranking
         self.max_retries = max_retries
 
@@ -276,6 +277,6 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
     """
     agent = VectorSearchAgent(
         top_k=settings.retrieval_top_k,
-        use_reranking=True,
+        use_reranking=False,  # TD-059: Disabled - sentence-transformers not in container
     )
     return await agent.process(state)

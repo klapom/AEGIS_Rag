@@ -372,7 +372,7 @@ class GraphRAGRetriever:
         search_result = await self.hybrid_search.hybrid_search(
             query=query,
             top_k=top_k,
-            use_reranking=True,
+            use_reranking=False,  # TD-059: Disabled
         )
 
         # Convert search results to documents
@@ -505,7 +505,7 @@ class GraphRAGRetriever:
             search_result = await self.hybrid_search.hybrid_search(
                 query=augmented_query,
                 top_k=top_k,
-                use_reranking=True,
+                use_reranking=False,  # TD-059: Disabled
             )
 
             # Add documents to context

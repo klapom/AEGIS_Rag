@@ -149,8 +149,19 @@ class DualLevelSearch:
             LIMIT $top_k
             """
 
-            # Extract query terms (simple approach - first few words)
-            query_term = " ".join(query.split()[:3])
+            # Sprint 42: Extract meaningful query terms (skip stop words)
+            # German + English stop words commonly used in questions
+            stop_words = {
+                "was", "weißt", "du", "über", "wie", "ist", "sind", "der", "die", "das",
+                "ein", "eine", "und", "oder", "mit", "von", "zu", "für", "auf", "in",
+                "what", "is", "are", "the", "a", "an", "and", "or", "with", "from",
+                "to", "for", "on", "in", "who", "where", "when", "how", "why",
+                "tell", "me", "about", "know", "do", "you", "can", "could", "would",
+            }
+            words = query.lower().split()
+            meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
+            # Use meaningful words if found, otherwise use full query
+            query_term = " ".join(meaningful_words) if meaningful_words else query
 
             results = await self.neo4j_client.execute_read(
                 cypher_query,
@@ -227,7 +238,17 @@ class DualLevelSearch:
             LIMIT $top_k
             """
 
-            query_term = " ".join(query.split()[:3])
+            # Sprint 42: Extract meaningful query terms (skip stop words)
+            stop_words = {
+                "was", "weißt", "du", "über", "wie", "ist", "sind", "der", "die", "das",
+                "ein", "eine", "und", "oder", "mit", "von", "zu", "für", "auf", "in",
+                "what", "is", "are", "the", "a", "an", "and", "or", "with", "from",
+                "to", "for", "on", "in", "who", "where", "when", "how", "why",
+                "tell", "me", "about", "know", "do", "you", "can", "could", "would",
+            }
+            words = query.lower().split()
+            meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
+            query_term = " ".join(meaningful_words) if meaningful_words else query
 
             results = await self.neo4j_client.execute_read(
                 cypher_query,

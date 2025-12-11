@@ -362,7 +362,7 @@ class HybridSearch:
         bm25_top_k: int = 20,
         rrf_k: int = 60,
         score_threshold: float | None = None,
-        use_reranking: bool = True,
+        use_reranking: bool = False,  # TD-059: Disabled - sentence-transformers not in container
         rerank_top_k: int | None = None,
         filters: MetadataFilters | None = None,
     ) -> dict[str, Any]:
@@ -375,7 +375,7 @@ class HybridSearch:
             bm25_top_k: Results from BM25 search (default: 20)
             rrf_k: RRF constant (default: 60)
             score_threshold: Minimum vector similarity score
-            use_reranking: Apply cross-encoder reranking (default: True)
+            use_reranking: Apply cross-encoder reranking (default: from settings)
             rerank_top_k: Number of candidates to rerank (default: 2*top_k)
             filters: Metadata filters for targeted search
 
