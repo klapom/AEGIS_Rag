@@ -339,6 +339,31 @@ class Settings(BaseSettings):
         default="auto", description="Device for semantic dedup ('auto', 'cuda', 'cpu')"
     )
 
+    # Multi-Criteria Entity Deduplication (Sprint 43: ADR-044)
+    enable_multi_criteria_dedup: bool = Field(
+        default=True,
+        description="Use multi-criteria dedup (edit distance + substring + semantic). "
+        "If False, falls back to semantic-only (ADR-017).",
+    )
+    dedup_edit_distance_threshold: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Max Levenshtein edit distance to consider as duplicate (1-2 char typos)",
+    )
+    dedup_min_length_for_edit: int = Field(
+        default=5,
+        ge=2,
+        le=20,
+        description="Min entity name length for edit distance check (prevents 'AI' ~ 'UI')",
+    )
+    dedup_min_length_for_substring: int = Field(
+        default=6,
+        ge=3,
+        le=20,
+        description="Min entity name length for substring check (prevents 'AI' in 'NVIDIA')",
+    )
+
     # Gemma Relation Extraction (Sprint 13: ADR-018)
     # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
     gemma_model: str = Field(

@@ -1,6 +1,6 @@
 # ARCHITECTURE EVOLUTION - Sprint Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-09 (Sprint 42)
+**Last Updated:** 2025-12-11 (Sprint 43)
 
 ---
 
@@ -54,6 +54,7 @@
 | 39 | Bi-Temporal | Entity versioning, time travel queries |
 | 40 | MCP + Sandbox | MCP integration, Bubblewrap shell sandbox |
 | 42 | 4-Way Hybrid | Intent-Weighted RRF, Graph Global channel |
+| 43 | Dedup & Monitoring | MultiCriteria Dedup (10.1%), Prometheus Metrics, Benchmarking |
 
 ---
 
@@ -135,6 +136,14 @@ Layer 3: Graphiti  (Episodic, <200ms, temporal relationships)
 - **Intent-Weighted Fusion:** Dynamic RRF weights per query intent
 - **Automatic Community Detection:** community_id on entity nodes
 
+### Sprint 43: Multi-Criteria Deduplication & Pipeline Monitoring
+- **MultiCriteriaDeduplicator:** 4 matching criteria (exact, edit-distance, substring, semantic)
+- **10.1% Entity Reduction:** On large multi-chunk documents (68k chars, 18 chunks)
+- **12 New Prometheus Metrics:** Chunking, deduplication, extraction by type
+- **Comprehensive Benchmarking:** Chunk sizes (500-4000), model comparison (gemma3:4b vs qwen2.5:7b)
+- **Parallel Extraction:** +20-30% more entities by combining gemma3:4b + qwen2.5:7b
+- **Model Stability Finding:** qwen2.5:7b stable across all chunk sizes, gemma3:4b unstable >2500 chars
+
 ---
 
 ## Current Retrieval Architecture (Sprint 42)
@@ -203,6 +212,8 @@ User Query
 5. **AegisLLMProxy** - Clean abstraction for multi-cloud routing
 6. **Intent-Weighted RRF** - Dynamic fusion adapts to query type
 7. **Bi-Temporal Opt-In** - Performance preserved for standard queries
+8. **Multi-Criteria Deduplication** - 10.1% reduction on multi-chunk docs
+9. **Parallel Model Extraction** - Fault-tolerance + 20-30% more entities
 
 ### Challenges Overcome
 1. **Embedding Mismatch** - Solved with BGE-M3 system-wide
@@ -211,6 +222,8 @@ User Query
 4. **Cost Visibility** - Solved with SQLite cost tracking
 5. **Multi-Hop Reasoning** - Solved with GraphRAG + context injection
 6. **Shell Security** - Solved with Bubblewrap (not Docker)
+7. **Entity Duplicates** - Solved with MultiCriteriaDeduplicator (ADR-044)
+8. **Model Instability** - Solved with parallel extraction fallback
 
 ---
 
@@ -284,10 +297,12 @@ User Query
 - Streaming pipeline with worker pools
 - Faceted search and export
 
-### Enterprise Features (Sprint 38-42)
+### Enterprise Features (Sprint 38-43)
 - JWT authentication with protected routes
 - Conversation search and share links
 - GraphRAG multi-hop reasoning
 - Bi-temporal entity versioning
 - MCP integration and shell sandbox
 - 4-Way Hybrid RRF with intent classification
+- Multi-criteria entity deduplication (10.1% reduction)
+- Comprehensive pipeline monitoring (12 new Prometheus metrics)

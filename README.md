@@ -1,7 +1,7 @@
 # AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-**Status:** Sprint 37 Complete (2025-12-08)
-**Version:** 1.1.0 (Production-Ready)
+**Status:** Sprint 43 Complete (2025-12-11)
+**Version:** 1.3.0 (Production-Ready)
 
 Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, and GPU-accelerated ingestion.
 
@@ -23,26 +23,32 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 
 ## Current Sprint Status
 
-### Sprint 37: Streaming Pipeline Architecture (COMPLETE)
-**Duration:** 2025-12-05 - 2025-12-08
+### Sprint 43: Multi-Criteria Deduplication & Pipeline Monitoring (COMPLETE)
+**Duration:** 2025-12-10 to 2025-12-11
 
 **Key Achievements:**
-- StreamingPipelineOrchestrator with AsyncIO queues
-- SSE Progress Updates for real-time pipeline monitoring
-- Worker Pool Configuration (embedding, extraction, VLM workers)
-- Multi-Document Parallel Processing
-- Pipeline E2E Tests (10+ tests)
+- MultiCriteriaDeduplicator: 4 matching criteria (exact, edit-distance, substring, semantic)
+- **10.1% entity deduplication** on large multi-chunk documents
+- 12 new Prometheus metrics for chunking, deduplication, extraction
+- Comprehensive benchmarking: chunk sizes, model comparison, parallel extraction
+- HotPotQA evaluation: gemma3:4b + qwen2.5:7b parallel strategy
+- RAGAS TXT pipeline evaluation with production ChunkingService
+
+**Benchmarking Results:**
+- Parallel extraction: +20-30% more entities, +45-107% more relations
+- Model stability: qwen2.5:7b stable across all chunk sizes
+- Optimal chunk size: 2500-3500 chars for speed, 500-1000 for coverage
 
 **Architecture Decisions:**
-- ADR-042: Bi-temporal Memory Opt-In Strategy
-- ADR-043: Secure Shell Sandbox (Bubblewrap)
+- ADR-044: Multi-Criteria Entity Deduplication
 
-### Sprint 38: Authentication & GraphRAG (PLANNED)
-**Planned (25 SP):**
+### Sprint 44: Next (PLANNED)
+**Candidates:**
 - JWT Authentication Frontend (Login UI, Protected Routes)
-- Conversation Search UI (Semantic Search)
-- Share Conversation Links (Temporary public links)
-- GraphRAG Multi-Hop Integration
+- Community Summary Generation (TD-058)
+- Learned RRF Weights (ML-based)
+- NuExtract Model Evaluation
+- Namespace Selector UI
 
 ---
 
@@ -141,8 +147,8 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 ## Project Status
 
 ### Sprint Completion
-- **Sprints 1-37:** COMPLETE (Streaming pipeline architecture)
-- **Sprint 38:** PLANNED (Authentication & GraphRAG, 25 SP)
+- **Sprints 1-43:** COMPLETE (Multi-Criteria Deduplication, Pipeline Monitoring)
+- **Sprint 44:** PLANNED (TBD)
 
 ### Test Coverage
 - **Unit Tests:** 467+ tests
@@ -151,7 +157,7 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 - **Total Coverage:** >80%
 
 ### Documentation
-- **ADRs:** 43 Architecture Decision Records
+- **ADRs:** 44 Architecture Decision Records
 - **Sprint Reports:** 37 sprint completion reports
 - **Total Docs:** 150+ markdown files
 
@@ -178,11 +184,11 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 **Runtime:**
 - Python 3.12+
 - Docker + NVIDIA Container Toolkit
-- Ollama (llama3.2, gemma-3, BGE-M3)
+- Ollama 
 - Poetry (dependency management)
 
 **GPU Requirements:**
-- NVIDIA GPU with CUDA 12.4+ support
+- NVIDIA GPU with CUDA 13.0+ support
 - 12GB+ VRAM recommended (for VLM + Docling)
 - DGX Spark: CUDA 13.0, PyTorch cu130
 
@@ -216,5 +222,5 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 
 ---
 
-**Last Updated:** 2025-12-08 (Sprint 37 Complete)
+**Last Updated:** 2025-12-09 (Sprint 42 Complete)
 **Maintainer:** AEGIS RAG Team

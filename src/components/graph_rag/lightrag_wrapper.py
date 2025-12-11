@@ -26,8 +26,12 @@ from tenacity import (
 # Sprint 32 FIX: Use ExtractionPipelineFactory instead of deprecated ThreePhaseExtractor
 # The ThreePhaseExtractor was removed in Sprint 25 (ADR-026) and caused 'NoneType' is not callable errors
 from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
+# Sprint 43: MultiCriteriaDeduplicator integration
+from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
 from src.core.config import settings
 from src.core.models import GraphQueryResult
+# Sprint 43 Feature 43.8: Prometheus metrics for deduplication
+from src.monitoring.metrics import record_deduplication_detail, record_extraction_by_type
 
 logger = structlog.get_logger(__name__)
 
@@ -1424,6 +1428,245 @@ class LightRAGClient:
             "stats": aggregate_stats,
             "total_time_seconds": total_time,
             "results": results,
+        }
+
+    async def insert_prechunked_documents(
+        self,
+        chunks: list[dict[str, Any]],
+        document_id: str,
+    ) -> dict[str, Any]:
+        """Insert pre-chunked documents with existing chunk_ids (Sprint 42).
+
+        This method accepts chunks that have already been created by the embedding
+        pipeline (embedding_node) with their chunk_ids. It skips internal chunking
+        and uses the provided chunk_ids directly to ensure ID alignment between
+        Qdrant and Neo4j.
+
+        Sprint 42: Unified chunk IDs between Qdrant and Neo4j for true hybrid search.
+
+        Args:
+            chunks: List of pre-chunked documents, each with:
+                - chunk_id: The Qdrant-compatible chunk ID (from embedding_node)
+                - text: The chunk text content
+                - chunk_index: Optional index within the document
+            document_id: The source document ID for provenance tracking
+
+        Returns:
+            Batch insertion result with entities/relations extracted
+
+        Example:
+            >>> chunks = [
+            ...     {"chunk_id": "abc123-uuid", "text": "Amsterdam is...", "chunk_index": 0}
+            ... ]
+            >>> result = await wrapper.insert_prechunked_documents(chunks, "doc_001")
+        """
+        await self._ensure_initialized()
+
+        logger.info(
+            "insert_prechunked_documents_start",
+            chunk_count=len(chunks),
+            document_id=document_id,
+        )
+
+        total_start = time.time()
+        aggregate_stats = {
+            "total_chunks": 0,
+            "total_entities": 0,
+            "total_relations": 0,
+            "total_mentioned_in": 0,
+        }
+
+        # Initialize Extraction Pipeline
+        extractor = create_extraction_pipeline_from_config()
+
+        all_entities = []
+        all_relations = []
+        converted_chunks = []
+
+        for chunk in chunks:
+            chunk_id = chunk.get("chunk_id", f"chunk_{chunk.get('chunk_index', 0)}")
+            chunk_text = chunk.get("text", "")
+            chunk_index = chunk.get("chunk_index", 0)
+
+            if not chunk_text:
+                logger.warning("empty_chunk_skipped", chunk_id=chunk_id)
+                continue
+
+            logger.info(
+                "extracting_prechunked",
+                chunk_id=chunk_id[:16] if len(chunk_id) > 16 else chunk_id,
+                chunk_index=chunk_index,
+                text_length=len(chunk_text),
+            )
+
+            try:
+                # Extract entities and relations from chunk
+                entities, relations = await extractor.extract(
+                    text=chunk_text, document_id=f"{document_id}#{chunk_index}"
+                )
+
+                # Annotate entities with the PROVIDED chunk_id (not regenerated)
+                for entity in entities:
+                    entity["chunk_id"] = chunk_id
+                    entity["document_id"] = document_id
+                    entity["chunk_index"] = chunk_index
+
+                # Annotate relations with the PROVIDED chunk_id
+                for relation in relations:
+                    relation["chunk_id"] = chunk_id
+                    relation["document_id"] = document_id
+                    relation["chunk_index"] = chunk_index
+
+                all_entities.extend(entities)
+                all_relations.extend(relations)
+
+                # Create chunk in LightRAG format with PROVIDED chunk_id as source_id
+                converted_chunks.append({
+                    "content": chunk_text,
+                    "source_id": chunk_id,  # Use the Qdrant chunk_id!
+                    "file_path": document_id,
+                })
+
+                logger.info(
+                    "chunk_extraction_complete",
+                    chunk_id=chunk_id[:16] if len(chunk_id) > 16 else chunk_id,
+                    entities=len(entities),
+                    relations=len(relations),
+                )
+
+            except Exception as e:
+                logger.error(
+                    "chunk_extraction_failed",
+                    chunk_id=chunk_id,
+                    error=str(e),
+                )
+                continue
+
+        # Sprint 43 Feature 43.8: Apply MultiCriteriaDeduplicator before storage
+        entities_before_dedup = len(all_entities)
+
+        if settings.enable_multi_criteria_dedup and all_entities:
+            try:
+                deduplicator = create_deduplicator_from_config()
+
+                # Deduplicate entities using multi-criteria matching
+                # Note: deduplicate() is synchronous, returns list only
+                deduplicated_entities = deduplicator.deduplicate(all_entities)
+                entities_after_dedup = len(deduplicated_entities)
+
+                # Calculate reduction
+                reduction_percent = round(
+                    (1 - entities_after_dedup / entities_before_dedup) * 100, 1
+                ) if entities_before_dedup > 0 else 0
+
+                # Record metrics
+                record_deduplication_detail(
+                    document_id=document_id,
+                    entities_before=entities_before_dedup,
+                    entities_after=entities_after_dedup,
+                    criterion_matches=None,  # Not tracked at call-site
+                )
+
+                logger.info(
+                    "entity_deduplication_complete",
+                    document_id=document_id,
+                    entities_before=entities_before_dedup,
+                    entities_after=entities_after_dedup,
+                    reduction_percent=reduction_percent,
+                )
+
+                all_entities = deduplicated_entities
+            except Exception as e:
+                logger.warning(
+                    "deduplication_failed_fallback_to_raw",
+                    document_id=document_id,
+                    error=str(e),
+                )
+
+        # Sprint 43 Feature 43.9: Record entity/relation types for monitoring
+        entity_type_counts: dict[str, int] = {}
+        for entity in all_entities:
+            ent_type = entity.get("type", entity.get("entity_type", "UNKNOWN"))
+            entity_type_counts[ent_type] = entity_type_counts.get(ent_type, 0) + 1
+
+        relation_type_counts: dict[str, int] = {}
+        for relation in all_relations:
+            rel_type = relation.get("type", relation.get("relation_type", "RELATES_TO"))
+            relation_type_counts[rel_type] = relation_type_counts.get(rel_type, 0) + 1
+
+        record_extraction_by_type(
+            entity_types=entity_type_counts,
+            relation_types=relation_type_counts,
+            model=settings.lightrag_llm_model,
+        )
+
+        # Convert to LightRAG format
+        lightrag_entities = self._convert_entities_to_lightrag_format(all_entities)
+        lightrag_relations = self._convert_relations_to_lightrag_format(all_relations)
+
+        logger.info(
+            "prechunked_extraction_complete",
+            document_id=document_id,
+            chunks=len(converted_chunks),
+            entities_raw=entities_before_dedup,
+            entities_deduplicated=len(lightrag_entities),
+            relations=len(lightrag_relations),
+            entity_types=entity_type_counts,
+            relation_types=relation_type_counts,
+        )
+
+        # Insert into LightRAG (embeddings + storage)
+        if hasattr(self.rag, "ainsert_custom_kg"):
+            await self.rag.ainsert_custom_kg(
+                custom_kg={
+                    "chunks": converted_chunks,
+                    "entities": lightrag_entities,
+                    "relations": lightrag_relations,
+                },
+                full_doc_id=document_id,
+            )
+            logger.info(
+                "lightrag_prechunked_kg_inserted",
+                chunks=len(converted_chunks),
+                entities=len(lightrag_entities),
+                relations=len(lightrag_relations),
+            )
+        else:
+            logger.warning(
+                "ainsert_custom_kg_unavailable",
+                fallback="entities_relations_not_stored",
+            )
+
+        # Store chunks and provenance in Neo4j
+        await self._store_chunks_and_provenance_in_neo4j(
+            chunks=[{
+                "chunk_id": c["source_id"],
+                "text": c["content"],
+                "document_id": document_id,
+                "chunk_index": i,
+            } for i, c in enumerate(converted_chunks)],
+            entities=lightrag_entities,
+        )
+
+        # Update aggregate stats
+        aggregate_stats["total_chunks"] = len(converted_chunks)
+        aggregate_stats["total_entities"] = len(lightrag_entities)
+        aggregate_stats["total_relations"] = len(lightrag_relations)
+
+        total_time = time.time() - total_start
+
+        logger.info(
+            "insert_prechunked_documents_complete",
+            document_id=document_id,
+            total_time_seconds=total_time,
+            **aggregate_stats,
+        )
+
+        return {
+            "document_id": document_id,
+            "status": "success",
+            "stats": aggregate_stats,
+            "total_time_seconds": total_time,
         }
 
     async def _clear_neo4j_database(self) -> None:

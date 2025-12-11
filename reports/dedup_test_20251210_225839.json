@@ -1,0 +1,188 @@
+{
+  "timestamp": "20251210_225839",
+  "sample": {
+    "question": "Musician and satirist Allie Goertz wrote a song about the \"The Simpsons\" character Milhouse, who Matt Groening named after who?",
+    "ground_truth": "President Richard Nixon",
+    "contexts": [
+      "Allison Beth \"Allie\" Goertz (born March 2, 1991) is an American musician.",
+      " Goertz is known for her satirical songs based on various pop culture topics.",
+      " Her videos are posted on YouTube under the name of Cossbysweater.",
+      "Milhouse Mussolini van Houten is a fictional character featured in the animated television series \"The Simpsons\", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon's middle name."
+    ]
+  },
+  "chunk_size": 500,
+  "chunks": [
+    {
+      "chunk_id": "test_chunk_0",
+      "text": "Allison Beth \"Allie\" Goertz (born March 2, 1991) is an American musician.  Goertz is known for her satirical songs based on various pop culture topics.  Her videos are posted on YouTube under the name of Cossbysweater. Milhouse Mussolini van Houten is a fictional character featured in the animated television series \"The Simpsons\", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon's middle name.",
+      "chunk_index": 0
+    }
+  ],
+  "original_entities": [
+    {
+      "entity_name": "Allison Beth \"Allie\" Goertz",
+      "entity_type": "PERSON",
+      "description": "American musician known for satirical songs based on pop culture topics",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Cossbysweater",
+      "entity_type": "PRODUCT",
+      "description": "YouTube channel name used by Allison Beth Goertz for posting her music videos",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Milhouse Mussolini van Houten",
+      "entity_type": "CONCEPT",
+      "description": "Fictional character from the animated television series 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Simpsons",
+      "entity_type": "PRODUCT",
+      "description": "Animated television series featuring the character Milhouse Mussolini van Houten",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Pamela Hayden",
+      "entity_type": "PERSON",
+      "description": "Voice actor for the character Milhouse Mussolini van Houten in 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Matt Groening",
+      "entity_type": "PERSON",
+      "description": "Creator of the character Milhouse Mussolini van Houten in 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Richard Nixon",
+      "entity_type": "PERSON",
+      "description": "U.S. President after whom the middle name of the character Milhouse was named",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    }
+  ],
+  "original_relations": [
+    {
+      "source": "Allison Beth \"Allie\" Goertz",
+      "target": "Cossbysweater",
+      "description": "Allison Beth \"Allie\" Goertz uses the name Cossbysweater for her YouTube videos.",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Milhouse Mussolini van Houten",
+      "target": "The Simpsons",
+      "description": "Milhouse Mussolini van Houten is a character in The Simpsons.",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Milhouse Mussolini van Houten",
+      "target": "Pamela Hayden",
+      "description": "Milhouse Mussolini van Houten is voiced by Pamela Hayden.",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Milhouse Mussolini van Houten",
+      "target": "Matt Groening",
+      "description": "Milhouse Mussolini van Houten was created by Matt Groening.",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Matt Groening",
+      "target": "Richard Nixon",
+      "description": "Matt Groening named the character Milhouse Mussolini van Houten after Richard Nixon's middle name.",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    }
+  ],
+  "stats_before_dedup": {
+    "total_entities": 7,
+    "total_relations": 5
+  },
+  "deduplicated_entities": [
+    {
+      "entity_name": "Allison Beth \"Allie\" Goertz",
+      "entity_type": "PERSON",
+      "description": "American musician known for satirical songs based on pop culture topics",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Cossbysweater",
+      "entity_type": "PRODUCT",
+      "description": "YouTube channel name used by Allison Beth Goertz for posting her music videos",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Milhouse Mussolini van Houten",
+      "entity_type": "CONCEPT",
+      "description": "Fictional character from the animated television series 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Simpsons",
+      "entity_type": "PRODUCT",
+      "description": "Animated television series featuring the character Milhouse Mussolini van Houten",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Pamela Hayden",
+      "entity_type": "PERSON",
+      "description": "Voice actor for the character Milhouse Mussolini van Houten in 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Matt Groening",
+      "entity_type": "PERSON",
+      "description": "Creator of the character Milhouse Mussolini van Houten in 'The Simpsons'",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Richard Nixon",
+      "entity_type": "PERSON",
+      "description": "U.S. President after whom the middle name of the character Milhouse was named",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    }
+  ],
+  "stats_after_dedup": {
+    "total_entities": 7,
+    "removed": 0,
+    "dedup_rate": 0.0
+  }
+}

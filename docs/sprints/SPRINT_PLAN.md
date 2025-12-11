@@ -610,7 +610,7 @@
 
 ---
 
-## Sprint 42: 4-Way Hybrid RRF ✅
+## Sprint 42: 4-Way Hybrid RRF ✅ (COMPLETE 2025-12-09)
 **Ziel:** Intent-Weighted 4-Way Hybrid Retrieval
 
 **Breakdown:**
@@ -641,6 +641,205 @@
 ### References
 - [SPRINT_42_PLAN.md](SPRINT_42_PLAN.md)
 - [TD-057: 4-Way Hybrid RRF](../technical-debt/TD-057_4WAY_HYBRID_RRF_RETRIEVAL.md)
+
+---
+
+## Sprint 43: Multi-Criteria Deduplication & Pipeline Monitoring ✅ (COMPLETE 2025-12-11)
+**Ziel:** Multi-Criteria Entity Deduplication + Production Pipeline Monitoring & Evaluation
+
+**Start:** 2025-12-10
+**End:** 2025-12-11
+**Status:** COMPLETE
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 43.1 MultiCriteriaDeduplicator Implementation | 5 | ✅ DONE |
+| 43.2 Config Options for Deduplication | 2 | ✅ DONE |
+| 43.3 Unit Tests for Multi-Criteria Matching | 3 | ✅ DONE |
+| 43.4 Integration with Extraction Pipeline | 3 | ✅ DONE |
+| 43.5 Benchmark: Before vs After Dedup | 2 | ✅ DONE |
+| 43.6 Documentation Update | 1 | ✅ DONE |
+| 43.7 Chunking Metrics (chars in/out, overlap) | 3 | ✅ DONE |
+| 43.8 Deduplication Metrics in Pipeline | 3 | ✅ DONE |
+| 43.9 Extraction Metrics (Entities/Relations by type) | 2 | ✅ DONE |
+| 43.10 Logging for Report Generation | 2 | ✅ DONE |
+| 43.11 RAGAS TXT Pipeline Evaluation | 5 | ✅ DONE |
+| 43.12 HotPotQA Smart Chunk-Size Benchmark | 3 | ✅ DONE (Bonus) |
+| 43.13 Parallel Extraction Benchmark | 3 | ✅ DONE (Bonus) |
+
+### Deliverables
+**Part 1: Deduplication (COMPLETE)**
+- MultiCriteriaDeduplicator class (extends SemanticDeduplicator)
+- 4 matching criteria: exact, edit distance, substring, semantic
+- Config options for thresholds and min-lengths
+- Unit tests with Nicolas Cage test cases (335 lines)
+- Benchmark comparison: raw vs deduplicated entity counts
+
+**Part 2: Pipeline Monitoring (COMPLETE)**
+- Prometheus metrics for chunking (input chars, output chunks, overlap)
+- Prometheus metrics for deduplication (before/after counts, match criteria)
+- Prometheus metrics for extraction (entity types, relation types, model)
+- Structured logging for JSON report export
+- RAGAS TXT evaluation pipeline script
+
+**Part 3: Comprehensive Benchmarking (COMPLETE)**
+- Chunk size benchmark (500-4000 chars) with qwen3:32b
+- HotPotQA smart benchmark with gemma3:4b and qwen2.5:7b
+- Parallel extraction benchmark (gemma3:4b + qwen2.5:7b combined)
+- Full pipeline evaluation with large HotPotQA samples (10 samples, 68k chars)
+
+### Technical Tasks
+**Part 1: Deduplication**
+- ✅ python-Levenshtein dependency (Added to pyproject.toml)
+- ✅ _is_duplicate_by_criteria() method
+- ✅ Two-phase deduplication (fast criteria + semantic)
+- ✅ Factory function update (create_deduplicator_from_config)
+
+**Part 2: Pipeline Monitoring**
+- ✅ New metrics in src/monitoring/metrics.py (12 new metrics)
+- ✅ Chunking service metric integration
+- ✅ Deduplicator metric integration (lightrag_wrapper.py)
+- ✅ RAGAS samples → TXT files conversion
+- ✅ Pipeline execution with TXT input
+
+**Part 3: Benchmarking**
+- ✅ scripts/benchmark_chunk_sizes.py
+- ✅ scripts/benchmark_chunking_smart.py
+- ✅ scripts/benchmark_parallel_hotpotqa.py
+- ✅ scripts/ragas_txt_pipeline_evaluation.py
+
+### Success Criteria
+**Part 1: Deduplication**
+- ✅ 5-6% additional reduction vs simple lowercase dedup
+- ✅ Substring matching catches "Goertz" in "Allison Beth 'Allie' Goertz"
+- ✅ Graceful fallback without python-Levenshtein
+- ✅ Feature flag support (enable_multi_criteria_dedup)
+
+**Part 2: Pipeline Monitoring**
+- ✅ Prometheus endpoint exposes all new metrics
+- ✅ Reports can be generated from structured logs
+- ✅ RAGAS TXT evaluation runs through production pipeline
+
+**Part 3: Benchmarking Results**
+- ✅ **10.1% deduplication reduction** on large multi-chunk documents
+- ✅ **Optimal chunk size:** 2500-3500 chars for speed, 500-1000 for coverage
+- ✅ **Parallel extraction:** +20-30% more entities, +45-107% more relations
+- ✅ **Model comparison:** qwen2.5:7b stable across all chunk sizes
+
+### Key Findings (RAGAS Evaluation)
+
+| Metric | Value |
+|--------|-------|
+| Large samples processed | 10/10 (68,126 chars) |
+| Chunks created | 18 |
+| Entities (raw → deduped) | 346 → 311 |
+| **Dedup reduction** | **10.1%** |
+| Multi-chunk dedup rate | 8.6-18.3% |
+| Entity types | ORG (32%), PERSON (29%), LOCATION (17%) |
+
+**Model Comparison (HotPotQA):**
+| Model | Stability | Max Entities | Best For |
+|-------|-----------|--------------|----------|
+| gemma3:4b | ⚠️ Unstable >2500 chars | 104 | Small chunks |
+| qwen2.5:7b | ✅ Stable all sizes | 92 | Large chunks |
+| Parallel | ✅ Fault-tolerant | 129 (+24%) | Production |
+
+### References
+- [ADR-044: Multi-Criteria Entity Deduplication](../adr/ADR-044_MULTI_CRITERIA_ENTITY_DEDUPLICATION.md)
+- [TD-062: Multi-Criteria Entity Deduplication](../technical-debt/TD-062_MULTI_CRITERIA_ENTITY_DEDUPLICATION.md)
+- [RAGAS_EVALUATION_ANALYSIS.md](../RAGAS_EVALUATION_ANALYSIS.md)
+- [NEO4J_LLM_GRAPH_BUILDER_COMPARISON.md](../NEO4J_LLM_GRAPH_BUILDER_COMPARISON.md)
+
+### Reports Generated
+- `reports/chunk_size_benchmark_20251210_211022.json`
+- `reports/benchmark_smart_gemma3_4b_20251211_090246.json`
+- `reports/benchmark_smart_qwen2.5_7b_20251211_093131.json`
+- `reports/benchmark_parallel_hotpotqa_20251211_100720.json`
+- `reports/ragas_txt_pipeline_eval_20251211_135825.json`
+- `reports/ragas_txt_pipeline_eval_20251211_160655.json`
+- `reports/llm_extraction_benchmark_round2_20251211_071122_dedup.json`
+
+---
+
+## Sprint 44: Relation Deduplication & Graph Quality 📋
+**Ziel:** Relation Deduplication + Knowledge Graph Qualitätsverbesserung
+
+**Start:** 2025-12-12 (planned)
+**Status:** PLANNED
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 44.1 RelationDeduplicator Implementation | 8 | 📋 |
+| 44.2 Entity Name Normalization for Relations | 3 | 📋 |
+| 44.3 Type Synonym Resolution | 5 | 📋 |
+| 44.4 Bidirectional Relation Handling | 3 | 📋 |
+| 44.5 Integration with lightrag_wrapper.py | 3 | 📋 |
+| 44.6 Update parallel_extractor.py | 2 | 📋 |
+| 44.7 Unit Tests for Relation Deduplication | 3 | 📋 |
+| 44.8 Benchmark: Relation Dedup Impact | 2 | 📋 |
+| 44.9 Community Summary Generation (TD-058) | 8 | 📋 Optional |
+
+### Deliverables
+**Part 1: Relation Deduplication (TD-063)**
+- RelationDeduplicator class (new file)
+- Stage 1: Entity name normalization (remap to canonical names)
+- Stage 2: Type synonym resolution (STARRED_IN → ACTED_IN)
+- Stage 3: Bidirectional relation handling (symmetric dedup)
+- Integration with entity deduplication flow
+- Config options: `enable_relation_dedup`, custom synonym mappings
+
+**Part 2: Graph Quality (Optional)**
+- Community summary generation for graph clustering
+- Graph quality metrics dashboard
+
+### Technical Tasks
+**Relation Deduplication:**
+- Create `src/components/graph_rag/relation_deduplicator.py`
+- Define `RELATION_TYPE_SYNONYMS` mapping
+- Define `SYMMETRIC_RELATIONS` set
+- Add `deduplicate_with_mapping()` to entity deduplicator
+- Update `lightrag_wrapper.py` integration
+- Update `parallel_extractor.py` to use RelationDeduplicator
+
+### Success Criteria
+- 35-40% relation deduplication on parallel extraction
+- Type synonyms merged (STARRED_IN, ACTED_IN → ACTED_IN)
+- Entity references remapped to canonical names
+- Symmetric relations deduplicated (A↔B only once)
+
+### References
+- [TD-063: Relation Deduplication](../technical-debt/TD-063_RELATION_DEDUPLICATION.md)
+- [TD-058: Community Summary Generation](../technical-debt/TD-058_COMMUNITY_SUMMARY_GENERATION.md)
+- [ADR-044: Multi-Criteria Entity Deduplication](../adr/ADR-044_MULTI_CRITERIA_ENTITY_DEDUPLICATION.md)
+
+### Research Insights (from Web Search)
+**LightRAG native approach:**
+- Deduplicates by description-based matching (not type)
+- Uses first-occurrence preference, sorted by timestamp
+- No explicit type synonym resolution
+
+**Industry best practices:**
+- Entity-Resolved Knowledge Graphs (ERKGs) - Neo4j, Senzing
+- Semantic Entity Resolution with LLMs (context-aware matching)
+- Type normalization via ontology alignment
+- RAGFlow uses LLM-based entity resolution toggle
+
+---
+
+## Sprint 45+: Backlog Candidates 📋
+**Candidates:**
+| Feature | SP | Source |
+|---------|-----|--------|
+| JWT Authentication Frontend | 13 | Backlog |
+| Learned RRF Weights | 8 | Backlog |
+| Conversation Search UI | 8 | Backlog |
+| NuExtract Model Evaluation | 5 | Backlog |
+| Qwen3:8b-Q4_K_M Benchmark | 3 | Backlog |
+| Reranking in Container (TD-059) | 3 | Tech Debt |
+| Unified Chunk IDs (TD-060) | 5 | Tech Debt |
+| Ollama GPU Docker Config (TD-061) | 3 | Tech Debt |
 
 ---
 

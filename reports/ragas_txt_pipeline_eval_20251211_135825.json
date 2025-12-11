@@ -1,0 +1,238 @@
+{
+  "metadata": {
+    "timestamp": "2025-12-11T14:02:25.761279",
+    "total_samples": 5,
+    "successful": 5,
+    "failed": 0,
+    "sprint": "43",
+    "feature": "43.11"
+  },
+  "chunking_summary": {
+    "total_input_chars": 1513,
+    "total_chunks_created": 5,
+    "avg_chunk_size_chars": 302.4,
+    "min_chunk_size_chars": 184,
+    "max_chunk_size_chars": 458
+  },
+  "extraction_summary": {
+    "total_entities_raw": 32,
+    "total_relations": 24,
+    "entity_types": {
+      "PRODUCT": 4,
+      "LOCATION": 4,
+      "ORGANIZATION": 3,
+      "CONCEPT": 9,
+      "PERSON": 7,
+      "EVENT": 5
+    },
+    "avg_entities_per_sample": 6.4,
+    "avg_relations_per_sample": 4.8
+  },
+  "deduplication_summary": {
+    "total_entities_before": 32,
+    "total_entities_after": 31,
+    "overall_reduction_percent": 3.1,
+    "samples_with_reduction": 1
+  },
+  "timing_summary": {
+    "total_time_seconds": 236.31,
+    "avg_time_per_sample_seconds": 47.26
+  },
+  "results": [
+    {
+      "question_id": "hotpot_000000",
+      "question": "Which magazine was started first Arthur's Magazine or First for Women?",
+      "ground_truth": "Arthur's Magazine",
+      "status": "success",
+      "chunking": {
+        "input_chars": 194,
+        "chunks_created": 1,
+        "chunk_sizes_chars": [
+          194
+        ],
+        "chunk_sizes_tokens": [
+          43
+        ],
+        "duration_seconds": 0.001
+      },
+      "extraction": {
+        "entities_raw": 5,
+        "relations_raw": 4,
+        "entity_types": {
+          "PRODUCT": 2,
+          "LOCATION": 2,
+          "ORGANIZATION": 1
+        },
+        "relation_types": {
+          "RELATES_TO": 4
+        },
+        "duration_seconds": 35.784
+      },
+      "deduplication": {
+        "entities_before": 5,
+        "entities_after": 5,
+        "reduction_percent": 0.0,
+        "duration_seconds": 0.053
+      },
+      "final_entities": 5,
+      "final_relations": 4,
+      "total_time_seconds": 35.838
+    },
+    {
+      "question_id": "hotpot_000001",
+      "question": "The Oberoi family is part of a hotel company that has a head office in what city?",
+      "ground_truth": "Delhi",
+      "status": "success",
+      "chunking": {
+        "input_chars": 184,
+        "chunks_created": 1,
+        "chunk_sizes_chars": [
+          184
+        ],
+        "chunk_sizes_tokens": [
+          39
+        ],
+        "duration_seconds": 0.001
+      },
+      "extraction": {
+        "entities_raw": 4,
+        "relations_raw": 3,
+        "entity_types": {
+          "ORGANIZATION": 2,
+          "LOCATION": 1,
+          "CONCEPT": 1
+        },
+        "relation_types": {
+          "RELATES_TO": 3
+        },
+        "duration_seconds": 27.59
+      },
+      "deduplication": {
+        "entities_before": 4,
+        "entities_after": 4,
+        "reduction_percent": 0.0,
+        "duration_seconds": 0.045
+      },
+      "final_entities": 4,
+      "final_relations": 3,
+      "total_time_seconds": 27.636
+    },
+    {
+      "question_id": "hotpot_000002",
+      "question": "Musician and satirist Allie Goertz wrote a song about the \"The Simpsons\" character Milhouse, who Matt Groening named after who?",
+      "ground_truth": "President Richard Nixon",
+      "status": "success",
+      "chunking": {
+        "input_chars": 458,
+        "chunks_created": 1,
+        "chunk_sizes_chars": [
+          458
+        ],
+        "chunk_sizes_tokens": [
+          102
+        ],
+        "duration_seconds": 0.001
+      },
+      "extraction": {
+        "entities_raw": 8,
+        "relations_raw": 5,
+        "entity_types": {
+          "PERSON": 4,
+          "EVENT": 1,
+          "PRODUCT": 2,
+          "CONCEPT": 1
+        },
+        "relation_types": {
+          "RELATES_TO": 5
+        },
+        "duration_seconds": 60.487
+      },
+      "deduplication": {
+        "entities_before": 8,
+        "entities_after": 8,
+        "reduction_percent": 0.0,
+        "duration_seconds": 0.045
+      },
+      "final_entities": 8,
+      "final_relations": 5,
+      "total_time_seconds": 60.533
+    },
+    {
+      "question_id": "hotpot_000003",
+      "question": " What nationality was James Henry Miller's wife?",
+      "ground_truth": "American",
+      "status": "success",
+      "chunking": {
+        "input_chars": 450,
+        "chunks_created": 1,
+        "chunk_sizes_chars": [
+          450
+        ],
+        "chunk_sizes_tokens": [
+          114
+        ],
+        "duration_seconds": 0.001
+      },
+      "extraction": {
+        "entities_raw": 10,
+        "relations_raw": 8,
+        "entity_types": {
+          "PERSON": 3,
+          "EVENT": 4,
+          "LOCATION": 1,
+          "CONCEPT": 2
+        },
+        "relation_types": {
+          "RELATES_TO": 8
+        },
+        "duration_seconds": 77.326
+      },
+      "deduplication": {
+        "entities_before": 10,
+        "entities_after": 10,
+        "reduction_percent": 0.0,
+        "duration_seconds": 0.047
+      },
+      "final_entities": 10,
+      "final_relations": 8,
+      "total_time_seconds": 77.374
+    },
+    {
+      "question_id": "hotpot_000004",
+      "question": "Cadmium Chloride is slightly soluble in this chemical, it is also called what?",
+      "ground_truth": "alcohol",
+      "status": "success",
+      "chunking": {
+        "input_chars": 227,
+        "chunks_created": 1,
+        "chunk_sizes_chars": [
+          226
+        ],
+        "chunk_sizes_tokens": [
+          50
+        ],
+        "duration_seconds": 0.001
+      },
+      "extraction": {
+        "entities_raw": 5,
+        "relations_raw": 4,
+        "entity_types": {
+          "CONCEPT": 5
+        },
+        "relation_types": {
+          "RELATES_TO": 4
+        },
+        "duration_seconds": 34.877
+      },
+      "deduplication": {
+        "entities_before": 5,
+        "entities_after": 4,
+        "reduction_percent": 20.0,
+        "duration_seconds": 0.047
+      },
+      "final_entities": 4,
+      "final_relations": 4,
+      "total_time_seconds": 34.924
+    }
+  ]
+}

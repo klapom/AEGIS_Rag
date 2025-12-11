@@ -54,6 +54,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 041 | Graph Visualization Edge Filtering | Accepted | 2025-11-28 |
 | 042 | Bi-Temporal Queries - Opt-In Strategy | Accepted | 2025-12-08 |
 | 043 | Secure Shell Sandbox for Tool Execution | Accepted | 2025-12-08 |
+| 044 | Hybrid Multi-Criteria Entity Deduplication | Accepted | 2025-12-10 |
 
 ---
 

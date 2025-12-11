@@ -1,0 +1,80 @@
+{
+  "timestamp": "20251211_065540",
+  "test_text_length": 451,
+  "results": [
+    {
+      "model": "nuextract:3.8b",
+      "status": "success",
+      "entities_extracted": 5,
+      "relations_extracted": 2,
+      "entity_time_seconds": 4.5,
+      "relation_time_seconds": 1.0,
+      "total_time_seconds": 5.5,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "an American literary periodical published in Philadelphia"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "a woman's magazine published by Bauer Media Group in the USA"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group"
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "First for Women",
+          "type": "",
+          "description": ""
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "type": "",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "model": "qwen3:8b",
+      "status": "partial_success",
+      "entities_extracted": 8,
+      "relations_extracted": 0,
+      "entity_time_seconds": 44.33,
+      "relation_time_seconds": 54.25,
+      "total_time_seconds": 98.58,
+      "error": "Relation JSON parse failed",
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PRODUCT",
+          "description": "An American literary periodical published in Philadelphia in the 19th century"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States where Arthur's Magazine was published"
+        },
+        {
+          "name": "First for Women",
+          "type": "PRODUCT",
+          "description": "A woman's magazine published by Bauer Media Group in the USA"
+        }
+      ],
+      "sample_relations": []
+    }
+  ],
+  "working_models": [
+    "nuextract:3.8b",
+    "qwen3:8b"
+  ],
+  "not_available": []
+}

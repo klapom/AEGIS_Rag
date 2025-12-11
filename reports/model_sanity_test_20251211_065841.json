@@ -1,0 +1,194 @@
+{
+  "timestamp": "20251211_065841",
+  "test_text_length": 451,
+  "results": [
+    {
+      "model": "gemma3:4b",
+      "status": "success",
+      "entities_extracted": 9,
+      "relations_extracted": 6,
+      "entity_time_seconds": 8.45,
+      "relation_time_seconds": 3.85,
+      "total_time_seconds": 12.3,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PUBLICATION",
+          "description": "A literary periodical published in the 19th century."
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States."
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "A media company that publishes magazines."
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "type": "LOCATED_IN",
+          "description": "Arthur's Magazine was located in Philadelphia."
+        },
+        {
+          "source": "Arthur's Magazine",
+          "target": "Bauer Media Group",
+          "type": "PUBLISHED_BY",
+          "description": "Bauer Media Group published Arthur's Magazine."
+        },
+        {
+          "source": "Bauer Media Group",
+          "target": "USA",
+          "type": "LOCATED_IN",
+          "description": "Bauer Media Group is located in USA."
+        }
+      ]
+    },
+    {
+      "model": "phi4-mini:latest",
+      "status": "success",
+      "entities_extracted": 8,
+      "relations_extracted": 0,
+      "entity_time_seconds": 12.24,
+      "relation_time_seconds": 0.24,
+      "total_time_seconds": 12.48,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PRODUCT",
+          "description": "An American literary periodical published in Philadelphia"
+        },
+        {
+          "name": "First for Women",
+          "type": "EVENT",
+          "description": "The title of a women's magazine published by Bauer Media Group"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "A media company publishing magazines and other publications"
+        }
+      ],
+      "sample_relations": []
+    },
+    {
+      "model": "qwen2.5:7b",
+      "status": "success",
+      "entities_extracted": 9,
+      "relations_extracted": 4,
+      "entity_time_seconds": 10.38,
+      "relation_time_seconds": 4.15,
+      "total_time_seconds": 14.53,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "An American literary periodical published in the 19th century."
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States where Arthur's Magazine was published."
+        },
+        {
+          "name": "First for Women",
+          "type": "PRODUCT",
+          "description": "A woman's magazine published by Bauer Media Group in the USA."
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "type": "PUBLISHED_IN",
+          "description": "Arthur's Magazine was published in Philadelphia"
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "type": "PUBLISHED_BY",
+          "description": "First for Women is published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "Delhi",
+          "type": "HEAD_OFFICE_IN",
+          "description": "The Oberoi Group has its head office in Delhi"
+        }
+      ]
+    },
+    {
+      "model": "mistral:7b",
+      "status": "success",
+      "entities_extracted": 5,
+      "relations_extracted": 5,
+      "entity_time_seconds": 8.35,
+      "relation_time_seconds": 7.12,
+      "total_time_seconds": 15.47,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "EVENT",
+          "description": "An American literary periodical published between 1844 and 1846"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "A woman's magazine published by Bauer Media Group in the USA"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "An Indian family known for their involvement in hotels through The Oberoi Group"
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Published_by",
+          "type": "PUBLISHED_BY",
+          "description": "Arthur's Magazine was published by an unspecified entity"
+        },
+        {
+          "source": "First for Women",
+          "target": "Published_by",
+          "type": "PUBLISHED_BY",
+          "description": "First for Women is published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "Famous_for",
+          "type": "FAMED_FOR",
+          "description": "The Oberoi family is famous for its involvement in hotels"
+        }
+      ]
+    },
+    {
+      "model": "zeffmuks/universal-ner:latest",
+      "status": "json_parse_failed",
+      "entities_extracted": 0,
+      "relations_extracted": 0,
+      "entity_time_seconds": 9.28,
+      "relation_time_seconds": 0,
+      "total_time_seconds": 0,
+      "error": "Could not parse JSON from:  I've read this text....",
+      "sample_entities": [],
+      "sample_relations": []
+    }
+  ],
+  "working_models": [
+    "gemma3:4b",
+    "phi4-mini:latest",
+    "qwen2.5:7b",
+    "mistral:7b"
+  ],
+  "not_available": []
+}

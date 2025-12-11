@@ -59,6 +59,73 @@ deduplication_reduction_ratio = Histogram(
 )
 
 # ============================================================================
+# Sprint 43: Enhanced Chunking & Deduplication Metrics (Feature 43.x)
+# ============================================================================
+
+# Chunking input/output metrics
+chunking_input_chars_total = Counter(
+    "aegis_chunking_input_chars_total",
+    "Total characters input to chunker",
+    ["document_id"],
+)
+
+chunking_output_chunks_total = Counter(
+    "aegis_chunking_output_chunks_total",
+    "Total chunks output from chunker",
+    ["document_id"],
+)
+
+chunking_chunk_size_chars = Histogram(
+    "aegis_chunking_chunk_size_chars",
+    "Individual chunk size in characters",
+    buckets=[100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000],
+)
+
+chunking_chunk_size_tokens = Histogram(
+    "aegis_chunking_chunk_size_tokens",
+    "Individual chunk size in tokens",
+    buckets=[50, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+)
+
+chunking_overlap_tokens = Histogram(
+    "aegis_chunking_overlap_tokens",
+    "Overlap between consecutive chunks in tokens",
+    buckets=[0, 25, 50, 75, 100, 150, 200, 300],
+)
+
+# Deduplication detailed metrics
+deduplication_entities_before = Gauge(
+    "aegis_deduplication_entities_before",
+    "Entity count before deduplication",
+    ["document_id"],
+)
+
+deduplication_entities_after = Gauge(
+    "aegis_deduplication_entities_after",
+    "Entity count after deduplication",
+    ["document_id"],
+)
+
+deduplication_matches_by_criterion = Counter(
+    "aegis_deduplication_matches_by_criterion",
+    "Deduplication matches by criterion type",
+    ["criterion"],  # exact, edit_distance, substring, embedding
+)
+
+# Extraction detailed metrics
+extraction_entities_by_type = Counter(
+    "aegis_extraction_entities_by_type",
+    "Entities extracted by type",
+    ["entity_type", "model"],
+)
+
+extraction_relations_by_type = Counter(
+    "aegis_extraction_relations_by_type",
+    "Relations extracted by type",
+    ["relation_type", "model"],
+)
+
+# ============================================================================
 # GPU Memory Metrics (optional, only if GPU available)
 # ============================================================================
 
@@ -163,6 +230,79 @@ def record_deduplication_reduction(reduction_ratio: float) -> None:
         reduction_ratio: 0.0-1.0 (0.15 = 15% reduction)
     """
     deduplication_reduction_ratio.observe(reduction_ratio)
+
+
+# ============================================================================
+# Sprint 43: Enhanced Chunking & Deduplication Recording Functions
+# ============================================================================
+
+
+def record_chunking_input(document_id: str, chars: int) -> None:
+    """Record characters input to chunker."""
+    chunking_input_chars_total.labels(document_id=document_id).inc(chars)
+
+
+def record_chunking_output(document_id: str, chunk_count: int) -> None:
+    """Record number of chunks created."""
+    chunking_output_chunks_total.labels(document_id=document_id).inc(chunk_count)
+
+
+def record_chunk_size(chars: int, tokens: int) -> None:
+    """Record individual chunk size in chars and tokens."""
+    chunking_chunk_size_chars.observe(chars)
+    chunking_chunk_size_tokens.observe(tokens)
+
+
+def record_chunk_overlap(overlap_tokens: int) -> None:
+    """Record overlap between consecutive chunks."""
+    chunking_overlap_tokens.observe(overlap_tokens)
+
+
+def record_deduplication_detail(
+    document_id: str,
+    entities_before: int,
+    entities_after: int,
+    criterion_matches: dict[str, int] | None = None,
+) -> None:
+    """Record detailed deduplication metrics.
+
+    Args:
+        document_id: Document identifier
+        entities_before: Entity count before dedup
+        entities_after: Entity count after dedup
+        criterion_matches: Dict with match counts per criterion
+            e.g. {"exact": 5, "edit_distance": 2, "substring": 1, "embedding": 3}
+    """
+    deduplication_entities_before.labels(document_id=document_id).set(entities_before)
+    deduplication_entities_after.labels(document_id=document_id).set(entities_after)
+
+    if criterion_matches:
+        for criterion, count in criterion_matches.items():
+            deduplication_matches_by_criterion.labels(criterion=criterion).inc(count)
+
+    # Also record ratio
+    if entities_before > 0:
+        reduction = (entities_before - entities_after) / entities_before
+        deduplication_reduction_ratio.observe(reduction)
+
+
+def record_extraction_by_type(
+    entity_types: dict[str, int],
+    relation_types: dict[str, int],
+    model: str,
+) -> None:
+    """Record entities and relations by type.
+
+    Args:
+        entity_types: Dict of entity_type -> count
+        relation_types: Dict of relation_type -> count
+        model: LLM model used for extraction
+    """
+    for entity_type, count in entity_types.items():
+        extraction_entities_by_type.labels(entity_type=entity_type, model=model).inc(count)
+
+    for relation_type, count in relation_types.items():
+        extraction_relations_by_type.labels(relation_type=relation_type, model=model).inc(count)
 
 
 def update_gpu_memory(

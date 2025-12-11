@@ -1,0 +1,1917 @@
+{
+  "model": "qwen2.5:7b",
+  "timestamp": "2025-12-11T07:40:02.010599",
+  "num_samples": 10,
+  "chunk_sizes": [
+    500,
+    1000,
+    1500,
+    2000,
+    2500,
+    3000,
+    3500,
+    4000,
+    10000
+  ],
+  "chunk_results": [
+    {
+      "chunk_size": 500,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8705.535650253296,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8705.535650253296
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 6029.721736907959,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 6029.721736907959
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10836.458921432495,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10836.458921432495
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 6,
+              "time_ms": 13234.179019927979,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 6,
+            "time_ms": 13234.179019927979
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14490.10705947876,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14490.10705947876
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 9,
+              "relations": 6,
+              "time_ms": 13046.109437942505,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 6,
+            "time_ms": 13046.109437942505
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11779.160737991333,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11779.160737991333
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13722.306728363037,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13722.306728363037
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11477.55742073059,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11477.55742073059
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13670.60136795044,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13670.60136795044
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 78,
+        "total_relations": 59,
+        "total_time_ms": 116991.7380809784,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 1000,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 4,
+              "time_ms": 9739.847660064697,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 4,
+            "time_ms": 9739.847660064697
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 3,
+              "time_ms": 7070.4755783081055,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 3,
+            "time_ms": 7070.4755783081055
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10503.763437271118,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10503.763437271118
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13840.636491775513,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13840.636491775513
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14506.53100013733,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14506.53100013733
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 8,
+              "relations": 7,
+              "time_ms": 12832.987070083618,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 8,
+            "relations": 7,
+            "time_ms": 12832.987070083618
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11104.51626777649,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11104.51626777649
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13696.396827697754,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13696.396827697754
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11495.975255966187,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11495.975255966187
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13657.796859741211,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13657.796859741211
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 77,
+        "total_relations": 63,
+        "total_time_ms": 118448.92644882202,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 1500,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 9006.568908691406,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 9006.568908691406
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 3,
+              "time_ms": 7149.604320526123,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 3,
+            "time_ms": 7149.604320526123
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10941.038131713867,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10941.038131713867
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13813.353061676025,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13813.353061676025
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14705.735206604004,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14705.735206604004
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9682.856559753418,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9682.856559753418
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11774.72186088562,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11774.72186088562
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13766.450643539429,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13766.450643539429
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11389.697313308716,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11389.697313308716
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13783.83755683899,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13783.83755683899
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 60,
+        "total_time_ms": 116013.8635635376,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 2000,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8641.573667526245,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8641.573667526245
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 5886.594295501709,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 5886.594295501709
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 9935.842037200928,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 9935.842037200928
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13754.053592681885,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13754.053592681885
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14653.948783874512,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14653.948783874512
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9722.342252731323,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9722.342252731323
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11938.249111175537,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11938.249111175537
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13701.478958129883,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13701.478958129883
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 6,
+              "time_ms": 10354.663848876953,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 6,
+            "time_ms": 10354.663848876953
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13633.27169418335,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13633.27169418335
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 58,
+        "total_time_ms": 112222.01824188232,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 2500,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8995.46480178833,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8995.46480178833
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 5890.889644622803,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 5890.889644622803
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10516.509056091309,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10516.509056091309
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 6,
+              "time_ms": 13277.792930603027,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 6,
+            "time_ms": 13277.792930603027
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14296.211004257202,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14296.211004257202
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 12093.328714370728,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 12093.328714370728
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11675.18138885498,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11675.18138885498
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13688.752889633179,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13688.752889633179
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11467.499494552612,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11467.499494552612
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 8,
+              "relations": 7,
+              "time_ms": 12618.382692337036,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 8,
+            "relations": 7,
+            "time_ms": 12618.382692337036
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 60,
+        "total_time_ms": 114520.0126171112,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 3000,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8639.389991760254,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8639.389991760254
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 3,
+              "time_ms": 7067.097902297974,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 3,
+            "time_ms": 7067.097902297974
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10250.799655914307,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10250.799655914307
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 6,
+              "time_ms": 13262.705326080322,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 6,
+            "time_ms": 13262.705326080322
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14863.696336746216,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14863.696336746216
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9765.365600585938,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9765.365600585938
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11920.38869857788,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11920.38869857788
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13728.840827941895,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13728.840827941895
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11477.900505065918,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11477.900505065918
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13764.561414718628,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13764.561414718628
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 59,
+        "total_time_ms": 114740.74625968933,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 3500,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8621.151208877563,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8621.151208877563
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 6029.305696487427,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 6029.305696487427
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10462.438821792603,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10462.438821792603
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 14097.226858139038,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 14097.226858139038
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14335.874080657959,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14335.874080657959
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9804.113149642944,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9804.113149642944
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11724.38097000122,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11724.38097000122
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13667.288780212402,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13667.288780212402
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11405.865669250488,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11405.865669250488
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 8,
+              "relations": 7,
+              "time_ms": 12667.566776275635,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 8,
+            "relations": 7,
+            "time_ms": 12667.566776275635
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 74,
+        "total_relations": 59,
+        "total_time_ms": 112815.21201133728,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 4000,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8621.891260147095,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8621.891260147095
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 6114.436864852905,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 6114.436864852905
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 8,
+              "relations": 5,
+              "time_ms": 11128.144979476929,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 8,
+            "relations": 5,
+            "time_ms": 11128.144979476929
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13834.353685379028,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13834.353685379028
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14274.698495864868,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14274.698495864868
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9770.159244537354,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9770.159244537354
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11726.493835449219,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11726.493835449219
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13866.585493087769,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13866.585493087769
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 6,
+              "time_ms": 10445.329189300537,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 6,
+            "time_ms": 10445.329189300537
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 8,
+              "relations": 8,
+              "time_ms": 13523.231267929077,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 8,
+            "relations": 8,
+            "time_ms": 13523.231267929077
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 59,
+        "total_time_ms": 113305.32431602478,
+        "total_chunks": 10
+      }
+    },
+    {
+      "chunk_size": 10000,
+      "samples": [
+        {
+          "sample_id": "sample_1",
+          "text_length": 377,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 377,
+              "entities": 7,
+              "relations": 3,
+              "time_ms": 8744.5228099823,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 3,
+            "time_ms": 8744.5228099823
+          }
+        },
+        {
+          "sample_id": "sample_2",
+          "text_length": 380,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 380,
+              "entities": 5,
+              "relations": 2,
+              "time_ms": 5930.254936218262,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 5,
+            "relations": 2,
+            "time_ms": 5930.254936218262
+          }
+        },
+        {
+          "sample_id": "sample_3",
+          "text_length": 492,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 492,
+              "entities": 7,
+              "relations": 5,
+              "time_ms": 10371.225833892822,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 5,
+            "time_ms": 10371.225833892822
+          }
+        },
+        {
+          "sample_id": "sample_4",
+          "text_length": 430,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 430,
+              "entities": 9,
+              "relations": 6,
+              "time_ms": 13300.967931747437,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 6,
+            "time_ms": 13300.967931747437
+          }
+        },
+        {
+          "sample_id": "sample_5",
+          "text_length": 409,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 409,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 14787.953615188599,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 14787.953615188599
+          }
+        },
+        {
+          "sample_id": "sample_6",
+          "text_length": 387,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 387,
+              "entities": 6,
+              "relations": 5,
+              "time_ms": 9818.04633140564,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 6,
+            "relations": 5,
+            "time_ms": 9818.04633140564
+          }
+        },
+        {
+          "sample_id": "sample_7",
+          "text_length": 405,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 405,
+              "entities": 7,
+              "relations": 7,
+              "time_ms": 11983.31069946289,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 7,
+            "time_ms": 11983.31069946289
+          }
+        },
+        {
+          "sample_id": "sample_8",
+          "text_length": 375,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 375,
+              "entities": 9,
+              "relations": 8,
+              "time_ms": 13711.233615875244,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 8,
+            "time_ms": 13711.233615875244
+          }
+        },
+        {
+          "sample_id": "sample_9",
+          "text_length": 350,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 350,
+              "entities": 7,
+              "relations": 6,
+              "time_ms": 10447.026014328003,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 7,
+            "relations": 6,
+            "time_ms": 10447.026014328003
+          }
+        },
+        {
+          "sample_id": "sample_10",
+          "text_length": 411,
+          "num_chunks": 1,
+          "chunks": [
+            {
+              "chunk_index": 0,
+              "chunk_chars": 411,
+              "entities": 9,
+              "relations": 7,
+              "time_ms": 13795.423030853271,
+              "error": null
+            }
+          ],
+          "sample_totals": {
+            "entities": 9,
+            "relations": 7,
+            "time_ms": 13795.423030853271
+          }
+        }
+      ],
+      "totals": {
+        "total_entities": 75,
+        "total_relations": 57,
+        "total_time_ms": 112889.96481895447,
+        "total_chunks": 10
+      }
+    }
+  ]
+}

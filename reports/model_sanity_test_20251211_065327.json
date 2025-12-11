@@ -1,0 +1,77 @@
+{
+  "timestamp": "20251211_065327",
+  "test_text_length": 451,
+  "results": [
+    {
+      "model": "gemma3:1b",
+      "status": "success",
+      "entities_extracted": 1,
+      "relations_extracted": 1,
+      "entity_time_seconds": 13.68,
+      "relation_time_seconds": 0.57,
+      "total_time_seconds": 14.25,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "A literary periodical"
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "American literary periodical",
+          "type": "PUBLISHED_BY",
+          "description": "Arthur's Magazine was published in Philadelphia in the 19th century."
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:3b",
+      "status": "success",
+      "entities_extracted": 5,
+      "relations_extracted": 2,
+      "entity_time_seconds": 4.42,
+      "relation_time_seconds": 1.16,
+      "total_time_seconds": 5.58,
+      "error": null,
+      "sample_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PRODUCT",
+          "description": "An American literary periodical"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "Woman's magazine published by Bauer Media Group"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "Indian family famous for its involvement in hotels"
+        }
+      ],
+      "sample_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "First for Women",
+          "type": "WORKS_FOR",
+          "description": "First for Women is a magazine published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "type": "PART_OF",
+          "description": "The Oberoi family is involved in The Oberoi Group, which runs hotels"
+        }
+      ]
+    }
+  ],
+  "working_models": [
+    "gemma3:1b",
+    "qwen2.5:3b"
+  ],
+  "not_available": []
+}

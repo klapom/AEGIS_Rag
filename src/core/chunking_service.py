@@ -81,6 +81,31 @@ documents_chunked_total = Counter(
     labelnames=["strategy"],
 )
 
+# Sprint 43 Feature 43.7: Enhanced Chunking Metrics
+chunking_input_chars = Counter(
+    "chunking_input_chars_total",
+    "Total characters input to chunker",
+    labelnames=["document_id"],
+)
+
+chunking_chunk_size_chars_histogram = Histogram(
+    "chunking_chunk_size_chars",
+    "Individual chunk size in characters",
+    buckets=[100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000],
+)
+
+chunking_chunk_size_tokens_histogram = Histogram(
+    "chunking_chunk_size_tokens",
+    "Individual chunk size in tokens",
+    buckets=[50, 100, 200, 400, 600, 800, 1000, 1200, 1500, 1800],
+)
+
+chunking_overlap_tokens_histogram = Histogram(
+    "chunking_overlap_tokens",
+    "Overlap between consecutive chunks in tokens",
+    buckets=[0, 25, 50, 75, 100, 150, 200, 300],
+)
+
 
 # =============================================================================
 # CONFIGURATION MODELS
@@ -323,18 +348,39 @@ class ChunkingService:
         chunks_created_total.labels(strategy=strategy_label).inc(len(chunks))
         documents_chunked_total.labels(strategy=strategy_label).inc()
 
+        # Sprint 43 Feature 43.7: Enhanced metrics for monitoring/reporting
+        chunking_input_chars.labels(document_id=document_id).inc(len(text))
+
         if chunks:
             avg_tokens = sum(c.token_count for c in chunks) / len(chunks)
             avg_chunk_size_tokens.labels(strategy=strategy_label).set(avg_tokens)
 
+            # Record individual chunk sizes for histogram
+            for i, chunk in enumerate(chunks):
+                chunking_chunk_size_chars_histogram.observe(len(chunk.content))
+                chunking_chunk_size_tokens_histogram.observe(chunk.token_count)
+
+                # Record overlap (overlap_tokens is already set in _create_chunk)
+                if i > 0:
+                    chunking_overlap_tokens_histogram.observe(chunk.overlap_tokens)
+
+        # Enhanced logging for report generation (Sprint 43 Feature 43.10)
         logger.info(
             "chunking_document_complete",
             document_id=document_id,
+            input_chars=len(text),
             chunks_created=len(chunks),
             avg_tokens_per_chunk=(
                 sum(c.token_count for c in chunks) / len(chunks) if chunks else 0
             ),
+            avg_chars_per_chunk=(
+                sum(len(c.content) for c in chunks) / len(chunks) if chunks else 0
+            ),
+            overlap_tokens=self.config.overlap_tokens,
             duration_seconds=round(duration, 3),
+            # Sprint 43: Include chunk details for report export
+            chunk_sizes_chars=[len(c.content) for c in chunks],
+            chunk_sizes_tokens=[c.token_count for c in chunks],
         )
 
         return chunks

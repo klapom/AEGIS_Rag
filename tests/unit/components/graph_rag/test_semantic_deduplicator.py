@@ -703,3 +703,338 @@ def test_deduplicate_batch_processing(mock_get_singleton):
     call_kwargs = mock_model.encode.call_args[1]
     assert "batch_size" in call_kwargs
     assert call_kwargs["batch_size"] == 64
+
+
+# ============================================================================
+# Sprint 43: MultiCriteriaDeduplicator Tests (ADR-044, TD-062)
+# ============================================================================
+
+
+@pytest.fixture
+def nicolas_cage_entities() -> list[dict[str, Any]]:
+    """Nicolas Cage test case entities for multi-criteria deduplication."""
+    return [
+        {"name": "Nicolas Cage", "type": "PERSON", "description": "American actor"},
+        {"name": "nicolas cage", "type": "PERSON", "description": "Oscar winner"},  # Case variant
+        {"name": "Nicholas Cage", "type": "PERSON", "description": "Born 1964"},  # Typo
+        {"name": "Nick Cage", "type": "PERSON", "description": "Film star"},  # Semantic variant
+        {"name": "Cage", "type": "PERSON", "description": "Actor in Leaving Las Vegas"},  # Short name
+        {"name": "Mike Figgis", "type": "PERSON", "description": "Director"},  # Different person
+    ]
+
+
+@pytest.fixture
+def short_entity_names() -> list[dict[str, Any]]:
+    """Entities with short names to test min-length guards."""
+    return [
+        {"name": "AI", "type": "TECHNOLOGY", "description": "Artificial Intelligence"},
+        {"name": "UI", "type": "TECHNOLOGY", "description": "User Interface"},
+        {"name": "NVIDIA", "type": "ORGANIZATION", "description": "GPU maker"},
+    ]
+
+
+@pytest.fixture
+def mock_config_multi_criteria():
+    """Mock config with multi-criteria deduplication enabled."""
+    config = MagicMock()
+    config.enable_semantic_dedup = True
+    config.enable_multi_criteria_dedup = True
+    config.semantic_dedup_model = "sentence-transformers/all-MiniLM-L6-v2"
+    config.semantic_dedup_threshold = 0.93
+    config.semantic_dedup_device = "cpu"
+    config.dedup_edit_distance_threshold = 3
+    config.dedup_min_length_for_edit = 5
+    config.dedup_min_length_for_substring = 6
+    return config
+
+
+# ============================================================================
+# Test MultiCriteriaDeduplicator Initialization
+# ============================================================================
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_multi_criteria_deduplicator_init_default(mock_get_singleton):
+    """Test MultiCriteriaDeduplicator initialization with defaults."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    # Given: Default initialization
+    mock_get_singleton.return_value = MagicMock()
+
+    # When: Initialize
+    dedup = MultiCriteriaDeduplicator()
+
+    # Then: Verify default parameters
+    assert dedup.threshold == 0.93
+    assert dedup.edit_distance_threshold == 3
+    assert dedup.min_length_for_edit == 5
+    assert dedup.min_length_for_substring == 6
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_multi_criteria_deduplicator_init_custom_params(mock_get_singleton):
+    """Test MultiCriteriaDeduplicator initialization with custom parameters."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    # Given: Custom parameters
+    mock_get_singleton.return_value = MagicMock()
+
+    # When: Initialize with custom params
+    dedup = MultiCriteriaDeduplicator(
+        threshold=0.90,
+        edit_distance_threshold=2,
+        min_length_for_edit=4,
+        min_length_for_substring=5,
+    )
+
+    # Then: Verify custom parameters
+    assert dedup.threshold == 0.90
+    assert dedup.edit_distance_threshold == 2
+    assert dedup.min_length_for_edit == 4
+    assert dedup.min_length_for_substring == 5
+
+
+# ============================================================================
+# Test _is_duplicate_by_criteria Method
+# ============================================================================
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_is_duplicate_exact_match(mock_get_singleton):
+    """Test exact case-insensitive match detection."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator()
+
+    # When: Check exact match (case-insensitive)
+    is_dup, criterion = dedup._is_duplicate_by_criteria("Nicolas Cage", "nicolas cage")
+
+    # Then: Should detect as duplicate with "exact" criterion
+    assert is_dup is True
+    assert criterion == "exact"
+
+
+# Check if python-Levenshtein is available
+try:
+    from Levenshtein import distance as _lev_check
+
+    LEVENSHTEIN_INSTALLED = True
+except ImportError:
+    LEVENSHTEIN_INSTALLED = False
+
+
+@pytest.mark.skipif(not LEVENSHTEIN_INSTALLED, reason="python-Levenshtein not installed")
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_is_duplicate_edit_distance(mock_get_singleton):
+    """Test edit distance typo detection."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator(edit_distance_threshold=3)
+
+    # When: Check typo (1 char difference: Nicolas -> Nicholas)
+    is_dup, criterion = dedup._is_duplicate_by_criteria("Nicolas Cage", "Nicholas Cage")
+
+    # Then: Should detect as duplicate with "edit_distance" criterion
+    assert is_dup is True
+    assert criterion == "edit_distance"
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_is_duplicate_substring(mock_get_singleton):
+    """Test substring containment detection."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator(min_length_for_substring=6)
+
+    # When: Check substring (Nicolas is in "Nicolas Cage")
+    is_dup, criterion = dedup._is_duplicate_by_criteria("Nicolas Cage", "Nicolas")
+
+    # Then: Should detect as duplicate with "substring" criterion
+    assert is_dup is True
+    assert criterion == "substring"
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_is_duplicate_none(mock_get_singleton):
+    """Test no duplicate detection for different entities."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator()
+
+    # When: Check completely different entities
+    is_dup, criterion = dedup._is_duplicate_by_criteria("Nicolas Cage", "Mike Figgis")
+
+    # Then: Should NOT detect as duplicate
+    assert is_dup is False
+    assert criterion == "none"
+
+
+# ============================================================================
+# Test Min-Length Guards (Prevent False Positives)
+# ============================================================================
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_min_length_edit_prevents_false_positive(mock_get_singleton):
+    """Test min_length_for_edit prevents 'AI' ~ 'UI' false positive."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator(min_length_for_edit=5)
+
+    # When: Check short names (AI, UI have edit distance 1 but are too short)
+    is_dup, criterion = dedup._is_duplicate_by_criteria("AI", "UI")
+
+    # Then: Should NOT detect as duplicate (too short for edit distance check)
+    assert is_dup is False
+    assert criterion == "none"
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_min_length_substring_prevents_false_positive(mock_get_singleton):
+    """Test min_length_for_substring prevents 'AI' in 'NVIDIA' false positive."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+    dedup = MultiCriteriaDeduplicator(min_length_for_substring=6)
+
+    # When: Check short name contained in longer name ("AI" in "NVIDIA")
+    is_dup, criterion = dedup._is_duplicate_by_criteria("AI", "NVIDIA")
+
+    # Then: Should NOT detect as duplicate ("AI" is only 2 chars < 6)
+    assert is_dup is False
+    assert criterion == "none"
+
+
+# ============================================================================
+# Test Factory Function with MultiCriteria
+# ============================================================================
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_create_deduplicator_from_config_multi_criteria(mock_get_singleton, mock_config_multi_criteria):
+    """Test factory creates MultiCriteriaDeduplicator when enabled."""
+    from src.components.graph_rag.semantic_deduplicator import (
+        MultiCriteriaDeduplicator,
+        create_deduplicator_from_config,
+    )
+
+    # Given: Config with multi-criteria enabled
+    mock_get_singleton.return_value = MagicMock()
+
+    # When: Create from config
+    dedup = create_deduplicator_from_config(mock_config_multi_criteria)
+
+    # Then: Should create MultiCriteriaDeduplicator
+    assert isinstance(dedup, MultiCriteriaDeduplicator)
+    assert dedup.edit_distance_threshold == 3
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_create_deduplicator_from_config_semantic_only(mock_get_singleton, mock_config_multi_criteria):
+    """Test factory creates SemanticDeduplicator when multi-criteria disabled."""
+    from src.components.graph_rag.semantic_deduplicator import (
+        MultiCriteriaDeduplicator,
+        SemanticDeduplicator,
+        create_deduplicator_from_config,
+    )
+
+    # Given: Config with multi-criteria disabled
+    mock_config_multi_criteria.enable_multi_criteria_dedup = False
+    mock_get_singleton.return_value = MagicMock()
+
+    # When: Create from config
+    dedup = create_deduplicator_from_config(mock_config_multi_criteria)
+
+    # Then: Should create SemanticDeduplicator (not MultiCriteria)
+    assert isinstance(dedup, SemanticDeduplicator)
+    assert not isinstance(dedup, MultiCriteriaDeduplicator)
+
+
+# ============================================================================
+# Test Levenshtein Fallback
+# ============================================================================
+
+
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.LEVENSHTEIN_AVAILABLE", False)
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_multi_criteria_without_levenshtein(mock_get_singleton):
+    """Test MultiCriteriaDeduplicator works without python-Levenshtein."""
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    mock_get_singleton.return_value = MagicMock()
+
+    # When: Initialize without Levenshtein
+    dedup = MultiCriteriaDeduplicator()
+
+    # Then: Should still work (exact match and substring still available)
+    is_dup, criterion = dedup._is_duplicate_by_criteria("Nicolas Cage", "nicolas cage")
+    assert is_dup is True
+    assert criterion == "exact"
+
+
+# ============================================================================
+# Test Full Deduplication Flow
+# ============================================================================
+
+
+@pytest.mark.skipif(not SKLEARN_AVAILABLE, reason="sklearn not installed")
+@patch("src.components.graph_rag.semantic_deduplicator.DEPENDENCIES_AVAILABLE", True)
+@patch("src.components.graph_rag.semantic_deduplicator.cosine_similarity")
+@patch("src.components.graph_rag.semantic_deduplicator.get_sentence_transformer_singleton")
+def test_multi_criteria_deduplicate_nicolas_cage(
+    mock_get_singleton, mock_cosine_sim, nicolas_cage_entities
+):
+    """Test full deduplication with Nicolas Cage test case.
+
+    Note: Uses real levenshtein_distance if available, otherwise tests
+    without edit distance criterion (exact + substring + semantic still work).
+    """
+    import numpy as np
+
+    from src.components.graph_rag.semantic_deduplicator import MultiCriteriaDeduplicator
+
+    # Given: Nicolas Cage entities with various duplicates
+    mock_model = MagicMock()
+    mock_get_singleton.return_value = mock_model
+
+    # Mock embeddings - cluster representatives after fast criteria
+    # Expected clusters after Phase 1:
+    # - "Nicolas Cage" cluster (includes case variants, typos via levenshtein if available)
+    # - Other entities that don't match fast criteria
+    n = 5  # Conservative: assume worst case where only exact matches work
+    embeddings_np = np.array([[i * 0.1] * 384 for i in range(n)])
+    mock_model.encode.return_value.cpu.return_value.numpy.return_value = embeddings_np
+
+    # Mock cosine similarity - low similarity (no semantic matches beyond fast criteria)
+    similarity = np.eye(n) * 0.5
+    mock_cosine_sim.return_value = similarity
+
+    dedup = MultiCriteriaDeduplicator(threshold=0.93)
+
+    # When: Deduplicate
+    result = dedup.deduplicate(nicolas_cage_entities)
+
+    # Then: Should reduce entity count (at least exact match "Nicolas Cage" == "nicolas cage")
+    # Original: 6 entities
+    # At minimum: "Nicolas Cage" + "nicolas cage" merge via exact match = 5 remaining
+    # With levenshtein: "Nicholas Cage" also merges = 4 remaining
+    assert len(result) < len(nicolas_cage_entities)
+    # Mike Figgis should always remain separate
+    result_names = [r["name"] for r in result]
+    assert "Mike Figgis" in result_names

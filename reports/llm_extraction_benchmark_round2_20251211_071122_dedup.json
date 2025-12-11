@@ -1,0 +1,2116 @@
+{
+  "timestamp": "2025-12-11T07:11:22.769468",
+  "test_text_length": 758,
+  "chunk_size": 500,
+  "models_tested": [
+    "qwen3:32b",
+    "gemma3:4b",
+    "qwen2.5:7b",
+    "phi4-mini:latest",
+    "mistral:7b",
+    "qwen2.5:3b",
+    "nuextract:3.8b"
+  ],
+  "baseline_model": "qwen3:32b",
+  "results": [
+    {
+      "model": "qwen3:32b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "ORGANIZATION",
+              "description": "An American literary periodical published in the 19th century"
+            },
+            {
+              "name": "Philadelphia",
+              "type": "LOCATION",
+              "description": "A city in the United States where Arthur's Magazine was published"
+            },
+            {
+              "name": "First for Women",
+              "type": "ORGANIZATION",
+              "description": "A woman's magazine published in the USA"
+            },
+            {
+              "name": "Bauer Media Group",
+              "type": "ORGANIZATION",
+              "description": "The publisher of First for Women magazine"
+            },
+            {
+              "name": "USA",
+              "type": "LOCATION",
+              "description": "The country where First for Women is published"
+            },
+            {
+              "name": "The Oberoi family",
+              "type": "ORGANIZATION",
+              "description": "An Indian family known for their involvement in the hotel industry"
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company with its head office in Delhi"
+            },
+            {
+              "name": "Delhi",
+              "type": "LOCATION",
+              "description": "The city where The Oberoi Group is headquartered"
+            },
+            {
+              "name": "Allison Beth 'Allie' Goertz (born March 2, 1991)",
+              "type": "PERSON",
+              "description": "An American musician known for satirical songs"
+            }
+          ],
+          "relations": [],
+          "entity_time": 162.61533951759338,
+          "relation_time": 0,
+          "tokens_output": 1494
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Cossbysweater",
+              "type": "PRODUCT",
+              "description": "A satirical song about comedian Bill Cosby that appeared on YouTube and became viral"
+            },
+            {
+              "name": "Goertz",
+              "type": "PERSON",
+              "description": "The creator of the satirical song 'Cossbysweater'"
+            },
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "A comedian who is the subject of the satirical song 'Cossbysweater'"
+            },
+            {
+              "name": "YouTube",
+              "type": "PRODUCT",
+              "description": "A video-sharing platform where 'Cossbysweater' became viral"
+            },
+            {
+              "name": "Richard Nixon",
+              "type": "PERSON",
+              "description": "A former U.S. president whose second vice president was Gerald Ford"
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "The second vice president under Richard Nixon"
+            },
+            {
+              "name": "The Simpsons",
+              "type": "PRODUCT",
+              "description": "An animated TV series created by Matt Groening"
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "The creator of the animated TV series 'The Simpsons'"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Cossbysweater",
+              "target": "Goertz",
+              "type": "CREATED_BY",
+              "description": "Cossbysweater was created by Goertz"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "Bill Cosby",
+              "type": "ABOUT",
+              "description": "Cossbysweater is a satirical song about Bill Cosby"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "YouTube",
+              "type": "LOCATED_IN",
+              "description": "Cossbysweater appeared on YouTube"
+            },
+            {
+              "source": "Gerald Ford",
+              "target": "Richard Nixon",
+              "type": "WORKS_FOR",
+              "description": "Gerald Ford was the second vice president of Richard Nixon"
+            },
+            {
+              "source": "The Simpsons",
+              "target": "Matt Groening",
+              "type": "CREATED_BY",
+              "description": "The Simpsons was created by Matt Groening"
+            }
+          ],
+          "entity_time": 86.25318622589111,
+          "relation_time": 109.60777926445007,
+          "tokens_output": 1844
+        }
+      ],
+      "total_entities": 17,
+      "total_relations": 5,
+      "total_time": 358.47630500793457,
+      "total_tokens_output": 3338,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "An American literary periodical published in the 19th century"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States where Arthur's Magazine was published"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "A woman's magazine published in the USA"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "The publisher of First for Women magazine"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION",
+          "description": "The country where First for Women is published"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "ORGANIZATION",
+          "description": "An Indian family known for their involvement in the hotel industry"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company with its head office in Delhi"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION",
+          "description": "The city where The Oberoi Group is headquartered"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz (born March 2, 1991)",
+          "type": "PERSON",
+          "description": "An American musician known for satirical songs"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT",
+          "description": "A satirical song about comedian Bill Cosby that appeared on YouTube and became viral"
+        },
+        {
+          "name": "Goertz",
+          "type": "PERSON",
+          "description": "The creator of the satirical song 'Cossbysweater'"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "A comedian who is the subject of the satirical song 'Cossbysweater'"
+        },
+        {
+          "name": "YouTube",
+          "type": "PRODUCT",
+          "description": "A video-sharing platform where 'Cossbysweater' became viral"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON",
+          "description": "A former U.S. president whose second vice president was Gerald Ford"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "The second vice president under Richard Nixon"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT",
+          "description": "An animated TV series created by Matt Groening"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "The creator of the animated TV series 'The Simpsons'"
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Cossbysweater",
+          "target": "Goertz",
+          "type": "CREATED_BY",
+          "description": "Cossbysweater was created by Goertz"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Bill Cosby",
+          "type": "ABOUT",
+          "description": "Cossbysweater is a satirical song about Bill Cosby"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "YouTube",
+          "type": "LOCATED_IN",
+          "description": "Cossbysweater appeared on YouTube"
+        },
+        {
+          "source": "Gerald Ford",
+          "target": "Richard Nixon",
+          "type": "WORKS_FOR",
+          "description": "Gerald Ford was the second vice president of Richard Nixon"
+        },
+        {
+          "source": "The Simpsons",
+          "target": "Matt Groening",
+          "type": "CREATED_BY",
+          "description": "The Simpsons was created by Matt Groening"
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 17,
+        "simple_dedup_entities": 17,
+        "multi_dedup_entities": 16,
+        "additional_reduction_pct": 5.9
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz (born March 2, 1991)",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "YouTube",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "model": "gemma3:4b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "ORGANIZATION",
+              "description": "A literary periodical published in the 19th century."
+            },
+            {
+              "name": "Philadelphia",
+              "type": "LOCATION",
+              "description": "A city in the United States."
+            },
+            {
+              "name": "Bauer Media Group",
+              "type": "ORGANIZATION",
+              "description": "A media company that publishes magazines."
+            },
+            {
+              "name": "USA",
+              "type": "LOCATION",
+              "description": "The United States of America."
+            },
+            {
+              "name": "Oberoi family",
+              "type": "PERSON",
+              "description": "A family known for its involvement in the hotel industry."
+            },
+            {
+              "name": "Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company with headquarters in Delhi."
+            },
+            {
+              "name": "Delhi",
+              "type": "LOCATION",
+              "description": "The capital city of India."
+            },
+            {
+              "name": "Allison Beth \"Allie\" Goertz",
+              "type": "PERSON",
+              "description": "An American musician."
+            },
+            {
+              "name": "March 2, 1991",
+              "type": "EVENT",
+              "description": "The date of Allison Beth Goertz's birth."
+            }
+          ],
+          "relations": [
+            {
+              "source": "Arthur's Magazine",
+              "target": "Philadelphia",
+              "type": "PUBLISHED_IN",
+              "description": "Arthur's Magazine was published in Philadelphia."
+            },
+            {
+              "source": "Arthur's Magazine",
+              "target": "Bauer Media Group",
+              "type": "PUBLISHED_BY",
+              "description": "Arthur's Magazine was published by Bauer Media Group."
+            },
+            {
+              "source": "Bauer Media Group",
+              "target": "USA",
+              "type": "LOCATED_IN",
+              "description": "Bauer Media Group is located in the USA."
+            },
+            {
+              "source": "Oberoi family",
+              "target": "Oberoi Group",
+              "type": "PART_OF",
+              "description": "Oberoi family is involved with Oberoi Group."
+            },
+            {
+              "source": "Oberoi Group",
+              "target": "Delhi",
+              "type": "LOCATED_IN",
+              "description": "Oberoi Group has its head office in Delhi."
+            },
+            {
+              "source": "Allison Beth \"Allie\" Goertz",
+              "target": "American",
+              "type": "IS_A",
+              "description": "Allison Beth \"Allie\" Goertz is an American."
+            },
+            {
+              "source": "Allison Beth \"Allie\" Goertz",
+              "target": "American",
+              "type": "IS_A",
+              "description": "Allison Beth \"Allie\" Goertz is an American"
+            }
+          ],
+          "entity_time": 6.6868884563446045,
+          "relation_time": 4.67892861366272,
+          "tokens_output": 573
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Cossbysweater",
+              "type": "PRODUCT",
+              "description": "A satirical song about comedian Bill Cosby."
+            },
+            {
+              "name": "Goertz",
+              "type": "PERSON",
+              "description": "A comedian who created the 'Cossbysweater' song."
+            },
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "A comedian who was the subject of the 'Cossbysweater' song."
+            },
+            {
+              "name": "YouTube",
+              "type": "TECHNOLOGY",
+              "description": "A video-sharing website where the 'Cossbysweater' song became viral."
+            },
+            {
+              "name": "Richard Nixon",
+              "type": "PERSON",
+              "description": "A former U.S. President."
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "Richard Nixon's second vice president."
+            },
+            {
+              "name": "The Simpsons",
+              "type": "CONCEPT",
+              "description": "An animated TV series created by Matt Groening."
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "The creator of the animated TV series 'The Simpsons'."
+            }
+          ],
+          "relations": [
+            {
+              "source": "Cossbysweater",
+              "target": "Goertz",
+              "type": "CREATED_BY",
+              "description": "Cossbysweater is created by Goertz"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "Bill Cosby",
+              "type": "ABOUT",
+              "description": "Cossbysweater is about Bill Cosby"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "YouTube",
+              "type": "APPEARED_ON",
+              "description": "Cossbysweater appeared on YouTube"
+            },
+            {
+              "source": "Richard Nixon",
+              "target": "Gerald Ford",
+              "type": "VICE_PRESIDENT",
+              "description": "Gerald Ford was Richard Nixon's second vice president"
+            },
+            {
+              "source": "The Simpsons",
+              "target": "Matt Groening",
+              "type": "CREATED_BY",
+              "description": "The Simpsons is created by Matt Groening"
+            }
+          ],
+          "entity_time": 3.980160713195801,
+          "relation_time": 3.3065407276153564,
+          "tokens_output": 469
+        }
+      ],
+      "total_entities": 17,
+      "total_relations": 12,
+      "total_time": 18.65251851081848,
+      "total_tokens_output": 1042,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "A literary periodical published in the 19th century."
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States."
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "A media company that publishes magazines."
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION",
+          "description": "The United States of America."
+        },
+        {
+          "name": "Oberoi family",
+          "type": "PERSON",
+          "description": "A family known for its involvement in the hotel industry."
+        },
+        {
+          "name": "Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company with headquarters in Delhi."
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION",
+          "description": "The capital city of India."
+        },
+        {
+          "name": "Allison Beth \"Allie\" Goertz",
+          "type": "PERSON",
+          "description": "An American musician."
+        },
+        {
+          "name": "March 2, 1991",
+          "type": "EVENT",
+          "description": "The date of Allison Beth Goertz's birth."
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT",
+          "description": "A satirical song about comedian Bill Cosby."
+        },
+        {
+          "name": "Goertz",
+          "type": "PERSON",
+          "description": "A comedian who created the 'Cossbysweater' song."
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "A comedian who was the subject of the 'Cossbysweater' song."
+        },
+        {
+          "name": "YouTube",
+          "type": "TECHNOLOGY",
+          "description": "A video-sharing website where the 'Cossbysweater' song became viral."
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON",
+          "description": "A former U.S. President."
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "Richard Nixon's second vice president."
+        },
+        {
+          "name": "The Simpsons",
+          "type": "CONCEPT",
+          "description": "An animated TV series created by Matt Groening."
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "The creator of the animated TV series 'The Simpsons'."
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "type": "PUBLISHED_IN",
+          "description": "Arthur's Magazine was published in Philadelphia."
+        },
+        {
+          "source": "Arthur's Magazine",
+          "target": "Bauer Media Group",
+          "type": "PUBLISHED_BY",
+          "description": "Arthur's Magazine was published by Bauer Media Group."
+        },
+        {
+          "source": "Bauer Media Group",
+          "target": "USA",
+          "type": "LOCATED_IN",
+          "description": "Bauer Media Group is located in the USA."
+        },
+        {
+          "source": "Oberoi family",
+          "target": "Oberoi Group",
+          "type": "PART_OF",
+          "description": "Oberoi family is involved with Oberoi Group."
+        },
+        {
+          "source": "Oberoi Group",
+          "target": "Delhi",
+          "type": "LOCATED_IN",
+          "description": "Oberoi Group has its head office in Delhi."
+        },
+        {
+          "source": "Allison Beth \"Allie\" Goertz",
+          "target": "American",
+          "type": "IS_A",
+          "description": "Allison Beth \"Allie\" Goertz is an American."
+        },
+        {
+          "source": "Allison Beth \"Allie\" Goertz",
+          "target": "American",
+          "type": "IS_A",
+          "description": "Allison Beth \"Allie\" Goertz is an American"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Goertz",
+          "type": "CREATED_BY",
+          "description": "Cossbysweater is created by Goertz"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Bill Cosby",
+          "type": "ABOUT",
+          "description": "Cossbysweater is about Bill Cosby"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "YouTube",
+          "type": "APPEARED_ON",
+          "description": "Cossbysweater appeared on YouTube"
+        },
+        {
+          "source": "Richard Nixon",
+          "target": "Gerald Ford",
+          "type": "VICE_PRESIDENT",
+          "description": "Gerald Ford was Richard Nixon's second vice president"
+        },
+        {
+          "source": "The Simpsons",
+          "target": "Matt Groening",
+          "type": "CREATED_BY",
+          "description": "The Simpsons is created by Matt Groening"
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 17,
+        "simple_dedup_entities": 17,
+        "multi_dedup_entities": 16,
+        "additional_reduction_pct": 5.9
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth \"Allie\" Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        },
+        {
+          "name": "March 2, 1991",
+          "type": "EVENT"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "YouTube",
+          "type": "TECHNOLOGY"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "CONCEPT"
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:7b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "ORGANIZATION",
+              "description": "An American literary periodical published in the 19th century."
+            },
+            {
+              "name": "Philadelphia",
+              "type": "LOCATION",
+              "description": "A city in the United States where Arthur's Magazine was published."
+            },
+            {
+              "name": "First for Women",
+              "type": "PRODUCT",
+              "description": "A woman's magazine published by Bauer Media Group."
+            },
+            {
+              "name": "Bauer Media Group",
+              "type": "ORGANIZATION",
+              "description": "The publisher of First for Women in the USA."
+            },
+            {
+              "name": "USA",
+              "type": "LOCATION",
+              "description": "The country where First for Women and Arthur's Magazine are published."
+            },
+            {
+              "name": "Oberoi family",
+              "type": "PERSON",
+              "description": "An Indian family famous for its involvement in hotels through The Oberoi Group."
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company with headquarters in Delhi, India, associated with the Oberoi family."
+            },
+            {
+              "name": "Delhi",
+              "type": "LOCATION",
+              "description": "The city where The Oberoi Group has its head office."
+            },
+            {
+              "name": "Allison Beth 'Allie' Goertz",
+              "type": "PERSON",
+              "description": "An American musician known for her satirical songs."
+            }
+          ],
+          "relations": [
+            {
+              "source": "Arthur's Magazine",
+              "target": "Philadelphia",
+              "type": "PUBLISHED_IN",
+              "description": "Arthur's Magazine was published in Philadelphia"
+            },
+            {
+              "source": "First for Women",
+              "target": "Bauer Media Group",
+              "type": "CREATED_BY",
+              "description": "First for Women is published by Bauer Media Group"
+            },
+            {
+              "source": "The Oberoi Group",
+              "target": "Delhi",
+              "type": "HEAD_OFFICE Located_IN",
+              "description": "The head office of The Oberoi Group is in Delhi"
+            },
+            {
+              "source": "Oberoi family",
+              "target": "The Oberoi Group",
+              "type": "OWNED_BY",
+              "description": "The Oberoi family owns The Oberoi Group"
+            }
+          ],
+          "entity_time": 10.462397336959839,
+          "relation_time": 4.063366889953613,
+          "tokens_output": 462
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Cossbysweater",
+              "type": "PRODUCT",
+              "description": "A satirical song about comedian Bill Cosby."
+            },
+            {
+              "name": "Goertz",
+              "type": "PERSON",
+              "description": "The creator of the 'Cossbysweater' song."
+            },
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "A well-known American comedian mentioned in the text."
+            },
+            {
+              "name": "Richard Nixon",
+              "type": "PERSON",
+              "description": "Former President of the United States, mentioned as a historical figure."
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "The second vice president under Richard Nixon, also a historical figure."
+            },
+            {
+              "name": "The Simpsons",
+              "type": "PRODUCT",
+              "description": "An animated TV series created by Matt Groening."
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "The creator of the 'The Simpsons' TV series."
+            }
+          ],
+          "relations": [
+            {
+              "source": "Cossbysweater",
+              "target": "Goertz",
+              "type": "CREATED_BY",
+              "description": "Cossbysweater is created by Goertz"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "Bill Cosby",
+              "type": "SATIRIZES",
+              "description": "Cossbysweater satirizes Bill Cosby"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "YouTube",
+              "type": "PUBLISHED_ON",
+              "description": "Cossbysweater is published on YouTube"
+            },
+            {
+              "source": "Cossbysweater",
+              "target": "Goertz",
+              "type": "CREATED_BY",
+              "description": "Cossbysweater is created by Goertz"
+            },
+            {
+              "source": "Gerald Ford",
+              "target": "Richard Nixon",
+              "type": "VICE_PRESIDENT_OF",
+              "description": "Gerald Ford was the second vice president of Richard Nixon"
+            },
+            {
+              "source": "The Simpsons",
+              "target": "Matt Groening",
+              "type": "CREATED_BY",
+              "description": "The Simpsons is created by Matt Groening"
+            }
+          ],
+          "entity_time": 5.209251880645752,
+          "relation_time": 6.126676321029663,
+          "tokens_output": 469
+        }
+      ],
+      "total_entities": 16,
+      "total_relations": 10,
+      "total_time": 25.861692428588867,
+      "total_tokens_output": 931,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "An American literary periodical published in the 19th century."
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city in the United States where Arthur's Magazine was published."
+        },
+        {
+          "name": "First for Women",
+          "type": "PRODUCT",
+          "description": "A woman's magazine published by Bauer Media Group."
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "The publisher of First for Women in the USA."
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION",
+          "description": "The country where First for Women and Arthur's Magazine are published."
+        },
+        {
+          "name": "Oberoi family",
+          "type": "PERSON",
+          "description": "An Indian family famous for its involvement in hotels through The Oberoi Group."
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company with headquarters in Delhi, India, associated with the Oberoi family."
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION",
+          "description": "The city where The Oberoi Group has its head office."
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON",
+          "description": "An American musician known for her satirical songs."
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT",
+          "description": "A satirical song about comedian Bill Cosby."
+        },
+        {
+          "name": "Goertz",
+          "type": "PERSON",
+          "description": "The creator of the 'Cossbysweater' song."
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "A well-known American comedian mentioned in the text."
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON",
+          "description": "Former President of the United States, mentioned as a historical figure."
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "The second vice president under Richard Nixon, also a historical figure."
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT",
+          "description": "An animated TV series created by Matt Groening."
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "The creator of the 'The Simpsons' TV series."
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "type": "PUBLISHED_IN",
+          "description": "Arthur's Magazine was published in Philadelphia"
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "type": "CREATED_BY",
+          "description": "First for Women is published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "Delhi",
+          "type": "HEAD_OFFICE Located_IN",
+          "description": "The head office of The Oberoi Group is in Delhi"
+        },
+        {
+          "source": "Oberoi family",
+          "target": "The Oberoi Group",
+          "type": "OWNED_BY",
+          "description": "The Oberoi family owns The Oberoi Group"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Goertz",
+          "type": "CREATED_BY",
+          "description": "Cossbysweater is created by Goertz"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Bill Cosby",
+          "type": "SATIRIZES",
+          "description": "Cossbysweater satirizes Bill Cosby"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "YouTube",
+          "type": "PUBLISHED_ON",
+          "description": "Cossbysweater is published on YouTube"
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "Goertz",
+          "type": "CREATED_BY",
+          "description": "Cossbysweater is created by Goertz"
+        },
+        {
+          "source": "Gerald Ford",
+          "target": "Richard Nixon",
+          "type": "VICE_PRESIDENT_OF",
+          "description": "Gerald Ford was the second vice president of Richard Nixon"
+        },
+        {
+          "source": "The Simpsons",
+          "target": "Matt Groening",
+          "type": "CREATED_BY",
+          "description": "The Simpsons is created by Matt Groening"
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 16,
+        "simple_dedup_entities": 16,
+        "multi_dedup_entities": 15,
+        "additional_reduction_pct": 6.2
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION"
+        },
+        {
+          "name": "First for Women",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        }
+      ]
+    },
+    {
+      "model": "phi4-mini:latest",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine (1844\u20131846)",
+              "type": "PRODUCT",
+              "description": "An American literary periodical published in Philadelphia"
+            },
+            {
+              "name": "Philadelphia",
+              "type": "LOCATION",
+              "description": "A city where Arthur's Magazine was originally located"
+            },
+            {
+              "name": "First for Women",
+              "type": "EVENT",
+              "description": "The title of a women's magazine"
+            },
+            {
+              "name": "Bauer Media Group",
+              "type": "ORGANIZATION",
+              "description": "An American media company publishing First for Women"
+            },
+            {
+              "name": "USA",
+              "type": "LOCATION",
+              "description": "A country where Bauer Media Group is located and publishes magazines"
+            },
+            {
+              "name": "The Oberoi family",
+              "type": "PERSON",
+              "description": "An Indian family known for its involvement in hotels through The Oberoi Group"
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company headquartered in Delhi, associated with the Oberoi family"
+            },
+            {
+              "name": "Delhi",
+              "type": "LOCATION",
+              "description": "The head office location of The Oberoi Group"
+            },
+            {
+              "name": "Allison Beth 'Allie' Goertz",
+              "type": "PERSON",
+              "description": "An American musician known for satirical songs"
+            }
+          ],
+          "relations": [],
+          "entity_time": 7.00719141960144,
+          "relation_time": 0.2753171920776367,
+          "tokens_output": 292
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Cossbysweater",
+              "type": "PRODUCT",
+              "description": "A satirical song about comedian Bill Cosby"
+            },
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "Comedian referenced in the text"
+            },
+            {
+              "name": "YouTube",
+              "type": "TECHNOLOGY",
+              "description": "Online video-sharing platform mentioned"
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "Second vice president of Richard Nixon"
+            },
+            {
+              "name": "The Simpsons",
+              "type": "EVENT/PRODUCT",
+              "description": "An animated TV series created by Matt Groening"
+            }
+          ],
+          "relations": [],
+          "entity_time": 2.19512677192688,
+          "relation_time": 0.23917651176452637,
+          "tokens_output": 152
+        }
+      ],
+      "total_entities": 14,
+      "total_relations": 0,
+      "total_time": 9.716811895370483,
+      "total_tokens_output": 444,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine (1844\u20131846)",
+          "type": "PRODUCT",
+          "description": "An American literary periodical published in Philadelphia"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION",
+          "description": "A city where Arthur's Magazine was originally located"
+        },
+        {
+          "name": "First for Women",
+          "type": "EVENT",
+          "description": "The title of a women's magazine"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION",
+          "description": "An American media company publishing First for Women"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION",
+          "description": "A country where Bauer Media Group is located and publishes magazines"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "An Indian family known for its involvement in hotels through The Oberoi Group"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company headquartered in Delhi, associated with the Oberoi family"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION",
+          "description": "The head office location of The Oberoi Group"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON",
+          "description": "An American musician known for satirical songs"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT",
+          "description": "A satirical song about comedian Bill Cosby"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "Comedian referenced in the text"
+        },
+        {
+          "name": "YouTube",
+          "type": "TECHNOLOGY",
+          "description": "Online video-sharing platform mentioned"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "Second vice president of Richard Nixon"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "EVENT/PRODUCT",
+          "description": "An animated TV series created by Matt Groening"
+        }
+      ],
+      "all_relations": [],
+      "dedup_stats": {
+        "raw_entities": 14,
+        "simple_dedup_entities": 14,
+        "multi_dedup_entities": 14,
+        "additional_reduction_pct": 0.0
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine (1844\u20131846)",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "Cossbysweater",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "Philadelphia",
+          "type": "LOCATION"
+        },
+        {
+          "name": "USA",
+          "type": "LOCATION"
+        },
+        {
+          "name": "Delhi",
+          "type": "LOCATION"
+        },
+        {
+          "name": "First for Women",
+          "type": "EVENT"
+        },
+        {
+          "name": "Bauer Media Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "YouTube",
+          "type": "TECHNOLOGY"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "EVENT/PRODUCT"
+        }
+      ]
+    },
+    {
+      "model": "mistral:7b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "EVENT",
+              "description": "An American literary periodical published between 1844 and 1846"
+            },
+            {
+              "name": "First for Women",
+              "type": "ORGANIZATION",
+              "description": "A woman's magazine published by Bauer Media Group in the USA"
+            },
+            {
+              "name": "The Oberoi family",
+              "type": "PERSON",
+              "description": "An Indian family known for their involvement in hotels through The Oberoi Group"
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company with its head office in Delhi"
+            },
+            {
+              "name": "Allison Beth 'Allie' Goertz",
+              "type": "PERSON",
+              "description": "An American musician known for her satirical songs"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Arthur's Magazine",
+              "target": "Published_in",
+              "type": "LOCATED_IN",
+              "description": "Arthur's Magazine is located in Philadelphia"
+            },
+            {
+              "source": "First for Women",
+              "target": "Published_by",
+              "type": "PUBLISHED_BY",
+              "description": "First for Women is published by Bauer Media Group"
+            },
+            {
+              "source": "The Oberoi family",
+              "target": "Known_for",
+              "type": "KNOWN_FOR",
+              "description": "The Oberoi family is known for its involvement in hotels"
+            },
+            {
+              "source": "The Oberoi Group",
+              "target": "Headquartered_in",
+              "type": "LOCATED_IN",
+              "description": "The Oberoi Group is headquartered in Delhi"
+            },
+            {
+              "source": "Allison Beth 'Allie' Goertz",
+              "target": "Known_as",
+              "type": "KNOWN_AS",
+              "description": "Allison Beth 'Allie' Goertz is known as an American musician"
+            }
+          ],
+          "entity_time": 5.773978233337402,
+          "relation_time": 7.150338888168335,
+          "tokens_output": 546
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "Comedian who is the subject of the satirical song 'Cossbysweater'"
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "Second vice president of Richard Nixon"
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "Creator of the animated TV series The Simpsons"
+            },
+            {
+              "name": "The Simpsons",
+              "type": "PRODUCT",
+              "description": "An animated TV series created by Matt Groening"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Goertz",
+              "target": "Bill Cosby",
+              "type": "CREATED_BY",
+              "description": "Goertz created 'Cossbysweater' about Bill Cosby"
+            },
+            {
+              "source": "Matt Groening",
+              "target": "The Simpsons",
+              "type": "CREATED_BY",
+              "description": "Matt Groening created The Simpsons"
+            }
+          ],
+          "entity_time": 4.221889019012451,
+          "relation_time": 2.8326549530029297,
+          "tokens_output": 299
+        }
+      ],
+      "total_entities": 9,
+      "total_relations": 7,
+      "total_time": 19.978861093521118,
+      "total_tokens_output": 845,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "EVENT",
+          "description": "An American literary periodical published between 1844 and 1846"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "A woman's magazine published by Bauer Media Group in the USA"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "An Indian family known for their involvement in hotels through The Oberoi Group"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company with its head office in Delhi"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON",
+          "description": "An American musician known for her satirical songs"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "Comedian who is the subject of the satirical song 'Cossbysweater'"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "Second vice president of Richard Nixon"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "Creator of the animated TV series The Simpsons"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT",
+          "description": "An animated TV series created by Matt Groening"
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Published_in",
+          "type": "LOCATED_IN",
+          "description": "Arthur's Magazine is located in Philadelphia"
+        },
+        {
+          "source": "First for Women",
+          "target": "Published_by",
+          "type": "PUBLISHED_BY",
+          "description": "First for Women is published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "Known_for",
+          "type": "KNOWN_FOR",
+          "description": "The Oberoi family is known for its involvement in hotels"
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "Headquartered_in",
+          "type": "LOCATED_IN",
+          "description": "The Oberoi Group is headquartered in Delhi"
+        },
+        {
+          "source": "Allison Beth 'Allie' Goertz",
+          "target": "Known_as",
+          "type": "KNOWN_AS",
+          "description": "Allison Beth 'Allie' Goertz is known as an American musician"
+        },
+        {
+          "source": "Goertz",
+          "target": "Bill Cosby",
+          "type": "CREATED_BY",
+          "description": "Goertz created 'Cossbysweater' about Bill Cosby"
+        },
+        {
+          "source": "Matt Groening",
+          "target": "The Simpsons",
+          "type": "CREATED_BY",
+          "description": "Matt Groening created The Simpsons"
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 9,
+        "simple_dedup_entities": 9,
+        "multi_dedup_entities": 9,
+        "additional_reduction_pct": 0.0
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "EVENT"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth 'Allie' Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        },
+        {
+          "name": "The Simpsons",
+          "type": "PRODUCT"
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:3b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "PRODUCT",
+              "description": "An American literary periodical"
+            },
+            {
+              "name": "First for Women",
+              "type": "ORGANIZATION",
+              "description": "A woman's magazine published by Bauer Media Group in the USA"
+            },
+            {
+              "name": "The Oberoi family",
+              "type": "PERSON",
+              "description": "An Indian family famous for its involvement in hotels"
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "A hotel company with head office in Delhi"
+            },
+            {
+              "name": "Allison Beth Goertz",
+              "type": "PERSON",
+              "description": "An American musician"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Arthur's Magazine",
+              "target": "Bauer Media Group",
+              "type": "WORKS_FOR",
+              "description": "First for Women is a magazine published by Bauer Media Group"
+            },
+            {
+              "source": "The Oberoi family",
+              "target": "The Oberoi Group",
+              "type": "PART_OF",
+              "description": "The Oberoi family is involved in the The Oberoi Group"
+            }
+          ],
+          "entity_time": 4.053566217422485,
+          "relation_time": 1.1986539363861084,
+          "tokens_output": 236
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "Comedian"
+            },
+            {
+              "name": "Goertz",
+              "type": "ORGANIZATION",
+              "description": "Artist who created the song 'Cossbysweater'"
+            },
+            {
+              "name": "Richard Nixon",
+              "type": "PERSON",
+              "description": "Former President of the United States"
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "Nixon's second vice president"
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "Creator of The Simpsons animated TV series"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Goertz",
+              "target": "Bill Cosby",
+              "type": "COMMENTS_ON",
+              "description": "Goertz commented on Bill Cosby"
+            },
+            {
+              "source": "Matt Groening",
+              "target": "The Simpsons",
+              "type": "CREATED",
+              "description": "Matt Groehn created The Simpsons"
+            }
+          ],
+          "entity_time": 1.7080674171447754,
+          "relation_time": 0.9578549861907959,
+          "tokens_output": 208
+        }
+      ],
+      "total_entities": 10,
+      "total_relations": 4,
+      "total_time": 7.918142557144165,
+      "total_tokens_output": 444,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PRODUCT",
+          "description": "An American literary periodical"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "A woman's magazine published by Bauer Media Group in the USA"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "An Indian family famous for its involvement in hotels"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "A hotel company with head office in Delhi"
+        },
+        {
+          "name": "Allison Beth Goertz",
+          "type": "PERSON",
+          "description": "An American musician"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "Comedian"
+        },
+        {
+          "name": "Goertz",
+          "type": "ORGANIZATION",
+          "description": "Artist who created the song 'Cossbysweater'"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON",
+          "description": "Former President of the United States"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "Nixon's second vice president"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "Creator of The Simpsons animated TV series"
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Bauer Media Group",
+          "type": "WORKS_FOR",
+          "description": "First for Women is a magazine published by Bauer Media Group"
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "type": "PART_OF",
+          "description": "The Oberoi family is involved in the The Oberoi Group"
+        },
+        {
+          "source": "Goertz",
+          "target": "Bill Cosby",
+          "type": "COMMENTS_ON",
+          "description": "Goertz commented on Bill Cosby"
+        },
+        {
+          "source": "Matt Groening",
+          "target": "The Simpsons",
+          "type": "CREATED",
+          "description": "Matt Groehn created The Simpsons"
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 10,
+        "simple_dedup_entities": 10,
+        "multi_dedup_entities": 10,
+        "additional_reduction_pct": 0.0
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "PRODUCT"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "Goertz",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Richard Nixon",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        }
+      ]
+    },
+    {
+      "model": "nuextract:3.8b",
+      "chunks": [
+        {
+          "chunk_id": 0,
+          "chunk_length": 500,
+          "entities": [
+            {
+              "name": "Arthur's Magazine",
+              "type": "ORGANIZATION",
+              "description": "an American literary periodical published in Philadelphia in the 19th century"
+            },
+            {
+              "name": "First for Women",
+              "type": "ORGANIZATION",
+              "description": "a woman's magazine published by Bauer Media Group in the USA"
+            },
+            {
+              "name": "The Oberoi family",
+              "type": "PERSON",
+              "description": "an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group"
+            },
+            {
+              "name": "The Oberoi Group",
+              "type": "ORGANIZATION",
+              "description": "a hotel company with its head office in Delhi"
+            },
+            {
+              "name": "Allison Beth \u201cAllie\u201d Goertz",
+              "type": "PERSON",
+              "description": "an American musician. She's known for her satirical songs based on var"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Arthur's Magazine",
+              "target": "The Oberoi Group",
+              "type": "",
+              "description": ""
+            },
+            {
+              "source": "First for Women",
+              "target": "Bauer Media Group",
+              "type": "",
+              "description": ""
+            },
+            {
+              "source": "The Oberoi family",
+              "target": "The Oberoi Group",
+              "type": "",
+              "description": ""
+            }
+          ],
+          "entity_time": 5.0806050300598145,
+          "relation_time": 1.46769118309021,
+          "tokens_output": 397
+        },
+        {
+          "chunk_id": 1,
+          "chunk_length": 258,
+          "entities": [
+            {
+              "name": "Bill Cosby",
+              "type": "PERSON",
+              "description": "comedian"
+            },
+            {
+              "name": "Gerald Ford",
+              "type": "PERSON",
+              "description": "Richard Nixon's second vice president"
+            },
+            {
+              "name": "Matt Groening",
+              "type": "PERSON",
+              "description": "created The Simpsons"
+            }
+          ],
+          "relations": [
+            {
+              "source": "Bill Cosby",
+              "target": "Gerald Ford",
+              "type": "",
+              "description": ""
+            },
+            {
+              "source": "Matt Groening",
+              "target": "The Simpsons",
+              "type": "",
+              "description": ""
+            }
+          ],
+          "entity_time": 1.3652217388153076,
+          "relation_time": 0.9905502796173096,
+          "tokens_output": 208
+        }
+      ],
+      "total_entities": 8,
+      "total_relations": 5,
+      "total_time": 8.904068231582642,
+      "total_tokens_output": 605,
+      "status": "success",
+      "error": null,
+      "all_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION",
+          "description": "an American literary periodical published in Philadelphia in the 19th century"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION",
+          "description": "a woman's magazine published by Bauer Media Group in the USA"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON",
+          "description": "an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION",
+          "description": "a hotel company with its head office in Delhi"
+        },
+        {
+          "name": "Allison Beth \u201cAllie\u201d Goertz",
+          "type": "PERSON",
+          "description": "an American musician. She's known for her satirical songs based on var"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON",
+          "description": "comedian"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON",
+          "description": "Richard Nixon's second vice president"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON",
+          "description": "created The Simpsons"
+        }
+      ],
+      "all_relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "The Oberoi Group",
+          "type": "",
+          "description": ""
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "type": "",
+          "description": ""
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "type": "",
+          "description": ""
+        },
+        {
+          "source": "Bill Cosby",
+          "target": "Gerald Ford",
+          "type": "",
+          "description": ""
+        },
+        {
+          "source": "Matt Groening",
+          "target": "The Simpsons",
+          "type": "",
+          "description": ""
+        }
+      ],
+      "dedup_stats": {
+        "raw_entities": 8,
+        "simple_dedup_entities": 8,
+        "multi_dedup_entities": 8,
+        "additional_reduction_pct": 0.0
+      },
+      "deduplicated_entities": [
+        {
+          "name": "Arthur's Magazine",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "First for Women",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi Group",
+          "type": "ORGANIZATION"
+        },
+        {
+          "name": "The Oberoi family",
+          "type": "PERSON"
+        },
+        {
+          "name": "Allison Beth \u201cAllie\u201d Goertz",
+          "type": "PERSON"
+        },
+        {
+          "name": "Bill Cosby",
+          "type": "PERSON"
+        },
+        {
+          "name": "Gerald Ford",
+          "type": "PERSON"
+        },
+        {
+          "name": "Matt Groening",
+          "type": "PERSON"
+        }
+      ]
+    }
+  ],
+  "dedup_processing": {
+    "timestamp": "2025-12-11T10:24:23.965016",
+    "deduplicator": "MultiCriteriaDeduplicator",
+    "config": {
+      "threshold": 0.93,
+      "edit_distance_threshold": 3,
+      "min_length_for_edit": 5,
+      "min_length_for_substring": 6
+    }
+  }
+}

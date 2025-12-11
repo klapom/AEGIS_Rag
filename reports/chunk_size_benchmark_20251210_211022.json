@@ -1,0 +1,446 @@
+{
+  "sample_id": "Q1064",
+  "original_text_length": 5281,
+  "chunk_size_results": [
+    {
+      "chunk_size": 500,
+      "num_chunks": 16,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 416,
+          "entities": 10,
+          "relationships": 11,
+          "time_ms": 108085.9649181366,
+          "output_tokens": 1013
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 467,
+          "entities": 7,
+          "relationships": 6,
+          "time_ms": 65228.4152507782,
+          "output_tokens": 597
+        },
+        {
+          "chunk_index": 2,
+          "chunk_chars": 101,
+          "entities": 4,
+          "relationships": 4,
+          "time_ms": 34053.69257926941,
+          "output_tokens": 306
+        },
+        {
+          "chunk_index": 3,
+          "chunk_chars": 467,
+          "entities": 7,
+          "relationships": 8,
+          "time_ms": 59953.14574241638,
+          "output_tokens": 547
+        },
+        {
+          "chunk_index": 4,
+          "chunk_chars": 305,
+          "entities": 11,
+          "relationships": 10,
+          "time_ms": 80785.92538833618,
+          "output_tokens": 743
+        },
+        {
+          "chunk_index": 5,
+          "chunk_chars": 481,
+          "entities": 10,
+          "relationships": 9,
+          "time_ms": 103119.68946456909,
+          "output_tokens": 950
+        },
+        {
+          "chunk_index": 6,
+          "chunk_chars": 64,
+          "entities": 2,
+          "relationships": 1,
+          "time_ms": 14627.928972244263,
+          "output_tokens": 123
+        },
+        {
+          "chunk_index": 7,
+          "chunk_chars": 303,
+          "entities": 6,
+          "relationships": 6,
+          "time_ms": 52891.80493354797,
+          "output_tokens": 482
+        },
+        {
+          "chunk_index": 8,
+          "chunk_chars": 326,
+          "entities": 8,
+          "relationships": 6,
+          "time_ms": 58436.98787689209,
+          "output_tokens": 534
+        },
+        {
+          "chunk_index": 9,
+          "chunk_chars": 285,
+          "entities": 7,
+          "relationships": 7,
+          "time_ms": 59802.860736846924,
+          "output_tokens": 547
+        },
+        {
+          "chunk_index": 10,
+          "chunk_chars": 342,
+          "entities": 8,
+          "relationships": 7,
+          "time_ms": 84426.81097984314,
+          "output_tokens": 776
+        },
+        {
+          "chunk_index": 11,
+          "chunk_chars": 488,
+          "entities": 12,
+          "relationships": 12,
+          "time_ms": 107833.80818367004,
+          "output_tokens": 994
+        },
+        {
+          "chunk_index": 12,
+          "chunk_chars": 226,
+          "entities": 3,
+          "relationships": 2,
+          "time_ms": 26784.22784805298,
+          "output_tokens": 237
+        },
+        {
+          "chunk_index": 13,
+          "chunk_chars": 347,
+          "entities": 9,
+          "relationships": 9,
+          "time_ms": 96336.64560317993,
+          "output_tokens": 888
+        },
+        {
+          "chunk_index": 14,
+          "chunk_chars": 263,
+          "entities": 4,
+          "relationships": 4,
+          "time_ms": 40309.79895591736,
+          "output_tokens": 364
+        },
+        {
+          "chunk_index": 15,
+          "chunk_chars": 376,
+          "entities": 8,
+          "relationships": 6,
+          "time_ms": 62942.82031059265,
+          "output_tokens": 576
+        }
+      ],
+      "totals": {
+        "total_entities": 116,
+        "total_relationships": 108,
+        "total_time_ms": 1055620.5277442932,
+        "total_output_tokens": 9677,
+        "avg_entities_per_chunk": 7.25,
+        "avg_time_per_chunk_ms": 65976.28298401833
+      }
+    },
+    {
+      "chunk_size": 1000,
+      "num_chunks": 7,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 987,
+          "entities": 18,
+          "relationships": 17,
+          "time_ms": 176038.67101669312,
+          "output_tokens": 1624
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 773,
+          "entities": 15,
+          "relationships": 15,
+          "time_ms": 141767.3783302307,
+          "output_tokens": 1308
+        },
+        {
+          "chunk_index": 2,
+          "chunk_chars": 546,
+          "entities": 9,
+          "relationships": 9,
+          "time_ms": 102484.8120212555,
+          "output_tokens": 944
+        },
+        {
+          "chunk_index": 3,
+          "chunk_chars": 917,
+          "entities": 15,
+          "relationships": 13,
+          "time_ms": 112987.71905899048,
+          "output_tokens": 1040
+        },
+        {
+          "chunk_index": 4,
+          "chunk_chars": 831,
+          "entities": 18,
+          "relationships": 17,
+          "time_ms": 188958.09602737427,
+          "output_tokens": 1744
+        },
+        {
+          "chunk_index": 5,
+          "chunk_chars": 839,
+          "entities": 9,
+          "relationships": 8,
+          "time_ms": 90619.88401412964,
+          "output_tokens": 832
+        },
+        {
+          "chunk_index": 6,
+          "chunk_chars": 376,
+          "entities": 7,
+          "relationships": 7,
+          "time_ms": 66474.63321685791,
+          "output_tokens": 609
+        }
+      ],
+      "totals": {
+        "total_entities": 91,
+        "total_relationships": 86,
+        "total_time_ms": 879331.1936855316,
+        "total_output_tokens": 8101,
+        "avg_entities_per_chunk": 13.0,
+        "avg_time_per_chunk_ms": 125618.74195507595
+      }
+    },
+    {
+      "chunk_size": 1500,
+      "num_chunks": 5,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 987,
+          "entities": 14,
+          "relationships": 16,
+          "time_ms": 157352.8516292572,
+          "output_tokens": 1451
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 1321,
+          "entities": 24,
+          "relationships": 24,
+          "time_ms": 233552.28638648987,
+          "output_tokens": 2151
+        },
+        {
+          "chunk_index": 2,
+          "chunk_chars": 917,
+          "entities": 15,
+          "relationships": 13,
+          "time_ms": 137932.90090560913,
+          "output_tokens": 1272
+        },
+        {
+          "chunk_index": 3,
+          "chunk_chars": 1407,
+          "entities": 31,
+          "relationships": 29,
+          "time_ms": 330615.73028564453,
+          "output_tokens": 3035
+        },
+        {
+          "chunk_index": 4,
+          "chunk_chars": 641,
+          "entities": 10,
+          "relationships": 10,
+          "time_ms": 115749.59111213684,
+          "output_tokens": 1067
+        }
+      ],
+      "totals": {
+        "total_entities": 94,
+        "total_relationships": 92,
+        "total_time_ms": 975203.3603191376,
+        "total_output_tokens": 8976,
+        "avg_entities_per_chunk": 18.8,
+        "avg_time_per_chunk_ms": 195040.67206382751
+      }
+    },
+    {
+      "chunk_size": 2000,
+      "num_chunks": 4,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 1762,
+          "entities": 23,
+          "relationships": 24,
+          "time_ms": 235810.80174446106,
+          "output_tokens": 2168
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 1465,
+          "entities": 23,
+          "relationships": 23,
+          "time_ms": 234176.08451843262,
+          "output_tokens": 2156
+        },
+        {
+          "chunk_index": 2,
+          "chunk_chars": 1672,
+          "entities": 35,
+          "relationships": 34,
+          "time_ms": 388935.60671806335,
+          "output_tokens": 3561
+        },
+        {
+          "chunk_index": 3,
+          "chunk_chars": 376,
+          "entities": 8,
+          "relationships": 7,
+          "time_ms": 72427.32620239258,
+          "output_tokens": 665
+        }
+      ],
+      "totals": {
+        "total_entities": 89,
+        "total_relationships": 88,
+        "total_time_ms": 931349.8191833496,
+        "total_output_tokens": 8550,
+        "avg_entities_per_chunk": 22.25,
+        "avg_time_per_chunk_ms": 232837.4547958374
+      }
+    },
+    {
+      "chunk_size": 2500,
+      "num_chunks": 3,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 2310,
+          "entities": 33,
+          "relationships": 46,
+          "time_ms": 407984.33327674866,
+          "output_tokens": 3725
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 2326,
+          "entities": 33,
+          "relationships": 31,
+          "time_ms": 333179.2721748352,
+          "output_tokens": 3049
+        },
+        {
+          "chunk_index": 2,
+          "chunk_chars": 641,
+          "entities": 11,
+          "relationships": 8,
+          "time_ms": 104105.35478591919,
+          "output_tokens": 958
+        }
+      ],
+      "totals": {
+        "total_entities": 77,
+        "total_relationships": 85,
+        "total_time_ms": 845268.960237503,
+        "total_output_tokens": 7732,
+        "avg_entities_per_chunk": 25.666666666666668,
+        "avg_time_per_chunk_ms": 281756.32007916766
+      }
+    },
+    {
+      "chunk_size": 3000,
+      "num_chunks": 2,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 2942,
+          "entities": 28,
+          "relationships": 36,
+          "time_ms": 342792.6142215729,
+          "output_tokens": 3129
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 2337,
+          "entities": 30,
+          "relationships": 30,
+          "time_ms": 340307.5215816498,
+          "output_tokens": 3113
+        }
+      ],
+      "totals": {
+        "total_entities": 58,
+        "total_relationships": 66,
+        "total_time_ms": 683100.1358032227,
+        "total_output_tokens": 6242,
+        "avg_entities_per_chunk": 29.0,
+        "avg_time_per_chunk_ms": 341550.0679016113
+      }
+    },
+    {
+      "chunk_size": 3500,
+      "num_chunks": 2,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 3229,
+          "entities": 36,
+          "relationships": 50,
+          "time_ms": 453992.2122955322,
+          "output_tokens": 4126
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 2050,
+          "entities": 37,
+          "relationships": 34,
+          "time_ms": 384894.15192604065,
+          "output_tokens": 3523
+        }
+      ],
+      "totals": {
+        "total_entities": 73,
+        "total_relationships": 84,
+        "total_time_ms": 838886.3642215729,
+        "total_output_tokens": 7649,
+        "avg_entities_per_chunk": 36.5,
+        "avg_time_per_chunk_ms": 419443.18211078644
+      }
+    },
+    {
+      "chunk_size": 4000,
+      "num_chunks": 2,
+      "chunks": [
+        {
+          "chunk_index": 0,
+          "chunk_chars": 3229,
+          "entities": 36,
+          "relationships": 34,
+          "time_ms": 354389.3852233887,
+          "output_tokens": 3230
+        },
+        {
+          "chunk_index": 1,
+          "chunk_chars": 2050,
+          "entities": 31,
+          "relationships": 30,
+          "time_ms": 351629.0693283081,
+          "output_tokens": 3217
+        }
+      ],
+      "totals": {
+        "total_entities": 67,
+        "total_relationships": 64,
+        "total_time_ms": 706018.4545516968,
+        "total_output_tokens": 6447,
+        "avg_entities_per_chunk": 33.5,
+        "avg_time_per_chunk_ms": 353009.2272758484
+      }
+    }
+  ]
+}

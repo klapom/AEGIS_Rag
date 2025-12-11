@@ -1,0 +1,495 @@
+{
+  "timestamp": "20251210_230509",
+  "samples_used": [
+    {
+      "question": "Which magazine was started first Arthur's Magazine or First for Women?",
+      "ground_truth": "Arthur's Magazine"
+    },
+    {
+      "question": "The Oberoi family is part of a hotel company that has a head office in what city?",
+      "ground_truth": "Delhi"
+    },
+    {
+      "question": "Musician and satirist Allie Goertz wrote a song about the \"The Simpsons\" character Milhouse, who Matt Groening named after who?",
+      "ground_truth": "President Richard Nixon"
+    },
+    {
+      "question": " What nationality was James Henry Miller's wife?",
+      "ground_truth": "American"
+    },
+    {
+      "question": "Cadmium Chloride is slightly soluble in this chemical, it is also called what?",
+      "ground_truth": "alcohol"
+    }
+  ],
+  "chunk_size": 500,
+  "chunks": [
+    {
+      "chunk_id": "test_chunk_0",
+      "text": "Arthur's Magazine (1844\u20131846) was an American literary periodical published in Philadelphia in the 19th century. First for Women is a woman's magazine published by Bauer Media Group in the USA. The Oberoi family is an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group. The Oberoi Group is a hotel company with its head office in Delhi. Allison Beth \"Allie\" Goertz (born March 2, 1991) is an American musician.  Goertz is known for her satirical songs based o",
+      "chunk_index": 0
+    },
+    {
+      "chunk_id": "test_chunk_1",
+      "text": "n various pop culture topics.  Her videos are posted on YouTube under the name of Cossbysweater. Milhouse Mussolini van Houten is a fictional character featured in the animated television series \"The Simpsons\", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon's middle name. Margaret \"Peggy\" Seeger (born June 17, 1935) is an American folksinger.  She is also well known in Britain, where she has lived for more than 30 years, and was marrie",
+      "chunk_index": 1
+    },
+    {
+      "chunk_id": "test_chunk_2",
+      "text": "d to the singer and songwriter Ewan MacColl until his death in 1989. James Henry Miller (25 January 1915 \u2013 22 October 1989), better known by his stage name Ewan MacColl, was an English folk singer, songwriter, communist, labour activist, actor, poet, playwright and record producer.  It is a hygroscopic solid that is highly soluble in water and slightly soluble in alcohol. Ethanol, also called alcohol, ethyl alcohol, and drinking alcohol, is a compound and simple alcohol with the chemical formula",
+      "chunk_index": 2
+    },
+    {
+      "chunk_id": "test_chunk_3",
+      "text": " C2H5OH .",
+      "chunk_index": 3
+    }
+  ],
+  "original_entities": [
+    {
+      "entity_name": "Arthur's Magazine",
+      "entity_type": "PRODUCT",
+      "description": "American literary periodical published in Philadelphia in the 19th century",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Philadelphia",
+      "entity_type": "LOCATION",
+      "description": "City where Arthur's Magazine was published",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "First for Women",
+      "entity_type": "PRODUCT",
+      "description": "Woman's magazine published by Bauer Media Group in the USA",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Bauer Media Group",
+      "entity_type": "ORGANIZATION",
+      "description": "Publisher of First for Women magazine",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Oberoi family",
+      "entity_type": "ORGANIZATION",
+      "description": "Indian family known for involvement in hotels through The Oberoi Group",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Oberoi Group",
+      "entity_type": "ORGANIZATION",
+      "description": "Hotel company with its head office in Delhi",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Delhi",
+      "entity_type": "LOCATION",
+      "description": "City where The Oberoi Group is headquartered",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Allison Beth \"Allie\" Goertz",
+      "entity_type": "PERSON",
+      "description": "American musician known for satirical songs",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "March 2, 1991",
+      "entity_type": "EVENT",
+      "description": "Birth date of Allison Beth \"Allie\" Goertz",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Cossbysweater",
+      "entity_type": "PRODUCT",
+      "description": "Name under which videos are posted on YouTube",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Milhouse Mussolini van Houten",
+      "entity_type": "CONCEPT",
+      "description": "Fictional character from the animated television series 'The Simpsons'",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "The Simpsons",
+      "entity_type": "PRODUCT",
+      "description": "Animated television series featuring Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Pamela Hayden",
+      "entity_type": "PERSON",
+      "description": "Voice actor for Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Matt Groening",
+      "entity_type": "PERSON",
+      "description": "Creator of the character Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Richard Nixon",
+      "entity_type": "PERSON",
+      "description": "U.S. President after whom the character's middle name is named",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Margaret 'Peggy' Seeger",
+      "entity_type": "PERSON",
+      "description": "American folksinger known in Britain and the U.S.",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Ewan MacColl",
+      "entity_type": "PERSON",
+      "description": "English folk singer, songwriter, and communist",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "James Henry Miller",
+      "entity_type": "PERSON",
+      "description": "Real name of Ewan MacColl",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "1989",
+      "entity_type": "EVENT",
+      "description": "Year of Ewan MacColl's death",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "Ethanol",
+      "entity_type": "PRODUCT",
+      "description": "Compound and simple alcohol with the chemical formula C\u2082H\u2085OH",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "alcohol",
+      "entity_type": "CONCEPT",
+      "description": "General term for a class of organic compounds including ethanol",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    }
+  ],
+  "original_relations": [
+    {
+      "source": "Arthur's Magazine",
+      "target": "Philadelphia",
+      "description": "Arthur's Magazine was published in Philadelphia in the 19th century",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "First for Women",
+      "target": "Bauer Media Group",
+      "description": "First for Women is a woman's magazine published by Bauer Media Group",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "The Oberoi Group",
+      "target": "The Oberoi family",
+      "description": "The Oberoi Group is a hotel company owned by The Oberoi family",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "The Oberoi Group",
+      "target": "Delhi",
+      "description": "The Oberoi Group has its head office in Delhi",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Allison Beth \"Allie\" Goertz",
+      "target": "March 2, 1991",
+      "description": "Allison Beth \"Allie\" Goertz was born on March 2, 1991",
+      "strength": 8,
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "source": "Pamela Hayden",
+      "target": "Milhouse Mussolini van Houten",
+      "description": "Pamela Hayden voices the character Milhouse Mussolini van Houten",
+      "strength": 8,
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "source": "Matt Groening",
+      "target": "Milhouse Mussolini van Houten",
+      "description": "Matt Groening created the character Milhouse Mussolini van Houten",
+      "strength": 8,
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "source": "Milhouse Mussolini van Houten",
+      "target": "The Simpsons",
+      "description": "Milhouse Mussolini van Houten is a character in the animated television series The Simpsons",
+      "strength": 8,
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "source": "Matt Groening",
+      "target": "The Simpsons",
+      "description": "Matt Groening created the animated television series The Simpsons",
+      "strength": 8,
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "source": "Ewan MacColl",
+      "target": "1989",
+      "description": "Ewan MacColl died in 1989",
+      "strength": 8,
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "source": "James Henry Miller",
+      "target": "Ewan MacColl",
+      "description": "James Henry Miller is better known by his stage name Ewan MacColl",
+      "strength": 8,
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "source": "Ethanol",
+      "target": "alcohol",
+      "description": "Ethanol is also called alcohol",
+      "strength": 8,
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    }
+  ],
+  "stats_before_dedup": {
+    "total_entities": 21,
+    "total_relations": 12
+  },
+  "deduplicated_entities": [
+    {
+      "entity_name": "Arthur's Magazine",
+      "entity_type": "PRODUCT",
+      "description": "American literary periodical published in Philadelphia in the 19th century",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Philadelphia",
+      "entity_type": "LOCATION",
+      "description": "City where Arthur's Magazine was published",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "First for Women",
+      "entity_type": "PRODUCT",
+      "description": "Woman's magazine published by Bauer Media Group in the USA",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Bauer Media Group",
+      "entity_type": "ORGANIZATION",
+      "description": "Publisher of First for Women magazine",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Oberoi family",
+      "entity_type": "ORGANIZATION",
+      "description": "Indian family known for involvement in hotels through The Oberoi Group",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "The Oberoi Group",
+      "entity_type": "ORGANIZATION",
+      "description": "Hotel company with its head office in Delhi",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Delhi",
+      "entity_type": "LOCATION",
+      "description": "City where The Oberoi Group is headquartered",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Allison Beth \"Allie\" Goertz",
+      "entity_type": "PERSON",
+      "description": "American musician known for satirical songs",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "March 2, 1991",
+      "entity_type": "EVENT",
+      "description": "Birth date of Allison Beth \"Allie\" Goertz",
+      "source_id": "test_doc#0",
+      "chunk_id": "test_chunk_0",
+      "chunk_index": 0
+    },
+    {
+      "entity_name": "Cossbysweater",
+      "entity_type": "PRODUCT",
+      "description": "Name under which videos are posted on YouTube",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Milhouse Mussolini van Houten",
+      "entity_type": "CONCEPT",
+      "description": "Fictional character from the animated television series 'The Simpsons'",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "The Simpsons",
+      "entity_type": "PRODUCT",
+      "description": "Animated television series featuring Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Pamela Hayden",
+      "entity_type": "PERSON",
+      "description": "Voice actor for Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Matt Groening",
+      "entity_type": "PERSON",
+      "description": "Creator of the character Milhouse Mussolini van Houten",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Richard Nixon",
+      "entity_type": "PERSON",
+      "description": "U.S. President after whom the character's middle name is named",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Margaret 'Peggy' Seeger",
+      "entity_type": "PERSON",
+      "description": "American folksinger known in Britain and the U.S.",
+      "source_id": "test_doc#1",
+      "chunk_id": "test_chunk_1",
+      "chunk_index": 1
+    },
+    {
+      "entity_name": "Ewan MacColl",
+      "entity_type": "PERSON",
+      "description": "English folk singer, songwriter, and communist",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "James Henry Miller",
+      "entity_type": "PERSON",
+      "description": "Real name of Ewan MacColl",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "1989",
+      "entity_type": "EVENT",
+      "description": "Year of Ewan MacColl's death",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "Ethanol",
+      "entity_type": "PRODUCT",
+      "description": "Compound and simple alcohol with the chemical formula C\u2082H\u2085OH",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    },
+    {
+      "entity_name": "alcohol",
+      "entity_type": "CONCEPT",
+      "description": "General term for a class of organic compounds including ethanol",
+      "source_id": "test_doc#2",
+      "chunk_id": "test_chunk_2",
+      "chunk_index": 2
+    }
+  ],
+  "stats_after_dedup": {
+    "total_entities": 21,
+    "removed": 0,
+    "dedup_rate": 0.0
+  }
+}

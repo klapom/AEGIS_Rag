@@ -1,0 +1,188 @@
+{
+  "timestamp": "2025-12-11T10:07:20.885619",
+  "strategy": "ParallelExtractor with gemma3:4b + qwen2.5:7b",
+  "models": [
+    "gemma3:4b",
+    "qwen2.5:7b"
+  ],
+  "chunk_sizes_tested": [
+    500,
+    1000,
+    2000,
+    4000,
+    10000
+  ],
+  "results": [
+    {
+      "sample_id": "5a8db19d5542994ba4e3dd00",
+      "context_length": 7000,
+      "chunk_size": 500,
+      "num_chunks": 15,
+      "total_entities_raw": 145,
+      "unique_entities": 129,
+      "total_relations_raw": 141,
+      "unique_relations": 141,
+      "total_time": 310.25371289253235,
+      "per_model_entities": {
+        "gemma3:4b": 115,
+        "qwen2.5:7b": 108
+      },
+      "per_model_relations": {
+        "gemma3:4b": 88,
+        "qwen2.5:7b": 59
+      }
+    },
+    {
+      "sample_id": "5a8db19d5542994ba4e3dd00",
+      "context_length": 7000,
+      "chunk_size": 1000,
+      "num_chunks": 7,
+      "total_entities_raw": 132,
+      "unique_entities": 125,
+      "total_relations_raw": 130,
+      "unique_relations": 130,
+      "total_time": 249.127699136734,
+      "per_model_entities": {
+        "gemma3:4b": 117,
+        "qwen2.5:7b": 67
+      },
+      "per_model_relations": {
+        "gemma3:4b": 99,
+        "qwen2.5:7b": 42
+      }
+    },
+    {
+      "sample_id": "5a8db19d5542994ba4e3dd00",
+      "context_length": 7000,
+      "chunk_size": 2000,
+      "num_chunks": 4,
+      "total_entities_raw": 106,
+      "unique_entities": 102,
+      "total_relations_raw": 86,
+      "unique_relations": 86,
+      "total_time": 232.13474678993225,
+      "per_model_entities": {
+        "gemma3:4b": 77,
+        "qwen2.5:7b": 74
+      },
+      "per_model_relations": {
+        "gemma3:4b": 34,
+        "qwen2.5:7b": 57
+      }
+    },
+    {
+      "sample_id": "5a8db19d5542994ba4e3dd00",
+      "context_length": 7000,
+      "chunk_size": 4000,
+      "num_chunks": 2,
+      "total_entities_raw": 59,
+      "unique_entities": 58,
+      "total_relations_raw": 12,
+      "unique_relations": 12,
+      "total_time": 119.21768546104431,
+      "per_model_entities": {
+        "gemma3:4b": 0,
+        "qwen2.5:7b": 59
+      },
+      "per_model_relations": {
+        "gemma3:4b": 0,
+        "qwen2.5:7b": 12
+      }
+    },
+    {
+      "sample_id": "5a85ea095542994775f606a8",
+      "context_length": 6787,
+      "chunk_size": 500,
+      "num_chunks": 15,
+      "total_entities_raw": 128,
+      "unique_entities": 115,
+      "total_relations_raw": 140,
+      "unique_relations": 140,
+      "total_time": 280.6726245880127,
+      "per_model_entities": {
+        "gemma3:4b": 118,
+        "qwen2.5:7b": 87
+      },
+      "per_model_relations": {
+        "gemma3:4b": 88,
+        "qwen2.5:7b": 66
+      }
+    },
+    {
+      "sample_id": "5a85ea095542994775f606a8",
+      "context_length": 6787,
+      "chunk_size": 1000,
+      "num_chunks": 7,
+      "total_entities_raw": 92,
+      "unique_entities": 85,
+      "total_relations_raw": 83,
+      "unique_relations": 83,
+      "total_time": 208.2491614818573,
+      "per_model_entities": {
+        "gemma3:4b": 75,
+        "qwen2.5:7b": 62
+      },
+      "per_model_relations": {
+        "gemma3:4b": 52,
+        "qwen2.5:7b": 34
+      }
+    },
+    {
+      "sample_id": "5a85ea095542994775f606a8",
+      "context_length": 6787,
+      "chunk_size": 2000,
+      "num_chunks": 4,
+      "total_entities_raw": 72,
+      "unique_entities": 71,
+      "total_relations_raw": 52,
+      "unique_relations": 52,
+      "total_time": 147.21610403060913,
+      "per_model_entities": {
+        "gemma3:4b": 40,
+        "qwen2.5:7b": 50
+      },
+      "per_model_relations": {
+        "gemma3:4b": 23,
+        "qwen2.5:7b": 32
+      }
+    },
+    {
+      "sample_id": "5a85ea095542994775f606a8",
+      "context_length": 6787,
+      "chunk_size": 4000,
+      "num_chunks": 2,
+      "total_entities_raw": 49,
+      "unique_entities": 49,
+      "total_relations_raw": 43,
+      "unique_relations": 43,
+      "total_time": 115.55919218063354,
+      "per_model_entities": {
+        "gemma3:4b": 19,
+        "qwen2.5:7b": 37
+      },
+      "per_model_relations": {
+        "gemma3:4b": 22,
+        "qwen2.5:7b": 23
+      }
+    },
+    {
+      "sample_id": "combined_large",
+      "context_length": 16586,
+      "chunk_size": 10000,
+      "num_chunks": 2,
+      "total_entities_raw": 90,
+      "unique_entities": 90,
+      "total_relations_raw": 62,
+      "unique_relations": 62,
+      "total_time": 170.1862587928772,
+      "per_model_entities": {
+        "gemma3:4b": 69,
+        "qwen2.5:7b": 42
+      },
+      "per_model_relations": {
+        "gemma3:4b": 32,
+        "qwen2.5:7b": 34
+      }
+    }
+  ]
+}

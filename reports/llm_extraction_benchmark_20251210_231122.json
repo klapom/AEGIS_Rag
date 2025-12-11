@@ -1,0 +1,996 @@
+{
+  "timestamp": "20251210_231122",
+  "samples_used": [
+    {
+      "question": "Which magazine was started first Arthur's Magazine or First for Women?",
+      "ground_truth": "Arthur's Magazine"
+    },
+    {
+      "question": "The Oberoi family is part of a hotel company that has a head office in what city?",
+      "ground_truth": "Delhi"
+    },
+    {
+      "question": "Musician and satirist Allie Goertz wrote a song about the \"The Simpsons\" character Milhouse, who Matt Groening named after who?",
+      "ground_truth": "President Richard Nixon"
+    }
+  ],
+  "full_text": "Arthur's Magazine (1844\u20131846) was an American literary periodical published in Philadelphia in the 19th century. First for Women is a woman's magazine published by Bauer Media Group in the USA. The Oberoi family is an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group. The Oberoi Group is a hotel company with its head office in Delhi. Allison Beth \"Allie\" Goertz (born March 2, 1991) is an American musician.  Goertz is known for her satirical songs based on various pop culture topics.  Her videos are posted on YouTube under the name of Cossbysweater. Milhouse Mussolini van Houten is a fictional character featured in the animated television series \"The Simpsons\", voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon's middle name.",
+  "chunk_size": 500,
+  "models": {
+    "qwen3:32b": {
+      "model": "qwen3:32b",
+      "chunk_size": 500,
+      "total_chunks": 2,
+      "total_entities": 15,
+      "total_relations": 9,
+      "total_time_seconds": 97.99,
+      "avg_time_per_chunk": 49.0,
+      "chunk_results": [
+        {
+          "chunk_index": 0,
+          "text_length": 500,
+          "entities": 9,
+          "relations": 5,
+          "time_seconds": 57.21
+        },
+        {
+          "chunk_index": 1,
+          "text_length": 333,
+          "entities": 6,
+          "relations": 4,
+          "time_seconds": 40.63
+        }
+      ],
+      "entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "PRODUCT",
+          "description": "American literary periodical published in Philadelphia in the 19th century",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Philadelphia",
+          "entity_type": "LOCATION",
+          "description": "City where Arthur's Magazine was published",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "Woman's magazine published by Bauer Media Group in the USA",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Bauer Media Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Publisher of First for Women magazine",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "ORGANIZATION",
+          "description": "Indian family known for involvement in hotels through The Oberoi Group",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Hotel company with its head office in Delhi",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Delhi",
+          "entity_type": "LOCATION",
+          "description": "City where The Oberoi Group is headquartered",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \"Allie\" Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician known for satirical songs",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "March 2, 1991",
+          "entity_type": "EVENT",
+          "description": "Birth date of Allison Beth \"Allie\" Goertz",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Cossbysweater",
+          "entity_type": "PRODUCT",
+          "description": "Name under which videos are posted on YouTube",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "CONCEPT",
+          "description": "Fictional character from The Simpsons",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "PRODUCT",
+          "description": "Animated television series",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "Voice actor for Milhouse Mussolini van Houten",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "Creator of the character Milhouse Mussolini van Houten",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Richard Nixon",
+          "entity_type": "PERSON",
+          "description": "U.S. President after whom the character's middle name was named",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "description": "Arthur's Magazine was published in Philadelphia in the 19th century",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "description": "First for Women is a woman's magazine published by Bauer Media Group in the USA",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "description": "The Oberoi family is involved in hotels through The Oberoi Group",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "Delhi",
+          "description": "The Oberoi Group has its head office in Delhi",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Allison Beth \"Allie\" Goertz",
+          "target": "March 2, 1991",
+          "description": "Allison Beth \"Allie\" Goertz was born on March 2, 1991",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Pamela Hayden",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "Pamela Hayden voices the character Milhouse Mussolini van Houten",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Matt Groening",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "Matt Groening created the character Milhouse Mussolini van Houten",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Milhouse Mussolini van Houten",
+          "target": "The Simpsons",
+          "description": "Milhouse Mussolini van Houten is a character in The Simpsons",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Matt Groening",
+          "target": "The Simpsons",
+          "description": "Matt Groening created The Simpsons",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "deduplicated_entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "PRODUCT",
+          "description": "American literary periodical published in Philadelphia in the 19th century",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Philadelphia",
+          "entity_type": "LOCATION",
+          "description": "City where Arthur's Magazine was published",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "Woman's magazine published by Bauer Media Group in the USA",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Bauer Media Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Publisher of First for Women magazine",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "ORGANIZATION",
+          "description": "Indian family known for involvement in hotels through The Oberoi Group",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Hotel company with its head office in Delhi",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Delhi",
+          "entity_type": "LOCATION",
+          "description": "City where The Oberoi Group is headquartered",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \"Allie\" Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician known for satirical songs",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "March 2, 1991",
+          "entity_type": "EVENT",
+          "description": "Birth date of Allison Beth \"Allie\" Goertz",
+          "source_id": "benchmark_qwen3_32b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Cossbysweater",
+          "entity_type": "PRODUCT",
+          "description": "Name under which videos are posted on YouTube",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "CONCEPT",
+          "description": "Fictional character from The Simpsons",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "PRODUCT",
+          "description": "Animated television series",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "Voice actor for Milhouse Mussolini van Houten",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "Creator of the character Milhouse Mussolini van Houten",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Richard Nixon",
+          "entity_type": "PERSON",
+          "description": "U.S. President after whom the character's middle name was named",
+          "source_id": "benchmark_qwen3_32b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "dedup_stats": {
+        "before": 15,
+        "after": 15,
+        "removed": 0,
+        "reduction_pct": 0.0
+      }
+    },
+    "sam860/qwen3:8b-Q4_K_M": {
+      "model": "sam860/qwen3:8b-Q4_K_M",
+      "chunk_size": 500,
+      "total_chunks": 2,
+      "total_entities": 17,
+      "total_relations": 10,
+      "total_time_seconds": 1417.13,
+      "avg_time_per_chunk": 708.56,
+      "chunk_results": [
+        {
+          "chunk_index": 0,
+          "text_length": 500,
+          "entities": 10,
+          "relations": 6,
+          "time_seconds": 177.61
+        },
+        {
+          "chunk_index": 1,
+          "text_length": 333,
+          "entities": 7,
+          "relations": 4,
+          "time_seconds": 1239.51
+        }
+      ],
+      "entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "PRODUCT",
+          "description": "American literary periodical published in Philadelphia",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "1844\u20131846",
+          "entity_type": "EVENT",
+          "description": "Publication period of Arthur's Magazine",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Philadelphia",
+          "entity_type": "LOCATION",
+          "description": "City where Arthur's Magazine was published",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "Woman's magazine published by Bauer Media Group",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Bauer Media Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Publisher of First for Women magazine",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "CONCEPT",
+          "description": "Indian family known for involvement in hotels",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Hotel company with head office in Delhi",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Delhi",
+          "entity_type": "LOCATION",
+          "description": "Head office location of The Oberoi Group",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \"Allie\" Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician known for satirical songs",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "March 2, 1991",
+          "entity_type": "EVENT",
+          "description": "Birth date of Allison Beth Goertz",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Cossbysweater",
+          "entity_type": "PERSON",
+          "description": "YouTube channel name",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "CONCEPT",
+          "description": "Fictional character from The Simpsons",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "Voice actor for Milhouse Mussolini van Houten",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "Creator of The Simpsons",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "President Richard Nixon",
+          "entity_type": "PERSON",
+          "description": "President whose middle name inspired the character",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "CONCEPT",
+          "description": "Animated television series",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "YouTube",
+          "entity_type": "PRODUCT",
+          "description": "Online video platform",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "relations": [
+        {
+          "source": "Arthur's Magazine",
+          "target": "Philadelphia",
+          "description": "Arthur's Magazine was published in Philadelphia",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "description": "First for Women is published by Bauer Media Group",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "The Oberoi family",
+          "description": "The Oberoi Group is part of the Oberoi family's involvement in hotels",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "The Oberoi Group",
+          "target": "Delhi",
+          "description": "The Oberoi Group has its head office in Delhi",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Allison Beth \"Allie\" Goertz",
+          "target": "March 2, 1991",
+          "description": "Allison Beth \"Allie\" Goertz was born on March 2, 1991",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Arthur's Magazine",
+          "target": "1844\u20131846",
+          "description": "Arthur's Magazine was published during the period 1844\u20131846",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Cossbysweater",
+          "target": "YouTube",
+          "description": "Cossbysweater uses YouTube to post her videos",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Milhouse Mussolini van Houten",
+          "target": "The Simpsons",
+          "description": "Milhouse Mussolini van Houten is a fictional character featured in The Simpsons",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Pamela Hayden",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "Pamela Hayden voices Milhouse Mussolini van Houten in The Simpsons",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Matt Groening",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "Matt Groening created Milhouse Mussolini van Houten as a character in The Simpsons",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "deduplicated_entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "PRODUCT",
+          "description": "American literary periodical published in Philadelphia",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "1844\u20131846",
+          "entity_type": "EVENT",
+          "description": "Publication period of Arthur's Magazine",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Philadelphia",
+          "entity_type": "LOCATION",
+          "description": "City where Arthur's Magazine was published",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "Woman's magazine published by Bauer Media Group",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Bauer Media Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Publisher of First for Women magazine",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "CONCEPT",
+          "description": "Indian family known for involvement in hotels",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "Hotel company with head office in Delhi",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Delhi",
+          "entity_type": "LOCATION",
+          "description": "Head office location of The Oberoi Group",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \"Allie\" Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician known for satirical songs",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "March 2, 1991",
+          "entity_type": "EVENT",
+          "description": "Birth date of Allison Beth Goertz",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Cossbysweater",
+          "entity_type": "PERSON",
+          "description": "YouTube channel name",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "CONCEPT",
+          "description": "Fictional character from The Simpsons",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "Voice actor for Milhouse Mussolini van Houten",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "Creator of The Simpsons",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "President Richard Nixon",
+          "entity_type": "PERSON",
+          "description": "President whose middle name inspired the character",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "CONCEPT",
+          "description": "Animated television series",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "YouTube",
+          "entity_type": "PRODUCT",
+          "description": "Online video platform",
+          "source_id": "benchmark_sam860_qwen3_8b-Q4_K_M#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "dedup_stats": {
+        "before": 17,
+        "after": 17,
+        "removed": 0,
+        "reduction_pct": 0.0
+      }
+    },
+    "nuextract:3.8b": {
+      "model": "nuextract:3.8b",
+      "chunk_size": 500,
+      "total_chunks": 2,
+      "total_entities": 10,
+      "total_relations": 5,
+      "total_time_seconds": 17.4,
+      "avg_time_per_chunk": 8.7,
+      "chunk_results": [
+        {
+          "chunk_index": 0,
+          "text_length": 500,
+          "entities": 5,
+          "relations": 2,
+          "time_seconds": 12.21
+        },
+        {
+          "chunk_index": 1,
+          "text_length": 333,
+          "entities": 5,
+          "relations": 3,
+          "time_seconds": 5.18
+        }
+      ],
+      "entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "ORGANIZATION",
+          "description": "American literary periodical published in Philadelphia in the 19th century.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "woman's magazine published by Bauer Media Group in the USA.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "PERSON",
+          "description": "Indian family that is famous for its involvement in hotels, namely through The Oberoi Group.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "hotel company with its head office in Delhi.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \u201cAllie\u201d Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician. Known for her satirical songs based o",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "PERSON",
+          "description": "fictional character featured in the animated television series \"The Simpsons\"",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon'sin middle name.",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "created by Matt Groening who named the character after President Richard Nixon'sin middle name.",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "CONCEPT",
+          "description": "animated television series",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "YouTube",
+          "entity_type": "TECHNOLOGY",
+          "description": "platform where videos are posted",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "relations": [
+        {
+          "source": "The Oberoi family",
+          "target": "The Oberoi Group",
+          "description": "is famous for its involvement in hotels, namely through The Oberoi Group.",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "First for Women",
+          "target": "Bauer Media Group",
+          "description": "First for Women is a woman's magazine published by Bauer Media Group in the USA.",
+          "strength": 8,
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "source": "Milhouse Mussolini van Houten",
+          "target": "The Simpsons",
+          "description": "Milhouse Mussolini van Houten is a fictional character featured in the animated television series",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Pamela Hayden",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon's middle name.",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "source": "Matt Groening",
+          "target": "Milhouse Mussolini van Houten",
+          "description": "created by Matt Groening who named the character after President Richard Nixon's middle name.",
+          "strength": 8,
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "deduplicated_entities": [
+        {
+          "entity_name": "Arthur's Magazine",
+          "entity_type": "ORGANIZATION",
+          "description": "American literary periodical published in Philadelphia in the 19th century.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "First for Women",
+          "entity_type": "PRODUCT",
+          "description": "woman's magazine published by Bauer Media Group in the USA.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi family",
+          "entity_type": "PERSON",
+          "description": "Indian family that is famous for its involvement in hotels, namely through The Oberoi Group.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "The Oberoi Group",
+          "entity_type": "ORGANIZATION",
+          "description": "hotel company with its head office in Delhi.",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Allison Beth \u201cAllie\u201d Goertz",
+          "entity_type": "PERSON",
+          "description": "American musician. Known for her satirical songs based o",
+          "source_id": "benchmark_nuextract_3.8b#0",
+          "chunk_id": "chunk_0",
+          "chunk_index": 0
+        },
+        {
+          "entity_name": "Milhouse Mussolini van Houten",
+          "entity_type": "PERSON",
+          "description": "fictional character featured in the animated television series \"The Simpsons\"",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Pamela Hayden",
+          "entity_type": "PERSON",
+          "description": "voiced by Pamela Hayden, and created by Matt Groening who named the character after President Richard Nixon'sin middle name.",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "Matt Groening",
+          "entity_type": "PERSON",
+          "description": "created by Matt Groening who named the character after President Richard Nixon'sin middle name.",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "The Simpsons",
+          "entity_type": "CONCEPT",
+          "description": "animated television series",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        },
+        {
+          "entity_name": "YouTube",
+          "entity_type": "TECHNOLOGY",
+          "description": "platform where videos are posted",
+          "source_id": "benchmark_nuextract_3.8b#1",
+          "chunk_id": "chunk_1",
+          "chunk_index": 1
+        }
+      ],
+      "dedup_stats": {
+        "before": 10,
+        "after": 10,
+        "removed": 0,
+        "reduction_pct": 0.0
+      }
+    }
+  }
+}

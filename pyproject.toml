@@ -52,6 +52,7 @@ aiofiles = "^24.1.0"
 pyyaml = "^6.0.0"
 python-multipart = "^0.0.20"
 numpy = "^1.26.0"  # For vector operations in consolidation
+python-Levenshtein = "^0.26.0"  # Edit distance for entity deduplication (ADR-044)
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
 
 # Monitoring (Sprint 2: Metrics)
