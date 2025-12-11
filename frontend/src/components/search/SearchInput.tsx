@@ -1,20 +1,23 @@
 /**
  * SearchInput Component
  * Sprint 15 Feature 15.3: Large search input with mode selector (ADR-021)
+ * Sprint 42: Added namespace/project selection for search filtering
  *
  * Perplexity-inspired search input with:
  * - Large centered input field
  * - Mode selector chips (Hybrid, Vector, Graph, Memory)
+ * - Namespace/Project selector for filtering
  * - Input icons and submit button
  * - Keyboard shortcuts (Enter to submit)
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { NamespaceSelector } from './NamespaceSelector';
 
 export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory';
 
 interface SearchInputProps {
-  onSubmit: (query: string, mode: SearchMode) => void;
+  onSubmit: (query: string, mode: SearchMode, namespaces: string[]) => void;
   placeholder?: string;
   autoFocus?: boolean;
 }
@@ -26,6 +29,7 @@ export function SearchInput({
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<SearchMode>('hybrid');
+  const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export function SearchInput({
       // Don't submit empty or whitespace-only queries
       return;
     }
-    onSubmit(trimmedQuery, mode);
+    onSubmit(trimmedQuery, mode, selectedNamespaces);
     setQuery(''); // Clear input immediately after sending
   };
 
@@ -99,6 +103,12 @@ export function SearchInput({
           </svg>
         </button>
       </div>
+
+      {/* Namespace/Project Selector - Sprint 42 */}
+      <NamespaceSelector
+        selectedNamespaces={selectedNamespaces}
+        onSelectionChange={setSelectedNamespaces}
+      />
 
       {/* Mode Selector Chips */}
       <div className="flex justify-center space-x-3">

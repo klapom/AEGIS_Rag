@@ -26,6 +26,7 @@ import { TypingIndicator } from './TypingIndicator';  // Sprint 35 Feature 35.6
 interface StreamingAnswerProps {
   query: string;
   mode: string;
+  namespaces?: string[];  // Sprint 42: Namespace filtering
   sessionId?: string;
   onSessionIdReceived?: (sessionId: string) => void;
   onTitleGenerated?: (title: string) => void;  // Sprint 17 Feature 17.3
@@ -33,7 +34,7 @@ interface StreamingAnswerProps {
   onComplete?: (answer: string, sources: Source[]) => void;  // Sprint 32: Save answer to history
 }
 
-export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, onTitleGenerated, onFollowUpQuestion, onComplete }: StreamingAnswerProps) {
+export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionIdReceived, onTitleGenerated, onFollowUpQuestion, onComplete }: StreamingAnswerProps) {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
   const [metadata, setMetadata] = useState<any>(null);
@@ -66,7 +67,8 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
           query,
           intent: mode,
           session_id: sessionId,
-          include_sources: true
+          include_sources: true,
+          namespaces: namespaces && namespaces.length > 0 ? namespaces : undefined,  // Sprint 42
         }, abortController.signal)) {  // Pass signal to streamChat
           // Stop processing if component unmounted
           if (isAborted) {
@@ -102,7 +104,7 @@ export function StreamingAnswer({ query, mode, sessionId, onSessionIdReceived, o
       isAborted = true;
       abortController.abort();
     };
-  }, [query, mode, sessionId]);
+  }, [query, mode, namespaces, sessionId]);
 
   // Sprint 28 Feature 28.2: Scroll to source card when citation is clicked
   const handleCitationClick = (sourceId: string) => {

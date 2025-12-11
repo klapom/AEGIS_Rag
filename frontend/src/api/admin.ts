@@ -3,6 +3,7 @@
  * Sprint 17 Feature 17.1: Admin UI for Directory Indexing
  * Sprint 31 Feature 31.10b: Cost Dashboard API Integration
  * Sprint 33 Feature 33.1: Directory Scanning API
+ * Sprint 42: Namespace Management API
  */
 
 import type {
@@ -330,4 +331,45 @@ export async function* streamAddDocuments(
   } finally {
     reader.releaseLock();
   }
+}
+
+// ============================================================================
+// Sprint 42: Namespace Management API
+// ============================================================================
+
+/**
+ * Namespace information
+ */
+export interface NamespaceInfo {
+  namespace_id: string;
+  namespace_type: string;
+  document_count: number;
+  description: string;
+}
+
+export interface NamespaceListResponse {
+  namespaces: NamespaceInfo[];
+  total_count: number;
+}
+
+/**
+ * Get available namespaces for search filtering
+ * Sprint 42: Namespace/Project selection in search UI
+ *
+ * @returns NamespaceListResponse with all available namespaces
+ */
+export async function getNamespaces(): Promise<NamespaceListResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/namespaces`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
 }

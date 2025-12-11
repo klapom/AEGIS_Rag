@@ -11,6 +11,7 @@ export interface ChatRequest {
   intent?: string;
   include_sources?: boolean;
   include_tool_calls?: boolean;
+  namespaces?: string[];  // Sprint 42: Filter search by namespace/project
 }
 
 export interface Source {

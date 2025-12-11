@@ -23,6 +23,7 @@ interface Message {
   content: string;
   query?: string;
   mode?: SearchMode;
+  namespaces?: string[];
 }
 
 export function HomePage() {
@@ -30,19 +31,22 @@ export function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
+  const [currentNamespaces, setCurrentNamespaces] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleSearch = (query: string, mode: SearchMode) => {
+  const handleSearch = (query: string, mode: SearchMode, namespaces: string[]) => {
     // Add user message to history
-    setConversationHistory(prev => [...prev, { role: 'user', content: query, query, mode }]);
+    setConversationHistory(prev => [...prev, { role: 'user', content: query, query, mode, namespaces }]);
 
     // Trigger streaming response
     setCurrentQuery(query);
     setCurrentMode(mode);
+    setCurrentNamespaces(namespaces);
   };
 
   const handleQuickPrompt = (prompt: string) => {
-    handleSearch(prompt, 'hybrid');
+    // Use current namespaces for quick prompts (or all if none selected)
+    handleSearch(prompt, 'hybrid', currentNamespaces);
   };
 
   const handleSessionIdReceived = (sessionId: string) => {
@@ -52,7 +56,7 @@ export function HomePage() {
   };
 
   const handleFollowUpQuestion = (question: string) => {
-    handleSearch(question, currentMode);
+    handleSearch(question, currentMode, currentNamespaces);
   };
 
   // Sprint 32: Save completed answer to history
@@ -220,6 +224,7 @@ export function HomePage() {
               <StreamingAnswer
                 query={currentQuery}
                 mode={currentMode}
+                namespaces={currentNamespaces}
                 sessionId={activeSessionId}
                 onSessionIdReceived={handleSessionIdReceived}
                 onFollowUpQuestion={handleFollowUpQuestion}
