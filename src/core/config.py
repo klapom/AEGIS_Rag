@@ -364,6 +364,18 @@ class Settings(BaseSettings):
         description="Min entity name length for substring check (prevents 'AI' in 'NVIDIA')",
     )
 
+    # Relation Deduplication (Sprint 44: TD-063)
+    enable_relation_dedup: bool = Field(
+        default=True,
+        description="Enable relation deduplication (type synonyms + bidirectional handling). "
+        "Requires entity deduplication to be enabled for entity name normalization.",
+    )
+    relation_preserve_original_type: bool = Field(
+        default=False,
+        description="If True, store original relation type in 'original_type' field "
+        "when normalizing to canonical type (e.g., STARRED_IN → ACTED_IN).",
+    )
+
     # Gemma Relation Extraction (Sprint 13: ADR-018)
     # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
     gemma_model: str = Field(

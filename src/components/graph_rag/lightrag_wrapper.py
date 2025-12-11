@@ -28,6 +28,11 @@ from tenacity import (
 from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
 # Sprint 43: MultiCriteriaDeduplicator integration
 from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
+# Sprint 44: RelationDeduplicator integration (TD-063)
+from src.components.graph_rag.relation_deduplicator import (
+    RelationDeduplicator,
+    create_relation_deduplicator_from_config,
+)
 from src.core.config import settings
 from src.core.models import GraphQueryResult
 # Sprint 43 Feature 43.8: Prometheus metrics for deduplication
@@ -1543,15 +1548,20 @@ class LightRAGClient:
                 continue
 
         # Sprint 43 Feature 43.8: Apply MultiCriteriaDeduplicator before storage
+        # Sprint 44 Feature 44.5: Use deduplicate_with_mapping for relation dedup (TD-063)
         entities_before_dedup = len(all_entities)
+        relations_before_dedup = len(all_relations)
+        entity_mapping: dict[str, str] = {}
 
         if settings.enable_multi_criteria_dedup and all_entities:
             try:
                 deduplicator = create_deduplicator_from_config()
 
-                # Deduplicate entities using multi-criteria matching
-                # Note: deduplicate() is synchronous, returns list only
-                deduplicated_entities = deduplicator.deduplicate(all_entities)
+                # Deduplicate entities and get mapping for relation normalization
+                # Sprint 44: Use deduplicate_with_mapping to get entity name mapping
+                deduplicated_entities, entity_mapping = deduplicator.deduplicate_with_mapping(
+                    all_entities
+                )
                 entities_after_dedup = len(deduplicated_entities)
 
                 # Calculate reduction
@@ -1573,12 +1583,47 @@ class LightRAGClient:
                     entities_before=entities_before_dedup,
                     entities_after=entities_after_dedup,
                     reduction_percent=reduction_percent,
+                    entity_mapping_size=len(entity_mapping),
                 )
 
                 all_entities = deduplicated_entities
             except Exception as e:
                 logger.warning(
                     "deduplication_failed_fallback_to_raw",
+                    document_id=document_id,
+                    error=str(e),
+                )
+
+        # Sprint 44 Feature 44.5: Apply RelationDeduplicator (TD-063)
+        if settings.enable_relation_dedup and all_relations:
+            try:
+                relation_deduplicator = create_relation_deduplicator_from_config(settings)
+
+                if relation_deduplicator:
+                    # Deduplicate relations with entity name normalization
+                    deduplicated_relations = relation_deduplicator.deduplicate(
+                        all_relations,
+                        entity_mapping=entity_mapping,
+                    )
+                    relations_after_dedup = len(deduplicated_relations)
+
+                    # Calculate reduction
+                    relation_reduction_percent = round(
+                        (1 - relations_after_dedup / relations_before_dedup) * 100, 1
+                    ) if relations_before_dedup > 0 else 0
+
+                    logger.info(
+                        "relation_deduplication_complete",
+                        document_id=document_id,
+                        relations_before=relations_before_dedup,
+                        relations_after=relations_after_dedup,
+                        reduction_percent=relation_reduction_percent,
+                    )
+
+                    all_relations = deduplicated_relations
+            except Exception as e:
+                logger.warning(
+                    "relation_deduplication_failed_fallback_to_raw",
                     document_id=document_id,
                     error=str(e),
                 )

@@ -270,6 +270,117 @@ class SemanticDeduplicator:
 
         return deduplicated
 
+    def deduplicate_with_mapping(
+        self, entities: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], dict[str, str]]:
+        """Deduplicate entities and return mapping from old names to canonical names.
+
+        Sprint 44 Feature 44.2: Required for relation deduplication (TD-063).
+        After entity deduplication, relations need to be updated to use the
+        canonical entity names. This method provides that mapping.
+
+        Args:
+            entities: List of entity dicts
+
+        Returns:
+            Tuple of:
+            - Deduplicated entity list
+            - Mapping from original name (lowercase) to canonical name
+              e.g., {"nicolas cage": "Nicolas Cage", "nick cage": "Nicolas Cage"}
+
+        Example:
+            >>> dedup = SemanticDeduplicator()
+            >>> entities = [
+            ...     {"name": "Nicolas Cage", "type": "PERSON"},
+            ...     {"name": "nicolas cage", "type": "PERSON"},
+            ... ]
+            >>> deduped, mapping = dedup.deduplicate_with_mapping(entities)
+            >>> mapping
+            {'nicolas cage': 'Nicolas Cage'}
+        """
+        if not entities:
+            return [], {}
+
+        # Group by type
+        type_groups: dict[str, list[dict[str, Any]]] = {}
+        for entity in entities:
+            etype = entity.get("type", "OTHER")
+            if etype not in type_groups:
+                type_groups[etype] = []
+            type_groups[etype].append(entity)
+
+        deduplicated = []
+        entity_mapping: dict[str, str] = {}
+
+        for etype, group in type_groups.items():
+            if len(group) == 1:
+                deduplicated.extend(group)
+                continue
+
+            # Deduplicate and get mapping
+            deduped_group, group_mapping = self._deduplicate_group_with_mapping(group, etype)
+            deduplicated.extend(deduped_group)
+            entity_mapping.update(group_mapping)
+
+        logger.info(
+            "deduplication_with_mapping_complete",
+            total_entities=len(entities),
+            deduplicated_count=len(deduplicated),
+            mapping_entries=len(entity_mapping),
+        )
+
+        return deduplicated, entity_mapping
+
+    def _deduplicate_group_with_mapping(
+        self, entities: list[dict[str, Any]], entity_type: str
+    ) -> tuple[list[dict[str, Any]], dict[str, str]]:
+        """Deduplicate a group and return name mapping.
+
+        Args:
+            entities: Entities of same type
+            entity_type: Type label
+
+        Returns:
+            Tuple of (deduplicated entities, name mapping)
+        """
+        # Use the regular deduplication and build mapping from result
+        deduped = self._deduplicate_group(entities, entity_type)
+
+        # Build mapping: we need to track which names were merged
+        # This is a simplified approach - we map all variants to the representative
+        names = [e.get("name", e.get("entity_name", "UNKNOWN")) for e in entities]
+        deduped_names = {e.get("name", e.get("entity_name", "")).lower() for e in deduped}
+
+        mapping: dict[str, str] = {}
+        for entity in entities:
+            name = entity.get("name", entity.get("entity_name", ""))
+            name_lower = name.lower().strip()
+
+            # Find the representative for this entity
+            for deduped_entity in deduped:
+                rep_name = deduped_entity.get("name", deduped_entity.get("entity_name", ""))
+                rep_lower = rep_name.lower().strip()
+
+                # Check if this entity was merged into this representative
+                if name_lower == rep_lower:
+                    # Same entity (possibly different case)
+                    if name != rep_name:
+                        mapping[name_lower] = rep_name
+                    break
+                elif self._are_duplicates(name, rep_name):
+                    mapping[name_lower] = rep_name
+                    break
+
+        return deduped, mapping
+
+    def _are_duplicates(self, name1: str, name2: str) -> bool:
+        """Check if two names are duplicates (for mapping purposes).
+
+        Override in subclasses for multi-criteria matching.
+        """
+        # Default: exact match (case-insensitive)
+        return name1.lower().strip() == name2.lower().strip()
+
     def _deduplicate_group(
         self, entities: list[dict[str, Any]], entity_type: str
     ) -> list[dict[str, Any]]:
@@ -583,6 +694,14 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
             deduplicated.append(representative)
 
         return deduplicated
+
+    def _are_duplicates(self, name1: str, name2: str) -> bool:
+        """Check if two names are duplicates using multi-criteria matching.
+
+        Override of base class method for proper mapping support.
+        """
+        is_dup, _ = self._is_duplicate_by_criteria(name1, name2)
+        return is_dup
 
 
 def create_deduplicator_from_config(config) -> SemanticDeduplicator | MultiCriteriaDeduplicator | None:
