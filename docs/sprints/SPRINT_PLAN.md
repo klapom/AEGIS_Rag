@@ -762,69 +762,176 @@
 
 ---
 
-## Sprint 44: Relation Deduplication & Graph Quality 📋
-**Ziel:** Relation Deduplication + Knowledge Graph Qualitätsverbesserung
+## Sprint 44: Relation Deduplication & Full Pipeline Evaluation 📋
+**Ziel:** Relation Deduplication + Multi-Model Pipeline Evaluation mit Production-Grade Monitoring
 
-**Start:** 2025-12-12 (planned)
-**Status:** PLANNED
+**Start:** 2025-12-12
+**Status:** IN PROGRESS
 
-**Breakdown:**
+---
+
+### Part 1: Relation Deduplication (TD-063)
+
 | Feature | SP | Status |
 |---------|-----|--------|
-| 44.1 RelationDeduplicator Implementation | 8 | 📋 |
-| 44.2 Entity Name Normalization for Relations | 3 | 📋 |
-| 44.3 Type Synonym Resolution | 5 | 📋 |
-| 44.4 Bidirectional Relation Handling | 3 | 📋 |
-| 44.5 Integration with lightrag_wrapper.py | 3 | 📋 |
-| 44.6 Update parallel_extractor.py | 2 | 📋 |
-| 44.7 Unit Tests for Relation Deduplication | 3 | 📋 |
-| 44.8 Benchmark: Relation Dedup Impact | 2 | 📋 |
-| 44.9 Community Summary Generation (TD-058) | 8 | 📋 Optional |
+| 44.1 RelationDeduplicator Implementation | 5 | 📋 |
+| 44.2 Entity Name Normalization for Relations | 2 | 📋 |
+| 44.3 Type Synonym Resolution | 3 | 📋 |
+| 44.4 Bidirectional Relation Handling | 2 | 📋 |
+| 44.5 Integration with lightrag_wrapper.py | 2 | 📋 |
+| 44.6 Unit Tests for Relation Deduplication | 2 | 📋 |
 
-### Deliverables
-**Part 1: Relation Deduplication (TD-063)**
-- RelationDeduplicator class (new file)
-- Stage 1: Entity name normalization (remap to canonical names)
-- Stage 2: Type synonym resolution (STARRED_IN → ACTED_IN)
-- Stage 3: Bidirectional relation handling (symmetric dedup)
-- Integration with entity deduplication flow
-- Config options: `enable_relation_dedup`, custom synonym mappings
+**Deliverables:**
+- `src/components/graph_rag/relation_deduplicator.py` (NEW)
+- Stage 1: Entity name normalization (remap to canonical names after entity dedup)
+- Stage 2: Type synonym resolution (STARRED_IN, ACTED_IN, PLAYED_IN → ACTED_IN)
+- Stage 3: Bidirectional/symmetric relation handling (A↔B only once)
+- Config: `enable_relation_dedup`, `relation_type_synonyms`
 
-**Part 2: Graph Quality (Optional)**
-- Community summary generation for graph clustering
-- Graph quality metrics dashboard
+---
+
+### Part 2: Pipeline Monitoring & Logging Enhancement
+
+| Feature | SP | Status |
+|---------|-----|--------|
+| 44.7 PipelineMonitor Class | 3 | 📋 |
+| 44.8 Structured Event Logging | 2 | 📋 |
+| 44.9 Report Generator | 3 | 📋 |
+| 44.10 Model-Configurable Extraction | 2 | 📋 |
+
+**Deliverables:**
+- `src/monitoring/pipeline_monitor.py` (NEW) - Collects all pipeline metrics
+- Structured JSON event logging for each pipeline stage
+- Report generator: JSON + Markdown summary
+- `--model` parameter für Extraction-Modell-Auswahl
+
+**Pipeline Stages mit Monitoring:**
+```
+TXT Input → Chunking → Extraction → Entity Dedup → Relation Dedup → Neo4j Insert
+    │           │           │            │              │              │
+    └───────────┴───────────┴────────────┴──────────────┴──────────────┘
+                            Pipeline Monitor (collects all metrics)
+```
+
+**Metriken pro Stage:**
+| Stage | Metriken |
+|-------|----------|
+| Input | file_count, total_chars, avg_chars_per_file |
+| Chunking | chunks_created, avg_chunk_size, overlap_chars |
+| Extraction | entities_raw, relations_raw, entity_types, relation_types, duration |
+| Entity Dedup | before, after, reduction_%, criteria_distribution |
+| Relation Dedup | before, after, reduction_%, type_merges, bidirectional_merges |
+| Neo4j | nodes_created, edges_created, duration |
+
+---
+
+### Part 3: Multi-Model Pipeline Evaluation
+
+| Feature | SP | Status |
+|---------|-----|--------|
+| 44.11 Evaluation Script mit Model-Parameter | 3 | 📋 |
+| 44.12 HotPotQA TXT Dataset (10 Samples) | 1 | 📋 |
+| 44.13 Model Runs: qwen3:8b, qwen2.5:7b, nuextract | 3 | 📋 |
+| 44.14 Model Runs: gemma3:4b, qwen2.5:3b | 2 | 📋 |
+| 44.15 Comparison Report Generator | 3 | 📋 |
+
+**Test-Matrix:**
+| Model | Size | Priority | Expected Time |
+|-------|------|----------|---------------|
+| qwen3:32b | 20 GB | BASELINE (neu mit Relation Dedup!) | ~47 min |
+| qwen3:8b | 5 GB | HIGH | ~15-20 min |
+| qwen2.5:7b | 4 GB | HIGH | ~12-18 min |
+| nuextract:3.8b | 2 GB | HIGH (NER-specialized) | ~10-15 min |
+| gemma3:4b | 3 GB | MEDIUM | ~10-15 min |
+| qwen2.5:3b | 1 GB | MEDIUM | ~8-12 min |
+
+**WICHTIG:** Die Sprint 43 Baseline (qwen3:32b) enthält KEINE Relation Deduplication!
+Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu getestet werden.
+
+**Evaluation Metriken pro Model:**
+1. **Quality:** Entities, Relations, Entity Types Distribution
+2. **Deduplication:** Entity Reduction %, Relation Reduction %
+3. **Performance:** Time/Sample, Time/1000 chars
+4. **Stability:** Success Rate, JSON Parse Errors
+
+**Deliverables:**
+- `scripts/pipeline_model_evaluation.py` - Main evaluation script
+- `reports/model_comparison_<model>_<timestamp>.json` - Per-model reports
+- `reports/model_comparison_summary_<timestamp>.md` - Aggregated comparison
+
+---
+
+### Sprint 44 Breakdown Summary
+
+| Part | Features | SP | Focus |
+|------|----------|-----|-------|
+| Part 1 | 44.1-44.6 | 16 | Relation Deduplication |
+| Part 2 | 44.7-44.10 | 10 | Pipeline Monitoring |
+| Part 3 | 44.11-44.15 | 12 | Model Evaluation |
+| **Total** | **15 Features** | **38** | |
+
+---
 
 ### Technical Tasks
+
 **Relation Deduplication:**
 - Create `src/components/graph_rag/relation_deduplicator.py`
 - Define `RELATION_TYPE_SYNONYMS` mapping
 - Define `SYMMETRIC_RELATIONS` set
-- Add `deduplicate_with_mapping()` to entity deduplicator
+- Modify entity deduplicator to return `entity_mapping: dict[str, str]`
 - Update `lightrag_wrapper.py` integration
-- Update `parallel_extractor.py` to use RelationDeduplicator
+
+**Pipeline Monitoring:**
+- Create `src/monitoring/pipeline_monitor.py`
+- Add `@monitor_stage` decorator for automatic metric collection
+- JSON event log format with timestamps
+- Report generator with Markdown output
+
+**Model Evaluation:**
+- Extend `ragas_txt_pipeline_evaluation.py` with `--model` parameter
+- Parallel-safe execution (one model at a time)
+- Aggregation script for cross-model comparison
+
+---
 
 ### Success Criteria
-- 35-40% relation deduplication on parallel extraction
-- Type synonyms merged (STARRED_IN, ACTED_IN → ACTED_IN)
-- Entity references remapped to canonical names
-- Symmetric relations deduplicated (A↔B only once)
+
+**Part 1: Relation Deduplication**
+- [ ] 25-40% relation reduction on parallel extraction
+- [ ] Type synonyms merged correctly
+- [ ] Entity references remapped to canonical names
+- [ ] Symmetric relations deduplicated
+
+**Part 2: Pipeline Monitoring**
+- [ ] All pipeline stages emit structured metrics
+- [ ] JSON report with complete pipeline trace
+- [ ] Markdown summary for human review
+
+**Part 3: Model Evaluation**
+- [ ] 5+ models evaluated on same dataset
+- [ ] Comparison matrix: Quality vs Speed vs Size
+- [ ] Clear recommendation for production model
+
+---
 
 ### References
 - [TD-063: Relation Deduplication](../technical-debt/TD-063_RELATION_DEDUPLICATION.md)
-- [TD-058: Community Summary Generation](../technical-debt/TD-058_COMMUNITY_SUMMARY_GENERATION.md)
+- [SPRINT_43_PLAN.md](SPRINT_43_PLAN.md) - Entity Deduplication baseline
 - [ADR-044: Multi-Criteria Entity Deduplication](../adr/ADR-044_MULTI_CRITERIA_ENTITY_DEDUPLICATION.md)
 
-### Research Insights (from Web Search)
-**LightRAG native approach:**
-- Deduplicates by description-based matching (not type)
-- Uses first-occurrence preference, sorted by timestamp
-- No explicit type synonym resolution
+### Sprint 43 Reference (OHNE Relation Dedup)
+| Metric | Value |
+|--------|-------|
+| Samples | 10 |
+| Input Chars | 68,126 |
+| Chunks | 18 |
+| Entities (raw → dedup) | 346 → 311 (10.1%) |
+| Relations (NICHT dedupliziert!) | 287 |
+| Total Time | 2802.6s (~47 min) |
 
-**Industry best practices:**
-- Entity-Resolved Knowledge Graphs (ERKGs) - Neo4j, Senzing
-- Semantic Entity Resolution with LLMs (context-aware matching)
-- Type normalization via ontology alignment
-- RAGFlow uses LLM-based entity resolution toggle
+**Erwartung nach Sprint 44:**
+- Relations nach Dedup: ~180-200 (25-40% Reduktion)
+- Neue Baseline mit qwen3:32b erforderlich
 
 ---
 
