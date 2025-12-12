@@ -139,18 +139,29 @@ class DSPyOptimizer:
             )
 
     def _configure_dspy(self) -> None:
-        """Configure DSPy with Ollama backend."""
+        """Configure DSPy with Ollama backend.
+
+        Note: We only create the LM here, actual configuration happens
+        in _get_dspy_context() to be async-safe.
+        """
         if not self._dspy_available:
             return
 
-        # Configure Ollama LLM
+        # Create Ollama LLM (configuration done via context manager for async safety)
         self.lm = self._dspy.LM(
             model=f"ollama_chat/{self.llm_model}",
             api_base="http://localhost:11434",
             api_key="",  # Not needed for local Ollama
         )
-        self._dspy.configure(lm=self.lm)
-        logger.info("dspy_configured", model=self.llm_model, backend="ollama")
+        logger.info("dspy_lm_created", model=self.llm_model, backend="ollama")
+
+    def _get_dspy_context(self) -> Any:
+        """Get DSPy context manager for async-safe configuration.
+
+        Returns:
+            Context manager that configures DSPy LM for the current async task.
+        """
+        return self._dspy.context(lm=self.lm)
 
     async def optimize_entity_extraction(
         self,
@@ -222,11 +233,14 @@ class DSPyOptimizer:
         if progress_callback:
             progress_callback("Building DSPy module", 30.0)
 
-        # Create entity extraction module
-        class EntityExtractor(self._dspy.Module):  # type: ignore[name-defined,misc]
+        # Store reference to dspy module for inner class
+        dspy_module = self._dspy
+
+        # Create entity extraction module (using closure for dspy reference)
+        class EntityExtractor(dspy_module.Module):  # type: ignore[name-defined,misc]
             def __init__(self, signature: type) -> None:
                 super().__init__()
-                self.predictor = self._dspy.ChainOfThought(signature)
+                self.predictor = dspy_module.ChainOfThought(signature)
 
             def forward(self, source_text: str) -> Any:
                 return self.predictor(source_text=source_text)
@@ -253,37 +267,38 @@ class DSPyOptimizer:
         if progress_callback:
             progress_callback("Running BootstrapFewShot optimization", 50.0)
 
-        # Optimize with BootstrapFewShot
+        # Optimize with BootstrapFewShot using async-safe context
         try:
-            optimizer = self._dspy.BootstrapFewShot(
-                metric=entity_extraction_metric,
-                max_bootstrapped_demos=5,
-                max_labeled_demos=3,
-            )
+            with self._get_dspy_context():
+                optimizer = dspy_module.BootstrapFewShot(
+                    metric=entity_extraction_metric,
+                    max_bootstrapped_demos=5,
+                    max_labeled_demos=3,
+                )
 
-            # Create signature dynamically
-            signature = type(
-                "EntityExtractionSignature",
-                (),
-                {
-                    "__doc__": EntityExtractionSignature.get_instructions(),
-                    "source_text": self._dspy.InputField(),
-                    "entities": self._dspy.OutputField(desc="THOROUGH list of key entities"),
-                },
-            )
+                # Create signature dynamically
+                signature = type(
+                    "EntityExtractionSignature",
+                    (),
+                    {
+                        "__doc__": EntityExtractionSignature.get_instructions(),
+                        "source_text": dspy_module.InputField(),
+                        "entities": dspy_module.OutputField(desc="THOROUGH list of key entities"),
+                    },
+                )
 
-            optimized_module = optimizer.compile(
-                EntityExtractor(signature),
-                trainset=trainset,
-            )
+                optimized_module = optimizer.compile(
+                    EntityExtractor(signature),
+                    trainset=trainset,
+                )
 
-            if progress_callback:
-                progress_callback("Evaluating on validation set", 80.0)
+                if progress_callback:
+                    progress_callback("Evaluating on validation set", 80.0)
 
-            # Evaluate on validation set
-            eval_score = await self._evaluate_async(
-                optimized_module, valset, entity_extraction_metric
-            )
+                # Evaluate on validation set
+                eval_score = await self._evaluate_async(
+                    optimized_module, valset, entity_extraction_metric
+                )
 
             logger.info("entity_extraction_optimized", val_f1=eval_score)
 
@@ -385,11 +400,14 @@ class DSPyOptimizer:
         if progress_callback:
             progress_callback("Building DSPy module", 30.0)
 
-        # Create relation extraction module
-        class RelationExtractor(self._dspy.Module):  # type: ignore[name-defined,misc]
+        # Store reference to dspy module for inner class
+        dspy_module = self._dspy
+
+        # Create relation extraction module (using closure for dspy reference)
+        class RelationExtractor(dspy_module.Module):  # type: ignore[name-defined,misc]
             def __init__(self, signature: type) -> None:
                 super().__init__()
-                self.predictor = self._dspy.ChainOfThought(signature)
+                self.predictor = dspy_module.ChainOfThought(signature)
 
             def forward(self, source_text: str, entities: list[str]) -> Any:
                 return self.predictor(source_text=source_text, entities=entities)
@@ -424,40 +442,41 @@ class DSPyOptimizer:
         if progress_callback:
             progress_callback("Running BootstrapFewShot optimization", 50.0)
 
-        # Optimize with BootstrapFewShot
+        # Optimize with BootstrapFewShot using async-safe context
         try:
-            optimizer = self._dspy.BootstrapFewShot(
-                metric=relation_extraction_metric,
-                max_bootstrapped_demos=5,
-                max_labeled_demos=3,
-            )
+            with self._get_dspy_context():
+                optimizer = dspy_module.BootstrapFewShot(
+                    metric=relation_extraction_metric,
+                    max_bootstrapped_demos=5,
+                    max_labeled_demos=3,
+                )
 
-            # Create signature dynamically
-            signature = type(
-                "RelationExtractionSignature",
-                (),
-                {
-                    "__doc__": RelationExtractionSignature.get_instructions(),
-                    "source_text": self._dspy.InputField(),
-                    "entities": self._dspy.InputField(),
-                    "relations": self._dspy.OutputField(
-                        desc="List of {subject, predicate, object} tuples"
-                    ),
-                },
-            )
+                # Create signature dynamically
+                signature = type(
+                    "RelationExtractionSignature",
+                    (),
+                    {
+                        "__doc__": RelationExtractionSignature.get_instructions(),
+                        "source_text": dspy_module.InputField(),
+                        "entities": dspy_module.InputField(),
+                        "relations": dspy_module.OutputField(
+                            desc="List of {subject, predicate, object} tuples"
+                        ),
+                    },
+                )
 
-            optimized_module = optimizer.compile(
-                RelationExtractor(signature),
-                trainset=trainset,
-            )
+                optimized_module = optimizer.compile(
+                    RelationExtractor(signature),
+                    trainset=trainset,
+                )
 
-            if progress_callback:
-                progress_callback("Evaluating on validation set", 80.0)
+                if progress_callback:
+                    progress_callback("Evaluating on validation set", 80.0)
 
-            # Evaluate on validation set
-            eval_score = await self._evaluate_async(
-                optimized_module, valset, relation_extraction_metric
-            )
+                # Evaluate on validation set
+                eval_score = await self._evaluate_async(
+                    optimized_module, valset, relation_extraction_metric
+                )
 
             logger.info("relation_extraction_optimized", val_f1=eval_score)
 
