@@ -75,12 +75,19 @@ export function DomainConfigStep({
           data-testid="domain-name-input"
           type="text"
           value={config.name}
-          onChange={(e) => onChange({ ...config, name: e.target.value })}
+          onChange={(e) => {
+            // Sanitize: lowercase, replace spaces/hyphens with underscore, remove invalid chars
+            const sanitized = e.target.value
+              .toLowerCase()
+              .replace(/[\s-]+/g, '_')
+              .replace(/[^a-z0-9_]/g, '');
+            onChange({ ...config, name: sanitized });
+          }}
           placeholder="e.g., finance, legal, medical"
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="mt-1 text-sm text-gray-500">
-          Unique identifier for this domain (lowercase, no spaces)
+          Lowercase letters, numbers, and underscores only (e.g., omnitracker_docs)
         </p>
       </div>
 
