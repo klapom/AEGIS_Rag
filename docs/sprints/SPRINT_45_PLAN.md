@@ -1,6 +1,6 @@
 # Sprint 45: Domain-Specific Prompt Optimization mit DSPy
 
-**Status:** PLANNED
+**Status:** CLOSED (2025-12-12)
 **Duration:** 5 Arbeitstage
 **Story Points:** 47 SP
 **Dependencies:** Sprint 44 (Pipeline Monitoring)
@@ -3016,6 +3016,53 @@ interface TrainingMetrics {
 
 ---
 
+## Feature 45.17: Embedding-based Semantic Matching (1 SP) - P1 ✅
+
+### Konzept
+
+Replace exact string matching in DSPy evaluation metrics with BGE-M3 embedding-based cosine similarity. This improves F1 scores for semantically equivalent extractions that differ textually (e.g., "verfügt über" vs "hat", "Rechtesystem" vs "Rechte-System").
+
+### Problem
+
+DSPy BootstrapFewShot evaluates candidate prompts using a metric function. With exact string matching:
+- `{"subject": "OMNITRACKER", "predicate": "verfügt über", "object": "Rechtesystem"}`
+- `{"subject": "OMNITRACKER", "predicate": "hat", "object": "Rechte-System"}`
+
+These semantically identical relations would have F1 = 0.0 due to string mismatch.
+
+### Lösung
+
+`SemanticMatcher` class in `src/components/domain_training/semantic_matcher.py`:
+
+```python
+class SemanticMatcher:
+    def __init__(self, threshold: float = 0.75, predicate_weight: float = 0.4):
+        """
+        threshold: Minimum cosine similarity for match (0.0-1.0)
+        predicate_weight: Weight for predicate in relation matching
+        """
+
+    def compute_entity_metrics(self, gold_entities, pred_entities) -> dict:
+        """Compute P/R/F1 using semantic matching instead of exact set intersection."""
+
+    def compute_relation_metrics(self, gold_relations, pred_relations) -> dict:
+        """Compute P/R/F1 using weighted semantic similarity across s/p/o."""
+```
+
+### Key Features
+
+- **BGE-M3 Embeddings**: Multilingual support (German documents)
+- **Configurable Thresholds**: Entity matching >= 0.75, Relation matching >= 0.70
+- **Weighted Relation Matching**: Predicate weight 0.4, Subject/Object 0.3 each
+- **LRU Cache**: 1000 embeddings cached for efficiency
+- **Graceful Fallback**: Token overlap (Jaccard) when embeddings unavailable
+
+### Commits
+
+- `d0b955f feat(sprint45): Add embedding-based semantic matching (Feature 45.17)`
+
+---
+
 ## Success Criteria
 
 ### Feature 45.1-45.3: Backend
@@ -3058,3 +3105,70 @@ interface TrainingMetrics {
 - [KGGen Repository](https://github.com/stair-lab/kg-gen) - Inspiration for DSPy signatures
 - Sprint 44: Pipeline Monitoring (prerequisite)
 - ADR-045: Domain-Specific Extraction Strategy (TBD)
+
+---
+
+## Sprint Closure Notes (2025-12-12)
+
+### Completed Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| 45.1 Domain Registry Neo4j | ✅ | Domain nodes with embeddings |
+| 45.2 DSPy Integration Service | ✅ | BootstrapFewShot optimization |
+| 45.3 Training Status API | ✅ | Real-time progress via SSE |
+| 45.4 Domain Training Admin UI | ✅ | 3-step wizard |
+| 45.5 Training Progress Display | ✅ | Live log with SSE streaming |
+| 45.6 Domain Classifier | ✅ | Embedding-based classification |
+| 45.7 Upload Integration | ✅ | Domain suggestion on upload |
+| 45.12 Metric Configuration UI | ✅ | DSPy metric thresholds configurable |
+| 45.13 SSE Training Stream | ✅ | Full content streaming (not truncated) |
+| 45.17 Semantic Matching | ✅ | BGE-M3 embedding-based evaluation |
+
+### Deferred Features (Future Sprints)
+
+| Feature | Reason |
+|---------|--------|
+| 45.8 Generic Fallback Prompt | Not yet needed, current setup works |
+| 45.14 Prompt Template Comparison | Nice-to-have, low priority |
+| 45.15 JSONL Event Logging | Optional disk logging |
+| 45.16 DSPy/AnyLLM Integration | Cost tracking via proxy |
+
+### Open Items for Future Sprints
+
+1. **Manual Testing of Domain Concept**
+   - End-to-end testing with real domain data
+   - Verify extraction quality improvements
+   - Measure F1 improvement with semantic matching
+
+2. **Admin UI Improvements**
+   - Smaller fonts for better density
+   - Fewer graphical elements (streamline UI)
+   - Combine admin areas into sections on one page
+   - Reduce visual clutter, focus on functionality
+
+3. **Domain Auto-Discovery Enhancement**
+   - Auto-create domain title and description from uploaded document
+   - LLM-based analysis of sample document for metadata
+   - Suggest appropriate domain name based on content
+
+### Key Commits (Sprint 45)
+
+```
+d0b955f feat(sprint45): Add embedding-based semantic matching (Feature 45.17)
+90ca182 feat(sprint45): SSE streaming, DSPy fixes, and progress tracking
+54f5020 fix(dspy): Use proper DSPy Signature classes
+07b0fa5 fix(dspy): Use async-safe context for DSPy configuration
+20f753f fix(domain-training): Fix training workflow bugs
+4da6d97 refactor(frontend): Standardize JSONL format to match API directly
+ee52bc0 docs(sprint45): Add Metric Configuration UI (Feature 45.12)
+ea4ce78 docs(sprint45): Complete Sprint 45 plan with DSPy domain training
+945295c feat(evaluation): Add model quality comparison with Precision/Recall/F1
+```
+
+### Lessons Learned
+
+1. **Thread-Local Context**: DSPy LM configuration is thread-local; must re-configure inside ThreadPoolExecutor workers
+2. **SSE Timing**: Frontend needs ~500ms delay to establish connection before backend starts streaming
+3. **Semantic Matching**: Exact string matching gives poor F1 for German text; embeddings solve this
+4. **Progress Tracking**: Async callbacks require careful handling with `asyncio.iscoroutinefunction()`
