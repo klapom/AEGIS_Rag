@@ -25,6 +25,7 @@ from src.api.v1.admin import router as admin_router
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
+from src.api.v1.domain_training import router as domain_training_router  # Sprint 45 Feature 45.3
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP Tool Discovery
 from src.api.v1.memory import router as memory_router
@@ -310,6 +311,15 @@ logger.info(
     router="mcp_router",
     prefix="/api/v1/mcp",
     note="Sprint 40: MCP tool discovery and execution",
+)
+
+# Domain Training API router (Sprint 45: Feature 45.3 - Domain Training API)
+app.include_router(domain_training_router)
+logger.info(
+    "router_registered",
+    router="domain_training_router",
+    prefix="/admin/domains",
+    note="Sprint 45: DSPy-based domain training and classification",
 )
 
 # Graph visualization and analytics routers (Sprint 6: Features 6.5 & 6.6)
