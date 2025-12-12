@@ -24,6 +24,8 @@ import { CostDashboardPage } from './pages/admin/CostDashboardPage';
 import { AdminIndexingPage } from './pages/admin/AdminIndexingPage';
 import { AdminLLMConfigPage } from './pages/admin/AdminLLMConfigPage';
 import { SharedConversationPage } from './pages/SharedConversationPage';
+import { DomainTrainingPage } from './pages/admin/DomainTrainingPage';
+import { UploadPage } from './pages/admin/UploadPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -59,6 +61,8 @@ function App() {
                       <Route path="/admin/graph" element={<GraphAnalyticsPage />} />
                       <Route path="/admin/costs" element={<CostDashboardPage />} />
                       <Route path="/admin/llm-config" element={<AdminLLMConfigPage />} />
+                      <Route path="/admin/domain-training" element={<DomainTrainingPage />} />
+                      <Route path="/admin/upload" element={<UploadPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>
