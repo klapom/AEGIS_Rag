@@ -276,19 +276,17 @@ class DSPyOptimizer:
                     max_labeled_demos=3,
                 )
 
-                # Create signature dynamically
-                signature = type(
-                    "EntityExtractionSignature",
-                    (),
-                    {
-                        "__doc__": EntityExtractionSignature.get_instructions(),
-                        "source_text": dspy_module.InputField(),
-                        "entities": dspy_module.OutputField(desc="THOROUGH list of key entities"),
-                    },
-                )
+                # Create proper DSPy Signature class
+                class EntityExtractionSig(dspy_module.Signature):
+                    """Extract a THOROUGH list of key entities from the source text."""
+
+                    source_text: str = dspy_module.InputField()
+                    entities: list[str] = dspy_module.OutputField(
+                        desc="THOROUGH list of key entities"
+                    )
 
                 optimized_module = optimizer.compile(
-                    EntityExtractor(signature),
+                    EntityExtractor(EntityExtractionSig),
                     trainset=trainset,
                 )
 
@@ -451,22 +449,18 @@ class DSPyOptimizer:
                     max_labeled_demos=3,
                 )
 
-                # Create signature dynamically
-                signature = type(
-                    "RelationExtractionSignature",
-                    (),
-                    {
-                        "__doc__": RelationExtractionSignature.get_instructions(),
-                        "source_text": dspy_module.InputField(),
-                        "entities": dspy_module.InputField(),
-                        "relations": dspy_module.OutputField(
-                            desc="List of {subject, predicate, object} tuples"
-                        ),
-                    },
-                )
+                # Create proper DSPy Signature class
+                class RelationExtractionSig(dspy_module.Signature):
+                    """Extract subject-predicate-object triples from the source text."""
+
+                    source_text: str = dspy_module.InputField()
+                    entities: list[str] = dspy_module.InputField()
+                    relations: list[dict[str, str]] = dspy_module.OutputField(
+                        desc="List of {subject, predicate, object} tuples"
+                    )
 
                 optimized_module = optimizer.compile(
-                    RelationExtractor(signature),
+                    RelationExtractor(RelationExtractionSig),
                     trainset=trainset,
                 )
 
