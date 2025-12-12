@@ -955,8 +955,9 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 | 45.9 Domain Auto-Discovery | 5 | P1 |
 | 45.10 LLM-Grouped Ingestion | 3 | P1 |
 | 45.11 Training Data Augmentation | 5 | P1 |
-| 45.12 E2E Tests | 3 | P2 |
-| **Total** | **55** | |
+| 45.12 Metric Configuration UI | 3 | P1 |
+| 45.13 E2E Tests | 3 | P2 |
+| **Total** | **58** | |
 
 ### Deliverables
 - Admin UI für Domain-Training (Name, Description, LLM Model, Dataset)
@@ -967,6 +968,7 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 - **Domain Auto-Discovery**: 3-10 Sample-Dokumente hochladen → LLM generiert Titel/Description
 - **LLM-Grouped Ingestion**: Batch-Uploads nach LLM gruppieren für optimales Model Loading
 - **Training Data Augmentation**: LLM generiert zusätzliche Samples aus 5-10 Seed-Samples
+- **Metric Configuration**: Preset-Auswahl (F1/Recall/Precision) + Entity/Relation Gewichtung
 
 ### Key Decisions
 - **Neo4j statt SQLite** - Nutzt bestehende Infrastruktur, keine neue DB
@@ -994,6 +996,7 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 - [ ] Auto-Discovery generiert sinnvolle Domain-Vorschläge aus Samples
 - [ ] Batch-Uploads werden nach LLM gruppiert verarbeitet
 - [ ] Data Augmentation generiert valide Samples aus 5-10 Seeds
+- [ ] Metric Configuration erlaubt Preset-Auswahl + Gewichtung
 
 ### References
 - [SPRINT_45_PLAN.md](SPRINT_45_PLAN.md)

@@ -91,13 +91,14 @@
 | 45.9: Domain Auto-Discovery | 5 SP | P1 | Backend + Frontend |
 | 45.10: LLM-Grouped Ingestion | 3 SP | P1 | Backend |
 | 45.11: Training Data Augmentation | 5 SP | P1 | Backend |
-| 45.12: E2E Tests | 3 SP | P2 | Testing |
-| **Total** | **55 SP** | | |
+| 45.12: Metric Configuration UI | 3 SP | P1 | Backend + Frontend |
+| 45.13: E2E Tests | 3 SP | P2 | Testing |
+| **Total** | **58 SP** | | |
 
 ### Priority Overview
 - **P0 (Must Have):** Features 45.1-45.3 - Backend Core (16 SP)
-- **P1 (Should Have):** Features 45.4-45.7, 45.9-45.11 - UI + Auto-Discovery + Augmentation (34 SP)
-- **P2 (Nice to Have):** Features 45.8, 45.12 - Fallback + E2E Tests (5 SP)
+- **P1 (Should Have):** Features 45.4-45.7, 45.9-45.12 - UI + Auto-Discovery + Augmentation + Metrics (37 SP)
+- **P2 (Nice to Have):** Features 45.8, 45.13 - Fallback + E2E Tests (5 SP)
 
 ---
 
@@ -1853,7 +1854,366 @@ function DatasetUploadStep({ dataset, onDatasetChange }: Props) {
 
 ---
 
-## Feature 45.12: E2E Tests (3 SP) - P2
+## Feature 45.12: Metric Configuration UI (3 SP) - P1
+
+### Konzept
+
+Der Benutzer kann die Evaluationsmetrik für DSPy-Training konfigurieren:
+- **Preset-Auswahl:** F1, Recall-focused, Precision-focused
+- **Gewichtung:** Entity vs. Relation Importance
+- **Threshold:** Minimum Score für Few-Shot Demo Selection
+
+### API Models
+
+```python
+# src/api/v1/domain_training.py
+
+class MetricPreset(str, Enum):
+    F1_BALANCED = "f1"              # 50/50 Precision/Recall
+    RECALL_FOCUSED = "recall"        # Alle Entities finden, Extras ok
+    PRECISION_FOCUSED = "precision"  # Weniger aber korrekt
+
+
+class MetricConfiguration(BaseModel):
+    """Configuration for DSPy training metrics."""
+    preset: MetricPreset = MetricPreset.F1_BALANCED
+
+    # Advanced: Custom weights (0.0 - 1.0)
+    precision_weight: float = Field(default=0.5, ge=0.0, le=1.0)
+    recall_weight: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    # Entity vs Relation importance
+    entity_weight: float = Field(default=0.8, ge=0.0, le=1.0)
+    relation_weight: float = Field(default=0.2, ge=0.0, le=1.0)
+
+    # Minimum score for a sample to be used as few-shot demo
+    demo_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+
+    @validator('recall_weight', always=True)
+    def weights_sum_to_one(cls, v, values):
+        if 'precision_weight' in values:
+            # Auto-adjust recall_weight based on precision_weight
+            return 1.0 - values['precision_weight']
+        return v
+
+    @validator('relation_weight', always=True)
+    def entity_relation_sum(cls, v, values):
+        if 'entity_weight' in values:
+            return 1.0 - values['entity_weight']
+        return v
+
+
+# Update DomainCreateRequest
+class DomainCreateRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100, pattern="^[a-z_]+$")
+    description: str = Field(..., min_length=10, max_length=1000)
+    llm_model: str = Field(default="qwen3:32b")
+    metric_config: MetricConfiguration = Field(default_factory=MetricConfiguration)
+```
+
+### Backend Metric Factory
+
+```python
+# src/components/domain_training/metrics.py
+
+from enum import Enum
+from typing import Callable
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
+class MetricFactory:
+    """Creates metric functions based on configuration."""
+
+    @staticmethod
+    def create_entity_metric(config: MetricConfiguration) -> Callable:
+        """Create entity extraction metric based on config."""
+
+        def metric(example, prediction, trace=None):
+            gold = set(e.lower() for e in example.entities)
+            pred = set(e.lower() for e in prediction.entities)
+
+            if not gold and not pred:
+                return 1.0
+            if not gold:
+                return 0.0 if pred else 1.0
+            if not pred:
+                return 0.0
+
+            intersection = len(gold & pred)
+            precision = intersection / len(pred)
+            recall = intersection / len(gold)
+
+            # Weighted combination based on config
+            p_weight = config.precision_weight
+            r_weight = config.recall_weight
+
+            if config.preset == MetricPreset.F1_BALANCED:
+                # Standard F1
+                if precision + recall == 0:
+                    return 0.0
+                return 2 * precision * recall / (precision + recall)
+
+            elif config.preset == MetricPreset.RECALL_FOCUSED:
+                # Weighted towards recall (find all entities)
+                return 0.3 * precision + 0.7 * recall
+
+            elif config.preset == MetricPreset.PRECISION_FOCUSED:
+                # Weighted towards precision (avoid false positives)
+                return 0.7 * precision + 0.3 * recall
+
+            else:
+                # Custom weights
+                return p_weight * precision + r_weight * recall
+
+        return metric
+
+    @staticmethod
+    def create_relation_metric(config: MetricConfiguration) -> Callable:
+        """Create relation extraction metric based on config."""
+
+        def metric(example, prediction, trace=None):
+            def normalize(r):
+                return (
+                    r.get("subject", "").lower(),
+                    r.get("predicate", "").lower(),
+                    r.get("object", "").lower()
+                )
+
+            gold = set(normalize(r) for r in example.relations)
+            pred = set(normalize(r) for r in prediction.relations)
+
+            if not gold and not pred:
+                return 1.0
+            if not gold or not pred:
+                return 0.0
+
+            intersection = len(gold & pred)
+            precision = intersection / len(pred)
+            recall = intersection / len(gold)
+
+            # Apply same weighting as entity metric
+            p_weight = config.precision_weight
+            r_weight = config.recall_weight
+
+            return p_weight * precision + r_weight * recall
+
+        return metric
+
+    @staticmethod
+    def create_combined_metric(config: MetricConfiguration) -> Callable:
+        """Create combined metric weighing entities and relations."""
+        entity_metric = MetricFactory.create_entity_metric(config)
+        relation_metric = MetricFactory.create_relation_metric(config)
+
+        def metric(example, prediction, trace=None):
+            entity_score = entity_metric(example, prediction, trace)
+            relation_score = relation_metric(example, prediction, trace)
+
+            # Weighted combination
+            combined = (
+                config.entity_weight * entity_score +
+                config.relation_weight * relation_score
+            )
+
+            return combined
+
+        return metric
+```
+
+### Frontend Component
+
+```typescript
+// frontend/src/components/admin/MetricConfigStep.tsx
+
+interface MetricConfig {
+  preset: 'f1' | 'recall' | 'precision';
+  precisionWeight: number;
+  entityWeight: number;
+  demoThreshold: number;
+}
+
+export function MetricConfigStep({
+  config,
+  onChange
+}: {
+  config: MetricConfig;
+  onChange: (config: MetricConfig) => void;
+}) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const presets = [
+    {
+      value: 'f1',
+      label: 'F1 Score (Balanced)',
+      description: 'Equal weight on finding all entities and avoiding false positives',
+      recommended: true
+    },
+    {
+      value: 'recall',
+      label: 'Recall-focused',
+      description: 'Prioritize finding all entities, tolerate some extras'
+    },
+    {
+      value: 'precision',
+      label: 'Precision-focused',
+      description: 'Prioritize accuracy, may miss some entities'
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold">Evaluation Metric</h3>
+      <p className="text-gray-600">
+        Choose how DSPy should evaluate extraction quality during optimization.
+      </p>
+
+      {/* Preset Selection */}
+      <div className="space-y-2">
+        {presets.map((preset) => (
+          <label
+            key={preset.value}
+            className={`
+              flex items-start p-4 border rounded-lg cursor-pointer
+              ${config.preset === preset.value ? 'border-primary bg-primary/5' : 'border-gray-200'}
+            `}
+            data-testid={`metric-preset-${preset.value}`}
+          >
+            <input
+              type="radio"
+              name="metric-preset"
+              value={preset.value}
+              checked={config.preset === preset.value}
+              onChange={() => onChange({ ...config, preset: preset.value as MetricConfig['preset'] })}
+              className="mt-1"
+            />
+            <div className="ml-3">
+              <span className="font-medium">{preset.label}</span>
+              {preset.recommended && (
+                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                  Recommended
+                </span>
+              )}
+              <p className="text-sm text-gray-500">{preset.description}</p>
+            </div>
+          </label>
+        ))}
+      </div>
+
+      {/* Advanced Toggle */}
+      <button
+        type="button"
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="text-sm text-primary hover:underline"
+        data-testid="toggle-advanced-metrics"
+      >
+        {showAdvanced ? '▼ Hide advanced options' : '▶ Show advanced options'}
+      </button>
+
+      {/* Advanced Options */}
+      {showAdvanced && (
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          {/* Entity vs Relation Weight */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Entity vs Relation Weight
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={config.entityWeight * 100}
+              onChange={(e) => onChange({
+                ...config,
+                entityWeight: parseInt(e.target.value) / 100
+              })}
+              className="w-full"
+              data-testid="entity-weight-slider"
+            />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Entities: {Math.round(config.entityWeight * 100)}%</span>
+              <span>Relations: {Math.round((1 - config.entityWeight) * 100)}%</span>
+            </div>
+          </div>
+
+          {/* Demo Threshold */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Minimum Score for Few-Shot Examples
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={config.demoThreshold * 100}
+              onChange={(e) => onChange({
+                ...config,
+                demoThreshold: parseInt(e.target.value) / 100
+              })}
+              className="w-full"
+              data-testid="demo-threshold-slider"
+            />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Threshold: {Math.round(config.demoThreshold * 100)}%</span>
+              <span className="text-gray-400">
+                (Lower = more demos, Higher = stricter selection)
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Integration in DSPy Optimizer
+
+```python
+# src/components/domain_training/dspy_optimizer.py (updated)
+
+class DSPyOptimizer:
+    def __init__(self, llm_model: str, metric_config: MetricConfiguration):
+        self.llm_model = llm_model
+        self.metric_config = metric_config
+        self._configure_dspy()
+
+    async def optimize_entity_extraction(self, training_data: list[dict], ...):
+        # Use configured metric instead of hardcoded one
+        metric = MetricFactory.create_entity_metric(self.metric_config)
+
+        optimizer = dspy.BootstrapFewShot(
+            metric=metric,
+            max_bootstrapped_demos=4,
+            max_labeled_demos=8,
+            # Use configured threshold
+            metric_threshold=self.metric_config.demo_threshold,
+        )
+        # ...
+```
+
+### Neo4j Schema Update
+
+```cypher
+// Add metric_config to Domain node
+(:Domain {
+    // ... existing fields ...
+    metric_config: '{"preset": "f1", "entity_weight": 0.8, ...}',  // JSON
+})
+```
+
+### Deliverables
+- [ ] MetricConfiguration Pydantic model
+- [ ] MetricFactory with preset + custom metrics
+- [ ] MetricConfigStep frontend component
+- [ ] Integration in Domain creation wizard (Step 1.5)
+- [ ] Neo4j schema update for metric_config
+- [ ] Unit tests for metric calculations
+
+---
+
+## Feature 45.13: E2E Tests (3 SP) - P2
 
 ### Playwright Tests
 
