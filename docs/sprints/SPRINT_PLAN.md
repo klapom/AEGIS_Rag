@@ -935,7 +935,74 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
-## Sprint 45+: Backlog Candidates 📋
+## Sprint 45: Domain-Specific Prompt Optimization mit DSPy 📋
+**Ziel:** Admin UI für Domain-Training + Automatische Prompt-Optimierung + LLM-Gruppierung
+
+**Start:** TBD (nach Sprint 44)
+**Status:** PLANNED
+
+**Breakdown:**
+| Feature | SP | Priority |
+|---------|-----|----------|
+| 45.1 Domain Registry in Neo4j | 3 | P0 |
+| 45.2 DSPy Integration Service | 8 | P0 |
+| 45.3 Domain Training API | 5 | P0 |
+| 45.4 Domain Training Admin UI | 8 | P1 |
+| 45.5 Training Progress & Logging | 3 | P1 |
+| 45.6 Domain Classifier | 5 | P1 |
+| 45.7 Upload Page Domain Suggestion | 5 | P1 |
+| 45.8 Fallback Generic Prompt | 2 | P2 |
+| 45.9 Domain Auto-Discovery | 5 | P1 |
+| 45.10 LLM-Grouped Ingestion | 3 | P1 |
+| 45.11 Training Data Augmentation | 5 | P1 |
+| 45.12 E2E Tests | 3 | P2 |
+| **Total** | **55** | |
+
+### Deliverables
+- Admin UI für Domain-Training (Name, Description, LLM Model, Dataset)
+- DSPy Integration für automatische Prompt-Optimierung
+- Domain Registry in Neo4j (nutzt bestehende Infrastruktur)
+- Automatische Domain-Klassifikation bei Document Upload
+- Generischer Fallback-Prompt für unbekannte Domains
+- **Domain Auto-Discovery**: 3-10 Sample-Dokumente hochladen → LLM generiert Titel/Description
+- **LLM-Grouped Ingestion**: Batch-Uploads nach LLM gruppieren für optimales Model Loading
+- **Training Data Augmentation**: LLM generiert zusätzliche Samples aus 5-10 Seed-Samples
+
+### Key Decisions
+- **Neo4j statt SQLite** - Nutzt bestehende Infrastruktur, keine neue DB
+- **DSPy nur für Training** - Optimierte Prompts werden extrahiert und statisch gespeichert
+- **Kein DSPy in Production** - Keine zusätzliche Runtime-Dependency
+- **Domain = Prompt + Few-Shots** - Jede Domain hat eigene optimierte Prompts
+- **Embedding-basierte Klassifikation** - Domain-Description → Embedding → Cosine Similarity
+- **Single-Domain per Document** - Ein Dokument gehört zu genau einer Domain
+
+### Technical Tasks
+- Neo4j Schema für Domain + TrainingLog Nodes
+- DSPyOptimizer mit Ollama Backend
+- Background Task für Training mit Progress Logging
+- DomainClassifier mit BGE-M3 Embeddings
+- 3-Step Wizard UI (Config → Dataset → Training)
+- GroupedIngestionProcessor für Batch-Uploads
+- Auto-Discovery LLM-Prompt
+
+### Success Criteria
+- [ ] Domains können per UI erstellt und trainiert werden
+- [ ] DSPy optimiert Prompts automatisch (Entity + Relation)
+- [ ] Training-Progress in Echtzeit sichtbar
+- [ ] Documents werden automatisch zur passenden Domain klassifiziert
+- [ ] Fallback zu generischem Prompt bei niedriger Confidence (<50%)
+- [ ] Auto-Discovery generiert sinnvolle Domain-Vorschläge aus Samples
+- [ ] Batch-Uploads werden nach LLM gruppiert verarbeitet
+- [ ] Data Augmentation generiert valide Samples aus 5-10 Seeds
+
+### References
+- [SPRINT_45_PLAN.md](SPRINT_45_PLAN.md)
+- [DSPy Documentation](https://dspy.ai/)
+- ADR-045: Domain-Specific Extraction Strategy (TBD)
+
+---
+
+## Sprint 46+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
 |---------|-----|--------|
