@@ -36,6 +36,8 @@ from typing import Any, Union
 
 import structlog
 
+from src.components.domain_training.semantic_matcher import get_semantic_matcher
+
 logger = structlog.get_logger(__name__)
 
 
@@ -365,28 +367,34 @@ class DSPyOptimizer:
                 sample_counter[0] += 1
                 return result
 
-        # Define metric function with event emission
+        # Get semantic matcher for embedding-based comparison (Feature 45.17)
+        semantic_matcher = get_semantic_matcher(threshold=0.75)
+
+        # Define metric function with event emission and semantic matching
         def entity_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
-            """Calculate F1 score for entity extraction."""
+            """Calculate F1 score for entity extraction using semantic matching."""
             gold_entities = set(example.entities)
             pred_entities = set(pred.entities) if hasattr(pred, "entities") else set()
 
             if not gold_entities:
                 return 1.0 if not pred_entities else 0.0
 
-            tp = len(gold_entities & pred_entities)
-            fp = len(pred_entities - gold_entities)
-            fn = len(gold_entities - pred_entities)
+            # Use semantic matching instead of exact set intersection (Feature 45.17)
+            metrics = semantic_matcher.compute_entity_metrics(gold_entities, pred_entities)
+            precision = metrics["precision"]
+            recall = metrics["recall"]
+            f1 = metrics["f1"]
 
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+            # Calculate matched counts for logging
+            tp = int(recall * len(gold_entities)) if gold_entities else 0
+            fp = len(pred_entities) - tp
+            fn = len(gold_entities) - tp
 
             # Emit sample result event
             optimizer_self._emit_llm_event(
                 event_type="sample_result",
                 phase="entity_optimization",
-                message=f"Sample evaluated - F1: {f1:.3f}",
+                message=f"Sample evaluated - F1: {f1:.3f} (semantic)",
                 data={
                     "gold_entities": list(gold_entities),
                     "predicted_entities": list(pred_entities),
@@ -396,6 +404,7 @@ class DSPyOptimizer:
                     "precision": precision,
                     "recall": recall,
                     "f1": f1,
+                    "matching_mode": "semantic",
                 },
             )
 
@@ -580,51 +589,52 @@ class DSPyOptimizer:
                 sample_counter[0] += 1
                 return result
 
-        # Define metric function with event emission
+        # Get semantic matcher for embedding-based comparison (Feature 45.17)
+        semantic_matcher = get_semantic_matcher(threshold=0.70, predicate_weight=0.4)
+
+        # Define metric function with event emission and semantic matching
         def relation_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
-            """Calculate F1 score for relation extraction."""
-            gold_relations = {
-                (r["subject"], r["predicate"], r["object"])
+            """Calculate F1 score for relation extraction using semantic matching."""
+            gold_relations = [
+                {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
                 for r in example.relations
                 if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"])
-            }
-            pred_relations = {
-                (r["subject"], r["predicate"], r["object"])
+            ]
+            pred_relations = [
+                {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}
                 for r in (pred.relations if hasattr(pred, "relations") else [])
                 if isinstance(r, dict) and all(k in r for k in ["subject", "predicate", "object"])
-            }
+            ]
 
             if not gold_relations:
                 return 1.0 if not pred_relations else 0.0
 
-            tp = len(gold_relations & pred_relations)
-            fp = len(pred_relations - gold_relations)
-            fn = len(gold_relations - pred_relations)
+            # Use semantic matching instead of exact tuple comparison (Feature 45.17)
+            metrics = semantic_matcher.compute_relation_metrics(gold_relations, pred_relations)
+            precision = metrics["precision"]
+            recall = metrics["recall"]
+            f1 = metrics["f1"]
 
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+            # Calculate matched counts for logging
+            tp = int(recall * len(gold_relations)) if gold_relations else 0
+            fp = len(pred_relations) - tp
+            fn = len(gold_relations) - tp
 
             # Emit sample result event
             optimizer_self._emit_llm_event(
                 event_type="sample_result",
                 phase="relation_optimization",
-                message=f"Sample evaluated - F1: {f1:.3f}",
+                message=f"Sample evaluated - F1: {f1:.3f} (semantic)",
                 data={
-                    "gold_relations": [
-                        {"subject": s, "predicate": p, "object": o}
-                        for s, p, o in gold_relations
-                    ],
-                    "predicted_relations": [
-                        {"subject": s, "predicate": p, "object": o}
-                        for s, p, o in pred_relations
-                    ],
+                    "gold_relations": gold_relations,
+                    "predicted_relations": pred_relations,
                     "true_positives": tp,
                     "false_positives": fp,
                     "false_negatives": fn,
                     "precision": precision,
                     "recall": recall,
                     "f1": f1,
+                    "matching_mode": "semantic",
                 },
             )
 
