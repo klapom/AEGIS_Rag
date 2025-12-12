@@ -1,0 +1,719 @@
+"""Domain Repository for DSPy-based Training Configuration.
+
+Sprint 45 - Feature 45.1: Domain Registry in Neo4j
+
+This module provides a repository for managing domain-specific extraction prompts
+and training configurations in Neo4j. Domains are matched to documents using
+semantic similarity of description embeddings.
+
+Neo4j Schema:
+    (:Domain {
+        id: uuid,
+        name: string (unique, lowercase, underscores),
+        description: string,
+        description_embedding: float[] (1024-dim BGE-M3),
+        entity_prompt: string,
+        relation_prompt: string,
+        entity_examples: string (JSON array),
+        relation_examples: string (JSON array),
+        llm_model: string,
+        training_samples: int,
+        training_metrics: string (JSON object),
+        status: string (pending/training/ready/failed),
+        created_at: datetime,
+        updated_at: datetime,
+        trained_at: datetime
+    })
+
+    (:TrainingLog {
+        id: uuid,
+        started_at: datetime,
+        completed_at: datetime,
+        status: string (pending/running/completed/failed),
+        current_step: string,
+        progress_percent: float,
+        log_messages: string (JSON array),
+        metrics: string (JSON object),
+        error_message: string
+    })
+
+    (d:Domain)-[:HAS_TRAINING_LOG]->(t:TrainingLog)
+
+Example:
+    >>> repo = get_domain_repository()
+    >>> await repo.initialize()
+    >>> domain = await repo.create_domain(
+    ...     name="tech_docs",
+    ...     description="Technical documentation...",
+    ...     llm_model="qwen3:32b",
+    ...     description_embedding=[0.1, 0.2, ...]
+    ... )
+    >>> matched = await repo.find_best_matching_domain(doc_embedding)
+"""
+
+import json
+import uuid
+from datetime import datetime
+from typing import Any
+
+import structlog
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from src.components.graph_rag.neo4j_client import get_neo4j_client
+from src.core.config import settings
+from src.core.exceptions import DatabaseConnectionError
+
+logger = structlog.get_logger(__name__)
+
+# Constants
+DEFAULT_DOMAIN_NAME = "general"
+DEFAULT_DOMAIN_DESCRIPTION = (
+    "General-purpose domain for documents that don't match specialized domains"
+)
+DEFAULT_SIMILARITY_THRESHOLD = 0.5
+MAX_RETRY_ATTEMPTS = 3
+
+
+class DomainRepository:
+    """Repository for managing domain training configurations in Neo4j.
+
+    Provides methods for:
+    - Creating and managing domain configurations
+    - Semantic domain matching using embeddings
+    - Training log tracking with progress and metrics
+    - Default "general" domain fallback
+    """
+
+    def __init__(self) -> None:
+        """Initialize domain repository with Neo4j client."""
+        self.neo4j_client = get_neo4j_client()
+        logger.info(
+            "domain_repository_initialized",
+            neo4j_uri=settings.neo4j_uri,
+            neo4j_database=settings.neo4j_database,
+        )
+
+    @retry(
+        stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type(DatabaseConnectionError),
+    )
+    async def initialize(self) -> None:
+        """Initialize domain repository with constraints and default domain.
+
+        Creates:
+        - Unique constraint on Domain.name
+        - Vector index on Domain.description_embedding
+        - Default "general" domain if not exists
+
+        Raises:
+            DatabaseConnectionError: If initialization fails after retries
+        """
+        logger.info("initializing_domain_repository")
+
+        try:
+            # Create unique constraint on domain name
+            await self.neo4j_client.execute_write(
+                """
+                CREATE CONSTRAINT domain_name_unique IF NOT EXISTS
+                FOR (d:Domain) REQUIRE d.name IS UNIQUE
+                """
+            )
+            logger.info("domain_constraint_created")
+
+            # Create index on domain status for efficient filtering
+            await self.neo4j_client.execute_write(
+                """
+                CREATE INDEX domain_status_idx IF NOT EXISTS
+                FOR (d:Domain) ON (d.status)
+                """
+            )
+            logger.info("domain_status_index_created")
+
+            # Check if default domain exists
+            result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $name})
+                RETURN d
+                """,
+                {"name": DEFAULT_DOMAIN_NAME},
+            )
+
+            if not result:
+                # Create default "general" domain with zero embedding
+                # Zero embedding ensures it doesn't match any specific domain
+                zero_embedding = [0.0] * 1024  # BGE-M3 dimension
+                await self.create_domain(
+                    name=DEFAULT_DOMAIN_NAME,
+                    description=DEFAULT_DOMAIN_DESCRIPTION,
+                    llm_model=settings.lightrag_llm_model,
+                    description_embedding=zero_embedding,
+                )
+                logger.info("default_domain_created", name=DEFAULT_DOMAIN_NAME)
+            else:
+                logger.info("default_domain_exists", name=DEFAULT_DOMAIN_NAME)
+
+        except Exception as e:
+            logger.error("domain_repository_initialization_failed", error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Domain repository initialization failed: {e}")
+
+    async def create_domain(
+        self,
+        name: str,
+        description: str,
+        llm_model: str,
+        description_embedding: list[float],
+    ) -> dict[str, Any]:
+        """Create a new domain configuration.
+
+        Args:
+            name: Unique domain name (lowercase, underscores)
+            description: Human-readable domain description
+            llm_model: LLM model to use for extraction (e.g., "qwen3:32b")
+            description_embedding: BGE-M3 embedding of description (1024-dim)
+
+        Returns:
+            Dictionary with created domain properties
+
+        Raises:
+            DatabaseConnectionError: If domain creation fails
+            ValueError: If domain name already exists
+        """
+        logger.info(
+            "creating_domain",
+            name=name,
+            llm_model=llm_model,
+            embedding_dim=len(description_embedding),
+        )
+
+        # Validate name format (lowercase, underscores only)
+        if not name.replace("_", "").islower():
+            raise ValueError(f"Domain name must be lowercase with underscores: {name}")
+
+        # Validate embedding dimension
+        if len(description_embedding) != 1024:
+            raise ValueError(f"Embedding must be 1024-dim, got {len(description_embedding)}")
+
+        domain_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+
+        try:
+            # Create domain node
+            result = await self.neo4j_client.execute_write(
+                """
+                CREATE (d:Domain {
+                    id: $id,
+                    name: $name,
+                    description: $description,
+                    description_embedding: $embedding,
+                    entity_prompt: null,
+                    relation_prompt: null,
+                    entity_examples: '[]',
+                    relation_examples: '[]',
+                    llm_model: $llm_model,
+                    training_samples: 0,
+                    training_metrics: '{}',
+                    status: 'pending',
+                    created_at: datetime($created_at),
+                    updated_at: datetime($updated_at),
+                    trained_at: null
+                })
+                RETURN d.id as id, d.name as name, d.status as status
+                """,
+                {
+                    "id": domain_id,
+                    "name": name,
+                    "description": description,
+                    "embedding": description_embedding,
+                    "llm_model": llm_model,
+                    "created_at": now,
+                    "updated_at": now,
+                },
+            )
+
+            logger.info(
+                "domain_created",
+                domain_id=domain_id,
+                name=name,
+                status="pending",
+            )
+
+            return {
+                "id": domain_id,
+                "name": name,
+                "description": description,
+                "llm_model": llm_model,
+                "status": "pending",
+                "created_at": now,
+            }
+
+        except Exception as e:
+            if "ConstraintValidationFailed" in str(e):
+                raise ValueError(f"Domain with name '{name}' already exists") from e
+
+            logger.error("domain_creation_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Domain creation failed: {e}") from e
+
+    async def get_domain(self, name: str) -> dict[str, Any] | None:
+        """Get domain configuration by name.
+
+        Args:
+            name: Domain name
+
+        Returns:
+            Domain configuration dict or None if not found
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info("getting_domain", name=name)
+
+        try:
+            result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $name})
+                RETURN d.id as id, d.name as name, d.description as description,
+                       d.entity_prompt as entity_prompt, d.relation_prompt as relation_prompt,
+                       d.entity_examples as entity_examples,
+                       d.relation_examples as relation_examples,
+                       d.llm_model as llm_model, d.training_samples as training_samples,
+                       d.training_metrics as training_metrics, d.status as status,
+                       d.created_at as created_at, d.updated_at as updated_at,
+                       d.trained_at as trained_at
+                """,
+                {"name": name},
+            )
+
+            if not result:
+                logger.info("domain_not_found", name=name)
+                return None
+
+            domain = result[0]
+            logger.info("domain_retrieved", name=name, status=domain["status"])
+            return domain
+
+        except Exception as e:
+            logger.error("get_domain_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Get domain failed: {e}") from e
+
+    async def list_domains(self) -> list[dict[str, Any]]:
+        """List all domains.
+
+        Returns:
+            List of domain configuration dictionaries
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info("listing_domains")
+
+        try:
+            results = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain)
+                RETURN d.id as id, d.name as name, d.description as description,
+                       d.llm_model as llm_model, d.training_samples as training_samples,
+                       d.status as status, d.created_at as created_at,
+                       d.trained_at as trained_at
+                ORDER BY d.created_at DESC
+                """
+            )
+
+            logger.info("domains_listed", count=len(results))
+            return results
+
+        except Exception as e:
+            logger.error("list_domains_failed", error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"List domains failed: {e}") from e
+
+    async def update_domain_prompts(
+        self,
+        name: str,
+        entity_prompt: str,
+        relation_prompt: str,
+        entity_examples: list[dict[str, Any]],
+        relation_examples: list[dict[str, Any]],
+        metrics: dict[str, Any],
+    ) -> bool:
+        """Update domain prompts and training results after DSPy optimization.
+
+        Args:
+            name: Domain name
+            entity_prompt: Optimized entity extraction prompt
+            relation_prompt: Optimized relation extraction prompt
+            entity_examples: Entity extraction examples (list of dicts)
+            relation_examples: Relation extraction examples (list of dicts)
+            metrics: Training metrics (e.g., {"entity_f1": 0.85})
+
+        Returns:
+            True if update successful
+
+        Raises:
+            DatabaseConnectionError: If update fails
+        """
+        logger.info(
+            "updating_domain_prompts",
+            name=name,
+            entity_examples_count=len(entity_examples),
+            relation_examples_count=len(relation_examples),
+        )
+
+        now = datetime.utcnow().isoformat()
+        entity_examples_json = json.dumps(entity_examples)
+        relation_examples_json = json.dumps(relation_examples)
+        metrics_json = json.dumps(metrics)
+
+        try:
+            await self.neo4j_client.execute_write(
+                """
+                MATCH (d:Domain {name: $name})
+                SET d.entity_prompt = $entity_prompt,
+                    d.relation_prompt = $relation_prompt,
+                    d.entity_examples = $entity_examples,
+                    d.relation_examples = $relation_examples,
+                    d.training_samples = $training_samples,
+                    d.training_metrics = $metrics,
+                    d.status = 'ready',
+                    d.updated_at = datetime($updated_at),
+                    d.trained_at = datetime($trained_at)
+                RETURN d.name as name
+                """,
+                {
+                    "name": name,
+                    "entity_prompt": entity_prompt,
+                    "relation_prompt": relation_prompt,
+                    "entity_examples": entity_examples_json,
+                    "relation_examples": relation_examples_json,
+                    "training_samples": len(entity_examples) + len(relation_examples),
+                    "metrics": metrics_json,
+                    "updated_at": now,
+                    "trained_at": now,
+                },
+            )
+
+            logger.info("domain_prompts_updated", name=name, status="ready")
+            return True
+
+        except Exception as e:
+            logger.error("update_domain_prompts_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Update domain prompts failed: {e}") from e
+
+    async def find_best_matching_domain(
+        self,
+        document_embedding: list[float],
+        threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+    ) -> dict[str, Any] | None:
+        """Find best matching domain for a document using cosine similarity.
+
+        Args:
+            document_embedding: BGE-M3 embedding of document (1024-dim)
+            threshold: Minimum cosine similarity threshold (default: 0.5)
+
+        Returns:
+            Dict with {"domain": domain_dict, "score": float} or None if no match
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info(
+            "finding_best_matching_domain",
+            embedding_dim=len(document_embedding),
+            threshold=threshold,
+        )
+
+        # Validate embedding dimension
+        if len(document_embedding) != 1024:
+            raise ValueError(f"Embedding must be 1024-dim, got {len(document_embedding)}")
+
+        try:
+            # Calculate cosine similarity using Neo4j vector functions
+            # Note: Neo4j uses gds.similarity.cosine for vector similarity
+            # Formula: similarity = dot(a, b) / (norm(a) * norm(b))
+            results = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain)
+                WHERE d.status = 'ready' AND d.name <> $default_domain
+                WITH d,
+                     reduce(dot = 0.0, i IN range(0, size(d.description_embedding)-1) |
+                            dot + d.description_embedding[i] * $doc_embedding[i]) AS dot_product,
+                     sqrt(reduce(sum = 0.0, x IN d.description_embedding | sum + x * x)) AS norm_domain,
+                     sqrt(reduce(sum = 0.0, x IN $doc_embedding | sum + x * x)) AS norm_doc
+                WITH d, dot_product / (norm_domain * norm_doc) AS similarity
+                WHERE similarity >= $threshold
+                RETURN d.id as id, d.name as name, d.description as description,
+                       d.entity_prompt as entity_prompt, d.relation_prompt as relation_prompt,
+                       d.llm_model as llm_model, similarity
+                ORDER BY similarity DESC
+                LIMIT 1
+                """,
+                {
+                    "doc_embedding": document_embedding,
+                    "threshold": threshold,
+                    "default_domain": DEFAULT_DOMAIN_NAME,
+                },
+            )
+
+            if not results:
+                logger.info(
+                    "no_matching_domain_found",
+                    threshold=threshold,
+                    fallback=DEFAULT_DOMAIN_NAME,
+                )
+                return None
+
+            match = results[0]
+            score = match.pop("similarity")
+
+            logger.info(
+                "domain_matched",
+                domain_name=match["name"],
+                similarity_score=round(score, 3),
+            )
+
+            return {"domain": match, "score": score}
+
+        except Exception as e:
+            logger.error("find_best_matching_domain_failed", error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Find matching domain failed: {e}") from e
+
+    async def delete_domain(self, name: str) -> bool:
+        """Delete a domain and its training logs.
+
+        Args:
+            name: Domain name
+
+        Returns:
+            True if deletion successful, False if domain not found
+
+        Raises:
+            DatabaseConnectionError: If deletion fails
+            ValueError: If trying to delete default domain
+        """
+        if name == DEFAULT_DOMAIN_NAME:
+            raise ValueError(f"Cannot delete default domain: {name}")
+
+        logger.info("deleting_domain", name=name)
+
+        try:
+            result = await self.neo4j_client.execute_write(
+                """
+                MATCH (d:Domain {name: $name})
+                OPTIONAL MATCH (d)-[:HAS_TRAINING_LOG]->(t:TrainingLog)
+                DETACH DELETE d, t
+                RETURN count(d) AS deleted_count
+                """,
+                {"name": name},
+            )
+
+            deleted = result[0]["deleted_count"] > 0 if result else False
+
+            if deleted:
+                logger.info("domain_deleted", name=name)
+            else:
+                logger.warning("domain_not_found_for_deletion", name=name)
+
+            return deleted
+
+        except Exception as e:
+            logger.error("delete_domain_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Delete domain failed: {e}") from e
+
+    async def create_training_log(self, domain_name: str) -> dict[str, Any]:
+        """Create a new training log for a domain.
+
+        Args:
+            domain_name: Domain name
+
+        Returns:
+            Created training log dictionary
+
+        Raises:
+            DatabaseConnectionError: If creation fails
+        """
+        logger.info("creating_training_log", domain_name=domain_name)
+
+        log_id = str(uuid.uuid4())
+        now = datetime.utcnow().isoformat()
+
+        try:
+            result = await self.neo4j_client.execute_write(
+                """
+                MATCH (d:Domain {name: $domain_name})
+                CREATE (t:TrainingLog {
+                    id: $id,
+                    started_at: datetime($started_at),
+                    completed_at: null,
+                    status: 'pending',
+                    current_step: 'Initializing...',
+                    progress_percent: 0.0,
+                    log_messages: '[]',
+                    metrics: '{}',
+                    error_message: null
+                })
+                CREATE (d)-[:HAS_TRAINING_LOG]->(t)
+                SET d.status = 'training'
+                RETURN t.id as id, t.status as status, t.started_at as started_at
+                """,
+                {
+                    "id": log_id,
+                    "domain_name": domain_name,
+                    "started_at": now,
+                },
+            )
+
+            training_log = result[0] if result else {}
+            logger.info("training_log_created", log_id=log_id, domain=domain_name)
+
+            return {
+                "id": log_id,
+                "domain_name": domain_name,
+                "status": "pending",
+                "started_at": now,
+                "progress_percent": 0.0,
+            }
+
+        except Exception as e:
+            logger.error("create_training_log_failed", domain=domain_name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Create training log failed: {e}") from e
+
+    async def update_training_log(
+        self,
+        log_id: str,
+        progress: float,
+        message: str,
+        status: str | None = None,
+        metrics: dict[str, Any] | None = None,
+        error_message: str | None = None,
+    ) -> bool:
+        """Update training log progress and status.
+
+        Args:
+            log_id: Training log ID
+            progress: Progress percentage (0-100)
+            message: Progress message
+            status: Training status (pending/running/completed/failed)
+            metrics: Training metrics dictionary
+            error_message: Error message if failed
+
+        Returns:
+            True if update successful
+
+        Raises:
+            DatabaseConnectionError: If update fails
+        """
+        logger.info(
+            "updating_training_log",
+            log_id=log_id,
+            progress=progress,
+            status=status,
+        )
+
+        now = datetime.utcnow().isoformat()
+
+        # Build SET clause dynamically based on provided parameters
+        set_clauses = [
+            "t.progress_percent = $progress",
+            "t.current_step = $message",
+        ]
+        params: dict[str, Any] = {
+            "log_id": log_id,
+            "progress": progress,
+            "message": message,
+            "now": now,
+        }
+
+        if status:
+            set_clauses.append("t.status = $status")
+            params["status"] = status
+
+        if metrics:
+            set_clauses.append("t.metrics = $metrics")
+            params["metrics"] = json.dumps(metrics)
+
+        if error_message:
+            set_clauses.append("t.error_message = $error_message")
+            params["error_message"] = error_message
+
+        if status == "completed":
+            set_clauses.append("t.completed_at = datetime($now)")
+
+        set_clause = ", ".join(set_clauses)
+
+        try:
+            await self.neo4j_client.execute_write(
+                f"""
+                MATCH (t:TrainingLog {{id: $log_id}})
+                SET {set_clause}
+                RETURN t.id as id
+                """,
+                params,
+            )
+
+            logger.info("training_log_updated", log_id=log_id, progress=progress)
+            return True
+
+        except Exception as e:
+            logger.error("update_training_log_failed", log_id=log_id, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Update training log failed: {e}") from e
+
+    async def get_latest_training_log(self, domain_name: str) -> dict[str, Any] | None:
+        """Get latest training log for a domain.
+
+        Args:
+            domain_name: Domain name
+
+        Returns:
+            Latest training log dict or None if not found
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info("getting_latest_training_log", domain=domain_name)
+
+        try:
+            result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $domain_name})-[:HAS_TRAINING_LOG]->(t:TrainingLog)
+                RETURN t.id as id, t.started_at as started_at,
+                       t.completed_at as completed_at, t.status as status,
+                       t.current_step as current_step, t.progress_percent as progress_percent,
+                       t.log_messages as log_messages, t.metrics as metrics,
+                       t.error_message as error_message
+                ORDER BY t.started_at DESC
+                LIMIT 1
+                """,
+                {"domain_name": domain_name},
+            )
+
+            if not result:
+                logger.info("no_training_log_found", domain=domain_name)
+                return None
+
+            log = result[0]
+            logger.info("training_log_retrieved", domain=domain_name, status=log["status"])
+            return log
+
+        except Exception as e:
+            logger.error("get_latest_training_log_failed", domain=domain_name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Get training log failed: {e}") from e
+
+
+# Global instance (singleton pattern)
+_domain_repository: DomainRepository | None = None
+
+
+def get_domain_repository() -> DomainRepository:
+    """Get global domain repository instance (singleton).
+
+    Returns:
+        DomainRepository instance
+    """
+    global _domain_repository
+    if _domain_repository is None:
+        _domain_repository = DomainRepository()
+    return _domain_repository

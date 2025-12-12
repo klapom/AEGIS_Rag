@@ -291,6 +291,118 @@ class TestExtractionService:
         assert instance1 is instance2
 
 
+class TestExtractionServiceDomainAware:
+    """Test extraction service domain-aware features (Sprint 45)."""
+
+    @pytest.fixture
+    def extraction_service(self):
+        """Extraction service fixture."""
+        with patch("src.components.graph_rag.extraction_service.AegisLLMProxy"):
+            return ExtractionService(
+                llm_model="llama3.2:8b",
+                temperature=0.1,
+                max_tokens=4096,
+            )
+
+    @pytest.fixture
+    def mock_llm_response(self):
+        """Mock LLM proxy response generator."""
+        from src.components.llm_proxy.models import LLMResponse
+
+        def _response(json_data):
+            return LLMResponse(
+                content=json.dumps(json_data),
+                provider="local_ollama",
+                model="llama3.2:8b",
+                tokens_used=100,
+                cost_usd=0.0,
+            )
+
+        return _response
+
+    @pytest.mark.asyncio
+    async def test_get_extraction_prompts_with_domain(self, extraction_service):
+        """Test getting extraction prompts with domain support (Feature 45.8).
+
+        When domain-specific prompts are available, they should be returned
+        instead of generic prompts.
+        """
+        # This test is placeholder for future domain-aware prompt selection
+        # Currently all prompts use generic templates from extraction_prompts.py
+        from src.prompts.extraction_prompts import (
+            ENTITY_EXTRACTION_PROMPT,
+            RELATIONSHIP_EXTRACTION_PROMPT,
+        )
+
+        # Generic prompts should contain placeholders
+        assert "{text}" in ENTITY_EXTRACTION_PROMPT
+        assert "{text}" in RELATIONSHIP_EXTRACTION_PROMPT
+        assert "{entities}" in RELATIONSHIP_EXTRACTION_PROMPT
+
+    @pytest.mark.asyncio
+    async def test_entity_extraction_with_generic_prompts(
+        self, extraction_service, mock_llm_response
+    ):
+        """Test entity extraction using generic extraction prompts."""
+        mock_entities = [
+            {
+                "name": "TensorFlow",
+                "type": "TECHNOLOGY",
+                "description": "Machine learning framework",
+            },
+            {
+                "name": "Google",
+                "type": "ORGANIZATION",
+                "description": "Technology company",
+            },
+        ]
+
+        with patch.object(
+            extraction_service.llm_proxy,
+            "generate",
+            new=AsyncMock(return_value=mock_llm_response(mock_entities)),
+        ):
+            text = "TensorFlow is a machine learning framework developed by Google."
+            entities = await extraction_service.extract_entities(text, "ml_doc")
+
+            assert len(entities) == 2
+            assert entities[0].type == "TECHNOLOGY"
+            assert entities[1].type == "ORGANIZATION"
+
+    @pytest.mark.asyncio
+    async def test_relationship_extraction_with_generic_prompts(
+        self, extraction_service, mock_llm_response
+    ):
+        """Test relationship extraction using generic extraction prompts."""
+        entities = [
+            GraphEntity(id="e1", name="TensorFlow", type="TECHNOLOGY"),
+            GraphEntity(id="e2", name="Google", type="ORGANIZATION"),
+        ]
+
+        mock_relationships = [
+            {
+                "source": "TensorFlow",
+                "target": "Google",
+                "type": "DEVELOPED_BY",
+                "description": "TensorFlow is developed by Google",
+            }
+        ]
+
+        with patch.object(
+            extraction_service.llm_proxy,
+            "generate",
+            new=AsyncMock(return_value=mock_llm_response(mock_relationships)),
+        ):
+            text = "TensorFlow is a machine learning framework developed by Google."
+            relationships = await extraction_service.extract_relationships(
+                text, entities, "ml_doc"
+            )
+
+            assert len(relationships) == 1
+            assert relationships[0].source == "TensorFlow"
+            assert relationships[0].target == "Google"
+
+
 class TestExtractionServiceIntegration:
     """Integration tests for extraction service with real Ollama."""
 

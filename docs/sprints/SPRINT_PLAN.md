@@ -762,11 +762,12 @@
 
 ---
 
-## Sprint 44: Relation Deduplication & Full Pipeline Evaluation 📋
+## Sprint 44: Relation Deduplication & Full Pipeline Evaluation ✅
 **Ziel:** Relation Deduplication + Multi-Model Pipeline Evaluation mit Production-Grade Monitoring
 
 **Start:** 2025-12-12
-**Status:** IN PROGRESS
+**End:** 2025-12-12
+**Status:** COMPLETE
 
 ---
 
@@ -935,11 +936,11 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
-## Sprint 45: Domain-Specific Prompt Optimization mit DSPy 📋
+## Sprint 45: Domain-Specific Prompt Optimization mit DSPy 🔄
 **Ziel:** Admin UI für Domain-Training + Automatische Prompt-Optimierung + LLM-Gruppierung
 
-**Start:** TBD (nach Sprint 44)
-**Status:** PLANNED
+**Start:** 2025-12-12
+**Status:** IN PROGRESS
 
 **Breakdown:**
 | Feature | SP | Priority |

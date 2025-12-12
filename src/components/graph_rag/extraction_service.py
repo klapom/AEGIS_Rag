@@ -30,6 +30,8 @@ from src.core.config import settings
 from src.core.models import GraphEntity, GraphRelationship
 from src.prompts.extraction_prompts import (
     ENTITY_EXTRACTION_PROMPT,
+    GENERIC_ENTITY_EXTRACTION_PROMPT,
+    GENERIC_RELATION_EXTRACTION_PROMPT,
     RELATIONSHIP_EXTRACTION_PROMPT,
 )
 

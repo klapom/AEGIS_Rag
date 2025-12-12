@@ -2,6 +2,7 @@
 
 Sprint 5: Feature 5.3 - Entity & Relationship Extraction
 Sprint 13: Enhanced prompts for llama3.2:3b compatibility (TD-30 fix)
+Sprint 45: Feature 45.8 - Generic extraction prompts for domain fallback
 """
 
 # Entity Extraction Prompt with Few-Shot Examples
@@ -130,4 +131,41 @@ Guidelines:
 - Return only valid JSON (no additional text)
 
 Relationships:
+"""
+
+# Sprint 45 Feature 45.8: Generic Extraction Prompts for Domain Fallback
+# These prompts are used when no domain-specific prompts are available
+
+GENERIC_ENTITY_EXTRACTION_PROMPT = """Extract all significant entities from the following text.
+
+An entity is any named thing: person, organization, place, concept, technology, product, event, etc.
+Do NOT limit yourself to predefined types - extract whatever is meaningful in the context.
+
+Text:
+{text}
+
+Return a JSON array of entities. Each entity should have:
+- name: The exact name as it appears in text
+- type: Your best categorization (use natural language, e.g., "Software Framework")
+- description: Brief description based on context (1 sentence)
+
+Output (JSON array only):
+"""
+
+GENERIC_RELATION_EXTRACTION_PROMPT = """Extract relationships between the given entities from the text.
+
+Entities:
+{entities}
+
+Text:
+{text}
+
+Return subject-predicate-object triples where:
+- subject and object MUST be from the entity list above
+- predicate is a natural language description of the relationship
+
+Output format (JSON array):
+[{{"subject": "Entity1", "predicate": "relationship description", "object": "Entity2"}}]
+
+Output (JSON array only):
 """
