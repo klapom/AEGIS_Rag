@@ -1,6 +1,6 @@
 """Domain Training API Endpoints for DSPy-based Knowledge Graph Optimization.
 
-Sprint 45 - Feature 45.3: Domain Training API
+Sprint 45 - Feature 45.3, 45.10: Domain Training API
 
 This module provides FastAPI endpoints for managing domain-specific extraction prompts
 and training configurations. It enables creating domains, training them with DSPy,
@@ -15,6 +15,7 @@ Key Endpoints:
 - DELETE /admin/domains/{name} - Delete domain
 - GET /admin/domains/available-models - List Ollama models
 - POST /admin/domains/classify - Classify document to domain
+- POST /admin/domains/ingest-batch - Batch ingestion grouped by LLM model (45.10)
 
 Security:
 - All endpoints require authentication (future Sprint)
@@ -151,14 +152,10 @@ class TrainingStatusResponse(BaseModel):
     Provides real-time updates on DSPy optimization progress.
     """
 
-    status: str = Field(
-        ..., description="Training status (pending/running/completed/failed)"
-    )
+    status: str = Field(..., description="Training status (pending/running/completed/failed)")
     progress_percent: float = Field(..., ge=0, le=100, description="Progress percentage")
     current_step: str = Field(..., description="Current training step description")
-    logs: list[dict[str, Any]] = Field(
-        default_factory=list, description="Training log messages"
-    )
+    logs: list[dict[str, Any]] = Field(default_factory=list, description="Training log messages")
     metrics: dict[str, Any] | None = Field(
         default=None, description="Training metrics (available after completion)"
     )
@@ -205,6 +202,110 @@ class ClassificationResponse(BaseModel):
     )
     recommended: str = Field(..., description="Top recommended domain")
     confidence: float = Field(..., ge=0, le=1, description="Confidence of top recommendation")
+
+
+class BatchIngestionItemRequest(BaseModel):
+    """Single item in batch ingestion request."""
+
+    file_path: str = Field(..., description="Path to source document")
+    text: str = Field(..., min_length=10, max_length=50000, description="Document text")
+    domain: str = Field(..., description="Target domain for extraction")
+
+
+class BatchIngestionRequest(BaseModel):
+    """Request for batch ingestion grouped by LLM model.
+
+    Items will be automatically grouped by the LLM model configured for their
+    target domain, minimizing model switching overhead during extraction.
+    """
+
+    items: list[BatchIngestionItemRequest] = Field(
+        ..., min_items=1, description="List of documents to ingest"
+    )
+
+
+class BatchIngestionResponse(BaseModel):
+    """Response for batch ingestion request."""
+
+    message: str = Field(..., description="Status message")
+    total_items: int = Field(..., description="Total items in batch")
+    model_groups: dict[str, int] = Field(..., description="Count per LLM model")
+    domain_groups: dict[str, int] = Field(..., description="Count per domain")
+
+
+class AutoDiscoveryRequest(BaseModel):
+    """Request for domain auto-discovery.
+
+    Upload 3-10 representative documents and let the LLM analyze them
+    to suggest an appropriate domain configuration.
+    """
+
+    sample_texts: list[str] = Field(
+        ...,
+        min_items=3,
+        max_items=10,
+        description="3-10 representative document texts",
+    )
+    llm_model: str = Field(
+        default="qwen3:32b",
+        description="LLM model to use for analysis",
+    )
+
+
+class AutoDiscoveryResponse(BaseModel):
+    """Response from domain auto-discovery.
+
+    Contains the LLM's suggested domain configuration including name,
+    description, and expected entity/relation types.
+    """
+
+    name: str = Field(..., description="Suggested domain name (normalized)")
+    title: str = Field(..., description="Human-readable title")
+    description: str = Field(..., description="Detailed domain description")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence score")
+    reasoning: str = Field(..., description="LLM's reasoning for suggestion")
+    entity_types: list[str] = Field(..., description="Expected entity types")
+    relation_types: list[str] = Field(..., description="Expected relation types")
+
+
+class AugmentationRequest(BaseModel):
+    """Request for data augmentation.
+
+    Provides seed samples and configuration for LLM-based generation of
+    additional training data.
+    """
+
+    seed_samples: list[dict] = Field(
+        ...,
+        min_items=5,
+        max_items=10,
+        description="5-10 high-quality seed samples with text, entities, and relations",
+    )
+    target_count: int = Field(
+        default=20,
+        ge=5,
+        le=100,
+        description="Number of samples to generate (5-100)",
+    )
+    llm_model: str = Field(
+        default="qwen3:32b",
+        description="LLM model to use for generation",
+        examples=["qwen3:32b", "llama3.2:8b", "mistral:7b"],
+    )
+
+
+class AugmentationResponse(BaseModel):
+    """Response from data augmentation.
+
+    Contains generated samples and statistics about the augmentation process.
+    """
+
+    generated_samples: list[dict] = Field(..., description="Generated training samples (validated)")
+    seed_count: int = Field(..., description="Number of seed samples provided")
+    generated_count: int = Field(..., description="Number of samples generated (after validation)")
+    validation_rate: float = Field(
+        ..., ge=0, le=1, description="Validation rate (validated/target)"
+    )
 
 
 # --- Endpoints ---
@@ -836,4 +937,394 @@ async def classify_document(request: ClassificationRequest) -> ClassificationRes
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Classification failed",
+        )
+
+
+@router.post("/discover", response_model=AutoDiscoveryResponse)
+async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryResponse:
+    """Auto-discover domain from sample documents.
+
+    Upload 3-10 representative documents and let the LLM analyze their content
+    to suggest an appropriate domain name, description, and expected entity/relation types.
+
+    This endpoint is useful when you have a collection of documents but aren't sure
+    how to categorize them or what domain configuration to use.
+
+    Discovery process:
+    1. Sample documents are sent to LLM (qwen3:32b by default)
+    2. LLM analyzes content to identify common themes and patterns
+    3. LLM suggests domain name, description, and expected types
+    4. Response includes confidence score and reasoning
+
+    Args:
+        request: Auto-discovery request with sample texts and LLM model
+
+    Returns:
+        Suggested domain configuration with confidence and reasoning
+
+    Raises:
+        HTTPException 400: If less than 3 samples provided
+        HTTPException 503: If Ollama service is unavailable
+        HTTPException 500: If discovery fails
+    """
+    logger.info(
+        "discover_domain_request",
+        sample_count=len(request.sample_texts),
+        llm_model=request.llm_model,
+    )
+
+    try:
+        from src.components.domain_training import get_domain_discovery_service
+
+        service = get_domain_discovery_service()
+        service.llm_model = request.llm_model
+
+        # Perform discovery
+        suggestion = await service.discover_domain(request.sample_texts)
+
+        logger.info(
+            "domain_discovered",
+            name=suggestion.name,
+            confidence=suggestion.confidence,
+            entity_types_count=len(suggestion.entity_types),
+            relation_types_count=len(suggestion.relation_types),
+        )
+
+        return AutoDiscoveryResponse(
+            name=suggestion.name,
+            title=suggestion.title,
+            description=suggestion.description,
+            confidence=suggestion.confidence,
+            reasoning=suggestion.reasoning,
+            entity_types=suggestion.entity_types,
+            relation_types=suggestion.relation_types,
+        )
+
+    except ValueError as e:
+        # Insufficient samples or validation error
+        logger.warning(
+            "discover_domain_validation_error",
+            error=str(e),
+            sample_count=len(request.sample_texts),
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    except httpx.ConnectError as e:
+        logger.error("discover_domain_ollama_connection_error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ollama service is not available",
+        )
+
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "discover_domain_ollama_http_error",
+            status_code=e.response.status_code,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ollama API error: {e.response.status_code}",
+        )
+
+    except Exception as e:
+        logger.error(
+            "discover_domain_unexpected_error",
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Domain discovery failed",
+        )
+
+
+@router.post("/ingest-batch", response_model=BatchIngestionResponse)
+async def ingest_batch(
+    request: BatchIngestionRequest,
+    background_tasks: BackgroundTasks,
+) -> BatchIngestionResponse:
+    """Ingest documents in batches grouped by LLM model.
+
+    Items are automatically grouped by the LLM model configured for their
+    target domain, minimizing model switching overhead during extraction.
+
+    This endpoint optimizes batch processing by:
+    1. Loading each domain's LLM model configuration
+    2. Grouping items by model (largest batches first)
+    3. Processing each group sequentially with one model load
+    4. Reducing GPU memory thrashing and context switching
+
+    Processing runs in background, use domain status endpoints to monitor progress.
+
+    Args:
+        request: Batch ingestion request with list of documents
+        background_tasks: FastAPI background task handler
+
+    Returns:
+        Immediate response with grouping statistics
+
+    Raises:
+        HTTPException 400: If invalid domain or request data
+        HTTPException 500: If batch processing setup fails
+
+    Example:
+        >>> response = client.post("/admin/domains/ingest-batch", json={
+        ...     "items": [
+        ...         {
+        ...             "file_path": "/docs/api.md",
+        ...             "text": "FastAPI documentation...",
+        ...             "domain": "tech_docs"
+        ...         },
+        ...         {
+        ...             "file_path": "/legal/contract.pdf",
+        ...             "text": "This agreement...",
+        ...             "domain": "legal_contracts"
+        ...         }
+        ...     ]
+        ... })
+        >>> print(response.json())
+        {
+            "message": "Batch ingestion started",
+            "total_items": 2,
+            "model_groups": {"qwen3:32b": 1, "llama3.2:8b": 1},
+            "domain_groups": {"tech_docs": 1, "legal_contracts": 1}
+        }
+    """
+    logger.info(
+        "ingest_batch_request",
+        total_items=len(request.items),
+    )
+
+    try:
+        from collections import Counter
+
+        from src.components.domain_training import (
+            IngestionItem,
+            get_domain_repository,
+            get_grouped_ingestion_processor,
+        )
+
+        repo = get_domain_repository()
+
+        # Build ingestion items with model info
+        items: list[IngestionItem] = []
+        for item_data in request.items:
+            domain = await repo.get_domain(item_data.domain)
+
+            # Fallback to general domain if not found
+            if not domain:
+                logger.warning(
+                    "domain_not_found_fallback",
+                    domain=item_data.domain,
+                    file_path=item_data.file_path,
+                )
+                domain = await repo.get_domain("general")
+
+                # If even general domain doesn't exist, use default config
+                if not domain:
+                    domain = {
+                        "name": "general",
+                        "llm_model": "qwen3:32b",
+                    }
+
+            llm_model = domain.get("llm_model", "qwen3:32b")
+
+            items.append(
+                IngestionItem(
+                    file_path=item_data.file_path,
+                    text=item_data.text,
+                    domain=item_data.domain,
+                    llm_model=llm_model,
+                )
+            )
+
+        logger.info(
+            "ingestion_items_prepared",
+            total_items=len(items),
+            unique_domains=len(set(item.domain for item in items)),
+            unique_models=len(set(item.llm_model for item in items)),
+        )
+
+        # Process in background
+        processor = get_grouped_ingestion_processor()
+        background_tasks.add_task(processor.process_batch, items)
+
+        # Return immediate response with grouping info
+        model_counts = Counter(item.llm_model for item in items)
+        domain_counts = Counter(item.domain for item in items)
+
+        logger.info(
+            "batch_ingestion_started",
+            total_items=len(items),
+            model_groups=dict(model_counts),
+            domain_groups=dict(domain_counts),
+        )
+
+        return BatchIngestionResponse(
+            message="Batch ingestion started in background",
+            total_items=len(items),
+            model_groups=dict(model_counts),
+            domain_groups=dict(domain_counts),
+        )
+
+    except ValueError as e:
+        logger.warning(
+            "ingest_batch_validation_error",
+            error=str(e),
+            items_count=len(request.items),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    except DatabaseConnectionError as e:
+        logger.error(
+            "ingest_batch_db_error",
+            error=str(e),
+            items_count=len(request.items),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database operation failed",
+        )
+
+    except Exception as e:
+        logger.error(
+            "ingest_batch_unexpected_error",
+            error=str(e),
+            items_count=len(request.items),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Batch ingestion setup failed",
+        )
+
+
+@router.post("/augment", response_model=AugmentationResponse)
+async def augment_training_data(request: AugmentationRequest) -> AugmentationResponse:
+    """Generate additional training samples from seed examples.
+
+    Provide 5-10 high-quality seed samples, and the LLM will generate additional
+    samples in the same style/domain. This is useful for expanding small training
+    datasets to improve DSPy optimization results.
+
+    Augmentation process:
+    1. Format seed samples into few-shot prompt
+    2. Call Ollama LLM to generate batch of samples
+    3. Parse JSON response and validate structure
+    4. Filter by quality criteria (length, entity count)
+    5. Return validated samples
+
+    Quality Criteria:
+    - Text length: 50-2000 characters
+    - Minimum entities: 2
+    - Valid JSON structure with text, entities, relations
+
+    Args:
+        request: Augmentation request with seed samples and configuration
+
+    Returns:
+        Generated samples with validation statistics
+
+    Raises:
+        HTTPException 400: If less than 5 seed samples provided
+        HTTPException 503: If Ollama service is not available
+        HTTPException 500: If generation fails
+
+    Example:
+        >>> response = client.post("/admin/domains/augment", json={
+        ...     "seed_samples": [
+        ...         {
+        ...             "text": "FastAPI is a modern web framework...",
+        ...             "entities": ["FastAPI", "web framework"],
+        ...             "relations": [
+        ...                 {"subject": "FastAPI", "predicate": "is_a", "object": "web framework"}
+        ...             ]
+        ...         },
+        ...         ...  # 5-10 seed samples
+        ...     ],
+        ...     "target_count": 20,
+        ...     "llm_model": "qwen3:32b"
+        ... })
+        >>> print(f"Generated {response.json()['generated_count']} samples")
+    """
+    logger.info(
+        "augment_training_data_request",
+        seed_count=len(request.seed_samples),
+        target_count=request.target_count,
+        llm_model=request.llm_model,
+    )
+
+    try:
+        from src.components.domain_training import get_training_data_augmenter
+
+        # Get augmenter and configure model
+        augmenter = get_training_data_augmenter()
+        augmenter.llm_model = request.llm_model
+
+        # Generate samples
+        generated = await augmenter.augment(
+            seed_samples=request.seed_samples,
+            target_count=request.target_count,
+        )
+
+        logger.info(
+            "training_data_augmented",
+            seed_count=len(request.seed_samples),
+            target_count=request.target_count,
+            generated_count=len(generated),
+            validation_rate=(
+                len(generated) / request.target_count if request.target_count > 0 else 0
+            ),
+        )
+
+        return AugmentationResponse(
+            generated_samples=generated,
+            seed_count=len(request.seed_samples),
+            generated_count=len(generated),
+            validation_rate=(
+                len(generated) / request.target_count if request.target_count > 0 else 0
+            ),
+        )
+
+    except ValueError as e:
+        # Less than 5 seed samples
+        logger.warning(
+            "augmentation_validation_error",
+            seed_count=len(request.seed_samples),
+            error=str(e),
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    except httpx.ConnectError as e:
+        logger.error("augmentation_ollama_connection_error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ollama service is not available",
+        )
+
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "augmentation_ollama_http_error",
+            status_code=e.response.status_code,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ollama API error: {e.response.status_code}",
+        )
+
+    except Exception as e:
+        logger.error(
+            "augment_training_data_unexpected_error",
+            seed_count=len(request.seed_samples),
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Training data augmentation failed",
         )
