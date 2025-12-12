@@ -1,1 +1,1 @@
-"""Unit tests for domain training module."""
+"""Unit tests for domain training component."""

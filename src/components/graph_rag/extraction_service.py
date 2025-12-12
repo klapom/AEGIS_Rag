@@ -203,6 +203,68 @@ class ExtractionService:
             max_tokens=self.max_tokens,
         )
 
+    async def get_extraction_prompts(
+        self, domain: str | None = None
+    ) -> tuple[str, str]:
+        """Get extraction prompts for a given domain.
+
+        Sprint 45 Feature 45.8: Domain-specific or generic fallback prompts.
+
+        If domain is provided and has custom prompts, use those.
+        Otherwise, fall back to generic extraction prompts.
+
+        Args:
+            domain: Domain name (e.g., "tech_docs", "legal_contracts")
+
+        Returns:
+            Tuple of (entity_prompt, relation_prompt)
+
+        Example:
+            >>> service = get_extraction_service()
+            >>> entity_prompt, relation_prompt = await service.get_extraction_prompts("tech_docs")
+            >>> # If tech_docs domain exists with custom prompts, returns those
+            >>> # Otherwise returns generic prompts
+        """
+        # Import here to avoid circular dependency
+        from src.components.domain_training import get_domain_repository
+
+        # If no domain specified, use generic prompts
+        if not domain:
+            logger.info("using_generic_prompts", reason="no_domain_specified")
+            return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+
+        try:
+            # Try to get domain-specific prompts
+            domain_repo = get_domain_repository()
+            domain_config = await domain_repo.get_domain(domain)
+
+            if domain_config and domain_config.get("entity_prompt") and domain_config.get("relation_prompt"):
+                logger.info(
+                    "using_domain_specific_prompts",
+                    domain=domain,
+                    status=domain_config.get("status"),
+                )
+                return (
+                    domain_config["entity_prompt"],
+                    domain_config["relation_prompt"],
+                )
+            else:
+                logger.info(
+                    "using_generic_prompts",
+                    reason="domain_not_found_or_no_prompts",
+                    domain=domain,
+                )
+                return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+
+        except Exception as e:
+            # If anything goes wrong, fall back to generic prompts
+            logger.warning(
+                "domain_prompt_lookup_failed_using_generic",
+                domain=domain,
+                error=str(e),
+            )
+            return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+
     def _parse_json_response(
         self, response: str, data_type: str = "entity"
     ) -> list[dict[str, Any]]:

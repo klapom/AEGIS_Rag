@@ -321,23 +321,125 @@ class TestExtractionServiceDomainAware:
         return _response
 
     @pytest.mark.asyncio
-    async def test_get_extraction_prompts_with_domain(self, extraction_service):
-        """Test getting extraction prompts with domain support (Feature 45.8).
+    async def test_get_extraction_prompts_no_domain(self, extraction_service):
+        """Test getting extraction prompts without domain (Feature 45.8).
 
-        When domain-specific prompts are available, they should be returned
-        instead of generic prompts.
+        When no domain is specified, should return generic prompts.
         """
-        # This test is placeholder for future domain-aware prompt selection
-        # Currently all prompts use generic templates from extraction_prompts.py
         from src.prompts.extraction_prompts import (
-            ENTITY_EXTRACTION_PROMPT,
-            RELATIONSHIP_EXTRACTION_PROMPT,
+            GENERIC_ENTITY_EXTRACTION_PROMPT,
+            GENERIC_RELATION_EXTRACTION_PROMPT,
         )
 
-        # Generic prompts should contain placeholders
-        assert "{text}" in ENTITY_EXTRACTION_PROMPT
-        assert "{text}" in RELATIONSHIP_EXTRACTION_PROMPT
-        assert "{entities}" in RELATIONSHIP_EXTRACTION_PROMPT
+        entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(None)
+
+        assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
+        assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+
+    @pytest.mark.asyncio
+    async def test_get_extraction_prompts_domain_not_found(self, extraction_service):
+        """Test getting prompts when domain doesn't exist (Feature 45.8).
+
+        When domain is not found, should fall back to generic prompts.
+        """
+        from src.prompts.extraction_prompts import (
+            GENERIC_ENTITY_EXTRACTION_PROMPT,
+            GENERIC_RELATION_EXTRACTION_PROMPT,
+        )
+
+        # Create a mock DomainRepository instance
+        mock_repo = AsyncMock()
+        mock_repo.get_domain = AsyncMock(return_value=None)
+
+        # Patch get_domain_repository directly in the method where it's called
+        with patch("src.components.domain_training.get_domain_repository", return_value=mock_repo):
+            entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(
+                "nonexistent_domain"
+            )
+
+            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
+            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+            assert mock_repo.get_domain.await_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_extraction_prompts_domain_no_prompts(self, extraction_service):
+        """Test getting prompts when domain exists but has no custom prompts (Feature 45.8).
+
+        When domain exists but entity_prompt/relation_prompt are None, fall back to generic.
+        """
+        from src.prompts.extraction_prompts import (
+            GENERIC_ENTITY_EXTRACTION_PROMPT,
+            GENERIC_RELATION_EXTRACTION_PROMPT,
+        )
+
+        mock_repo = AsyncMock()
+        mock_repo.get_domain = AsyncMock(
+            return_value={
+                "name": "tech_docs",
+                "status": "pending",
+                "entity_prompt": None,  # Not yet trained
+                "relation_prompt": None,
+            }
+        )
+
+        with patch("src.components.domain_training.get_domain_repository", return_value=mock_repo):
+            entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(
+                "tech_docs"
+            )
+
+            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
+            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
+
+    @pytest.mark.asyncio
+    async def test_get_extraction_prompts_domain_with_custom_prompts(self, extraction_service):
+        """Test getting prompts when domain has custom prompts (Feature 45.8).
+
+        When domain exists with trained prompts, should return those.
+        """
+        custom_entity_prompt = "Extract technical entities from: {text}"
+        custom_relation_prompt = "Extract technical relations between: {entities} in {text}"
+
+        mock_repo = AsyncMock()
+        mock_repo.get_domain = AsyncMock(
+            return_value={
+                "name": "tech_docs",
+                "status": "ready",
+                "entity_prompt": custom_entity_prompt,
+                "relation_prompt": custom_relation_prompt,
+            }
+        )
+
+        with patch("src.components.domain_training.get_domain_repository", return_value=mock_repo):
+            entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(
+                "tech_docs"
+            )
+
+            assert entity_prompt == custom_entity_prompt
+            assert relation_prompt == custom_relation_prompt
+            assert mock_repo.get_domain.await_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_extraction_prompts_fallback_on_error(self, extraction_service):
+        """Test getting prompts falls back to generic on database error (Feature 45.8).
+
+        When domain repository raises an exception, should gracefully fall back to generic prompts.
+        """
+        from src.prompts.extraction_prompts import (
+            GENERIC_ENTITY_EXTRACTION_PROMPT,
+            GENERIC_RELATION_EXTRACTION_PROMPT,
+        )
+
+        mock_repo = AsyncMock()
+        mock_repo.get_domain = AsyncMock(side_effect=Exception("Database connection failed"))
+
+        with patch("src.components.domain_training.get_domain_repository", return_value=mock_repo):
+            entity_prompt, relation_prompt = await extraction_service.get_extraction_prompts(
+                "tech_docs"
+            )
+
+            # Should fall back to generic prompts even on error
+            assert entity_prompt == GENERIC_ENTITY_EXTRACTION_PROMPT
+            assert relation_prompt == GENERIC_RELATION_EXTRACTION_PROMPT
 
     @pytest.mark.asyncio
     async def test_entity_extraction_with_generic_prompts(
