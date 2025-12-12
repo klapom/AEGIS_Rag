@@ -173,6 +173,18 @@ optional = true
 [tool.poetry.group.monitoring.dependencies]
 psutil = "^5.9.0"  # System resource monitoring (memory/VRAM checks in ingestion - Sprint 32)
 
+# ----------------------------------------------------------------------------
+# DOMAIN-TRAINING GROUP: DSPy-based prompt optimization for KG extraction
+# Install: poetry install --with domain-training
+# Size: ~200MB (DSPy + dependencies)
+# NOTE: Optional for domain-specific prompt optimization (Sprint 45, Feature 45.2)
+# ----------------------------------------------------------------------------
+[tool.poetry.group.domain-training]
+optional = true
+
+[tool.poetry.group.domain-training.dependencies]
+dspy-ai = "^2.5.0"  # DSPy for prompt optimization with BootstrapFewShot (Sprint 45, Feature 45.2)
+
 # ============================================================================
 # DEVELOPMENT DEPENDENCIES (Install with: poetry install --with dev)
 # ============================================================================
