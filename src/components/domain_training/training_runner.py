@@ -233,8 +233,13 @@ async def run_dspy_optimization(
         )
 
         # Extract static prompts from DSPy results
-        entity_prompt = extract_prompt_from_dspy_result(entity_result)
-        relation_prompt = extract_prompt_from_dspy_result(relation_result)
+        # extract_prompt_from_dspy_result returns a dict with prompt_template key
+        entity_prompt_data = extract_prompt_from_dspy_result(entity_result)
+        relation_prompt_data = extract_prompt_from_dspy_result(relation_result)
+
+        # Get the actual prompt template strings for Neo4j storage
+        entity_prompt = entity_prompt_data.get("prompt_template", "")
+        relation_prompt = relation_prompt_data.get("prompt_template", "")
 
         # Extract examples (demos)
         entity_examples = entity_result.get("demos", [])

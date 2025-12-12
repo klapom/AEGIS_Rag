@@ -548,7 +548,8 @@ class DomainRepository:
         now = datetime.utcnow().isoformat()
 
         try:
-            result = await self.neo4j_client.execute_write(
+            # Use execute_query instead of execute_write to get RETURN values
+            result = await self.neo4j_client.execute_query(
                 """
                 MATCH (d:Domain {name: $domain_name})
                 CREATE (t:TrainingLog {
@@ -573,7 +574,9 @@ class DomainRepository:
                 },
             )
 
-            training_log = result[0] if result else {}
+            if not result:
+                raise ValueError(f"Domain '{domain_name}' not found")
+
             logger.info("training_log_created", log_id=log_id, domain=domain_name)
 
             return {
@@ -584,6 +587,8 @@ class DomainRepository:
                 "progress_percent": 0.0,
             }
 
+        except ValueError:
+            raise
         except Exception as e:
             logger.error("create_training_log_failed", domain=domain_name, error=str(e))
             raise DatabaseConnectionError("Neo4j", f"Create training log failed: {e}") from e
