@@ -22,14 +22,8 @@ export interface Domain {
   updated_at?: string;
 }
 
+// Training sample format - matches API directly
 export interface TrainingSample {
-  input: string | { source_text: string };
-  output: string | { entities: string[]; relations?: Array<{ subject: string; predicate: string; object: string }> };
-  metadata?: Record<string, unknown>;
-}
-
-// API format for training samples
-interface ApiTrainingSample {
   text: string;
   entities: string[];
   relations?: Array<{ subject: string; predicate: string; object: string }>;
@@ -144,36 +138,9 @@ export function useStartTraining() {
       setIsLoading(true);
       setError(null);
       try {
-        // Transform frontend format to API format
-        const apiSamples: ApiTrainingSample[] = data.dataset.map((sample) => {
-          // Extract text from input
-          const text = typeof sample.input === 'string'
-            ? sample.input
-            : sample.input?.source_text || '';
-
-          // Extract entities and relations from output
-          let entities: string[] = [];
-          let relations: Array<{ subject: string; predicate: string; object: string }> = [];
-
-          if (typeof sample.output === 'string') {
-            // Try to parse as JSON, otherwise treat as single entity
-            try {
-              const parsed = JSON.parse(sample.output);
-              entities = parsed.entities || [sample.output];
-              relations = parsed.relations || [];
-            } catch {
-              entities = [sample.output];
-            }
-          } else if (sample.output) {
-            entities = sample.output.entities || [];
-            relations = sample.output.relations || [];
-          }
-
-          return { text, entities, relations };
-        });
-
+        // Send samples directly - format already matches API
         await apiClient.post<void>(`/admin/domains/${data.domain}/train`, {
-          samples: apiSamples,
+          samples: data.dataset,
         });
       } catch (err) {
         const error = err instanceof Error ? err : new Error('Failed to start training');

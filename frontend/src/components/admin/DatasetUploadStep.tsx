@@ -38,15 +38,15 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
         try {
           const sample = JSON.parse(line);
 
-          // Validate sample structure
-          if (!sample.input || !sample.output) {
-            throw new Error('Each sample must have "input" and "output" fields');
+          // Validate sample structure - must have text and entities (API format)
+          if (!sample.text || !Array.isArray(sample.entities)) {
+            throw new Error('Each sample must have "text" (string) and "entities" (array) fields');
           }
 
           samples.push({
-            input: sample.input,
-            output: sample.output,
-            metadata: sample.metadata,
+            text: sample.text,
+            entities: sample.entities,
+            relations: sample.relations || [],
           });
         } catch (err) {
           throw new Error(
@@ -112,8 +112,7 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
           </svg>
           <span className="text-lg font-medium text-gray-700">Choose JSONL file</span>
           <span className="text-sm text-gray-500 mt-2">
-            Each line should be: {'{'}
-            "input": "question", "output": "answer"{'}'}
+            Format: {'{"text": "...", "entities": ["..."], "relations": [...]}'}
           </span>
         </label>
       </div>
@@ -153,21 +152,29 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
               >
                 <div className="space-y-2">
                   <div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase">Input</span>
-                    <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
-                      {typeof sample.input === 'string'
-                        ? sample.input
-                        : sample.input?.source_text || JSON.stringify(sample.input, null, 2)}
+                    <span className="text-xs font-semibold text-gray-500 uppercase">Text</span>
+                    <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap line-clamp-3">
+                      {sample.text}
                     </p>
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase">Output</span>
-                    <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap bg-gray-50 p-2 rounded overflow-auto max-h-32">
-                      {typeof sample.output === 'string'
-                        ? sample.output
-                        : JSON.stringify(sample.output, null, 2)}
-                    </pre>
+                    <span className="text-xs font-semibold text-gray-500 uppercase">Entities ({sample.entities.length})</span>
+                    <p className="text-sm text-gray-700 mt-1">
+                      {sample.entities.slice(0, 8).join(', ')}
+                      {sample.entities.length > 8 && ` +${sample.entities.length - 8} more`}
+                    </p>
                   </div>
+                  {sample.relations && sample.relations.length > 0 && (
+                    <div>
+                      <span className="text-xs font-semibold text-gray-500 uppercase">Relations ({sample.relations.length})</span>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {sample.relations.slice(0, 3).map((r, i) => (
+                          <span key={i} className="block">{r.subject} → {r.predicate} → {r.object}</span>
+                        ))}
+                        {sample.relations.length > 3 && <span className="text-gray-400">+{sample.relations.length - 3} more</span>}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
