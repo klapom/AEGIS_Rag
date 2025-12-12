@@ -1,14 +1,27 @@
 /**
  * DomainConfigStep Component
  * Sprint 45 Feature 45.4: Domain Training Admin UI
+ * Updated Sprint 45 Feature 45.12: Added Metric Configuration
  *
- * Step 1 of domain wizard: Configure domain name, description, and model
+ * Step 1 of domain wizard: Configure domain name, description, model, and metrics
  */
+
+import { useState } from 'react';
+import { MetricConfigPanel } from './MetricConfigPanel';
+
+interface MetricConfig {
+  preset: 'balanced' | 'precision_focused' | 'recall_focused' | 'custom';
+  entity_weight: number;
+  relation_weight: number;
+  entity_metric: 'f1' | 'precision' | 'recall';
+  relation_metric: 'f1' | 'precision' | 'recall';
+}
 
 interface DomainConfig {
   name: string;
   description: string;
   llm_model: string;
+  metricConfig?: MetricConfig;
 }
 
 interface DomainConfigStepProps {
@@ -27,6 +40,23 @@ export function DomainConfigStep({
   onCancel,
 }: DomainConfigStepProps) {
   const isValid = config.name.trim() !== '' && config.description.trim() !== '';
+
+  // Initialize metric config with default balanced preset
+  const [metricConfig, setMetricConfig] = useState<MetricConfig>(
+    config.metricConfig || {
+      preset: 'balanced',
+      entity_weight: 0.5,
+      relation_weight: 0.5,
+      entity_metric: 'f1',
+      relation_metric: 'f1',
+    }
+  );
+
+  // Update parent config when metric config changes
+  const handleMetricConfigChange = (newMetricConfig: MetricConfig) => {
+    setMetricConfig(newMetricConfig);
+    onChange({ ...config, metricConfig: newMetricConfig });
+  };
 
   return (
     <div className="space-y-6" data-testid="domain-config-step">
@@ -96,6 +126,9 @@ export function DomainConfigStep({
           Select a specific model for this domain, or use the default
         </p>
       </div>
+
+      {/* Metric Configuration */}
+      <MetricConfigPanel value={metricConfig} onChange={handleMetricConfigChange} />
 
       {/* Actions */}
       <div className="flex justify-end space-x-4 pt-4 border-t">
