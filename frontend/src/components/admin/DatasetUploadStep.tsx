@@ -1,8 +1,9 @@
 /**
  * DatasetUploadStep Component
- * Sprint 45 Feature 45.4: Domain Training Admin UI
+ * Sprint 45 Feature 45.4, 45.13: Domain Training Admin UI with JSONL Log Export
  *
  * Step 2 of domain wizard: Upload JSONL dataset with preview
+ * Includes optional log path for saving training events to JSONL
  */
 
 import { useState, useRef } from 'react';
@@ -12,13 +13,15 @@ interface DatasetUploadStepProps {
   dataset: TrainingSample[];
   onUpload: (samples: TrainingSample[]) => void;
   onBack: () => void;
-  onNext: () => void;
+  onNext: (logPath?: string) => void;
   isLoading?: boolean;
   error?: string | null;
 }
 
 export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading = false, error: submitError }: DatasetUploadStepProps) {
   const [parseError, setParseError] = useState<string | null>(null);
+  const [logPath, setLogPath] = useState<string>('');
+  const [showLogPathInput, setShowLogPathInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,6 +190,39 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
         </div>
       )}
 
+      {/* Log Path Input (Feature 45.13) */}
+      {dataset.length > 0 && (
+        <div className="space-y-2">
+          <button
+            onClick={() => setShowLogPathInput(!showLogPathInput)}
+            className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+          >
+            <span>{showLogPathInput ? '▼' : '▶'}</span>
+            Advanced: JSONL Training Log Export
+          </button>
+          {showLogPathInput && (
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+              <label htmlFor="log-path" className="block text-sm font-medium text-gray-700">
+                Training Log Path (optional)
+              </label>
+              <input
+                id="log-path"
+                type="text"
+                value={logPath}
+                onChange={(e) => setLogPath(e.target.value)}
+                placeholder="/var/log/aegis/training/domain_2025-12-12.jsonl"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                data-testid="log-path-input"
+              />
+              <p className="text-xs text-gray-500">
+                Save all training events (prompts, responses, scores) to a JSONL file for later DSPy evaluation.
+                Leave empty to skip logging.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-between pt-4 border-t">
         <button
@@ -197,24 +233,34 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
         >
           Back
         </button>
-        <button
-          onClick={onNext}
-          disabled={!isValid || isLoading}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-          data-testid="dataset-upload-next"
-        >
-          {isLoading ? (
-            <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        <div className="flex items-center gap-3">
+          {logPath && (
+            <span className="text-xs text-green-600 flex items-center gap-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Starting Training...
-            </>
-          ) : (
-            'Start Training'
+              Log to: {logPath.split('/').pop()}
+            </span>
           )}
-        </button>
+          <button
+            onClick={() => onNext(logPath || undefined)}
+            disabled={!isValid || isLoading}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            data-testid="dataset-upload-next"
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Starting Training...
+              </>
+            ) : (
+              'Start Training'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

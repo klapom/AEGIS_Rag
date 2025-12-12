@@ -43,11 +43,13 @@ Example:
     ... })
 """
 
+import json
 from typing import Any
 
 import httpx
 import structlog
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.core.config import get_settings
@@ -124,6 +126,12 @@ class TrainingDataset(BaseModel):
 
     samples: list[TrainingSample] = Field(
         ..., min_items=5, description="Training samples (minimum 5 recommended)"
+    )
+    log_path: str | None = Field(
+        default=None,
+        description="Optional path to save training log as JSONL. "
+        "All events (prompts, responses, scores) will be saved for later analysis.",
+        examples=["/var/log/aegis/training/tech_docs_2025-12-12.jsonl"],
     )
 
 
@@ -661,12 +669,13 @@ async def start_training(
         # Import here to avoid circular dependency
         from src.components.domain_training.training_runner import run_dspy_optimization
 
-        # Start background training
+        # Start background training with optional JSONL logging
         background_tasks.add_task(
             run_dspy_optimization,
             domain_name=domain_name,
             training_run_id=training_log["id"],
             dataset=[s.model_dump() for s in dataset.samples],
+            log_path=dataset.log_path,  # SSE event log for later DSPy evaluation
         )
 
         logger.info(
@@ -792,6 +801,125 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+@router.get("/{domain_name}/training-stream")
+async def stream_training_progress(
+    domain_name: str,
+    training_run_id: str = Query(..., description="Training run ID to stream"),
+) -> StreamingResponse:
+    """Stream training progress via Server-Sent Events (SSE).
+
+    Provides real-time streaming of training events including:
+    - Progress updates (percentage, phase)
+    - LLM interactions (full prompts and responses)
+    - Sample processing results
+    - Evaluation scores
+
+    The stream delivers events in SSE format (data: {...}\\n\\n).
+    Content is NOT truncated - full prompts and responses are included.
+
+    Connect with EventSource or fetch with streaming:
+        ```javascript
+        const eventSource = new EventSource(
+            `/api/v1/domain-training/${domain}/training-stream?training_run_id=${runId}`
+        );
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log(data);
+        };
+        ```
+
+    Args:
+        domain_name: Domain being trained
+        training_run_id: Unique training run identifier
+
+    Returns:
+        StreamingResponse with SSE events
+
+    Raises:
+        HTTPException 404: If training stream not found or not active
+    """
+    logger.info(
+        "training_stream_requested",
+        domain=domain_name,
+        training_run_id=training_run_id,
+    )
+
+    from src.components.domain_training.training_stream import get_training_stream
+
+    stream = get_training_stream()
+
+    if not stream.is_active(training_run_id):
+        logger.warning(
+            "training_stream_not_found",
+            domain=domain_name,
+            training_run_id=training_run_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Training stream '{training_run_id}' not found or not active",
+        )
+
+    async def event_generator():
+        """Generate SSE events from the training stream."""
+        try:
+            async for event in stream.subscribe(training_run_id):
+                yield event.to_sse()
+        except Exception as e:
+            logger.error(
+                "training_stream_error",
+                training_run_id=training_run_id,
+                error=str(e),
+            )
+            # Send error event before closing
+            error_data = {
+                "event_type": "error",
+                "message": str(e),
+                "training_run_id": training_run_id,
+            }
+            yield f"data: {json.dumps(error_data)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        },
+    )
+
+
+@router.get("/{domain_name}/training-stream/stats")
+async def get_training_stream_stats(
+    domain_name: str,
+    training_run_id: str = Query(..., description="Training run ID"),
+) -> dict:
+    """Get statistics for an active training stream.
+
+    Args:
+        domain_name: Domain being trained
+        training_run_id: Training run identifier
+
+    Returns:
+        Stream statistics including event count and duration
+
+    Raises:
+        HTTPException 404: If stream not found
+    """
+    from src.components.domain_training.training_stream import get_training_stream
+
+    stream = get_training_stream()
+    stats = stream.get_stats(training_run_id)
+
+    if not stats:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Training stream '{training_run_id}' not found",
+        )
+
+    return stats
 
 
 @router.delete("/{domain_name}", status_code=status.HTTP_204_NO_CONTENT)

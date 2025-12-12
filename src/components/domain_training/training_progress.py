@@ -43,10 +43,13 @@ Usage:
     >>> tracker.complete({"f1": 0.85, "samples": 100})
 """
 
-from collections.abc import Callable
+import asyncio
+import inspect
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Union
 
 import structlog
 
@@ -133,11 +136,17 @@ class TrainingProgressTracker:
         TrainingPhase.COMPLETED: (100, 100),
     }
 
+    # Type alias for progress callback - supports both sync and async
+    ProgressCallback = Union[
+        Callable[["ProgressEvent"], None],
+        Callable[["ProgressEvent"], Awaitable[None]],
+    ]
+
     def __init__(
         self,
         training_run_id: str,
         domain_name: str,
-        on_progress: Callable[[ProgressEvent], None] | None = None,
+        on_progress: "TrainingProgressTracker.ProgressCallback | None" = None,
     ):
         """Initialize training progress tracker.
 
@@ -260,6 +269,9 @@ class TrainingProgressTracker:
     def _emit(self, event: ProgressEvent) -> None:
         """Emit progress event to logger and callback.
 
+        Supports both sync and async callbacks. Async callbacks are
+        scheduled as background tasks to avoid blocking the training loop.
+
         Args:
             event: Progress event to emit
         """
@@ -276,7 +288,21 @@ class TrainingProgressTracker:
         )
 
         if self.on_progress:
-            self.on_progress(event)
+            # Check if callback is async (coroutine function)
+            if inspect.iscoroutinefunction(self.on_progress):
+                # Schedule async callback as background task (fire-and-forget)
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.on_progress(event))
+                except RuntimeError:
+                    # No running loop - skip async callback
+                    logger.warning(
+                        "async_callback_skipped",
+                        reason="no_running_event_loop",
+                    )
+            else:
+                # Sync callback - call directly
+                self.on_progress(event)
 
     def _log_summary(self, metrics: dict) -> None:
         """Log training summary with duration and metrics.

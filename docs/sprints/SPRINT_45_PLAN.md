@@ -93,7 +93,10 @@
 | 45.11: Training Data Augmentation | 5 SP | P1 | Backend |
 | 45.12: Metric Configuration UI | 3 SP | P1 | Backend + Frontend |
 | 45.13: E2E Tests | 3 SP | P2 | Testing |
-| **Total** | **58 SP** | | |
+| 45.14: SSE Real-Time Training Stream | 5 SP | P1 | Backend + Frontend |
+| 45.15: JSONL Training Log Export | 3 SP | P1 | Backend + Frontend |
+| 45.16: DSPy/AnyLLM Integration | 3 SP | P2 | Backend |
+| **Total** | **69 SP** | | |
 
 ### Priority Overview
 - **P0 (Must Have):** Features 45.1-45.3 - Backend Core (16 SP)
@@ -2273,6 +2276,743 @@ test.describe('Domain Training', () => {
 - [ ] Training flow E2E test
 - [ ] Document classification E2E test
 - [ ] Test fixtures (JSONL dataset, sample docs)
+
+---
+
+## Feature 45.14: SSE Real-Time Training Stream (5 SP) - P1
+
+### Konzept
+
+Echtzeit-Streaming von Training-Events via Server-Sent Events (SSE) statt Polling. Das Frontend erhält sofort alle LLM-Interaktionen, Evaluationsergebnisse und Fortschrittsupdates ohne Verzögerung.
+
+### Architecture
+
+```
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│   DSPy Train    │────────▶│ TrainingStream  │────────▶│   SSE Client    │
+│   Background    │  emit   │   (Singleton)   │  yield  │   (Frontend)    │
+│     Task        │         │                 │         │                 │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
+        │                          │
+        │                          ▼
+        │                   ┌─────────────────┐
+        └──────────────────▶│  JSONL Logger   │
+                            │  (Optional)     │
+                            └─────────────────┘
+```
+
+### Event Types
+
+```python
+class EventType(str, Enum):
+    # Progress events
+    STARTED = "started"
+    PHASE_CHANGED = "phase_changed"
+    PROGRESS_UPDATE = "progress_update"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+    # LLM interaction events (FULL content, not truncated)
+    LLM_REQUEST = "llm_request"
+    LLM_RESPONSE = "llm_response"
+
+    # Sample processing events
+    SAMPLE_PROCESSING = "sample_processing"
+    SAMPLE_RESULT = "sample_result"
+
+    # Evaluation events
+    EVALUATION_START = "evaluation_start"
+    EVALUATION_RESULT = "evaluation_result"
+
+    # Optimization events
+    BOOTSTRAP_ITERATION = "bootstrap_iteration"
+    DEMO_SELECTED = "demo_selected"
+```
+
+### Backend SSE Endpoint
+
+```python
+# src/api/v1/domain_training.py
+
+from fastapi.responses import StreamingResponse
+from src.components.domain_training.training_stream import (
+    get_training_stream,
+    TrainingEvent
+)
+
+@router.get("/{domain_name}/training-stream")
+async def stream_training_progress(
+    domain_name: str,
+    training_run_id: str,
+):
+    """Stream training progress via Server-Sent Events.
+
+    Connect to this endpoint to receive real-time updates during training.
+    Events include LLM prompts/responses, evaluation results, and progress.
+
+    Example:
+        const eventSource = new EventSource(
+            `/admin/domains/tech_docs/training-stream?training_run_id=abc123`
+        );
+        eventSource.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log(data.event_type, data.message);
+        };
+    """
+    stream = get_training_stream()
+
+    if not stream.is_active(training_run_id):
+        raise HTTPException(
+            status_code=404,
+            detail="Training stream not found or already completed"
+        )
+
+    async def event_generator():
+        async for event in stream.subscribe(training_run_id):
+            yield event.to_sse()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )
+```
+
+### Training Event Emission
+
+```python
+# src/components/domain_training/training_runner.py (updated)
+
+from src.components.domain_training.training_stream import (
+    get_training_stream,
+    EventType
+)
+
+async def run_dspy_optimization(...):
+    stream = get_training_stream()
+
+    # Start stream with optional JSONL logging
+    stream.start_stream(
+        training_run_id=training_run_id,
+        domain=domain_name,
+        log_path=log_path  # From API request
+    )
+
+    try:
+        # Emit start event
+        stream.emit(
+            training_run_id=training_run_id,
+            event_type=EventType.STARTED,
+            domain=domain_name,
+            progress_percent=0,
+            phase="initializing",
+            message="Starting DSPy optimization",
+            data={"samples_count": len(dataset)}
+        )
+
+        # During entity extraction, emit LLM interactions
+        def on_llm_call(prompt, response, score):
+            stream.emit(
+                training_run_id=training_run_id,
+                event_type=EventType.LLM_RESPONSE,
+                domain=domain_name,
+                progress_percent=current_progress,
+                phase="entity_extraction",
+                message="LLM completed extraction",
+                data={
+                    "prompt": prompt,  # FULL prompt, not truncated
+                    "response": response,  # FULL response
+                    "score": score,
+                    "sample_index": idx
+                }
+            )
+
+        # ... optimization with callbacks ...
+
+    finally:
+        stream.close_stream(training_run_id)
+```
+
+### Frontend SSE Hook
+
+```typescript
+// frontend/src/hooks/useTrainingStream.ts
+
+import { useEffect, useState, useCallback } from 'react';
+
+interface TrainingEvent {
+  event_type: string;
+  timestamp: string;
+  training_run_id: string;
+  domain: string;
+  progress_percent: number;
+  phase: string;
+  message: string;
+  data: Record<string, unknown>;
+}
+
+export function useTrainingStream(
+  domainName: string,
+  trainingRunId: string | null,
+  enabled: boolean = true
+) {
+  const [events, setEvents] = useState<TrainingEvent[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [latestEvent, setLatestEvent] = useState<TrainingEvent | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !trainingRunId) return;
+
+    const eventSource = new EventSource(
+      `/admin/domains/${domainName}/training-stream?training_run_id=${trainingRunId}`
+    );
+
+    eventSource.onopen = () => {
+      setIsConnected(true);
+      setError(null);
+    };
+
+    eventSource.onmessage = (event) => {
+      const data: TrainingEvent = JSON.parse(event.data);
+      setLatestEvent(data);
+      setEvents((prev) => [...prev, data]);
+
+      // Auto-close on completion
+      if (data.event_type === 'completed' || data.event_type === 'failed') {
+        eventSource.close();
+        setIsConnected(false);
+      }
+    };
+
+    eventSource.onerror = () => {
+      setError(new Error('Connection lost'));
+      setIsConnected(false);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [domainName, trainingRunId, enabled]);
+
+  const clearEvents = useCallback(() => {
+    setEvents([]);
+  }, []);
+
+  return {
+    events,
+    latestEvent,
+    isConnected,
+    error,
+    clearEvents,
+    progress: latestEvent?.progress_percent ?? 0,
+    phase: latestEvent?.phase ?? 'pending',
+  };
+}
+```
+
+### Live Log Display Component
+
+```typescript
+// frontend/src/components/admin/TrainingLiveLog.tsx
+
+import { useRef, useEffect } from 'react';
+import { useTrainingStream, TrainingEvent } from '../../hooks/useTrainingStream';
+
+interface TrainingLiveLogProps {
+  domainName: string;
+  trainingRunId: string;
+  onComplete?: () => void;
+}
+
+export function TrainingLiveLog({
+  domainName,
+  trainingRunId,
+  onComplete
+}: TrainingLiveLogProps) {
+  const logRef = useRef<HTMLDivElement>(null);
+  const { events, isConnected, progress, phase } = useTrainingStream(
+    domainName,
+    trainingRunId
+  );
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [events]);
+
+  // Handle completion
+  useEffect(() => {
+    const lastEvent = events[events.length - 1];
+    if (lastEvent?.event_type === 'completed') {
+      onComplete?.();
+    }
+  }, [events, onComplete]);
+
+  return (
+    <div className="space-y-4" data-testid="training-live-log">
+      {/* Progress Bar */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="font-medium">{phase}</span>
+          <span>{progress.toFixed(1)}%</span>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Connection Status */}
+      <div className="flex items-center gap-2 text-sm">
+        <span
+          className={`w-2 h-2 rounded-full ${
+            isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+          }`}
+        />
+        <span className="text-gray-600">
+          {isConnected ? 'Live connected' : 'Disconnected'}
+        </span>
+      </div>
+
+      {/* Event Log */}
+      <div
+        ref={logRef}
+        className="h-96 overflow-y-auto font-mono text-sm bg-gray-900 text-gray-100 rounded-lg p-4 space-y-2"
+        data-testid="event-log"
+      >
+        {events.map((event, idx) => (
+          <TrainingEventRow key={idx} event={event} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TrainingEventRow({ event }: { event: TrainingEvent }) {
+  const timestamp = new Date(event.timestamp).toLocaleTimeString();
+
+  // Color coding by event type
+  const typeColors: Record<string, string> = {
+    llm_request: 'text-yellow-400',
+    llm_response: 'text-green-400',
+    sample_processing: 'text-blue-400',
+    sample_result: 'text-cyan-400',
+    evaluation_result: 'text-purple-400',
+    failed: 'text-red-400',
+    completed: 'text-green-500',
+  };
+
+  const color = typeColors[event.event_type] || 'text-gray-400';
+
+  return (
+    <div className="border-b border-gray-800 pb-2">
+      <div className="flex items-start gap-2">
+        <span className="text-gray-500 text-xs">{timestamp}</span>
+        <span className={`font-semibold ${color}`}>
+          [{event.event_type}]
+        </span>
+        <span className="text-gray-300">{event.message}</span>
+      </div>
+
+      {/* Show full data for LLM events */}
+      {(event.event_type === 'llm_request' || event.event_type === 'llm_response') && (
+        <div className="mt-2 ml-4">
+          {event.data.prompt && (
+            <details className="text-xs">
+              <summary className="cursor-pointer text-yellow-300">
+                Prompt ({(event.data.prompt as string).length} chars)
+              </summary>
+              <pre className="mt-1 p-2 bg-gray-800 rounded whitespace-pre-wrap max-h-64 overflow-y-auto">
+                {event.data.prompt as string}
+              </pre>
+            </details>
+          )}
+          {event.data.response && (
+            <details className="text-xs mt-1">
+              <summary className="cursor-pointer text-green-300">
+                Response ({(event.data.response as string).length} chars)
+              </summary>
+              <pre className="mt-1 p-2 bg-gray-800 rounded whitespace-pre-wrap max-h-64 overflow-y-auto">
+                {event.data.response as string}
+              </pre>
+            </details>
+          )}
+          {event.data.score !== undefined && (
+            <span className="text-purple-300 text-xs">
+              Score: {(event.data.score as number).toFixed(3)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Deliverables
+- [ ] TrainingEventStream singleton class
+- [ ] SSE endpoint `/admin/domains/{name}/training-stream`
+- [ ] Event emission in training_runner.py
+- [ ] useTrainingStream React hook
+- [ ] TrainingLiveLog component with auto-scroll
+- [ ] Full LLM prompt/response display (expandable)
+- [ ] Unit tests for stream management
+
+---
+
+## Feature 45.15: JSONL Training Log Export (3 SP) - P1
+
+### Konzept
+
+Optionale Speicherung aller Training-Events als JSONL-Datei für spätere DSPy-Evaluation und Debugging. Der Benutzer gibt im UI einen Log-Pfad an, alle Events werden vollständig (nicht gekürzt) gespeichert.
+
+### API Request Update
+
+```python
+# src/api/v1/domain_training.py
+
+class TrainingDataset(BaseModel):
+    samples: list[TrainingSample]
+    log_path: str | None = Field(
+        default=None,
+        description="Optional path to save training log as JSONL. "
+                    "All events (prompts, responses, scores) will be saved."
+    )
+
+@router.post("/{domain_name}/train")
+async def start_training(
+    domain_name: str,
+    dataset: TrainingDataset,
+    background_tasks: BackgroundTasks,
+) -> dict[str, Any]:
+    # ... validation ...
+
+    # Pass log_path to training task
+    background_tasks.add_task(
+        run_dspy_optimization,
+        domain_name=domain_name,
+        training_run_id=training_log["id"],
+        dataset=[s.model_dump() for s in dataset.samples],
+        log_path=dataset.log_path,  # NEW
+    )
+
+    return {
+        "message": "Training started",
+        "training_run_id": training_log["id"],
+        "log_path": dataset.log_path,
+        # ...
+    }
+```
+
+### JSONL Log Format
+
+```jsonl
+{"event_type": "started", "timestamp": "2025-12-12T18:30:00Z", "training_run_id": "abc123", "domain": "tech_docs", "progress_percent": 0, "phase": "initializing", "message": "Starting DSPy optimization", "data": {"samples_count": 12}}
+{"event_type": "llm_request", "timestamp": "2025-12-12T18:30:05Z", "training_run_id": "abc123", "domain": "tech_docs", "progress_percent": 15, "phase": "entity_extraction", "message": "Sending prompt to LLM", "data": {"prompt": "Extract key entities from the following text...\n\nText: OMNITRACKER Task Management - Die Aufgaben...", "sample_index": 0}}
+{"event_type": "llm_response", "timestamp": "2025-12-12T18:30:12Z", "training_run_id": "abc123", "domain": "tech_docs", "progress_percent": 18, "phase": "entity_extraction", "message": "LLM completed extraction", "data": {"prompt": "Extract key entities...", "response": "[\"OMNITRACKER\", \"Task Management\", \"Aufgabenmanagement\", ...]", "expected": ["OMNITRACKER", "Task Management", ...], "score": 0.85, "sample_index": 0}}
+{"event_type": "evaluation_result", "timestamp": "2025-12-12T18:32:00Z", "training_run_id": "abc123", "domain": "tech_docs", "progress_percent": 50, "phase": "entity_extraction", "message": "Entity extraction evaluation complete", "data": {"precision": 0.82, "recall": 0.91, "f1": 0.86, "samples_evaluated": 12}}
+{"event_type": "completed", "timestamp": "2025-12-12T18:45:00Z", "training_run_id": "abc123", "domain": "tech_docs", "progress_percent": 100, "phase": "completed", "message": "Training completed successfully", "data": {"entity_f1": 0.86, "relation_f1": 0.72, "total_duration_seconds": 900}}
+```
+
+### Frontend: Log Path Input
+
+```typescript
+// frontend/src/components/admin/DatasetUploadStep.tsx (updated)
+
+interface DatasetUploadStepProps {
+  dataset: TrainingSample[];
+  logPath: string;
+  onUpload: (samples: TrainingSample[]) => void;
+  onLogPathChange: (path: string) => void;
+  onBack: () => void;
+  onNext: () => void;
+}
+
+export function DatasetUploadStep({
+  dataset,
+  logPath,
+  onUpload,
+  onLogPathChange,
+  onBack,
+  onNext
+}: DatasetUploadStepProps) {
+  return (
+    <div className="space-y-6" data-testid="dataset-upload-step">
+      {/* ... file upload section ... */}
+
+      {/* Log Path Input */}
+      <div className="space-y-2">
+        <label
+          htmlFor="log-path"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Training Log Path (Optional)
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="log-path"
+            type="text"
+            value={logPath}
+            onChange={(e) => onLogPathChange(e.target.value)}
+            placeholder="/var/log/aegis/training/my_domain_2025-12-12.jsonl"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+            data-testid="log-path-input"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const defaultPath = `/var/log/aegis/training/${Date.now()}.jsonl`;
+              onLogPathChange(defaultPath);
+            }}
+            className="px-3 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200"
+            data-testid="generate-log-path"
+          >
+            Auto
+          </button>
+        </div>
+        <p className="text-sm text-gray-500">
+          All training events (LLM prompts, responses, scores) will be saved to this file
+          for later analysis and DSPy evaluation.
+        </p>
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-between pt-4 border-t">
+        <button onClick={onBack}>Back</button>
+        <button
+          onClick={onNext}
+          disabled={dataset.length === 0}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg"
+          data-testid="start-training-button"
+        >
+          Start Training
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+### Log File Management
+
+```python
+# src/components/domain_training/training_stream.py
+
+class TrainingEventStream:
+    def start_stream(
+        self,
+        training_run_id: str,
+        domain: str,
+        log_path: str | None = None,
+    ) -> None:
+        """Start a new training event stream.
+
+        Args:
+            training_run_id: Unique training run identifier
+            domain: Domain being trained
+            log_path: Optional path for JSONL log file (FULL events, not truncated)
+        """
+        # Create log file if path provided
+        file_handle = None
+        path = None
+        if log_path:
+            path = Path(log_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            file_handle = open(path, "w", encoding="utf-8")
+            logger.info("jsonl_log_file_created", path=str(path))
+
+        state = StreamState(
+            training_run_id=training_run_id,
+            domain=domain,
+            log_path=path,
+            queue=asyncio.Queue(),
+            log_file=file_handle,
+        )
+        self._streams[training_run_id] = state
+
+    def emit_event(self, training_run_id: str, event: TrainingEvent) -> None:
+        """Emit an event to the stream."""
+        state = self._streams.get(training_run_id)
+        if not state:
+            return
+
+        # Write FULL event to JSONL log file (not truncated!)
+        if state.log_file:
+            state.log_file.write(event.to_json() + "\n")
+            state.log_file.flush()  # Ensure immediate write
+
+        # Put in queue for SSE consumers
+        state.queue.put_nowait(event)
+
+    def close_stream(self, training_run_id: str) -> None:
+        """Close a training stream."""
+        state = self._streams.get(training_run_id)
+        if state and state.log_file:
+            state.log_file.close()
+            logger.info(
+                "jsonl_log_file_closed",
+                path=str(state.log_path),
+                event_count=state.event_count,
+            )
+        # ... rest of cleanup ...
+```
+
+### Example: Using JSONL for DSPy Evaluation
+
+```python
+# scripts/evaluate_from_log.py
+"""Evaluate DSPy training from JSONL log file."""
+
+import json
+from pathlib import Path
+
+
+def load_training_log(log_path: str) -> list[dict]:
+    """Load all events from JSONL log."""
+    events = []
+    with open(log_path, "r") as f:
+        for line in f:
+            events.append(json.loads(line))
+    return events
+
+
+def extract_llm_interactions(events: list[dict]) -> list[dict]:
+    """Extract LLM request/response pairs for analysis."""
+    interactions = []
+    for event in events:
+        if event["event_type"] == "llm_response":
+            interactions.append({
+                "prompt": event["data"]["prompt"],
+                "response": event["data"]["response"],
+                "expected": event["data"].get("expected"),
+                "score": event["data"].get("score"),
+                "phase": event["phase"],
+            })
+    return interactions
+
+
+def compute_metrics(interactions: list[dict]) -> dict:
+    """Compute aggregate metrics from logged interactions."""
+    scores = [i["score"] for i in interactions if i["score"] is not None]
+    return {
+        "total_interactions": len(interactions),
+        "avg_score": sum(scores) / len(scores) if scores else 0,
+        "min_score": min(scores) if scores else 0,
+        "max_score": max(scores) if scores else 0,
+    }
+
+
+if __name__ == "__main__":
+    import sys
+    log_path = sys.argv[1] if len(sys.argv) > 1 else "training.jsonl"
+
+    events = load_training_log(log_path)
+    interactions = extract_llm_interactions(events)
+    metrics = compute_metrics(interactions)
+
+    print(f"Loaded {len(events)} events from {log_path}")
+    print(f"LLM Interactions: {metrics['total_interactions']}")
+    print(f"Average Score: {metrics['avg_score']:.3f}")
+    print(f"Score Range: {metrics['min_score']:.3f} - {metrics['max_score']:.3f}")
+```
+
+### Deliverables
+- [ ] `log_path` parameter in TrainingDataset model
+- [ ] JSONL file writing in TrainingEventStream
+- [ ] Log path input in DatasetUploadStep
+- [ ] Auto-generate log path button
+- [ ] Example evaluation script
+- [ ] Documentation for log format
+
+---
+
+## Feature 45.16: DSPy/AnyLLM Integration (3 SP) - P2
+
+### Konzept
+
+Integration von DSPy Training mit dem AegisLLMProxy (AnyLLM) System für einheitliche LLM-Nutzung und Cost Tracking. Statt direkter Ollama-Konfiguration soll DSPy über den bestehenden AegisLLMProxy geroutet werden.
+
+### Ziele
+
+1. **Einheitliches LLM Routing** - DSPy nutzt AegisLLMProxy statt direkter Ollama-Verbindung
+2. **Cost Measuring** - Alle DSPy LLM-Calls werden im bestehenden Cost Tracking erfasst
+3. **Provider Flexibilität** - Ermöglicht Cloud-Provider als Fallback (DashScope, OpenAI)
+4. **Transparenz** - Training-Kosten werden im Admin UI sichtbar
+
+### Technische Änderungen
+
+```python
+# src/components/domain_training/dspy_optimizer.py
+
+# AKTUELL (direkte Ollama-Konfiguration):
+self.lm = self._dspy.LM(
+    model=f"ollama_chat/{self.llm_model}",
+    api_base="http://localhost:11434",
+    api_key="",
+)
+
+# ZIEL (über AegisLLMProxy):
+from src.components.llm_proxy import get_llm_proxy
+
+proxy = get_llm_proxy()
+# Option A: Custom DSPy LM wrapper für AegisLLMProxy
+# Option B: DSPy litellm backend mit Proxy-Endpoint
+
+# Cost Tracking automatisch durch Proxy
+```
+
+### UI-Erweiterungen
+
+```typescript
+// TrainingProgressStep.tsx - Cost Anzeige
+interface TrainingMetrics {
+  // ... existing metrics ...
+  llm_cost?: {
+    total_tokens: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    estimated_cost_usd?: number;
+    model: string;
+    provider: string;
+  };
+}
+```
+
+### Implementierungs-Optionen
+
+| Option | Beschreibung | Aufwand |
+|--------|--------------|---------|
+| A: Custom LM Wrapper | DSPy LM Klasse die AegisLLMProxy nutzt | Mittel |
+| B: LiteLLM Proxy Mode | DSPy → LiteLLM → AegisLLMProxy | Gering |
+| C: Pre-Processing | AegisLLMProxy als pre-processor vor Ollama | Gering |
+
+### Tasks
+
+- [ ] Analyse: DSPy LM Backend Architektur
+- [ ] Entscheidung: Welche Integration-Option
+- [ ] Custom DSPy LM Wrapper für AegisLLMProxy (wenn Option A)
+- [ ] Cost Tracking in Training Events emittieren
+- [ ] Training Metrics um Kosten erweitern
+- [ ] Frontend: Kosten-Anzeige in TrainingProgressStep
+- [ ] ADR: Integration Strategy (ADR-046)
+
+### Akzeptanzkriterien
+
+- [ ] DSPy Training nutzt AegisLLMProxy
+- [ ] Alle LLM-Calls werden im Cost Tracking erfasst
+- [ ] Training-Kosten im UI sichtbar
+- [ ] Fallback zu Cloud-Provider funktioniert
+- [ ] Keine Regression bei Training Performance
 
 ---
 

@@ -30,8 +30,9 @@ Usage:
 """
 
 import asyncio
-from collections.abc import Callable
-from typing import Any
+import inspect
+from collections.abc import Awaitable, Callable
+from typing import Any, Union
 
 import structlog
 
@@ -110,6 +111,12 @@ class DSPyOptimizer:
         lm: DSPy language model instance
     """
 
+    # Type alias for progress callback - supports both sync and async
+    ProgressCallback = Union[
+        Callable[[str, float], None],
+        Callable[[str, float], Awaitable[None]],
+    ]
+
     def __init__(self, llm_model: str = "qwen3:32b") -> None:
         """Initialize DSPy optimizer with Ollama backend.
 
@@ -163,10 +170,95 @@ class DSPyOptimizer:
         """
         return self._dspy.context(lm=self.lm)
 
+    async def _call_progress_callback(
+        self,
+        callback: "DSPyOptimizer.ProgressCallback | None",
+        message: str,
+        progress: float,
+    ) -> None:
+        """Safely call progress callback, handling both sync and async.
+
+        Args:
+            callback: Progress callback function (sync or async)
+            message: Progress message
+            progress: Progress percentage (0-100)
+        """
+        if callback is None:
+            return
+
+        if inspect.iscoroutinefunction(callback):
+            await callback(message, progress)
+        else:
+            callback(message, progress)
+
+    def set_event_stream(self, stream: Any, training_run_id: str) -> None:
+        """Set the SSE event stream for detailed LLM interaction logging.
+
+        Feature 45.13: Real-time Training Progress with SSE
+
+        When set, the optimizer will emit detailed events for every LLM interaction:
+        - LLM_REQUEST: Full prompt sent to the model (NOT truncated)
+        - LLM_RESPONSE: Full response from the model (NOT truncated)
+        - SAMPLE_PROCESSING: Current sample being processed
+        - SAMPLE_RESULT: Evaluation result for sample
+
+        Args:
+            stream: TrainingEventStream instance
+            training_run_id: Training run ID for emitting events
+        """
+        self._event_stream = stream
+        self._training_run_id = training_run_id
+        logger.info(
+            "dspy_event_stream_configured",
+            training_run_id=training_run_id,
+        )
+
+    def _emit_llm_event(
+        self,
+        event_type: str,
+        phase: str,
+        message: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """Emit an LLM interaction event to the SSE stream.
+
+        Args:
+            event_type: Type of event (llm_request, llm_response, etc.)
+            phase: Current training phase
+            message: Human-readable message
+            data: Additional event data (prompts, responses, scores)
+        """
+        if not hasattr(self, "_event_stream") or self._event_stream is None:
+            return
+
+        from src.components.domain_training.training_stream import EventType
+
+        # Map string event types to EventType enum
+        type_map = {
+            "llm_request": EventType.LLM_REQUEST,
+            "llm_response": EventType.LLM_RESPONSE,
+            "sample_processing": EventType.SAMPLE_PROCESSING,
+            "sample_result": EventType.SAMPLE_RESULT,
+            "bootstrap_iteration": EventType.BOOTSTRAP_ITERATION,
+            "demo_selected": EventType.DEMO_SELECTED,
+        }
+
+        evt_type = type_map.get(event_type, EventType.PROGRESS_UPDATE)
+
+        self._event_stream.emit(
+            training_run_id=self._training_run_id,
+            event_type=evt_type,
+            domain="",  # Will be filled by training_runner
+            progress_percent=0.0,  # Progress managed by runner
+            phase=phase,
+            message=message,
+            data=data or {},
+        )
+
     async def optimize_entity_extraction(
         self,
         training_data: list[dict[str, Any]],
-        progress_callback: Callable[[str, float], None] | None = None,
+        progress_callback: "DSPyOptimizer.ProgressCallback | None" = None,
     ) -> dict[str, Any]:
         """Optimize entity extraction prompt using training data.
 
@@ -200,8 +292,7 @@ class DSPyOptimizer:
             model=self.llm_model,
         )
 
-        if progress_callback:
-            progress_callback("Preparing training data", 10.0)
+        await self._call_progress_callback(progress_callback, "Preparing training data", 10.0)
 
         # Convert to DSPy format
         dspy_examples = []
@@ -230,11 +321,12 @@ class DSPyOptimizer:
             val_size=len(valset),
         )
 
-        if progress_callback:
-            progress_callback("Building DSPy module", 30.0)
+        await self._call_progress_callback(progress_callback, "Building DSPy module", 30.0)
 
-        # Store reference to dspy module for inner class
+        # Store reference to dspy module and self for inner class
         dspy_module = self._dspy
+        optimizer_self = self  # Capture self for event emission in nested functions
+        sample_counter = [0]  # Mutable counter for tracking sample index
 
         # Create entity extraction module (using closure for dspy reference)
         class EntityExtractor(dspy_module.Module):  # type: ignore[name-defined,misc]
@@ -243,9 +335,37 @@ class DSPyOptimizer:
                 self.predictor = dspy_module.ChainOfThought(signature)
 
             def forward(self, source_text: str) -> Any:
-                return self.predictor(source_text=source_text)
+                # Emit LLM request event (full prompt, NOT truncated)
+                optimizer_self._emit_llm_event(
+                    event_type="llm_request",
+                    phase="entity_optimization",
+                    message=f"Processing sample #{sample_counter[0] + 1}",
+                    data={
+                        "sample_index": sample_counter[0],
+                        "prompt": source_text,  # FULL source text
+                        "model": optimizer_self.llm_model,
+                    },
+                )
 
-        # Define metric function
+                result = self.predictor(source_text=source_text)
+
+                # Emit LLM response event (full response, NOT truncated)
+                entities = result.entities if hasattr(result, "entities") else []
+                optimizer_self._emit_llm_event(
+                    event_type="llm_response",
+                    phase="entity_optimization",
+                    message=f"Extracted {len(entities)} entities",
+                    data={
+                        "sample_index": sample_counter[0],
+                        "entities": entities,  # FULL entity list
+                        "reasoning": getattr(result, "reasoning", ""),  # FULL reasoning
+                    },
+                )
+
+                sample_counter[0] += 1
+                return result
+
+        # Define metric function with event emission
         def entity_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
             """Calculate F1 score for entity extraction."""
             gold_entities = set(example.entities)
@@ -262,10 +382,28 @@ class DSPyOptimizer:
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
+            # Emit sample result event
+            optimizer_self._emit_llm_event(
+                event_type="sample_result",
+                phase="entity_optimization",
+                message=f"Sample evaluated - F1: {f1:.3f}",
+                data={
+                    "gold_entities": list(gold_entities),
+                    "predicted_entities": list(pred_entities),
+                    "true_positives": tp,
+                    "false_positives": fp,
+                    "false_negatives": fn,
+                    "precision": precision,
+                    "recall": recall,
+                    "f1": f1,
+                },
+            )
+
             return f1
 
-        if progress_callback:
-            progress_callback("Running BootstrapFewShot optimization", 50.0)
+        await self._call_progress_callback(
+            progress_callback, "Running BootstrapFewShot optimization", 50.0
+        )
 
         # Optimize with BootstrapFewShot using async-safe context
         try:
@@ -290,8 +428,9 @@ class DSPyOptimizer:
                     trainset=trainset,
                 )
 
-                if progress_callback:
-                    progress_callback("Evaluating on validation set", 80.0)
+                await self._call_progress_callback(
+                    progress_callback, "Evaluating on validation set", 80.0
+                )
 
                 # Evaluate on validation set
                 eval_score = await self._evaluate_async(
@@ -300,8 +439,9 @@ class DSPyOptimizer:
 
             logger.info("entity_extraction_optimized", val_f1=eval_score)
 
-            if progress_callback:
-                progress_callback("Extracting optimized prompt", 95.0)
+            await self._call_progress_callback(
+                progress_callback, "Extracting optimized prompt", 95.0
+            )
 
             # Extract prompt components
             result = {
@@ -314,8 +454,9 @@ class DSPyOptimizer:
                 },
             }
 
-            if progress_callback:
-                progress_callback("Optimization complete", 100.0)
+            await self._call_progress_callback(
+                progress_callback, "Optimization complete", 100.0
+            )
 
             return result
 
@@ -326,7 +467,7 @@ class DSPyOptimizer:
     async def optimize_relation_extraction(
         self,
         training_data: list[dict[str, Any]],
-        progress_callback: Callable[[str, float], None] | None = None,
+        progress_callback: "DSPyOptimizer.ProgressCallback | None" = None,
     ) -> dict[str, Any]:
         """Optimize relation extraction prompt using training data.
 
@@ -364,8 +505,7 @@ class DSPyOptimizer:
             model=self.llm_model,
         )
 
-        if progress_callback:
-            progress_callback("Preparing training data", 10.0)
+        await self._call_progress_callback(progress_callback, "Preparing training data", 10.0)
 
         # Convert to DSPy format
         dspy_examples = []
@@ -395,11 +535,12 @@ class DSPyOptimizer:
             val_size=len(valset),
         )
 
-        if progress_callback:
-            progress_callback("Building DSPy module", 30.0)
+        await self._call_progress_callback(progress_callback, "Building DSPy module", 30.0)
 
-        # Store reference to dspy module for inner class
+        # Store reference to dspy module and self for inner class
         dspy_module = self._dspy
+        optimizer_self = self  # Capture self for event emission in nested functions
+        sample_counter = [0]  # Mutable counter for tracking sample index
 
         # Create relation extraction module (using closure for dspy reference)
         class RelationExtractor(dspy_module.Module):  # type: ignore[name-defined,misc]
@@ -408,9 +549,38 @@ class DSPyOptimizer:
                 self.predictor = dspy_module.ChainOfThought(signature)
 
             def forward(self, source_text: str, entities: list[str]) -> Any:
-                return self.predictor(source_text=source_text, entities=entities)
+                # Emit LLM request event (full prompt, NOT truncated)
+                optimizer_self._emit_llm_event(
+                    event_type="llm_request",
+                    phase="relation_optimization",
+                    message=f"Processing sample #{sample_counter[0] + 1}",
+                    data={
+                        "sample_index": sample_counter[0],
+                        "prompt": source_text,  # FULL source text
+                        "entities": entities,  # FULL entity list
+                        "model": optimizer_self.llm_model,
+                    },
+                )
 
-        # Define metric function
+                result = self.predictor(source_text=source_text, entities=entities)
+
+                # Emit LLM response event (full response, NOT truncated)
+                relations = result.relations if hasattr(result, "relations") else []
+                optimizer_self._emit_llm_event(
+                    event_type="llm_response",
+                    phase="relation_optimization",
+                    message=f"Extracted {len(relations)} relations",
+                    data={
+                        "sample_index": sample_counter[0],
+                        "relations": relations,  # FULL relation list
+                        "reasoning": getattr(result, "reasoning", ""),  # FULL reasoning
+                    },
+                )
+
+                sample_counter[0] += 1
+                return result
+
+        # Define metric function with event emission
         def relation_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
             """Calculate F1 score for relation extraction."""
             gold_relations = {
@@ -435,10 +605,34 @@ class DSPyOptimizer:
             recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
+            # Emit sample result event
+            optimizer_self._emit_llm_event(
+                event_type="sample_result",
+                phase="relation_optimization",
+                message=f"Sample evaluated - F1: {f1:.3f}",
+                data={
+                    "gold_relations": [
+                        {"subject": s, "predicate": p, "object": o}
+                        for s, p, o in gold_relations
+                    ],
+                    "predicted_relations": [
+                        {"subject": s, "predicate": p, "object": o}
+                        for s, p, o in pred_relations
+                    ],
+                    "true_positives": tp,
+                    "false_positives": fp,
+                    "false_negatives": fn,
+                    "precision": precision,
+                    "recall": recall,
+                    "f1": f1,
+                },
+            )
+
             return f1
 
-        if progress_callback:
-            progress_callback("Running BootstrapFewShot optimization", 50.0)
+        await self._call_progress_callback(
+            progress_callback, "Running BootstrapFewShot optimization", 50.0
+        )
 
         # Optimize with BootstrapFewShot using async-safe context
         try:
@@ -464,8 +658,9 @@ class DSPyOptimizer:
                     trainset=trainset,
                 )
 
-                if progress_callback:
-                    progress_callback("Evaluating on validation set", 80.0)
+                await self._call_progress_callback(
+                    progress_callback, "Evaluating on validation set", 80.0
+                )
 
                 # Evaluate on validation set
                 eval_score = await self._evaluate_async(
@@ -474,8 +669,9 @@ class DSPyOptimizer:
 
             logger.info("relation_extraction_optimized", val_f1=eval_score)
 
-            if progress_callback:
-                progress_callback("Extracting optimized prompt", 95.0)
+            await self._call_progress_callback(
+                progress_callback, "Extracting optimized prompt", 95.0
+            )
 
             # Extract prompt components
             result = {
@@ -488,8 +684,9 @@ class DSPyOptimizer:
                 },
             }
 
-            if progress_callback:
-                progress_callback("Optimization complete", 100.0)
+            await self._call_progress_callback(
+                progress_callback, "Optimization complete", 100.0
+            )
 
             return result
 
@@ -510,20 +707,25 @@ class DSPyOptimizer:
         Returns:
             Average metric score across test set
         """
+        # Capture LM reference for thread-safe access
+        lm = self.lm
+        dspy_module = self._dspy
 
         def _evaluate_sync() -> float:
             """Synchronous evaluation helper."""
-            total_score = 0.0
-            for example in testset:
-                try:
-                    pred = module(**example.inputs())
-                    score = metric(example, pred, None)  # Add trace=None for consistency
-                    total_score += score
-                except Exception as e:
-                    logger.warning("evaluation_example_failed", error=str(e))
-                    continue
+            # Re-configure DSPy in worker thread (context is thread-local)
+            with dspy_module.context(lm=lm):
+                total_score = 0.0
+                for example in testset:
+                    try:
+                        pred = module(**example.inputs())
+                        score = metric(example, pred, None)
+                        total_score += score
+                    except Exception as e:
+                        logger.warning("evaluation_example_failed", error=str(e))
+                        continue
 
-            return total_score / len(testset) if testset else 0.0
+                return total_score / len(testset) if testset else 0.0
 
         # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()

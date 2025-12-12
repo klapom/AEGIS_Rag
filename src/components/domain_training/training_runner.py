@@ -1,6 +1,6 @@
 """Background Training Runner for DSPy Optimization.
 
-Sprint 45 - Feature 45.3, 45.5: Domain Training API with Progress Tracking
+Sprint 45 - Feature 45.3, 45.5, 45.13: Domain Training API with Progress Tracking & SSE
 
 This module provides background task execution for DSPy-based domain training.
 It runs entity and relation extraction optimization, tracks progress, and saves
@@ -9,6 +9,8 @@ results to Neo4j.
 Key Features:
 - Asynchronous DSPy optimization execution
 - Real-time progress tracking to Neo4j (Feature 45.5)
+- SSE streaming with full LLM interaction details (Feature 45.13)
+- JSONL logging for later DSPy evaluation (Feature 45.13)
 - Structured phase-based progress logging (Feature 45.5)
 - Error handling and recovery
 - Metric logging and evaluation
@@ -20,6 +22,10 @@ Architecture:
     │   ├── Phase transitions with callbacks
     │   ├── Sub-progress within phases
     │   └── Neo4j persistence via on_progress callback
+    ├── TrainingEventStream (45.13)
+    │   ├── SSE event queue for real-time streaming
+    │   ├── Full LLM interaction logging (prompts/responses)
+    │   └── JSONL file export (optional)
     ├── 1. Initialize DSPy optimizer with LLM model
     ├── 2. Optimize entity extraction (10-45% progress)
     ├── 3. Optimize relation extraction (45-80% progress)
@@ -44,7 +50,8 @@ Usage:
     ...     run_dspy_optimization,
     ...     domain_name="tech_docs",
     ...     training_run_id="uuid-1234",
-    ...     dataset=[{"text": "...", "entities": [...]}]
+    ...     dataset=[{"text": "...", "entities": [...]}],
+    ...     log_path="/var/log/aegis/training/tech_docs.jsonl"
     ... )
 """
 
@@ -63,6 +70,10 @@ from src.components.domain_training.training_progress import (
     TrainingPhase,
     TrainingProgressTracker,
 )
+from src.components.domain_training.training_stream import (
+    EventType,
+    get_training_stream,
+)
 from src.core.exceptions import DatabaseConnectionError
 
 logger = structlog.get_logger(__name__)
@@ -72,11 +83,13 @@ async def run_dspy_optimization(
     domain_name: str,
     training_run_id: str,
     dataset: list[dict[str, Any]],
+    log_path: str | None = None,
 ) -> None:
-    """Run DSPy optimization with comprehensive progress tracking.
+    """Run DSPy optimization with comprehensive progress tracking and SSE streaming.
 
     This function executes the full DSPy training pipeline with structured
-    progress tracking using TrainingProgressTracker (Feature 45.5):
+    progress tracking using TrainingProgressTracker (Feature 45.5) and
+    real-time SSE streaming using TrainingEventStream (Feature 45.13):
     1. Initialize optimizer with domain's LLM model (INITIALIZING phase)
     2. Load and validate dataset (LOADING_DATA phase)
     3. Optimize entity extraction prompts (ENTITY_OPTIMIZATION phase)
@@ -89,15 +102,44 @@ async def run_dspy_optimization(
     Progress is tracked through phases and logged to Neo4j TrainingLog node
     for real-time monitoring via the on_progress callback.
 
+    SSE streaming (Feature 45.13) provides:
+    - Full LLM prompts and responses (NOT truncated)
+    - Sample processing details
+    - Evaluation scores
+    - Optional JSONL file export for later DSPy evaluation
+
     Args:
         domain_name: Domain to train (e.g., "tech_docs")
         training_run_id: UUID of training log
         dataset: List of training samples with text, entities, relations
+        log_path: Optional path to save training events as JSONL
 
     Raises:
         Exception: Any error during training is logged and status updated to 'failed'
     """
     repo = get_domain_repository()
+
+    # Initialize SSE stream (Feature 45.13)
+    stream = get_training_stream()
+    stream.start_stream(training_run_id, domain_name, log_path)
+
+    def emit_sse(
+        event_type: EventType,
+        progress: float,
+        phase: str,
+        message: str,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """Emit an SSE event to the training stream."""
+        stream.emit(
+            training_run_id=training_run_id,
+            event_type=event_type,
+            domain=domain_name,
+            progress_percent=progress,
+            phase=phase,
+            message=message,
+            data=data,
+        )
 
     async def persist_progress(event: ProgressEvent) -> None:
         """Persist progress event to Neo4j.
@@ -142,6 +184,7 @@ async def run_dspy_optimization(
     try:
         # --- Phase 1: Initialization (0-5%) ---
         tracker.enter_phase(TrainingPhase.INITIALIZING, "Loading domain configuration...")
+        emit_sse(EventType.STARTED, 0.0, "initializing", "Training started")
 
         # Get domain configuration
         domain = await repo.get_domain(domain_name)
@@ -155,15 +198,32 @@ async def run_dspy_optimization(
             f"DSPy optimizer ready with {llm_model}",
             {"llm_model": llm_model},
         )
+        emit_sse(
+            EventType.PROGRESS_UPDATE,
+            5.0,
+            "initializing",
+            f"DSPy optimizer ready with {llm_model}",
+            {"llm_model": llm_model},
+        )
 
         # --- Phase 2: Loading Data (5-10%) ---
         tracker.enter_phase(
             TrainingPhase.LOADING_DATA,
             f"Processing {len(dataset)} training samples...",
         )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            5.0,
+            "loading_data",
+            f"Processing {len(dataset)} training samples...",
+            {"sample_count": len(dataset)},
+        )
 
-        # Initialize optimizer
+        # Initialize optimizer with stream for LLM interaction capture
         optimizer = DSPyOptimizer(llm_model=llm_model)
+
+        # Pass stream to optimizer for detailed LLM interaction capture
+        optimizer.set_event_stream(stream, training_run_id)
 
         tracker.update_progress(
             0.8,
@@ -183,11 +243,24 @@ async def run_dspy_optimization(
             TrainingPhase.ENTITY_OPTIMIZATION,
             "Optimizing entity extraction (this may take several minutes)...",
         )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            10.0,
+            "entity_optimization",
+            "Starting entity extraction optimization...",
+        )
 
-        # Create progress callback for entity extraction
+        # Create progress callback for entity extraction with SSE events
         async def entity_progress_callback(msg: str, pct: float) -> None:
-            # Map 0-100% to 0-1 sub-progress
+            # Map 0-100% to 10-45% global progress
+            global_pct = 10.0 + (pct * 0.35)
             tracker.update_progress(pct / 100, f"Entity: {msg}")
+            emit_sse(
+                EventType.PROGRESS_UPDATE,
+                global_pct,
+                "entity_optimization",
+                f"Entity: {msg}",
+            )
 
         # Run entity extraction optimization
         entity_result = await optimizer.optimize_entity_extraction(
@@ -196,6 +269,13 @@ async def run_dspy_optimization(
         )
 
         entity_metrics = entity_result.get("metrics", {})
+        emit_sse(
+            EventType.EVALUATION_RESULT,
+            45.0,
+            "entity_optimization",
+            f"Entity optimization complete - F1: {entity_metrics.get('f1', 0):.3f}",
+            {"metrics": entity_metrics, "type": "entity_extraction"},
+        )
         logger.info(
             "entity_extraction_optimized",
             domain=domain_name,
@@ -207,11 +287,24 @@ async def run_dspy_optimization(
             TrainingPhase.RELATION_OPTIMIZATION,
             "Optimizing relation extraction (this may take several minutes)...",
         )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            45.0,
+            "relation_optimization",
+            "Starting relation extraction optimization...",
+        )
 
-        # Create progress callback for relation extraction
+        # Create progress callback for relation extraction with SSE events
         async def relation_progress_callback(msg: str, pct: float) -> None:
-            # Map 0-100% to 0-1 sub-progress
+            # Map 0-100% to 45-80% global progress
+            global_pct = 45.0 + (pct * 0.35)
             tracker.update_progress(pct / 100, f"Relation: {msg}")
+            emit_sse(
+                EventType.PROGRESS_UPDATE,
+                global_pct,
+                "relation_optimization",
+                f"Relation: {msg}",
+            )
 
         # Run relation extraction optimization
         relation_result = await optimizer.optimize_relation_extraction(
@@ -220,6 +313,13 @@ async def run_dspy_optimization(
         )
 
         relation_metrics = relation_result.get("metrics", {})
+        emit_sse(
+            EventType.EVALUATION_RESULT,
+            80.0,
+            "relation_optimization",
+            f"Relation optimization complete - F1: {relation_metrics.get('f1', 0):.3f}",
+            {"metrics": relation_metrics, "type": "relation_extraction"},
+        )
         logger.info(
             "relation_extraction_optimized",
             domain=domain_name,
@@ -229,6 +329,12 @@ async def run_dspy_optimization(
         # --- Phase 5: Prompt Extraction (80-85%) ---
         tracker.enter_phase(
             TrainingPhase.PROMPT_EXTRACTION,
+            "Extracting static prompts for production use...",
+        )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            80.0,
+            "prompt_extraction",
             "Extracting static prompts for production use...",
         )
 
@@ -249,6 +355,18 @@ async def run_dspy_optimization(
             0.8,
             f"Extracted prompts with {len(entity_examples)} entity examples, {len(relation_examples)} relation examples",
         )
+        emit_sse(
+            EventType.PROGRESS_UPDATE,
+            85.0,
+            "prompt_extraction",
+            f"Extracted {len(entity_examples)} entity examples, {len(relation_examples)} relation examples",
+            {
+                "entity_prompt": entity_prompt,  # FULL prompt (NOT truncated)
+                "relation_prompt": relation_prompt,  # FULL prompt (NOT truncated)
+                "entity_examples_count": len(entity_examples),
+                "relation_examples_count": len(relation_examples),
+            },
+        )
 
         logger.info(
             "prompts_extracted",
@@ -262,15 +380,21 @@ async def run_dspy_optimization(
             TrainingPhase.VALIDATION,
             "Validating training metrics...",
         )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            85.0,
+            "validation",
+            "Validating training metrics...",
+        )
 
-        # Prepare metrics
+        # Prepare metrics (DSPy returns "val_f1" for validation F1 score)
         training_metrics = {
             "entity_recall": entity_metrics.get("recall", 0.0),
             "entity_precision": entity_metrics.get("precision", 0.0),
-            "entity_f1": entity_metrics.get("f1", 0.0),
+            "entity_f1": entity_metrics.get("val_f1", entity_metrics.get("f1", 0.0)),
             "relation_recall": relation_metrics.get("recall", 0.0),
             "relation_precision": relation_metrics.get("precision", 0.0),
-            "relation_f1": relation_metrics.get("f1", 0.0),
+            "relation_f1": relation_metrics.get("val_f1", relation_metrics.get("f1", 0.0)),
             "training_samples": len(dataset),
         }
 
@@ -279,10 +403,23 @@ async def run_dspy_optimization(
             f"Metrics validated: Entity F1={training_metrics['entity_f1']:.2f}, Relation F1={training_metrics['relation_f1']:.2f}",
             training_metrics,
         )
+        emit_sse(
+            EventType.EVALUATION_RESULT,
+            95.0,
+            "validation",
+            f"Final metrics validated - Entity F1: {training_metrics['entity_f1']:.3f}, Relation F1: {training_metrics['relation_f1']:.3f}",
+            {"final_metrics": training_metrics},
+        )
 
         # --- Phase 7: Saving (95-100%) ---
         tracker.enter_phase(
             TrainingPhase.SAVING,
+            "Saving optimized prompts and metrics to Neo4j...",
+        )
+        emit_sse(
+            EventType.PHASE_CHANGED,
+            95.0,
+            "saving",
             "Saving optimized prompts and metrics to Neo4j...",
         )
 
@@ -306,6 +443,13 @@ async def run_dspy_optimization(
 
         # --- Phase 8: Completion (100%) ---
         tracker.complete(training_metrics)
+        emit_sse(
+            EventType.COMPLETED,
+            100.0,
+            "completed",
+            f"Training completed successfully - Entity F1: {training_metrics['entity_f1']:.3f}, Relation F1: {training_metrics['relation_f1']:.3f}",
+            {"final_metrics": training_metrics},
+        )
 
         logger.info(
             "dspy_optimization_completed",
@@ -321,6 +465,12 @@ async def run_dspy_optimization(
             training_run_id=training_run_id,
         )
         tracker.fail("Training cancelled by user")
+        emit_sse(
+            EventType.FAILED,
+            tracker.current_progress,
+            "cancelled",
+            "Training cancelled by user",
+        )
         raise
 
     except ValueError as e:
@@ -331,6 +481,13 @@ async def run_dspy_optimization(
             error=str(e),
         )
         tracker.fail(f"Validation error: {str(e)}")
+        emit_sse(
+            EventType.FAILED,
+            tracker.current_progress,
+            "failed",
+            f"Validation error: {str(e)}",
+            {"error_type": "validation", "error_message": str(e)},
+        )
 
     except DatabaseConnectionError as e:
         # Database errors
@@ -341,6 +498,13 @@ async def run_dspy_optimization(
             exc_info=True,
         )
         tracker.fail(f"Database error: {str(e)}")
+        emit_sse(
+            EventType.FAILED,
+            tracker.current_progress,
+            "failed",
+            f"Database error: {str(e)}",
+            {"error_type": "database", "error_message": str(e)},
+        )
 
     except Exception as e:
         # Unexpected errors
@@ -351,6 +515,13 @@ async def run_dspy_optimization(
             exc_info=True,
         )
         tracker.fail(str(e))
+        emit_sse(
+            EventType.FAILED,
+            tracker.current_progress,
+            "failed",
+            f"Unexpected error: {str(e)}",
+            {"error_type": "unexpected", "error_message": str(e)},
+        )
 
         # Try to update domain status to failed
         try:
@@ -371,3 +542,24 @@ async def run_dspy_optimization(
                 domain=domain_name,
                 error=str(status_error),
             )
+
+    finally:
+        # Keep stream open for a few seconds so late-connecting clients
+        # can receive the final events (completion/failure status)
+        # This handles the race condition where training completes before
+        # the frontend SSE connection is established
+        logger.info(
+            "training_stream_closing_delayed",
+            domain=domain_name,
+            training_run_id=training_run_id,
+            delay_seconds=5,
+        )
+        await asyncio.sleep(5)
+
+        # Now close the SSE stream (Feature 45.13)
+        stream.close_stream(training_run_id)
+        logger.info(
+            "training_stream_closed",
+            domain=domain_name,
+            training_run_id=training_run_id,
+        )

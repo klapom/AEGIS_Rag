@@ -1,8 +1,9 @@
 /**
  * NewDomainWizard Component
- * Sprint 45 Feature 45.4: Domain Training Admin UI
+ * Sprint 45 Feature 45.4, 45.13: Domain Training Admin UI with SSE and JSONL Export
  *
  * 3-step wizard for creating and training a new domain
+ * Feature 45.13: SSE live streaming and optional JSONL log export
  */
 
 import { useState } from 'react';
@@ -30,12 +31,13 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
   const [dataset, setDataset] = useState<TrainingSample[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [trainingRunId, setTrainingRunId] = useState<string | null>(null);
 
   const createDomain = useCreateDomain();
   const startTraining = useStartTraining();
   const { data: models } = useAvailableModels();
 
-  const handleStartTraining = async () => {
+  const handleStartTraining = async (logPath?: string) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
@@ -46,11 +48,15 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
         llm_model: config.llm_model || undefined,
       });
 
-      // Start training
-      await startTraining.mutateAsync({
+      // Start training with optional log path (Feature 45.13)
+      const response = await startTraining.mutateAsync({
         domain: config.name,
         dataset,
+        log_path: logPath,
       });
+
+      // Store training_run_id for SSE streaming
+      setTrainingRunId(response.training_run_id);
 
       // Move to progress step
       setStep(3);
@@ -87,7 +93,13 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
             error={submitError}
           />
         )}
-        {step === 3 && <TrainingProgressStep domainName={config.name} onComplete={onClose} />}
+        {step === 3 && (
+          <TrainingProgressStep
+            domainName={config.name}
+            trainingRunId={trainingRunId}
+            onComplete={onClose}
+          />
+        )}
       </div>
     </div>
   );

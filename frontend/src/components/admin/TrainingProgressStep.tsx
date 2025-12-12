@@ -1,35 +1,46 @@
 /**
  * TrainingProgressStep Component
- * Sprint 45 Feature 45.4: Domain Training Admin UI
+ * Sprint 45 Feature 45.4, 45.13: Domain Training Admin UI with SSE Live Log
  *
- * Step 3 of domain wizard: Real-time training progress with logs
+ * Step 3 of domain wizard: Real-time training progress with SSE streaming
+ * Shows FULL content (prompts, responses, evaluations) - NOT truncated.
  */
 
-import { useEffect } from 'react';
-import { useTrainingStatus } from '../../hooks/useDomainTraining';
+import { useState } from 'react';
+import { useTrainingStatus, useTrainingStream } from '../../hooks/useDomainTraining';
+import { TrainingLiveLog } from './TrainingLiveLog';
 
 interface TrainingProgressStepProps {
   domainName: string;
+  trainingRunId?: string | null;
   onComplete: () => void;
 }
 
-export function TrainingProgressStep({ domainName, onComplete }: TrainingProgressStepProps) {
+export function TrainingProgressStep({
+  domainName,
+  trainingRunId = null,
+  onComplete,
+}: TrainingProgressStepProps) {
   const { data: status, isLoading } = useTrainingStatus(domainName, true);
+  const [showLiveLog, setShowLiveLog] = useState(true);
 
-  // Auto-close on completion
-  useEffect(() => {
-    if (status?.status === 'ready') {
-      // Give user time to see success message
-      const timer = setTimeout(() => {
-        onComplete();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [status, onComplete]);
+  // SSE stream for live events (Feature 45.13)
+  // Connect as soon as we have a training_run_id (don't wait for status === 'training')
+  const sseStream = useTrainingStream(
+    domainName,
+    trainingRunId,
+    !!trainingRunId // Connect immediately when we have a run ID
+  );
 
-  const isComplete = status?.status === 'ready';
-  const isFailed = status?.status === 'failed';
-  const progress = status?.progress || 0;
+  // Use SSE progress if available, fallback to polling
+  const sseProgress = sseStream.progress;
+  const pollingProgress = status?.progress_percent || 0;
+  const progress = sseProgress > 0 ? sseProgress : pollingProgress;
+
+  // No auto-close - let user review results and click Done manually
+
+  const isComplete = status?.status === 'ready' || sseStream.isComplete;
+  const isFailed = status?.status === 'failed' || sseStream.isFailed;
 
   return (
     <div className="space-y-6" data-testid="training-progress-step">
@@ -82,7 +93,14 @@ export function TrainingProgressStep({ domainName, onComplete }: TrainingProgres
               {!isLoading && status?.status === 'ready' && 'Training Complete!'}
               {!isLoading && status?.status === 'failed' && 'Training Failed'}
             </h3>
-            <p className="text-sm text-gray-600">Domain: {domainName}</p>
+            <p className="text-sm text-gray-600">
+              Domain: {domainName}
+              {sseStream.phase && (
+                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                  {sseStream.phase.replace('_', ' ')}
+                </span>
+              )}
+            </p>
           </div>
         </div>
 
@@ -108,7 +126,7 @@ export function TrainingProgressStep({ domainName, onComplete }: TrainingProgres
         )}
 
         {/* Error Message */}
-        {isFailed && status.error && (
+        {isFailed && status?.error && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800" data-testid="training-error">
               {status.error}
@@ -117,10 +135,41 @@ export function TrainingProgressStep({ domainName, onComplete }: TrainingProgres
         )}
       </div>
 
-      {/* Training Logs */}
-      {status?.logs && status.logs.length > 0 && (
+      {/* Live Log Toggle */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setShowLiveLog(!showLiveLog)}
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+        >
+          <span>{showLiveLog ? '▼' : '▶'}</span>
+          {showLiveLog ? 'Hide' : 'Show'} Live Training Log
+          {sseStream.events.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+              {sseStream.events.length}
+            </span>
+          )}
+        </button>
+        {sseStream.isConnected && (
+          <span className="text-xs text-green-600 flex items-center gap-1">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            SSE Connected
+          </span>
+        )}
+      </div>
+
+      {/* SSE Live Log (Feature 45.13) */}
+      {showLiveLog && (
+        <TrainingLiveLog
+          events={sseStream.events}
+          isConnected={sseStream.isConnected}
+          latestEvent={sseStream.latestEvent}
+        />
+      )}
+
+      {/* Legacy Training Logs (fallback) */}
+      {!showLiveLog && status?.logs && status.logs.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-700">Training Logs</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Training Logs (Polling)</h3>
           <div
             className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs max-h-64 overflow-y-auto"
             data-testid="training-logs"
