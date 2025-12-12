@@ -6,6 +6,7 @@ import { AdminIndexingPage } from '../pom/AdminIndexingPage';
 import { AdminGraphPage } from '../pom/AdminGraphPage';
 import { CostDashboardPage } from '../pom/CostDashboardPage';
 import { AdminLLMConfigPage } from '../pom/AdminLLMConfigPage';
+import { AdminDomainTrainingPage } from '../pom/AdminDomainTrainingPage';
 
 /**
  * Custom Playwright test fixtures for AEGIS RAG
@@ -79,6 +80,7 @@ type Fixtures = {
   adminGraphPage: AdminGraphPage;
   costDashboardPage: CostDashboardPage;
   adminLLMConfigPage: AdminLLMConfigPage;
+  adminDomainTrainingPage: AdminDomainTrainingPage;
   /** Authenticated page - use for protected routes */
   authenticatedPage: Page;
   /** Authenticated chat page - with auth mocking */
@@ -162,6 +164,18 @@ export const test = base.extend<Fixtures>({
     const adminLLMConfigPage = new AdminLLMConfigPage(page);
     await adminLLMConfigPage.goto();
     await use(adminLLMConfigPage);
+  },
+
+  /**
+   * Admin Domain Training Page Fixture
+   * Navigates to /admin/domain-training and provides AdminDomainTrainingPage object
+   * Sprint 45: Domain Training System (Features 45.3, 45.10, 45.12)
+   */
+  adminDomainTrainingPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
+    const adminDomainTrainingPage = new AdminDomainTrainingPage(page);
+    await adminDomainTrainingPage.goto();
+    await use(adminDomainTrainingPage);
   },
 
   /**
