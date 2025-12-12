@@ -49,6 +49,27 @@
 | qwen2.5:7b | 2.4% | 0.8% | Very clean extraction |
 | nuextract:3.8b | 0.0% | 5.0% | Too few entities to dedup |
 
+### 4. Quality Comparison (vs qwen3:32b Reference)
+
+**Entity Extraction Quality** (3 samples, qwen3:32b = 100%)
+
+| Model | Precision | Recall | F1 Score | Quality |
+|-------|-----------|--------|----------|---------|
+| qwen2.5:7b | 61.5% | 43.9% | **50.2%** | Moderate |
+| qwen2.5:3b | 56.7% | 29.1% | **35.6%** | Poor |
+
+**Relation Extraction Quality** (3 samples, qwen3:32b = 100%)
+
+| Model | Precision | Recall | F1 Score | Quality |
+|-------|-----------|--------|----------|---------|
+| qwen2.5:7b | 8.5% | 5.3% | **6.3%** | Very Poor |
+| qwen2.5:3b | 0.0% | 0.0% | **0.0%** | None |
+
+**Key Insight:** Smaller models find **different** entities and relations, not the same ones faster!
+- qwen2.5:7b finds ~44% of qwen3:32b's entities (moderate overlap)
+- qwen2.5:3b finds ~29% of qwen3:32b's entities (low overlap)
+- Relation extraction diverges significantly - almost no overlap
+
 ---
 
 ## Detailed Model Analysis
@@ -115,13 +136,23 @@ EXTRACTION_MODEL_QUALITY: qwen3:32b
 ---
 
 ## Data Files
+
+### Performance Evaluation (10 samples each)
 - `pipeline_eval_qwen3_32b_20251211_230359.json`
 - `pipeline_eval_qwen3_8b_20251211_235936.json`
 - `pipeline_eval_qwen2.5_7b_20251212_000759.json`
 - `pipeline_eval_qwen2.5_3b_20251212_011618.json`
 - `pipeline_eval_nuextract_3.8b_20251212_001455.json`
 
+### Quality Comparison (3 samples)
+- `quality_comparison_20251212_065139.json` - Detailed entity/relation overlap
+- `quality_comparison_20251212_065139.md` - Human-readable report
+
+### Scripts
+- `scripts/pipeline_model_evaluation.py` - Performance evaluation
+- `scripts/compare_model_quality.py` - Quality comparison (Precision/Recall/F1)
+
 ---
 
-*Generated: 2025-12-12 01:20 CET*
+*Generated: 2025-12-12 06:52 CET*
 *Sprint 44 Part 3 Evaluation*

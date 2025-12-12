@@ -1,0 +1,1134 @@
+{
+  "metadata": {
+    "timestamp": "2025-12-12T06:37:18.996942",
+    "reference_model": "qwen3:32b",
+    "candidate_models": [
+      "qwen2.5:7b",
+      "qwen2.5:3b"
+    ],
+    "num_samples": 3
+  },
+  "per_sample": [
+    {
+      "sample_id": "sample_0000",
+      "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+      "comparisons": {
+        "qwen2.5:7b": {
+          "entities": {
+            "intersection": 11,
+            "set_a_size": 21,
+            "set_b_size": 31,
+            "precision": 0.524,
+            "recall": 0.355,
+            "f1": 0.423,
+            "unique_to_a": 10,
+            "unique_to_b": 20,
+            "unique_to_a_items": [
+              "300 (film)",
+              "dawn of the dead (film)",
+              "deliver us from evil (2014 film)",
+              "doctor strange (2016 film)",
+              "ed wood (film)",
+              "ed wood sr.",
+              "john wick (film)",
+              "sinister (film)",
+              "sucker punch (film)",
+              "woodson, arkansas"
+            ],
+            "unique_to_b_items": [
+              "anneliese michel",
+              "benedict cumberbatch",
+              "conrad brooks",
+              "deliver us from evil",
+              "doctor strange",
+              "ed wood",
+              "guardians of the galaxy",
+              "heaven upside down",
+              "james gunn",
+              "jerry bruckheimer"
+            ]
+          },
+          "relations": {
+            "intersection": 0,
+            "set_a_size": 15,
+            "set_b_size": 24,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "unique_to_a": 15,
+            "unique_to_b": 24,
+            "unique_to_a_items": [
+              [
+                "adam collis",
+                "ASSISTANT_DIRECTOR_OF",
+                "scott derrickson"
+              ],
+              [
+                "adam collis",
+                "WORKED_AT",
+                "duke university"
+              ],
+              [
+                "adam collis",
+                "WORKED_AT",
+                "university of california, los angeles"
+              ],
+              [
+                "adam collis",
+                "WORKED_AT",
+                "university of southern california"
+              ],
+              [
+                "bela lugosi",
+                "ACTED_IN",
+                "ed wood (film)"
+              ],
+              [
+                "ed wood sr.",
+                "NAMED_AFTER",
+                "woodson, arkansas"
+              ],
+              [
+                "scott derrickson",
+                "DIRECTED",
+                "deliver us from evil (2014 film)"
+              ],
+              [
+                "scott derrickson",
+                "DIRECTED",
+                "doctor strange (2016 film)"
+              ],
+              [
+                "scott derrickson",
+                "DIRECTED",
+                "hellraiser: inferno"
+              ],
+              [
+                "scott derrickson",
+                "DIRECTED",
+                "sinister (film)"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "duke university"
+              ],
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "university of california, los angeles"
+              ],
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "university of southern california"
+              ],
+              [
+                "adam collis",
+                "WORKS_WITH",
+                "scott derrickson"
+              ],
+              [
+                "conrad brooks",
+                "ACTED_IN",
+                "ed wood"
+              ],
+              [
+                "deliver us from evil",
+                "DIRECTED_BY",
+                "scott derrickson"
+              ],
+              [
+                "deliver us from evil",
+                "PRODUCED_BY",
+                "jerry bruckheimer"
+              ],
+              [
+                "doctor strange",
+                "DIRECTED_BY",
+                "scott derrickson"
+              ],
+              [
+                "doctor strange",
+                "DISTRIBUTED_BY",
+                "walt disney studios motion pictures"
+              ],
+              [
+                "doctor strange",
+                "PRODUCED_BY",
+                "marvel studios"
+              ]
+            ]
+          },
+          "entity_names": [
+            "300 (film)",
+            "adam collis",
+            "bela lugosi",
+            "dawn of the dead (film)",
+            "deliver us from evil (2014 film)",
+            "doctor strange (2016 film)",
+            "duke university",
+            "ed wood (film)",
+            "ed wood sr.",
+            "hellraiser: inferno",
+            "john wick (film)",
+            "marvel studios",
+            "scott derrickson",
+            "sinister (film)",
+            "sucker punch (film)",
+            "tim burton",
+            "tyler bates",
+            "university of california, los angeles",
+            "university of southern california",
+            "walt disney studios motion pictures",
+            "woodson, arkansas"
+          ]
+        },
+        "qwen2.5:3b": {
+          "entities": {
+            "intersection": 11,
+            "set_a_size": 38,
+            "set_b_size": 31,
+            "precision": 0.289,
+            "recall": 0.355,
+            "f1": 0.319,
+            "unique_to_a": 27,
+            "unique_to_b": 20,
+            "unique_to_a_items": [
+              "baltimore, maryland",
+              "benedict wong",
+              "benjamin bratt",
+              "bill murray",
+              "chiwetel ejiofor",
+              "conrad biedrzycki",
+              "ed wood sr.",
+              "eric bana",
+              "jeffrey jones",
+              "joel mchale"
+            ],
+            "unique_to_b_items": [
+              "anneliese michel",
+              "conrad brooks",
+              "deliver us from evil",
+              "doctor strange",
+              "ed wood",
+              "guardians of the galaxy",
+              "heaven upside down",
+              "hellraiser: inferno",
+              "james gunn",
+              "laura linney"
+            ]
+          },
+          "relations": {
+            "intersection": 0,
+            "set_a_size": 8,
+            "set_b_size": 24,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "unique_to_a": 8,
+            "unique_to_b": 24,
+            "unique_to_a_items": [
+              [
+                "adam collis",
+                "WORKS_AT",
+                "duke university"
+              ],
+              [
+                "adam collis",
+                "WORKS_AT",
+                "university of california, los angeles"
+              ],
+              [
+                "adam collis",
+                "WORKS_AT",
+                "university of southern california"
+              ],
+              [
+                "scott derrickson",
+                "CREATED",
+                "ed wood (film)"
+              ],
+              [
+                "scott derrickson",
+                "WORKS_AT",
+                "deliver us from evil (2014 film)"
+              ],
+              [
+                "scott derrickson",
+                "WORKS_AT",
+                "doctor strange (2016 film)"
+              ],
+              [
+                "scott derrickson",
+                "WORKS_AT",
+                "sinister (film)"
+              ],
+              [
+                "scott derrickson",
+                "WORKS_AT",
+                "the exorcism of emily rose (2005 film)"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "duke university"
+              ],
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "university of california, los angeles"
+              ],
+              [
+                "adam collis",
+                "EDUCATED_AT",
+                "university of southern california"
+              ],
+              [
+                "adam collis",
+                "WORKS_WITH",
+                "scott derrickson"
+              ],
+              [
+                "conrad brooks",
+                "ACTED_IN",
+                "ed wood"
+              ],
+              [
+                "deliver us from evil",
+                "DIRECTED_BY",
+                "scott derrickson"
+              ],
+              [
+                "deliver us from evil",
+                "PRODUCED_BY",
+                "jerry bruckheimer"
+              ],
+              [
+                "doctor strange",
+                "DIRECTED_BY",
+                "scott derrickson"
+              ],
+              [
+                "doctor strange",
+                "DISTRIBUTED_BY",
+                "walt disney studios motion pictures"
+              ],
+              [
+                "doctor strange",
+                "PRODUCED_BY",
+                "marvel studios"
+              ]
+            ]
+          },
+          "entity_names": [
+            "adam collis",
+            "baltimore, maryland",
+            "bela lugosi",
+            "benedict cumberbatch",
+            "benedict wong",
+            "benjamin bratt",
+            "bill murray",
+            "chiwetel ejiofor",
+            "conrad biedrzycki",
+            "duke university",
+            "ed wood sr.",
+            "eric bana",
+            "jeffrey jones",
+            "jerry bruckheimer",
+            "joel mchale",
+            "johnny depp",
+            "lisa marie",
+            "mads mikkelsen",
+            "michael stuhlbarg",
+            "neil marshall",
+            "olivia munn",
+            "patricia arquette",
+            "rachel mcadams",
+            "rob zombie",
+            "sarah jessica parker",
+            "scott adkins",
+            "scott derrickson",
+            "sean harris",
+            "tilda swinton",
+            "tim burton",
+            "university of california, los angeles",
+            "university of southern california",
+            "william friedkin",
+            "wood hollow",
+            "woodson lake",
+            "woodson, arkansas",
+            "zack snyder",
+            "édgar ramírez"
+          ]
+        }
+      },
+      "reference": {
+        "model": "qwen3:32b",
+        "entities_count": 31,
+        "relations_count": 24,
+        "entity_names": [
+          "adam collis",
+          "anneliese michel",
+          "bela lugosi",
+          "benedict cumberbatch",
+          "conrad brooks",
+          "deliver us from evil",
+          "doctor strange",
+          "duke university",
+          "ed wood",
+          "guardians of the galaxy",
+          "heaven upside down",
+          "hellraiser: inferno",
+          "james gunn",
+          "jerry bruckheimer",
+          "johnny depp",
+          "laura linney",
+          "love in the ruins",
+          "marilyn manson",
+          "marvel studios",
+          "scott derrickson",
+          "sinister",
+          "the exorcism of emily rose",
+          "the pale emperor",
+          "tim burton",
+          "tom wilkinson",
+          "tyler bates",
+          "university of california, los angeles",
+          "university of southern california",
+          "walt disney studios motion pictures",
+          "woodson",
+          "zack snyder"
+        ]
+      }
+    },
+    {
+      "sample_id": "sample_0001",
+      "question": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?",
+      "comparisons": {
+        "qwen2.5:7b": {
+          "entities": {
+            "intersection": 11,
+            "set_a_size": 14,
+            "set_b_size": 27,
+            "precision": 0.786,
+            "recall": 0.407,
+            "f1": 0.537,
+            "unique_to_a": 3,
+            "unique_to_b": 16,
+            "unique_to_a_items": [
+              "janet waldo",
+              "kiss and tell",
+              "meet corliss archer (radio series)"
+            ],
+            "unique_to_b_items": [
+              "bangui",
+              "cbs",
+              "central african republic",
+              "flippers new adventure",
+              "hampshire",
+              "highway patrol",
+              "janet marie waldo",
+              "kiss and tell (1945 film)",
+              "meet corliss archer (1954)",
+              "meet corliss archer (radio)"
+            ]
+          },
+          "relations": {
+            "intersection": 1,
+            "set_a_size": 9,
+            "set_b_size": 23,
+            "precision": 0.111,
+            "recall": 0.043,
+            "f1": 0.062,
+            "unique_to_a": 8,
+            "unique_to_b": 22,
+            "unique_to_a_items": [
+              [
+                "a kiss for corliss",
+                "ACTED_IN",
+                "shirley temple"
+              ],
+              [
+                "a kiss for corliss",
+                "RELEASING_COMPANY",
+                "united artists"
+              ],
+              [
+                "a kiss for corliss",
+                "SEQUEL_OF",
+                "kiss and tell (1945 film)"
+              ],
+              [
+                "a kiss for corliss",
+                "WORKS_AT",
+                "howard dimsdale"
+              ],
+              [
+                "a kiss for corliss",
+                "WORKS_AT",
+                "richard wallace"
+              ],
+              [
+                "janet waldo",
+                "VOICED_CHARACTER_IN",
+                "meet corliss archer"
+              ],
+              [
+                "meet corliss archer (radio series)",
+                "CREATED_BY",
+                "f. hugh herbert"
+              ],
+              [
+                "meet corliss archer (tv series)",
+                "EDITED_BY",
+                "charles craft"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "a kiss for corliss",
+                "RELEASED_BY",
+                "united artists"
+              ],
+              [
+                "a kiss for corliss",
+                "SEQUEL_TO",
+                "kiss and tell (1945 film)"
+              ],
+              [
+                "charles craft",
+                "BORN_IN",
+                "hampshire"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "flippers new adventure"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "highway patrol"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "meet corliss archer (1954)"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "racket squad"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "science fiction theatre"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "sea hunt"
+              ],
+              [
+                "charles craft",
+                "WORKED_AT",
+                "universal pictures"
+              ]
+            ]
+          },
+          "entity_names": [
+            "a kiss for corliss",
+            "charles craft",
+            "f. hugh herbert",
+            "howard dimsdale",
+            "janet waldo",
+            "joseph kalite",
+            "kiss and tell",
+            "lord high treasurer",
+            "meet corliss archer (radio series)",
+            "meet corliss archer (tv series)",
+            "richard wallace",
+            "secretary of state for constitutional affairs",
+            "shirley temple",
+            "united artists"
+          ]
+        },
+        "qwen2.5:3b": {
+          "entities": {
+            "intersection": 7,
+            "set_a_size": 8,
+            "set_b_size": 27,
+            "precision": 0.875,
+            "recall": 0.259,
+            "f1": 0.4,
+            "unique_to_a": 1,
+            "unique_to_b": 20,
+            "unique_to_a_items": [
+              "janet waldo"
+            ],
+            "unique_to_b_items": [
+              "a kiss for corliss",
+              "bangui",
+              "cbs",
+              "central african republic",
+              "charles craft",
+              "flippers new adventure",
+              "hampshire",
+              "highway patrol",
+              "janet marie waldo",
+              "joseph kalite"
+            ]
+          },
+          "relations": {
+            "intersection": 0,
+            "set_a_size": 5,
+            "set_b_size": 23,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "unique_to_a": 5,
+            "unique_to_b": 23,
+            "unique_to_a_items": [
+              [
+                "howard dimsdale",
+                "USES",
+                "kiss and tell (1945 film)"
+              ],
+              [
+                "janet waldo",
+                "USES",
+                "meet corliss archer (tv series)"
+              ],
+              [
+                "kiss and tell (1945 film)",
+                "PART_OF",
+                "meet corliss archer"
+              ],
+              [
+                "richard wallace",
+                "USES",
+                "kiss and tell (1945 film)"
+              ],
+              [
+                "united artists",
+                "WORKS_AT",
+                "a kiss for corliss: a kiss for corliss"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "a kiss for corliss",
+                "RELEASED_BY",
+                "united artists"
+              ],
+              [
+                "a kiss for corliss",
+                "SEQUEL_TO",
+                "kiss and tell (1945 film)"
+              ],
+              [
+                "charles craft",
+                "BORN_IN",
+                "hampshire"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "flippers new adventure"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "highway patrol"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "meet corliss archer (1954)"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "racket squad"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "science fiction theatre"
+              ],
+              [
+                "charles craft",
+                "EDITED",
+                "sea hunt"
+              ],
+              [
+                "charles craft",
+                "WORKED_AT",
+                "universal pictures"
+              ]
+            ]
+          },
+          "entity_names": [
+            "f. hugh herbert",
+            "howard dimsdale",
+            "janet waldo",
+            "kiss and tell (1945 film)",
+            "lord high treasurer",
+            "richard wallace",
+            "shirley temple",
+            "united artists"
+          ]
+        }
+      },
+      "reference": {
+        "model": "qwen3:32b",
+        "entities_count": 27,
+        "relations_count": 23,
+        "entity_names": [
+          "a kiss for corliss",
+          "bangui",
+          "cbs",
+          "central african republic",
+          "charles craft",
+          "f. hugh herbert",
+          "flippers new adventure",
+          "hampshire",
+          "highway patrol",
+          "howard dimsdale",
+          "janet marie waldo",
+          "joseph kalite",
+          "kiss and tell (1945 film)",
+          "lord high treasurer",
+          "meet corliss archer (1954)",
+          "meet corliss archer (radio)",
+          "meet corliss archer (tv series)",
+          "racket squad",
+          "richard wallace",
+          "science fiction theatre",
+          "sea hunt",
+          "secretary of state for constitutional affairs",
+          "shirley temple",
+          "the village accountant",
+          "united artists",
+          "universal pictures",
+          "ziv company"
+        ]
+      }
+    },
+    {
+      "sample_id": "sample_0002",
+      "question": "What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?",
+      "comparisons": {
+        "qwen2.5:7b": {
+          "entities": {
+            "intersection": 15,
+            "set_a_size": 28,
+            "set_b_size": 27,
+            "precision": 0.536,
+            "recall": 0.556,
+            "f1": 0.545,
+            "unique_to_a": 13,
+            "unique_to_b": 12,
+            "unique_to_a_items": [
+              "andre norton award for young adult science fiction and fantasy",
+              "back to the divide (2005)",
+              "indigo magic",
+              "jinx on the divide (2006)",
+              "kyril bonfiglioli",
+              "new worlds",
+              "science fantasy (magazine)",
+              "shadowshaper (2015)",
+              "star trek",
+              "the divide (2002)"
+            ],
+            "unique_to_b_items": [
+              "andre norton",
+              "andre norton award",
+              "etiquette & espionage",
+              "gail carriger",
+              "jerry b. jenkins",
+              "left behind: the kids",
+              "science fantasy",
+              "shadowshaper",
+              "square enix",
+              "the divide trilogy"
+            ]
+          },
+          "relations": {
+            "intersection": 3,
+            "set_a_size": 21,
+            "set_b_size": 26,
+            "precision": 0.143,
+            "recall": 0.115,
+            "f1": 0.128,
+            "unique_to_a": 18,
+            "unique_to_b": 23,
+            "unique_to_a_items": [
+              [
+                "andre norton award for young adult science fiction and fantasy",
+                "AWARDS",
+                "the healers keep"
+              ],
+              [
+                "andre norton award for young adult science fiction and fantasy",
+                "AWARDS",
+                "the light of the oracle"
+              ],
+              [
+                "andre norton award for young adult science fiction and fantasy",
+                "AWARDS",
+                "the seer and the sword"
+              ],
+              [
+                "chicken house",
+                "PUBLISHES",
+                "the divide (2002)"
+              ],
+              [
+                "chicken house",
+                "PUBLISHES",
+                "the healers keep"
+              ],
+              [
+                "chicken house",
+                "PUBLISHES",
+                "the seer and the sword"
+              ],
+              [
+                "daniel josé older",
+                "CREATES",
+                "shadowshaper (2015)"
+              ],
+              [
+                "egmont usa",
+                "PUBLISHES",
+                "indigo magic"
+              ],
+              [
+                "john carnell",
+                "EDITOR",
+                "science fantasy"
+              ],
+              [
+                "k. a. applegate",
+                "CREATES",
+                "animorphs"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "andre norton award",
+                "ADMINISTERED_BY",
+                "science fiction and fantasy writers of america"
+              ],
+              [
+                "andre norton award",
+                "NAMED_AFTER",
+                "andre norton"
+              ],
+              [
+                "animorphs",
+                "PUBLISHED_BY",
+                "scholastic"
+              ],
+              [
+                "back to the divide",
+                "PUBLISHED_BY",
+                "scholastic"
+              ],
+              [
+                "daniel josé older",
+                "CREATES",
+                "shadowshaper"
+              ],
+              [
+                "etiquette & espionage",
+                "PART_OF",
+                "parasol protectorate"
+              ],
+              [
+                "gail carriger",
+                "CREATES",
+                "etiquette & espionage"
+              ],
+              [
+                "jeri taylor",
+                "CREATES",
+                "kazon"
+              ],
+              [
+                "jerry b. jenkins",
+                "CREATES",
+                "left behind: the kids"
+              ],
+              [
+                "jinx on the divide",
+                "PUBLISHED_BY",
+                "scholastic"
+              ]
+            ]
+          },
+          "entity_names": [
+            "andre norton award for young adult science fiction and fantasy",
+            "animorphs",
+            "back to the divide (2005)",
+            "chicken house",
+            "daniel josé older",
+            "elizabeth kay",
+            "indigo magic",
+            "jeri taylor",
+            "jinx on the divide (2006)",
+            "john carnell",
+            "katherine applegate",
+            "kazon",
+            "kyril bonfiglioli",
+            "michael grant",
+            "michael piller",
+            "new worlds",
+            "nova publications",
+            "rick berman",
+            "scholastic",
+            "science fantasy (magazine)",
+            "shadowshaper (2015)",
+            "star trek",
+            "the divide (2002)",
+            "the healers keep",
+            "the light of the oracle",
+            "the seer and the sword",
+            "victoria hanley",
+            "walter gillings"
+          ]
+        },
+        "qwen2.5:3b": {
+          "entities": {
+            "intersection": 7,
+            "set_a_size": 13,
+            "set_b_size": 27,
+            "precision": 0.538,
+            "recall": 0.259,
+            "f1": 0.35,
+            "unique_to_a": 6,
+            "unique_to_b": 20,
+            "unique_to_a_items": [
+              "cotton wood press",
+              "digicube",
+              "egmont usa",
+              "kyril bonfiglioli",
+              "studio bentstuff",
+              "walter gillot"
+            ],
+            "unique_to_b_items": [
+              "andre norton",
+              "andre norton award",
+              "animorphs",
+              "daniel josé older",
+              "elizabeth kay",
+              "etiquette & espionage",
+              "gail carriger",
+              "jeri taylor",
+              "jerry b. jenkins",
+              "kazon"
+            ]
+          },
+          "relations": {
+            "intersection": 0,
+            "set_a_size": 13,
+            "set_b_size": 26,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "unique_to_a": 13,
+            "unique_to_b": 26,
+            "unique_to_a_items": [
+              [
+                "chicken house",
+                "PUBLISHED_BY",
+                "the divide trilogy"
+              ],
+              [
+                "cotton wood press",
+                "PUBLISHED_BY",
+                "seize the story: a handbook for teens who like to write"
+              ],
+              [
+                "digicube",
+                "WRITTEN_AND_PUBLISHED_BY",
+                "perfect works series"
+              ],
+              [
+                "egmont usa",
+                "PUBLISHED_BY",
+                "indigo magic"
+              ],
+              [
+                "john carnell",
+                "EDITED",
+                "science fantasy"
+              ],
+              [
+                "katherine applegate",
+                "CO_WRITES",
+                "michael grant"
+              ],
+              [
+                "kyril bonfiglioli",
+                "EDITED",
+                "science fantasy"
+              ],
+              [
+                "nova publications",
+                "LAUNCHED",
+                "science fantasy"
+              ],
+              [
+                "scholastic",
+                "PUBLISHED_BY",
+                "the divide trilogy"
+              ],
+              [
+                "scholastic",
+                "PUBLISHES",
+                "animorphs"
+              ]
+            ],
+            "unique_to_b_items": [
+              [
+                "andre norton award",
+                "ADMINISTERED_BY",
+                "science fiction and fantasy writers of america"
+              ],
+              [
+                "andre norton award",
+                "NAMED_AFTER",
+                "andre norton"
+              ],
+              [
+                "animorphs",
+                "PUBLISHED_BY",
+                "scholastic"
+              ],
+              [
+                "back to the divide",
+                "PUBLISHED_BY",
+                "scholastic"
+              ],
+              [
+                "daniel josé older",
+                "CREATES",
+                "shadowshaper"
+              ],
+              [
+                "elizabeth kay",
+                "CREATES",
+                "the divide trilogy"
+              ],
+              [
+                "etiquette & espionage",
+                "PART_OF",
+                "parasol protectorate"
+              ],
+              [
+                "gail carriger",
+                "CREATES",
+                "etiquette & espionage"
+              ],
+              [
+                "jeri taylor",
+                "CREATES",
+                "kazon"
+              ],
+              [
+                "jerry b. jenkins",
+                "CREATES",
+                "left behind: the kids"
+              ]
+            ]
+          },
+          "entity_names": [
+            "chicken house",
+            "cotton wood press",
+            "digicube",
+            "egmont usa",
+            "john carnell",
+            "katherine applegate",
+            "kyril bonfiglioli",
+            "michael grant",
+            "nova publications",
+            "scholastic",
+            "studio bentstuff",
+            "tyndale house publishing",
+            "walter gillot"
+          ]
+        }
+      },
+      "reference": {
+        "model": "qwen3:32b",
+        "entities_count": 27,
+        "relations_count": 26,
+        "entity_names": [
+          "andre norton",
+          "andre norton award",
+          "animorphs",
+          "chicken house",
+          "daniel josé older",
+          "elizabeth kay",
+          "etiquette & espionage",
+          "gail carriger",
+          "jeri taylor",
+          "jerry b. jenkins",
+          "john carnell",
+          "katherine applegate",
+          "kazon",
+          "left behind: the kids",
+          "michael grant",
+          "michael piller",
+          "nova publications",
+          "rick berman",
+          "scholastic",
+          "science fantasy",
+          "shadowshaper",
+          "square enix",
+          "the divide trilogy",
+          "tim lahaye",
+          "tyndale house publishing",
+          "victoria hanley",
+          "walter gillings"
+        ]
+      }
+    }
+  ],
+  "aggregated": {
+    "qwen2.5:7b": {
+      "vs_reference": "qwen3:32b",
+      "entity_metrics": {
+        "avg_precision": 0.615,
+        "avg_recall": 0.439,
+        "avg_f1": 0.502
+      },
+      "relation_metrics": {
+        "avg_precision": 0.085,
+        "avg_recall": 0.053,
+        "avg_f1": 0.063
+      }
+    },
+    "qwen2.5:3b": {
+      "vs_reference": "qwen3:32b",
+      "entity_metrics": {
+        "avg_precision": 0.567,
+        "avg_recall": 0.291,
+        "avg_f1": 0.356
+      },
+      "relation_metrics": {
+        "avg_precision": 0.0,
+        "avg_recall": 0.0,
+        "avg_f1": 0.0
+      }
+    }
+  }
+}
