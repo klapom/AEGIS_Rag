@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "run_id": "eval_qwen3_32b_20251211_225613",
+    "model": "qwen3:32b",
+    "dataset": "hotpotqa",
+    "timestamp": "2025-12-11T23:00:30.802568",
+    "total_samples": 1,
+    "successful": 1,
+    "failed": 0,
+    "total_time_seconds": 256.81
+  },
+  "summary": {
+    "chunking": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 0.0736994743347168,
+      "avg_duration_seconds": 0.0736994743347168,
+      "errors": 0,
+      "total_input_chars": 5011,
+      "avg_input_chars": 5011.0,
+      "total_chunks_created": 1,
+      "avg_chunks_created": 1.0
+    },
+    "extraction": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 254.72508096694946,
+      "avg_duration_seconds": 254.72508096694946,
+      "errors": 1,
+      "total_entities_raw": 32,
+      "avg_entities_raw": 32.0,
+      "total_relations_raw": 26,
+      "avg_relations_raw": 26.0
+    },
+    "overall": {
+      "total_samples": 1,
+      "successful": 1,
+      "failed": 0,
+      "avg_time_per_sample": 254.79884219169617
+    }
+  },
+  "results": [
+    {
+      "sample_id": "sample_0000",
+      "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+      "ground_truth": "yes",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.074,
+          "metrics": {
+            "input_chars": 5011,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              5011
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 254.725,
+          "metrics": {
+            "entities_raw": 32,
+            "relations_raw": 26
+          },
+          "errors": [
+            "'GraphEntity' object has no attribute 'get'"
+          ]
+        }
+      },
+      "total_time_seconds": 254.799,
+      "error_message": ""
+    }
+  ]
+}

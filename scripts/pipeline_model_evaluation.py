@@ -114,11 +114,19 @@ async def process_sample(
             # Stage 1: Chunking
             with monitor.stage("chunking") as stage:
                 chunking_service = ChunkingService()
-                chunks = chunking_service.chunk_text(text)
+                chunk_objects = await chunking_service.chunk_document(
+                    text=text,
+                    document_id=sample_id,
+                )
+                # Convert Chunk objects to dicts for extraction
+                chunks = [
+                    {"content": c.content, "chunk_id": c.chunk_id, "metadata": c.metadata}
+                    for c in chunk_objects
+                ]
 
                 stage.metrics["input_chars"] = len(text)
                 stage.metrics["chunks_created"] = len(chunks)
-                stage.metrics["chunk_sizes_chars"] = [len(c.get("content", c.get("text", ""))) for c in chunks]
+                stage.metrics["chunk_sizes_chars"] = [len(c["content"]) for c in chunks]
 
                 result["chunks_created"] = len(chunks)
 
@@ -127,22 +135,30 @@ async def process_sample(
             all_relations = []
 
             with monitor.stage("extraction") as stage:
-                extraction_service = ExtractionService()
+                extraction_service = ExtractionService(llm_model=model)
 
                 for chunk in chunks:
-                    chunk_text = chunk.get("content", chunk.get("text", ""))
+                    chunk_text = chunk.get("content", "")
                     try:
-                        # Extract entities
-                        entities = await asyncio.to_thread(
-                            extraction_service.extract_entities, chunk_text
-                        )
-                        all_entities.extend(entities)
+                        # Extract entities (async) - returns GraphEntity objects
+                        entities = await extraction_service.extract_entities(chunk_text)
+                        # Convert to dicts for deduplication
+                        entity_dicts = [
+                            e.model_dump() if hasattr(e, "model_dump") else e
+                            for e in entities
+                        ]
+                        all_entities.extend(entity_dicts)
 
-                        # Extract relations
-                        relations = await asyncio.to_thread(
-                            extraction_service.extract_relationships, chunk_text, entities
+                        # Extract relations (async) - returns GraphRelationship objects
+                        relations = await extraction_service.extract_relationships(
+                            chunk_text, entities
                         )
-                        all_relations.extend(relations)
+                        # Convert to dicts for deduplication
+                        relation_dicts = [
+                            r.model_dump() if hasattr(r, "model_dump") else r
+                            for r in relations
+                        ]
+                        all_relations.extend(relation_dicts)
                     except Exception as e:
                         logger.warning(
                             "chunk_extraction_failed",

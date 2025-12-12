@@ -1,0 +1,126 @@
+{
+  "metadata": {
+    "run_id": "eval_qwen3_8b_20251211_230113",
+    "model": "qwen3:8b",
+    "dataset": "hotpotqa",
+    "timestamp": "2025-12-11T23:02:01.327309",
+    "total_samples": 1,
+    "successful": 1,
+    "failed": 0,
+    "total_time_seconds": 48.18
+  },
+  "summary": {
+    "chunking": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 0.07944488525390625,
+      "avg_duration_seconds": 0.07944488525390625,
+      "errors": 0,
+      "total_input_chars": 5011,
+      "avg_input_chars": 5011.0,
+      "total_chunks_created": 1,
+      "avg_chunks_created": 1.0
+    },
+    "entity_dedup": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 1.734877347946167,
+      "avg_duration_seconds": 1.734877347946167,
+      "errors": 0,
+      "total_entities_before": 24,
+      "avg_entities_before": 24.0,
+      "total_entities_after": 22,
+      "avg_entities_after": 22.0,
+      "total_reduction_percent": 8.3,
+      "avg_reduction_percent": 8.3,
+      "total_mapping_size": 1,
+      "avg_mapping_size": 1.0
+    },
+    "extraction": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 44.24350380897522,
+      "avg_duration_seconds": 44.24350380897522,
+      "errors": 0,
+      "total_entities_raw": 24,
+      "avg_entities_raw": 24.0,
+      "total_relations_raw": 19,
+      "avg_relations_raw": 19.0
+    },
+    "relation_dedup": {
+      "samples_with_stage": 1,
+      "total_duration_seconds": 0.0002079010009765625,
+      "avg_duration_seconds": 0.0002079010009765625,
+      "errors": 0,
+      "total_relations_before": 19,
+      "avg_relations_before": 19.0,
+      "total_relations_after": 19,
+      "avg_relations_after": 19.0,
+      "total_reduction_percent": 0.0,
+      "avg_reduction_percent": 0.0
+    },
+    "overall": {
+      "total_samples": 1,
+      "successful": 1,
+      "failed": 0,
+      "avg_time_per_sample": 46.058095932006836
+    }
+  },
+  "results": [
+    {
+      "sample_id": "sample_0000",
+      "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+      "ground_truth": "yes",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.079,
+          "metrics": {
+            "input_chars": 5011,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              5011
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 44.244,
+          "metrics": {
+            "entities_raw": 24,
+            "relations_raw": 19,
+            "entity_types": {
+              "PERSON": 11,
+              "ORGANIZATION": 5,
+              "PRODUCT": 7,
+              "LOCATION": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 1.735,
+          "metrics": {
+            "entities_before": 24,
+            "entities_after": 22,
+            "reduction_percent": 8.3,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 19,
+            "relations_after": 19,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 46.058,
+      "error_message": ""
+    }
+  ]
+}

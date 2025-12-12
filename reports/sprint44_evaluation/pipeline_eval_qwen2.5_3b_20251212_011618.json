@@ -1,0 +1,655 @@
+{
+  "metadata": {
+    "run_id": "eval_qwen2.5_3b_20251212_011618",
+    "model": "qwen2.5:3b",
+    "dataset": "hotpotqa",
+    "timestamp": "2025-12-12T01:19:33.181743",
+    "total_samples": 10,
+    "successful": 10,
+    "failed": 0,
+    "total_time_seconds": 195.13
+  },
+  "summary": {
+    "chunking": {
+      "samples_with_stage": 10,
+      "total_duration_seconds": 0.08079242706298828,
+      "avg_duration_seconds": 0.008079242706298829,
+      "errors": 0,
+      "total_input_chars": 68126,
+      "avg_input_chars": 6812.6,
+      "total_chunks_created": 15,
+      "avg_chunks_created": 1.5
+    },
+    "entity_dedup": {
+      "samples_with_stage": 10,
+      "total_duration_seconds": 2.355623483657837,
+      "avg_duration_seconds": 0.23556234836578369,
+      "errors": 0,
+      "total_entities_before": 301,
+      "avg_entities_before": 30.1,
+      "total_entities_after": 256,
+      "avg_entities_after": 25.6,
+      "total_reduction_percent": 149.9,
+      "avg_reduction_percent": 14.99,
+      "total_mapping_size": 8,
+      "avg_mapping_size": 0.8
+    },
+    "extraction": {
+      "samples_with_stage": 10,
+      "total_duration_seconds": 190.71753573417664,
+      "avg_duration_seconds": 19.071753573417663,
+      "errors": 0,
+      "total_entities_raw": 301,
+      "avg_entities_raw": 30.1,
+      "total_relations_raw": 88,
+      "avg_relations_raw": 8.8
+    },
+    "relation_dedup": {
+      "samples_with_stage": 10,
+      "total_duration_seconds": 0.0011451244354248047,
+      "avg_duration_seconds": 0.00011451244354248047,
+      "errors": 0,
+      "total_relations_before": 88,
+      "avg_relations_before": 8.8,
+      "total_relations_after": 83,
+      "avg_relations_after": 8.3,
+      "total_reduction_percent": 48.0,
+      "avg_reduction_percent": 4.8
+    },
+    "overall": {
+      "total_samples": 10,
+      "successful": 10,
+      "failed": 0,
+      "avg_time_per_sample": 19.315536975860596
+    }
+  },
+  "results": [
+    {
+      "sample_id": "sample_0000",
+      "question": "Were Scott Derrickson and Ed Wood of the same nationality?",
+      "ground_truth": "yes",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.071,
+          "metrics": {
+            "input_chars": 5011,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              5011
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 21.772,
+          "metrics": {
+            "entities_raw": 39,
+            "relations_raw": 6,
+            "entity_types": {
+              "PERSON": 35,
+              "ORGANIZATION": 3,
+              "LOCATION": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 1.797,
+          "metrics": {
+            "entities_before": 39,
+            "entities_after": 37,
+            "reduction_percent": 5.1,
+            "mapping_size": 0
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 6,
+            "relations_after": 6,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 23.639,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0001",
+      "question": "What government position was held by the woman who portrayed Corliss Archer in the film Kiss and Tell?",
+      "ground_truth": "Chief of Protocol",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 5238,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              5238
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 10.351,
+          "metrics": {
+            "entities_raw": 12,
+            "relations_raw": 6,
+            "entity_types": {
+              "PERSON": 6,
+              "ORGANIZATION": 2,
+              "CONCEPT": 3,
+              "PRODUCT": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.021,
+          "metrics": {
+            "entities_before": 12,
+            "entities_after": 8,
+            "reduction_percent": 33.3,
+            "mapping_size": 0
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 6,
+            "relations_after": 6,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 10.373,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0002",
+      "question": "What science fantasy young adult series, told in first person, has a set of companion books narrating the stories of enslaved worlds and alien species?",
+      "ground_truth": "Animorphs",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 7000,
+            "chunks_created": 2,
+            "chunk_sizes_chars": [
+              7000,
+              200
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 19.299,
+          "metrics": {
+            "entities_raw": 30,
+            "relations_raw": 11,
+            "entity_types": {
+              "PERSON": 15,
+              "ORGANIZATION": 11,
+              "EVENT": 2,
+              "CONCEPT": 1,
+              "NUMBER": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.083,
+          "metrics": {
+            "entities_before": 30,
+            "entities_after": 27,
+            "reduction_percent": 10.0,
+            "mapping_size": 0
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 11,
+            "relations_after": 11,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 19.383,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0003",
+      "question": "Are the Laleli Mosque and Esma Sultan Mansion located in the same neighborhood?",
+      "ground_truth": "no",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 3552,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              3552
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 24.838,
+          "metrics": {
+            "entities_raw": 34,
+            "relations_raw": 16,
+            "entity_types": {
+              "PERSON": 24,
+              "LOCATION": 9,
+              "ORGANIZATION": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.046,
+          "metrics": {
+            "entities_before": 34,
+            "entities_after": 23,
+            "reduction_percent": 32.4,
+            "mapping_size": 3
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 16,
+            "relations_after": 14,
+            "reduction_percent": 12.5
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 24.884,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0004",
+      "question": "The director of the romantic comedy \"Big Stone Gap\" is based in what New York city?",
+      "ground_truth": "Greenwich Village, New York City",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 6136,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              6136
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 17.184,
+          "metrics": {
+            "entities_raw": 35,
+            "relations_raw": 3,
+            "entity_types": {
+              "ORGANIZATION": 7,
+              "PERSON": 14,
+              "LOCATION": 13,
+              "CONCEPT": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.068,
+          "metrics": {
+            "entities_before": 35,
+            "entities_after": 31,
+            "reduction_percent": 11.4,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 3,
+            "relations_after": 3,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 17.253,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0005",
+      "question": "2014 S/S is the debut album of a South Korean boy group that was formed by who?",
+      "ground_truth": "YG Entertainment",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 5632,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              5632
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 11.048,
+          "metrics": {
+            "entities_raw": 21,
+            "relations_raw": 6,
+            "entity_types": {
+              "ORGANIZATION": 19,
+              "TECHNOLOGY": 1,
+              "PERSON": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.023,
+          "metrics": {
+            "entities_before": 21,
+            "entities_after": 18,
+            "reduction_percent": 14.3,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 6,
+            "relations_after": 6,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 11.072,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0006",
+      "question": "Who was known by his stage name Aladin and helped organizations improve their performance as a consultant?",
+      "ground_truth": "Eenasul Fateh",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.002,
+          "metrics": {
+            "input_chars": 7913,
+            "chunks_created": 2,
+            "chunk_sizes_chars": [
+              7196,
+              1115
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 23.217,
+          "metrics": {
+            "entities_raw": 41,
+            "relations_raw": 6,
+            "entity_types": {
+              "PERSON": 15,
+              "ORGANIZATION": 8,
+              "CONCEPT": 4,
+              "PRODUCT": 10,
+              "TECHNOLOGY": 2,
+              "EVENT": 2
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.122,
+          "metrics": {
+            "entities_before": 41,
+            "entities_after": 37,
+            "reduction_percent": 9.8,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 6,
+            "relations_after": 6,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 23.341,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0007",
+      "question": "The arena where the Lewiston Maineiacs played their home games can seat how many people?",
+      "ground_truth": "3,677 seated",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 14234,
+            "chunks_created": 3,
+            "chunk_sizes_chars": [
+              7196,
+              7198,
+              640
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 22.567,
+          "metrics": {
+            "entities_raw": 40,
+            "relations_raw": 11,
+            "entity_types": {
+              "PRODUCT": 7,
+              "EVENT": 3,
+              "ORGANIZATION": 15,
+              "CONCEPT": 2,
+              "PERSON": 4,
+              "LOCATION": 8,
+              "OTHER": 1
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.095,
+          "metrics": {
+            "entities_before": 40,
+            "entities_after": 31,
+            "reduction_percent": 22.5,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 11,
+            "relations_after": 11,
+            "reduction_percent": 0.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 22.663,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0008",
+      "question": "Who is older, Annie Morton or Terry Richardson?",
+      "ground_truth": "Terry Richardson",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 6155,
+            "chunks_created": 1,
+            "chunk_sizes_chars": [
+              6155
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 5.915,
+          "metrics": {
+            "entities_raw": 4,
+            "relations_raw": 4,
+            "entity_types": {
+              "PERSON": 4
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.011,
+          "metrics": {
+            "entities_before": 4,
+            "entities_after": 4,
+            "reduction_percent": 0.0,
+            "mapping_size": 0
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 4,
+            "relations_after": 3,
+            "reduction_percent": 25.0
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 5.927,
+      "error_message": ""
+    },
+    {
+      "sample_id": "sample_0009",
+      "question": "Are Local H and For Against both from the United States?",
+      "ground_truth": "yes",
+      "status": "success",
+      "stages": {
+        "chunking": {
+          "stage": "chunking",
+          "duration_seconds": 0.001,
+          "metrics": {
+            "input_chars": 7255,
+            "chunks_created": 2,
+            "chunk_sizes_chars": [
+              7194,
+              460
+            ]
+          },
+          "errors": []
+        },
+        "extraction": {
+          "stage": "extraction",
+          "duration_seconds": 34.527,
+          "metrics": {
+            "entities_raw": 45,
+            "relations_raw": 19,
+            "entity_types": {
+              "PRODUCT": 6,
+              "LOCATION": 11,
+              "PERSON": 7,
+              "ORGANIZATION": 15,
+              "CONCEPT": 4,
+              "EVENT": 2
+            }
+          },
+          "errors": []
+        },
+        "entity_dedup": {
+          "stage": "entity_dedup",
+          "duration_seconds": 0.091,
+          "metrics": {
+            "entities_before": 45,
+            "entities_after": 40,
+            "reduction_percent": 11.1,
+            "mapping_size": 1
+          },
+          "errors": []
+        },
+        "relation_dedup": {
+          "stage": "relation_dedup",
+          "duration_seconds": 0.0,
+          "metrics": {
+            "relations_before": 19,
+            "relations_after": 17,
+            "reduction_percent": 10.5
+          },
+          "errors": []
+        }
+      },
+      "total_time_seconds": 34.619,
+      "error_message": ""
+    }
+  ]
+}
