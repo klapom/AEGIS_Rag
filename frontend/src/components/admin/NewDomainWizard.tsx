@@ -28,12 +28,16 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
     llm_model: 'qwen3:32b',
   });
   const [dataset, setDataset] = useState<TrainingSample[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createDomain = useCreateDomain();
   const startTraining = useStartTraining();
   const { data: models } = useAvailableModels();
 
   const handleStartTraining = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
     try {
       // Create domain
       await createDomain.mutateAsync({
@@ -52,7 +56,9 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
       setStep(3);
     } catch (error) {
       console.error('Failed to start training:', error);
-      // Error is handled by the hooks, stay on current step
+      setSubmitError(error instanceof Error ? error.message : 'Failed to start training');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,6 +83,8 @@ export function NewDomainWizard({ onClose }: NewDomainWizardProps) {
             onUpload={setDataset}
             onBack={() => setStep(1)}
             onNext={handleStartTraining}
+            isLoading={isSubmitting}
+            error={submitError}
           />
         )}
         {step === 3 && <TrainingProgressStep domainName={config.name} onComplete={onClose} />}

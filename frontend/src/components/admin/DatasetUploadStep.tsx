@@ -13,17 +13,19 @@ interface DatasetUploadStepProps {
   onUpload: (samples: TrainingSample[]) => void;
   onBack: () => void;
   onNext: () => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
-export function DatasetUploadStep({ dataset, onUpload, onBack, onNext }: DatasetUploadStepProps) {
-  const [error, setError] = useState<string | null>(null);
+export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading = false, error: submitError }: DatasetUploadStepProps) {
+  const [parseError, setParseError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setError(null);
+    setParseError(null);
 
     try {
       const text = await file.text();
@@ -59,7 +61,7 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext }: Dataset
 
       onUpload(samples);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse JSONL file');
+      setParseError(err instanceof Error ? err.message : 'Failed to parse JSONL file');
       onUpload([]);
     }
   };
@@ -117,12 +119,12 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext }: Dataset
       </div>
 
       {/* Error Display */}
-      {error && (
+      {(parseError || submitError) && (
         <div
           className="p-4 bg-red-50 border border-red-200 rounded-lg"
           data-testid="dataset-upload-error"
         >
-          <p className="text-sm text-red-800">{error}</p>
+          <p className="text-sm text-red-800">{parseError || submitError}</p>
         </div>
       )}
 
@@ -152,11 +154,19 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext }: Dataset
                 <div className="space-y-2">
                   <div>
                     <span className="text-xs font-semibold text-gray-500 uppercase">Input</span>
-                    <p className="text-sm text-gray-900 mt-1">{sample.input}</p>
+                    <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
+                      {typeof sample.input === 'string'
+                        ? sample.input
+                        : sample.input?.source_text || JSON.stringify(sample.input, null, 2)}
+                    </p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold text-gray-500 uppercase">Output</span>
-                    <p className="text-sm text-gray-700 mt-1">{sample.output}</p>
+                    <pre className="text-sm text-gray-700 mt-1 whitespace-pre-wrap bg-gray-50 p-2 rounded overflow-auto max-h-32">
+                      {typeof sample.output === 'string'
+                        ? sample.output
+                        : JSON.stringify(sample.output, null, 2)}
+                    </pre>
                   </div>
                 </div>
               </div>
@@ -174,18 +184,29 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext }: Dataset
       <div className="flex justify-between pt-4 border-t">
         <button
           onClick={onBack}
-          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          disabled={isLoading}
+          className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           data-testid="dataset-upload-back"
         >
           Back
         </button>
         <button
           onClick={onNext}
-          disabled={!isValid}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          disabled={!isValid || isLoading}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
           data-testid="dataset-upload-next"
         >
-          Start Training
+          {isLoading ? (
+            <>
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Starting Training...
+            </>
+          ) : (
+            'Start Training'
+          )}
         </button>
       </div>
     </div>

@@ -500,24 +500,31 @@ class DomainRepository:
         logger.info("deleting_domain", name=name)
 
         try:
-            result = await self.neo4j_client.execute_write(
+            # First check if domain exists
+            check_result = await self.neo4j_client.execute_read(
                 """
                 MATCH (d:Domain {name: $name})
-                OPTIONAL MATCH (d)-[:HAS_TRAINING_LOG]->(t:TrainingLog)
-                DETACH DELETE d, t
-                RETURN count(d) AS deleted_count
+                RETURN d.id AS id
                 """,
                 {"name": name},
             )
 
-            deleted = result[0]["deleted_count"] > 0 if result else False
-
-            if deleted:
-                logger.info("domain_deleted", name=name)
-            else:
+            if not check_result:
                 logger.warning("domain_not_found_for_deletion", name=name)
+                return False
 
-            return deleted
+            # Delete domain and associated training logs
+            await self.neo4j_client.execute_write(
+                """
+                MATCH (d:Domain {name: $name})
+                OPTIONAL MATCH (d)-[:HAS_TRAINING_LOG]->(t:TrainingLog)
+                DETACH DELETE d, t
+                """,
+                {"name": name},
+            )
+
+            logger.info("domain_deleted", name=name)
+            return True
 
         except Exception as e:
             logger.error("delete_domain_failed", name=name, error=str(e))

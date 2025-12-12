@@ -344,7 +344,7 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
         embedding_service = EmbeddingService()
 
         # Generate description embedding using BGE-M3
-        description_embedding = await embedding_service.embed_text(request.description)
+        description_embedding = await embedding_service.embed_single(request.description)
 
         logger.info(
             "description_embedded",
@@ -451,6 +451,65 @@ async def list_domains() -> list[DomainResponse]:
 
     except Exception as e:
         logger.error("list_domains_unexpected_error", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
+
+
+@router.get("/available-models", response_model=list[AvailableModel])
+async def get_available_models() -> list[AvailableModel]:
+    """Get list of available LLM models from Ollama.
+
+    Queries the local Ollama instance to retrieve all available models
+    that can be used for domain training.
+
+    Returns:
+        List of available Ollama models
+
+    Raises:
+        HTTPException 503: If Ollama is not available
+        HTTPException 500: If query fails
+    """
+    logger.info("get_available_models_request")
+
+    try:
+        ollama_url = settings.ollama_base_url or "http://localhost:11434"
+
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{ollama_url}/api/tags")
+            response.raise_for_status()
+
+            models_data = response.json()
+            models = models_data.get("models", [])
+
+            logger.info("available_models_retrieved", count=len(models))
+
+            return [
+                AvailableModel(
+                    name=m["name"],
+                    size=m.get("size", 0),
+                    modified_at=m.get("modified_at"),
+                )
+                for m in models
+            ]
+
+    except httpx.ConnectError as e:
+        logger.error("ollama_connection_error", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ollama service is not available",
+        )
+
+    except httpx.HTTPStatusError as e:
+        logger.error("ollama_http_error", status_code=e.response.status_code, error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ollama API error: {e.response.status_code}",
+        )
+
+    except Exception as e:
+        logger.error("get_available_models_unexpected_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
@@ -729,65 +788,6 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
             error=str(e),
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
-
-
-@router.get("/available-models", response_model=list[AvailableModel])
-async def get_available_models() -> list[AvailableModel]:
-    """Get list of available LLM models from Ollama.
-
-    Queries the local Ollama instance to retrieve all available models
-    that can be used for domain training.
-
-    Returns:
-        List of available Ollama models
-
-    Raises:
-        HTTPException 503: If Ollama is not available
-        HTTPException 500: If query fails
-    """
-    logger.info("get_available_models_request")
-
-    try:
-        ollama_url = settings.ollama_base_url or "http://localhost:11434"
-
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{ollama_url}/api/tags")
-            response.raise_for_status()
-
-            models_data = response.json()
-            models = models_data.get("models", [])
-
-            logger.info("available_models_retrieved", count=len(models))
-
-            return [
-                AvailableModel(
-                    name=m["name"],
-                    size=m.get("size", 0),
-                    modified_at=m.get("modified_at"),
-                )
-                for m in models
-            ]
-
-    except httpx.ConnectError as e:
-        logger.error("ollama_connection_error", error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Ollama service is not available",
-        )
-
-    except httpx.HTTPStatusError as e:
-        logger.error("ollama_http_error", status_code=e.response.status_code, error=str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ollama API error: {e.response.status_code}",
-        )
-
-    except Exception as e:
-        logger.error("get_available_models_unexpected_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
