@@ -206,19 +206,25 @@ grep -r "SessionSidebar" frontend/src --include="*.tsx" --include="*.ts"
 
 ---
 
-## Part 2: Domain Auto-Discovery
+## Part 2: Domain Auto-Discovery (Admin UI)
 
 ### Feature 46.4: Document-based Domain Discovery 📋
 **Story Points:** 8
 **Priority:** P1
 
 **Concept:**
-User uploads 1-3 sample documents → LLM analyzes content → Suggests domain title & description
+Im Admin UI beim Anlegen einer neuen Domain: User lädt 1-3 Sample-Dokumente hoch → LLM analysiert Inhalt → Schlägt Domain-Titel & Beschreibung vor
+
+**Location:** Admin UI → Domains → "Neue Domain anlegen" → Step 1 (oder Tab "Auto-Discovery")
 
 **User Flow:**
 ```
 ┌─────────────────────────────────────────────┐
-│ Domain Auto-Discovery                       │
+│ Admin > Domains > Neue Domain anlegen       │
+├─────────────────────────────────────────────┤
+│                                             │
+│ [Tab: Manuell] [Tab: Auto-Discovery ✓]      │
+│                                             │
 ├─────────────────────────────────────────────┤
 │                                             │
 │ Upload 1-3 sample documents to auto-        │
