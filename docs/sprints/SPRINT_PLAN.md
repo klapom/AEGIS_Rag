@@ -936,11 +936,12 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
-## Sprint 45: Domain-Specific Prompt Optimization mit DSPy 🔄
+## Sprint 45: Domain-Specific Prompt Optimization mit DSPy ✅ (COMPLETE 2025-12-12)
 **Ziel:** Admin UI für Domain-Training + Automatische Prompt-Optimierung + LLM-Gruppierung
 
 **Start:** 2025-12-12
-**Status:** IN PROGRESS
+**End:** 2025-12-12
+**Status:** COMPLETE
 
 **Breakdown:**
 | Feature | SP | Priority |
@@ -1006,13 +1007,56 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
-## Sprint 46+: Backlog Candidates 📋
+## Sprint 46: Conversation UI & Domain Auto-Discovery 📋
+**Ziel:** Chat-Style Conversation UI + Transparentes Reasoning + Domain Auto-Discovery
+
+**Start:** 2025-12-15
+**Status:** PLANNED
+
+**Breakdown:**
+| Feature | SP | Priority |
+|---------|-----|----------|
+| 46.1 Chat-Style Layout | 8 | P0 |
+| 46.2 Transparent Reasoning Panel | 13 | P0 |
+| 46.3 Bug Fix: Duplicate History | 2 | P0 |
+| 46.4 Document-based Domain Discovery | 8 | P1 |
+| 46.5 Integration with Domain Wizard | 3 | P1 |
+| 46.6 Manual Domain Testing | 5 | P1 |
+| 46.7 Admin UI Improvements | 5 | P2 |
+| 46.8 Admin Area Consolidation | 8 | P2 |
+| **Total** | **52** | |
+
+### Deliverables
+- Chat-style conversation UI (history scrolls up, input at bottom)
+- Expandable "Reasoning" panel per message (like ChatGPT)
+- Show retrieval steps: Intent → Qdrant → BM25 → Neo4j → Redis → RRF
+- Domain auto-discovery from 1-3 uploaded documents
+- Admin UI consolidated into single dashboard page
+- Bug fix: Remove duplicate SessionSidebar components
+
+### Key Changes
+- **SearchResultsPage** → **ConversationView** (major refactor)
+- **SSE Stream** → Add retrieval step events, intent events
+- **Admin UI** → Consolidate multiple pages into sections
+
+### Success Criteria
+- [ ] Conversation flows upward, input fixed at bottom
+- [ ] Reasoning panel shows all backend queries with timing
+- [ ] Domain discovery suggests sensible title/description from samples
+- [ ] At least one domain fully tested with documented results
+- [ ] No duplicate SessionSidebar components
+
+### References
+- [SPRINT_46_PLAN.md](SPRINT_46_PLAN.md)
+
+---
+
+## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
 |---------|-----|--------|
 | JWT Authentication Frontend | 13 | Backlog |
 | Learned RRF Weights | 8 | Backlog |
-| Conversation Search UI | 8 | Backlog |
 | NuExtract Model Evaluation | 5 | Backlog |
 | Qwen3:8b-Q4_K_M Benchmark | 3 | Backlog |
 | Reranking in Container (TD-059) | 3 | Tech Debt |
