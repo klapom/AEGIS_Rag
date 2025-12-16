@@ -14,7 +14,7 @@
  * - Keyboard navigation support
  */
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { MessageBubble, type MessageData } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { SearchInput, type SearchMode } from '../search';
@@ -72,6 +72,9 @@ export function ConversationView({
   const userHasScrolledUp = useRef(false);
   // Track previous message count to detect new messages
   const prevMessageCount = useRef(messages.length);
+
+  // Sprint 47: Track thinking start time for elapsed time display
+  const [thinkingStartTime, setThinkingStartTime] = useState<number | null>(null);
 
   /**
    * Check if the user is scrolled near the bottom of the messages container
@@ -131,6 +134,26 @@ export function ConversationView({
   }, []); // Only on mount
 
   /**
+   * Sprint 47: Track thinking start time
+   * Starts timer when streaming begins, resets when streaming ends
+   */
+  useEffect(() => {
+    const shouldShowIndicator = showTypingIndicator ?? (isStreaming && messages.length > 0);
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    const isLastMessageStreaming = lastMessage?.isStreaming ?? false;
+
+    if (shouldShowIndicator && !isLastMessageStreaming && !thinkingStartTime) {
+      // Start thinking timer
+      setThinkingStartTime(Date.now());
+    } else if (!shouldShowIndicator || isLastMessageStreaming) {
+      // Reset thinking timer when indicator hides or streaming starts
+      if (thinkingStartTime) {
+        setThinkingStartTime(null);
+      }
+    }
+  }, [isStreaming, showTypingIndicator, messages, thinkingStartTime]);
+
+  /**
    * Determine if typing indicator should be shown
    */
   const shouldShowTypingIndicator = showTypingIndicator ?? (isStreaming && messages.length > 0);
@@ -185,7 +208,11 @@ export function ConversationView({
             {/* Typing indicator - shown while waiting for response */}
             {shouldShowTypingIndicator && !isLastMessageStreaming && (
               <div className="px-6 py-4 bg-white border-t border-gray-100">
-                <TypingIndicator text={typingText} showAvatar={true} />
+                <TypingIndicator
+                  text={typingText}
+                  showAvatar={true}
+                  startTime={thinkingStartTime ?? undefined}
+                />
               </div>
             )}
 
