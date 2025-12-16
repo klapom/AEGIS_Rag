@@ -1,7 +1,7 @@
 # Sprint 48: Real-Time Thinking Phase Events
 
 **Sprint Duration:** 2 Weeks
-**Total Story Points:** 68 SP
+**Total Story Points:** 73 SP
 **Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte
 
 ---
@@ -19,7 +19,8 @@
 | 48.7 | 3 | ReasoningData Builder |
 | 48.8 | 8 | TD-059 Reranking via Ollama |
 | 48.9 | 5 | Default LLM zu Nemotron wechseln |
-| **Total** | **68** | |
+| 48.10 | 5 | Request Timeout & Cancel |
+| **Total** | **73** | |
 
 ---
 
@@ -593,6 +594,209 @@ class DomainCreateRequest(BaseModel):
 
 ---
 
+### Feature 48.10: Request Timeout & Cancel (5 SP)
+
+**Problem:** Anfragen können hängen bleiben (z.B. 27+ Minuten wie beobachtet), ohne dass der User Feedback bekommt oder abbrechen kann.
+
+**Backend: Timeout-Mechanismus**
+
+```python
+# src/api/v1/chat.py
+import asyncio
+from contextlib import asynccontextmanager
+
+# Konfigurierbare Timeouts
+REQUEST_TIMEOUT_SECONDS = 90      # Gesamter Request
+PHASE_TIMEOUT_SECONDS = 30        # Einzelne Phase (außer LLM)
+LLM_TIMEOUT_SECONDS = 60          # LLM Generation (länger wegen Streaming)
+
+@asynccontextmanager
+async def timeout_context(seconds: float, phase_name: str):
+    """Context manager für Phase-Timeouts."""
+    try:
+        yield
+    except asyncio.TimeoutError:
+        raise PhaseTimeoutError(
+            phase=phase_name,
+            timeout_seconds=seconds,
+            message=f"Phase '{phase_name}' timed out after {seconds}s"
+        )
+
+async def generate_stream() -> AsyncGenerator[str, None]:
+    """Stream mit Timeout-Handling."""
+
+    try:
+        async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
+            async for chunk in coordinator.process_query_stream(...):
+                yield _format_sse_message(chunk)
+
+    except asyncio.TimeoutError:
+        # Timeout-Event senden
+        yield _format_sse_message({
+            "type": "error",
+            "error": "Request timed out after 90 seconds",
+            "code": "TIMEOUT",
+            "recoverable": True,
+        })
+        yield _format_sse_message({"type": "complete"})
+```
+
+**Backend: AbortController für sauberen Abbruch**
+
+```python
+# src/agents/coordinator.py
+class CoordinatorAgent:
+    async def process_query_stream(
+        self,
+        query: str,
+        abort_signal: asyncio.Event | None = None,  # NEU
+        ...
+    ) -> AsyncGenerator[dict, None]:
+        """Stream mit Abort-Support."""
+
+        for phase in phases:
+            # Check abort signal before each phase
+            if abort_signal and abort_signal.is_set():
+                yield PhaseEvent(
+                    phase=PhaseType.ABORTED,
+                    message="Anfrage vom Benutzer abgebrochen",
+                    status=PhaseStatus.CANCELLED,
+                )
+                return
+
+            # Execute phase with timeout
+            try:
+                async with asyncio.timeout(PHASE_TIMEOUT_SECONDS):
+                    result = await self._execute_phase(phase, state)
+            except asyncio.TimeoutError:
+                yield PhaseEvent(
+                    phase=phase.type,
+                    message=f"{phase.name} Timeout nach {PHASE_TIMEOUT_SECONDS}s",
+                    status=PhaseStatus.ERROR,
+                    data={"timeout": True}
+                )
+                # Continue with fallback or abort based on phase criticality
+```
+
+**Frontend: Cancel Button & Warning**
+
+```typescript
+// frontend/src/hooks/useStreamChat.ts
+export interface StreamingState {
+  // ... existing
+  abortController: AbortController | null;
+  showTimeoutWarning: boolean;
+}
+
+const WARNING_THRESHOLD_MS = 30000;  // 30s
+const TIMEOUT_MS = 90000;            // 90s
+
+export function useStreamChat() {
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const startStreaming = async (query: string) => {
+    // Create abort controller
+    abortControllerRef.current = new AbortController();
+
+    // Set warning timer
+    warningTimeoutRef.current = setTimeout(() => {
+      setShowTimeoutWarning(true);
+    }, WARNING_THRESHOLD_MS);
+
+    try {
+      await fetchStream(query, {
+        signal: abortControllerRef.current.signal,
+      });
+    } finally {
+      clearTimeout(warningTimeoutRef.current);
+      setShowTimeoutWarning(false);
+    }
+  };
+
+  const cancelRequest = () => {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    setShowTimeoutWarning(false);
+  };
+
+  return { ..., cancelRequest, showTimeoutWarning };
+}
+```
+
+**Frontend: TypingIndicator mit Cancel Button**
+
+```typescript
+// frontend/src/components/chat/TypingIndicator.tsx
+interface TypingIndicatorProps {
+  // ... existing
+  onCancel?: () => void;           // NEU: Cancel callback
+  showWarning?: boolean;           // NEU: Timeout warning
+}
+
+export function TypingIndicator({
+  onCancel,
+  showWarning,
+  ...props
+}: TypingIndicatorProps) {
+  return (
+    <div className="...">
+      {/* Existing content */}
+
+      {/* Timeout Warning */}
+      {showWarning && (
+        <div className="mt-2 text-amber-600 text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          <span>Anfrage dauert länger als erwartet...</span>
+        </div>
+      )}
+
+      {/* Cancel Button */}
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          className="mt-2 text-sm text-gray-500 hover:text-red-500
+                     flex items-center gap-1 transition-colors"
+        >
+          <XCircle className="w-4 h-4" />
+          <span>Abbrechen</span>
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**Konfiguration:**
+
+```bash
+# .env.dgx-spark
+REQUEST_TIMEOUT_SECONDS=90
+PHASE_TIMEOUT_SECONDS=30
+LLM_TIMEOUT_SECONDS=60
+```
+
+**Dateien:**
+- `src/api/v1/chat.py` (UPDATE - Timeout handling)
+- `src/agents/coordinator.py` (UPDATE - Abort signal support)
+- `src/core/config.py` (UPDATE - Timeout settings)
+- `frontend/src/hooks/useStreamChat.ts` (UPDATE - AbortController, warning)
+- `frontend/src/components/chat/TypingIndicator.tsx` (UPDATE - Cancel button, warning)
+- `frontend/src/components/chat/ConversationView.tsx` (UPDATE - Pass cancel props)
+
+**Akzeptanzkriterien:**
+- [ ] Request wird nach 90s automatisch abgebrochen
+- [ ] Warning erscheint nach 30s
+- [ ] Cancel-Button bricht Request sofort ab
+- [ ] Backend beendet Verarbeitung sauber bei Abort
+- [ ] Timeout-Error wird dem User angezeigt
+- [ ] Phase-Events zeigen Timeout/Cancelled Status
+- [ ] Konfigurierbare Timeout-Werte
+- [ ] Integration Tests für Timeout-Szenarien
+
+---
+
 ## Error Handling Strategie
 
 ### Recoverable Errors (Phase continues)
@@ -747,8 +951,8 @@ Client POST /api/v1/chat/stream
 
 | Metrik | Target |
 |--------|--------|
-| Features | 9 |
-| Story Points | 68 SP |
+| Features | 10 |
+| Story Points | 73 SP |
 | Test Coverage | >80% |
 | Phase Latency Overhead | <10ms |
 

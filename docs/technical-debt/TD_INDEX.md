@@ -136,7 +136,7 @@
 
 ### Sprint 48 (Current - Real-Time Thinking Phase Events)
 **Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte + Reranking + Nemotron
-**Story Points:** 68 SP
+**Story Points:** 73 SP
 
 | Feature | SP | Description |
 |---------|-----|-------------|
@@ -149,6 +149,7 @@
 | 48.7 | 3 | ReasoningData Builder |
 | 48.8 | 8 | **TD-059 Reranking via Ollama (bge-reranker-v2-m3)** |
 | 48.9 | 5 | **Default LLM zu Nemotron wechseln** |
+| 48.10 | 5 | **Request Timeout & Cancel** |
 
 **Related TDs:**
 - TD-053: Admin Dashboard (Phase-Events für Monitoring)
