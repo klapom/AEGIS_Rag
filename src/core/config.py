@@ -332,8 +332,8 @@ class Settings(BaseSettings):
         description="Reranking backend: 'ollama' (TD-059, no sentence-transformers) or 'sentence-transformers' (legacy)",
     )
     reranker_ollama_model: str = Field(
-        default="bge-reranker-v2-m3",
-        description="Ollama model for reranking (bge-reranker-v2-m3: multilingual, compatible with BGE-M3)",
+        default="qllama/bge-reranker-v2-m3:q8_0",
+        description="Ollama model for reranking (qllama/bge-reranker-v2-m3: multilingual, compatible with BGE-M3)",
     )
     reranker_top_k: int = Field(
         default=10,

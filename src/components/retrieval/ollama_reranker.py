@@ -82,10 +82,10 @@ class OllamaReranker:
         """Initialize Ollama reranker.
 
         Args:
-            model: Ollama model name for reranking (default: from settings.reranker_model)
+            model: Ollama model name for reranking (default: from settings.reranker_ollama_model)
             top_k: Number of top documents to return (default: 10)
         """
-        self.model = model or settings.reranker_model
+        self.model = model or settings.reranker_ollama_model
         self.top_k = top_k
         self.ollama_url = f"{settings.ollama_base_url}/api/generate"
 

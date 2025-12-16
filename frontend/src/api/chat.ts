@@ -308,7 +308,7 @@ export async function getFollowUpQuestions(sessionId: string): Promise<string[]>
  * @returns Conversation history with messages
  */
 export async function getConversation(sessionId: string): Promise<ConversationHistoryResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions/${sessionId}/conversation`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/history/${sessionId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
