@@ -246,27 +246,63 @@ class FourWayHybridSearch:
             fused_results = []
             logger.warning("four_way_search_no_results", query=query[:50])
 
-        # Step 5: Apply reranking if requested
+        # Step 5: Apply reranking if requested (Sprint 48 Feature 48.8: Ollama Reranker)
         if use_reranking and fused_results:
-            reranked = await self.hybrid_search.reranker.rerank(
-                query=query,
-                documents=fused_results[: top_k * 2],
-                top_k=top_k,
-            )
-            final_results = []
-            for rerank_result in reranked:
-                original = next(
-                    (d for d in fused_results if d.get("id") == rerank_result.doc_id),
-                    None,
+            from src.core.config import settings
+
+            # Choose reranker backend (Ollama or sentence-transformers)
+            if settings.reranker_backend == "ollama":
+                # Use Ollama reranker (TD-059: No sentence-transformers dependency)
+                from src.components.retrieval.ollama_reranker import OllamaReranker
+
+                ollama_reranker = OllamaReranker(
+                    model=settings.reranker_ollama_model,
+                    top_k=top_k,
                 )
-                if original:
+
+                # Extract document texts for reranking
+                doc_texts = [d.get("text", "") for d in fused_results[: top_k * 2]]
+
+                # Rerank: returns list of (doc_index, score) tuples
+                reranked_indices = await ollama_reranker.rerank(
+                    query=query,
+                    documents=doc_texts,
+                    top_k=top_k,
+                )
+
+                # Reorder results based on reranking
+                final_results = []
+                for rank, (doc_idx, score) in enumerate(reranked_indices):
+                    original = fused_results[doc_idx]
                     final_results.append(
                         {
                             **original,
-                            "rerank_score": rerank_result.rerank_score,
-                            "final_rank": rerank_result.final_rank,
+                            "rerank_score": score,
+                            "final_rank": rank,
                         }
                     )
+
+            else:
+                # Use sentence-transformers reranker (legacy)
+                reranked = await self.hybrid_search.reranker.rerank(
+                    query=query,
+                    documents=fused_results[: top_k * 2],
+                    top_k=top_k,
+                )
+                final_results = []
+                for rerank_result in reranked:
+                    original = next(
+                        (d for d in fused_results if d.get("id") == rerank_result.doc_id),
+                        None,
+                    )
+                    if original:
+                        final_results.append(
+                            {
+                                **original,
+                                "rerank_score": rerank_result.rerank_score,
+                                "final_rank": rerank_result.final_rank,
+                            }
+                        )
         else:
             final_results = fused_results[:top_k]
 

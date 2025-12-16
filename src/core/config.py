@@ -196,7 +196,8 @@ class Settings(BaseSettings):
     # Ollama LLM (Primary)
     ollama_base_url: str = Field(default="http://localhost:11434", description="Ollama server URL")
     ollama_model_generation: str = Field(
-        default="llama3.1:8b", description="Ollama model for generation (128K context)"
+        default="nemotron-no-think:latest",
+        description="Ollama model for generation (Sprint 48: nemotron-no-think for better RAG)",
     )
     ollama_model_query: str = Field(
         default="llama3.2:3b", description="Ollama model for query understanding"
@@ -319,6 +320,26 @@ class Settings(BaseSettings):
     reranker_batch_size: int = Field(default=32, description="Batch size for reranking inference")
     reranker_cache_dir: str = Field(
         default="./data/models", description="Directory for caching HuggingFace models"
+    )
+
+    # Sprint 48 Feature 48.8: Ollama Reranker (TD-059)
+    reranker_enabled: bool = Field(
+        default=True,
+        description="Enable reranking after RRF fusion",
+    )
+    reranker_backend: str = Field(
+        default="ollama",
+        description="Reranking backend: 'ollama' (TD-059, no sentence-transformers) or 'sentence-transformers' (legacy)",
+    )
+    reranker_ollama_model: str = Field(
+        default="bge-reranker-v2-m3",
+        description="Ollama model for reranking (bge-reranker-v2-m3: multilingual, compatible with BGE-M3)",
+    )
+    reranker_top_k: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Number of documents to return after reranking",
     )
 
     # Semantic Entity Deduplication (Sprint 13: ADR-017)

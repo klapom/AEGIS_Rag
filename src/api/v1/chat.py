@@ -3,12 +3,15 @@
 Sprint 10 Feature 10.1: FastAPI Chat Endpoints
 Sprint 15 Feature 15.1: SSE Streaming Endpoint
 Sprint 17 Feature 17.2: Conversation History Persistence
+Sprint 48 Feature 48.4: Chat Stream API Enhancement (8 SP)
+Sprint 48 Feature 48.5: Phase Events Redis Persistence (5 SP)
 
 This module provides RESTful chat endpoints for the Gradio UI and React frontend.
 It integrates the CoordinatorAgent for query processing and UnifiedMemoryAPI for session management.
-Includes Server-Sent Events (SSE) streaming for real-time token-by-token responses.
+Includes Server-Sent Events (SSE) streaming for real-time token-by-token responses with phase events.
 """
 
+import asyncio
 import json
 import uuid
 from collections.abc import AsyncGenerator
@@ -22,14 +25,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents.coordinator import CoordinatorAgent
 from src.agents.followup_generator import generate_followup_questions
+from src.agents.reasoning_data import ReasoningData
 from src.api.v1.title_generator import generate_conversation_title
 from src.components.memory import get_unified_memory_api
 from src.core.exceptions import AegisRAGException
+from src.models.phase_event import PhaseEvent
 from src.models.profiling import ConversationSearchRequest, ConversationSearchResponse
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+# Sprint 48 Feature 48.4: Timeout Constants
+REQUEST_TIMEOUT_SECONDS = 90  # Total request timeout
+PHASE_TIMEOUT_SECONDS = 30  # Individual phase timeout (not LLM)
+LLM_TIMEOUT_SECONDS = 60  # LLM generation timeout (longer)
 
 # Initialize coordinator (singleton pattern)
 _coordinator: CoordinatorAgent | None = None
@@ -475,12 +485,13 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
     """Stream chat response using Server-Sent Events (SSE).
 
     Sprint 15 Feature 15.1: SSE Streaming Endpoint (ADR-020)
+    Sprint 48 Feature 48.4: Chat Stream API Enhancement (8 SP)
 
     This endpoint:
     1. Validates the query
     2. Generates/validates session_id
-    3. Streams tokens and metadata from CoordinatorAgent in real-time
-    4. Sends sources as they become available
+    3. Streams phase events and tokens from CoordinatorAgent in real-time
+    4. Handles timeouts and cancellation gracefully
     5. Returns SSE-formatted stream
 
     Args:
@@ -491,8 +502,10 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
     SSE Message Format:
         data: {"type": "metadata", "session_id": "...", "timestamp": "..."}
-        data: {"type": "token", "content": "Hello"}
-        data: {"type": "source", "source": {...}}
+        data: {"type": "phase_event", "data": {...}}
+        data: {"type": "answer_chunk", "data": {"answer": "...", "citations": [...]}}
+        data: {"type": "reasoning_complete", "data": {"phase_events": [...]}}
+        data: {"type": "error", "error": "...", "code": "TIMEOUT"}
         data: [DONE]
     """
     # Generate session_id if not provided
@@ -509,8 +522,11 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         """Generate SSE-formatted stream of chat response.
 
         Sprint 17 Feature 17.2: Collect answer during streaming and save to Redis
+        Sprint 48 Feature 48.4: Phase events streaming with timeout handling
+        Sprint 48 Feature 48.5: Phase events persistence
         """
-        # Sprint 17 Feature 17.2: Accumulate answer tokens and sources
+        # Accumulate data for persistence
+        reasoning_data = ReasoningData()
         collected_answer = []
         collected_sources = []
         collected_intent = None
@@ -528,89 +544,116 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             # Get coordinator
             coordinator = get_coordinator()
 
-            # Check if coordinator has streaming method
-            if hasattr(coordinator, "process_query_stream"):
-                # Stream from CoordinatorAgent
-                async for chunk in coordinator.process_query_stream(
+            # Sprint 48 Feature 48.4: Global request timeout (90s)
+            async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
+                # Stream from CoordinatorAgent using process_query_stream()
+                async for event in coordinator.process_query_stream(
                     query=request.query,
                     session_id=session_id,
                     intent=request.intent,
                     namespaces=request.namespaces,
                 ):
-                    # Sprint 17 Feature 17.2: Collect tokens and sources
-                    if isinstance(chunk, dict):
-                        if chunk.get("type") == "token" and "content" in chunk:
-                            collected_answer.append(chunk["content"])
-                        elif chunk.get("type") == "source" and "source" in chunk:
-                            collected_sources.append(chunk["source"])
-                        elif chunk.get("type") == "metadata" and "intent" in chunk.get("data", {}):
-                            collected_intent = chunk["data"]["intent"]
+                    # Sprint 48 Feature 48.5: Accumulate phase events for persistence
+                    if event.get("type") == "phase_event":
+                        phase_event = PhaseEvent(**event["data"])
+                        reasoning_data.add_phase_event(phase_event)
 
-                    yield _format_sse_message(chunk)
-            else:
-                # Fallback: Non-streaming mode (for backward compatibility)
-                logger.warning(
-                    "coordinator_streaming_not_available",
-                    message="process_query_stream not implemented, falling back to non-streaming",
-                )
+                    # Collect answer chunks
+                    elif event.get("type") == "answer_chunk":
+                        answer_data = event.get("data", {})
+                        if "answer" in answer_data:
+                            collected_answer.append(answer_data["answer"])
+                        if "intent" in answer_data:
+                            collected_intent = answer_data["intent"]
 
-                # Process query normally
-                result = await coordinator.process_query(
-                    query=request.query,
-                    session_id=session_id,
-                    intent=request.intent,
-                    namespaces=request.namespaces,
-                )
+                    # Collect sources
+                    elif event.get("type") == "source":
+                        collected_sources.append(event.get("source", {}))
 
-                # Extract answer, intent, and citation_map (Sprint 27 Feature 27.10)
-                answer = _extract_answer(result)
-                collected_intent = result.get("intent")
-                citation_map = result.get("citation_map", {})
-
-                # Phase 1 Diagnostic Logging: Log citation_map state
-                logger.info(
-                    "CITATIONS_DEBUG_CHAT_API",
-                    has_citation_map=bool(citation_map),
-                    citation_map_count=len(citation_map) if citation_map else 0,
-                    citation_map_keys=list(citation_map.keys())[:5] if citation_map else [],
-                    answer_preview=answer[:200] if answer else "",
-                    result_keys=list(result.keys()),
-                )
-
-                # Send citation_map in metadata (Sprint 27 Feature 27.10)
-                if citation_map:
-                    yield _format_sse_message(
-                        {
-                            "type": "metadata",
-                            "data": {
-                                "citation_map": citation_map,
-                                "citations_count": len(citation_map),
-                            },
-                        }
-                    )
-
-                # Send answer as tokens (simulate streaming)
-                for token in answer.split():
-                    collected_answer.append(token + " ")
-                    yield _format_sse_message({"type": "token", "content": token + " "})
-
-                # Send sources if available
-                if request.include_sources:
-                    sources = _extract_sources(result)
-                    collected_sources = [
-                        s.model_dump() if hasattr(s, "model_dump") else s for s in sources
-                    ]
-                    for source in sources:
-                        yield _format_sse_message({"type": "source", "source": source.model_dump()})
+                    # Stream event to client
+                    yield _format_sse_message(event)
 
             # Signal completion
             yield "data: [DONE]\n\n"
 
             logger.info("chat_stream_completed", session_id=session_id)
 
+        except asyncio.TimeoutError:
+            logger.error(
+                "chat_stream_timeout",
+                session_id=session_id,
+                timeout_seconds=REQUEST_TIMEOUT_SECONDS,
+            )
+            yield _format_sse_message(
+                {
+                    "type": "error",
+                    "error": f"Request timed out after {REQUEST_TIMEOUT_SECONDS} seconds",
+                    "code": "TIMEOUT",
+                    "recoverable": True,
+                }
+            )
+
+        except asyncio.CancelledError:
+            logger.info("chat_stream_cancelled", session_id=session_id)
+            yield _format_sse_message(
+                {
+                    "type": "cancelled",
+                    "message": "Request cancelled by user",
+                }
+            )
+            raise  # Re-raise to ensure proper cleanup
+
+        except AegisRAGException as e:
+            logger.error(
+                "chat_stream_failed_aegis_exception",
+                session_id=session_id,
+                error=str(e),
+                details=e.details,
+            )
+            yield _format_sse_message(
+                {
+                    "type": "error",
+                    "error": f"RAG system error: {e.message}",
+                    "code": "AEGIS_ERROR",
+                    "recoverable": False,
+                }
+            )
+
+        except Exception as e:
+            logger.error("chat_stream_failed_unexpected", session_id=session_id, error=str(e))
+            yield _format_sse_message(
+                {
+                    "type": "error",
+                    "error": f"Unexpected error: {str(e)}",
+                    "code": "INTERNAL_ERROR",
+                    "recoverable": False,
+                }
+            )
+
+        finally:
+            # Sprint 48 Feature 48.5: Save phase events to Redis after stream completes
+            if reasoning_data.phase_events:
+                try:
+                    from src.components.memory import get_redis_memory
+
+                    redis_memory = get_redis_memory()
+                    await redis_memory.save_phase_events(
+                        conversation_id=session_id,
+                        phase_events=reasoning_data.phase_events,
+                    )
+                    logger.info(
+                        "phase_events_saved_to_redis",
+                        session_id=session_id,
+                        event_count=len(reasoning_data.phase_events),
+                    )
+                except Exception as e:
+                    logger.error(
+                        "phase_events_save_failed",
+                        session_id=session_id,
+                        error=str(e),
+                    )
+
             # Sprint 17 Feature 17.2: Save conversation after streaming completes
-            # Sprint 35 Feature 35.3: Generate and store follow-up questions
-            # Sprint 35 Feature 35.4: Generate title for first Q&A exchange
             full_answer = "".join(collected_answer)
             if full_answer:
                 # Generate follow-up questions before saving
@@ -657,23 +700,6 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                     follow_up_count=len(follow_up_questions) if follow_up_questions else 0,
                     title_generated=bool(title),
                 )
-
-        except AegisRAGException as e:
-            logger.error(
-                "chat_stream_failed_aegis_exception",
-                session_id=session_id,
-                error=str(e),
-                details=e.details,
-            )
-            yield _format_sse_message(
-                {"type": "error", "error": f"RAG system error: {e.message}", "code": "AEGIS_ERROR"}
-            )
-
-        except Exception as e:
-            logger.error("chat_stream_failed_unexpected", session_id=session_id, error=str(e))
-            yield _format_sse_message(
-                {"type": "error", "error": f"Unexpected error: {str(e)}", "code": "INTERNAL_ERROR"}
-            )
 
     return StreamingResponse(
         generate_stream(),
@@ -873,6 +899,83 @@ async def get_conversation_history(session_id: str) -> ConversationHistoryRespon
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve conversation history: {str(e)}",
+        ) from e
+
+
+@router.get("/conversations/{conversation_id}/phase-events")
+async def get_conversation_phase_events(conversation_id: str) -> list[dict]:
+    """Retrieve phase events for a conversation.
+
+    Sprint 48 Feature 48.5: Phase Events Redis Persistence (5 SP)
+
+    This endpoint retrieves the phase events (thinking process) for a specific
+    conversation from Redis. Phase events show which processing phases were
+    executed (intent classification, vector search, graph query, LLM generation, etc.)
+    with timing information and metadata.
+
+    Args:
+        conversation_id: Conversation identifier (session_id)
+
+    Returns:
+        List of phase event dictionaries with:
+            - phase_type: Type of processing phase (e.g., "vector_search")
+            - status: Execution status (pending, in_progress, completed, failed)
+            - start_time: When the phase started (ISO timestamp)
+            - end_time: When the phase completed (ISO timestamp, optional)
+            - duration_ms: Phase execution time in milliseconds (optional)
+            - metadata: Phase-specific data (e.g., docs_retrieved, top_k)
+            - error: Error message if phase failed (optional)
+
+    Raises:
+        HTTPException: If retrieval fails
+
+    Example Response:
+        [
+            {
+                "phase_type": "intent_classification",
+                "status": "completed",
+                "start_time": "2025-12-16T10:00:00.000Z",
+                "end_time": "2025-12-16T10:00:00.150Z",
+                "duration_ms": 150.0,
+                "metadata": {"detected_intent": "hybrid"},
+                "error": null
+            },
+            {
+                "phase_type": "vector_search",
+                "status": "completed",
+                "start_time": "2025-12-16T10:00:00.150Z",
+                "end_time": "2025-12-16T10:00:00.350Z",
+                "duration_ms": 200.0,
+                "metadata": {"docs_retrieved": 10, "collection": "documents_v1"},
+                "error": null
+            }
+        ]
+    """
+    logger.info("phase_events_retrieval_requested", conversation_id=conversation_id)
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        events = await redis_memory.get_phase_events(conversation_id)
+
+        logger.info(
+            "phase_events_retrieved",
+            conversation_id=conversation_id,
+            event_count=len(events),
+        )
+
+        return [e.model_dump() for e in events]
+
+    except Exception as e:
+        logger.error(
+            "phase_events_retrieval_failed",
+            conversation_id=conversation_id,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve phase events: {str(e)}",
         ) from e
 
 

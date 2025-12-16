@@ -6,6 +6,8 @@
  * Sprint 46 Feature 46.1: ConversationView Integration
  * Sprint 46 Feature 46.2: ReasoningPanel Integration
  * Sprint 47: Fixed infinite re-render loop with stable callbacks
+ * Sprint 48 Feature 48.6: Phase event display integration
+ * Sprint 48 Feature 48.10: Request timeout and cancel integration
  *
  * Features:
  * - Chat-style conversation layout with ConversationView
@@ -15,6 +17,8 @@
  * - Citations and follow-up questions
  * - Welcome screen with quick prompts
  * - Transparent reasoning panel for assistant messages
+ * - Real-time phase progress display (Sprint 48)
+ * - Timeout warning and request cancellation (Sprint 48)
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
@@ -315,6 +319,10 @@ export function HomePage() {
           showTypingIndicator={streamingState.isStreaming && !streamingState.answer}
           typingText="AegisRAG denkt nach..."
           emptyStateContent={welcomeContent}
+          currentPhase={streamingState.currentPhase}
+          phaseEvents={streamingState.phaseEvents}
+          showTimeoutWarning={streamingState.showTimeoutWarning}
+          onCancel={streamingState.cancelRequest}
         />
       </div>
     </div>

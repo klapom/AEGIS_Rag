@@ -6,10 +6,12 @@ The graph orchestrates query routing and agent coordination.
 Sprint 4 Features 4.1-4.4: Base Graph Structure with State Persistence
 Sprint 5 Feature 5.5: Graph Query Agent Integration
 Sprint 42: True Hybrid Mode - Vector + Graph parallel execution
+Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - LLM Generation
 Implements the foundational graph with optional checkpointing for conversation history.
 """
 
 import asyncio
+from datetime import datetime
 from typing import Any, Literal
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -20,6 +22,7 @@ from src.agents.memory_agent import memory_node
 from src.agents.state import AgentState, create_initial_state
 from src.agents.vector_search_agent import vector_search_node
 from src.core.logging import get_logger
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 logger = get_logger(__name__)
 
@@ -61,13 +64,14 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
     Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
     Sprint 27 Feature 27.10: Inline Source Citations
+    Sprint 48 Feature 48.3: Emits phase events for LLM generation.
     Uses AnswerGenerator to synthesize answers with citation markers [1], [2], etc.
 
     Args:
         state: Current agent state with retrieved_contexts
 
     Returns:
-        State with generated answer in messages and citation_map
+        State with generated answer in messages, citation_map, and phase_event
     """
     from src.agents.answer_generator import get_answer_generator
 
@@ -76,30 +80,71 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts))
 
-    # Generate answer with inline citations (Sprint 27 Feature 27.10)
-    generator = get_answer_generator()
-    answer, citation_map = await generator.generate_with_citations(query, contexts)
-
-    # Add to messages (LangGraph format)
-    if "messages" not in state:
-        state["messages"] = []
-
-    state["messages"].append({"role": "assistant", "content": answer})
-
-    # Also add as direct field for easier access
-    state["answer"] = answer
-
-    # Store citation map for API response (Sprint 27 Feature 27.10)
-    state["citation_map"] = citation_map
-
-    logger.info(
-        "llm_answer_node_complete",
-        answer_length=len(answer),
-        contexts_used=len(contexts),
-        citations_count=len(citation_map),
+    # Create phase event for LLM generation
+    event = PhaseEvent(
+        phase_type=PhaseType.LLM_GENERATION,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
     )
 
-    return state
+    try:
+        # Generate answer with inline citations (Sprint 27 Feature 27.10)
+        generator = get_answer_generator()
+        answer, citation_map = await generator.generate_with_citations(query, contexts)
+
+        # Add to messages (LangGraph format)
+        if "messages" not in state:
+            state["messages"] = []
+
+        state["messages"].append({"role": "assistant", "content": answer})
+
+        # Also add as direct field for easier access
+        state["answer"] = answer
+
+        # Store citation map for API response (Sprint 27 Feature 27.10)
+        state["citation_map"] = citation_map
+
+        # Update phase event with success
+        event.status = PhaseStatus.COMPLETED
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+        event.metadata = {
+            "answer_length": len(answer),
+            "contexts_used": len(contexts),
+            "citations_count": len(citation_map),
+        }
+
+        # Add phase event to state
+        state["phase_event"] = event
+
+        logger.info(
+            "llm_answer_node_complete",
+            answer_length=len(answer),
+            contexts_used=len(contexts),
+            citations_count=len(citation_map),
+            duration_ms=event.duration_ms,
+        )
+
+        return state
+
+    except Exception as e:
+        # Mark phase event as failed
+        event.status = PhaseStatus.FAILED
+        event.error = str(e)
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = event
+
+        logger.error(
+            "llm_answer_node_failed",
+            error=str(e),
+            duration_ms=event.duration_ms,
+        )
+
+        # Re-raise to let error handling take over
+        raise
 
 
 async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -162,9 +207,21 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     # Update metadata
     if "metadata" not in state:
         state["metadata"] = {}
+
+    vector_count = (
+        len(vector_result.get("retrieved_contexts", []))
+        if isinstance(vector_result, dict)
+        else 0
+    )
+    graph_count = (
+        len(graph_result.get("retrieved_contexts", []))
+        if isinstance(graph_result, dict)
+        else 0
+    )
+
     state["metadata"]["hybrid_search"] = {
-        "vector_count": len(vector_result.get("retrieved_contexts", [])) if isinstance(vector_result, dict) else 0,
-        "graph_count": len(graph_result.get("retrieved_contexts", [])) if isinstance(graph_result, dict) else 0,
+        "vector_count": vector_count,
+        "graph_count": graph_count,
         "merged_count": len(unique_contexts),
     }
 
@@ -176,7 +233,9 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
-def route_query(state: dict[str, Any]) -> Literal["hybrid_search", "vector_search", "graph", "memory", "end"]:
+def route_query(
+    state: dict[str, Any],
+) -> Literal["hybrid_search", "vector_search", "graph", "memory", "end"]:
     """Determine the next node based on intent.
 
     This is a conditional edge function that determines routing.

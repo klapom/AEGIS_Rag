@@ -1,6 +1,7 @@
 /**
  * Reasoning Types
  * Sprint 46 Feature 46.2: Transparent Reasoning Panel
+ * Sprint 48 Feature 48.6: Phase Event Types for Real-Time Thinking Indicator
  *
  * TypeScript interfaces for the reasoning/retrieval chain display
  */
@@ -110,3 +111,67 @@ export interface RetrievalStepProps {
   /** Whether this is the last step (for styling) */
   isLast?: boolean;
 }
+
+/**
+ * Sprint 48 Feature 48.6: Phase Event Types
+ * Represents a phase event from the SSE stream for real-time thinking indicator
+ */
+
+/**
+ * Phase type enumeration matching backend phase types
+ */
+export type PhaseType =
+  | 'intent_classification'
+  | 'vector_search'
+  | 'bm25_search'
+  | 'rrf_fusion'
+  | 'reranking'
+  | 'graph_query'
+  | 'memory_retrieval'
+  | 'llm_generation'
+  | 'follow_up_questions';
+
+/**
+ * Phase status enumeration
+ */
+export type PhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped';
+
+/**
+ * Phase event data from SSE stream
+ */
+export interface PhaseEvent {
+  /** Type of phase being processed */
+  phase_type: PhaseType;
+  /** Current status of the phase */
+  status: PhaseStatus;
+  /** ISO timestamp when phase started */
+  start_time: string;
+  /** ISO timestamp when phase ended (only for completed/failed/skipped) */
+  end_time?: string;
+  /** Duration in milliseconds (only for completed phases) */
+  duration_ms?: number;
+  /** Additional metadata specific to the phase */
+  metadata?: Record<string, unknown>;
+  /** Error message if phase failed */
+  error?: string;
+}
+
+/**
+ * Human-readable phase names in German
+ */
+export const PHASE_NAMES: Record<PhaseType, string> = {
+  intent_classification: 'Intent analysieren',
+  vector_search: 'Vektor-Suche',
+  bm25_search: 'BM25-Suche',
+  rrf_fusion: 'Ergebnisse fusionieren',
+  reranking: 'Reranking',
+  graph_query: 'Graph durchsuchen',
+  memory_retrieval: 'Erinnerungen abrufen',
+  llm_generation: 'Antwort generieren',
+  follow_up_questions: 'Fragen vorschlagen',
+};
+
+/**
+ * Total number of possible phases for progress calculation
+ */
+export const TOTAL_PHASES = Object.keys(PHASE_NAMES).length;

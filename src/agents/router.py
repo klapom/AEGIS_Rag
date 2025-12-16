@@ -4,9 +4,11 @@ This module implements the intelligent query router that classifies user queries
 into different intents (VECTOR, GRAPH, HYBRID, MEMORY) using an LLM.
 
 Sprint 4 Feature 4.2: Query Router & Intent Classification
+Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Router
 """
 
 import re
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -26,6 +28,7 @@ from src.components.llm_proxy.models import (
     TaskType,
 )
 from src.core.config import settings
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 from src.prompts.router_prompts import CLASSIFICATION_PROMPT
 
 logger = structlog.get_logger(__name__)
@@ -217,15 +220,24 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
     This node classifies the query intent and updates the state.
     It's called by the LangGraph orchestration layer.
 
+    Sprint 48 Feature 48.3: Emits phase events for intent classification.
+
     Args:
         state: Current agent state
 
     Returns:
-        Updated state with intent field set
+        Updated state with intent field set and phase_event
     """
     query = state.get("query", "")
 
     logger.info("router_node_processing", query=query[:100])
+
+    # Create phase event for intent classification
+    event = PhaseEvent(
+        phase_type=PhaseType.INTENT_CLASSIFICATION,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
+    )
 
     try:
         # Get classifier
@@ -247,10 +259,20 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         state["metadata"]["agent_path"].append("router")
         state["metadata"]["intent"] = intent.value
 
+        # Complete phase event successfully
+        event.status = PhaseStatus.COMPLETED
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+        event.metadata = {"intent": intent.value}
+
+        # Add phase event to state
+        state["phase_event"] = event
+
         logger.info(
             "router_node_complete",
             query=query[:100],
             intent=intent.value,
+            duration_ms=event.duration_ms,
         )
 
         return state
@@ -261,6 +283,15 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
             query=query[:100],
             error=str(e),
         )
+
+        # Mark phase event as failed
+        event.status = PhaseStatus.FAILED
+        event.error = str(e)
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = event
 
         # Set default intent and error
         state["intent"] = settings.router_default_intent

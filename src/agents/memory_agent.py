@@ -4,15 +4,18 @@ This module implements the Memory Agent that handles MEMORY intent routing
 and executes memory retrieval across the 3-layer memory architecture.
 
 Sprint 7: Feature 7.4 - Memory Agent (LangGraph Integration)
+Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Memory Retrieval
 Integrates with Sprint 4 Router and Sprint 7.3 Memory Router.
 """
 
+from datetime import datetime
 from typing import Any
 
 import structlog
 
 from src.agents.base_agent import BaseAgent
 from src.agents.retry import retry_on_failure
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 # Import will be available after Feature 7.3
 try:
@@ -244,11 +247,13 @@ async def memory_node(state: dict[str, Any]) -> dict[str, Any]:
     This is the node function that gets added to the LangGraph StateGraph.
     It instantiates the MemoryAgent and calls process().
 
+    Sprint 48 Feature 48.3: Emits phase events for memory retrieval.
+
     Args:
         state: Current agent state
 
     Returns:
-        Updated agent state after memory query processing
+        Updated agent state after memory query processing with phase_event
 
     Example:
         >>> from langgraph.graph import StateGraph
@@ -261,24 +266,64 @@ async def memory_node(state: dict[str, Any]) -> dict[str, Any]:
         intent=state.get("intent", "unknown"),
     )
 
-    # Instantiate agent
-    agent = MemoryAgent()
-
-    # Process state
-    updated_state = await agent.process(state)
-
-    logger.info(
-        "memory_node_complete",
-        query=state.get("query", "")[:50],
-        layers_used=updated_state.get("metadata", {})
-        .get("memory_search", {})
-        .get("layers_used", []),
-        total_results=updated_state.get("metadata", {})
-        .get("memory_search", {})
-        .get("total_results", 0),
+    # Create phase event for memory retrieval
+    event = PhaseEvent(
+        phase_type=PhaseType.MEMORY_RETRIEVAL,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
     )
 
-    return updated_state
+    try:
+        # Instantiate agent
+        agent = MemoryAgent()
+
+        # Process state
+        updated_state = await agent.process(state)
+
+        # Update phase event with success
+        event.status = PhaseStatus.COMPLETED
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Extract metadata from memory search results
+        memory_metadata = updated_state.get("metadata", {}).get("memory_search", {})
+        event.metadata = {
+            "total_results": memory_metadata.get("total_results", 0),
+            "layers_used": memory_metadata.get("layers_used", []),
+            "results_per_layer": memory_metadata.get("results_per_layer", {}),
+        }
+
+        # Add phase event to state
+        updated_state["phase_event"] = event
+
+        logger.info(
+            "memory_node_complete",
+            query=state.get("query", "")[:50],
+            layers_used=event.metadata["layers_used"],
+            total_results=event.metadata["total_results"],
+            duration_ms=event.duration_ms,
+        )
+
+        return updated_state
+
+    except Exception as e:
+        # Mark phase event as failed
+        event.status = PhaseStatus.FAILED
+        event.error = str(e)
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = event
+
+        logger.error(
+            "memory_node_failed",
+            error=str(e),
+            duration_ms=event.duration_ms,
+        )
+
+        # Re-raise to let error handling take over
+        raise
 
 
 # Export public API

@@ -1,6 +1,8 @@
 /**
  * ConversationView Component
  * Sprint 46 Feature 46.1: Chat-Style Layout
+ * Sprint 48 Feature 48.6: Phase event display integration
+ * Sprint 48 Feature 48.10: Request timeout and cancel integration
  *
  * Main container for the chat-style conversation UI.
  * Transforms the search interface into a ChatGPT/Claude-style conversation layout.
@@ -12,12 +14,15 @@
  * - Flex-col layout with flex-grow for messages area
  * - Typing indicator while streaming
  * - Keyboard navigation support
+ * - Phase events display during thinking (Sprint 48)
+ * - Timeout warning and cancel functionality (Sprint 48)
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { MessageBubble, type MessageData } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { SearchInput, type SearchMode } from '../search';
+import type { PhaseEvent, PhaseType } from '../../types/reasoning';
 
 /**
  * Props for the ConversationView component
@@ -39,6 +44,14 @@ interface ConversationViewProps {
   typingText?: string;
   /** Empty state content when no messages */
   emptyStateContent?: React.ReactNode;
+  /** Sprint 48: Current phase being processed */
+  currentPhase?: PhaseType | null;
+  /** Sprint 48: List of phase events for progress display */
+  phaseEvents?: PhaseEvent[];
+  /** Sprint 48: Whether to show timeout warning */
+  showTimeoutWarning?: boolean;
+  /** Sprint 48: Callback to cancel the current request */
+  onCancel?: () => void;
 }
 
 /**
@@ -63,6 +76,10 @@ export function ConversationView({
   showTypingIndicator,
   typingText = 'AegisRAG denkt nach...',
   emptyStateContent,
+  currentPhase,
+  phaseEvents = [],
+  showTimeoutWarning = false,
+  onCancel,
 }: ConversationViewProps) {
   // Ref for the messages container to handle scrolling
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -212,6 +229,10 @@ export function ConversationView({
                   text={typingText}
                   showAvatar={true}
                   startTime={thinkingStartTime ?? undefined}
+                  currentPhase={currentPhase}
+                  phaseEvents={phaseEvents}
+                  showTimeoutWarning={showTimeoutWarning}
+                  onCancel={onCancel}
                 />
               </div>
             )}

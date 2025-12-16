@@ -4,15 +4,18 @@ This module implements the Graph Query Agent that handles GRAPH intent routing
 and executes graph-based knowledge retrieval using dual-level search.
 
 Sprint 5: Feature 5.5 - Graph Query Agent
+Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Graph Query
 Integrates with Sprint 4 Router and Sprint 5 DualLevelSearch.
 """
 
+from datetime import datetime
 from typing import Any
 
 import structlog
 
 from src.agents.base_agent import BaseAgent
 from src.agents.retry import retry_on_failure
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 try:
     # Try user's implementation first (Feature 5.4)
@@ -367,11 +370,13 @@ async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
     This is the node function that gets added to the LangGraph StateGraph.
     It instantiates the GraphQueryAgent and calls process().
 
+    Sprint 48 Feature 48.3: Emits phase events for graph query.
+
     Args:
         state: Current agent state
 
     Returns:
-        Updated agent state after graph query processing
+        Updated agent state after graph query processing with phase_event
 
     Example:
         >>> from langgraph.graph import StateGraph
@@ -384,21 +389,64 @@ async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
         intent=state.get("intent", "unknown"),
     )
 
-    # Instantiate agent
-    agent = GraphQueryAgent()
-
-    # Process state
-    updated_state = await agent.process(state)
-
-    logger.info(
-        "graph_query_node_complete",
-        query=state.get("query", "")[:50],
-        entities_found=updated_state.get("metadata", {})
-        .get("graph_search", {})
-        .get("entities_found", 0),
+    # Create phase event for graph query
+    event = PhaseEvent(
+        phase_type=PhaseType.GRAPH_QUERY,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
     )
 
-    return updated_state
+    try:
+        # Instantiate agent
+        agent = GraphQueryAgent()
+
+        # Process state
+        updated_state = await agent.process(state)
+
+        # Update phase event with success
+        event.status = PhaseStatus.COMPLETED
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Extract metadata from graph search results
+        graph_metadata = updated_state.get("metadata", {}).get("graph_search", {})
+        event.metadata = {
+            "entities_found": graph_metadata.get("entities_found", 0),
+            "relationships_found": graph_metadata.get("relationships_found", 0),
+            "topics_found": graph_metadata.get("topics_found", 0),
+            "mode": graph_metadata.get("mode", "unknown"),
+        }
+
+        # Add phase event to state
+        updated_state["phase_event"] = event
+
+        logger.info(
+            "graph_query_node_complete",
+            query=state.get("query", "")[:50],
+            entities_found=event.metadata["entities_found"],
+            duration_ms=event.duration_ms,
+        )
+
+        return updated_state
+
+    except Exception as e:
+        # Mark phase event as failed
+        event.status = PhaseStatus.FAILED
+        event.error = str(e)
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = event
+
+        logger.error(
+            "graph_query_node_failed",
+            error=str(e),
+            duration_ms=event.duration_ms,
+        )
+
+        # Re-raise to let error handling take over
+        raise
 
 
 # Export public API

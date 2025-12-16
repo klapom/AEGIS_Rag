@@ -5,10 +5,11 @@ multi-agent workflow. It initializes state, invokes the LangGraph, and
 manages conversation persistence.
 
 Sprint 4 Feature 4.4: Coordinator Agent with State Persistence
+Sprint 48 Feature 48.2: CoordinatorAgent Streaming Method (13 SP)
 """
 
 import time
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import structlog
 from langgraph.checkpoint.memory import MemorySaver
@@ -16,9 +17,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from src.agents.checkpointer import create_checkpointer, create_thread_config
 from src.agents.error_handler import handle_agent_error
 from src.agents.graph import compile_graph
+from src.agents.reasoning_data import ReasoningData
 from src.agents.retry import retry_on_failure
 from src.agents.state import create_initial_state
 from src.core.config import settings
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 logger = structlog.get_logger(__name__)
 
@@ -273,6 +276,214 @@ class CoordinatorAgent:
         )
 
         return results
+
+    async def process_query_stream(
+        self,
+        query: str,
+        session_id: str | None = None,
+        intent: str | None = None,
+        namespaces: list[str] | None = None,
+    ) -> AsyncGenerator[dict, None]:
+        """Stream phase events and final answer during query processing.
+
+        Sprint 48 Feature 48.2: CoordinatorAgent Streaming Method (13 SP)
+
+        This method provides real-time visibility into the query processing pipeline
+        by emitting phase events as each agent executes. It enables the frontend to
+        display a thinking process indicator.
+
+        Args:
+            query: User's query string
+            session_id: Optional session ID for conversation persistence
+            intent: Optional intent override (default: let router decide)
+            namespaces: Optional list of namespaces to search in
+
+        Yields:
+            dict: Events with types:
+                - phase_event: PhaseEvent updates (start, progress, completion)
+                - answer_chunk: Streaming answer text (final answer)
+                - reasoning_complete: Final reasoning summary with all phase events
+
+        Example:
+            >>> coordinator = CoordinatorAgent()
+            >>> async for event in coordinator.process_query_stream(
+            ...     query="What is RAG?",
+            ...     session_id="user123"
+            ... ):
+            ...     if event["type"] == "phase_event":
+            ...         print(f"Phase: {event['data']['phase_type']}")
+            ...     elif event["type"] == "answer_chunk":
+            ...         print(f"Answer: {event['data']['answer']}")
+            ...     elif event["type"] == "reasoning_complete":
+            ...         print(f"Completed {len(event['data']['phase_events'])} phases")
+        """
+        reasoning_data = ReasoningData()
+
+        try:
+            # Execute workflow and stream phase events
+            async for event in self._execute_workflow_with_events(
+                query=query,
+                session_id=session_id,
+                intent=intent,
+                namespaces=namespaces,
+                reasoning_data=reasoning_data,
+            ):
+                if isinstance(event, PhaseEvent):
+                    # Add to reasoning data accumulator
+                    reasoning_data.add_phase_event(event)
+
+                    # Yield phase event to stream
+                    yield {
+                        "type": "phase_event",
+                        "data": event.model_dump(),
+                    }
+
+                elif isinstance(event, dict) and "answer" in event:
+                    # Final answer received
+                    yield {
+                        "type": "answer_chunk",
+                        "data": event,
+                    }
+
+            # Emit final reasoning summary
+            yield {
+                "type": "reasoning_complete",
+                "data": reasoning_data.to_dict(),
+            }
+
+        except Exception as e:
+            logger.error(
+                "coordinator_stream_failed",
+                query=query[:100],
+                session_id=session_id,
+                error=str(e),
+            )
+
+            # Emit error event
+            from datetime import datetime
+
+            error_event = PhaseEvent(
+                phase_type=PhaseType.LLM_GENERATION,  # Generic phase for error
+                status=PhaseStatus.FAILED,
+                start_time=datetime.utcnow(),
+                error=str(e),
+            )
+            yield {
+                "type": "phase_event",
+                "data": error_event.model_dump(),
+            }
+
+            # Re-raise for proper error handling
+            raise
+
+    async def _execute_workflow_with_events(
+        self,
+        query: str,
+        session_id: str | None,
+        intent: str | None,
+        namespaces: list[str] | None,
+        reasoning_data: ReasoningData,
+    ) -> AsyncGenerator[PhaseEvent | dict, None]:
+        """Execute LangGraph workflow with phase event emissions.
+
+        This is the core streaming implementation that orchestrates the LangGraph
+        workflow and emits phase events as each node executes.
+
+        Args:
+            query: User query string
+            session_id: Optional session ID for persistence
+            intent: Optional intent override
+            namespaces: Optional namespace filter
+            reasoning_data: ReasoningData accumulator (for internal tracking)
+
+        Yields:
+            PhaseEvent or dict: Phase events or final answer
+
+        Note:
+            This uses the compiled_graph's astream() method to get real-time
+            updates from each node execution.
+        """
+        start_time = time.perf_counter()
+
+        logger.info(
+            "coordinator_stream_started",
+            query=query[:100],
+            session_id=session_id,
+            intent=intent,
+        )
+
+        # Create initial state
+        initial_state = create_initial_state(
+            query=query,
+            intent=intent or "hybrid",
+            namespaces=namespaces,
+        )
+
+        # Create session config
+        config = None
+        if session_id and self.use_persistence:
+            config = create_thread_config(session_id)
+            config["recursion_limit"] = self.recursion_limit
+
+        # Stream through LangGraph workflow
+        # Note: We use astream() to get updates as each node completes
+        final_state = None
+        try:
+            async for event in self.compiled_graph.astream(initial_state, config=config):
+                # LangGraph astream yields (node_name, node_output) tuples
+                if isinstance(event, dict):
+                    # Extract node name and state from event
+                    for node_name, node_state in event.items():
+                        logger.debug(
+                            "node_completed",
+                            node=node_name,
+                            query=query[:50],
+                        )
+
+                        # Check if node added a phase_event to state
+                        if isinstance(node_state, dict) and "phase_event" in node_state:
+                            phase_event = node_state["phase_event"]
+                            if isinstance(phase_event, PhaseEvent):
+                                yield phase_event
+                            elif isinstance(phase_event, dict):
+                                # Convert dict to PhaseEvent if needed
+                                yield PhaseEvent(**phase_event)
+
+                        # Keep track of final state
+                        final_state = node_state
+
+        except Exception as e:
+            logger.error(
+                "workflow_execution_failed",
+                query=query[:100],
+                error=str(e),
+            )
+            raise
+
+        # Calculate total latency
+        latency_ms = (time.perf_counter() - start_time) * 1000
+
+        # If we have a final state, extract the answer
+        if final_state and isinstance(final_state, dict):
+            answer = final_state.get("answer", "")
+            citation_map = final_state.get("citation_map", {})
+
+            logger.info(
+                "coordinator_stream_complete",
+                query=query[:100],
+                latency_ms=latency_ms,
+                answer_length=len(answer) if answer else 0,
+            )
+
+            # Yield final answer
+            yield {
+                "answer": answer,
+                "citation_map": citation_map,
+                "metadata": {
+                    "total_latency_ms": latency_ms,
+                    "session_id": session_id,
+                },
+            }
 
     def get_session_history(self, session_id: str) -> list[dict[str, Any]]:
         """Retrieve conversation history for a session.

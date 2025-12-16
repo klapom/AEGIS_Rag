@@ -415,6 +415,92 @@ class RedisMemoryManager:
             self._client = None
             logger.info("Redis client closed")
 
+    async def save_phase_events(
+        self,
+        conversation_id: str,
+        phase_events: list["PhaseEvent"],
+    ) -> None:
+        """Save phase events to Redis with 7-day TTL.
+
+        Sprint 48 Feature 48.5: Phase Events Redis Persistence (5 SP)
+
+        Args:
+            conversation_id: Conversation identifier
+            phase_events: List of phase events to persist
+
+        Raises:
+            MemoryError: If storage fails
+        """
+        try:
+            key = f"phase_events:{conversation_id}"
+            redis_client = await self.client
+
+            # Serialize events to JSON
+            events_json = [e.model_dump_json() for e in phase_events]
+
+            # Store as list in Redis
+            await redis_client.delete(key)  # Clear old events
+            if events_json:
+                await redis_client.lpush(key, *events_json)
+                await redis_client.expire(key, 7 * 24 * 60 * 60)  # 7 days TTL
+
+            logger.debug(
+                "phase_events_saved",
+                conversation_id=conversation_id,
+                event_count=len(phase_events),
+            )
+
+        except Exception as e:
+            logger.error(
+                "failed_to_save_phase_events",
+                conversation_id=conversation_id,
+                error=str(e),
+            )
+            raise MemoryError(
+                operation="Failed to save phase events", reason=str(e)
+            ) from e
+
+    async def get_phase_events(
+        self,
+        conversation_id: str,
+    ) -> list["PhaseEvent"]:
+        """Retrieve phase events from Redis.
+
+        Sprint 48 Feature 48.5: Phase Events Redis Persistence (5 SP)
+
+        Args:
+            conversation_id: Conversation identifier
+
+        Returns:
+            List of phase events, or empty list if not found
+
+        Raises:
+            MemoryError: If retrieval fails
+        """
+        try:
+            key = f"phase_events:{conversation_id}"
+            redis_client = await self.client
+
+            events_json = await redis_client.lrange(key, 0, -1)
+
+            if not events_json:
+                return []
+
+            # Deserialize from JSON
+            from src.models.phase_event import PhaseEvent
+
+            return [PhaseEvent.model_validate_json(e) for e in events_json]
+
+        except Exception as e:
+            logger.error(
+                "failed_to_retrieve_phase_events",
+                conversation_id=conversation_id,
+                error=str(e),
+            )
+            raise MemoryError(
+                operation="Failed to retrieve phase events", reason=str(e)
+            ) from e
+
 
 # Global instance (singleton pattern)
 _redis_memory: RedisMemoryManager | None = None

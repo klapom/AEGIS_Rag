@@ -2,6 +2,8 @@
  * TypingIndicator Component
  * Sprint 35 Feature 35.6: Loading States & Animations
  * Sprint 47: Enhanced with elapsed time display and phase information
+ * Sprint 48 Feature 48.6: Phase event integration
+ * Sprint 48 Feature 48.10: Timeout warning and cancel button
  *
  * Displays a ChatGPT-style typing indicator with three bouncing dots.
  * Used to show that the assistant is "thinking" or generating a response.
@@ -11,10 +13,15 @@
  * - Elapsed time display (shows how long thinking has been in progress)
  * - Optional phase/step information
  * - Avatar with message layout
+ * - Phase events display with progress (Sprint 48)
+ * - Timeout warning message (Sprint 48)
+ * - Cancel button for long-running requests (Sprint 48)
  */
 
 import { useState, useEffect } from 'react';
 import { BotAvatar } from './BotAvatar';
+import { PhaseIndicator } from './PhaseIndicator';
+import type { PhaseEvent, PhaseType } from '../../types/reasoning';
 
 interface TypingIndicatorProps {
   /**
@@ -33,7 +40,7 @@ interface TypingIndicatorProps {
    */
   startTime?: number;
   /**
-   * Current phase/step being executed.
+   * Current phase/step being executed (legacy prop).
    * Examples: "Retrieval", "Graph Query", "Reranking", "LLM Generation"
    */
   phase?: string;
@@ -46,6 +53,22 @@ interface TypingIndicatorProps {
    * Additional details about what's being processed.
    */
   details?: string;
+  /**
+   * Sprint 48: Current phase type from phase events.
+   */
+  currentPhase?: PhaseType | null;
+  /**
+   * Sprint 48: List of phase events for detailed progress display.
+   */
+  phaseEvents?: PhaseEvent[];
+  /**
+   * Sprint 48: Whether to show timeout warning message.
+   */
+  showTimeoutWarning?: boolean;
+  /**
+   * Sprint 48: Callback to cancel the current request.
+   */
+  onCancel?: () => void;
 }
 
 /**
@@ -74,6 +97,8 @@ function formatElapsedTime(ms: number): string {
  * - Optional phase and progress display
  * - Optional avatar and text label
  * - Matches ChatMessage layout when showAvatar=true
+ * - Phase events display with PhaseIndicator (Sprint 48)
+ * - Timeout warning and cancel button (Sprint 48)
  */
 export function TypingIndicator({
   text = 'AegisRAG denkt nach...',
@@ -82,6 +107,10 @@ export function TypingIndicator({
   phase,
   progress,
   details,
+  currentPhase,
+  phaseEvents = [],
+  showTimeoutWarning = false,
+  onCancel,
 }: TypingIndicatorProps) {
   // Elapsed time state - updates every 100ms when startTime is provided
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -103,6 +132,9 @@ export function TypingIndicator({
 
     return () => clearInterval(intervalId);
   }, [startTime]);
+
+  // Determine if we should use phase events display
+  const hasPhaseEvents = phaseEvents.length > 0 || currentPhase !== undefined;
 
   // Dots animation element
   const dotsElement = (
@@ -175,6 +207,48 @@ export function TypingIndicator({
     </div>
   );
 
+  // Sprint 48: Timeout warning element
+  const timeoutWarningElement = showTimeoutWarning && (
+    <div
+      className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2"
+      role="alert"
+      aria-live="assertive"
+      data-testid="timeout-warning"
+    >
+      <span className="text-amber-600" aria-hidden="true">
+        {'\u26A0'}
+      </span>
+      <span className="text-sm text-amber-700">
+        Diese Anfrage dauert ungewoehnlich lange. Sie koennen sie abbrechen.
+      </span>
+    </div>
+  );
+
+  // Sprint 48: Cancel button element
+  const cancelButtonElement = onCancel && (
+    <button
+      type="button"
+      onClick={onCancel}
+      className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+      title="Anfrage abbrechen"
+      aria-label="Anfrage abbrechen"
+      data-testid="cancel-button"
+    >
+      <span className="text-sm" aria-hidden="true">{'\u2715'}</span>
+    </button>
+  );
+
+  // Sprint 48: Phase events indicator element
+  const phaseIndicatorElement = hasPhaseEvents && (
+    <div className="mt-3" data-testid="phase-indicator-container">
+      <PhaseIndicator
+        currentPhase={currentPhase ?? null}
+        phaseEvents={phaseEvents}
+        showDetails={phaseEvents.length > 0}
+      />
+    </div>
+  );
+
   // Inline version (no avatar, just dots and optional text)
   if (!showAvatar) {
     return (
@@ -182,8 +256,11 @@ export function TypingIndicator({
         <div className="flex items-center gap-2">
           {dotsElement}
           {statusElement}
+          {cancelButtonElement}
         </div>
         {phaseElement}
+        {phaseIndicatorElement}
+        {timeoutWarningElement}
         {detailsElement}
       </div>
     );
@@ -202,8 +279,11 @@ export function TypingIndicator({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Name label */}
-        <div className="text-sm font-semibold text-gray-700 mb-2">AegisRAG</div>
+        {/* Header with name and cancel button */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold text-gray-700">AegisRAG</div>
+          {cancelButtonElement}
+        </div>
 
         {/* Typing animation with status */}
         <div className="flex items-center gap-3">
@@ -211,8 +291,14 @@ export function TypingIndicator({
           {statusElement}
         </div>
 
-        {/* Phase and progress */}
+        {/* Legacy phase and progress (for backward compatibility) */}
         {phaseElement}
+
+        {/* Sprint 48: Phase events indicator */}
+        {phaseIndicatorElement}
+
+        {/* Sprint 48: Timeout warning */}
+        {timeoutWarningElement}
 
         {/* Additional details */}
         {detailsElement}

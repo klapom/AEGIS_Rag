@@ -2,8 +2,11 @@
 
 Integrates existing HybridSearch from Sprint 2-3 into LangGraph orchestration.
 Performs vector + BM25 search with optional reranking.
+
+Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Vector Search
 """
 
+from datetime import datetime
 from typing import Any
 
 from tenacity import (
@@ -19,6 +22,7 @@ from src.components.vector_search.hybrid_search import HybridSearch
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 from src.core.logging import get_logger
+from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 logger = get_logger(__name__)
 
@@ -262,11 +266,13 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
     This function is called by LangGraph when the graph executes.
     It instantiates the VectorSearchAgent and processes the state.
 
+    Sprint 48 Feature 48.3: Emits phase events for vector search.
+
     Args:
         state: Current agent state dictionary
 
     Returns:
-        Updated state with search results
+        Updated state with search results and phase_event
 
     Example:
         >>> from langgraph.graph import StateGraph
@@ -275,8 +281,61 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
         >>> graph = StateGraph(AgentState)
         >>> graph.add_node("vector_search", vector_search_node)
     """
-    agent = VectorSearchAgent(
-        top_k=settings.retrieval_top_k,
-        use_reranking=False,  # TD-059: Disabled - sentence-transformers not in container
+    # Create phase event for vector search
+    event = PhaseEvent(
+        phase_type=PhaseType.VECTOR_SEARCH,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
     )
-    return await agent.process(state)
+
+    try:
+        # Execute vector search
+        agent = VectorSearchAgent(
+            top_k=settings.retrieval_top_k,
+            use_reranking=False,  # TD-059: Disabled - sentence-transformers not in container
+        )
+        result_state = await agent.process(state)
+
+        # Update phase event with success
+        event.status = PhaseStatus.COMPLETED
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Extract metadata from search results
+        search_metadata = result_state.get("metadata", {}).get("search", {})
+        event.metadata = {
+            "results_count": search_metadata.get("result_count", 0),
+            "vector_count": search_metadata.get("vector_results_count", 0),
+            "bm25_count": search_metadata.get("bm25_results_count", 0),
+            "reranking_applied": search_metadata.get("reranking_applied", False),
+        }
+
+        # Add phase event to state
+        result_state["phase_event"] = event
+
+        logger.info(
+            "vector_search_phase_complete",
+            duration_ms=event.duration_ms,
+            results_count=event.metadata["results_count"],
+        )
+
+        return result_state
+
+    except Exception as e:
+        # Mark phase event as failed
+        event.status = PhaseStatus.FAILED
+        event.error = str(e)
+        event.end_time = datetime.utcnow()
+        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = event
+
+        logger.error(
+            "vector_search_phase_failed",
+            error=str(e),
+            duration_ms=event.duration_ms,
+        )
+
+        # Re-raise to let error handling take over
+        raise

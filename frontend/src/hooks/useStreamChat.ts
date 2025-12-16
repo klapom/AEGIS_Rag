@@ -2,6 +2,8 @@
  * useStreamChat Hook
  * Sprint 46: Extracted streaming logic from StreamingAnswer component
  * Sprint 47: Fixed infinite re-render loop (Maximum update depth exceeded)
+ * Sprint 48 Feature 48.6: Phase event handling for real-time thinking indicator
+ * Sprint 48 Feature 48.10: Request timeout and cancel functionality
  *
  * This hook manages SSE streaming for chat responses and returns
  * state that can be used with ConversationView.
@@ -12,6 +14,8 @@
  * - Metadata extraction (session_id, intent, citations)
  * - Error handling
  * - AbortController support for cleanup
+ * - Phase event tracking (Sprint 48)
+ * - Timeout warning and auto-cancel (Sprint 48)
  *
  * Bug Fix (Sprint 47):
  * - Use refs for callbacks to prevent dependency array changes
@@ -19,10 +23,20 @@
  * - Remove unstable callbacks from useEffect dependency arrays
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { streamChat, type ChatChunk } from '../api/chat';
 import type { Source } from '../types/chat';
-import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType } from '../types/reasoning';
+import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType, PhaseEvent, PhaseType } from '../types/reasoning';
+
+/**
+ * Sprint 48 Feature 48.10: Timeout configuration
+ */
+export const TIMEOUT_CONFIG = {
+  /** Warning threshold in milliseconds (30 seconds) */
+  WARNING_THRESHOLD_MS: 30000,
+  /** Auto-cancel timeout in milliseconds (90 seconds) */
+  TIMEOUT_MS: 90000,
+} as const;
 
 /**
  * Streaming state returned by the hook
@@ -46,6 +60,14 @@ export interface StreamingState {
   reasoningData: ReasoningData | null;
   /** Metadata from the response */
   metadata: Record<string, unknown> | null;
+  /** Sprint 48: Current phase being processed */
+  currentPhase: PhaseType | null;
+  /** Sprint 48: List of all phase events received */
+  phaseEvents: PhaseEvent[];
+  /** Sprint 48: Whether timeout warning should be shown */
+  showTimeoutWarning: boolean;
+  /** Sprint 48: Function to cancel the current request */
+  cancelRequest: () => void;
 }
 
 interface UseStreamChatOptions {
@@ -89,8 +111,20 @@ export function useStreamChat({
   const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
   const [reasoningData, setReasoningData] = useState<ReasoningData | null>(null);
 
+  // Sprint 48 Feature 48.6: Phase event state
+  const [currentPhase, setCurrentPhase] = useState<PhaseType | null>(null);
+  const [phaseEvents, setPhaseEvents] = useState<PhaseEvent[]>([]);
+
+  // Sprint 48 Feature 48.10: Timeout state
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+
   const hasCalledOnComplete = useRef(false);
   const currentReasoningData = useRef<ReasoningData | null>(null);
+
+  // Sprint 48 Feature 48.10: Refs for timeout/cancel management
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sprint 47 Fix: Store callbacks in refs to avoid triggering useEffect on every render
   // This prevents the infinite re-render loop caused by unstable callback references
@@ -111,6 +145,31 @@ export function useStreamChat({
   const finalAnswerRef = useRef('');
   const finalSourcesRef = useRef<Source[]>([]);
 
+  /**
+   * Sprint 48 Feature 48.10: Clear all timers
+   */
+  const clearTimers = useCallback(() => {
+    if (warningTimerRef.current) {
+      clearTimeout(warningTimerRef.current);
+      warningTimerRef.current = null;
+    }
+    if (timeoutTimerRef.current) {
+      clearTimeout(timeoutTimerRef.current);
+      timeoutTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Sprint 48 Feature 48.10: Cancel the current request
+   */
+  const cancelRequest = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    setShowTimeoutWarning(false);
+    setCurrentPhase(null);
+    clearTimers();
+  }, [clearTimers]);
+
   // Handle SSE streaming
   // Sprint 47 Fix: Remove onSessionIdReceived from dependency array to prevent infinite loop.
   // Use onSessionIdReceivedRef.current inside the effect to call the latest callback.
@@ -119,7 +178,9 @@ export function useStreamChat({
       return;
     }
 
+    // Sprint 48: Create new AbortController and store in ref
     const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     let isAborted = false;
 
     const fetchStream = async () => {
@@ -137,6 +198,21 @@ export function useStreamChat({
       // Sprint 47 Fix: Reset final state refs
       finalAnswerRef.current = '';
       finalSourcesRef.current = [];
+
+      // Sprint 48 Feature 48.6: Reset phase state
+      setCurrentPhase(null);
+      setPhaseEvents([]);
+      setShowTimeoutWarning(false);
+
+      // Sprint 48 Feature 48.10: Set up timeout timers
+      warningTimerRef.current = setTimeout(() => {
+        setShowTimeoutWarning(true);
+      }, TIMEOUT_CONFIG.WARNING_THRESHOLD_MS);
+
+      timeoutTimerRef.current = setTimeout(() => {
+        abortController.abort();
+        setError('Anfrage-Timeout: Die Verarbeitung dauerte zu lange.');
+      }, TIMEOUT_CONFIG.TIMEOUT_MS);
 
       try {
         for await (const chunk of streamChat(
@@ -159,11 +235,17 @@ export function useStreamChat({
           (err instanceof Error && err.name === 'AbortError') ||
           (err instanceof DOMException && err.name === 'AbortError');
 
-        if (isAbortError) return;
+        if (isAbortError) {
+          // Sprint 48: Clear timers on abort
+          clearTimers();
+          return;
+        }
 
         console.error('Streaming error:', err);
         setError(err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten');
         setIsStreaming(false);
+        // Sprint 48: Clear timers on error
+        clearTimers();
       }
     };
 
@@ -195,6 +277,20 @@ export function useStreamChat({
             const rd = data.reasoning as ReasoningData;
             setReasoningData(rd);
             currentReasoningData.current = rd;
+          }
+
+          // Sprint 48 Feature 48.6: Handle phase_event in metadata
+          if (data.phase_event) {
+            handlePhaseEvent(data.phase_event as PhaseEvent);
+          }
+          break;
+        }
+
+        // Sprint 48 Feature 48.6: Handle phase_event chunk type
+        case 'phase_event' as ChatChunk['type']: {
+          const phaseData = chunk.data as unknown as PhaseEvent;
+          if (phaseData) {
+            handlePhaseEvent(phaseData);
           }
           break;
         }
@@ -236,6 +332,11 @@ export function useStreamChat({
             }
           }
           setIsStreaming(false);
+          setCurrentPhase(null);
+          setShowTimeoutWarning(false);
+
+          // Sprint 48: Clear timers on successful completion
+          clearTimers();
 
           // Sprint 47 Fix: Call onComplete immediately when streaming completes
           // Use refs to get the final values and avoid dependency array issues
@@ -253,8 +354,43 @@ export function useStreamChat({
         case 'error':
           setError(chunk.error || 'Unknown error');
           setIsStreaming(false);
+          setCurrentPhase(null);
+          setShowTimeoutWarning(false);
+          // Sprint 48: Clear timers on error
+          clearTimers();
           break;
       }
+    };
+
+    /**
+     * Sprint 48 Feature 48.6: Handle phase event updates
+     */
+    const handlePhaseEvent = (event: PhaseEvent) => {
+      // Update current phase based on status
+      if (event.status === 'in_progress') {
+        setCurrentPhase(event.phase_type);
+      } else if (event.status === 'completed' || event.status === 'failed' || event.status === 'skipped') {
+        // Clear current phase if the completed phase matches
+        setCurrentPhase((current) =>
+          current === event.phase_type ? null : current
+        );
+      }
+
+      // Update phase events list
+      setPhaseEvents((prev) => {
+        const existingIndex = prev.findIndex(
+          (e) => e.phase_type === event.phase_type
+        );
+
+        if (existingIndex >= 0) {
+          // Update existing event
+          const updated = [...prev];
+          updated[existingIndex] = event;
+          return updated;
+        }
+        // Add new event
+        return [...prev, event];
+      });
     };
 
     fetchStream();
@@ -262,9 +398,12 @@ export function useStreamChat({
     return () => {
       isAborted = true;
       abortController.abort();
+      // Sprint 48: Clear timers on cleanup
+      clearTimers();
     };
     // Sprint 47 Fix: Removed onSessionIdReceived from dependencies - use ref instead
-  }, [query, mode, namespaces, initialSessionId]);
+    // Sprint 48: Added clearTimers to dependencies
+  }, [query, mode, namespaces, initialSessionId, clearTimers]);
 
   // Sprint 47 Fix: Fallback onComplete call when streaming finishes
   // This handles edge cases where the 'complete' event might be missed
@@ -292,6 +431,12 @@ export function useStreamChat({
     citationMap,
     reasoningData,
     metadata,
+    // Sprint 48 Feature 48.6: Phase event state
+    currentPhase,
+    phaseEvents,
+    // Sprint 48 Feature 48.10: Timeout and cancel
+    showTimeoutWarning,
+    cancelRequest,
   };
 }
 
