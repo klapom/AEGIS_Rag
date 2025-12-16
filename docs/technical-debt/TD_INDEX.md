@@ -1,8 +1,9 @@
 # Technical Debt Index
 
 **Last Updated:** 2025-12-16
-**Total Open Items:** 12
-**Total Story Points:** ~179 SP
+**Total Open Items:** 14
+**Total Story Points:** ~230 SP
+**Archived Items:** [6 items](archive/ARCHIVE_INDEX.md)
 
 ---
 
@@ -12,19 +13,23 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~53 SP       |
-| MEDIUM   | 6     | ~97 SP       |
-| LOW      | 2     | ~20 SP       |
+| MEDIUM   | 8     | ~140 SP      |
+| LOW      | 3     | ~37 SP       |
 
 ---
 
-## Resolved in Sprint 47
+## Archived Items (Sprint 47)
 
-| TD# | Title | Status | SP | Resolution |
-|-----|-------|--------|-----|------------|
-| TD-056 | React Infinite Loop in Chat Streaming | **RESOLVED** | 13 | Fixed unstable callback refs in useStreamChat.ts |
-| TD-057 | Health Page Endpoint Mismatch | **RESOLVED** | 3 | Updated frontend to use /health instead of /health/detailed |
-| TD-058 | Admin Domain List Sync Issue | **RESOLVED** | 5 | Fixed trailing slash + response structure in useDomainTraining.ts |
-| TD-050 | Duplicate Answer Streaming | **RESOLVED** | 3 | Root cause same as TD-056, fixed by hasCalledOnComplete ref |
+Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
+
+| TD# | Title | Resolution Sprint |
+|-----|-------|-------------------|
+| TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
+| TD-050 | Duplicate Answer Streaming | Sprint 47 |
+| TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
+| TD-060 | Unified Chunk IDs | Sprint 42 |
+| TD-061 | Ollama GPU Docker Config | Sprint 42 |
+| TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
 
 ---
 
@@ -34,108 +39,39 @@
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 35 |
-| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 35/36 |
-| [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | OPEN | 5 | Sprint 36 |
-| [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests (Sprint 8) | OPEN | 40 | Sprint 37 |
+| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 49 |
+| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 49 |
+| [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | OPEN | 5 | Sprint 49 |
+| [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | OPEN | 40 | Sprint 51 |
 
 ### MEDIUM Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | PARTIAL | 13 | Sprint 34 (done) |
-| [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md) | Graph Extraction with Unified Chunks | OPEN | 13 | Sprint 38 |
-| [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 39 |
-| [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 38 |
-| [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 39/40 |
-| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 36 |
+| [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | PARTIAL | 13 | Done (Sprint 34) |
+| [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md) | Graph Extraction with Unified Chunks | OPEN | 13 | Sprint 52 |
+| [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 52+ |
+| [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 52 |
+| [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
+| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50 |
+| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | PLANNED | 13 | Sprint 52+ |
+| [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | OPEN | 8 | **Sprint 48** |
+| [TD-063](TD-063_RELATION_DEDUPLICATION.md) | Relation Deduplication | PLANNED | 5 | Sprint 52+ |
 
 ### LOW Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | OPEN | 34 | Sprint 40+ |
-| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 41+ |
+| [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | OPEN | 34 | Sprint 52+ |
+| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 52+ |
+| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 52+ |
+| [TD-067](TD-067_DATASET_ANNOTATION_TOOL.md) | Dataset Annotation Tool | BACKLOG | 21 | Future |
 
 ---
 
-## Items by Original Sprint
+## Sprint 48 (Current - Real-Time Thinking Phase Events)
 
-### Sprint 8
-- [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md): Critical Path E2E Tests (40 SP)
-
-### Sprint 9
-- [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline (21 SP)
-- [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client Implementation (21 SP)
-
-### Sprint 10
-- [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md): User Document Upload Interface (13 SP)
-
-### Sprint 11
-- [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md): Admin Dashboard Full (34 SP)
-
-### Sprint 16
-- [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md): Graph Extraction with Unified Chunks (13 SP)
-- [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service (6 SP)
-
-### Sprint 17
-- [TD-049](TD-049_IMPLICIT_USER_PROFILING.md): Implicit User Profiling (21 SP)
-- [TD-050](TD-050_DUPLICATE_ANSWER_STREAMING.md): Duplicate Answer Streaming Fix (3 SP)
-
-### Sprint 32/33
-- [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md): Follow-up Questions Redis Storage (5 SP)
-- [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md): DoclingParsedDocument Interface (8 SP)
-- [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration (5 SP)
-- [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction (13 SP)
-
-### Sprint 46 (Testing) → Resolved in Sprint 47
-- ~~TD-056: React Infinite Loop in Chat Streaming (13 SP)~~ - **RESOLVED**
-- ~~TD-057: Health Page Endpoint Mismatch (3 SP)~~ - **RESOLVED**
-- ~~TD-058: Admin Domain List Sync Issue (5 SP)~~ - **RESOLVED**
-- ~~TD-050: Duplicate Answer Streaming (3 SP)~~ - **RESOLVED** (same root cause)
-
----
-
-## Items by Category
-
-### Architecture
-- [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service
-- [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md): Graph Extraction with Unified Chunks
-- [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline
-
-### Testing
-- [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md): Critical Path E2E Tests
-
-### Data Model
-- [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md): DoclingParsedDocument Interface
-- [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration
-- [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction
-
-### Features
-- [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md): Follow-up Questions
-- [TD-049](TD-049_IMPLICIT_USER_PROFILING.md): User Profiling
-- [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md): User Document Upload
-- [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md): Admin Dashboard
-- [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client
-
-### Bugs (All Sprint 47 bugs resolved)
-- ~~TD-056: React Infinite Loop~~ - **RESOLVED Sprint 47**
-- ~~TD-057: Health Page Endpoint~~ - **RESOLVED Sprint 47**
-- ~~TD-058: Admin Domain List Sync~~ - **RESOLVED Sprint 47**
-- ~~TD-050: Duplicate Streaming~~ - **RESOLVED Sprint 47** (same root cause as TD-056)
-
----
-
-## Recommended Sprint Allocation
-
-### Sprint 47 (COMPLETED - Bug Fixes)
-- ~~TD-056: React Infinite Loop (13 SP)~~ - **RESOLVED**
-- ~~TD-057: Health Page Endpoint (3 SP)~~ - **RESOLVED**
-- ~~TD-058: Admin Domain Sync (5 SP)~~ - **RESOLVED**
-- ~~TD-050: Duplicate Streaming (3 SP)~~ - **RESOLVED** (same root cause as TD-056)
-
-### Sprint 48 (Current - Real-Time Thinking Phase Events)
-**Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte + Reranking + Nemotron
+**Focus:** Backend SSE Phase Events + Reranking + Nemotron + Timeout
 **Story Points:** 73 SP
 
 | Feature | SP | Description |
@@ -151,10 +87,9 @@
 | 48.9 | 5 | **Default LLM zu Nemotron wechseln** |
 | 48.10 | 5 | **Request Timeout & Cancel** |
 
-**Related TDs:**
-- TD-053: Admin Dashboard (Phase-Events für Monitoring)
-- TD-059: Reranking Container (Phase zeigt Reranking Status) → **IN SPRINT 48**
-- TD-043: Follow-up Questions (Redis Pattern)
+---
+
+## Recommended Sprint Allocation
 
 ### Sprint 49
 - TD-043: Follow-up Questions Redis (5 SP)
@@ -174,6 +109,39 @@
 - TD-052: User Document Upload (13 SP)
 - TD-053: Admin Dashboard Full (34 SP)
 - TD-055: MCP Client (21 SP)
+- TD-056: Project Collaboration (34 SP)
+- TD-058: Community Summaries (13 SP)
+- TD-063: Relation Deduplication (5 SP)
+- TD-067: Dataset Annotation Tool (21 SP)
+
+---
+
+## Items by Category
+
+### Architecture
+- [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service
+- [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md): Graph Extraction with Unified Chunks
+- [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline
+
+### Testing
+- [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md): Critical Path E2E Tests
+
+### Data Model
+- [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md): DoclingParsedDocument Interface
+- [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration
+- [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction
+- [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md): Community Summary Generation
+- [TD-063](TD-063_RELATION_DEDUPLICATION.md): Relation Deduplication
+
+### Features
+- [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md): Follow-up Questions
+- [TD-049](TD-049_IMPLICIT_USER_PROFILING.md): User Profiling
+- [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md): User Document Upload
+- [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md): Admin Dashboard
+- [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client
+- [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md): Project Collaboration
+- [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md): Reranking via Ollama
+- [TD-067](TD-067_DATASET_ANNOTATION_TOOL.md): Dataset Annotation Tool
 
 ---
 
@@ -188,6 +156,8 @@ TD-043 (Follow-up Questions)
 
 TD-045 (entity_id Migration)
     └─→ TD-046 (RELATES_TO) ✓ DONE
+
+TD-059 (Reranking) → Sprint 48
 ```
 
 ---
@@ -195,24 +165,25 @@ TD-045 (entity_id Migration)
 ## Metrics
 
 ### Velocity Required (to clear backlog)
-- Total remaining: ~180 SP
-- At 15 SP/sprint: 12 sprints
-- At 30 SP/sprint (parallel): 6 sprints
+- Total remaining: ~230 SP
+- At 15 SP/sprint: 15 sprints
+- At 30 SP/sprint (parallel): 8 sprints
 
 ### Aging
-- Oldest item: TD-047 (Sprint 8) - 26+ sprints old
-- Average age: ~15 sprints
+- Oldest item: TD-047 (Sprint 8) - 40+ sprints old
+- Average age: ~20 sprints
 
 ---
 
 ## Notes
 
-1. **TD-056, TD-057, TD-058** added from Sprint 46 testing - prioritized for Sprint 47
-2. **TD-056** is CRITICAL - React infinite loop blocks all chat functionality
-3. **TD-050** being investigated to determine if related to TD-056
-4. **TD-046** was completed in Sprint 34
-5. **TD-044** is in progress with workarounds
-6. **TD-047** is a large item (40 SP) requiring dedicated sprint
+1. **Sprint 47 bugs resolved** - All testing bugs from Sprint 46 were fixed
+2. **6 items archived** - Resolved TDs moved to archive folder
+3. **TD-046** was completed in Sprint 34
+4. **TD-044** is in progress with workarounds
+5. **TD-047** is a large item (40 SP) requiring dedicated sprint
+6. **TD-059** scheduled for Sprint 48 (Reranking via Ollama)
+7. **New TDs added**: TD-056 (Collaboration), TD-058 (Community Summaries), TD-063 (Relation Dedup), TD-067 (Annotation Tool)
 
 ---
 
