@@ -13,6 +13,8 @@ from typing import Any, Literal
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 
+from src.models.phase_event import PhaseEvent
+
 
 class RetrievedContext(BaseModel):
     """A single retrieved context/document."""
@@ -95,6 +97,10 @@ class AgentState(MessagesState):
     namespaces: list[str] | None = Field(
         default=None,
         description='Namespaces to search in. Defaults to ["default", "general"] (Sprint 41 Feature 41.4)',
+    )
+    phase_event: PhaseEvent | None = Field(
+        default=None,
+        description="Latest phase event emitted by the current node (Sprint 48 Feature 48.2)",
     )
 
 
