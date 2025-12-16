@@ -6,8 +6,10 @@
 providers:
   local_ollama:
     base_url: "${OLLAMA_BASE_URL:-http://localhost:11434}"
-    timeout: 120  # Increased for large models like qwen3:32b
+    timeout: 120  # Increased for large models
     models:
+      - nemotron-3-nano      # DGX Spark: NVIDIA Nemotron 3 Nano 30B-3A (fastest, MoE)
+      - gpt-oss:20b          # DGX Spark: GPT-OSS 20B for extraction/generation (fallback)
       - qwen3:32b            # DGX Spark: Qwen3 32B for extraction/generation
       - qwen3-vl:32b         # DGX Spark: Qwen3 VL for vision tasks
       - bge-m3               # Embeddings (always local)
@@ -75,10 +77,12 @@ routing:
       complexity: medium
 
 # Model selection per provider (defaults)
+# Nemotron 3 Nano: 30B total / 3.5B active params (MoE) - optimized for DGX Spark
+# Thinking Mode: Disable with enable_thinking=false or empty <think></think> tags
 model_defaults:
   local_ollama:
-    extraction: qwen3:32b   # DGX Spark: Qwen3 32B for entity extraction
-    generation: qwen3:32b   # DGX Spark: Qwen3 32B for generation
+    extraction: nemotron-3-nano  # DGX Spark: NVIDIA Nemotron 3 Nano (fastest, MoE)
+    generation: nemotron-3-nano  # DGX Spark: NVIDIA Nemotron 3 Nano (fastest, MoE)
     embedding: bge-m3
   alibaba_cloud:
     extraction: qwen3-32b      # High quality extraction (32B params)

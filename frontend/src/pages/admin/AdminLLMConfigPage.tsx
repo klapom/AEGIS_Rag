@@ -250,26 +250,26 @@ export function AdminLLMConfigPage() {
       className="min-h-screen bg-gray-50 dark:bg-gray-900"
       data-testid="llm-config-page"
     >
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-4">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Cpu className="w-6 h-6" />
+        <div className="mb-4">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+            <Cpu className="w-4 h-4" />
             LLM Configuration
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
             Configure which model to use for each use case
           </p>
         </div>
 
         {/* Use Case Model Assignment */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5" />
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <Settings className="w-4 h-4" />
             Use Case Model Assignment
           </h2>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {config.map((useCaseConfig) => {
               const def = useCaseDefinitions[useCaseConfig.useCase];
               const currentModel = modelOptions.find(
@@ -280,21 +280,21 @@ export function AdminLLMConfigPage() {
               return (
                 <div
                   key={useCaseConfig.useCase}
-                  className="border dark:border-gray-700 rounded-lg p-4"
+                  className="border dark:border-gray-700 rounded-md p-3"
                   data-testid={`usecase-selector-${useCaseConfig.useCase}`}
                 >
-                  <div className="flex justify-between items-start mb-2">
+                  <div className="flex justify-between items-start mb-1.5">
                     <div>
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {def.label}
                       </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {def.description}
                       </p>
                     </div>
                     {currentModel && (
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${getProviderBadgeColor(
+                        className={`text-xs px-1.5 py-0.5 rounded ${getProviderBadgeColor(
                           currentModel.provider
                         )}`}
                       >
@@ -308,7 +308,7 @@ export function AdminLLMConfigPage() {
                     onChange={(e) =>
                       handleModelChange(useCaseConfig.useCase, e.target.value)
                     }
-                    className="w-full mt-2 p-2 border dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className="w-full mt-1.5 p-1.5 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     data-testid={`model-dropdown-${useCaseConfig.useCase}`}
                   >
                     {availableModels.map((model) => (
@@ -328,29 +328,29 @@ export function AdminLLMConfigPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-3 items-center">
           <button
             onClick={handleRefreshModels}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 border dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-900 dark:text-gray-100"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-gray-900 dark:text-gray-100"
             data-testid="refresh-models-button"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh Models
           </button>
 
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             data-testid="save-config-button"
           >
             {isSaving ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
+              <RefreshCw className="w-3 h-3 animate-spin" />
             ) : saveStatus === 'success' ? (
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-3 h-3" />
             ) : saveStatus === 'error' ? (
-              <AlertCircle className="w-4 h-4" />
+              <AlertCircle className="w-3 h-3" />
             ) : null}
             {saveStatus === 'success'
               ? 'Saved!'

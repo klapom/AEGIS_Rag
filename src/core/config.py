@@ -377,9 +377,9 @@ class Settings(BaseSettings):
     )
 
     # Gemma Relation Extraction (Sprint 13: ADR-018)
-    # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
+    # Sprint 36: Updated default to gpt-oss:20b for faster tests
     gemma_model: str = Field(
-        default="qwen3:32b",
+        default="gpt-oss:20b",
         description="LLM model for relation extraction (Ollama) - use GEMMA_MODEL env var to override",
     )
     gemma_temperature: float = Field(
@@ -576,9 +576,9 @@ class Settings(BaseSettings):
     )
 
     # LightRAG LLM Configuration
-    # Sprint 36: Updated default to qwen3:32b for DGX Spark compatibility
+    # Sprint 36: Updated default to gpt-oss:20b for faster tests
     lightrag_llm_model: str = Field(
-        default="qwen3:32b",
+        default="gpt-oss:20b",
         description="Ollama LLM model for LightRAG entity extraction - use LIGHTRAG_LLM_MODEL env var to override",
     )
     lightrag_llm_temperature: float = Field(

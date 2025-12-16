@@ -117,33 +117,33 @@ export function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-6 space-y-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 space-y-6">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-sm text-gray-600">
             Re-index documents and monitor system statistics
           </p>
         </div>
 
         {/* Re-indexing Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-semibold text-gray-900">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-gray-900">
               Directory Re-Indexing
             </h2>
-            <p className="text-sm text-gray-600">
+            <p className="text-xs text-gray-600">
               Re-index all documents from a specified directory into Qdrant, BM25, and Neo4j.
             </p>
           </div>
 
           {/* Form */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Directory Input */}
             <div>
               <label
                 htmlFor="directory"
-                className="block text-sm font-medium text-gray-700 mb-2"
+                className="block text-xs font-medium text-gray-700 mb-1"
               >
                 Document Directory
               </label>
@@ -155,7 +155,7 @@ export function AdminPage() {
                 placeholder="e.g., data/sample_documents"
                 disabled={isReindexing}
                 className="
-                  w-full px-4 py-3 rounded-lg border border-gray-300
+                  w-full px-3 py-2 text-sm rounded-md border border-gray-300
                   focus:ring-2 focus:ring-primary focus:border-transparent
                   disabled:bg-gray-100 disabled:cursor-not-allowed
                   transition-all
@@ -167,7 +167,7 @@ export function AdminPage() {
             </div>
 
             {/* Dry Run Toggle */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <input
                 id="dry-run"
                 type="checkbox"
@@ -175,12 +175,12 @@ export function AdminPage() {
                 onChange={(e) => setDryRun(e.target.checked)}
                 disabled={isReindexing}
                 className="
-                  w-5 h-5 rounded border-gray-300 text-primary
+                  w-4 h-4 rounded border-gray-300 text-primary
                   focus:ring-2 focus:ring-primary
                   disabled:opacity-50 disabled:cursor-not-allowed
                 "
               />
-              <label htmlFor="dry-run" className="text-sm font-medium text-gray-700">
+              <label htmlFor="dry-run" className="text-sm text-gray-700">
                 Dry Run (simulate without making changes)
               </label>
             </div>
@@ -190,7 +190,7 @@ export function AdminPage() {
               onClick={handleReindex}
               disabled={!isFormValid || isReindexing}
               className="
-                w-full px-6 py-3 rounded-lg font-semibold
+                w-full px-4 py-2 rounded-md font-medium text-sm
                 bg-primary text-white
                 hover:bg-primary-hover
                 disabled:bg-gray-300 disabled:cursor-not-allowed
@@ -221,13 +221,13 @@ export function AdminPage() {
         </div>
 
         {/* Statistics Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold text-gray-900">
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold text-gray-900">
                 System Statistics
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs text-gray-600">
                 Current state of all system components
               </p>
             </div>
@@ -235,10 +235,10 @@ export function AdminPage() {
               onClick={loadStats}
               disabled={statsLoading}
               className="
-                px-4 py-2 rounded-lg border border-gray-300
+                px-3 py-1.5 text-sm rounded-md border border-gray-300
                 hover:bg-gray-50 transition-all
                 disabled:opacity-50 disabled:cursor-not-allowed
-                flex items-center space-x-2
+                flex items-center space-x-1.5
               "
             >
               {statsLoading ? (
@@ -291,20 +291,20 @@ function ProgressDisplay({ progress, progressHistory, error }: ProgressDisplayPr
   const isComplete = progress.status === 'completed';
 
   return (
-    <div className="space-y-4 pt-4 border-t border-gray-200">
+    <div className="space-y-3 pt-3 border-t border-gray-200">
       {/* Phase Badge */}
       {progress.phase && (
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <PhaseBadge phase={progress.phase} />
             {progress.current_document && (
-              <span className="text-sm text-gray-600">
+              <span className="text-xs text-gray-600 truncate max-w-xs">
                 {progress.current_document}
               </span>
             )}
           </div>
           {progress.eta_seconds && (
-            <span className="text-sm text-gray-500">
+            <span className="text-xs text-gray-500">
               ETA: {formatETA(progress.eta_seconds)}
             </span>
           )}
@@ -312,12 +312,12 @@ function ProgressDisplay({ progress, progressHistory, error }: ProgressDisplayPr
       )}
 
       {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-gray-700">{progress.message}</span>
           <span className="text-gray-600">{percentage.toFixed(0)}%</span>
         </div>
-        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`
               h-full transition-all duration-300 rounded-full
@@ -330,18 +330,18 @@ function ProgressDisplay({ progress, progressHistory, error }: ProgressDisplayPr
 
       {/* Document Progress */}
       {progress.documents_total && progress.documents_total > 0 && (
-        <div className="text-sm text-gray-600">
+        <div className="text-xs text-gray-600">
           Documents: {progress.documents_processed || 0} / {progress.documents_total}
         </div>
       )}
 
       {/* Progress History Log */}
       {progressHistory.length > 0 && (
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
             View Progress Log ({progressHistory.length} events)
           </summary>
-          <div className="mt-3 max-h-64 overflow-y-auto space-y-1 text-xs font-mono bg-gray-50 rounded-lg p-3">
+          <div className="mt-2 max-h-48 overflow-y-auto space-y-0.5 text-xs font-mono bg-gray-50 rounded p-2">
             {progressHistory.map((chunk, i) => (
               <div key={i} className="text-gray-600">
                 <span className="text-gray-400">[{chunk.phase || 'unknown'}]</span>{' '}
@@ -354,9 +354,9 @@ function ProgressDisplay({ progress, progressHistory, error }: ProgressDisplayPr
 
       {/* Completion Message */}
       {isComplete && (
-        <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-md">
           <svg
-            className="w-5 h-5 text-green-600"
+            className="w-4 h-4 text-green-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -368,7 +368,7 @@ function ProgressDisplay({ progress, progressHistory, error }: ProgressDisplayPr
               d="M5 13l4 4L19 7"
             />
           </svg>
-          <span className="text-sm font-medium text-green-800">
+          <span className="text-xs font-medium text-green-800">
             Re-indexing completed successfully!
           </span>
         </div>
@@ -387,7 +387,7 @@ interface StatisticsGridProps {
 
 function StatisticsGrid({ stats }: StatisticsGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {/* Qdrant Stats */}
       <StatCard
         title="Qdrant Vector Store"
@@ -475,16 +475,16 @@ interface StatCardProps {
 
 function StatCard({ title, icon, stats }: StatCardProps) {
   return (
-    <div className="p-5 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-      <div className="flex items-center space-x-2">
-        <span className="text-2xl">{icon}</span>
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+    <div className="p-3 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+      <div className="flex items-center space-x-1.5">
+        <span className="text-base">{icon}</span>
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {stats.map((stat, i) => (
           <div key={i} className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">{stat.label}</span>
-            <span className="text-sm font-semibold text-gray-900">{stat.value}</span>
+            <span className="text-xs text-gray-600">{stat.label}</span>
+            <span className="text-xs font-semibold text-gray-900">{stat.value}</span>
           </div>
         ))}
       </div>
@@ -512,7 +512,7 @@ function PhaseBadge({ phase }: PhaseBadgeProps) {
   return (
     <span
       className={`
-        px-3 py-1 rounded-full text-xs font-semibold uppercase
+        px-2 py-0.5 rounded-full text-xs font-medium uppercase
         ${colorClass}
       `}
     >
@@ -522,7 +522,7 @@ function PhaseBadge({ phase }: PhaseBadgeProps) {
 }
 
 function LoadingSpinner({ size = 'md' }: { size?: 'sm' | 'md' }) {
-  const sizeClass = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5';
+  const sizeClass = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
   return (
     <svg
       className={`${sizeClass} animate-spin`}
@@ -567,10 +567,10 @@ function RefreshIcon() {
 
 function ErrorDisplay({ error }: { error: string }) {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
-      <div className="flex items-center space-x-2 text-red-700">
+    <div className="bg-red-50 border border-red-200 rounded-md p-3 space-y-1">
+      <div className="flex items-center space-x-1.5 text-red-700">
         <svg
-          className="w-5 h-5"
+          className="w-4 h-4"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -582,22 +582,22 @@ function ErrorDisplay({ error }: { error: string }) {
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 className="font-semibold">Error</h3>
+        <h3 className="font-medium text-sm">Error</h3>
       </div>
-      <p className="text-sm text-red-600">{error}</p>
+      <p className="text-xs text-red-600">{error}</p>
     </div>
   );
 }
 
 function SkeletonStats() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div key={i} className="p-5 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-          <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4" />
-          <div className="space-y-2">
-            <div className="h-4 bg-gray-200 rounded animate-pulse" />
-            <div className="h-4 bg-gray-200 rounded animate-pulse w-2/3" />
+        <div key={i} className="p-3 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+          <div className="space-y-1">
+            <div className="h-3 bg-gray-200 rounded animate-pulse" />
+            <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
           </div>
         </div>
       ))}

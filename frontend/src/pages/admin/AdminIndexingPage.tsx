@@ -450,21 +450,21 @@ export function AdminIndexingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-8 px-6 space-y-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 space-y-4">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Document Indexing</h1>
-          <p className="text-gray-600">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold text-gray-900">Document Indexing</h1>
+          <p className="text-sm text-gray-600">
             Indizieren Sie Dokumente durch Datei-Upload oder aus einem Serververzeichnis
           </p>
         </div>
 
         {/* Sprint 35 Feature 35.10: File Upload Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">
             Option 1: Dateien hochladen
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             Laden Sie Dateien von Ihrem Computer hoch. Unterstützte Formate: PDF, DOCX, PPTX,
             TXT, MD, HTML und mehr.
           </p>
@@ -484,14 +484,14 @@ export function AdminIndexingPage() {
             <label
               htmlFor="file-upload-input"
               className={`
-                inline-flex items-center px-6 py-3 rounded-lg font-semibold
+                inline-flex items-center px-4 py-2 rounded-md font-medium text-sm
                 bg-indigo-600 text-white cursor-pointer
                 hover:bg-indigo-700 transition-all
                 ${isIndexing || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
               `}
             >
               <svg
-                className="w-5 h-5 mr-2"
+                className="w-4 h-4 mr-1.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -505,7 +505,7 @@ export function AdminIndexingPage() {
               </svg>
               Dateien auswählen
             </label>
-            <span className="ml-4 text-sm text-gray-600">
+            <span className="ml-3 text-xs text-gray-600">
               {selectedLocalFiles.length > 0
                 ? `${selectedLocalFiles.length} Datei(en) ausgewählt`
                 : 'Keine Dateien ausgewählt'}
@@ -514,8 +514,8 @@ export function AdminIndexingPage() {
 
           {/* Selected Files List */}
           {selectedLocalFiles.length > 0 && (
-            <div className="space-y-4">
-              <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200">
+            <div className="space-y-3">
+              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-200">
                 {selectedLocalFiles.map((file, index) => {
                   const supportStatus = getFileSupportStatus(file.name);
                   const config = FILE_TYPE_CONFIG[supportStatus];
@@ -525,30 +525,30 @@ export function AdminIndexingPage() {
                     <div
                       key={index}
                       data-testid={`upload-file-${file.name}`}
-                      className={`flex items-center space-x-3 px-4 py-3 ${
+                      className={`flex items-center space-x-2 px-3 py-2 ${
                         !supported ? 'opacity-60' : ''
                       }`}
                     >
                       {/* Support Status Indicator */}
                       <div
-                        className={`w-2 h-2 rounded-full ${config.color}`}
+                        className={`w-1.5 h-1.5 rounded-full ${config.color}`}
                         title={config.description}
                       />
 
                       {/* File Name */}
-                      <span className="flex-1 text-sm font-medium text-gray-900 truncate">
+                      <span className="flex-1 text-xs font-medium text-gray-900 truncate">
                         {file.name}
                       </span>
 
                       {/* Support Badge */}
                       <span
-                        className={`px-2 py-0.5 text-xs font-semibold rounded ${config.badgeColor}`}
+                        className={`px-1.5 py-0.5 text-xs font-medium rounded ${config.badgeColor}`}
                       >
                         {config.label}
                       </span>
 
                       {/* File Size */}
-                      <span className="text-xs text-gray-500 w-16 text-right">
+                      <span className="text-xs text-gray-500 w-14 text-right">
                         {formatFileSize(file.size)}
                       </span>
 
@@ -560,7 +560,7 @@ export function AdminIndexingPage() {
                         aria-label="Datei entfernen"
                       >
                         <svg
-                          className="w-5 h-5"
+                          className="w-4 h-4"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -584,12 +584,12 @@ export function AdminIndexingPage() {
                 onClick={handleUploadFiles}
                 disabled={isUploading || selectedLocalFiles.length === 0}
                 className="
-                  px-6 py-3 rounded-lg font-semibold
+                  px-4 py-2 rounded-md font-medium text-sm
                   bg-indigo-600 text-white
                   hover:bg-indigo-700
                   disabled:bg-gray-300 disabled:cursor-not-allowed
                   transition-all
-                  flex items-center space-x-2
+                  flex items-center space-x-1.5
                 "
               >
                 {isUploading ? (
@@ -600,7 +600,7 @@ export function AdminIndexingPage() {
                 ) : (
                   <>
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -623,16 +623,16 @@ export function AdminIndexingPage() {
           {uploadedFiles.length > 0 && (
             <div
               data-testid="uploaded-files-summary"
-              className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+              className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-md"
             >
               <SuccessIcon />
-              <span className="text-sm font-medium text-green-800 flex-1">
+              <span className="text-xs font-medium text-green-800 flex-1">
                 {uploadedFiles.length} Datei(en) erfolgreich hochgeladen und bereit zur
                 Indizierung
               </span>
               <button
                 onClick={handleClearUploads}
-                className="text-sm text-green-700 hover:text-green-900 font-medium"
+                className="text-xs text-green-700 hover:text-green-900 font-medium"
               >
                 Zurücksetzen
               </button>
@@ -643,20 +643,20 @@ export function AdminIndexingPage() {
           {uploadError && (
             <div
               data-testid="upload-error"
-              className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg"
+              className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md"
             >
               <ErrorIcon />
-              <span className="text-sm font-medium text-red-800">{uploadError}</span>
+              <span className="text-xs font-medium text-red-800">{uploadError}</span>
             </div>
           )}
         </div>
 
         {/* Directory Selection Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">
             Option 2: Serververzeichnis scannen
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             Scannen Sie ein Verzeichnis auf dem Server nach Dokumenten. Ideal für große Mengen
             bereits vorhandener Dateien.
           </p>
@@ -665,11 +665,11 @@ export function AdminIndexingPage() {
           <div>
             <label
               htmlFor="directory-input"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-xs font-medium text-gray-700 mb-1"
             >
               Verzeichnispfad
             </label>
-            <div className="flex space-x-4">
+            <div className="flex space-x-3">
               <input
                 id="directory-input"
                 data-testid="directory-input"
@@ -679,7 +679,7 @@ export function AdminIndexingPage() {
                 placeholder="z.B. C:\Dokumente oder data/sample_documents"
                 disabled={isIndexing || isScanning}
                 className="
-                  flex-1 px-4 py-3 rounded-lg border border-gray-300
+                  flex-1 px-3 py-2 text-sm rounded-md border border-gray-300
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
                   disabled:bg-gray-100 disabled:cursor-not-allowed
                   transition-all
@@ -690,12 +690,12 @@ export function AdminIndexingPage() {
                 onClick={handleScanDirectory}
                 disabled={!directory.trim() || isIndexing || isScanning}
                 className="
-                  px-6 py-3 rounded-lg font-semibold
+                  px-4 py-2 rounded-md font-medium text-sm
                   bg-blue-600 text-white
                   hover:bg-blue-700
                   disabled:bg-gray-300 disabled:cursor-not-allowed
                   transition-all
-                  flex items-center space-x-2
+                  flex items-center space-x-1.5
                 "
               >
                 {isScanning ? (
@@ -711,7 +711,7 @@ export function AdminIndexingPage() {
           </div>
 
           {/* Recursive Checkbox */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <input
               id="recursive-checkbox"
               data-testid="recursive-checkbox"
@@ -720,7 +720,7 @@ export function AdminIndexingPage() {
               onChange={(e) => setRecursive(e.target.checked)}
               disabled={isIndexing || isScanning}
               className="
-                w-5 h-5 rounded border-gray-300 text-blue-600
+                w-4 h-4 rounded border-gray-300 text-blue-600
                 focus:ring-2 focus:ring-blue-500
                 disabled:opacity-50 disabled:cursor-not-allowed
               "
@@ -734,25 +734,25 @@ export function AdminIndexingPage() {
           {scanError && (
             <div
               data-testid="scan-error"
-              className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg"
+              className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md"
             >
               <ErrorIcon />
-              <span className="text-sm font-medium text-red-800">{scanError}</span>
+              <span className="text-xs font-medium text-red-800">{scanError}</span>
             </div>
           )}
         </div>
 
         {/* File List Section (Sprint 33 Feature 33.2) */}
         {scanResult && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">
               Schritt 2: Dateien auswählen
             </h2>
 
             {/* Statistics */}
             <div
               data-testid="scan-statistics"
-              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              className="grid grid-cols-2 md:grid-cols-4 gap-2"
             >
               <StatCard
                 label="Gesamt"
@@ -784,7 +784,7 @@ export function AdminIndexingPage() {
                 data-testid="select-all"
                 onClick={handleSelectAll}
                 disabled={isIndexing}
-                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
               >
                 Alle auswählen
               </button>
@@ -792,7 +792,7 @@ export function AdminIndexingPage() {
                 data-testid="select-none"
                 onClick={handleSelectNone}
                 disabled={isIndexing}
-                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
               >
                 Keine auswählen
               </button>
@@ -800,11 +800,11 @@ export function AdminIndexingPage() {
                 data-testid="select-supported"
                 onClick={handleSelectSupported}
                 disabled={isIndexing}
-                className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                className="px-3 py-1.5 text-xs rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
               >
                 Nur unterstützte
               </button>
-              <span className="ml-auto text-sm text-gray-600 self-center">
+              <span className="ml-auto text-xs text-gray-600 self-center">
                 {selectedFiles.size} von {scanResult.files.length} ausgewählt
                 ({selectedSupportedCount} unterstützt)
               </span>
@@ -813,7 +813,7 @@ export function AdminIndexingPage() {
             {/* File List */}
             <div
               data-testid="file-list"
-              className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-200"
+              className="max-h-64 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-200"
             >
               {scanResult.files.map((file) => (
                 <FileListItem
@@ -829,8 +829,8 @@ export function AdminIndexingPage() {
         )}
 
         {/* Indexing Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">
             {uploadedFiles.length > 0
               ? 'Schritt 2: Hochgeladene Dateien indizieren'
               : scanResult && selectedFiles.size > 0
@@ -840,20 +840,20 @@ export function AdminIndexingPage() {
           </h2>
 
           {!scanResult && uploadedFiles.length === 0 && (
-            <p className="text-sm text-gray-600">
+            <p className="text-xs text-gray-600">
               Laden Sie Dateien hoch oder geben Sie einen Verzeichnispfad ein, um zu beginnen.
             </p>
           )}
 
           {uploadedFiles.length > 0 && (
-            <p className="text-sm text-gray-600">
+            <p className="text-xs text-gray-600">
               {uploadedFiles.length} Datei(en) hochgeladen und bereit zur Indizierung.
               Klicken Sie auf "Indizierung starten", um fortzufahren.
             </p>
           )}
 
           {/* Action Buttons */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-3">
             <button
               data-testid="start-indexing"
               onClick={handleStartIndexing}
@@ -863,12 +863,12 @@ export function AdminIndexingPage() {
                 (uploadedFiles.length === 0 && scanResult !== null && selectedSupportedCount === 0)
               }
               className="
-                flex-1 px-6 py-3 rounded-lg font-semibold
+                flex-1 px-4 py-2 rounded-md font-medium text-sm
                 bg-blue-600 text-white
                 hover:bg-blue-700
                 disabled:bg-gray-300 disabled:cursor-not-allowed
                 transition-all
-                flex items-center justify-center space-x-2
+                flex items-center justify-center space-x-1.5
               "
             >
               {isIndexing ? (
@@ -896,7 +896,7 @@ export function AdminIndexingPage() {
                   data-testid="cancel-indexing"
                   onClick={handleCancelIndexing}
                   className="
-                    px-6 py-3 rounded-lg font-semibold
+                    px-4 py-2 rounded-md font-medium text-sm
                     bg-red-600 text-white
                     hover:bg-red-700
                     transition-all
@@ -917,12 +917,12 @@ export function AdminIndexingPage() {
 
             {/* Progress Display (Sprint 33 Feature 33.3) */}
             {isIndexing && progress && (
-              <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div className="space-y-3 pt-3 border-t border-gray-200">
                 {/* Status Message with Error Button and Details Button */}
                 <div className="flex items-center justify-between">
                   <div
                     data-testid="indexing-status"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-xs font-medium text-gray-700"
                   >
                     {progress.message || 'Verarbeite...'}
                   </div>
@@ -935,7 +935,7 @@ export function AdminIndexingPage() {
                     <button
                       onClick={() => setIsDetailDialogOpen(true)}
                       className="
-                        px-4 py-2 rounded-lg font-semibold text-sm
+                        px-3 py-1.5 rounded-md font-medium text-xs
                         bg-indigo-600 text-white
                         hover:bg-indigo-700
                         transition-all
@@ -947,8 +947,8 @@ export function AdminIndexingPage() {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600">Fortschritt</span>
                     <span data-testid="progress-percentage" className="font-semibold">
                       {percentage.toFixed(0)}%
@@ -956,7 +956,7 @@ export function AdminIndexingPage() {
                   </div>
                   <div
                     data-testid="progress-bar"
-                    className="w-full h-3 bg-gray-200 rounded-full overflow-hidden"
+                    className="w-full h-2 bg-gray-200 rounded-full overflow-hidden"
                   >
                     <div
                       className={`
@@ -970,14 +970,14 @@ export function AdminIndexingPage() {
 
                 {/* Document Count */}
                 {documentsTotal > 0 && (
-                  <div data-testid="indexed-count" className="text-sm text-gray-600">
+                  <div data-testid="indexed-count" className="text-xs text-gray-600">
                     Dokumente: {documentsProcessed} / {documentsTotal}
                   </div>
                 )}
 
                 {/* Sprint 36: Chunk Progress during Entity/Relation Extraction */}
                 {detailedProgress && detailedProgress.chunks_total !== undefined && detailedProgress.chunks_total > 0 && (
-                  <div data-testid="chunk-progress" className="text-sm text-gray-600 flex items-center space-x-4">
+                  <div data-testid="chunk-progress" className="text-xs text-gray-600 flex items-center space-x-3">
                     <span>Chunks: {detailedProgress.chunks_processed || 0} / {detailedProgress.chunks_total}</span>
                     {detailedProgress.entities && (
                       <span className="text-indigo-600">
@@ -992,7 +992,7 @@ export function AdminIndexingPage() {
                   <div className="flex items-center space-x-2">
                     <PhaseBadge phase={progress.phase} />
                     {progress.current_document && (
-                      <span className="text-sm text-gray-600 truncate">
+                      <span className="text-xs text-gray-600 truncate max-w-xs">
                         {progress.current_document}
                       </span>
                     )}
@@ -1005,10 +1005,10 @@ export function AdminIndexingPage() {
             {isComplete && (
               <div
                 data-testid="success-message"
-                className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+                className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-md"
               >
                 <SuccessIcon />
-                <span className="text-sm font-medium text-green-800">
+                <span className="text-xs font-medium text-green-800">
                   Indizierung erfolgreich abgeschlossen! {documentsProcessed} Dokumente
                   verarbeitet.
                 </span>
@@ -1019,20 +1019,20 @@ export function AdminIndexingPage() {
             {error && (
               <div
                 data-testid="error-message"
-                className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg"
+                className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md"
               >
                 <ErrorIcon />
-                <span className="text-sm font-medium text-red-800">{error}</span>
+                <span className="text-xs font-medium text-red-800">{error}</span>
               </div>
             )}
 
           {/* Progress History (Collapsible) */}
           {progressHistory.length > 0 && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
                 Fortschritts-Log anzeigen ({progressHistory.length} Ereignisse)
               </summary>
-              <div className="mt-3 max-h-64 overflow-y-auto space-y-1 text-xs font-mono bg-gray-50 rounded-lg p-3">
+              <div className="mt-2 max-h-48 overflow-y-auto space-y-0.5 text-xs font-mono bg-gray-50 rounded p-2">
                 {progressHistory.map((chunk, i) => (
                   <div key={i} className="text-gray-600">
                     <span className="text-gray-400">[{chunk.phase || 'unknown'}]</span>{' '}
@@ -1073,9 +1073,9 @@ interface StatCardProps {
 
 function StatCard({ label, value, color, textColor = 'text-gray-900' }: StatCardProps) {
   return (
-    <div className={`${color} rounded-lg p-4`}>
-      <div className={`text-2xl font-bold ${textColor}`}>{value}</div>
-      <div className={`text-sm ${textColor} opacity-80`}>{label}</div>
+    <div className={`${color} rounded-md p-2`}>
+      <div className={`text-lg font-bold ${textColor}`}>{value}</div>
+      <div className={`text-xs ${textColor} opacity-80`}>{label}</div>
     </div>
   );
 }
@@ -1094,7 +1094,7 @@ function FileListItem({ file, isSelected, onToggle, disabled }: FileListItemProp
     <div
       data-testid={`file-item-${file.file_name}`}
       className={`
-        flex items-center space-x-3 px-4 py-3 hover:bg-gray-50
+        flex items-center space-x-2 px-3 py-1.5 hover:bg-gray-50
         ${!file.is_supported ? 'opacity-60' : ''}
         ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
       `}
@@ -1105,25 +1105,25 @@ function FileListItem({ file, isSelected, onToggle, disabled }: FileListItemProp
         checked={isSelected}
         onChange={onToggle}
         disabled={disabled}
-        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         onClick={(e) => e.stopPropagation()}
       />
 
       {/* Parser Type Indicator */}
-      <div className={`w-2 h-2 rounded-full ${config.color}`} title={config.description} />
+      <div className={`w-1.5 h-1.5 rounded-full ${config.color}`} title={config.description} />
 
       {/* File Name */}
-      <span className="flex-1 text-sm font-medium text-gray-900 truncate">
+      <span className="flex-1 text-xs font-medium text-gray-900 truncate">
         {file.file_name}
       </span>
 
       {/* Parser Badge */}
-      <span className={`px-2 py-0.5 text-xs font-semibold rounded ${config.badgeColor}`}>
+      <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${config.badgeColor}`}>
         {config.label}
       </span>
 
       {/* File Size */}
-      <span className="text-xs text-gray-500 w-16 text-right">
+      <span className="text-xs text-gray-500 w-14 text-right">
         {formatFileSize(file.file_size_bytes)}
       </span>
     </div>
@@ -1150,7 +1150,7 @@ function PhaseBadge({ phase }: PhaseBadgeProps) {
   return (
     <span
       className={`
-        px-3 py-1 rounded-full text-xs font-semibold uppercase
+        px-2 py-0.5 rounded-full text-xs font-medium uppercase
         ${colorClass}
       `}
     >
@@ -1162,7 +1162,7 @@ function PhaseBadge({ phase }: PhaseBadgeProps) {
 function LoadingSpinner() {
   return (
     <svg
-      className="w-5 h-5 animate-spin"
+      className="w-4 h-4 animate-spin"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
@@ -1187,7 +1187,7 @@ function LoadingSpinner() {
 function SuccessIcon() {
   return (
     <svg
-      className="w-5 h-5 text-green-600 flex-shrink-0"
+      className="w-4 h-4 text-green-600 flex-shrink-0"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -1205,7 +1205,7 @@ function SuccessIcon() {
 function ErrorIcon() {
   return (
     <svg
-      className="w-5 h-5 text-red-600 flex-shrink-0"
+      className="w-4 h-4 text-red-600 flex-shrink-0"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

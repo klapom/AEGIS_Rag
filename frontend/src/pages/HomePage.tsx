@@ -3,100 +3,253 @@
  * Sprint 15 Feature 15.3: Landing page with SearchInput component
  * Sprint 31: Transformed into full chat interface for E2E test compatibility
  * Sprint 35 Feature 35.5: Session History Sidebar
+ * Sprint 46 Feature 46.1: ConversationView Integration
+ * Sprint 46 Feature 46.2: ReasoningPanel Integration
  *
  * Features:
+ * - Chat-style conversation layout with ConversationView
  * - Message input with inline chat responses
- * - Conversation history display
+ * - Conversation history display with MessageBubble
  * - Session management with sidebar
  * - Citations and follow-up questions
  * - Welcome screen with quick prompts
+ * - Transparent reasoning panel for assistant messages
  */
 
-import { useState, useCallback } from 'react';
-import { SearchInput, type SearchMode } from '../components/search';
-import { StreamingAnswer, SessionSidebar } from '../components/chat';
+import { useState, useCallback, useMemo } from 'react';
+import { type SearchMode } from '../components/search';
+import { ConversationView, SessionSidebar, type MessageData } from '../components/chat';
 import { getConversation } from '../api/chat';
 import type { Source } from '../types/chat';
+import type { ReasoningData } from '../types/reasoning';
+import { useStreamChat, buildReasoningData } from '../hooks/useStreamChat';
 
+/**
+ * Internal message format for conversation history
+ */
 interface Message {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   query?: string;
   mode?: SearchMode;
   namespaces?: string[];
+  sources?: Source[];
+  reasoningData?: ReasoningData | null;
+  timestamp?: string;
+}
+
+/**
+ * Generate a unique message ID
+ */
+function generateMessageId(): string {
+  return `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 export function HomePage() {
+  // Conversation state
   const [conversationHistory, setConversationHistory] = useState<Message[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Current query state for streaming
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
   const [currentNamespaces, setCurrentNamespaces] = useState<string[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleSearch = (query: string, mode: SearchMode, namespaces: string[]) => {
+  // Use streaming hook for SSE
+  const streamingState = useStreamChat({
+    query: currentQuery,
+    mode: currentMode,
+    namespaces: currentNamespaces,
+    sessionId: activeSessionId,
+    onSessionIdReceived: (sessionId) => {
+      if (!activeSessionId && sessionId) {
+        setActiveSessionId(sessionId);
+      }
+    },
+    onComplete: useCallback((answer: string, sources: Source[], reasoningData: ReasoningData | null) => {
+      // Add completed assistant message to history
+      setConversationHistory((prev) => [
+        ...prev,
+        {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: answer,
+          sources,
+          reasoningData,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      // Clear current query after completion (keep answer visible in history)
+      // Note: We don't clear immediately to allow the streaming message to be replaced by history
+    }, []),
+  });
+
+  /**
+   * Handle new message submission
+   */
+  const handleSearch = useCallback((query: string, mode: SearchMode, namespaces: string[]) => {
     // Add user message to history
-    setConversationHistory(prev => [...prev, { role: 'user', content: query, query, mode, namespaces }]);
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        id: generateMessageId(),
+        role: 'user',
+        content: query,
+        query,
+        mode,
+        namespaces,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
 
     // Trigger streaming response
     setCurrentQuery(query);
     setCurrentMode(mode);
     setCurrentNamespaces(namespaces);
-  };
-
-  const handleQuickPrompt = (prompt: string) => {
-    // Use current namespaces for quick prompts (or all if none selected)
-    handleSearch(prompt, 'hybrid', currentNamespaces);
-  };
-
-  const handleSessionIdReceived = (sessionId: string) => {
-    if (!activeSessionId && sessionId) {
-      setActiveSessionId(sessionId);
-    }
-  };
-
-  const handleFollowUpQuestion = (question: string) => {
-    handleSearch(question, currentMode, currentNamespaces);
-  };
-
-  // Sprint 32: Save completed answer to history
-  // Sprint 32 Fix: DON'T clear currentQuery - keep StreamingAnswer rendered so citations remain visible
-  const handleAnswerComplete = useCallback((answer: string, _sources: Source[]) => {
-    // Add assistant message to history (for when new question is asked and this one moves to history)
-    setConversationHistory(prev => [...prev, { role: 'assistant', content: answer }]);
-    // NOTE: Don't clear currentQuery! StreamingAnswer must stay rendered to show citations.
-    // It will be replaced when user asks a new question via handleSearch.
   }, []);
 
-  // Sprint 35 Feature 35.5: Session management handlers
-  const handleNewChat = () => {
+  /**
+   * Handle quick prompt click
+   */
+  const handleQuickPrompt = useCallback((prompt: string) => {
+    handleSearch(prompt, 'hybrid', currentNamespaces);
+  }, [handleSearch, currentNamespaces]);
+
+  /**
+   * Handle new chat creation
+   */
+  const handleNewChat = useCallback(() => {
     setActiveSessionId(undefined);
     setConversationHistory([]);
     setCurrentQuery(null);
-  };
+  }, []);
 
-  const handleSelectSession = async (sessionId: string) => {
+  /**
+   * Handle session selection from sidebar
+   */
+  const handleSelectSession = useCallback(async (sessionId: string) => {
     try {
       const conversation = await getConversation(sessionId);
       setActiveSessionId(sessionId);
 
       // Convert messages to Message format
-      const messages: Message[] = conversation.messages.map((m: { role: 'user' | 'assistant'; content: string }) => ({
-        role: m.role,
-        content: m.content,
-        mode: 'hybrid' as SearchMode, // Default mode for loaded conversations
-      }));
+      const messages: Message[] = conversation.messages.map(
+        (m: { role: 'user' | 'assistant'; content: string }) => ({
+          id: generateMessageId(),
+          role: m.role,
+          content: m.content,
+          mode: 'hybrid' as SearchMode,
+        })
+      );
 
       setConversationHistory(messages);
-      setCurrentQuery(null); // Clear any active streaming
+      setCurrentQuery(null);
     } catch (error) {
       console.error('Failed to load conversation:', error);
       alert('Failed to load conversation');
     }
-  };
+  }, []);
+
+  /**
+   * Build messages array for ConversationView
+   * Combines history with current streaming message
+   */
+  const messages = useMemo((): MessageData[] => {
+    // Convert history to MessageData format
+    const historyMessages: MessageData[] = conversationHistory.map((msg) => ({
+      id: msg.id,
+      role: msg.role,
+      content: msg.content,
+      sources: msg.sources,
+      timestamp: msg.timestamp,
+      isStreaming: false,
+      reasoningData: msg.reasoningData,
+    }));
+
+    // If streaming, add current streaming message (but only if we have content)
+    if (streamingState.isStreaming || (currentQuery && streamingState.answer)) {
+      // Check if this streaming message is already in history (completed)
+      const lastHistoryMessage = historyMessages[historyMessages.length - 1];
+      const isAlreadyInHistory =
+        lastHistoryMessage?.role === 'assistant' &&
+        lastHistoryMessage?.content === streamingState.answer;
+
+      if (!isAlreadyInHistory && streamingState.answer) {
+        // Build reasoning data from metadata if available
+        const reasoningData = buildReasoningData(
+          streamingState.metadata,
+          streamingState.intent
+        );
+
+        historyMessages.push({
+          id: `streaming-${Date.now()}`,
+          role: 'assistant',
+          content: streamingState.answer,
+          sources: streamingState.sources,
+          isStreaming: streamingState.isStreaming,
+          reasoningData,
+        });
+      }
+    }
+
+    return historyMessages;
+  }, [conversationHistory, streamingState, currentQuery]);
 
   // Show welcome screen if no conversation yet
-  const showWelcome = conversationHistory.length === 0;
+  const showWelcome = messages.length === 0;
+
+  /**
+   * Welcome screen component with quick prompts
+   */
+  const welcomeContent = (
+    <div className="space-y-12 max-w-4xl mx-auto px-6">
+      {/* Welcome Text */}
+      <div className="text-center space-y-3">
+        <h1 className="text-5xl font-bold text-gray-900">Was möchten Sie wissen?</h1>
+        <p className="text-xl text-gray-600">
+          Durchsuchen Sie Ihre Dokumente mit KI-gestützter Hybrid-Retrieval
+        </p>
+      </div>
+
+      {/* Quick Prompts */}
+      <div className="space-y-4">
+        <h2 className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wide">
+          Beispiel-Fragen
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            'Erkläre mir das Konzept von RAG',
+            'Was ist ein Knowledge Graph?',
+            'Wie funktioniert Hybrid Search?',
+            'Zeige mir die Systemarchitektur',
+          ].map((prompt) => (
+            <button
+              key={prompt}
+              onClick={() => handleQuickPrompt(prompt)}
+              data-testid={`quick-prompt-${prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              aria-label={`Quick prompt: ${prompt}`}
+              className="p-4 text-left border-2 border-gray-200 rounded-xl
+                         hover:border-primary hover:shadow-md hover:bg-gray-50
+                         transition-all text-sm text-gray-700 font-medium"
+            >
+              <span className="text-gray-400 mr-2">-&gt;</span>
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Features Overview */}
+      <div className="grid grid-cols-4 gap-6 pt-8 border-t border-gray-200">
+        <FeatureCard icon="magnifying-glass" title="Vector Search" description="Semantische Ähnlichkeit" />
+        <FeatureCard icon="network" title="Graph RAG" description="Entity-Beziehungen" />
+        <FeatureCard icon="chat" title="Memory" description="Kontext-Awareness" />
+        <FeatureCard icon="shuffle" title="Hybrid" description="Best of All" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -111,130 +264,28 @@ export function HomePage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Search Bar (Sticky) */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-5xl mx-auto py-4 px-6">
-            {activeSessionId && (
-              <div className="mb-2 text-xs text-gray-500">
-                <span>Session: </span>
-                <span data-testid="session-id" data-session-id={activeSessionId} className="font-mono">
-                  {activeSessionId.slice(0, 8)}...
-                </span>
-              </div>
-            )}
-            <SearchInput
-              onSubmit={handleSearch}
-              placeholder={showWelcome ? "Fragen Sie alles über Ihre Dokumente..." : "Neue Frage..."}
-              autoFocus={showWelcome}
-            />
-          </div>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto py-8 px-6">
-        {showWelcome ? (
-          /* Welcome Screen with Quick Prompts */
-          <div className="space-y-12">
-            {/* Welcome Text */}
-            <div className="text-center space-y-3">
-              <h1 className="text-5xl font-bold text-gray-900">
-                Was möchten Sie wissen?
-              </h1>
-              <p className="text-xl text-gray-600">
-                Durchsuchen Sie Ihre Dokumente mit KI-gestützter Hybrid-Retrieval
-              </p>
+        {/* Session ID Badge */}
+        {activeSessionId && (
+          <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-2">
+            <div className="text-xs text-gray-500">
+              <span>Session: </span>
+              <span data-testid="session-id" data-session-id={activeSessionId} className="font-mono">
+                {activeSessionId.slice(0, 8)}...
+              </span>
             </div>
-
-            {/* Quick Prompts */}
-            <div className="space-y-4">
-              <h2 className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                Beispiel-Fragen
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  'Erkläre mir das Konzept von RAG',
-                  'Was ist ein Knowledge Graph?',
-                  'Wie funktioniert Hybrid Search?',
-                  'Zeige mir die Systemarchitektur',
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => handleQuickPrompt(prompt)}
-                    data-testid={`quick-prompt-${prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                    aria-label={`Quick prompt: ${prompt}`}
-                    className="p-4 text-left border-2 border-gray-200 rounded-xl
-                               hover:border-primary hover:shadow-md hover:bg-gray-50
-                               transition-all text-sm text-gray-700 font-medium"
-                  >
-                    <span className="text-gray-400 mr-2">→</span>
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Features Overview */}
-            <div className="grid grid-cols-4 gap-6 pt-8 border-t border-gray-200">
-              <FeatureCard
-                icon="🔍"
-                title="Vector Search"
-                description="Semantische Ähnlichkeit"
-              />
-              <FeatureCard
-                icon="🕸️"
-                title="Graph RAG"
-                description="Entity-Beziehungen"
-              />
-              <FeatureCard
-                icon="💭"
-                title="Memory"
-                description="Kontext-Awareness"
-              />
-              <FeatureCard
-                icon="🔀"
-                title="Hybrid"
-                description="Best of All"
-              />
-            </div>
-          </div>
-        ) : (
-          /* Conversation View */
-          <div className="space-y-6">
-            {/* Conversation History */}
-            {conversationHistory.map((message, index) => (
-              <div
-                key={index}
-                data-testid="message"
-                className={`p-6 rounded-lg ${
-                  message.role === 'user'
-                    ? 'bg-blue-50 border-2 border-blue-200'
-                    : 'bg-white border-2 border-gray-200'
-                }`}
-              >
-                <div className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                  {message.role === 'user' ? 'Frage' : 'Antwort'}
-                </div>
-                <div className="text-gray-900 whitespace-pre-wrap">{message.content}</div>
-              </div>
-            ))}
-
-            {/* Streaming Answer (Latest Query) */}
-            {currentQuery && (
-              <StreamingAnswer
-                query={currentQuery}
-                mode={currentMode}
-                namespaces={currentNamespaces}
-                sessionId={activeSessionId}
-                onSessionIdReceived={handleSessionIdReceived}
-                onFollowUpQuestion={handleFollowUpQuestion}
-                onComplete={handleAnswerComplete}
-              />
-            )}
           </div>
         )}
-          </div>
-        </div>
+
+        {/* Conversation View */}
+        <ConversationView
+          messages={messages}
+          isStreaming={streamingState.isStreaming}
+          onSendMessage={handleSearch}
+          placeholder={showWelcome ? 'Fragen Sie alles über Ihre Dokumente...' : 'Neue Frage...'}
+          showTypingIndicator={streamingState.isStreaming && !streamingState.answer}
+          typingText="AegisRAG denkt nach..."
+          emptyStateContent={welcomeContent}
+        />
       </div>
     </div>
   );
@@ -247,9 +298,17 @@ interface FeatureCardProps {
 }
 
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
+  // Map icon names to emoji for simplicity (could be replaced with Lucide icons)
+  const iconMap: Record<string, string> = {
+    'magnifying-glass': '\uD83D\uDD0D',
+    'network': '\uD83D\uDD78\uFE0F',
+    'chat': '\uD83D\uDCAD',
+    'shuffle': '\uD83D\uDD00',
+  };
+
   return (
     <div className="text-center space-y-2">
-      <div className="text-3xl">{icon}</div>
+      <div className="text-3xl">{iconMap[icon] || icon}</div>
       <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
       <p className="text-xs text-gray-500">{description}</p>
     </div>

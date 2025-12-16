@@ -22,6 +22,7 @@ from src.api.middleware.exception_handler import (
 from src.api.middleware.request_id import RequestIDMiddleware
 from src.api.routers import graph_viz
 from src.api.v1.admin import router as admin_router
+from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feature 46.4
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
@@ -320,6 +321,15 @@ logger.info(
     router="domain_training_router",
     prefix="/admin/domains",
     note="Sprint 45: DSPy-based domain training and classification",
+)
+
+# Domain Discovery API router (Sprint 46: Feature 46.4 - Domain Auto-Discovery)
+app.include_router(domain_discovery_router)
+logger.info(
+    "router_registered",
+    router="domain_discovery_router",
+    prefix="/api/v1/admin/domains",
+    note="Sprint 46: File-based domain auto-discovery with LLM analysis",
 )
 
 # Graph visualization and analytics routers (Sprint 6: Features 6.5 & 6.6)

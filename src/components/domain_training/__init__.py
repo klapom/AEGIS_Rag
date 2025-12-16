@@ -94,6 +94,10 @@ from src.components.domain_training.domain_classifier import (
     get_domain_classifier,
     reset_classifier,
 )
+from src.components.domain_training.domain_analyzer import (
+    DomainAnalyzer,
+    get_domain_analyzer,
+)
 from src.components.domain_training.domain_discovery import (
     DomainDiscoveryService,
     DomainSuggestion,
@@ -150,6 +154,9 @@ __all__ = [
     "DomainClassifier",
     "get_domain_classifier",
     "reset_classifier",
+    # Domain Analyzer (46.4)
+    "DomainAnalyzer",
+    "get_domain_analyzer",
     # Domain Discovery (45.9)
     "DomainDiscoveryService",
     "DomainSuggestion",

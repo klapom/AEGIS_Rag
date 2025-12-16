@@ -5,6 +5,7 @@
  * Sprint 31 Feature 31.10b: Cost Dashboard route registration
  * Sprint 38 Feature 38.1b: JWT Authentication Frontend
  * Sprint 38 Feature 38.3: Share Conversation Links (public route)
+ * Sprint 46 Feature 46.8: Admin Area Consolidation
  */
 
 import { useState } from 'react';
@@ -17,6 +18,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { HealthDashboard } from './pages/HealthDashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
 import { AdminPage } from './pages/AdminPage';
 import { Settings } from './pages/Settings';
 import { GraphAnalyticsPage } from './pages/admin/GraphAnalyticsPage';
@@ -56,7 +58,8 @@ function App() {
                       <Route path="/" element={<HomePage />} />
                       <Route path="/search" element={<SearchResultsPage />} />
                       <Route path="/health" element={<HealthDashboard />} />
-                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/admin/legacy" element={<AdminPage />} />
                       <Route path="/admin/indexing" element={<AdminIndexingPage />} />
                       <Route path="/admin/graph" element={<GraphAnalyticsPage />} />
                       <Route path="/admin/costs" element={<CostDashboardPage />} />

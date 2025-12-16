@@ -15,31 +15,31 @@ interface DomainListProps {
 export function DomainList({ domains, isLoading }: DomainListProps) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border p-8 text-center" data-testid="domain-list-loading">
-        <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="mt-4 text-gray-600">Loading domains...</p>
+      <div className="bg-white rounded-md border p-6 text-center" data-testid="domain-list-loading">
+        <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-3 text-sm text-gray-600">Loading domains...</p>
       </div>
     );
   }
 
   if (!domains || domains.length === 0) {
     return (
-      <div className="bg-white rounded-lg border p-8 text-center" data-testid="domain-list-empty">
-        <p className="text-gray-600">No domains found. Create a new domain to get started.</p>
+      <div className="bg-white rounded-md border p-6 text-center" data-testid="domain-list-empty">
+        <p className="text-sm text-gray-600">No domains found. Create a new domain to get started.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border" data-testid="domain-list">
+    <div className="bg-white rounded-md border" data-testid="domain-list">
       <table className="w-full">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Description</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Model</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Description</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Model</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Status</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -68,22 +68,22 @@ function DomainRow({ domain }: DomainRowProps) {
 
   return (
     <tr className="border-t hover:bg-gray-50" data-testid={`domain-row-${domain.name}`}>
-      <td className="px-4 py-3 font-medium text-gray-900">{domain.name}</td>
-      <td className="px-4 py-3 text-gray-600 truncate max-w-xs" title={domain.description}>
+      <td className="px-3 py-2 text-sm font-medium text-gray-900">{domain.name}</td>
+      <td className="px-3 py-2 text-xs text-gray-600 truncate max-w-xs" title={domain.description}>
         {domain.description}
       </td>
-      <td className="px-4 py-3 text-gray-700">{domain.llm_model || '-'}</td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2 text-xs text-gray-700">{domain.llm_model || '-'}</td>
+      <td className="px-3 py-2">
         <span
-          className={`px-2 py-1 rounded text-xs font-semibold ${statusColor}`}
+          className={`px-1.5 py-0.5 rounded text-xs font-medium ${statusColor}`}
           data-testid={`domain-status-${domain.name}`}
         >
           {domain.status}
         </span>
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2">
         <button
-          className="text-blue-600 hover:underline text-sm font-medium"
+          className="text-blue-600 hover:underline text-xs font-medium"
           data-testid={`domain-view-${domain.name}`}
         >
           View

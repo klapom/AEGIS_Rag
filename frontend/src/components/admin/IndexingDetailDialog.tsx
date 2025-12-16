@@ -36,17 +36,17 @@ export function IndexingDetailDialog({
     >
       <div
         data-testid="detail-dialog"
-        className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto m-4"
+        className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto m-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-2xl font-bold text-gray-900">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
+          <h2 className="text-lg font-bold text-gray-900">
             Indexing Details
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
             aria-label="Close dialog"
           >
             <CloseIcon />
@@ -54,14 +54,14 @@ export function IndexingDetailDialog({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 space-y-4">
           {/* Loading State - shown when progress data not yet available */}
           {!progress && (
-            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-indigo-600"></div>
+            <div className="flex flex-col items-center justify-center py-12 space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-indigo-600"></div>
               <div className="text-center">
-                <p className="text-lg font-medium text-gray-700">Warte auf Detaildaten...</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm font-medium text-gray-700">Warte auf Detaildaten...</p>
+                <p className="text-xs text-gray-500 mt-1">
                   Detaillierte Fortschrittsinformationen werden angezeigt, sobald die Pipeline-Verarbeitung beginnt.
                 </p>
               </div>
@@ -72,17 +72,17 @@ export function IndexingDetailDialog({
           {progress && (
             <>
           {/* Section 1: Document & Page Preview */}
-          <section data-testid="detail-page-preview" className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
+          <section data-testid="detail-page-preview" className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-1.5">
               Document & Page Preview
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Page Thumbnail */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Page Thumbnail</h4>
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-medium text-gray-700">Page Thumbnail</h4>
                 {progress?.page_thumbnail_url ? (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50">
                     <img
                       src={progress.page_thumbnail_url}
                       alt={`Page ${progress.current_page} thumbnail`}
@@ -90,20 +90,20 @@ export function IndexingDetailDialog({
                     />
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-lg p-8 bg-gray-50 flex items-center justify-center">
-                    <span className="text-gray-400">No preview available</span>
+                  <div className="border border-gray-200 rounded-md p-6 bg-gray-50 flex items-center justify-center">
+                    <span className="text-xs text-gray-400">No preview available</span>
                   </div>
                 )}
-                <div className="text-sm text-gray-600">
+                <div className="text-xs text-gray-600">
                   Page {progress?.current_page || 0} of {progress?.total_pages || 0}
                 </div>
               </div>
 
               {/* Document Info */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Document Info</h4>
-                  <div className="space-y-2 text-sm">
+                  <h4 className="text-xs font-medium text-gray-700 mb-1.5">Document Info</h4>
+                  <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-600">File:</span>
                       <span className="font-medium text-gray-900">{currentFile?.file_name || 'N/A'}</span>
@@ -122,8 +122,8 @@ export function IndexingDetailDialog({
                 </div>
 
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Detected Elements</h4>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h4 className="text-xs font-medium text-gray-700 mb-1.5">Detected Elements</h4>
+                  <div className="grid grid-cols-3 gap-1.5">
                     <ElementBadge
                       label="Tables"
                       value={progress?.page_elements.tables || 0}
@@ -146,41 +146,41 @@ export function IndexingDetailDialog({
           </section>
 
           {/* Section 2: VLM Image Analysis */}
-          <section data-testid="detail-vlm-images" className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
+          <section data-testid="detail-vlm-images" className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-1.5">
               VLM Image Analysis
             </h3>
 
             {progress?.vlm_images && progress.vlm_images.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {progress.vlm_images.map((image) => (
                   <VLMImageCard key={image.image_id} image={image} />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-6 text-xs text-gray-400">
                 No images detected on this page
               </div>
             )}
           </section>
 
           {/* Section 3: Chunk Processing */}
-          <section data-testid="detail-chunk-preview" className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
+          <section data-testid="detail-chunk-preview" className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-1.5">
               Chunk Processing
             </h3>
 
             {progress?.current_chunk ? (
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-gray-700">Current Chunk</h4>
-                    <div className="flex items-center space-x-4 text-sm">
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-medium text-gray-700">Current Chunk</h4>
+                    <div className="flex items-center space-x-3 text-xs">
                       <span className="text-gray-600">
                         Tokens: <span className="font-semibold text-gray-900">{progress.current_chunk.token_count}</span>
                       </span>
                       {progress.current_chunk.has_image && (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
                           Has Image
                         </span>
                       )}
@@ -188,69 +188,69 @@ export function IndexingDetailDialog({
                   </div>
 
                   {progress.current_chunk.section_name && (
-                    <div className="mb-3 text-sm">
+                    <div className="mb-2 text-xs">
                       <span className="text-gray-600">Section: </span>
                       <span className="font-medium text-gray-900">{progress.current_chunk.section_name}</span>
                     </div>
                   )}
 
-                  <div className="font-mono text-xs text-gray-700 whitespace-pre-wrap bg-white rounded p-3 border border-gray-200 max-h-40 overflow-y-auto">
+                  <div className="font-mono text-xs text-gray-700 whitespace-pre-wrap bg-white rounded p-2 border border-gray-200 max-h-32 overflow-y-auto">
                     {progress.current_chunk.text_preview}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-6 text-xs text-gray-400">
                 No chunk being processed
               </div>
             )}
           </section>
 
           {/* Section 4: Pipeline Status */}
-          <section data-testid="detail-pipeline-status" className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
+          <section data-testid="detail-pipeline-status" className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-1.5">
               Pipeline Status
             </h3>
 
             {progress?.pipeline_status && progress.pipeline_status.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {progress.pipeline_status.map((phase) => (
                   <PipelinePhaseCard key={phase.phase} phase={phase} />
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-6 text-xs text-gray-400">
                 Pipeline not started
               </div>
             )}
           </section>
 
           {/* Section 5: Extracted Entities */}
-          <section data-testid="detail-entities" className="space-y-4">
-            <h3 className="text-xl font-semibold text-gray-900 border-b pb-2">
+          <section data-testid="detail-entities" className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 border-b pb-1.5">
               Extracted Entities (Live)
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* New Entities from Current Page */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-700">New Entities</h4>
+                  <h4 className="text-xs font-medium text-gray-700">New Entities</h4>
                   <span className="text-xs text-gray-500">
                     From current page
                   </span>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 max-h-48 overflow-y-auto">
+                <div className="bg-blue-50 rounded-md p-3 border border-blue-200 max-h-36 overflow-y-auto">
                   {progress?.entities.new_entities && progress.entities.new_entities.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {progress.entities.new_entities.map((entity, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-medium">
+                        <span key={idx} className="px-1.5 py-0.5 bg-blue-200 text-blue-800 rounded text-xs font-medium">
                           {entity}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center text-blue-400 text-sm">
+                    <div className="text-center text-blue-400 text-xs">
                       No new entities yet
                     </div>
                   )}
@@ -258,24 +258,24 @@ export function IndexingDetailDialog({
               </div>
 
               {/* New Relations from Current Page */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-700">New Relations</h4>
+                  <h4 className="text-xs font-medium text-gray-700">New Relations</h4>
                   <span className="text-xs text-gray-500">
                     From current page
                   </span>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200 max-h-48 overflow-y-auto">
+                <div className="bg-green-50 rounded-md p-3 border border-green-200 max-h-36 overflow-y-auto">
                   {progress?.entities.new_relations && progress.entities.new_relations.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {progress.entities.new_relations.map((relation, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-medium">
+                        <span key={idx} className="px-1.5 py-0.5 bg-green-200 text-green-800 rounded text-xs font-medium">
                           {relation}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center text-green-400 text-sm">
+                    <div className="text-center text-green-400 text-xs">
                       No new relations yet
                     </div>
                   )}
@@ -283,16 +283,16 @@ export function IndexingDetailDialog({
               </div>
 
               {/* Total Counters */}
-              <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                  <div className="text-sm text-indigo-600 mb-1">Total Entities</div>
-                  <div className="text-3xl font-bold text-indigo-900">
+              <div className="md:col-span-2 grid grid-cols-2 gap-3">
+                <div className="bg-indigo-50 rounded-md p-3 border border-indigo-200">
+                  <div className="text-xs text-indigo-600 mb-0.5">Total Entities</div>
+                  <div className="text-xl font-bold text-indigo-900">
                     {progress?.entities.total_entities || 0}
                   </div>
                 </div>
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                  <div className="text-sm text-purple-600 mb-1">Total Relations</div>
-                  <div className="text-3xl font-bold text-purple-900">
+                <div className="bg-purple-50 rounded-md p-3 border border-purple-200">
+                  <div className="text-xs text-purple-600 mb-0.5">Total Relations</div>
+                  <div className="text-xl font-bold text-purple-900">
                     {progress?.entities.total_relations || 0}
                   </div>
                 </div>
@@ -304,10 +304,10 @@ export function IndexingDetailDialog({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 py-3 flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors"
           >
             Close
           </button>
@@ -329,8 +329,8 @@ interface ElementBadgeProps {
 
 function ElementBadge({ label, value, color }: ElementBadgeProps) {
   return (
-    <div className={`${color} rounded-lg p-3 text-center`}>
-      <div className="text-2xl font-bold">{value}</div>
+    <div className={`${color} rounded-md p-2 text-center`}>
+      <div className="text-lg font-bold">{value}</div>
       <div className="text-xs font-medium uppercase">{label}</div>
     </div>
   );
@@ -351,10 +351,10 @@ function VLMImageCard({ image }: VLMImageCardProps) {
   const config = statusConfig[image.status];
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+    <div className="border border-gray-200 rounded-md overflow-hidden bg-white">
       {/* Image Thumbnail */}
       {image.thumbnail_url ? (
-        <div className="h-32 bg-gray-50 flex items-center justify-center">
+        <div className="h-24 bg-gray-50 flex items-center justify-center">
           <img
             src={image.thumbnail_url}
             alt={`Image ${image.image_id}`}
@@ -362,25 +362,25 @@ function VLMImageCard({ image }: VLMImageCardProps) {
           />
         </div>
       ) : (
-        <div className="h-32 bg-gray-100 flex items-center justify-center">
-          <span className="text-gray-400 text-sm">No thumbnail</span>
+        <div className="h-24 bg-gray-100 flex items-center justify-center">
+          <span className="text-gray-400 text-xs">No thumbnail</span>
         </div>
       )}
 
       {/* Status Badge */}
-      <div className="p-3 space-y-2">
+      <div className="p-2 space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-600 truncate" title={image.image_id}>
             {image.image_id}
           </span>
-          <span className={`px-2 py-1 rounded text-xs font-semibold ${config.color}`}>
+          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${config.color}`}>
             {config.icon} {config.label}
           </span>
         </div>
 
         {/* VLM Description */}
         {image.description && (
-          <div className="text-xs text-gray-700 bg-gray-50 rounded p-2 max-h-20 overflow-y-auto">
+          <div className="text-xs text-gray-700 bg-gray-50 rounded p-1.5 max-h-16 overflow-y-auto">
             {image.description}
           </div>
         )}
@@ -418,10 +418,10 @@ function PipelinePhaseCard({ phase }: PipelinePhaseCardProps) {
   };
 
   return (
-    <div className={`border-2 rounded-lg p-4 ${statusColors[phase.status]}`}>
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-sm">{phaseLabels[phase.phase] || phase.phase}</h4>
-        <span className="text-2xl">{statusIcons[phase.status]}</span>
+    <div className={`border rounded-md p-3 ${statusColors[phase.status]}`}>
+      <div className="flex items-center justify-between mb-1">
+        <h4 className="font-medium text-xs">{phaseLabels[phase.phase] || phase.phase}</h4>
+        <span className="text-base">{statusIcons[phase.status]}</span>
       </div>
 
       <div className="text-xs uppercase font-medium opacity-80">
@@ -429,7 +429,7 @@ function PipelinePhaseCard({ phase }: PipelinePhaseCardProps) {
       </div>
 
       {phase.duration_ms != null && phase.duration_ms > 0 && (
-        <div className="text-xs mt-1 opacity-70">
+        <div className="text-xs mt-0.5 opacity-70">
           {phase.duration_ms < 1000
             ? `${phase.duration_ms}ms`
             : `${(phase.duration_ms / 1000).toFixed(2)}s`}
@@ -442,7 +442,7 @@ function PipelinePhaseCard({ phase }: PipelinePhaseCardProps) {
 function CloseIcon() {
   return (
     <svg
-      className="w-6 h-6 text-gray-600"
+      className="w-5 h-5 text-gray-600"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

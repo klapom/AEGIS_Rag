@@ -4,6 +4,7 @@ import { HistoryPage } from '../pom/HistoryPage';
 import { SettingsPage } from '../pom/SettingsPage';
 import { AdminIndexingPage } from '../pom/AdminIndexingPage';
 import { AdminGraphPage } from '../pom/AdminGraphPage';
+import { AdminDashboardPage } from '../pom/AdminDashboardPage';
 import { CostDashboardPage } from '../pom/CostDashboardPage';
 import { AdminLLMConfigPage } from '../pom/AdminLLMConfigPage';
 import { AdminDomainTrainingPage } from '../pom/AdminDomainTrainingPage';
@@ -78,6 +79,7 @@ type Fixtures = {
   settingsPage: SettingsPage;
   adminIndexingPage: AdminIndexingPage;
   adminGraphPage: AdminGraphPage;
+  adminDashboardPage: AdminDashboardPage;
   costDashboardPage: CostDashboardPage;
   adminLLMConfigPage: AdminLLMConfigPage;
   adminDomainTrainingPage: AdminDomainTrainingPage;
@@ -91,8 +93,10 @@ export const test = base.extend<Fixtures>({
   /**
    * Chat Page Fixture
    * Navigates to / and provides ChatPage object
+   * Sprint 46: Added authentication mocking for protected home route
    */
   chatPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const chatPage = new ChatPage(page);
     await chatPage.goto();
     await use(chatPage);
@@ -101,8 +105,10 @@ export const test = base.extend<Fixtures>({
   /**
    * History Page Fixture
    * Navigates to /history and provides HistoryPage object
+   * Sprint 46: Added authentication mocking for protected route
    */
   historyPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const historyPage = new HistoryPage(page);
     await historyPage.goto();
     await use(historyPage);
@@ -111,8 +117,10 @@ export const test = base.extend<Fixtures>({
   /**
    * Settings Page Fixture
    * Navigates to /settings and provides SettingsPage object
+   * Sprint 46: Added authentication mocking for protected route
    */
   settingsPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
     const settingsPage = new SettingsPage(page);
     await settingsPage.goto();
     await use(settingsPage);
@@ -140,6 +148,18 @@ export const test = base.extend<Fixtures>({
     const adminGraphPage = new AdminGraphPage(page);
     await adminGraphPage.goto();
     await use(adminGraphPage);
+  },
+
+  /**
+   * Admin Dashboard Page Fixture
+   * Navigates to /admin and provides AdminDashboardPage object
+   * Sprint 46: Unified admin interface with sections (domains, indexing, settings)
+   */
+  adminDashboardPage: async ({ page }, use) => {
+    await setupAuthMocking(page);
+    const adminDashboardPage = new AdminDashboardPage(page);
+    await adminDashboardPage.goto();
+    await use(adminDashboardPage);
   },
 
   /**

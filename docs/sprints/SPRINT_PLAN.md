@@ -1007,11 +1007,12 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
-## Sprint 46: Conversation UI & Domain Auto-Discovery 📋
+## Sprint 46: Conversation UI & Domain Auto-Discovery ✅ (COMPLETE 2025-12-16)
 **Ziel:** Chat-Style Conversation UI + Transparentes Reasoning + Domain Auto-Discovery
 
 **Start:** 2025-12-15
-**Status:** PLANNED
+**End:** 2025-12-16
+**Status:** COMPLETE
 
 **Breakdown:**
 | Feature | SP | Priority |
@@ -1040,11 +1041,11 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 - **Admin UI** → Consolidate multiple pages into sections
 
 ### Success Criteria
-- [ ] Conversation flows upward, input fixed at bottom
-- [ ] Reasoning panel shows all backend queries with timing
-- [ ] Domain discovery suggests sensible title/description from samples
-- [ ] At least one domain fully tested with documented results
-- [ ] No duplicate SessionSidebar components
+- [x] Conversation flows upward, input fixed at bottom
+- [x] Reasoning panel shows all backend queries with timing
+- [x] Domain discovery suggests sensible title/description from samples
+- [x] At least one domain fully tested with documented results
+- [x] No duplicate SessionSidebar components
 
 ### References
 - [SPRINT_46_PLAN.md](SPRINT_46_PLAN.md)

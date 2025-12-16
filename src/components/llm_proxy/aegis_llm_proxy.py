@@ -473,10 +473,12 @@ class AegisLLMProxy:
         #
         # See: docs/adr/ADR-038-dashscope-extra-body-parameters.md
 
-        # Local Ollama: Disable Qwen3 thinking mode for faster inference
-        # Sprint 36: Without this, Qwen3 generates 200+ thinking tokens internally
+        # Local Ollama: Disable thinking mode for faster inference
+        # Sprint 36: Without this, thinking models generate 200+ thinking tokens internally
+        # Sprint 46: Extended to include gpt-oss models
         # CRITICAL: Pass "think" directly, NOT via extra_body (ANY-LLM requirement)
-        if provider == "local_ollama" and "qwen3" in model.lower():
+        thinking_models = ["qwen3", "gpt-oss"]
+        if provider == "local_ollama" and any(m in model.lower() for m in thinking_models):
             completion_kwargs["think"] = False
             logger.info(
                 "ollama_thinking_disabled",

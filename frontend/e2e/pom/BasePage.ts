@@ -32,35 +32,40 @@ export class BasePage {
    * Wait for LLM response generation
    * LLM calls can take 10-20 seconds, especially for streaming
    *
+   * Sprint 46: Updated to work with new ConversationView/MessageBubble components
    * Waits for streaming to complete by checking for:
-   * 1. The streaming indicator to appear (confirms backend responded)
+   * 1. An assistant message bubble to appear (confirms response started)
    * 2. The streaming indicator to show completion (data-streaming="false")
    */
-  async waitForLLMResponse(timeout = 30000) {
+  async waitForLLMResponse(timeout = 90000) {
     try {
-      // Wait for the prose content area to have actual text (not skeleton)
-      // The .prose div contains the answer - wait until it has real content
-      const answerArea = this.page.locator('.prose.prose-lg');
-
-      // First, wait for the streaming container to appear
-      await this.page.locator('[data-streaming]').first().waitFor({
+      // Wait for an assistant message bubble to appear
+      // This confirms the backend has started responding
+      // Sprint 46: Allow 80% of timeout for first token (gpt-oss:20b is slow to start)
+      await this.page.locator('[data-testid="message-bubble"][data-role="assistant"]').first().waitFor({
         state: 'visible',
-        timeout: timeout / 2
+        timeout: Math.floor(timeout * 0.8)
       });
 
-      // Then wait for streaming to complete (data-streaming="false")
-      // Poll for this state since attribute value changes
+      // Then wait for streaming to complete (data-streaming="false" on assistant message)
+      // Poll for this state since attribute value changes during streaming
       await this.page.waitForFunction(
         () => {
-          const el = document.querySelector('[data-streaming="false"]');
-          return el !== null;
+          // Look for an assistant message that is no longer streaming
+          const assistantMessages = document.querySelectorAll('[data-testid="message-bubble"][data-role="assistant"]');
+          // Check if any assistant message has finished streaming
+          for (const msg of assistantMessages) {
+            if (msg.getAttribute('data-streaming') === 'false') {
+              return true;
+            }
+          }
+          return false;
         },
         { timeout }
       );
 
-      // Buffer for React re-render with citations
-      // Increased from 1s to 2s to allow citation components to fully render
-      await this.page.waitForTimeout(2000);
+      // Buffer for React re-render with citations and sources
+      await this.page.waitForTimeout(1000);
     } catch (error) {
       throw new Error(
         `LLM response timeout after ${timeout}ms. Check backend connectivity.`

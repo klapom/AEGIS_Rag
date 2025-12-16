@@ -78,16 +78,16 @@ export function HealthDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 flex items-center space-x-3">
-              <span>🏥</span>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+              <span className="text-lg">🏥</span>
               <span>System Health</span>
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-xs text-gray-600 mt-1">
               Letztes Update: {lastUpdated.toLocaleTimeString('de-DE')}
             </p>
           </div>
@@ -95,7 +95,7 @@ export function HealthDashboard() {
         </div>
 
         {/* Overall Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <StatCard
             label="Uptime"
             value={health.uptime ? `${Math.floor(health.uptime / 3600)}h` : 'N/A'}
@@ -115,8 +115,8 @@ export function HealthDashboard() {
 
         {/* Dependencies Grid */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Abhängigkeiten</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Abhängigkeiten</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {Object.entries(health.dependencies).map(([key, dep]) => (
               <DependencyCard key={key} name={key} dependency={dep} />
             ))}
@@ -124,12 +124,12 @@ export function HealthDashboard() {
         </div>
 
         {/* Performance Section (Placeholder) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Performance-Metriken</h2>
-          <div className="text-center py-12 text-gray-500">
-            <div className="text-4xl mb-3">📊</div>
-            <p>Performance-Diagramme werden in Zukunft hier angezeigt</p>
-            <p className="text-sm mt-2">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Performance-Metriken</h2>
+          <div className="text-center py-8 text-gray-500">
+            <div className="text-2xl mb-2">📊</div>
+            <p className="text-sm">Performance-Diagramme werden in Zukunft hier angezeigt</p>
+            <p className="text-xs mt-1">
               (Prometheus-Integration geplant)
             </p>
           </div>
@@ -139,10 +139,10 @@ export function HealthDashboard() {
         <div className="text-center">
           <button
             onClick={fetchHealth}
-            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover
-                       transition-all flex items-center space-x-2 mx-auto"
+            className="px-4 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary-hover
+                       transition-all flex items-center space-x-1.5 mx-auto"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>Aktualisieren</span>
@@ -173,7 +173,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <div
-      className={`px-6 py-3 rounded-full border-2 font-semibold text-lg ${getStatusColor()}`}
+      className={`px-4 py-1.5 rounded-full border font-semibold text-sm ${getStatusColor()}`}
     >
       {status.toUpperCase()}
     </div>
@@ -188,13 +188,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon }: StatCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-500 text-sm font-medium">{label}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-gray-500 text-xs font-medium">{label}</p>
+          <p className="text-xl font-bold text-gray-900 mt-0.5">{value}</p>
         </div>
-        <div className="text-4xl">{icon}</div>
+        <div className="text-2xl">{icon}</div>
       </div>
     </div>
   );
@@ -235,22 +235,22 @@ function DependencyCard({ name, dependency }: DependencyCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:border-primary/50 transition-all p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-primary/50 transition-all p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <div className="text-3xl">{getIcon(name)}</div>
-          <h3 className="font-semibold text-gray-900 capitalize">{name}</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-1.5">
+          <div className="text-lg">{getIcon(name)}</div>
+          <h3 className="text-sm font-semibold text-gray-900 capitalize">{name}</h3>
         </div>
         <div
-          className={`w-3 h-3 rounded-full ${getStatusColor(dependency.status)}`}
+          className={`w-2 h-2 rounded-full ${getStatusColor(dependency.status)}`}
           title={dependency.status}
         />
       </div>
 
       {/* Stats */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs">
           <span className="text-gray-500">Status:</span>
           <span
             className={`font-medium ${
@@ -266,14 +266,14 @@ function DependencyCard({ name, dependency }: DependencyCardProps) {
         </div>
 
         {dependency.latency_ms !== undefined && (
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-xs">
             <span className="text-gray-500">Latency:</span>
             <span className="font-medium text-gray-900">{dependency.latency_ms}ms</span>
           </div>
         )}
 
         {dependency.details && Object.entries(dependency.details).length > 0 && (
-          <div className="pt-2 mt-2 border-t border-gray-200 space-y-1">
+          <div className="pt-1.5 mt-1.5 border-t border-gray-200 space-y-0.5">
             {Object.entries(dependency.details).slice(0, 3).map(([key, value]) => (
               <div key={key} className="flex justify-between text-xs text-gray-600">
                 <span className="truncate">{key}:</span>

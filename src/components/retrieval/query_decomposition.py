@@ -120,13 +120,13 @@ class QueryDecomposer:
 
     def __init__(
         self,
-        model_name: str = "qwen3:8b",
+        model_name: str = "gpt-oss:20b",
         classification_threshold: float = 0.7,
     ) -> None:
         """Initialize query decomposer.
 
         Args:
-            model_name: Preferred local model name (default: qwen3:8b for DGX Spark)
+            model_name: Preferred local model name (default: gpt-oss:20b for faster tests)
             classification_threshold: Confidence threshold for complex queries
         """
         # Sprint 23: Use AegisLLMProxy for multi-cloud routing

@@ -15,7 +15,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { SessionItem } from '../../components/history/SessionItem';
-import { SessionSidebar } from '../../components/history/SessionSidebar';
+import { SessionSidebar } from '../../components/chat/SessionSidebar';
 import { StreamingAnswer } from '../../components/chat/StreamingAnswer';
 import {
   setupGlobalFetchMock,
@@ -213,22 +213,33 @@ describe('Feature 17.3: Auto-Generated Titles E2E Tests', () => {
         })
       );
 
-      // Act: Render session sidebar
+      // Act: Render session sidebar with required props (Sprint 46 Feature 46.3)
       render(
         <MemoryRouter>
-          <SessionSidebar isOpen={true} onToggle={() => {}} />
+          <SessionSidebar
+            currentSessionId={null}
+            onNewChat={() => {}}
+            onSelectSession={() => {}}
+            isOpen={true}
+            onToggle={() => {}}
+          />
         </MemoryRouter>
       );
 
-      // Assert: Titles should be displayed
+      // Assert: Wait for loading to finish, then verify session titles are displayed
+      // Note: The chat/SessionSidebar uses data-testid="session-title" for titles
       await waitFor(
         () => {
-          expect(screen.getByText(/Knowledge Graphs Overview/i)).toBeInTheDocument();
-          expect(screen.getByText(/RAG Architecture/i)).toBeInTheDocument();
-          expect(screen.getByText(/Hybrid Search Explained/i)).toBeInTheDocument();
+          const sessionTitles = screen.getAllByTestId('session-title');
+          expect(sessionTitles.length).toBeGreaterThanOrEqual(3);
         },
         { timeout: 3000 }
       );
+
+      // Verify specific titles are present
+      expect(screen.getByText('Knowledge Graphs Overview')).toBeInTheDocument();
+      expect(screen.getByText('RAG Architecture')).toBeInTheDocument();
+      expect(screen.getByText('Hybrid Search Explained')).toBeInTheDocument();
     });
   });
 

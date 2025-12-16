@@ -40,11 +40,16 @@ export function NamespaceSelector({
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchNamespaces = async () => {
       try {
         setLoading(true);
         setError(null);
         const response = await getNamespaces();
+
+        if (!isMounted) return;
+
         setNamespaces(response.namespaces);
 
         // If no namespaces selected, select all by default
@@ -52,14 +57,22 @@ export function NamespaceSelector({
           onSelectionChange(response.namespaces.map(ns => ns.namespace_id));
         }
       } catch (err) {
+        if (!isMounted) return;
+
         setError(err instanceof Error ? err.message : 'Failed to load namespaces');
         console.error('Failed to fetch namespaces:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchNamespaces();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleToggle = (namespaceId: string) => {

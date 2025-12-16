@@ -24,7 +24,7 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'test query' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
   });
 
   it('should call onSubmit when submit button is clicked', () => {
@@ -37,7 +37,7 @@ describe('SearchInput', () => {
     const submitButton = screen.getByTitle(/Suche starten/);
     fireEvent.click(submitButton);
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
   });
 
   it('should not submit empty query', () => {
@@ -63,7 +63,7 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'test' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'vector');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'vector', []);
   });
 
   it('should render all mode chips', () => {
@@ -111,7 +111,7 @@ describe('SearchInput', () => {
 
     // Input should be cleared immediately
     expect(input.value).toBe('');
-    expect(mockOnSubmit).toHaveBeenCalledWith('What is AI?', 'hybrid');
+    expect(mockOnSubmit).toHaveBeenCalledWith('What is AI?', 'hybrid', []);
   });
 
   it('should clear input field after Enter key submission', () => {
@@ -129,6 +129,6 @@ describe('SearchInput', () => {
 
     // Input should be cleared immediately
     expect(input.value).toBe('');
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid');
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
   });
 });

@@ -125,7 +125,7 @@ class IntentClassifier:
             use_llm: Whether to use LLM (True) or rule-based fallback only (False)
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.model = model or os.getenv("OLLAMA_MODEL_INTENT", "qwen3:8b")
+        self.model = model or os.getenv("OLLAMA_MODEL_INTENT", "gpt-oss:20b")
         self.timeout = timeout
         self.use_llm = use_llm
         self.client = httpx.AsyncClient(timeout=timeout)
