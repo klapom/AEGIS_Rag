@@ -30,7 +30,8 @@ COPY pyproject.toml poetry.lock ./
 # Install dependencies (without dev dependencies)
 # Updated for Poetry 1.8+: --no-dev is deprecated, use --only main
 # Include domain-training group for DSPy (Sprint 45)
-RUN /opt/poetry/bin/poetry install --no-root --only main,domain-training --no-interaction --no-ansi
+# Include reranking group for scikit-learn (Sprint 49 semantic deduplication)
+RUN /opt/poetry/bin/poetry install --no-root --only main,domain-training,reranking --no-interaction --no-ansi
 
 # ============================================================
 # Stage 2: Runtime
