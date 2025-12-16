@@ -12,17 +12,9 @@ import { type ReactNode } from 'react';
 
 interface AppLayoutProps {
   children: ReactNode;
-  sidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
 }
 
-export function AppLayout({
-  children,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  sidebarOpen = true,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onToggleSidebar
-}: AppLayoutProps) {
+export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Main Content Area - Sidebar is managed by individual pages */}

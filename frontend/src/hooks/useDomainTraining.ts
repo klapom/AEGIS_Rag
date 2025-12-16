@@ -397,7 +397,7 @@ export function useTrainingStream(
     let retryCount = 0;
     const maxRetries = 10;
     const retryDelay = 1000; // 1 second
-    let retryTimeout: NodeJS.Timeout | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const connect = () => {
       // Build SSE URL - domain training router is mounted WITHOUT /api/v1 prefix

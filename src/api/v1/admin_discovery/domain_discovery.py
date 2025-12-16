@@ -209,7 +209,7 @@ async def discover_domain(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     except httpx.ConnectError as e:
         # Ollama connection error
@@ -221,7 +221,7 @@ async def discover_domain(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ollama service is not available. Please check if Ollama is running.",
-        )
+        ) from e
 
     except httpx.HTTPStatusError as e:
         # Ollama HTTP error
@@ -234,7 +234,7 @@ async def discover_domain(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ollama API error: {e.response.status_code}",
-        )
+        ) from e
 
     except Exception as e:
         # Unexpected errors (text extraction, LLM analysis)
@@ -247,4 +247,4 @@ async def discover_domain(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Domain discovery failed: {str(e)}",
-        )
+        ) from e

@@ -260,7 +260,7 @@ jobs:
             --timeout=300 \
             --timeout-method=thread \
             -v \
-            -m "not integration"
+            -m "not integration and not requires_llm"
 
       - name: Upload Coverage Report
         uses: codecov/codecov-action@v4

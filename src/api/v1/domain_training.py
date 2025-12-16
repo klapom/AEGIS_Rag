@@ -389,14 +389,14 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
     except ValueError as e:
         # Domain already exists or validation error
         logger.warning("domain_creation_validation_error", name=request.name, error=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     except DatabaseConnectionError as e:
         logger.error("domain_creation_db_error", name=request.name, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -408,7 +408,7 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.get("", response_model=list[DomainResponse])
@@ -456,14 +456,14 @@ async def list_domains() -> list[DomainResponse]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error("list_domains_unexpected_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.get("/available-models", response_model=list[AvailableModel])
@@ -508,21 +508,21 @@ async def get_available_models() -> list[AvailableModel]:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ollama service is not available",
-        )
+        ) from e
 
     except httpx.HTTPStatusError as e:
         logger.error("ollama_http_error", status_code=e.response.status_code, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ollama API error: {e.response.status_code}",
-        )
+        ) from e
 
     except Exception as e:
         logger.error("get_available_models_unexpected_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.get("/{domain_name}", response_model=DomainResponse)
@@ -586,7 +586,7 @@ async def get_domain(domain_name: str) -> DomainResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -598,7 +598,7 @@ async def get_domain(domain_name: str) -> DomainResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.post("/{domain_name}/train")
@@ -701,7 +701,7 @@ async def start_training(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -713,7 +713,7 @@ async def start_training(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.get("/{domain_name}/training-status", response_model=TrainingStatusResponse)
@@ -789,7 +789,7 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -801,7 +801,7 @@ async def get_training_status(domain_name: str) -> TrainingStatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.get("/{domain_name}/training-stream")
@@ -968,14 +968,14 @@ async def delete_domain(domain_name: str) -> None:
     except ValueError as e:
         # Cannot delete default domain
         logger.warning("domain_deletion_validation_error", name=domain_name, error=str(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     except DatabaseConnectionError as e:
         logger.error("delete_domain_db_error", name=domain_name, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -987,7 +987,7 @@ async def delete_domain(domain_name: str) -> None:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 @router.post("/classify", response_model=ClassificationResponse)
@@ -1065,7 +1065,7 @@ async def classify_document(request: ClassificationRequest) -> ClassificationRes
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Classification failed",
-        )
+        ) from e
 
 
 @router.post("/discover", response_model=AutoDiscoveryResponse)
@@ -1135,14 +1135,14 @@ async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryRespons
             error=str(e),
             sample_count=len(request.sample_texts),
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     except httpx.ConnectError as e:
         logger.error("discover_domain_ollama_connection_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ollama service is not available",
-        )
+        ) from e
 
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -1153,7 +1153,7 @@ async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryRespons
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ollama API error: {e.response.status_code}",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -1164,7 +1164,7 @@ async def discover_domain(request: AutoDiscoveryRequest) -> AutoDiscoveryRespons
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Domain discovery failed",
-        )
+        ) from e
 
 
 @router.post("/ingest-batch", response_model=BatchIngestionResponse)
@@ -1305,7 +1305,7 @@ async def ingest_batch(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     except DatabaseConnectionError as e:
         logger.error(
@@ -1316,7 +1316,7 @@ async def ingest_batch(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database operation failed",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -1328,7 +1328,7 @@ async def ingest_batch(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Batch ingestion setup failed",
-        )
+        ) from e
 
 
 @router.post("/augment", response_model=AugmentationResponse)
@@ -1425,14 +1425,14 @@ async def augment_training_data(request: AugmentationRequest) -> AugmentationRes
             seed_count=len(request.seed_samples),
             error=str(e),
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     except httpx.ConnectError as e:
         logger.error("augmentation_ollama_connection_error", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Ollama service is not available",
-        )
+        ) from e
 
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -1443,7 +1443,7 @@ async def augment_training_data(request: AugmentationRequest) -> AugmentationRes
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ollama API error: {e.response.status_code}",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -1455,4 +1455,4 @@ async def augment_training_data(request: AugmentationRequest) -> AugmentationRes
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Training data augmentation failed",
-        )
+        ) from e
