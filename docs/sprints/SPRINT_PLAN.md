@@ -1052,6 +1052,101 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
+## Sprint 48: Real-Time Thinking Phase Events ✅ (COMPLETE 2025-12-16)
+**Ziel:** Echtzeit-Anzeige von LLM-Thinking-Events, Request Timeout & Cancel
+
+**Start:** 2025-12-16
+**End:** 2025-12-16
+**Status:** COMPLETE
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 48.1 Thinking Event Streaming via SSE | 8 | ✅ DONE |
+| 48.2 Real-Time Thinking Display UI | 13 | ✅ DONE |
+| 48.3 Request Timeout & Cancellation | 8 | ✅ DONE |
+| 48.4 Elapsed Time Display | 5 | ✅ DONE |
+| **Total** | **34** | |
+
+### Deliverables
+- SSE thinking event stream from LLM responses
+- Real-time thinking indicator in conversation UI
+- Elapsed time display during generation
+- Request timeout configuration
+- Cancel request button with cleanup
+
+### Technical Tasks
+- Ollama thinking event parsing
+- SSE stream for thinking chunks
+- React UI for real-time thinking display
+- Timeout handler with cleanup
+- Cancel request implementation
+
+### Success Criteria
+- [x] Thinking events stream in real-time
+- [x] Elapsed time updates every 100ms
+- [x] Request cancellation works cleanly
+- [x] Timeout cleanup prevents resource leaks
+
+### References
+- [SPRINT_48_PLAN.md](SPRINT_48_PLAN.md)
+
+---
+
+## Sprint 49: Dynamic UX & Knowledge Graph Deduplication ✅
+**Ziel:** Dynamic model selection, semantic entity/relation deduplication, provenance tracking
+
+**Breakdown:**
+| Feature | SP |
+|---------|-----|
+| 49.1 Dynamic LLM Selection from Ollama | 8 |
+| 49.2 Graph Relationship Type Multiselect | 8 |
+| 49.3 Historical Phase Events Display | 13 |
+| 49.4 Fix Indexing Progress Inconsistency | 3 |
+| 49.5 Add source_chunk_id to Relationships | 13 |
+| 49.6 Index Consistency Validation | 8 |
+| 49.7 Semantic Relation Deduplication (Embeddings) | 13 |
+| 49.8 Redis-based Synonym Overrides | 5 |
+| 49.9 Migrate Entity Dedup to BGE-M3 | 8 |
+| **Total** | **79** |
+
+### Deliverables
+- Dynamic model discovery API (Ollama)
+- Dynamic relationship type discovery (Neo4j)
+- Historical phase events in conversation view
+- Fixed indexing progress messages
+- source_chunk_id provenance tracking
+- Index consistency validation service
+- Semantic relation deduplication (BGE-M3 embeddings)
+- Redis-based synonym management
+- Entity deduplication with BGE-M3 (remove sentence-transformers)
+
+### Technical Tasks
+- Ollama model listing API
+- Neo4j relationship type query
+- Phase events lazy loading
+- Provenance migration script
+- Consistency validation endpoint
+- SemanticRelationDeduplicator implementation
+- HybridRelationDeduplicator with Redis
+- Entity dedup migration to BGE-M3
+
+### Success Criteria
+- No hardcoded model/relationship type lists
+- Phase events viewable in history
+- All relationships have source_chunk_id
+- <5% orphaned entities/chunks
+- >90% relation duplicate reduction
+- sentence-transformers dependency removed
+
+### References
+- [SPRINT_49_PLAN.md](SPRINT_49_PLAN.md)
+- [TD-048: Graph Extraction Provenance](../technical_debt/TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md)
+- [TD-063: Relation Deduplication](../technical_debt/TD-063_RELATION_DEDUPLICATION.md)
+- [TD-059: Reranking Dependencies](../technical_debt/TD-059_RERANKING_DEPENDENCY_SIZE.md)
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |

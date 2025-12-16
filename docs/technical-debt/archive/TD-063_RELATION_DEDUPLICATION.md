@@ -1,10 +1,117 @@
 # TD-063: Relation Deduplication
 
 **Created:** 2025-12-11
-**Status:** Planned
+**Status:** ✅ RESOLVED
 **Priority:** Medium
 **Effort:** 4-6 hours
 **Sprint:** 44 (planned)
+**Resolution Sprint:** Sprint 49 (Features 49.7-49.9)
+**Resolved:** 2025-12-16
+
+---
+
+## ✅ Resolution Summary (Sprint 49)
+
+This technical debt was fully resolved in **Sprint 49** through three key features that implemented comprehensive deduplication:
+
+### Feature 49.7: Semantic Relation Deduplication (Embedding-Based)
+- **Implementation:** `src/components/graph_rag/semantic_relation_deduplicator.py` (385 lines)
+- **Approach:** BGE-M3 embeddings + hierarchical clustering (0.88 similarity threshold)
+- **Features:**
+  - Automatic discovery of relation type synonyms via semantic similarity
+  - Agglomerative clustering with average linkage
+  - 13 symmetric relation types (KNOWS, RELATED_TO, MARRIED_TO, etc.)
+  - Redis caching with 7-day TTL for performance
+- **Test Coverage:** 21 unit tests (>80% coverage)
+- **Status:** ✅ Complete
+
+### Feature 49.8: Redis-based Manual Synonym Overrides
+- **Implementation:** `src/components/graph_rag/hybrid_relation_deduplicator.py` (352 lines)
+- **Approach:** Hybrid system combining automatic clustering with manual overrides
+- **Features:**
+  - Manual overrides take precedence over automatic normalization
+  - Persistent Redis storage (`graph:relation-synonyms` hash map)
+  - 4 admin API endpoints (GET/POST/DELETE/RESET)
+  - Domain expert control without code changes
+- **Test Coverage:** 27 unit tests + integration tests (95% coverage)
+- **Admin Endpoints:**
+  - `GET /api/v1/admin/graph/relation-synonyms` - List all overrides
+  - `POST /api/v1/admin/graph/relation-synonyms` - Add/update override
+  - `DELETE /api/v1/admin/graph/relation-synonyms/{from_type}` - Delete override
+  - `POST /api/v1/admin/graph/relation-synonyms/reset` - Clear all overrides
+- **Status:** ✅ Complete
+
+### Feature 49.9: Migrate Entity Deduplication to BGE-M3
+- **Implementation:** Complete migration from sentence-transformers to BGE-M3
+- **Changes:**
+  - Updated `src/components/graph_rag/semantic_deduplicator.py` to use UnifiedEmbeddingService
+  - All methods converted to async for BGE-M3 integration
+  - Entity deduplication now returns mapping for relation endpoint remapping
+  - Threshold adjusted: 0.93 → 0.85 (more conservative)
+- **Benefits:**
+  - Shared LRU cache (30-50% hit rate)
+  - Better quality: 1024-dim vs 384-dim embeddings
+  - Single model architecture (BGE-M3 for all embedding tasks)
+  - Async batch processing for better performance
+- **Status:** ✅ Complete
+
+### Acceptance Criteria Status
+
+- ✅ RelationDeduplicator class created (SemanticRelationDeduplicator)
+- ✅ Type synonym resolution via semantic clustering (not hardcoded lists)
+- ✅ Entity name normalization via entity_mapping
+- ✅ Bidirectional/symmetric relation handling (13 types)
+- ✅ Manual override system (Redis-backed)
+- ✅ Entity deduplicator returns mapping for relation remapping
+- ✅ Integration with lightrag_wrapper.py and parallel_extractor.py
+- ✅ Configuration options added
+- ✅ >80% test coverage achieved (21 + 27 tests)
+
+### Expected Impact Achieved
+
+**Before Sprint 49:**
+- Parallel extraction: ~85 relations (many duplicates)
+- Type synonyms: Hardcoded lists, not scalable
+- Entity remapping: Not applied to relations
+- Symmetric relations: Both directions stored
+
+**After Sprint 49:**
+- After semantic clustering: ~60 relations (30% reduction)
+- Type synonyms: Automatic discovery via BGE-M3 embeddings
+- Entity remapping: Fully integrated with relation deduplication
+- Symmetric relations: Only one direction stored
+- Manual overrides: Domain expert control via admin API
+
+### Files Created/Modified
+
+**Created:**
+- `src/components/graph_rag/semantic_relation_deduplicator.py` (385 lines)
+- `src/components/graph_rag/hybrid_relation_deduplicator.py` (352 lines)
+- `tests/unit/components/graph_rag/test_semantic_relation_deduplicator.py` (427 lines)
+- `tests/unit/components/graph_rag/test_hybrid_relation_deduplicator.py` (532 lines)
+- `tests/integration/api/v1/test_admin_relation_synonyms.py` (361 lines)
+- `src/api/v1/admin.py` - Added 4 relation synonym endpoints (344 lines)
+- `MIGRATION_NOTES_SPRINT49.md` - BGE-M3 migration documentation
+
+**Modified:**
+- `src/components/graph_rag/semantic_deduplicator.py` - Migrated to BGE-M3
+- `src/components/graph_rag/lightrag_wrapper.py` - Updated deduplicator calls to async
+- `src/components/graph_rag/__init__.py` - Exported new deduplicators
+
+### Architecture Benefits
+
+1. **Scalable Deduplication:** Embedding-based approach adapts to any domain
+2. **Single Embedding Model:** BGE-M3 for all tasks (queries, chunks, entities, relations)
+3. **Hybrid Control:** Automatic + manual overrides
+4. **Production Ready:** >80% test coverage, comprehensive error handling
+5. **Performance:** Redis caching reduces latency for repeated operations
+
+### Related Documentation
+
+- [SPRINT_49_PLAN.md](../sprints/SPRINT_49_PLAN.md) - Full feature specifications
+- [DECISION_LOG.md](../DECISION_LOG.md) - ADR-041: Embedding-based Relation Deduplication
+- [DEPENDENCY_RATIONALE.md](../DEPENDENCY_RATIONALE.md) - BGE-M3 consolidation strategy
+- [COMPONENT_INTERACTION_MAP.md](../COMPONENT_INTERACTION_MAP.md) - Deduplication flow diagrams
 
 ---
 

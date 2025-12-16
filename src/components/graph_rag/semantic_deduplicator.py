@@ -1,19 +1,14 @@
-"""Semantic Entity Deduplication using sentence-transformers.
+"""Semantic Entity Deduplication using BGE-M3 embeddings.
 
 Sprint 13 Feature 13.9: ADR-017
-Uses sentence-transformers to identify and merge duplicate entities based on
+Uses embeddings to identify and merge duplicate entities based on
 semantic similarity rather than string matching.
 
-Sprint 20 Feature 20.3: Singleton Pattern for SentenceTransformer
-- Eliminates 200+ redundant model loads during indexing
+Sprint 20 Feature 20.3: Singleton Pattern for Embedding Service
+- Eliminates redundant model loads during indexing
 - Lazy initialization (load on first use)
-- Thread-safe singleton pattern
+- Shared LRU cache across all components
 - Saves ~111 seconds per 223 chunks
-
-Sprint 20 Feature 20.5: CPU Embeddings Migration
-- Runs on CPU instead of GPU (frees 1-2GB VRAM for LLMs)
-- Device forced to 'cpu' in singleton initialization
-- No performance impact (embeddings are fast on CPU)
 
 Sprint 43 Feature 43.x: MultiCriteriaDeduplicator (ADR-044, TD-062)
 - Multi-criteria matching: exact, edit distance, substring, semantic
@@ -22,34 +17,27 @@ Sprint 43 Feature 43.x: MultiCriteriaDeduplicator (ADR-044, TD-062)
 - Catches abbreviations ("Nicolas Cage" vs "Cage")
 - Min-length guards prevent false positives ("AI" in "NVIDIA")
 
+Sprint 49 Feature 49.9: BGE-M3 Migration (ADR-024)
+- Migrated from sentence-transformers (all-MiniLM-L6-v2, 384-dim) to BGE-M3 (1024-dim)
+- Consolidates all embeddings to single model via UnifiedEmbeddingService
+- Async batch embedding for better performance
+- Removes sentence-transformers dependency
+
 Author: Claude Code
-Date: 2025-10-24, Updated: 2025-12-10
+Date: 2025-10-24, Updated: 2025-12-16
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+import numpy as np
 import structlog
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Sprint 24 Feature 24.15: Lazy import for optional reranking dependency
-if TYPE_CHECKING:
-    from sentence_transformers import SentenceTransformer
+from src.components.shared.embedding_service import get_embedding_service
 
 logger = structlog.get_logger(__name__)
-
-# Runtime conditional imports
-try:
-    from sentence_transformers import SentenceTransformer  # noqa: F811
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    DEPENDENCIES_AVAILABLE = True
-except ImportError:
-    DEPENDENCIES_AVAILABLE = False
-    logger.warning(
-        "sentence-transformers not available. Install with: "
-        "pip install sentence-transformers scikit-learn"
-    )
 
 # Sprint 43: Levenshtein distance for edit-distance deduplication (ADR-044)
 try:
@@ -63,148 +51,76 @@ except ImportError:
         "Install with: pip install python-Levenshtein"
     )
 
-# ============================================================================
-# Sprint 20 Feature 20.3: SINGLETON PATTERN
-# ============================================================================
-
-_sentence_transformer_instance: SentenceTransformer | None = None
-_singleton_lock = None  # Will be threading.Lock() if needed
-
-
-def get_sentence_transformer_singleton(
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-    device: str = "cpu",  # Sprint 20.5: Force CPU to free VRAM
-) -> SentenceTransformer:
-    """Get or create singleton SentenceTransformer instance.
-
-    Sprint 20 Feature 20.3: Singleton pattern to prevent redundant model loading.
-
-    Performance Impact:
-    - BEFORE: 200+ model loads per indexing run = ~111 seconds wasted
-    - AFTER: 1 model load per indexing run = ~0.5 seconds
-    - SAVINGS: ~110 seconds per 223 chunks (98% reduction)
-
-    Sprint 20 Feature 20.5: CPU device to free 1-2GB VRAM for LLMs.
-
-    Args:
-        model_name: Model identifier (default: all-MiniLM-L6-v2)
-        device: Device to use (default: 'cpu' for VRAM savings)
-
-    Returns:
-        Singleton SentenceTransformer instance
-
-    Thread Safety:
-        Uses lazy initialization with double-checked locking pattern.
-        Safe for concurrent access from multiple threads/chunks.
-    """
-    global _sentence_transformer_instance, _singleton_lock
-
-    # Fast path: already initialized
-    if _sentence_transformer_instance is not None:
-        return _sentence_transformer_instance
-
-    # Lazy lock creation (avoid import if not needed)
-    if _singleton_lock is None:
-        import threading
-
-        _singleton_lock = threading.Lock()
-
-    # Double-checked locking pattern
-    with _singleton_lock:
-        if _sentence_transformer_instance is None:
-            logger.info(
-                "sentence_transformer_singleton_initializing",
-                model=model_name,
-                device=device,
-                note="First initialization - subsequent calls will reuse this instance",
-            )
-
-            _sentence_transformer_instance = SentenceTransformer(model_name, device=device)
-
-            logger.info(
-                "sentence_transformer_singleton_ready",
-                model=model_name,
-                device=device,
-            )
-
-        return _sentence_transformer_instance
-
 
 class SemanticDeduplicator:
     """Deduplicate entities using semantic similarity.
 
-    Uses sentence-transformers to compute embeddings of entity names and
-    identifies duplicates using cosine similarity. Entities with similarity
-    above threshold are merged, keeping the first mention and aggregating
-    descriptions.
+    Uses BGE-M3 embeddings (1024-dim) via UnifiedEmbeddingService to compute
+    embeddings of entity names and identifies duplicates using cosine similarity.
+    Entities with similarity above threshold are merged, keeping the first mention
+    and aggregating descriptions.
 
     Architecture Decision: ADR-017 (Semantic Entity Deduplication)
-    Model Selection: ADR-018 (all-MiniLM-L6-v2)
+    Model Selection: ADR-024 (BGE-M3, 1024-dim multilingual embeddings)
 
     Example:
-        >>> dedup = SemanticDeduplicator(threshold=0.93)
+        >>> dedup = SemanticDeduplicator(threshold=0.85)
         >>> entities = [
         ...     {"name": "Alex", "type": "PERSON", "description": "..."},
         ...     {"name": "Alex", "type": "PERSON", "description": "..."},  # Duplicate
         ...     {"name": "Jordan", "type": "PERSON", "description": "..."}
         ... ]
-        >>> clean = dedup.deduplicate(entities)
+        >>> clean = await dedup.deduplicate(entities)
         >>> len(clean)  # 2 (Alex merged)
         2
+
+    Sprint 49 Feature 49.9:
+    - Migrated from sentence-transformers to BGE-M3 embeddings
+    - All methods are now async
+    - Uses UnifiedEmbeddingService singleton with LRU cache
+    - Better batch processing with configurable concurrency
     """
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        threshold: float = 0.93,
-        device: str = "cpu",  # Sprint 20.5: Default to CPU
+        threshold: float = 0.85,
+        batch_size: int = 32,
     ) -> None:
         """Initialize semantic deduplicator.
 
-        Sprint 20 Changes:
-        - Feature 20.3: Uses singleton SentenceTransformer (prevents 200+ reloads)
-        - Feature 20.5: Defaults to CPU device (frees 1-2GB VRAM for LLMs)
+        Sprint 49 Feature 49.9: BGE-M3 Migration
+        - Uses UnifiedEmbeddingService (BGE-M3, 1024-dim)
+        - Shared LRU cache across all AEGIS RAG components
+        - Async batch embedding for better performance
 
         Args:
-            model_name: Sentence transformer model name
-                       Default: all-MiniLM-L6-v2 (90MB, 384-dim, fast)
             threshold: Cosine similarity threshold for duplicate detection
-                      Recommended range: 0.90-0.95
-                      - Lower (0.90): More aggressive merging
-                      - Higher (0.95): More conservative
-            device: Device to use (default: 'cpu' to free VRAM)
-                   Sprint 20.5: Changed from 'auto' to 'cpu'
-
-        Raises:
-            ImportError: If sentence-transformers not installed
+                      Default: 0.85 (conservative, prevents false merges)
+                      Recommended range: 0.80-0.90
+                      - Lower (0.80): More aggressive merging
+                      - Higher (0.90): More conservative
+            batch_size: Number of entities to embed in parallel (default: 32)
+                       Higher values improve throughput but may increase memory usage
         """
-        if not DEPENDENCIES_AVAILABLE:
-            raise ImportError(
-                "sentence-transformers required. Install with: "
-                "pip install sentence-transformers scikit-learn"
-            )
-
-        # Sprint 20.3: Use singleton instead of creating new model
-        self.model = get_sentence_transformer_singleton(model_name=model_name, device=device)
+        self.embedding_service = get_embedding_service()
         self.threshold = threshold
-        self.device = device
-        self.model_name = model_name
+        self.batch_size = batch_size
 
         logger.info(
             "semantic_deduplicator_initialized",
-            model=model_name,
+            model="bge-m3",
+            embedding_dim=1024,
             threshold=threshold,
-            device=device,
-            singleton_mode=True,
-            note="Using singleton SentenceTransformer (Sprint 20.3)",
+            batch_size=batch_size,
+            note="Using UnifiedEmbeddingService with BGE-M3 (Sprint 49.9)",
         )
 
-    def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    async def deduplicate(self, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Deduplicate entities using semantic similarity.
 
         Strategy:
         1. Group entities by type (only compare same types)
-        2. Compute embeddings for all entity names within each type
+        2. Compute embeddings for all entity names within each type (async batch)
         3. Find clusters with similarity >= threshold
         4. Keep first entity from each cluster
         5. Merge descriptions from duplicates
@@ -222,6 +138,8 @@ class SemanticDeduplicator:
             Input:  [{"name": "Alex", ...}, {"name": "Alex", ...}, {"name": "Jordan", ...}]
             Output: [{"name": "Alex", "description": "... [Deduplicated from 2 mentions]"},
                     {"name": "Jordan", ...}]
+
+        Sprint 49 Feature 49.9: Now async, uses BGE-M3 embeddings via UnifiedEmbeddingService
         """
         if not entities:
             return []
@@ -250,8 +168,8 @@ class SemanticDeduplicator:
                 stats["kept"] += 1
                 continue
 
-            # Deduplicate this group
-            deduped_group = self._deduplicate_group(group, etype)
+            # Deduplicate this group (async)
+            deduped_group = await self._deduplicate_group(group, etype)
             deduplicated.extend(deduped_group)
 
             stats["kept"] += len(deduped_group)
@@ -270,7 +188,7 @@ class SemanticDeduplicator:
 
         return deduplicated
 
-    def deduplicate_with_mapping(
+    async def deduplicate_with_mapping(
         self, entities: list[dict[str, Any]]
     ) -> tuple[list[dict[str, Any]], dict[str, str]]:
         """Deduplicate entities and return mapping from old names to canonical names.
@@ -278,6 +196,8 @@ class SemanticDeduplicator:
         Sprint 44 Feature 44.2: Required for relation deduplication (TD-063).
         After entity deduplication, relations need to be updated to use the
         canonical entity names. This method provides that mapping.
+
+        Sprint 49 Feature 49.9: Now async, uses BGE-M3 embeddings
 
         Args:
             entities: List of entity dicts
@@ -294,7 +214,7 @@ class SemanticDeduplicator:
             ...     {"name": "Nicolas Cage", "type": "PERSON"},
             ...     {"name": "nicolas cage", "type": "PERSON"},
             ... ]
-            >>> deduped, mapping = dedup.deduplicate_with_mapping(entities)
+            >>> deduped, mapping = await dedup.deduplicate_with_mapping(entities)
             >>> mapping
             {'nicolas cage': 'Nicolas Cage'}
         """
@@ -317,8 +237,8 @@ class SemanticDeduplicator:
                 deduplicated.extend(group)
                 continue
 
-            # Deduplicate and get mapping
-            deduped_group, group_mapping = self._deduplicate_group_with_mapping(group, etype)
+            # Deduplicate and get mapping (async)
+            deduped_group, group_mapping = await self._deduplicate_group_with_mapping(group, etype)
             deduplicated.extend(deduped_group)
             entity_mapping.update(group_mapping)
 
@@ -331,7 +251,7 @@ class SemanticDeduplicator:
 
         return deduplicated, entity_mapping
 
-    def _deduplicate_group_with_mapping(
+    async def _deduplicate_group_with_mapping(
         self, entities: list[dict[str, Any]], entity_type: str
     ) -> tuple[list[dict[str, Any]], dict[str, str]]:
         """Deduplicate a group and return name mapping.
@@ -342,9 +262,11 @@ class SemanticDeduplicator:
 
         Returns:
             Tuple of (deduplicated entities, name mapping)
+
+        Sprint 49 Feature 49.9: Now async
         """
         # Use the regular deduplication and build mapping from result
-        deduped = self._deduplicate_group(entities, entity_type)
+        deduped = await self._deduplicate_group(entities, entity_type)
 
         # Build mapping: we need to track which names were merged
         # This is a simplified approach - we map all variants to the representative
@@ -381,10 +303,10 @@ class SemanticDeduplicator:
         # Default: exact match (case-insensitive)
         return name1.lower().strip() == name2.lower().strip()
 
-    def _deduplicate_group(
+    async def _deduplicate_group(
         self, entities: list[dict[str, Any]], entity_type: str
     ) -> list[dict[str, Any]]:
-        """Deduplicate entities of the same type.
+        """Deduplicate entities of the same type using BGE-M3 embeddings.
 
         Args:
             entities: Entities of same type
@@ -392,17 +314,19 @@ class SemanticDeduplicator:
 
         Returns:
             Deduplicated entities
+
+        Sprint 49 Feature 49.9: Now async, uses BGE-M3 via UnifiedEmbeddingService
         """
         # Extract names - handle both "name" (extraction) and "entity_name" (LightRAG format)
         names = [e.get("name", e.get("entity_name", "UNKNOWN")) for e in entities]
 
-        # Compute embeddings (batched for efficiency)
-        embeddings = self.model.encode(
-            names, batch_size=64, convert_to_tensor=True, show_progress_bar=False
+        # Compute embeddings using BGE-M3 (async batch embedding)
+        embeddings = await self.embedding_service.embed_batch(
+            names, max_concurrent=self.batch_size
         )
 
         # Convert to numpy for sklearn
-        embeddings_np = embeddings.cpu().numpy()
+        embeddings_np = np.array(embeddings)
 
         # Compute pairwise cosine similarity
         similarity_matrix = cosine_similarity(embeddings_np)
@@ -488,19 +412,19 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        threshold: float = 0.93,
-        device: str = "cpu",
+        threshold: float = 0.85,
+        batch_size: int = 32,
         edit_distance_threshold: int = 3,
         min_length_for_edit: int = 5,
         min_length_for_substring: int = 6,
     ) -> None:
         """Initialize multi-criteria deduplicator.
 
+        Sprint 49 Feature 49.9: Migrated to BGE-M3 embeddings
+
         Args:
-            model_name: Sentence transformer model name (for semantic matching)
-            threshold: Cosine similarity threshold for semantic matching
-            device: Device for embeddings (default: 'cpu')
+            threshold: Cosine similarity threshold for semantic matching (default: 0.85)
+            batch_size: Number of entities to embed in parallel (default: 32)
             edit_distance_threshold: Max edit distance to consider as duplicate
                                     Default: 3 (catches 1-2 char typos)
             min_length_for_edit: Min entity name length for edit distance check
@@ -508,7 +432,7 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
             min_length_for_substring: Min entity name length for substring check
                                      Default: 6 (prevents "AI" in "NVIDIA")
         """
-        super().__init__(model_name=model_name, threshold=threshold, device=device)
+        super().__init__(threshold=threshold, batch_size=batch_size)
 
         self.edit_distance_threshold = edit_distance_threshold
         self.min_length_for_edit = min_length_for_edit
@@ -523,8 +447,10 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
 
         logger.info(
             "multi_criteria_deduplicator_initialized",
-            model=model_name,
+            model="bge-m3",
+            embedding_dim=1024,
             threshold=threshold,
+            batch_size=batch_size,
             edit_distance_threshold=edit_distance_threshold,
             min_length_for_edit=min_length_for_edit,
             min_length_for_substring=min_length_for_substring,
@@ -574,7 +500,7 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
 
         return False, "none"
 
-    def _deduplicate_group(
+    async def _deduplicate_group(
         self, entities: list[dict[str, Any]], entity_type: str
     ) -> list[dict[str, Any]]:
         """Deduplicate entities using multi-criteria matching.
@@ -589,6 +515,8 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
 
         Returns:
             Deduplicated entities with merged descriptions
+
+        Sprint 49 Feature 49.9: Now async, uses BGE-M3 embeddings
         """
         if len(entities) <= 1:
             return entities
@@ -632,11 +560,11 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
             rep_indices = [c[0] for c in clusters]
             rep_names = [names[i] for i in rep_indices]
 
-            # Compute embeddings for cluster representatives only
-            embeddings = self.model.encode(
-                rep_names, batch_size=64, convert_to_tensor=True, show_progress_bar=False
+            # Compute embeddings using BGE-M3 (async batch embedding)
+            embeddings = await self.embedding_service.embed_batch(
+                rep_names, max_concurrent=self.batch_size
             )
-            embeddings_np = embeddings.cpu().numpy()
+            embeddings_np = np.array(embeddings)
             similarity_matrix = cosine_similarity(embeddings_np)
 
             # Merge clusters based on semantic similarity
@@ -707,16 +635,15 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
 def create_deduplicator_from_config(config) -> SemanticDeduplicator | MultiCriteriaDeduplicator | None:
     """Factory function to create deduplicator from app config.
 
-    Sprint 20 Feature 20.5: Defaults to 'cpu' device to free VRAM.
     Sprint 43 Feature 43.1: MultiCriteriaDeduplicator support (ADR-044).
+    Sprint 49 Feature 49.9: Migrated to BGE-M3 embeddings via UnifiedEmbeddingService.
 
     Args:
         config: Application config object with attributes:
                - enable_semantic_dedup (bool)
                - enable_multi_criteria_dedup (bool) - Sprint 43: use multi-criteria
-               - semantic_dedup_model (str)
-               - semantic_dedup_threshold (float)
-               - semantic_dedup_device (str) - Sprint 20.5: defaults to 'cpu'
+               - semantic_dedup_threshold (float) - Default: 0.85
+               - dedup_batch_size (int) - Sprint 49: batch size for embeddings
                - dedup_edit_distance_threshold (int) - Sprint 43: max edit distance
                - dedup_min_length_for_edit (int) - Sprint 43: min length for edit check
                - dedup_min_length_for_substring (int) - Sprint 43: min length for substring
@@ -733,32 +660,22 @@ def create_deduplicator_from_config(config) -> SemanticDeduplicator | MultiCrite
         logger.info("semantic_deduplication_disabled")
         return None
 
-    # Sprint 20.5: Default to 'cpu' instead of 'auto' to free VRAM
-    device = getattr(config, "semantic_dedup_device", "cpu")
-    # Convert 'auto' to 'cpu' (Sprint 20.5: no auto-detection, always use CPU)
-    if device == "auto":
-        device = "cpu"
-
-    model_name = getattr(
-        config, "semantic_dedup_model", "sentence-transformers/all-MiniLM-L6-v2"
-    )
-    threshold = getattr(config, "semantic_dedup_threshold", 0.93)
+    threshold = getattr(config, "semantic_dedup_threshold", 0.85)
+    batch_size = getattr(config, "dedup_batch_size", 32)
 
     # Sprint 43: Use MultiCriteriaDeduplicator by default (ADR-044)
     use_multi_criteria = getattr(config, "enable_multi_criteria_dedup", True)
 
     if use_multi_criteria:
         return MultiCriteriaDeduplicator(
-            model_name=model_name,
             threshold=threshold,
-            device=device,
+            batch_size=batch_size,
             edit_distance_threshold=getattr(config, "dedup_edit_distance_threshold", 3),
             min_length_for_edit=getattr(config, "dedup_min_length_for_edit", 5),
             min_length_for_substring=getattr(config, "dedup_min_length_for_substring", 6),
         )
     else:
         return SemanticDeduplicator(
-            model_name=model_name,
             threshold=threshold,
-            device=device,
+            batch_size=batch_size,
         )

@@ -1096,6 +1096,7 @@ class LightRAGClient:
                 )
 
                 # Step 2: Create MENTIONED_IN relationships
+                # Sprint 49 Feature 49.5: Add source_chunk_id to relationships for provenance tracking
                 # Group entities by chunk_id for efficient batch creation
                 entities_by_chunk = {}
                 for entity in entities:
@@ -1109,13 +1110,15 @@ class LightRAGClient:
                 mentioned_in_count = 0
                 for chunk_id, entity_ids in entities_by_chunk.items():
                     # Create MENTIONED_IN for all entities in this chunk
+                    # Sprint 49 Feature 49.5: Include source_chunk_id property
                     await session.run(
                         """
                         UNWIND $entity_ids AS entity_id
                         MATCH (e:base {entity_id: entity_id})
                         MATCH (c:chunk {chunk_id: $chunk_id})
                         MERGE (e)-[r:MENTIONED_IN]->(c)
-                        SET r.created_at = datetime()
+                        SET r.created_at = datetime(),
+                            r.source_chunk_id = $chunk_id
                         """,
                         chunk_id=chunk_id,
                         entity_ids=entity_ids,
@@ -1559,7 +1562,8 @@ class LightRAGClient:
 
                 # Deduplicate entities and get mapping for relation normalization
                 # Sprint 44: Use deduplicate_with_mapping to get entity name mapping
-                deduplicated_entities, entity_mapping = deduplicator.deduplicate_with_mapping(
+                # Sprint 49.9: Now async with BGE-M3 embeddings
+                deduplicated_entities, entity_mapping = await deduplicator.deduplicate_with_mapping(
                     all_entities
                 )
                 entities_after_dedup = len(deduplicated_entities)

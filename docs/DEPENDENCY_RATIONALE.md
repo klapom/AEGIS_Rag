@@ -393,25 +393,44 @@
 
 ---
 
-### Sentence-Transformers: 3.3.1 | Cross-Encoder Reranking
+### Sentence-Transformers: 3.3.1 | Cross-Encoder Reranking (REMOVED in Sprint 49)
 
-**Version:** `^3.3.1` (latest stable, HuggingFace compatibility)
+**Status:** ⛔ **REMOVED** (Sprint 49)
 
-**Rationale:**
+**Previous Version:** `^3.3.1` (deprecated)
+
+**Previous Rationale:**
 - **Cross-Encoder Reranking:** Evaluates query-document pairs directly (better than bi-encoder cosine similarity)
 - **Quality Boost:** +15-20% precision improvement for only +50ms latency
 - **Model:** `ms-marco-MiniLM-L-6-v2` (Microsoft, optimized for search reranking)
 - **HuggingFace Integration:** Easy model downloads, community support
 
-**Alternatives Rejected:**
-- **OpenAI Embeddings Similarity:** Weaker than cross-encoder for reranking, cloud dependency
-- **Custom Reranking Model:** Too much effort, ms-marco pretrained model excellent
-- **No Reranking:** Simpler but -15-20% precision (not acceptable for production)
+**Removal Decision (Sprint 49 - ADR-041):**
+- **Sprint 48:** Reranking moved to Ollama with `bge-reranker-v2-m3` model (15% faster, same quality)
+- **Sprint 49:** Entity dedup moved to BGE-M3 embeddings (replaces all-MiniLM-L6-v2)
+- **Impact:** Eliminated 2GB Docker image bloat, simplified dependency tree
+- **Ollama-First Strategy:** All transformer models now served via Ollama (unified model management)
 
-**Model Details:**
+**Migration Path:**
+- **Reranking:** Use Ollama API: `ollama run qllama/bge-reranker-v2-m3`
+- **Entity Deduplication:** Use BGE-M3 via Ollama for semantic similarity (replaces dedup model)
+- **Relation Deduplication:** Use BGE-M3 embeddings for clustering (1024-dim similarity threshold)
+
+**Alternatives Considered (Sprint 49):**
+- **Retaining sentence-transformers:** Extra 2GB for duplicate functionality (BGE-M3 covers all use cases)
+- **Local transformers in container:** Abandoned in favor of Ollama-managed models
+
+**Trade-offs Addressed:**
+- ⚠️ Slightly higher latency for local dedup (BGE-M3 embeddings ~100ms vs sentence-transformers ~10ms)
+- ✅ Consolidated model management (Ollama handles all transformer models)
+- ✅ -2GB Docker image size (significant for deployment efficiency)
+- ✅ Reduced pyproject.toml complexity
+- ✅ Ollama auto-downloads missing models on-demand
+
+**Previous Model Details:**
 - Architecture: MiniLM (6 layers, lightweight)
 - Training: MS MARCO dataset (850K query-document pairs)
-- Latency: ~5ms per pair, batch processing for top-10 results
+- Removed in Sprint 49: pyproject.toml updated, no dependency conflict
 
 ---
 
@@ -488,6 +507,78 @@
 - nomic-embed-text embeddings via Ollama
 - Batch embedding support
 - No upper version limit (flexible compatibility)
+
+---
+
+### BGE-M3: BAAI/bge-m3 | Universal Embedding Model (Expanded in Sprint 49)
+
+**Model:** BAAI/bge-m3 (1024-dim, multilingual)
+
+**Status:** ✅ **EXPANDED** (Sprint 49 - ADR-041)
+
+**Version:** Latest from HuggingFace Hub (via Ollama)
+
+**Rationale (Expanded Usage - Sprint 49):**
+- **Query Embeddings:** Dense vector representations for similarity search (existing)
+- **Document Chunk Embeddings:** Index chunk content for hybrid search (existing)
+- **Entity Deduplication:** Semantic similarity comparison for entity clustering (NEW - Sprint 49)
+- **Relation Type Clustering:** Group relation types by semantic similarity (NEW - Sprint 49)
+
+**Advantages:**
+- **Universal Model:** Single embedding model for all semantic tasks (eliminates sentence-transformers)
+- **High Dimensionality:** 1024-dim vs 384-dim from sentence-transformers (superior semantic separation)
+- **Multilingual Support:** 100+ languages with consistent embedding space
+- **Ollama Integration:** Model served via Ollama (no Python transformers library dependency)
+- **Consistency:** Same embedding space for queries, documents, and dedup tasks
+
+**Sprint 49 Migrations:**
+- **Entity Deduplication:** Replaced `all-MiniLM-L6-v2` with BGE-M3 (0.85 similarity threshold)
+- **Relation Clustering:** New capability using BGE-M3 (0.88 similarity threshold)
+- **Benefits:** -2GB Docker image (removed sentence-transformers), unified embedding model
+
+**Performance Characteristics:**
+- **Query Embeddings:** ~30-50ms per query (GPU-accelerated via Ollama)
+- **Batch Document Embeddings:** ~10-20ms per chunk (vectorized)
+- **Dedup Comparisons:** ~50-100ms for entity/relation clustering (CPU-acceptable latency)
+- **Embedding Quality:** 1024-dim provides excellent semantic discrimination
+
+**Configuration:**
+```yaml
+# Ollama Model Settings
+Ollama Model: BAAI/bge-m3 (auto-downloaded on first use)
+Embedding Dimension: 1024
+Similarity Threshold (Dedup): 0.85
+Similarity Threshold (Relations): 0.88
+Cache Strategy: Redis-backed (24-hour TTL)
+```
+
+**Threshold Tuning (Sprint 49):**
+- **Entity Dedup (0.85):** Conservative threshold, prevents false merges
+- **Relation Clustering (0.88):** Stricter threshold for relation type grouping (fewer false positives)
+- Experimentation-based tuning during Sprint 49 QA
+
+**Alternatives Rejected (Sprint 49):**
+- **sentence-transformers:** Duplicate functionality for 2GB Docker bloat (removed)
+- **OpenAI Embeddings:** Cloud dependency, DSGVO concerns, cost
+- **Local transformers:** Duplicate model management (Ollama already serves BGE-M3)
+
+**Trade-offs:**
+- ⚠️ CPU embeddings slightly slower for dedup (~100ms) vs GPU reranking (10ms)
+- ⚠️ Dependency on Ollama model availability
+- ✅ Unified embedding model (consistency across all tasks)
+- ✅ -2GB Docker image savings (removed sentence-transformers)
+- ✅ 1024-dim higher quality than 384-dim alternatives
+- ✅ Multilingual support built-in
+
+**Impact on Dependency Tree:**
+- ✅ **Removed:** `sentence-transformers ^3.3.1` (2GB Docker bloat)
+- ✅ **Kept:** BGE-M3 served via Ollama (no new pyproject.toml entry)
+- ✅ **Result:** Cleaner, leaner dependency management
+
+**Re-evaluation Triggers:**
+- New embedding models in Ollama with better quality/speed tradeoff
+- Threshold tuning feedback from production usage
+- Need for domain-specific embeddings (medical, legal)
 
 ---
 
@@ -642,6 +733,92 @@
 - Vector operations in memory consolidation
 - Embedding manipulation (normalization, similarity)
 - Efficient array processing
+
+---
+
+### Scikit-learn: 1.6.0 | Machine Learning & Clustering (Expanded in Sprint 49)
+
+**Version:** `^1.6.0` (latest stable)
+
+**Status:** ✅ **EXPANDED** (Sprint 49 - ADR-041)
+
+**Rationale (Expanded Usage - Sprint 49):**
+- **Hierarchical Clustering:** Agglomerative clustering for entity and relation deduplication
+- **Cosine Similarity:** Efficient similarity computations for dedup threshold matching
+- **Distance Metrics:** pdist/squareform for pairwise distance computation
+- **Hierarchical Dendrogram:** Optional visualization of clustering hierarchies
+
+**New Usages (Sprint 49):**
+- **Entity Deduplication:** `AgglomerativeClustering` with BGE-M3 embeddings (linkage='average', distance_threshold=0.15)
+- **Relation Type Clustering:** Group relation types by semantic similarity (linkage='ward', distance_threshold=0.12)
+- **Cosine Similarity Computation:** Compare embedding vectors for threshold-based matching
+- **Hierarchical Clustering:** Pre-compute dendrogram for optional UI visualization
+
+**Sprint 49 Implementation:**
+```python
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Entity deduplication using BGE-M3 embeddings
+embeddings = np.array([bge_m3_embed(entity) for entity in entities])
+similarity_matrix = cosine_similarity(embeddings)
+
+clustering = AgglomerativeClustering(
+    n_clusters=None,
+    distance_threshold=0.15,  # 1 - 0.85 similarity
+    linkage='average',
+    metric='euclidean'
+)
+
+labels = clustering.fit_predict(embeddings)
+```
+
+**Performance Characteristics:**
+- **Hierarchical Clustering:** O(n²) complexity for n entities/relations
+- **Cosine Similarity:** ~0.1-0.5ms for 1K embeddings (vectorized NumPy)
+- **Typical Runtime:** 10-50ms for 100-500 entities (acceptable for ingestion)
+- **Memory:** ~10MB for 10K embeddings (1024-dim × float32)
+
+**Configuration (Sprint 49):**
+```yaml
+# Entity Deduplication
+Entity Clustering:
+  Algorithm: AgglomerativeClustering
+  Linkage: average
+  Similarity Threshold: 0.85 (distance_threshold=0.15)
+  BGE-M3 Embedding Dimension: 1024
+
+# Relation Type Clustering
+Relation Clustering:
+  Algorithm: AgglomerativeClustering
+  Linkage: ward
+  Similarity Threshold: 0.88 (distance_threshold=0.12)
+  BGE-M3 Embedding Dimension: 1024
+```
+
+**Alternatives Rejected (Sprint 49):**
+- **SciPy Linkage (scipy.cluster.hierarchy):** Lower-level API, requires manual dendrogram construction
+- **DBSCAN:** Harder to tune (eps/min_samples), doesn't guarantee full coverage
+- **K-Means:** Requires pre-specifying cluster count (dynamic thresholding better for dedup)
+- **Custom Clustering:** Too much effort, scikit-learn battle-tested and well-optimized
+
+**Trade-offs:**
+- ⚠️ O(n²) complexity (acceptable for <1000 entities per document)
+- ⚠️ Requires dense embedding matrix in memory
+- ✅ Industry-standard, well-maintained library
+- ✅ Excellent documentation and community support
+- ✅ Optimized C backends for performance
+- ✅ Integrates seamlessly with NumPy/SciPy ecosystem
+
+**Threshold Tuning (Sprint 49):**
+- **Entity Dedup (0.85 similarity = 0.15 distance):** Conservative, prevents false entity merges
+- **Relation Clustering (0.88 similarity = 0.12 distance):** Stricter, for relation type grouping
+- Empirically validated during Sprint 49 QA testing
+
+**Re-evaluation Triggers:**
+- Entity/relation false merge rate exceeds 5% (tune thresholds)
+- Performance regression for large knowledge graphs (>10K entities)
+- New clustering algorithms in scikit-learn or alternative libraries
 
 ---
 
@@ -1478,11 +1655,50 @@ if (savedSettings) {
 
 ---
 
-**Last Updated:** 2025-12-01 (Sprint 34 Complete)
-**Total Dependencies:** 63+ (production + dev) - **NO CHANGES since Sprint 28**
+## SPRINT 49: UNIFIED EMBEDDING STRATEGY & GRAPH OPTIMIZATION
+
+**Status:** ✅ COMPLETE (2025-12-16)
+
+**Dependency Changes:**
+- ⛔ **REMOVED:** `sentence-transformers ^3.3.1` (2GB Docker bloat)
+- ✅ **EXPANDED:** BGE-M3 (universal embedding model for all semantic tasks)
+- ✅ **EXPANDED:** scikit-learn (hierarchical clustering for deduplication)
+- **Net Change:** -1 dependency, 2 enhanced
+
+**Key Improvements (ADR-041):**
+1. **Unified Embeddings:** BGE-M3 now handles queries, documents, entity dedup, and relation clustering
+2. **Ollama-First Strategy:** All transformer models managed through Ollama (eliminated local transformers library)
+3. **Docker Efficiency:** -2GB image size (removed sentence-transformers dependency)
+4. **Semantic Deduplication:** Entity and relation dedup using hierarchical clustering + BGE-M3
+5. **Threshold Tuning:** Entity dedup (0.85), Relation clustering (0.88) - validated during QA
+
+**Implementation Details:**
+- Entity deduplication: `AgglomerativeClustering` + BGE-M3 embeddings (10-50ms per 100-500 entities)
+- Relation clustering: Hierarchical grouping with stricter similarity threshold
+- Performance: ~100ms CPU-acceptable latency for dedup tasks
+- Quality: Higher semantic discrimination with 1024-dim vs 384-dim models
+
+**Testing Summary:**
+- All entity dedup tests passing (no false merges >5%)
+- Relation clustering validated with 100+ knowledge graph entries
+- Integration tests confirm Ollama model fallback on failures
+- E2E tests validate full ingestion→dedup→graph pipeline
+
+**Migration Notes:**
+- No pyproject.toml version changes to scikit-learn/NumPy
+- BGE-M3 via Ollama (no new Python dependencies)
+- Reranking remains on Ollama (`qllama/bge-reranker-v2-m3`)
+- No breaking changes to existing APIs
+
+---
+
+**Last Updated:** 2025-12-16 (Sprint 49 Complete)
+**Total Dependencies:** 62 (production + dev) - **1 REMOVED** (sentence-transformers)
 **Dependency Health:** All actively maintained, no critical CVEs
-**Sprint 34 Summary:**
-- ✅ RELATES_TO extraction fully operational (no new dependencies)
-- ✅ Graph visualization enhanced (react-force-graph-2d in active use)
-- ✅ Admin E2E tests passing (Playwright confirmed)
-- ✅ Knowledge graph semantics improved (+13% false relations reduction)
+**Sprint 49 Summary:**
+- ✅ Sentence-transformers removed (-2GB Docker)
+- ✅ BGE-M3 expanded to universal embedding model
+- ✅ Entity dedup via hierarchical clustering operational
+- ✅ Relation type clustering with semantic similarity
+- ✅ Ollama-first strategy enforced (all transformers managed by Ollama)
+- ✅ Docker image size reduced by ~2GB

@@ -97,6 +97,15 @@
 | StreamingPipelineOrchestrator | TypedQueue[EmbeddedChunkItem] | AsyncIO Queue | Pydantic | Embedding stage output queue (Sprint 37) |
 | Admin UI | FastAPI SSE Endpoint | SSE | JSON | Real-time pipeline progress updates (Sprint 37) |
 | Worker Pool | StreamingPipelineOrchestrator | Python Call | Pydantic | Dynamic worker configuration (Sprint 37) |
+| EntityDeduplicator | UnifiedEmbeddingService | Python Call | Pydantic | BGE-M3 entity embeddings (Sprint 49.9) |
+| EntityDeduplicator | Neo4j | Bolt Protocol | Cypher queries | Merge duplicate entities (Sprint 49) |
+| SemanticRelationDeduplicator | UnifiedEmbeddingService | Python Call | Pydantic | BGE-M3 relation type embeddings (Sprint 49.7) |
+| SemanticRelationDeduplicator | Redis | Redis Protocol | JSON | Relation type synonym overrides (Sprint 49.8) |
+| RelationNormalizer | Neo4j | Bolt Protocol | Cypher queries | Normalize relations, handle symmetry (Sprint 49.3) |
+| IndexConsistencyValidator | Qdrant | gRPC/HTTP | Protobuf/JSON | Cross-reference validation (Sprint 49.6) |
+| IndexConsistencyValidator | Neo4j | Bolt Protocol | Cypher queries | Entity/relation integrity check (Sprint 49.6) |
+| Admin API | Ollama | HTTP | JSON | List available LLM models (Sprint 49.1) |
+| Admin API | Neo4j | Bolt Protocol | Cypher queries | List relationship types dynamically (Sprint 49.2) |
 
 ---
 
@@ -868,6 +877,646 @@ Key Improvements (Sprint 16):
 
 ---
 
+### Scenario 6: Knowledge Graph Deduplication Pipeline (Sprint 49)
+
+**Admin Action:** Run deduplication after document ingestion to resolve duplicate entities and relations
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Flow: Knowledge Graph Deduplication (Entity + Relation Dedup)       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Admin Request                                                   │
+│     └─> POST /api/v1/admin/deduplicate-graph?confirm=true         │
+│         Headers: Accept: text/event-stream                          │
+│                                                                     │
+│  2. Phase 1: Data Collection (SSE Event)                            │
+│     └─> Load all entities and relations from Neo4j                 │
+│         Neo4j Query:                                                │
+│         MATCH (e:Entity) RETURN e                                   │
+│         MATCH (e1)-[r:RELATES_TO]->(e2) RETURN r                   │
+│                                                                     │
+│         Response: 1,587 entities, 2,445 relations                   │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "data_collection",                               │
+│           "entities_loaded": 1587,                                  │
+│           "relations_loaded": 2445                                  │
+│         }                                                          │
+│                                                                     │
+│  3. Phase 2: Entity Deduplication (Sprint 49.9) (SSE Events)       │
+│     └─> Identify and merge duplicate entities                      │
+│                                                                     │
+│         A. Batch Embedding Generation                              │
+│            └─> UnifiedEmbeddingService.embed_batch([               │
+│                  "Transformer",                                     │
+│                  "Transformers",  # Similar entity                  │
+│                  "TransformerModel",  # Another variant             │
+│                  ...  # All 1,587 entity names                      │
+│                ])                                                   │
+│                                                                     │
+│                Ollama API Call (bge-m3):                            │
+│                POST http://localhost:11434/api/embeddings          │
+│                Response: [                                          │
+│                  [0.123, -0.456, ...],  # "Transformer"            │
+│                  [0.125, -0.450, ...],  # "Transformers" (similar) │
+│                  [0.128, -0.452, ...],  # "TransformerModel"       │
+│                  ...                                               │
+│                ]                                                   │
+│                Latency: 3s for 1,587 entities                       │
+│                                                                     │
+│         B. Cosine Similarity Computation                            │
+│            └─> Compute pairwise similarities                       │
+│                For all pairs (e1, e2):                              │
+│                  similarity = cosine_distance(embed[e1], embed[e2]) │
+│                Results: 2M+ comparisons                             │
+│                Latency: 2s (vectorized)                             │
+│                                                                     │
+│         C. Duplicate Detection (0.85 threshold)                     │
+│            └─> Group similar entities                              │
+│                Clusters: [                                         │
+│                  {                                                 │
+│                    "canonical": "Transformer",  # Most frequent     │
+│                    "variants": ["Transformers", "TransformerModel"] │
+│                    "similarities": [0.88, 0.86]  # >= 0.85          │
+│                  },                                                │
+│                  ...                                               │
+│                ]                                                   │
+│                Duplicates Found: 234 entities                       │
+│                                                                     │
+│         D. Canonical Entity Mapping                                 │
+│            └─> Create dedup_map: variant → canonical                │
+│                {                                                   │
+│                  "Transformers": "Transformer",                     │
+│                  "TransformerModel": "Transformer",                 │
+│                  "attention head": "Attention Mechanism",           │
+│                  ...                                               │
+│                }                                                   │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "entity_deduplication",                          │
+│           "duplicates_found": 234,                                  │
+│           "similarity_threshold": 0.85,                             │
+│           "dedup_map_size": 234                                     │
+│         }                                                          │
+│                                                                     │
+│  4. Phase 3: Relation Extraction & Deduplication (Sprint 49.7)      │
+│     └─> Identify and merge duplicate relations                     │
+│                                                                     │
+│         A. Relation Type Extraction                                 │
+│            └─> Extract relation types: [                           │
+│                  "USES",                                            │
+│                  "uses",  # Variant                                 │
+│                  "RELATED_TO",                                      │
+│                  "related-to",  # Another variant                   │
+│                  ...                                               │
+│                ]                                                   │
+│                Unique types: 47                                     │
+│                                                                     │
+│         B. Relation Type Embedding                                  │
+│            └─> Embed relation types (BGE-M3)                       │
+│                UnifiedEmbeddingService.embed_batch([                │
+│                  "USES",                                            │
+│                  "uses",                                            │
+│                  "RELATED_TO",                                      │
+│                  ...                                               │
+│                ])                                                   │
+│                Response: [0.234, -0.567, ...] per type              │
+│                Latency: 200ms                                       │
+│                                                                     │
+│         C. Hierarchical Clustering (0.88 threshold)                 │
+│            └─> Group similar relation types                        │
+│                Algorithm: Hierarchical clustering with linkage      │
+│                Clusters: [                                         │
+│                  {                                                 │
+│                    "canonical": "USES",                             │
+│                    "variants": ["uses", "USES"],                    │
+│                    "similarities": [0.95, 0.99]  # >= 0.88          │
+│                  },                                                │
+│                  {                                                 │
+│                    "canonical": "RELATED_TO",                       │
+│                    "variants": ["related-to", "RELATES_TO"],        │
+│                    "similarities": [0.91, 0.92]  # >= 0.88          │
+│                  },                                                │
+│                  ...                                               │
+│                ]                                                   │
+│                Type synonyms Found: 12                              │
+│                                                                     │
+│         D. Relation Type Synonym Mapping                            │
+│            └─> Create type_synonym_map                              │
+│                {                                                   │
+│                  "uses": "USES",                                     │
+│                  "USES": "USES",                                     │
+│                  "related-to": "RELATED_TO",                        │
+│                  "RELATES_TO": "RELATED_TO",                        │
+│                  ...                                               │
+│                }                                                   │
+│                Store in Redis (Sprint 49.8):                        │
+│                HSET graph:relation-synonyms "uses" "USES"           │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "relation_deduplication",                        │
+│           "type_synonyms_found": 12,                                │
+│           "clustering_threshold": 0.88                              │
+│         }                                                          │
+│                                                                     │
+│  5. Phase 4: Relation Normalization (Sprint 49.3)                   │
+│     └─> Apply dedup maps to normalize graph                        │
+│                                                                     │
+│         A. Entity Name Remapping                                    │
+│            └─> For each relation:                                  │
+│                OLD: (Transformers)-[USES]->(attention head)         │
+│                MAP: Transformers → Transformer                      │
+│                     attention head → Attention Mechanism            │
+│                NEW: (Transformer)-[USES]->(Attention Mechanism)     │
+│                                                                     │
+│         B. Relation Type Normalization                              │
+│            └─> For each relation:                                  │
+│                OLD: (source)-[uses]->(target)                       │
+│                MAP: uses → USES                                     │
+│                NEW: (source)-[USES]->(target)                       │
+│                                                                     │
+│         C. Symmetric Relation Handling                              │
+│            └─> Detect bidirectional relations:                     │
+│                MATCH (e1)-[r1:RELATES_TO]->(e2),                   │
+│                       (e2)-[r2:RELATES_TO]->(e1)                   │
+│                Decision: Keep only one direction (e1→e2)            │
+│                Merge weights: weight = (r1.weight + r2.weight)/2   │
+│                                                                     │
+│         D. Final Deduplication                                      │
+│            └─> GROUP BY (source_entity, target_entity, type)        │
+│                For duplicates:                                      │
+│                  OLD: 2x (Transformer)-[USES]→(Attention)           │
+│                       with weights [0.9, 0.85]                      │
+│                  NEW: 1x (Transformer)-[USES]→(Attention)           │
+│                       with weight = max(0.9, 0.85) = 0.9            │
+│                Relations Merged: 156                                 │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "relation_normalization",                        │
+│           "entities_remapped": 234,                                 │
+│           "relation_types_normalized": 47,                          │
+│           "symmetric_relations_resolved": 45,                       │
+│           "relations_merged": 156                                   │
+│         }                                                          │
+│                                                                     │
+│  6. Phase 5: Neo4j Updates (SSE Event)                              │
+│     └─> Apply normalized data to Neo4j                             │
+│                                                                     │
+│         A. Merge Duplicate Entities                                 │
+│            └─> For each duplicate cluster:                         │
+│                Neo4j Cypher:                                        │
+│                MATCH (canonical:Entity {name: "Transformer"})       │
+│                MATCH (dup:Entity {name: "Transformers"})            │
+│                SET canonical.aliases = ['Transformers']             │
+│                MATCH (dup)-[r]->(target)                            │
+│                CREATE (canonical)-[COPY OF r]-(target)              │
+│                SET canonical.confidence = max(...)                  │
+│                DELETE dup                                           │
+│                Entities Deleted: 234                                │
+│                Entities Updated: 1,353                              │
+│                                                                     │
+│         B. Normalize Relations                                      │
+│            └─> Delete old relations, create normalized ones         │
+│                Relations Deleted: 2,445                             │
+│                Relations Created: 2,289 (merged + normalized)       │
+│                Net Reduction: 156 relations                         │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "in_progress",                                  │
+│           "phase": "neo4j_update",                                  │
+│           "entities_deleted": 234,                                  │
+│           "entities_updated": 1353,                                 │
+│           "relations_deleted": 2445,                                │
+│           "relations_created": 2289                                 │
+│         }                                                          │
+│                                                                     │
+│  7. Phase 6: Index Consistency Validation (Sprint 49.6)             │
+│     └─> Verify graph consistency after dedup                       │
+│                                                                     │
+│         A. Cross-Reference Check                                    │
+│            └─> Verify all Neo4j entities are in Qdrant             │
+│                For each entity:                                     │
+│                  1. Get entity name                                 │
+│                  2. Embed name (BGE-M3)                             │
+│                  3. Search Qdrant for documents mentioning entity    │
+│                  4. Verify MENTIONED_IN relation exists             │
+│                                                                     │
+│         B. Orphan Detection                                         │
+│            └─> Find entities without source chunks                 │
+│                Neo4j Query:                                         │
+│                MATCH (e:Entity)                                     │
+│                WHERE NOT (e)-[:MENTIONED_IN]->()                    │
+│                RETURN e                                             │
+│                Orphaned Entities: 0                                  │
+│                                                                     │
+│         C. Validation Report                                        │
+│            └─> Generate consistency report:                         │
+│                {                                                   │
+│                  "consistency_score": 0.98,  # 98% consistent       │
+│                  "total_entities": 1353,                            │
+│                  "total_relations": 2289,                           │
+│                  "orphaned_entities": 0,                            │
+│                  "orphaned_chunks": 0,                              │
+│                  "status": "healthy"                                │
+│                }                                                   │
+│                                                                     │
+│         SSE: {                                                      │
+│           "status": "complete",                                     │
+│           "phase": "validation",                                    │
+│           "consistency_score": 0.98,                                │
+│           "summary": {                                              │
+│             "entities_before": 1587,                                │
+│             "entities_after": 1353,                                 │
+│             "entities_deduplicated": 234,                           │
+│             "relations_before": 2445,                               │
+│             "relations_after": 2289,                                │
+│             "relations_merged": 156,                                │
+│             "total_time_seconds": 45,                               │
+│             "dedup_status": "success"                               │
+│           }                                                        │
+│         }                                                          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Total Latency: ~45s
+- Data Collection: 2s (Neo4j query)
+- Entity Embedding: 3s (1,587 entities)
+- Similarity Computation: 2s (vectorized)
+- Duplicate Detection: 1s (clustering)
+- Relation Embedding: 200ms (47 types)
+- Clustering: 1s (hierarchical)
+- Neo4j Updates: 20s (transaction)
+- Validation: 15s (consistency check)
+
+Key Improvements (Sprint 49):
+- Entity deduplication via semantic embeddings (0.85 threshold)
+- Relation type normalization (0.88 clustering threshold)
+- Orphan detection and validation reporting
+- Redis synonym overrides for manual curation (Sprint 49.8)
+- Atomic transaction rollback on validation failure
+```
+
+---
+
+### Scenario 7: Index Consistency Validation (Sprint 49.6)
+
+**Admin Action:** Validate cross-index consistency between Qdrant, Neo4j, and source chunks
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Flow: Index Consistency Validation                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Admin Request                                                   │
+│     └─> GET /api/v1/admin/validate-consistency                     │
+│         Query Params: ?full=true (detailed check) | false (summary) │
+│                                                                     │
+│  2. Data Collection Phase                                           │
+│     └─> Load all indexes in parallel                               │
+│                                                                     │
+│         A. Qdrant Collection Query                                  │
+│            └─> QdrantClient.scroll(                                │
+│                  collection="aegis-rag-documents",                  │
+│                  limit=10000                                        │
+│                )                                                   │
+│                Response: [                                         │
+│                  {                                                 │
+│                    "id": "chunk_abc123",                            │
+│                    "vector": [...],                                 │
+│                    "payload": {                                    │
+│                      "text": "...",                                 │
+│                      "source": "doc.pdf",                           │
+│                      "chunk_id": "chunk_abc123"                     │
+│                    }                                               │
+│                  },                                                │
+│                  ...                                               │
+│                ]                                                   │
+│                Total Chunks: 10,234                                 │
+│                                                                     │
+│         B. Neo4j Entity Query                                       │
+│            └─> MATCH (e:Entity) RETURN e                           │
+│                Response: 1,353 entities                             │
+│                MATCH (e)-[:MENTIONED_IN]->(c:Chunk)                │
+│                Response: 2,156 (entity→chunk) links                │
+│                                                                     │
+│         C. Neo4j Relation Query                                     │
+│            └─> MATCH (e1)-[r:RELATES_TO]->(e2)                    │
+│                RETURN r                                             │
+│                Response: 2,289 relations                            │
+│                                                                     │
+│  3. Validation Phase 1: Chunk Presence                              │
+│     └─> Verify all Neo4j chunks exist in Qdrant                    │
+│                                                                     │
+│         For each chunk in Neo4j:                                    │
+│           1. Check chunk exists in Qdrant (by ID)                   │
+│           2. Verify payload consistency (text, source)              │
+│           3. Count mismatches                                       │
+│                                                                     │
+│         Results: {                                                 │
+│           "missing_in_qdrant": 0,  # OK                             │
+│           "payload_mismatches": 0   # OK                            │
+│         }                                                          │
+│                                                                     │
+│  4. Validation Phase 2: Entity → Chunk Mapping                      │
+│     └─> Verify source_chunk_id references (Sprint 49.5)            │
+│                                                                     │
+│         For each entity:                                            │
+│           1. Check MENTIONED_IN relation exists                     │
+│           2. Verify target chunk exists in Qdrant                   │
+│           3. Verify entity text is in chunk text                    │
+│                                                                     │
+│         Results: {                                                 │
+│           "orphaned_entities": 0,  # Entities with no chunks        │
+│           "invalid_mentions": 0    # Chunk references missing       │
+│         }                                                          │
+│                                                                     │
+│  5. Validation Phase 3: Relation Integrity                          │
+│     └─> Verify RELATES_TO relations are valid                      │
+│                                                                     │
+│         For each relation (e1→e2):                                  │
+│           1. Verify both entities exist in Neo4j                    │
+│           2. Verify both entities have MENTIONED_IN chunks          │
+│           3. Verify relation type is valid                          │
+│           4. Verify weight in [0, 1]                                │
+│                                                                     │
+│         Results: {                                                 │
+│           "dangling_relations": 0,  # Relations with missing nodes  │
+│           "invalid_weights": 0,     # Out of range weights          │
+│           "invalid_types": 0        # Unknown relation types        │
+│         }                                                          │
+│                                                                     │
+│  6. Validation Report                                               │
+│     └─> Generate detailed report                                   │
+│                                                                     │
+│         Response: {                                                │
+│           "timestamp": "2025-12-16T10:30:00Z",                     │
+│           "validation_status": "healthy",                           │
+│           "consistency_score": 0.98,                                │
+│           "summary": {                                              │
+│             "total_chunks": 10234,                                  │
+│             "total_entities": 1353,                                 │
+│             "total_relations": 2289                                 │
+│           },                                                       │
+│           "cross_reference_check": {                                │
+│             "missing_in_qdrant": 0,                                 │
+│             "payload_mismatches": 0,                                │
+│             "status": "OK"                                          │
+│           },                                                       │
+│           "orphaned_check": {                                       │
+│             "orphaned_entities": 0,                                 │
+│             "orphaned_chunks": 0,                                   │
+│             "status": "OK"                                          │
+│           },                                                       │
+│           "relation_integrity": {                                   │
+│             "dangling_relations": 0,                                │
+│             "invalid_weights": 0,                                   │
+│             "invalid_types": 0,                                     │
+│             "status": "OK"                                          │
+│           },                                                       │
+│           "recommendations": []                                     │
+│         }                                                          │
+│                                                                     │
+│  7. Admin Dashboard Display                                         │
+│     └─> Show validation results in Admin UI                        │
+│         - Consistency score: 0.98 (green indicator)                 │
+│         - All checks: PASS                                          │
+│         - Last validated: 2025-12-16 10:30 UTC                     │
+│         - Action buttons:                                           │
+│           * "Run Full Deduplication" (if score < 0.95)              │
+│           * "Export Report" (JSON/CSV)                              │
+│           * "Run Again" (manual trigger)                            │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Total Latency: ~15s
+- Data Collection: 3s (parallel queries)
+- Chunk Presence: 4s (10K+ checks)
+- Entity Mapping: 5s (1.3K+ checks)
+- Relation Integrity: 2s (2.3K+ checks)
+- Report Generation: 1s (aggregation)
+
+Key Features (Sprint 49.6):
+- Cross-reference consistency verification
+- Orphaned entity/chunk detection
+- Automatic consistency scoring (0-1)
+- Detailed diagnostic report
+- Actionable recommendations
+```
+
+---
+
+### Scenario 8: Dynamic LLM & Relationship Type Discovery (Sprint 49.1-49.2)
+
+**Admin Action:** Configure LLM models and graph relationship types dynamically without code changes
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ Flow: Dynamic Discovery (LLM Models + Relationship Types)           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Dynamic LLM Model Discovery (Sprint 49.1)                       │
+│     └─> GET /api/v1/admin/ollama/models                            │
+│                                                                     │
+│         A. Query Ollama Available Models                            │
+│            └─> OllamaClient.list_models()                          │
+│                HTTP GET http://localhost:11434/api/tags            │
+│                Response: {                                         │
+│                  "models": [                                       │
+│                    {                                               │
+│                      "name": "llama3.2:8b",                         │
+│                      "modified_at": "2025-12-15T...",              │
+│                      "size": 4800000000,                            │
+│                      "digest": "sha256:abc123..."                   │
+│                    },                                              │
+│                    {                                               │
+│                      "name": "bge-m3",  # Embedding model           │
+│                      "modified_at": "2025-12-01T...",              │
+│                      "size": 1600000000                             │
+│                    },                                              │
+│                    {                                               │
+│                      "name": "nemotron-mini",  # NEW               │
+│                      "modified_at": "2025-12-14T...",              │
+│                      "size": 900000000                              │
+│                    },                                              │
+│                    ...                                             │
+│                  ]                                                 │
+│                }                                                   │
+│                                                                     │
+│         B. Filter Generation Models (exclude embeddings)            │
+│            └─> Filter by:                                          │
+│                - Exclude: bge-m3 (embedding only)                   │
+│                - Exclude: ms-marco-minilm (reranker only)           │
+│                - Include: Anything else (generation models)         │
+│                                                                     │
+│                Filtered Models: [                                   │
+│                  "llama3.2:8b",       # Current default             │
+│                  "nemotron-mini",     # NEW (Sprint 49)             │
+│                  "phi3",                                            │
+│                  "mistral:7b",                                      │
+│                  ...                                               │
+│                ]                                                   │
+│                                                                     │
+│         C. Response to Frontend                                     │
+│            └─> {                                                   │
+│                  "generation_models": [                             │
+│                    {                                               │
+│                      "name": "llama3.2:8b",                         │
+│                      "size_gb": 4.8,                                │
+│                      "type": "generation",                          │
+│                      "is_current": true  # Currently selected       │
+│                    },                                              │
+│                    {                                               │
+│                      "name": "nemotron-mini",                       │
+│                      "size_gb": 0.9,                                │
+│                      "type": "generation",                          │
+│                      "is_current": false                            │
+│                    },                                              │
+│                    ...                                             │
+│                  ],                                                │
+│                  "embedding_models": [                              │
+│                    {                                               │
+│                      "name": "bge-m3",                              │
+│                      "size_gb": 1.6,                                │
+│                      "type": "embedding",                           │
+│                      "is_current": true                             │
+│                    }                                               │
+│                  ]                                                 │
+│                }                                                   │
+│                                                                     │
+│  2. Dynamic Relationship Type Discovery (Sprint 49.2)               │
+│     └─> GET /api/v1/admin/graph/relationship-types                 │
+│                                                                     │
+│         A. Query Neo4j for All Relationship Types                   │
+│            └─> CALL db.relationshipTypes()                         │
+│                Response: [                                         │
+│                  "RELATES_TO",   # Semantic relationships            │
+│                  "MENTIONED_IN", # Chunk references                 │
+│                  "HAS_SECTION",  # Document structure               │
+│                  "USES",         # Entity relationships              │
+│                  "COMPONENT_OF",                                     │
+│                  "IMPLEMENTS",                                       │
+│                  ...                                               │
+│                ]                                                   │
+│                Total Types: 47                                      │
+│                                                                     │
+│         B. Compute Relationship Statistics                          │
+│            └─> For each relationship type:                         │
+│                Neo4j Query:                                         │
+│                MATCH ()-[r:RELATES_TO]->()                         │
+│                RETURN count(r) as count,                            │
+│                       min(r.weight) as min_weight,                  │
+│                       max(r.weight) as max_weight,                  │
+│                       avg(r.weight) as avg_weight                   │
+│                                                                     │
+│                Results: {                                          │
+│                  "RELATES_TO": {                                    │
+│                    "count": 2289,                                   │
+│                    "min_weight": 0.65,                              │
+│                    "max_weight": 0.99,                              │
+│                    "avg_weight": 0.84                               │
+│                  },                                                │
+│                  "MENTIONED_IN": {                                  │
+│                    "count": 3421,                                   │
+│                    "min_weight": 1,                                 │
+│                    "max_weight": 1,                                 │
+│                    "avg_weight": 1.0                                │
+│                  },                                                │
+│                  ...                                               │
+│                }                                                   │
+│                                                                     │
+│         C. Response to Frontend                                     │
+│            └─> {                                                   │
+│                  "relationship_types": [                            │
+│                    {                                               │
+│                      "name": "RELATES_TO",                          │
+│                      "count": 2289,                                 │
+│                      "weight_range": [0.65, 0.99],                  │
+│                      "avg_weight": 0.84,                            │
+│                      "color": "#3B82F6",  # Blue (hardcoded)         │
+│                      "category": "semantic"                         │
+│                    },                                              │
+│                    {                                               │
+│                      "name": "MENTIONED_IN",                        │
+│                      "count": 3421,                                 │
+│                      "weight_range": [1.0, 1.0],                    │
+│                      "avg_weight": 1.0,                             │
+│                      "color": "#9CA3AF",  # Gray                     │
+│                      "category": "mention"                          │
+│                    },                                              │
+│                    {                                               │
+│                      "name": "HAS_SECTION",                         │
+│                      "count": 934,                                  │
+│                      "weight_range": [0.9, 1.0],                    │
+│                      "avg_weight": 0.98,                            │
+│                      "color": "#10B981",  # Green                    │
+│                      "category": "structure"                        │
+│                    },                                              │
+│                    ...                                             │
+│                  ]                                                 │
+│                }                                                   │
+│                                                                     │
+│  3. Admin UI Update                                                 │
+│     └─> Populate dropdowns/selects dynamically                     │
+│                                                                     │
+│         A. LLM Model Selector (Settings Page)                       │
+│            └─> <select>                                            │
+│                  <option value="llama3.2:8b">                       │
+│                    llama3.2:8b (4.8 GB) - Current                   │
+│                  </option>                                         │
+│                  <option value="nemotron-mini">                     │
+│                    nemotron-mini (0.9 GB)                           │
+│                  </option>                                         │
+│                  ...                                               │
+│                </select>                                           │
+│                                                                     │
+│         B. Relationship Type Multi-Select (Graph Filter)            │
+│            └─> <MultiSelect>                                       │
+│                  checked: ["RELATES_TO", "MENTIONED_IN", ...]       │
+│                  options: [                                        │
+│                    "RELATES_TO" (2289 relations),                   │
+│                    "MENTIONED_IN" (3421 relations),                 │
+│                    "HAS_SECTION" (934 relations),                   │
+│                    ...                                             │
+│                  ]                                                 │
+│                </MultiSelect>                                      │
+│                                                                     │
+│  4. User Interaction                                                │
+│     └─> Admin changes LLM model in dropdown                        │
+│         POST /api/v1/admin/settings/llm-model                      │
+│         Body: {"model": "nemotron-mini"}                            │
+│                                                                     │
+│         Response: {"status": "success", "model": "nemotron-mini"}   │
+│         Config saved to environment/database                        │
+│         Next API call uses nemotron-mini                            │
+│                                                                     │
+│  5. Benefits of Dynamic Discovery                                   │
+│     ✓ No code changes needed to add/remove LLM models               │
+│     ✓ Relationship types discovered automatically from graph        │
+│     ✓ Users see accurate statistics (count, weights)                │
+│     ✓ UI stays current with Neo4j schema evolution                  │
+│     ✓ New models available immediately after Ollama pull            │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+Total Latency: ~500ms
+- Ollama Query: 150ms
+- Neo4j Relationship Query: 300ms
+- Filtering & Aggregation: 50ms
+
+Key Features (Sprint 49.1-49.2):
+- Zero hardcoded LLM model list
+- Zero hardcoded relationship types
+- Real-time discovery from running services
+- Automatic filtering of embedding models
+- Statistical metadata for each type
+```
+
+---
+
 ## 🔧 COMPONENT DETAILS
 
 ### FastAPI Endpoints
@@ -883,6 +1532,10 @@ Key Improvements (Sprint 16):
 | `/api/v1/graph/export/json` | GET | Export graph as JSON | - | `GraphJSON` |
 | `/api/v1/graph/export/graphml` | GET | Export as GraphML | - | `GraphML` |
 | `/stats` | GET | System statistics | - | `SystemStats` |
+| `/api/v1/admin/deduplicate-graph` | POST | Deduplicate entities + relations (Sprint 49) | `{"confirm": true}` | SSE stream with progress |
+| `/api/v1/admin/validate-consistency` | GET | Validate cross-index consistency (Sprint 49.6) | `?full=true` | `ConsistencyReport` |
+| `/api/v1/admin/ollama/models` | GET | List available LLM models (Sprint 49.1) | - | `{"generation_models": [...], "embedding_models": [...]}` |
+| `/api/v1/admin/graph/relationship-types` | GET | List all relationship types with stats (Sprint 49.2) | - | `{"relationship_types": [...]}` |
 
 ### LangGraph State Schema
 
@@ -988,6 +1641,153 @@ vector_size = 1024  # bge-m3 (Sprint 16)
     }
 }
 ```
+
+### Sprint 49 Component Details
+
+#### EntityDeduplicator (Sprint 49.9)
+
+**Purpose:** Identify and merge duplicate entities based on semantic similarity
+
+**Interface:**
+```python
+class EntityDeduplicator:
+    async def deduplicate(
+        self,
+        entities: List[Entity],
+        similarity_threshold: float = 0.85
+    ) -> DeduplicationResult:
+        """
+        Deduplicate entities using BGE-M3 embeddings.
+
+        Returns: {
+            "canonical_map": Dict[str, str],  # variant → canonical
+            "duplicates_found": int,
+            "merged_entities": int
+        }
+        """
+```
+
+**Data Flow:**
+1. Load all entities from Neo4j
+2. Batch embed entity names using BGE-M3 (1024-dim)
+3. Compute pairwise cosine similarities (vectorized)
+4. Cluster entities with similarity >= 0.85
+5. Select canonical entity (most frequent/recent)
+6. Return canonical mapping for Phase 4
+
+---
+
+#### SemanticRelationDeduplicator (Sprint 49.7)
+
+**Purpose:** Identify and normalize duplicate relationship types
+
+**Interface:**
+```python
+class SemanticRelationDeduplicator:
+    async def deduplicate_types(
+        self,
+        relation_types: List[str],
+        clustering_threshold: float = 0.88
+    ) -> TypeDeduplicationResult:
+        """
+        Deduplicate relation types using hierarchical clustering.
+
+        Returns: {
+            "type_synonym_map": Dict[str, str],  # variant → canonical
+            "synonyms_found": int,
+            "clusters": List[List[str]]
+        }
+        """
+```
+
+**Data Flow:**
+1. Extract all unique relation types from Neo4j
+2. Batch embed relation type names using BGE-M3
+3. Perform hierarchical clustering (Ward linkage)
+4. Group types with similarity >= 0.88
+5. Store mapping in Redis for (Sprint 49.8) overrides
+6. Return canonical mapping for Phase 4
+
+---
+
+#### RelationNormalizer (Sprint 49.3)
+
+**Purpose:** Apply deduplication maps to normalize graph
+
+**Interface:**
+```python
+class RelationNormalizer:
+    async def normalize_relations(
+        self,
+        entity_map: Dict[str, str],  # variant → canonical
+        type_map: Dict[str, str],    # variant_type → canonical_type
+        handle_symmetry: bool = True
+    ) -> NormalizationResult:
+        """
+        Normalize relations using canonical entity and type mappings.
+
+        Returns: {
+            "entities_remapped": int,
+            "types_normalized": int,
+            "symmetric_resolved": int,
+            "relations_merged": int
+        }
+        """
+```
+
+**Data Flow:**
+1. For each relation in Neo4j:
+   - Remap source entity name using entity_map
+   - Remap target entity name using entity_map
+   - Normalize relation type using type_map
+2. Detect bidirectional relations (e1→e2 and e2→e1)
+3. Keep only one direction, merge weights
+4. Group by (source, target, type), deduplicate
+5. Execute atomic transaction to update Neo4j
+
+---
+
+#### IndexConsistencyValidator (Sprint 49.6)
+
+**Purpose:** Validate cross-index consistency between Qdrant, Neo4j, and chunks
+
+**Interface:**
+```python
+class IndexConsistencyValidator:
+    async def validate_consistency(
+        self,
+        full_check: bool = False
+    ) -> ConsistencyReport:
+        """
+        Validate index consistency across all stores.
+
+        Returns: {
+            "consistency_score": float,  # 0-1
+            "total_chunks": int,
+            "total_entities": int,
+            "total_relations": int,
+            "issues": {
+                "orphaned_entities": List[str],
+                "orphaned_chunks": List[str],
+                "dangling_relations": List[Tuple[str, str, str]],
+                "missing_in_qdrant": List[str]
+            },
+            "status": "healthy" | "warning" | "error"
+        }
+        """
+```
+
+**Data Flow:**
+1. Load all chunks from Qdrant (chunk_id, text, source)
+2. Load all entities from Neo4j (entity_id, name)
+3. Load all MENTIONED_IN links (entity→chunk)
+4. Verify chunk presence: for each entity link, check chunk exists in Qdrant
+5. Detect orphaned entities: entities with no MENTIONED_IN links
+6. Verify relation integrity: all referenced entities exist, weights valid
+7. Generate consistency score: (total_checks - failures) / total_checks
+8. Return detailed report with recommendations
+
+---
 
 ### Neo4j Graph Schema
 
@@ -1108,6 +1908,185 @@ vector_size = 1024  # bge-m3 (Sprint 16)
   "collections_updated": ["aegis-rag-documents", "conversation-history"]
 }
 ```
+
+---
+
+## 🎯 EMBEDDING MODEL CONSOLIDATION (Sprint 49)
+
+### Overview
+
+Sprint 49 consolidates all embedding tasks to use BGE-M3 (1024-dim), removing dependency on sentence-transformers for entity deduplication and relation type clustering.
+
+**Before Sprint 49:**
+- Query embeddings: BGE-M3 (Ollama)
+- Document chunk embeddings: BGE-M3 (Ollama)
+- Entity deduplication: sentence-transformers/all-MiniLM-L6-v2
+- Reranking: sentence-transformers/ms-marco-MiniLM (removed in Sprint 48)
+
+**After Sprint 49:**
+- Query embeddings: BGE-M3 (Ollama)
+- Document chunk embeddings: BGE-M3 (Ollama)
+- Entity deduplication: BGE-M3 (Ollama) - NEW
+- Relation type clustering: BGE-M3 (Ollama) - NEW
+
+### Unified Embedding Flow
+
+```
+┌─────────────────────────────────────────┐
+│  UnifiedEmbeddingService                │
+│  (All embedding tasks route here)       │
+├─────────────────────────────────────────┤
+│                                         │
+│  embed(text: str) → [1024d vector]     │
+│  embed_batch(texts: List[str])          │
+│                 → List[[1024d vector]]  │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ LRU Cache (SHA-256 hash key)    │   │
+│  │ - Query embedding hits          │   │
+│  │ - Entity name embedding hits    │   │
+│  │ - Relation type embedding hits  │   │
+│  └────────┬────────────────────────┘   │
+│           │ cache miss                  │
+│           ▼                             │
+│  ┌─────────────────────────────────┐   │
+│  │ Ollama API (localhost:11434)    │   │
+│  │ POST /api/embeddings            │   │
+│  │ - model: "bge-m3"               │   │
+│  │ - inputs: batch of texts        │   │
+│  │ Response: List[1024d vector]    │   │
+│  └─────────────────────────────────┘   │
+│           │                             │
+│           ▼                             │
+│  ┌─────────────────────────────────┐   │
+│  │ Cache Store                     │   │
+│  │ Redis key: embedding:{hash}     │   │
+│  │ TTL: 7 days                     │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+### Usage by Component
+
+#### 1. Query Embedding (existing)
+```
+User Query → UnifiedEmbeddingService.embed()
+  → Cache: embedding:{hash("What is RAG?")}
+  → Hit? Return cached vector
+  → Miss? Call Ollama → Cache → Return
+  → Use vector for Qdrant search
+  → Latency: 50ms (miss), 5ms (hit)
+```
+
+#### 2. Document Chunk Embedding (existing)
+```
+Document Chunk → UnifiedEmbeddingService.embed_batch()
+  → Batch of 32 chunks
+  → Call Ollama once (not 32 times)
+  → Cache each result
+  → Use vectors for Qdrant insert
+  → Latency: ~2s for 45 chunks
+```
+
+#### 3. Entity Name Embedding (NEW - Sprint 49.9)
+```
+Entity Deduplicator:
+  Load all entities: [
+    "Transformer",
+    "Transformers",
+    "TransformerModel",
+    ...
+  ]
+  │
+  ├─ Check cache for each entity name
+  ├─ Batch embed cache misses
+  ├─ Store cache hits + new embeddings
+  │
+  ▼ Embeddings: [[0.123, ...], [0.125, ...], ...]
+  │
+  ├─ Compute pairwise cosine similarities
+  ├─ Cluster at similarity >= 0.85
+  ├─ Create canonical mapping
+  │
+  ▼ Dedup results
+```
+
+#### 4. Relation Type Embedding (NEW - Sprint 49.7)
+```
+SemanticRelationDeduplicator:
+  Load all relation types: [
+    "USES",
+    "uses",
+    "RELATED_TO",
+    "related-to",
+    ...
+  ]
+  │
+  ├─ Check cache for each type
+  ├─ Batch embed cache misses
+  ├─ Store cache hits + new embeddings
+  │
+  ▼ Embeddings: [[0.234, ...], [0.235, ...], ...]
+  │
+  ├─ Perform hierarchical clustering (Ward)
+  ├─ Group at similarity >= 0.88
+  ├─ Create type synonym mapping
+  │
+  ▼ Type synonym results
+```
+
+### Performance Characteristics
+
+| Task | Items | Batch Size | Latency | Bottleneck |
+|------|-------|-----------|---------|-----------|
+| Query Embedding | 1 | 1 | 50ms | Ollama |
+| Chunk Embedding | 10K | 32 | 2s | Ollama (10K * 25ms) |
+| Entity Embedding | 1.5K | 32 | 3s | Ollama (1.5K * 2ms) |
+| Entity Similarity | 1.5K | N/A | 2s | Vectorized cosine |
+| Type Embedding | 47 | 32 | 200ms | Ollama |
+| Type Clustering | 47 | N/A | 1s | Hierarchical clustering |
+
+### Cache Hit/Miss Rates
+
+**Query Embeddings:**
+- Cache hit rate: ~60% (same questions asked multiple times)
+- Miss rate: ~40% (new queries)
+- Impact: 60% of queries save 45ms
+
+**Entity Name Embeddings:**
+- Cache hit rate: ~20% (incremental ingestion)
+- Miss rate: ~80% (new entities from documents)
+- Impact: Mostly miss, but amortized cost via batch embedding
+
+**Relation Type Embeddings:**
+- Cache hit rate: ~95% (stable set of types)
+- Miss rate: ~5% (occasional new relation types from LLM)
+- Impact: After first dedup, subsequent runs cache-hit for all types
+
+### Removed Dependencies
+
+**sentence-transformers/all-MiniLM-L6-v2**
+- Used for: Entity deduplication (Sprint 48)
+- Size: 80MB
+- Latency: 30ms per entity
+- Reason for removal: BGE-M3 is superior (multilingual, 1024-dim)
+- Migration: Replace with BGE-M3 batch embedding in EntityDeduplicator
+
+**sentence-transformers/ms-marco-MiniLM**
+- Used for: Reranking (Sprint 48)
+- Size: 90MB
+- Status: Already removed in Sprint 48
+- Reason: LLM-based generation provides better quality
+
+### Benefits of Consolidation
+
+1. **Single embedding model:** BGE-M3 (multilingual, 1024-dim, cross-encoder)
+2. **Reduced memory footprint:** No need to load multiple transformer models
+3. **Consistent embeddings:** All text embedded the same way (semantic consistency)
+4. **Better performance:** BGE-M3 > sentence-transformers for multilingual + dense retrieval
+5. **Simpler operations:** Manage one model instead of multiple
+6. **Cost reduction:** Single Ollama model loaded, not multiple models
 
 ---
 
@@ -1268,7 +2247,7 @@ frontend/src/
 
 ---
 
-**Last Updated:** 2025-12-01 (Sprint 34 - Knowledge Graph Enhancement)
+**Last Updated:** 2025-12-16 (Sprint 49 - Knowledge Graph Deduplication)
 **Status:** Active Development
 
 **Architecture Changes Since Sprint 16:**
@@ -1277,15 +2256,21 @@ frontend/src/
 - **Sprint 25:** Complete migration to AegisLLMProxy (Feature 25.10)
 - **Sprint 28:** Frontend UX enhancements (Perplexity-style interface)
 - **Sprint 34:** Knowledge graph enhancement with RELATES_TO relationships and edge visualization
+- **Sprint 49:** Knowledge graph deduplication (entity + relation dedup), embedding consolidation, index validation
 
-**Current Architecture (Sprint 34):**
-- **Embeddings:** BGE-M3 (1024-dim, Sprint 16) - Local & Cost-Free
+**Current Architecture (Sprint 49):**
+- **Embeddings:** BGE-M3 (1024-dim, Sprint 16) - Unified for all embedding tasks (query, chunks, dedup, relations)
 - **LLM Routing:** AegisLLMProxy (Local Ollama → Alibaba Cloud → OpenAI)
 - **Search Strategy:** Hybrid (Vector BGE-M3 + BM25 Keyword + RRF Fusion)
-- **Graph Relationships:** RELATES_TO (semantic), MENTIONED_IN (chunk refs), HAS_SECTION (document structure)
+- **Graph Relationships:** RELATES_TO (semantic), MENTIONED_IN (chunk refs + source_chunk_id), HAS_SECTION (document structure)
+- **Entity Deduplication:** BGE-M3 embeddings + cosine similarity (0.85 threshold) - Sprint 49.9
+- **Relation Deduplication:** Hierarchical clustering (0.88 threshold) + type synonym mapping - Sprint 49.7
+- **Relation Normalization:** Entity remapping + symmetric handling + dedup by (source, target, type)
+- **Index Validation:** Cross-reference consistency check + orphaned entity/chunk detection - Sprint 49.6
 - **Edge Visualization:** Color-coded by type (Blue: RELATES_TO, Gray: MENTIONED_IN, Green: HAS_SECTION)
 - **Ingestion:** LangGraph pipeline (Docling primary, LlamaIndex fallback)
 - **Document Formats:** 30+ formats (FormatRouter Sprint 22.3)
 - **Relation Extraction:** Pure LLM via AegisLLMProxy (Alibaba Cloud Qwen3-32B)
+- **Dynamic Discovery:** LLM model list + relationship types from Neo4j (Sprint 49.1-49.2)
 
-**Next:** Sprint 29 (Graph Visualization Frontend - 36 SP, 7-9 days)
+**Next:** Sprint 50 (Continued graph optimization and scalability improvements)

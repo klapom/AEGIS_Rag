@@ -1,11 +1,64 @@
 # TD-048: Graph Extraction with Unified Chunks (Sprint 16)
 
-**Status:** OPEN
+**Status:** ✅ RESOLVED
 **Priority:** MEDIUM
 **Severity:** Architectural Inconsistency
 **Original Sprint:** Sprint 16 (Feature 16.5)
+**Resolution Sprint:** Sprint 49 (Features 49.5-49.6)
 **Story Points:** 13 SP
 **Created:** 2025-12-04
+**Resolved:** 2025-12-16
+
+---
+
+## ✅ Resolution Summary (Sprint 49)
+
+This technical debt was fully resolved in **Sprint 49** through two key features:
+
+### Feature 49.5: Add source_chunk_id to Relationships
+- **Implementation:** Migration script `scripts/migrations/migration_add_source_chunk_id.py`
+- **Changes:** Added `source_chunk_id` property to all MENTIONED_IN and RELATES_TO relationships
+- **Impact:** Full provenance tracking from entities back to source chunks
+- **Batch Migration:** Processes relationships in batches of 1000 with progress logging
+- **Status:** ✅ Complete
+
+### Feature 49.6: Index Consistency Validation
+- **Implementation:**
+  - `src/components/validation/index_consistency.py` (600+ lines)
+  - Admin API endpoint: `GET /api/v1/admin/validation/index-consistency`
+- **Features:**
+  - Cross-reference validation between Qdrant, Neo4j, and BM25
+  - Orphaned entity detection (entities without MENTIONED_IN relationships)
+  - Orphaned chunk detection (chunks with no extracted entities)
+  - Consistency score calculation (0.0 to 1.0)
+- **Status:** ✅ Complete
+
+### Acceptance Criteria Status
+
+- ✅ `MENTIONED_IN` relationships include `source_chunk_id` property
+- ✅ Entity extraction tracks chunk provenance
+- ✅ Validation endpoint confirms index consistency
+- ✅ Consistency score calculated across all indexes
+- ✅ Orphaned entities/chunks detected and reported
+- ✅ Migration script for backfilling existing relationships
+
+### Files Created/Modified
+
+**Created:**
+- `scripts/migrations/migration_add_source_chunk_id.py` (400+ lines)
+- `src/components/validation/index_consistency.py` (600+ lines)
+- `src/components/validation/__init__.py`
+- `src/api/v1/admin.py` (validation endpoint added)
+
+**Modified:**
+- Neo4j schema now includes source_chunk_id on relationships
+- lightrag_wrapper.py already had source_chunk_id implementation (lines 1119-1121)
+
+### Related Documentation
+
+- [SPRINT_49_PLAN.md](../sprints/SPRINT_49_PLAN.md) - Full feature specifications
+- [DECISION_LOG.md](../DECISION_LOG.md) - ADR-041: Provenance Tracking via source_chunk_id
+- [ARCHITECTURE_EVOLUTION.md](../ARCHITECTURE_EVOLUTION.md) - Sprint 49 summary
 
 ---
 

@@ -1,9 +1,9 @@
 # Technical Debt Index
 
 **Last Updated:** 2025-12-16
-**Total Open Items:** 14
-**Total Story Points:** ~230 SP
-**Archived Items:** [6 items](archive/ARCHIVE_INDEX.md)
+**Total Open Items:** 12
+**Total Story Points:** ~212 SP
+**Archived Items:** [8 items](archive/ARCHIVE_INDEX.md)
 
 ---
 
@@ -13,23 +13,25 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~53 SP       |
-| MEDIUM   | 8     | ~140 SP      |
+| MEDIUM   | 6     | ~122 SP      |
 | LOW      | 3     | ~37 SP       |
 
 ---
 
-## Archived Items (Sprint 47)
+## Archived Items
 
 Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Resolution Sprint |
 |-----|-------|-------------------|
 | TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
+| TD-048 | Graph Extraction with Unified Chunks | **Sprint 49** |
 | TD-050 | Duplicate Answer Streaming | Sprint 47 |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
 | TD-060 | Unified Chunk IDs | Sprint 42 |
 | TD-061 | Ollama GPU Docker Config | Sprint 42 |
 | TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
+| TD-063 | Relation Deduplication | **Sprint 49** |
 
 ---
 
@@ -49,14 +51,12 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
 | [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | PARTIAL | 13 | Done (Sprint 34) |
-| [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md) | Graph Extraction with Unified Chunks | OPEN | 13 | Sprint 52 |
 | [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 52+ |
 | [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 52 |
 | [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
 | [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50 |
 | [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | PLANNED | 13 | Sprint 52+ |
 | [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | OPEN | 8 | **Sprint 48** |
-| [TD-063](TD-063_RELATION_DEDUPLICATION.md) | Relation Deduplication | PLANNED | 5 | Sprint 52+ |
 
 ### LOW Priority
 
@@ -103,7 +103,6 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - TD-047: Critical Path E2E Tests (40 SP) - **Dedicated sprint**
 
 ### Sprint 52+
-- TD-048: Graph Extraction Unified (13 SP)
 - TD-051: Memory Consolidation (21 SP)
 - TD-049: User Profiling (21 SP)
 - TD-052: User Document Upload (13 SP)
@@ -111,7 +110,6 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - TD-055: MCP Client (21 SP)
 - TD-056: Project Collaboration (34 SP)
 - TD-058: Community Summaries (13 SP)
-- TD-063: Relation Deduplication (5 SP)
 - TD-067: Dataset Annotation Tool (21 SP)
 
 ---
@@ -120,7 +118,6 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ### Architecture
 - [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service
-- [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md): Graph Extraction with Unified Chunks
 - [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline
 
 ### Testing
@@ -131,7 +128,6 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration
 - [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction
 - [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md): Community Summary Generation
-- [TD-063](TD-063_RELATION_DEDUPLICATION.md): Relation Deduplication
 
 ### Features
 - [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md): Follow-up Questions
@@ -149,15 +145,17 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ```
 TD-044 (Docling Interface)
-    └─→ TD-054 (Unified Chunking) ─→ TD-048 (Graph Extraction)
+    └─→ TD-054 (Unified Chunking) ─→ TD-048 ✓ DONE (Sprint 49)
 
 TD-043 (Follow-up Questions)
     └─→ TD-049 (User Profiling)
 
 TD-045 (entity_id Migration)
-    └─→ TD-046 (RELATES_TO) ✓ DONE
+    └─→ TD-046 (RELATES_TO) ✓ DONE (Sprint 34)
 
-TD-059 (Reranking) → Sprint 48
+TD-048 (Graph Extraction) ✓ DONE (Sprint 49)
+TD-059 (Reranking) ✓ DONE (Sprint 48)
+TD-063 (Relation Dedup) ✓ DONE (Sprint 49)
 ```
 
 ---
@@ -165,9 +163,9 @@ TD-059 (Reranking) → Sprint 48
 ## Metrics
 
 ### Velocity Required (to clear backlog)
-- Total remaining: ~230 SP
-- At 15 SP/sprint: 15 sprints
-- At 30 SP/sprint (parallel): 8 sprints
+- Total remaining: ~212 SP
+- At 15 SP/sprint: 14 sprints
+- At 30 SP/sprint (parallel): 7 sprints
 
 ### Aging
 - Oldest item: TD-047 (Sprint 8) - 40+ sprints old
@@ -177,13 +175,14 @@ TD-059 (Reranking) → Sprint 48
 
 ## Notes
 
-1. **Sprint 47 bugs resolved** - All testing bugs from Sprint 46 were fixed
-2. **6 items archived** - Resolved TDs moved to archive folder
+1. **Sprint 49 TDs resolved** - TD-048 (Provenance Tracking) and TD-063 (Relation Dedup) completed
+2. **8 items archived** - Resolved TDs moved to archive folder
 3. **TD-046** was completed in Sprint 34
 4. **TD-044** is in progress with workarounds
 5. **TD-047** is a large item (40 SP) requiring dedicated sprint
-6. **TD-059** scheduled for Sprint 48 (Reranking via Ollama)
-7. **New TDs added**: TD-056 (Collaboration), TD-058 (Community Summaries), TD-063 (Relation Dedup), TD-067 (Annotation Tool)
+6. **TD-059** scheduled for Sprint 48 (Reranking via Ollama) - COMPLETED
+7. **Sprint 49 achievements**: Provenance tracking, index validation, semantic deduplication via BGE-M3
+8. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
 
 ---
 

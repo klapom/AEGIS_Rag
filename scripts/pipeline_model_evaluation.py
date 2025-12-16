@@ -188,7 +188,8 @@ async def process_sample(
                 if all_entities:
                     deduplicator = create_deduplicator_from_config(settings)
                     if deduplicator:
-                        all_entities, entity_mapping = deduplicator.deduplicate_with_mapping(all_entities)
+                        # Sprint 49.9: Now async with BGE-M3 embeddings
+                        all_entities, entity_mapping = await deduplicator.deduplicate_with_mapping(all_entities)
 
                 entities_after = len(all_entities)
                 stage.metrics["entities_after"] = entities_after
