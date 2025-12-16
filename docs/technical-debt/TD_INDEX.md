@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-04
-**Total Open Items:** 13
-**Total Story Points:** ~180 SP
+**Last Updated:** 2025-12-16
+**Total Open Items:** 16
+**Total Story Points:** ~203 SP
 
 ---
 
@@ -10,7 +10,8 @@
 
 | Priority | Count | Story Points |
 |----------|-------|--------------|
-| HIGH     | 4     | ~60 SP       |
+| CRITICAL | 1     | 13 SP        |
+| HIGH     | 6     | ~73 SP       |
 | MEDIUM   | 7     | ~100 SP      |
 | LOW      | 2     | ~20 SP       |
 
@@ -18,10 +19,18 @@
 
 ## Active Technical Debt Items
 
+### CRITICAL Priority (Sprint 46 Testing)
+
+| TD# | Title | Status | SP | Target Sprint |
+|-----|-------|--------|-----|---------------|
+| TD-056 | React Infinite Loop in Chat Streaming | OPEN | 13 | Sprint 47 |
+
 ### HIGH Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| TD-057 | Health Page Endpoint Mismatch | OPEN | 3 | Sprint 47 |
+| TD-058 | Admin Domain List Sync Issue | OPEN | 5 | Sprint 47 |
 | [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 35 |
 | [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 35/36 |
 | [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | OPEN | 5 | Sprint 36 |
@@ -34,7 +43,7 @@
 | [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | PARTIAL | 13 | Sprint 34 (done) |
 | [TD-048](TD-048_GRAPH_EXTRACTION_UNIFIED_CHUNKS.md) | Graph Extraction with Unified Chunks | OPEN | 13 | Sprint 38 |
 | [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 39 |
-| [TD-050](TD-050_DUPLICATE_ANSWER_STREAMING.md) | Duplicate Answer Streaming Fix | NEEDS VERIFICATION | 3 | Sprint 35/36 |
+| [TD-050](TD-050_DUPLICATE_ANSWER_STREAMING.md) | Duplicate Answer Streaming Fix | INVESTIGATING | 3 | Sprint 47 |
 | [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 38 |
 | [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 39/40 |
 | [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 36 |
@@ -77,6 +86,11 @@
 - [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration (5 SP)
 - [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction (13 SP)
 
+### Sprint 46 (Testing)
+- TD-056: React Infinite Loop in Chat Streaming (13 SP) - **CRITICAL**
+- TD-057: Health Page Endpoint Mismatch (3 SP)
+- TD-058: Admin Domain List Sync Issue (5 SP)
+
 ---
 
 ## Items by Category
@@ -102,33 +116,37 @@
 - [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client
 
 ### Bugs
-- [TD-050](TD-050_DUPLICATE_ANSWER_STREAMING.md): Duplicate Streaming
+- TD-056: React Infinite Loop in Chat Streaming - **CRITICAL**
+- TD-057: Health Page Endpoint Mismatch
+- TD-058: Admin Domain List Sync Issue
+- [TD-050](TD-050_DUPLICATE_ANSWER_STREAMING.md): Duplicate Streaming (investigating)
 
 ---
 
 ## Recommended Sprint Allocation
 
-### Sprint 35 (Current)
-- TD-043: Follow-up Questions Redis (5 SP) - **PLANNED**
-- TD-050: Duplicate Streaming Fix (3 SP) - **Verify first**
+### Sprint 47 (Current - Bug Fixes)
+- TD-056: React Infinite Loop (13 SP) - **CRITICAL**
+- TD-057: Health Page Endpoint (3 SP) - **HIGH**
+- TD-058: Admin Domain Sync (5 SP) - **HIGH**
+- TD-050: Duplicate Streaming (3 SP) - **Investigate if related to TD-056**
 
-### Sprint 36
+### Sprint 48
+- TD-043: Follow-up Questions Redis (5 SP)
 - TD-044: DoclingParsedDocument Interface (8 SP)
 - TD-045: entity_id Migration (5 SP)
+
+### Sprint 49
 - TD-054: Unified Chunking Service (6 SP)
 
-### Sprint 37
+### Sprint 50
 - TD-047: Critical Path E2E Tests (40 SP) - **Dedicated sprint**
 
-### Sprint 38
+### Sprint 51+
 - TD-048: Graph Extraction Unified (13 SP)
 - TD-051: Memory Consolidation (21 SP)
-
-### Sprint 39
 - TD-049: User Profiling (21 SP)
 - TD-052: User Document Upload (13 SP)
-
-### Sprint 40+
 - TD-053: Admin Dashboard Full (34 SP)
 - TD-055: MCP Client (21 SP)
 
@@ -164,11 +182,12 @@ TD-045 (entity_id Migration)
 
 ## Notes
 
-1. **TD-043** is already planned for Sprint 35
-2. **TD-046** was completed in Sprint 34
-3. **TD-044** is in progress with workarounds
-4. **TD-050** needs verification before implementation
-5. **TD-047** is a large item (40 SP) requiring dedicated sprint
+1. **TD-056, TD-057, TD-058** added from Sprint 46 testing - prioritized for Sprint 47
+2. **TD-056** is CRITICAL - React infinite loop blocks all chat functionality
+3. **TD-050** being investigated to determine if related to TD-056
+4. **TD-046** was completed in Sprint 34
+5. **TD-044** is in progress with workarounds
+6. **TD-047** is a large item (40 SP) requiring dedicated sprint
 
 ---
 
