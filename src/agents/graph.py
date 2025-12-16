@@ -19,6 +19,7 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agents.graph_query_agent import graph_query_node
 from src.agents.memory_agent import memory_node
+from src.agents.router import route_query as router_node_with_phase_events
 from src.agents.state import AgentState, create_initial_state
 from src.agents.vector_search_agent import vector_search_node
 from src.core.logging import get_logger
@@ -27,36 +28,8 @@ from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 logger = get_logger(__name__)
 
 
-async def router_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Route queries based on intent.
-
-    This is a placeholder router that will be enhanced in Feature 4.2.
-    Currently returns the state unchanged with routing metadata.
-
-    Args:
-        state: Current agent state
-
-    Returns:
-        State with routing decision added
-    """
-    logger.info(
-        "router_processing",
-        query=state.get("query", ""),
-        intent=state.get("intent", "hybrid"),
-    )
-
-    # Add router to agent path
-    if "metadata" not in state:
-        state["metadata"] = {}
-    if "agent_path" not in state["metadata"]:
-        state["metadata"]["agent_path"] = []
-
-    state["metadata"]["agent_path"].append("router")
-
-    # Default routing decision (will be enhanced in Feature 4.2)
-    state["route_decision"] = state.get("intent", "hybrid")
-
-    return state
+# Sprint 48: Use instrumented router from router.py with phase events
+router_node = router_node_with_phase_events
 
 
 async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
@@ -152,14 +125,19 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
 
     Sprint 42: True Hybrid Mode - combines vector semantic search with
     graph entity/relationship search for comprehensive retrieval.
+    Sprint 48 Feature 48.3: Emits phase events for hybrid search phases.
 
     Args:
         state: Current agent state
 
     Returns:
-        State with merged retrieved_contexts from both searches
+        State with merged retrieved_contexts from both searches and phase_event
     """
     logger.info("hybrid_search_node_start", query=state.get("query", "")[:100])
+
+    # Create phase events for both search types
+    # These will be emitted by the individual agent nodes
+    # Here we just coordinate the parallel execution
 
     # Run both searches in parallel
     vector_task = asyncio.create_task(vector_search_node(state.copy()))
@@ -193,44 +171,83 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     else:
         logger.warning("hybrid_graph_failed", error=str(graph_result))
 
-    # Deduplicate by text content (keep first occurrence)
-    seen_texts = set()
-    unique_contexts = []
-    for ctx in merged_contexts:
-        text = ctx.get("text", "")[:200]  # Use first 200 chars for dedup
-        if text not in seen_texts:
-            seen_texts.add(text)
-            unique_contexts.append(ctx)
-
-    state["retrieved_contexts"] = unique_contexts
-
-    # Update metadata
-    if "metadata" not in state:
-        state["metadata"] = {}
-
-    vector_count = (
-        len(vector_result.get("retrieved_contexts", []))
-        if isinstance(vector_result, dict)
-        else 0
-    )
-    graph_count = (
-        len(graph_result.get("retrieved_contexts", []))
-        if isinstance(graph_result, dict)
-        else 0
+    # Sprint 48 Feature 48.3: Create phase event for RRF fusion
+    fusion_event = PhaseEvent(
+        phase_type=PhaseType.RRF_FUSION,
+        status=PhaseStatus.IN_PROGRESS,
+        start_time=datetime.utcnow(),
     )
 
-    state["metadata"]["hybrid_search"] = {
-        "vector_count": vector_count,
-        "graph_count": graph_count,
-        "merged_count": len(unique_contexts),
-    }
+    try:
+        # Deduplicate by text content (keep first occurrence)
+        seen_texts = set()
+        unique_contexts = []
+        for ctx in merged_contexts:
+            text = ctx.get("text", "")[:200]  # Use first 200 chars for dedup
+            if text not in seen_texts:
+                seen_texts.add(text)
+                unique_contexts.append(ctx)
 
-    logger.info(
-        "hybrid_search_node_complete",
-        total_contexts=len(unique_contexts),
-    )
+        state["retrieved_contexts"] = unique_contexts
 
-    return state
+        # Update metadata
+        if "metadata" not in state:
+            state["metadata"] = {}
+
+        vector_count = (
+            len(vector_result.get("retrieved_contexts", []))
+            if isinstance(vector_result, dict)
+            else 0
+        )
+        graph_count = (
+            len(graph_result.get("retrieved_contexts", []))
+            if isinstance(graph_result, dict)
+            else 0
+        )
+
+        state["metadata"]["hybrid_search"] = {
+            "vector_count": vector_count,
+            "graph_count": graph_count,
+            "merged_count": len(unique_contexts),
+        }
+
+        # Complete fusion phase event
+        fusion_event.status = PhaseStatus.COMPLETED
+        fusion_event.end_time = datetime.utcnow()
+        fusion_event.duration_ms = (
+            fusion_event.end_time - fusion_event.start_time
+        ).total_seconds() * 1000
+        fusion_event.metadata = {
+            "vector_count": vector_count,
+            "graph_count": graph_count,
+            "merged_count": len(unique_contexts),
+        }
+
+        # Add phase event to state
+        state["phase_event"] = fusion_event
+
+        logger.info(
+            "hybrid_search_node_complete",
+            total_contexts=len(unique_contexts),
+            duration_ms=fusion_event.duration_ms,
+        )
+
+        return state
+
+    except Exception as e:
+        # Mark phase event as failed
+        fusion_event.status = PhaseStatus.FAILED
+        fusion_event.error = str(e)
+        fusion_event.end_time = datetime.utcnow()
+        fusion_event.duration_ms = (
+            fusion_event.end_time - fusion_event.start_time
+        ).total_seconds() * 1000
+
+        # Add failed phase event to state
+        state["phase_event"] = fusion_event
+
+        logger.error("hybrid_search_node_failed", error=str(e))
+        raise
 
 
 def route_query(
