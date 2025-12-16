@@ -475,9 +475,9 @@ class AegisLLMProxy:
 
         # Local Ollama: Disable thinking mode for faster inference
         # Sprint 36: Without this, thinking models generate 200+ thinking tokens internally
-        # Sprint 46: Extended to include gpt-oss models
+        # Sprint 46: Extended to include gpt-oss and nemotron models
         # CRITICAL: Pass "think" directly, NOT via extra_body (ANY-LLM requirement)
-        thinking_models = ["qwen3", "gpt-oss"]
+        thinking_models = ["qwen3", "gpt-oss", "nemotron"]
         if provider == "local_ollama" and any(m in model.lower() for m in thinking_models):
             completion_kwargs["think"] = False
             logger.info(
