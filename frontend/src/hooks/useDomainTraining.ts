@@ -77,6 +77,9 @@ export interface ClassifyDocumentResponse {
 
 /**
  * Fetch all domains
+ *
+ * Note: The API endpoint requires a trailing slash (/admin/domains/)
+ * and returns a direct array of Domain objects, not wrapped in { domains: [...] }
  */
 export function useDomains() {
   const [data, setData] = useState<Domain[] | null>(null);
@@ -87,8 +90,10 @@ export function useDomains() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get<DomainsResponse>('/admin/domains');
-      setData(response.domains);
+      // API returns Domain[] directly (not wrapped in { domains: [...] })
+      // Trailing slash is required by FastAPI router configuration
+      const response = await apiClient.get<Domain[]>('/admin/domains/');
+      setData(response);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch domains'));
     } finally {
@@ -105,6 +110,8 @@ export function useDomains() {
 
 /**
  * Create a new domain
+ *
+ * Note: The API endpoint requires a trailing slash (/admin/domains/)
  */
 export function useCreateDomain() {
   const [isLoading, setIsLoading] = useState(false);
@@ -114,7 +121,8 @@ export function useCreateDomain() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post<Domain>('/admin/domains', data);
+      // Trailing slash is required by FastAPI router configuration
+      const response = await apiClient.post<Domain>('/admin/domains/', data);
       return response;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create domain');

@@ -1,6 +1,7 @@
 /**
  * useStreamChat Hook
  * Sprint 46: Extracted streaming logic from StreamingAnswer component
+ * Sprint 47: Fixed infinite re-render loop (Maximum update depth exceeded)
  *
  * This hook manages SSE streaming for chat responses and returns
  * state that can be used with ConversationView.
@@ -11,6 +12,11 @@
  * - Metadata extraction (session_id, intent, citations)
  * - Error handling
  * - AbortController support for cleanup
+ *
+ * Bug Fix (Sprint 47):
+ * - Use refs for callbacks to prevent dependency array changes
+ * - Capture final state with refs before calling onComplete
+ * - Remove unstable callbacks from useEffect dependency arrays
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -59,6 +65,11 @@ interface UseStreamChatOptions {
 
 /**
  * Hook for managing SSE chat streaming
+ *
+ * Sprint 47 Fix: Use refs for callbacks to avoid infinite re-render loops.
+ * Callbacks passed as props often get recreated on every render, which would
+ * cause useEffect to re-run, triggering state updates, causing re-renders,
+ * creating new callback references, and so on (infinite loop).
  */
 export function useStreamChat({
   query,
@@ -81,7 +92,28 @@ export function useStreamChat({
   const hasCalledOnComplete = useRef(false);
   const currentReasoningData = useRef<ReasoningData | null>(null);
 
+  // Sprint 47 Fix: Store callbacks in refs to avoid triggering useEffect on every render
+  // This prevents the infinite re-render loop caused by unstable callback references
+  const onSessionIdReceivedRef = useRef(onSessionIdReceived);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep refs in sync with latest callback values
+  useEffect(() => {
+    onSessionIdReceivedRef.current = onSessionIdReceived;
+  }, [onSessionIdReceived]);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // Sprint 47 Fix: Store final answer and sources in refs for onComplete callback
+  // This ensures we capture the final state when streaming completes
+  const finalAnswerRef = useRef('');
+  const finalSourcesRef = useRef<Source[]>([]);
+
   // Handle SSE streaming
+  // Sprint 47 Fix: Remove onSessionIdReceived from dependency array to prevent infinite loop.
+  // Use onSessionIdReceivedRef.current inside the effect to call the latest callback.
   useEffect(() => {
     if (!query) {
       return;
@@ -102,6 +134,9 @@ export function useStreamChat({
       setReasoningData(null);
       currentReasoningData.current = null;
       hasCalledOnComplete.current = false;
+      // Sprint 47 Fix: Reset final state refs
+      finalAnswerRef.current = '';
+      finalSourcesRef.current = [];
 
       try {
         for await (const chunk of streamChat(
@@ -146,7 +181,8 @@ export function useStreamChat({
           const sessionIdFromMetadata = data.session_id || chunk.session_id;
           if (sessionIdFromMetadata) {
             setSessionId(sessionIdFromMetadata as string);
-            onSessionIdReceived?.(sessionIdFromMetadata as string);
+            // Sprint 47 Fix: Use ref to call callback without triggering re-render loop
+            onSessionIdReceivedRef.current?.(sessionIdFromMetadata as string);
           }
 
           // Extract citation map
@@ -165,13 +201,23 @@ export function useStreamChat({
 
         case 'source':
           if (chunk.source) {
-            setSources((prev) => [...prev, chunk.source!]);
+            setSources((prev) => {
+              const newSources = [...prev, chunk.source!];
+              // Sprint 47 Fix: Track final sources in ref for onComplete
+              finalSourcesRef.current = newSources;
+              return newSources;
+            });
           }
           break;
 
         case 'token':
           if (chunk.content) {
-            setAnswer((prev) => prev + chunk.content);
+            setAnswer((prev) => {
+              const newAnswer = prev + chunk.content;
+              // Sprint 47 Fix: Track final answer in ref for onComplete
+              finalAnswerRef.current = newAnswer;
+              return newAnswer;
+            });
           }
           break;
 
@@ -190,6 +236,17 @@ export function useStreamChat({
             }
           }
           setIsStreaming(false);
+
+          // Sprint 47 Fix: Call onComplete immediately when streaming completes
+          // Use refs to get the final values and avoid dependency array issues
+          if (!hasCalledOnComplete.current && finalAnswerRef.current) {
+            hasCalledOnComplete.current = true;
+            onCompleteRef.current?.(
+              finalAnswerRef.current,
+              finalSourcesRef.current,
+              currentReasoningData.current
+            );
+          }
           break;
         }
 
@@ -206,15 +263,24 @@ export function useStreamChat({
       isAborted = true;
       abortController.abort();
     };
-  }, [query, mode, namespaces, initialSessionId, onSessionIdReceived]);
+    // Sprint 47 Fix: Removed onSessionIdReceived from dependencies - use ref instead
+  }, [query, mode, namespaces, initialSessionId]);
 
-  // Call onComplete when streaming finishes
+  // Sprint 47 Fix: Fallback onComplete call when streaming finishes
+  // This handles edge cases where the 'complete' event might be missed
+  // Uses refs to avoid triggering infinite loops from unstable dependencies
   useEffect(() => {
-    if (!isStreaming && answer && onComplete && !hasCalledOnComplete.current) {
+    if (!isStreaming && finalAnswerRef.current && !hasCalledOnComplete.current) {
       hasCalledOnComplete.current = true;
-      onComplete(answer, sources, currentReasoningData.current);
+      onCompleteRef.current?.(
+        finalAnswerRef.current,
+        finalSourcesRef.current,
+        currentReasoningData.current
+      );
     }
-  }, [isStreaming, answer, sources, onComplete]);
+    // Sprint 47 Fix: Only depend on isStreaming to avoid re-running on every token/source
+    // The refs contain the final values when streaming completes
+  }, [isStreaming]);
 
   return {
     answer,

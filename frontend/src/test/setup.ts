@@ -53,6 +53,10 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {}
 } as any;
 
+// Sprint 47 Fix: Mock scrollIntoView for JSDOM
+// JSDOM does not implement scrollIntoView, causing test failures in ConversationView
+Element.prototype.scrollIntoView = vi.fn();
+
 // Mock AFRAME global for aframe-extras (transitive dependency of react-force-graph)
 // AFRAME is used by 3d-force-graph-vr and 3d-force-graph-ar packages
 (global as any).AFRAME = {

@@ -411,6 +411,7 @@ async def create_domain(request: DomainCreateRequest) -> DomainResponse:
         )
 
 
+@router.get("", response_model=list[DomainResponse])
 @router.get("/", response_model=list[DomainResponse])
 async def list_domains() -> list[DomainResponse]:
     """List all registered domains.

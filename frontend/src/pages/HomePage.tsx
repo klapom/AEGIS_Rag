@@ -5,6 +5,7 @@
  * Sprint 35 Feature 35.5: Session History Sidebar
  * Sprint 46 Feature 46.1: ConversationView Integration
  * Sprint 46 Feature 46.2: ReasoningPanel Integration
+ * Sprint 47: Fixed infinite re-render loop with stable callbacks
  *
  * Features:
  * - Chat-style conversation layout with ConversationView
@@ -16,7 +17,7 @@
  * - Transparent reasoning panel for assistant messages
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { type SearchMode } from '../components/search';
 import { ConversationView, SessionSidebar, type MessageData } from '../components/chat';
 import { getConversation } from '../api/chat';
@@ -57,33 +58,46 @@ export function HomePage() {
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
   const [currentNamespaces, setCurrentNamespaces] = useState<string[]>([]);
 
+  // Sprint 47 Fix: Use ref to track activeSessionId for the callback
+  // This avoids needing activeSessionId in the callback's dependencies
+  const activeSessionIdRef = useRef(activeSessionId);
+  activeSessionIdRef.current = activeSessionId;
+
+  // Sprint 47 Fix: Stable callbacks using useCallback with minimal dependencies
+  // These callbacks use refs internally to access current state without
+  // needing to include that state in dependency arrays
+  const handleSessionIdReceived = useCallback((sessionId: string) => {
+    // Use ref to check current value without dependency
+    if (!activeSessionIdRef.current && sessionId) {
+      setActiveSessionId(sessionId);
+    }
+  }, []);
+
+  const handleStreamComplete = useCallback((answer: string, sources: Source[], reasoningData: ReasoningData | null) => {
+    // Add completed assistant message to history
+    setConversationHistory((prev) => [
+      ...prev,
+      {
+        id: generateMessageId(),
+        role: 'assistant',
+        content: answer,
+        sources,
+        reasoningData,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+    // Clear current query after completion (keep answer visible in history)
+    // Note: We don't clear immediately to allow the streaming message to be replaced by history
+  }, []);
+
   // Use streaming hook for SSE
   const streamingState = useStreamChat({
     query: currentQuery,
     mode: currentMode,
     namespaces: currentNamespaces,
     sessionId: activeSessionId,
-    onSessionIdReceived: (sessionId) => {
-      if (!activeSessionId && sessionId) {
-        setActiveSessionId(sessionId);
-      }
-    },
-    onComplete: useCallback((answer: string, sources: Source[], reasoningData: ReasoningData | null) => {
-      // Add completed assistant message to history
-      setConversationHistory((prev) => [
-        ...prev,
-        {
-          id: generateMessageId(),
-          role: 'assistant',
-          content: answer,
-          sources,
-          reasoningData,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-      // Clear current query after completion (keep answer visible in history)
-      // Note: We don't clear immediately to allow the streaming message to be replaced by history
-    }, []),
+    onSessionIdReceived: handleSessionIdReceived,
+    onComplete: handleStreamComplete,
   });
 
   /**
@@ -152,6 +166,10 @@ export function HomePage() {
     }
   }, []);
 
+  // Sprint 47 Fix: Use a stable ID for the streaming message to prevent
+  // unnecessary re-renders and potential infinite loops
+  const streamingMessageIdRef = useRef<string>('streaming-0');
+
   /**
    * Build messages array for ConversationView
    * Combines history with current streaming message
@@ -183,8 +201,10 @@ export function HomePage() {
           streamingState.intent
         );
 
+        // Sprint 47 Fix: Use stable streaming ID from ref instead of Date.now()
+        // This prevents unnecessary re-renders caused by new IDs on each render
         historyMessages.push({
-          id: `streaming-${Date.now()}`,
+          id: streamingMessageIdRef.current,
           role: 'assistant',
           content: streamingState.answer,
           sources: streamingState.sources,
@@ -196,6 +216,16 @@ export function HomePage() {
 
     return historyMessages;
   }, [conversationHistory, streamingState, currentQuery]);
+
+  // Sprint 47 Fix: Generate new streaming ID when a new query starts
+  // This ensures the streaming message has a unique but stable ID during streaming
+  const prevQueryRef = useRef<string | null>(null);
+  if (currentQuery !== prevQueryRef.current) {
+    prevQueryRef.current = currentQuery;
+    if (currentQuery) {
+      streamingMessageIdRef.current = `streaming-${Date.now()}`;
+    }
+  }
 
   // Show welcome screen if no conversation yet
   const showWelcome = messages.length === 0;

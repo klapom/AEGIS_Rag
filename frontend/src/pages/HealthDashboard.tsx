@@ -1,20 +1,21 @@
 /**
  * HealthDashboard Page
  * Sprint 15 Feature 15.6: System health monitoring
+ * Updated: Sprint 47 - Use /health endpoint structure
  *
  * Real-time system health dashboard with:
  * - Overall health status
- * - Dependency health cards (Qdrant, Ollama, Neo4j, Redis)
- * - Performance metrics
+ * - Service health cards (Qdrant, Ollama, Neo4j, Redis)
+ * - Version info
  * - Auto-refresh every 30s
  */
 
 import { useState, useEffect } from 'react';
-import { getDetailedHealth } from '../api/health';
-import type { DetailedHealthResponse, DependencyHealth } from '../types/health';
+import { getSystemHealth } from '../api/health';
+import type { HealthResponse, ServiceHealth } from '../types/health';
 
 export function HealthDashboard() {
-  const [health, setHealth] = useState<DetailedHealthResponse | null>(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -32,7 +33,7 @@ export function HealthDashboard() {
 
   const fetchHealth = async () => {
     try {
-      const data = await getDetailedHealth();
+      const data = await getSystemHealth();
       setHealth(data);
       setLastUpdated(new Date());
       setError(null);
@@ -97,13 +98,13 @@ export function HealthDashboard() {
         {/* Overall Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <StatCard
-            label="Uptime"
-            value={health.uptime ? `${Math.floor(health.uptime / 3600)}h` : 'N/A'}
-            icon="⏱️"
+            label="Version"
+            value={health.version || 'N/A'}
+            icon="📦"
           />
           <StatCard
-            label="Dependencies"
-            value={`${Object.values(health.dependencies).filter(d => d.status === 'up').length}/${Object.keys(health.dependencies).length}`}
+            label="Services"
+            value={`${Object.values(health.services).filter(s => s.status === 'healthy').length}/${Object.keys(health.services).length}`}
             icon="🔗"
           />
           <StatCard
@@ -113,12 +114,12 @@ export function HealthDashboard() {
           />
         </div>
 
-        {/* Dependencies Grid */}
+        {/* Services Grid */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Abhängigkeiten</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">Services</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {Object.entries(health.dependencies).map(([key, dep]) => (
-              <DependencyCard key={key} name={key} dependency={dep} />
+            {Object.entries(health.services).map(([key, service]) => (
+              <ServiceCard key={key} name={key} service={service} />
             ))}
           </div>
         </div>
@@ -200,22 +201,35 @@ function StatCard({ label, value, icon }: StatCardProps) {
   );
 }
 
-interface DependencyCardProps {
+interface ServiceCardProps {
   name: string;
-  dependency: DependencyHealth;
+  service: ServiceHealth;
 }
 
-function DependencyCard({ name, dependency }: DependencyCardProps) {
+function ServiceCard({ name, service }: ServiceCardProps) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'up':
+      case 'healthy':
         return 'bg-green-500';
-      case 'down':
+      case 'unhealthy':
         return 'bg-red-500';
       case 'degraded':
         return 'bg-yellow-500';
       default:
         return 'bg-gray-500';
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'healthy':
+        return 'text-green-600';
+      case 'unhealthy':
+        return 'text-red-600';
+      case 'degraded':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-600';
     }
   };
 
@@ -243,8 +257,8 @@ function DependencyCard({ name, dependency }: DependencyCardProps) {
           <h3 className="text-sm font-semibold text-gray-900 capitalize">{name}</h3>
         </div>
         <div
-          className={`w-2 h-2 rounded-full ${getStatusColor(dependency.status)}`}
-          title={dependency.status}
+          className={`w-2 h-2 rounded-full ${getStatusColor(service.status)}`}
+          title={service.status}
         />
       </div>
 
@@ -252,34 +266,19 @@ function DependencyCard({ name, dependency }: DependencyCardProps) {
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
           <span className="text-gray-500">Status:</span>
-          <span
-            className={`font-medium ${
-              dependency.status === 'up'
-                ? 'text-green-600'
-                : dependency.status === 'down'
-                ? 'text-red-600'
-                : 'text-yellow-600'
-            }`}
-          >
-            {dependency.status.toUpperCase()}
+          <span className={`font-medium ${getStatusTextColor(service.status)}`}>
+            {service.status.toUpperCase()}
           </span>
         </div>
 
-        {dependency.latency_ms !== undefined && (
+        {service.latency_ms !== undefined && (
           <div className="flex justify-between text-xs">
             <span className="text-gray-500">Latency:</span>
-            <span className="font-medium text-gray-900">{dependency.latency_ms}ms</span>
-          </div>
-        )}
-
-        {dependency.details && Object.entries(dependency.details).length > 0 && (
-          <div className="pt-1.5 mt-1.5 border-t border-gray-200 space-y-0.5">
-            {Object.entries(dependency.details).slice(0, 3).map(([key, value]) => (
-              <div key={key} className="flex justify-between text-xs text-gray-600">
-                <span className="truncate">{key}:</span>
-                <span className="font-medium ml-2">{String(value)}</span>
-              </div>
-            ))}
+            <span className="font-medium text-gray-900">
+              {typeof service.latency_ms === 'number'
+                ? `${service.latency_ms.toFixed(2)}ms`
+                : `${service.latency_ms}ms`}
+            </span>
           </div>
         )}
       </div>
