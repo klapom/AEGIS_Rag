@@ -332,10 +332,10 @@ class CoordinatorAgent:
                     # Add to reasoning data accumulator
                     reasoning_data.add_phase_event(event)
 
-                    # Yield phase event to stream
+                    # Yield phase event to stream (mode='json' converts datetime to ISO strings)
                     yield {
                         "type": "phase_event",
-                        "data": event.model_dump(),
+                        "data": event.model_dump(mode='json'),
                     }
 
                 elif isinstance(event, dict) and "answer" in event:
@@ -370,7 +370,7 @@ class CoordinatorAgent:
             )
             yield {
                 "type": "phase_event",
-                "data": error_event.model_dump(),
+                "data": error_event.model_dump(mode='json'),
             }
 
             # Re-raise for proper error handling
@@ -430,20 +430,40 @@ class CoordinatorAgent:
         final_state = None
         try:
             async for event in self.compiled_graph.astream(initial_state, config=config):
+                # DEBUG: Log what astream() is yielding
+                logger.info(
+                    "astream_event_received",
+                    event_type=type(event).__name__,
+                    is_dict=isinstance(event, dict),
+                    keys=list(event.keys()) if isinstance(event, dict) else None,
+                )
+
                 # LangGraph astream yields (node_name, node_output) tuples
                 if isinstance(event, dict):
                     # Extract node name and state from event
                     for node_name, node_state in event.items():
-                        logger.debug(
+                        logger.info(
                             "node_completed",
                             node=node_name,
                             query=query[:50],
+                            node_state_type=type(node_state).__name__,
+                            has_phase_event="phase_event" in node_state
+                            if isinstance(node_state, dict)
+                            else False,
                         )
 
                         # Check if node added a phase_event to state
                         if isinstance(node_state, dict) and "phase_event" in node_state:
                             phase_event = node_state["phase_event"]
+                            logger.info(
+                                "phase_event_found",
+                                node=node_name,
+                                phase_type=phase_event.phase_type
+                                if isinstance(phase_event, PhaseEvent)
+                                else phase_event.get("phase_type"),
+                            )
                             if isinstance(phase_event, PhaseEvent):
+                                # Yield phase event (will be serialized by API layer)
                                 yield phase_event
                             elif isinstance(phase_event, dict):
                                 # Convert dict to PhaseEvent if needed
