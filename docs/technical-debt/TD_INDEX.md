@@ -128,24 +128,43 @@
 
 ## Recommended Sprint Allocation
 
-### Sprint 47 (Current - Bug Fixes)
-- TD-056: React Infinite Loop (13 SP) - **CRITICAL**
-- TD-057: Health Page Endpoint (3 SP) - **HIGH**
-- TD-058: Admin Domain Sync (5 SP) - **HIGH**
-- TD-050: Duplicate Streaming (3 SP) - **Investigate if related to TD-056**
+### Sprint 47 (COMPLETED - Bug Fixes)
+- ~~TD-056: React Infinite Loop (13 SP)~~ - **RESOLVED**
+- ~~TD-057: Health Page Endpoint (3 SP)~~ - **RESOLVED**
+- ~~TD-058: Admin Domain Sync (5 SP)~~ - **RESOLVED**
+- ~~TD-050: Duplicate Streaming (3 SP)~~ - **RESOLVED** (same root cause as TD-056)
 
-### Sprint 48
+### Sprint 48 (Current - Real-Time Thinking Phase Events)
+**Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte
+**Story Points:** 55 SP
+
+| Feature | SP | Description |
+|---------|-----|-------------|
+| 48.1 | 5 | Phase Event Models & Types |
+| 48.2 | 13 | CoordinatorAgent Streaming Method |
+| 48.3 | 13 | Agent Node Instrumentation |
+| 48.4 | 8 | Chat Stream API Enhancement |
+| 48.5 | 5 | Phase Events Redis Persistence |
+| 48.6 | 8 | Frontend Phase Event Handler |
+| 48.7 | 3 | ReasoningData Builder |
+
+**Related TDs:**
+- TD-053: Admin Dashboard (Phase-Events für Monitoring)
+- TD-059: Reranking Container (Phase zeigt Reranking Status)
+- TD-043: Follow-up Questions (Redis Pattern)
+
+### Sprint 49
 - TD-043: Follow-up Questions Redis (5 SP)
 - TD-044: DoclingParsedDocument Interface (8 SP)
 - TD-045: entity_id Migration (5 SP)
 
-### Sprint 49
+### Sprint 50
 - TD-054: Unified Chunking Service (6 SP)
 
-### Sprint 50
+### Sprint 51
 - TD-047: Critical Path E2E Tests (40 SP) - **Dedicated sprint**
 
-### Sprint 51+
+### Sprint 52+
 - TD-048: Graph Extraction Unified (13 SP)
 - TD-051: Memory Consolidation (21 SP)
 - TD-049: User Profiling (21 SP)
