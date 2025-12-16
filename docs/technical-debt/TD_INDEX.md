@@ -135,8 +135,8 @@
 - ~~TD-050: Duplicate Streaming (3 SP)~~ - **RESOLVED** (same root cause as TD-056)
 
 ### Sprint 48 (Current - Real-Time Thinking Phase Events)
-**Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte
-**Story Points:** 55 SP
+**Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte + Reranking + Nemotron
+**Story Points:** 68 SP
 
 | Feature | SP | Description |
 |---------|-----|-------------|
@@ -147,10 +147,12 @@
 | 48.5 | 5 | Phase Events Redis Persistence |
 | 48.6 | 8 | Frontend Phase Event Handler |
 | 48.7 | 3 | ReasoningData Builder |
+| 48.8 | 8 | **TD-059 Reranking via Ollama (bge-reranker-v2-m3)** |
+| 48.9 | 5 | **Default LLM zu Nemotron wechseln** |
 
 **Related TDs:**
 - TD-053: Admin Dashboard (Phase-Events für Monitoring)
-- TD-059: Reranking Container (Phase zeigt Reranking Status)
+- TD-059: Reranking Container (Phase zeigt Reranking Status) → **IN SPRINT 48**
 - TD-043: Follow-up Questions (Redis Pattern)
 
 ### Sprint 49

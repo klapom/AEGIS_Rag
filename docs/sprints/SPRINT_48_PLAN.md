@@ -1,8 +1,25 @@
 # Sprint 48: Real-Time Thinking Phase Events
 
 **Sprint Duration:** 2 Weeks
-**Total Story Points:** 55 SP
+**Total Story Points:** 68 SP
 **Focus:** Backend SSE Phase Events für transparente Verarbeitungsschritte
+
+---
+
+## Feature Summary
+
+| Feature | SP | Description |
+|---------|-----|-------------|
+| 48.1 | 5 | Phase Event Models & Types |
+| 48.2 | 13 | CoordinatorAgent Streaming Method |
+| 48.3 | 13 | Agent Node Instrumentation |
+| 48.4 | 8 | Chat Stream API Enhancement |
+| 48.5 | 5 | Phase Events Redis Persistence |
+| 48.6 | 8 | Frontend Phase Event Handler |
+| 48.7 | 3 | ReasoningData Builder |
+| 48.8 | 8 | TD-059 Reranking via Ollama |
+| 48.9 | 5 | Default LLM zu Nemotron wechseln |
+| **Total** | **68** | |
 
 ---
 
@@ -422,6 +439,160 @@ def build_reasoning_data(
 
 ---
 
+### Feature 48.8: TD-059 Reranking via Ollama (8 SP)
+
+**Backend: Reranking mit bge-reranker-v2-m3**
+
+TD-059 Option B implementieren: Reranking über Ollama statt sentence-transformers.
+
+**Model Setup:**
+```bash
+# BGE-Reranker-v2-m3 auf DGX Spark pullen
+ollama pull BAAI/bge-reranker-v2-m3
+
+# Alternativ via HuggingFace-kompatibles Ollama Modelfile
+ollama create bge-reranker-m3 -f Modelfile.bge-reranker
+```
+
+**Implementation:**
+```python
+# src/components/retrieval/ollama_reranker.py
+class OllamaReranker:
+    """Reranking via Ollama with bge-reranker-v2-m3."""
+
+    def __init__(self, model: str = "bge-reranker-m3"):
+        self.model = model
+        self.ollama_url = settings.ollama_base_url
+
+    async def rerank(
+        self,
+        query: str,
+        documents: list[dict],
+        top_k: int = 5,
+    ) -> list[dict]:
+        """Rerank documents using cross-encoder via Ollama."""
+
+        # Format query-document pairs
+        pairs = [
+            {"query": query, "document": doc["text"]}
+            for doc in documents
+        ]
+
+        # Call Ollama reranker endpoint
+        scores = await self._get_rerank_scores(pairs)
+
+        # Sort by score and return top_k
+        ranked = sorted(
+            zip(documents, scores),
+            key=lambda x: x[1],
+            reverse=True
+        )[:top_k]
+
+        return [doc for doc, score in ranked]
+```
+
+**Konfiguration:**
+```bash
+# .env.dgx-spark
+OLLAMA_MODEL_RERANKER=bge-reranker-m3
+VECTOR_AGENT_USE_RERANKING=true  # Wieder aktivieren!
+```
+
+**Dateien:**
+- `src/components/retrieval/ollama_reranker.py` (NEU)
+- `src/components/vector_search/hybrid_search.py` (UPDATE)
+- `src/core/config.py` (UPDATE - reranker model config)
+- `.env.dgx-spark` (UPDATE)
+- `docker-compose.dgx-spark.yml` (UPDATE)
+
+**Akzeptanzkriterien:**
+- [ ] bge-reranker-v2-m3 Modell auf DGX Spark verfügbar
+- [ ] OllamaReranker Klasse implementiert
+- [ ] Integration in HybridSearch
+- [ ] Phase-Event `reranking: completed` mit Score
+- [ ] Fallback auf RRF wenn Reranker nicht erreichbar
+- [ ] Performance: <200ms für 20 Dokumente
+- [ ] Integration Tests
+
+---
+
+### Feature 48.9: Default LLM zu Nemotron wechseln (5 SP)
+
+**Konfiguration: qwen3:32b → nemotron-no-think:latest**
+
+Nemotron-3-30B-A3 als neues Default-Modell (31.6B Parameter, Q4_K_M).
+
+**Warum Nemotron?**
+- Aktuelleres Modell (NVIDIA)
+- Gute Instruction-Following Fähigkeiten
+- Schnellere Inference (MoE Architektur)
+- Bereits auf DGX Spark geladen
+
+**Betroffene Modelle:**
+| Task | Alt (qwen3:32b) | Neu (nemotron) |
+|------|-----------------|----------------|
+| Generation | qwen3:32b | nemotron-no-think:latest |
+| Query Understanding | qwen3:32b | nemotron-no-think:latest |
+| Entity Extraction | qwen3:32b | nemotron-no-think:latest |
+| **Vision (bleibt!)** | qwen3-vl:32b | qwen3-vl:32b |
+
+**Konfigurationsänderungen:**
+```bash
+# .env.dgx-spark - ALT
+OLLAMA_MODEL_GENERATION=qwen3:32b
+OLLAMA_MODEL_QUERY=qwen3:32b
+OLLAMA_MODEL_EXTRACTION=qwen3:32b
+
+# .env.dgx-spark - NEU
+OLLAMA_MODEL_GENERATION=nemotron-no-think:latest
+OLLAMA_MODEL_QUERY=nemotron-no-think:latest
+OLLAMA_MODEL_EXTRACTION=nemotron-no-think:latest
+
+# Vision bleibt unverändert
+OLLAMA_MODEL_VLM=qwen3-vl:32b
+```
+
+**Code-Anpassungen:**
+```python
+# src/core/config.py - Default-Werte aktualisieren
+ollama_model_generation: str = Field(
+    default="nemotron-no-think:latest",
+    description="Ollama model for generation (Nemotron-3-30B-A3)"
+)
+ollama_model_query: str = Field(
+    default="nemotron-no-think:latest",
+    description="Ollama model for query understanding"
+)
+```
+
+**Domain Training Update:**
+```python
+# src/api/v1/domain_training.py - Default llm_model
+class DomainCreateRequest(BaseModel):
+    llm_model: str = Field(
+        default="nemotron-no-think:latest",  # War: qwen3:32b
+        description="LLM model to use for extraction"
+    )
+```
+
+**Dateien:**
+- `.env.dgx-spark` (UPDATE)
+- `.env.dgx-spark.template` (UPDATE)
+- `src/core/config.py` (UPDATE)
+- `src/api/v1/domain_training.py` (UPDATE)
+- `CLAUDE.md` (UPDATE - Model Info)
+
+**Akzeptanzkriterien:**
+- [ ] Alle Generation Tasks nutzen Nemotron
+- [ ] Alle Query Tasks nutzen Nemotron
+- [ ] Alle Extraction Tasks nutzen Nemotron
+- [ ] Vision Tasks nutzen weiterhin qwen3-vl:32b
+- [ ] Keine Regression in Antwortqualität
+- [ ] Performance mindestens gleichwertig
+- [ ] E2E Tests bestehen
+
+---
+
 ## Error Handling Strategie
 
 ### Recoverable Errors (Phase continues)
@@ -576,8 +747,8 @@ Client POST /api/v1/chat/stream
 
 | Metrik | Target |
 |--------|--------|
-| Features | 7 |
-| Story Points | 55 SP |
+| Features | 9 |
+| Story Points | 68 SP |
 | Test Coverage | >80% |
 | Phase Latency Overhead | <10ms |
 
