@@ -1,6 +1,6 @@
 # ARCHITECTURE EVOLUTION - Sprint Journey
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-11 (Sprint 43)
+**Last Updated:** 2025-12-16 (Sprint 49)
 
 ---
 
@@ -52,9 +52,16 @@
 | 37 | Pipeline | Streaming pipeline, worker pools |
 | 38 | Auth + GraphRAG | JWT Auth, Share Links, Multi-Hop GraphRAG |
 | 39 | Bi-Temporal | Entity versioning, time travel queries |
-| 40 | MCP + Sandbox | MCP integration, Bubblewrap shell sandbox |
-| 42 | 4-Way Hybrid | Intent-Weighted RRF, Graph Global channel |
-| 43 | Dedup & Monitoring | MultiCriteria Dedup (10.1%), Prometheus Metrics, Benchmarking |
+| 40 | Graphiti Memory | 3-layer memory integration, episode creation, temporal retrieval |
+| 41 | Parallel Extraction | Multi-model parallel LLM extraction, entity deduplication |
+| 42 | Neo4j Migration | Community Edition migration, GDS integration |
+| 43 | Entity Dedup | Multi-criteria deduplication (ADR-044), 10.1% reduction |
+| 44 | Relation Dedup | Entity normalization in relations, type synonym resolution |
+| 45 | LangGraph State | Unified AgentState, phase-based workflow |
+| 46 | Cancellation | Request cancellation, graceful stream cleanup |
+| 47 | Docling CUDA | GPU-accelerated ingestion, 3-5x speedup |
+| 48 | Phase Events | Real-time thinking events, SSE streaming, Nemotron LLM |
+| 49 | Dynamic UX | Embedding-based dedup, provenance tracking, consistency validation |
 
 ---
 
@@ -136,13 +143,91 @@ Layer 3: Graphiti  (Episodic, <200ms, temporal relationships)
 - **Intent-Weighted Fusion:** Dynamic RRF weights per query intent
 - **Automatic Community Detection:** community_id on entity nodes
 
-### Sprint 43: Multi-Criteria Deduplication & Pipeline Monitoring
+### Sprint 40: Graphiti Memory Integration
+- **3-Layer Memory System:** Episodic (temporal events), Semantic (entity facts), Entity (isolated nodes)
+- **Redis-Based Consolidation:** Automatic memory consolidation pipeline
+- **Episode Creation API:** `POST /api/v1/memory/episodes` for explicit memory capture
+- **Temporal Retrieval:** Query memory with time-aware filters and sorting
+- **Integration Points:** Memory agent receives memory vectors alongside graph/vector results
+- **Code Location:** `src/components/memory/graphiti_integration.py`
+
+### Sprint 41: Multi-Model Parallel Extraction
+- **Dual-Model Strategy:** gemma3:4b + qwen2.5:7b running in parallel
+- **Entity Deduplication:** Post-extraction dedup merges results from both models
+- **+20-30% Entity Recall:** Complementary extraction patterns improve coverage
+- **Fault Tolerance:** If one model fails, use results from other model
+- **Integration:** Pluggable in LangGraph ingestion agent
+- **Code Location:** `src/components/ingestion/parallel_extraction.py`
+
+### Sprint 42: Neo4j Community Edition Migration
+- **From Memgraph to Neo4j:** Full migration of graph storage
+- **GDS Library Support:** Graph Data Science for community detection, centrality analysis
+- **APOC Integration:** Advanced stored procedures for complex graph operations
+- **Query Language:** Cypher query syntax identical to Memgraph (seamless transition)
+- **Performance:** Comparable to Memgraph on community-size graphs (<10M nodes)
+- **Cost:** Zero-cost open-source alternative to Memgraph Pro
+
+### Sprint 43: Multi-Criteria Entity Deduplication (ADR-044)
 - **MultiCriteriaDeduplicator:** 4 matching criteria (exact, edit-distance, substring, semantic)
+- **Typo & Abbreviation Handling:** Catches "AI" vs "artificial intelligence", case variations
+- **False Positive Prevention:** Prevents "AI" (artificial intelligence) merging with "AI" in "NVIDIA"
 - **10.1% Entity Reduction:** On large multi-chunk documents (68k chars, 18 chunks)
 - **12 New Prometheus Metrics:** Chunking, deduplication, extraction by type
 - **Comprehensive Benchmarking:** Chunk sizes (500-4000), model comparison (gemma3:4b vs qwen2.5:7b)
-- **Parallel Extraction:** +20-30% more entities by combining gemma3:4b + qwen2.5:7b
 - **Model Stability Finding:** qwen2.5:7b stable across all chunk sizes, gemma3:4b unstable >2500 chars
+
+### Sprint 44: Relation Deduplication (TD-063)
+- **Entity Name Normalization:** Normalize entity names in relations before matching
+- **Type Synonym Resolution:** Hardcoded maps for relation types (e.g., "produces" → "creates")
+- **Bidirectional Handling:** Symmetric relation types (married_to, partners) detect reverse relationships
+- **Reduces False Positives:** Same entities referred by different names no longer duplicate
+- **Code Location:** `src/components/graph_rag/relation_deduplicator.py`
+- **Neo4j Integration:** Constraint enforcement on relation deduplication
+
+### Sprint 45: LangGraph State Management
+- **Unified AgentState Model:** Central state object passed between all agents
+- **Phase-Based Workflow:** Explicit phases (retrieval → reranking → generation → streaming)
+- **Better Error Handling:** State accumulates errors/warnings, visible in response metadata
+- **Context Injection:** State carries conversation history, user preferences, intent
+- **Parallel Agent Execution:** LangGraph Send/Receive for true parallel agent calls
+- **Code Location:** `src/core/agent_state.py`, `src/agents/coordinator.py`
+
+### Sprint 46: Request Cancellation & Cleanup
+- **AbortController Support:** Frontend AbortController propagates to backend via headers
+- **Graceful Stream Cancellation:** SSE streams stop mid-generation, cleanup handlers run
+- **Resource Cleanup:** Redis connections, Neo4j transactions properly closed
+- **Cancellation Propagation:** LangGraph agent loops check cancellation flag
+- **User Experience:** "Stop generating" button in UI actually works reliably
+- **Code Location:** `src/api/v1/chat.py`, `src/agents/coordinator.py`
+
+### Sprint 47: Docling CUDA Acceleration
+- **GPU-Accelerated OCR:** Native CUDA 13.0 support for GB10 (Blackwell, sm_121)
+- **Layout Analysis:** CUDA-optimized document structure detection
+- **Performance:** 3-5x faster PDF ingestion (420s → 90s baseline)
+- **Integration:** Docling container launched separately with `--gpus all`
+- **Accuracy:** 95% OCR accuracy vs 70% with CPU-only LlamaIndex
+- **Code Location:** `docker/docling.Dockerfile`, `src/components/ingestion/docling_pipeline.py`
+
+### Sprint 48: Real-Time Thinking Phase Events
+- **13 Phase Types:** RETRIEVE_VECTOR, RETRIEVE_GRAPH, RETRIEVE_MEMORY, RERANK, INTENT_CLASSIFY, FUSION, GENERATION, STREAMING, MEMORY_CONSOLIDATION, etc.
+- **PhaseEvent Models:** Timestamp, phase type, metadata (retrieved count, latency), reasoning text
+- **SSE Event Streaming:** Real-time phase updates to frontend
+- **Frontend Indicators:** "Thinking..." phases displayed as numbered steps
+- **Redis Persistence:** Phase event history stored for session replay
+- **Nemotron Default LLM:** Replaced Qwen3:8b with Alibaba Nemotron (better multilingual)
+- **Code Location:** `src/core/phase_events.py`, `src/api/v1/chat.py`
+- **Related:** TD-059 Reranking with Ollama local models
+
+### Sprint 49: Dynamic UX & Semantic Deduplication
+- **Embedding-Based Relation Dedup:** BGE-M3 embeddings for semantic similarity (replaces hardcoded lists)
+- **Entity Dedup Migration:** Move from sentence-transformers → BGE-M3 system-wide
+- **Sentence-Transformers Removal:** Complete elimination of duplicate embedding model dependency
+- **Dynamic Model/Relationship Discovery:** No hardcoded entity type or relation type lists
+- **Provenance Tracking:** `source_chunk_id` on all entities/relations for audit trail
+- **Index Consistency Validation:** Background job checks for inconsistencies, reports issues
+- **Historical Phase Events:** Display previous thinking steps in conversation history
+- **Embedding Synergy:** BGE-M3 used for queries + dedup + memory + reranking (single model)
+- **Code Location:** `src/components/graph_rag/semantic_deduplicator.py`, `src/core/provenance.py`
 
 ---
 
@@ -214,6 +299,11 @@ User Query
 7. **Bi-Temporal Opt-In** - Performance preserved for standard queries
 8. **Multi-Criteria Deduplication** - 10.1% reduction on multi-chunk docs
 9. **Parallel Model Extraction** - Fault-tolerance + 20-30% more entities
+10. **Graphiti Memory Integration** - Episodic/semantic/entity layers, temporal queries
+11. **Neo4j Community Edition** - Free, performant, same Cypher syntax
+12. **Real-Time Phase Events** - Transparency into reasoning pipeline
+13. **BGE-M3 Universal Embedding** - Single model for queries, dedup, memory, reranking
+14. **Provenance Tracking** - `source_chunk_id` enables audit trails and debugging
 
 ### Challenges Overcome
 1. **Embedding Mismatch** - Solved with BGE-M3 system-wide
@@ -224,6 +314,9 @@ User Query
 6. **Shell Security** - Solved with Bubblewrap (not Docker)
 7. **Entity Duplicates** - Solved with MultiCriteriaDeduplicator (ADR-044)
 8. **Model Instability** - Solved with parallel extraction fallback
+9. **Relation Type Synonyms** - Solved with type synonym resolution + normalization
+10. **Request Cancellation** - Solved with AbortController + LangGraph loop checks
+11. **Hardcoded Configuration** - Solved with dynamic discovery in Sprint 49
 
 ---
 
@@ -297,7 +390,7 @@ User Query
 - Streaming pipeline with worker pools
 - Faceted search and export
 
-### Enterprise Features (Sprint 38-43)
+### Enterprise Features (Sprint 38-49)
 - JWT authentication with protected routes
 - Conversation search and share links
 - GraphRAG multi-hop reasoning
@@ -306,3 +399,14 @@ User Query
 - 4-Way Hybrid RRF with intent classification
 - Multi-criteria entity deduplication (10.1% reduction)
 - Comprehensive pipeline monitoring (12 new Prometheus metrics)
+- Graphiti 3-layer memory system with temporal queries
+- Multi-model parallel extraction (gemma3:4b + qwen2.5:7b)
+- Neo4j Community Edition with GDS library
+- Relation deduplication with type synonym resolution
+- Real-time thinking phase events (13 phase types)
+- Request cancellation with graceful cleanup
+- Docling GPU acceleration (3-5x faster ingestion)
+- Embedding-based semantic deduplication (BGE-M3)
+- Provenance tracking with source_chunk_id
+- Index consistency validation
+- Dynamic model/relationship discovery
