@@ -1001,16 +1001,33 @@ export function AdminIndexingPage() {
               </div>
             )}
 
-            {/* Success Message */}
-            {isComplete && (
+            {/* Success Message - Sprint 49 Feature 49.4: Status-based styling */}
+            {isComplete && progress && !error && (
               <div
                 data-testid="success-message"
-                className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-md"
+                className={`flex items-center space-x-2 p-3 rounded-md ${
+                  progress.failed_documents === undefined || progress.failed_documents === 0
+                    ? 'bg-green-50 border border-green-200'
+                    : progress.documents_processed === 0
+                    ? 'bg-red-50 border border-red-200'
+                    : 'bg-yellow-50 border border-yellow-200'
+                }`}
               >
-                <SuccessIcon />
-                <span className="text-xs font-medium text-green-800">
-                  Indizierung erfolgreich abgeschlossen! {documentsProcessed} Dokumente
-                  verarbeitet.
+                {progress.failed_documents === undefined || progress.failed_documents === 0 ? (
+                  <SuccessIcon />
+                ) : progress.documents_processed === 0 ? (
+                  <ErrorIcon />
+                ) : (
+                  <WarningIcon />
+                )}
+                <span className={`text-xs font-medium ${
+                  progress.failed_documents === undefined || progress.failed_documents === 0
+                    ? 'text-green-800'
+                    : progress.documents_processed === 0
+                    ? 'text-red-800'
+                    : 'text-yellow-800'
+                }`}>
+                  {progress.message || 'Indizierung abgeschlossen'}
                 </span>
               </div>
             )}
@@ -1215,6 +1232,24 @@ function ErrorIcon() {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  );
+}
+
+function WarningIcon() {
+  return (
+    <svg
+      className="w-4 h-4 text-yellow-600 flex-shrink-0"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
       />
     </svg>
   );

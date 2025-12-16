@@ -30,6 +30,8 @@ export interface ReindexProgressChunk {
   // Sprint 33 Feature 33.6: Extended SSE fields for live progress
   detailed_progress?: DetailedProgress;
   errors?: IngestionError[];
+  // Sprint 49 Feature 49.4: Failed document count for status determination
+  failed_documents?: number;
 }
 
 export interface ReindexRequest {

@@ -796,7 +796,7 @@ async def add_documents_stream(
 
         # Sprint 33: Refresh BM25 index after adding documents
         # This ensures BM25 keyword search is synchronized with Qdrant vector store
-        if not dry_run and (completed_docs - failed_docs) > 0:
+        if not dry_run and completed_docs > 0:
             try:
                 yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Refreshing BM25 keyword index...'})}\n\n"
 
@@ -819,11 +819,19 @@ async def add_documents_stream(
 
         # Completion
         elapsed_time = time.time() - start_time
-        success_count = completed_docs - failed_docs
+        success_count = completed_docs
+        total_processed = success_count + failed_docs
 
-        completion_message = f"Successfully added {success_count} document(s) ({total_chunks} chunks) in {elapsed_time:.1f}s"
-        if failed_docs > 0:
-            completion_message += f" ({failed_docs} failed)"
+        # Sprint 49 Feature 49.4: Determine status based on success/failure counts
+        if failed_docs == 0:
+            # All succeeded
+            completion_message = f"Successfully added {success_count} document(s) ({total_chunks} chunks) in {elapsed_time:.1f}s"
+        elif success_count == 0:
+            # All failed
+            completion_message = f"Failed to add {failed_docs} document(s) in {elapsed_time:.1f}s"
+        else:
+            # Partial success
+            completion_message = f"Partially completed: {success_count} document(s) indexed ({total_chunks} chunks), {failed_docs} failed in {elapsed_time:.1f}s"
 
         yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': completion_message, 'documents_processed': success_count, 'documents_total': total_docs, 'chunks_created': total_chunks, 'failed_documents': failed_docs})}\n\n"
 
