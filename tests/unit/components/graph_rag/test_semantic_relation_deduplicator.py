@@ -30,21 +30,22 @@ class TestSemanticRelationDeduplicator:
             embeddings = []
             for text in texts:
                 # Generate deterministic embeddings based on text
-                # Similar relation types get similar embeddings
+                # Similar relation types get similar embeddings (with small noise for realism)
                 if "act" in text or "star" in text or "play" in text:
                     # ACTED_IN, STARRED_IN, PLAYED_IN cluster
+                    # Use very small noise (0.01) to ensure clustering works
                     base = np.array([1.0, 0.0, 0.0] + [0.0] * 1021)
-                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.05
+                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.01
                     embeddings.append((base + noise).tolist())
                 elif "direct" in text or "helm" in text:
                     # DIRECTED, HELMED cluster
                     base = np.array([0.0, 1.0, 0.0] + [0.0] * 1021)
-                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.05
+                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.01
                     embeddings.append((base + noise).tolist())
                 elif "work" in text or "employ" in text:
                     # WORKS_FOR, EMPLOYED_BY cluster
                     base = np.array([0.0, 0.0, 1.0] + [0.0] * 1021)
-                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.05
+                    noise = np.random.RandomState(hash(text) % 2**32).randn(1024) * 0.01
                     embeddings.append((base + noise).tolist())
                 else:
                     # Unique embedding for other types

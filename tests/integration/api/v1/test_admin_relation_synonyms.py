@@ -10,10 +10,11 @@ Date: 2025-12-16
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from redis.asyncio import Redis
 
 from src.api.main import app
 from src.components.graph_rag.hybrid_relation_deduplicator import REDIS_KEY_RELATION_SYNONYMS
-from src.components.memory import get_redis_memory
+from src.core.config import settings
 
 
 @pytest.fixture
@@ -26,15 +27,22 @@ async def client():
 @pytest.fixture
 async def clean_redis():
     """Clean up Redis before and after tests."""
-    # Clean before test
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    await redis_client.delete(REDIS_KEY_RELATION_SYNONYMS)
+    # Create fresh Redis client for cleanup
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
 
-    yield
+    try:
+        # Clean before test
+        await redis_client.delete(REDIS_KEY_RELATION_SYNONYMS)
 
-    # Clean after test
-    await redis_client.delete(REDIS_KEY_RELATION_SYNONYMS)
+        yield
+
+        # Clean after test
+        await redis_client.delete(REDIS_KEY_RELATION_SYNONYMS)
+    finally:
+        await redis_client.aclose()
 
 
 # ============================================================================
@@ -98,10 +106,15 @@ async def test_add_relation_synonym_success(client: AsyncClient, clean_redis):
     assert data["status"] == "created"
 
     # Verify it was stored in Redis
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
-    assert stored_value.decode() == "USED_BY"
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
+    try:
+        stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
+        assert stored_value == "USED_BY"
+    finally:
+        await redis_client.aclose()
 
 
 @pytest.mark.asyncio
@@ -129,10 +142,15 @@ async def test_add_relation_synonym_normalizes_dashes(client: AsyncClient, clean
     assert response.status_code == status.HTTP_201_CREATED
 
     # Verify normalization
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "WORKS_AT")
-    assert stored_value.decode() == "EMPLOYED_BY"
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
+    try:
+        stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "WORKS_AT")
+        assert stored_value == "EMPLOYED_BY"
+    finally:
+        await redis_client.aclose()
 
 
 @pytest.mark.asyncio
@@ -153,10 +171,15 @@ async def test_add_relation_synonym_updates_existing(client: AsyncClient, clean_
     assert response.status_code == status.HTTP_201_CREATED
 
     # Verify updated value
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
-    assert stored_value.decode() == "UTILIZED_BY"
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
+    try:
+        stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
+        assert stored_value == "UTILIZED_BY"
+    finally:
+        await redis_client.aclose()
 
 
 @pytest.mark.asyncio
@@ -215,10 +238,15 @@ async def test_delete_relation_synonym_success(client: AsyncClient, clean_redis)
     assert data["status"] == "deleted"
 
     # Verify it was removed from Redis
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
-    assert stored_value is None
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
+    try:
+        stored_value = await redis_client.hget(REDIS_KEY_RELATION_SYNONYMS, "USES")
+        assert stored_value is None
+    finally:
+        await redis_client.aclose()
 
 
 @pytest.mark.asyncio
@@ -276,10 +304,15 @@ async def test_reset_relation_synonyms_success(client: AsyncClient, clean_redis)
     assert data["status"] == "reset_complete"
 
     # Verify Redis is empty
-    redis_memory = get_redis_memory()
-    redis_client = await redis_memory.client
-    all_data = await redis_client.hgetall(REDIS_KEY_RELATION_SYNONYMS)
-    assert len(all_data) == 0
+    redis_client = await Redis.from_url(
+        settings.redis_memory_url,
+        decode_responses=True,
+    )
+    try:
+        all_data = await redis_client.hgetall(REDIS_KEY_RELATION_SYNONYMS)
+        assert len(all_data) == 0
+    finally:
+        await redis_client.aclose()
 
 
 @pytest.mark.asyncio
