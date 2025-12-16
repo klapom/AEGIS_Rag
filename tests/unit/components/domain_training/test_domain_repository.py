@@ -359,6 +359,8 @@ async def test_delete_domain_success(domain_repository, mock_neo4j_client):
 @pytest.mark.asyncio
 async def test_delete_domain_not_found(domain_repository, mock_neo4j_client):
     """Test deleting non-existent domain."""
+    # Mock execute_read to return empty list (domain not found)
+    mock_neo4j_client.execute_read.return_value = []
     mock_neo4j_client.execute_write.return_value = [{"deleted_count": 0}]
 
     result = await domain_repository.delete_domain("nonexistent")

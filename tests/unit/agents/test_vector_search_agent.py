@@ -10,6 +10,7 @@ import pytest
 
 from src.agents.state import create_initial_state
 from src.agents.vector_search_agent import VectorSearchAgent, vector_search_node
+from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 
 # ============================================================================
@@ -118,8 +119,8 @@ def test_vector_search_agent_init_default():
         agent = VectorSearchAgent()
 
         assert agent.name == "VectorSearchAgent"
-        assert agent.top_k == 5  # From settings default
-        assert agent.use_reranking is True
+        assert agent.top_k == settings.retrieval_top_k  # From settings
+        assert agent.use_reranking is False  # TD-059: Disabled by default
         assert agent.max_retries == 3
 
 
@@ -150,10 +151,11 @@ async def test_process_success(mock_hybrid_search, sample_state):
     result_state = await agent.process(sample_state)
 
     # Check that search was called
+    # TD-059: use_reranking is False by default
     mock_hybrid_search.hybrid_search.assert_called_once_with(
         query="What is RAG?",
         top_k=5,
-        use_reranking=True,
+        use_reranking=False,
         filters=None,
     )
 

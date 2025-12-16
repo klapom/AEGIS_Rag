@@ -80,8 +80,8 @@ class TestRouteQuery:
 
         route = route_query(state)
 
-        # Should route appropriately
-        assert route in ["vector_search", "hybrid", "end"]
+        # Sprint 42: hybrid intent routes to hybrid_search node
+        assert route in ["vector_search", "hybrid_search", "end"]
 
     def test_route_query__graph_intent__routes_correctly(self):
         """Test routing for graph intent."""
@@ -97,13 +97,13 @@ class TestRouteQuery:
         assert route in ["graph", "end"]
 
     def test_route_query__missing_intent__defaults_gracefully(self):
-        """Test that missing intent doesn't crash."""
+        """Test that missing intent defaults to hybrid_search (Sprint 42)."""
         state = {"query": "test"}
 
         route = route_query(state)
 
-        # Should return a valid route
-        assert route in ["vector_search", "graph", "hybrid", "end"]
+        # Default intent is hybrid, which routes to hybrid_search
+        assert route in ["vector_search", "graph", "hybrid_search", "memory", "end"]
 
 
 class TestCreateBaseGraph:

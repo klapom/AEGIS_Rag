@@ -66,7 +66,7 @@ Redis:     localhost:6379         # Memory/Cache
 Ollama:    http://localhost:11434 # LLM (llama3.2:8b)
 ```
 
-**WICHTIG:** Alle Services laufen lokal auf der DGX Spark, NICHT in Docker!
+**WICHTIG:** Alle Services laufen auf der DGX Spark in Docker!
 - Backend/Frontend: Direkt mit poetry/npm gestartet
 - Datenbanken: Native Installation auf DGX Spark
 - Docling Container: Muss separat gestartet werden für PDF-Ingestion
@@ -114,7 +114,8 @@ aegis-rag/
 ├── frontend/             # React Frontend
 ├── docs/                 # Documentation
 │   ├── adr/              # Architecture Decision Records
-│   └── sprints/          # Sprint Plans & Summaries
+│   ├── sprints/          # Sprint Plans & Summaries
+|   ├── technical_dept/   # Technical depts
 └── docker/               # Dockerfiles
 ```
 
@@ -242,6 +243,35 @@ uvicorn src.api.main:app --reload --port 8000
 # Check health
 curl http://localhost:8000/health
 ```
+
+---
+
+## Sprint-Abschluss: Docker Container Update
+
+**Nach jedem Sprint müssen die Docker Container neu gebaut werden:**
+
+```bash
+# 1. API Container neu bauen (enthält Backend Code)
+docker compose -f docker-compose.dgx-spark.yml build --no-cache api
+
+# 2. Test Container neu bauen (enthält Tests)
+docker compose -f docker-compose.dgx-spark.yml build --no-cache test
+
+# 3. Docling Container (nur bei Änderungen am Ingestion Code)
+docker compose -f docker-compose.dgx-spark.yml build --no-cache docling
+
+# 4. Alle Container neu starten
+docker compose -f docker-compose.dgx-spark.yml up -d
+```
+
+**Container-Images prüfen:**
+```bash
+# Image-Datum prüfen (sollte nach Sprint-Commit sein)
+docker images aegis-rag-api --format "{{.CreatedAt}}"
+docker images aegis-rag-test --format "{{.CreatedAt}}"
+```
+
+**Wichtig:** Die Datenbank-Container (Qdrant, Neo4j, Redis, Ollama) müssen NICHT neu gebaut werden - diese verwenden offizielle Images.
 
 ---
 
