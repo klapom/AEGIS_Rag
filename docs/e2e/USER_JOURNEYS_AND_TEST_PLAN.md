@@ -483,6 +483,379 @@
 
 ---
 
+### **Journey 12: Graph Time Travel (Bi-Temporal Queries)**
+**User Goal:** View historical graph states and track entity evolution over time
+**Feature Status:** ✅ Fully Implemented (Sprint 39) - Needs E2E Test
+**Reference:** ADR-042, Sprint 51.1
+
+#### Steps:
+1. **Enable Temporal Queries**
+   - Navigate to /admin/graph
+   - Click "Settings" or Feature Toggle
+   - Enable "Temporal Queries" feature flag
+   - Verify indexes created (composite temporal indexes)
+
+2. **Upload Documents and Create Versions**
+   - Upload document about "Python 3.11"
+   - Wait for entity extraction
+   - Update document with new information (Python 3.12 release)
+   - Upload again → creates new version
+   - Repeat to create version history (3+ versions)
+
+3. **Access Time Travel Interface**
+   - Navigate to /admin/graph
+   - Click "Time Travel" tab
+   - See date picker for historical queries
+
+4. **Query Historical State**
+   - Select date (e.g., 1 week ago)
+   - View graph as it existed on that date
+   - Verify entities match historical state
+   - Check relationships reflect historical connections
+
+5. **View Entity Version History**
+   - Click entity node (e.g., "Python 3.11")
+   - See version history panel
+   - View all versions with timestamps
+   - See "changed_by" user for each version
+
+6. **Compare Versions**
+   - Select two versions for comparison
+   - View side-by-side diff
+   - Highlight changes (properties, relationships)
+
+7. **View Audit Trail**
+   - See complete change log
+   - Filter by date range
+   - Filter by user
+   - Export audit report
+
+8. **Rollback Entity** (Optional)
+   - Select entity version
+   - Click "Rollback to this version"
+   - Confirm action
+   - Verify entity restored in current graph
+
+#### Test Coverage:
+- ⚠️ Existing: Feature implemented, NO E2E test
+- 🆕 Required: `test_e2e_graph_time_travel_workflow.py` (Sprint 51.1 - 13 SP)
+
+**API Endpoints to Test:**
+- `GET /api/v1/graph/temporal/entities?as_of=2024-01-15`
+- `GET /api/v1/graph/temporal/entity/{id}/history`
+- `POST /api/v1/graph/temporal/query`
+- `GET /api/v1/graph/temporal/entity/{id}/versions`
+- `POST /api/v1/graph/temporal/entity/{id}/rollback`
+- `GET /api/v1/graph/temporal/changes?from=...&to=...`
+
+---
+
+### **Journey 13: Secure Code Analysis with Shell Sandbox**
+**User Goal:** Analyze code repositories safely using sandboxed shell execution
+**Feature Status:** ✅ Fully Implemented (Sprint 40) - Needs E2E Test
+**Reference:** ADR-043, Sprint 51.2
+
+#### Steps:
+1. **Navigate to Code Analysis**
+   - Navigate to /admin/code-analysis (new page)
+   - See repository selector
+
+2. **Select Repository**
+   - Choose from uploaded repositories
+   - Or provide path to analyze
+   - Click "Analyze"
+
+3. **Monitor Sandbox Execution**
+   - Watch real-time log stream (SSE)
+   - See commands executed in sandbox:
+     - `find . -name "*.py" | wc -l` (count files)
+     - `grep -r "import" . | head -20` (dependencies)
+     - `git log --oneline | head -10` (history)
+   - Verify commands complete successfully
+
+4. **View Analysis Results**
+   - See extracted entities (functions, classes, modules)
+   - View dependency graph
+   - Check git metadata (contributors, timeline)
+
+5. **Verify Sandbox Security**
+   - Audit log shows all commands
+   - Network isolation enforced (no curl/wget)
+   - Filesystem isolation enforced
+   - Dangerous commands blocked
+
+6. **Test Sandbox Boundaries**
+   - Try network command → should fail
+   - Try write outside workspace → should fail
+   - Try reading /etc/passwd → should fail
+   - Verify all blocked with proper error messages
+
+#### Test Coverage:
+- ⚠️ Existing: Feature implemented, NO E2E test
+- 🆕 Required: `test_e2e_secure_shell_sandbox.py` (Sprint 51.2 - 8 SP)
+
+**Sandbox Features to Test:**
+- Bubblewrap isolation (network, filesystem, process)
+- Command validation and blocklist
+- Timeout enforcement (30s default)
+- Output sanitization (32KB limit)
+- Audit logging
+- Performance overhead (<200ms per ADR-043)
+
+---
+
+### **Journey 14: Dynamic LLM Model Discovery**
+**User Goal:** Discover and configure available LLM models automatically
+**Feature Status:** ✅ Fully Implemented (Sprint 49.1) - Needs E2E Test
+**Reference:** Sprint 51.3
+
+#### Steps:
+1. **Navigate to LLM Configuration**
+   - Navigate to /admin/llm-config
+   - See LLM configuration page loading
+
+2. **View Available Models**
+   - See model dropdown populated dynamically
+   - Verify models fetched from Ollama API
+   - Check embedding models filtered out (bge-m3, nomic-embed)
+
+3. **Inspect Model Details**
+   - See model size displayed
+   - Check vision models tagged correctly
+   - Verify local vs cloud models distinguished
+
+4. **Select New Model**
+   - Choose different model from dropdown
+   - Save configuration
+   - Verify settings persisted
+
+5. **Test Model Connection**
+   - Click "Test Connection" button
+   - Verify model responds
+   - See connection status (success/failure)
+
+6. **Pull New Model** (Optional)
+   - Use Ollama CLI to pull new model: `ollama pull llama3.3:70b`
+   - Refresh LLM config page
+   - Verify new model appears automatically in dropdown
+
+#### Test Coverage:
+- ⚠️ Existing: Feature implemented, NO E2E test
+- 🆕 Required: `test_e2e_dynamic_llm_configuration.py` (Sprint 51.3 - 5 SP)
+
+**API to Test:**
+- `GET /api/v1/admin/ollama/models`
+
+---
+
+### **Journey 15: Graph Relationship Type Filtering**
+**User Goal:** Filter graph visualization by relationship types
+**Feature Status:** ✅ Fully Implemented (Sprint 49.2) - Needs E2E Test
+**Reference:** Sprint 51.4
+
+#### Steps:
+1. **Navigate to Graph Analytics**
+   - Navigate to /admin/graph
+   - See full graph with all relationships
+
+2. **Open Relationship Filter**
+   - Locate relationship type multiselect
+   - See all available relationship types listed
+
+3. **Apply Filter - Single Type**
+   - Select only "WORKED_AT" relationships
+   - Verify graph updates immediately
+   - Only WORKED_AT edges visible
+   - Nodes with no WORKED_AT connections hidden
+
+4. **Apply Filter - Multiple Types**
+   - Add "FOUNDED" to filter
+   - Verify graph shows WORKED_AT + FOUNDED
+   - Other edge types hidden
+
+5. **Clear Filter**
+   - Deselect all relationship types
+   - Verify graph shows all relationships again
+
+6. **Test Filter Persistence**
+   - Apply filter
+   - Refresh page
+   - Verify filter still applied
+
+7. **Combine with Entity Search**
+   - Apply relationship filter
+   - Search for entity
+   - Verify filter persists during search
+
+#### Test Coverage:
+- ⚠️ Existing: Feature implemented, NO E2E test
+- 🆕 Required: `test_e2e_graph_relationship_filtering.py` (Sprint 51.4 - 5 SP)
+
+---
+
+### **Journey 16: Historical Phase Events Display**
+**User Goal:** View complete phase event history for chat messages
+**Feature Status:** ✅ Fully Implemented (Sprint 49.3) - Needs E2E Test
+**Reference:** Sprint 51.5
+
+#### Steps:
+1. **Start Chat Session**
+   - Navigate to chat (/)
+   - See chat interface ready
+
+2. **Submit Query and Watch Phases**
+   - Enter query: "Explain machine learning"
+   - Submit query
+   - Watch phase indicators during streaming:
+     - "Query Analysis" phase
+     - "Retrieval" phase
+     - "Response Generation" phase
+   - See phase progress in real-time
+
+3. **View Phase Timing**
+   - See phase durations displayed
+   - Verify timestamps accurate
+   - Check phase transitions smooth
+
+4. **Expand Phase History**
+   - After response completes
+   - Click "Show Phase History" or expand accordion
+   - See complete list of all phase events
+   - Verify all phases recorded with timestamps
+
+5. **Multiple Messages**
+   - Submit second query
+   - Verify new message has own phase tracking
+   - Verify first message's phase history preserved
+   - Check phase histories independent
+
+6. **Phase Event Details**
+   - Click on individual phase event
+   - See detailed information:
+     - Phase name
+     - Start/end timestamps
+     - Duration
+     - Status (success/failure)
+     - Optional: Phase-specific metadata
+
+#### Test Coverage:
+- ⚠️ Existing: Feature implemented, NO E2E test
+- 🆕 Required: `test_e2e_historical_phase_events.py` (Sprint 51.5 - 3 SP)
+
+**Component to Test:**
+- `PhaseEventHistory` component in ConversationView
+- SSE-based phase tracking
+- Phase timing accuracy
+
+---
+
+### **Journey 17: Index Consistency Validation UI**
+**User Goal:** Validate consistency across Qdrant, Neo4j, and BM25 indexes
+**Feature Status:** ⚠️ Backend Implemented (Sprint 49.6), Frontend Missing
+**Reference:** Sprint 51.6
+
+#### Steps:
+1. **Navigate to Indexing Management**
+   - Navigate to /admin/indexing
+   - See indexing management page
+   - Locate "Index Consistency" section (NEW)
+
+2. **Trigger Consistency Check**
+   - Click "Check Consistency" button
+   - Watch validation progress (SSE stream)
+   - See checks running:
+     - Qdrant chunk count
+     - Neo4j entity/relation count
+     - BM25 document count
+     - Cross-index consistency
+
+3. **View Results Dashboard**
+   - See summary statistics:
+     - Total documents indexed
+     - Qdrant chunks: X
+     - Neo4j entities: Y
+     - Neo4j relations: Z
+     - BM25 documents: W
+   - Consistency status: ✅ Consistent or ⚠️ Inconsistencies Found
+
+4. **Inspect Inconsistencies**
+   - If inconsistencies found:
+     - See detailed report
+     - List of missing/orphaned chunks
+     - List of entities without chunks
+     - Recommendations for fixes
+
+5. **Trigger Re-indexing**
+   - Select inconsistent documents
+   - Click "Re-index Selected"
+   - Monitor re-indexing progress
+   - Verify consistency after re-indexing
+
+6. **Schedule Automatic Checks**
+   - Configure automatic consistency checks
+   - Set schedule (daily, weekly)
+   - Enable email alerts for inconsistencies
+
+#### Test Coverage:
+- ⚠️ Existing: Backend API exists, NO frontend UI, NO E2E test
+- 🆕 Required: `test_e2e_index_consistency_validation.py` (Sprint 51.6 - 5 SP)
+
+**API to Test:**
+- `GET /api/v1/admin/index/consistency`
+- `POST /api/v1/admin/index/consistency/check`
+
+---
+
+### **Journey 18: User Preference Learning with Mem0 (OPTIONAL)**
+**User Goal:** Let system learn user preferences automatically from conversations
+**Feature Status:** ⚠️ Designed (ADR-025), NOT Implemented
+**Reference:** Sprint 51.7 (OPTIONAL Stretch Goal)
+
+#### Steps (If Implemented):
+1. **Enable Mem0**
+   - Navigate to user profile or settings
+   - See "Preference Learning" toggle
+   - Enable Mem0 feature
+
+2. **Have Conversations**
+   - Use chat interface normally
+   - System learns preferences in background:
+     - Communication style (concise vs detailed)
+     - Technical level (beginner vs expert)
+     - Language preferences
+     - Topic affinities
+
+3. **View Learned Preferences**
+   - Navigate to /profile or /settings
+   - See "Learned Preferences" section
+   - View extracted facts:
+     - "User prefers technical explanations"
+     - "User works with Python and TypeScript"
+     - "User frequently asks about RAG systems"
+
+4. **Manage Preferences**
+   - Delete individual preferences
+   - Edit preferences manually
+   - Disable preference learning temporarily
+
+5. **Experience Personalization**
+   - Chat responses tailored to preferences
+   - Relevant context prioritized
+   - Communication style adapted
+
+6. **Privacy Controls**
+   - View all stored preferences
+   - Export preferences (JSON)
+   - Delete all preferences (GDPR compliance)
+
+#### Test Coverage:
+- ⚠️ Existing: Feature NOT implemented
+- 🆕 Required: `test_e2e_mem0_user_preferences.py` (Sprint 51.7 - 13 SP, OPTIONAL)
+
+**Note:** Only implement if Sprint 51 ahead of schedule (5+ SP buffer).
+
+---
+
 ## ✅ Existing E2E Tests
 
 ### 1. `test_e2e_document_ingestion_workflow.py` (495 lines)

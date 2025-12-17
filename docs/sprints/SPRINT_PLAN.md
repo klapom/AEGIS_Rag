@@ -1206,6 +1206,75 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
+## Sprint 51: Unutilized Features E2E Test Coverage 📋 (PLANNED TBD)
+**Ziel:** E2E test coverage for implemented but unused features from Sprints 30-49 and ADRs
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 51.1 Bi-Temporal Queries / Graph Time Travel | 13 | ✅ Implemented (Sprint 39), Needs E2E |
+| 51.2 Secure Shell Sandbox Execution | 8 | ✅ Implemented (Sprint 40), Needs E2E |
+| 51.3 Dynamic LLM Model Configuration | 5 | ✅ Implemented (Sprint 49.1), Needs E2E |
+| 51.4 Graph Relationship Type Filtering | 5 | ✅ Implemented (Sprint 49.2), Needs E2E |
+| 51.5 Historical Phase Events Display | 3 | ✅ Implemented (Sprint 49.3), Needs E2E |
+| 51.6 Index Consistency Validation UI | 5 | ⚠️ Backend Only (Sprint 49.6), Needs Frontend + E2E |
+| 51.7 Mem0 User Preference Learning (OPTIONAL) | 13 | ⚠️ Designed (ADR-025), NOT Implemented |
+| **Total (without Mem0)** | **39** | |
+| **Total (with Mem0)** | **52** | |
+
+### Deliverables
+- 5-6 new E2E test files for unutilized features
+- Frontend UI components:
+  - TimeTravelControls.tsx + VersionHistoryPanel.tsx (Time Travel)
+  - CodeAnalysisPage.tsx + SandboxExecutionLog.tsx (Sandbox)
+  - ConsistencyReport.tsx (Index Validation)
+- Test fixtures for temporal data, code repositories
+- Updated USER_JOURNEYS_AND_TEST_PLAN.md with 7 new journeys (12-18)
+- Optional: Complete Mem0 implementation if time permits
+
+### Technical Tasks
+- Graph time travel workflow test (temporal queries, version history, rollback)
+- Secure shell sandbox test (Bubblewrap isolation, security boundaries)
+- Dynamic LLM model discovery test (Ollama API, filtering logic)
+- Graph relationship filtering test (multiselect, persistence)
+- Historical phase events test (phase tracking, timing accuracy)
+- Index consistency validation test (cross-system validation, re-indexing)
+- OPTIONAL: Mem0 user preference learning implementation + test
+
+### Success Criteria
+- All 5 critical E2E tests passing (51.1-51.5)
+- Feature 51.6 completed (consistency UI + test)
+- Mem0 decision documented (implement or defer to Sprint 52)
+- Temporal queries feature flag toggleable via UI
+- Sandbox security boundaries validated
+- Performance targets met:
+  - Temporal queries: <500ms (per ADR-042)
+  - Sandbox overhead: <200ms (per ADR-043)
+- All tests run reliably (3x consecutive pass)
+- Code coverage >80%
+
+### ADR References
+- **ADR-042:** Bi-Temporal Queries Opt-In Strategy (Sprint 39)
+- **ADR-043:** Secure Shell Sandbox with Bubblewrap (Sprint 40)
+- **ADR-025:** mem0 User Preference Learning (Sprint 21 planned, not implemented)
+
+### Sprint References
+- **Sprint 39:** Temporal queries implementation (440 lines, 6 API endpoints)
+- **Sprint 40:** Bubblewrap sandbox implementation (deepagents integration)
+- **Sprint 49.1:** Dynamic LLM model discovery
+- **Sprint 49.2:** Graph relationship multiselect
+- **Sprint 49.3:** Historical phase events display
+- **Sprint 49.6:** Index consistency validation backend
+
+### References
+- [SPRINT_51_PLAN.md](SPRINT_51_PLAN.md)
+- [USER_JOURNEYS_AND_TEST_PLAN.md](../e2e/USER_JOURNEYS_AND_TEST_PLAN.md) - Journeys 12-18
+- [ADR-042: Bi-Temporal Queries](../adr/ADR-042_BITEMPORAL_OPT_IN_STRATEGY.md)
+- [ADR-043: Secure Shell Sandbox](../adr/ADR-043_SECURE_SHELL_SANDBOX.md)
+- [ADR-025: mem0 User Preference Layer](../adr/ADR-025-mem0-user-preference-layer.md)
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
