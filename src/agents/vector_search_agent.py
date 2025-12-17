@@ -225,9 +225,21 @@ class VectorSearchAgent(BaseAgent):
             # Extract rank (final rank from reranking or original rank)
             rank = result.get("final_rank", result.get("rrf_rank", result.get("rank", 0)))
 
-            # Build metadata
+            # Sprint 51 Fix: Start with metadata from result (includes document metadata from Qdrant)
+            result_metadata = result.get("metadata", {})
             metadata = {
                 "search_type": result.get("search_type", "hybrid"),
+                # Include document metadata for frontend display
+                "source": result_metadata.get("source", result.get("source", "")),
+                "format": result_metadata.get("format", ""),
+                "file_type": result_metadata.get("file_type", ""),
+                "file_size": result_metadata.get("file_size"),
+                "page_count": result_metadata.get("page_count"),
+                "page": result_metadata.get("page"),
+                "created_at": result_metadata.get("created_at"),
+                "parser": result_metadata.get("parser", ""),
+                "section_headings": result_metadata.get("section_headings", []),
+                "namespace": result_metadata.get("namespace", "default"),
             }
 
             # Add reranking metadata if present

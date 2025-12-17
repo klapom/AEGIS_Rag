@@ -283,17 +283,32 @@ class HybridSearch:
             # Format results
             formatted_results = []
             for rank, result in enumerate(results, start=1):
+                # Sprint 51 Fix: Include full payload as metadata for frontend display
+                payload = result.get("payload", {})
                 formatted_results.append(
                     {
                         "id": str(result["id"]),
-                        "text": result["payload"].get("content", result["payload"].get("text", "")),
+                        "text": payload.get("content", payload.get("text", "")),
                         "score": result["score"],
-                        "source": result["payload"].get(
-                            "document_path", result["payload"].get("source", "unknown")
+                        "source": payload.get(
+                            "document_path", payload.get("source", "unknown")
                         ),
-                        "document_id": result["payload"].get("document_id", ""),
+                        "document_id": payload.get("document_id", ""),
                         "rank": rank,
                         "search_type": "vector",
+                        # Sprint 51 Fix: Pass full metadata from Qdrant payload
+                        "metadata": {
+                            "source": payload.get("source", payload.get("document_path", "")),
+                            "format": payload.get("format", ""),
+                            "file_type": payload.get("file_type", ""),
+                            "file_size": payload.get("file_size"),
+                            "page_count": payload.get("page_count"),
+                            "page": payload.get("page"),
+                            "created_at": payload.get("created_at", payload.get("creation_date")),
+                            "parser": payload.get("parser", ""),
+                            "section_headings": payload.get("section_headings", []),
+                            "namespace": payload.get("namespace", "default"),
+                        },
                     }
                 )
 

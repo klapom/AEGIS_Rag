@@ -346,7 +346,8 @@ class AnswerGenerator:
             else:
                 score = raw_score
 
-            # Sprint 32 Fix: Extract metadata and enrich with additional context fields
+            # Sprint 51 Fix: Pass through full metadata from context
+            # Metadata now includes document info from Qdrant (source, format, file_size, etc.)
             metadata = ctx.get("metadata", {})
             if not isinstance(metadata, dict):
                 metadata = {}
@@ -358,6 +359,9 @@ class AnswerGenerator:
                 metadata["rank"] = ctx["rank"]
             if ctx.get("document_id") and "document_id" not in metadata:
                 metadata["document_id"] = ctx["document_id"]
+
+            # Sprint 51 Fix: Clean up metadata - remove None values for cleaner frontend display
+            metadata = {k: v for k, v in metadata.items() if v is not None and v != ""}
 
             citation_map[i] = {
                 "text": truncated_text,
