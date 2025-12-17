@@ -43,10 +43,12 @@ class AnswerGenerator:
         """Initialize answer generator.
 
         Args:
-            model_name: Preferred local model name (default: llama3.2:3b from ollama_model_query)
+            model_name: Preferred local model name (default from ollama_model_generation)
             temperature: LLM temperature for answer generation (0.0 = deterministic)
         """
-        self.model_name = model_name or settings.ollama_model_query
+        # Sprint 51 Fix: Use ollama_model_generation (not ollama_model_query) for answer generation
+        # ollama_model_generation is configured for RAG answer synthesis (e.g., nemotron-no-think)
+        self.model_name = model_name or settings.ollama_model_generation
         self.temperature = temperature
 
         # Sprint 23: Use AegisLLMProxy for multi-cloud routing
