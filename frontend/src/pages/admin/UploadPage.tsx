@@ -85,6 +85,24 @@ export function UploadPage() {
         );
       } catch (error) {
         console.error(`Failed to classify ${uploadFile.file.name}:`, error);
+        // Fallback: Set default domain when classification fails
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.file.name === uploadFile.file.name && !f.domain
+              ? { ...f, domain: 'general' }
+              : f
+          )
+        );
+        // Add fallback suggestion
+        setDomainSuggestions((prev) => {
+          const updated = new Map(prev);
+          updated.set(uploadFile.file.name, {
+            recommended: 'general',
+            confidence: 0,
+            alternatives: [],
+          });
+          return updated;
+        });
       }
     }
   };

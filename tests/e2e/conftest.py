@@ -5,14 +5,23 @@ This module provides:
 - Shared fixtures for database clients
 - Test data cleanup
 - E2E test markers
+- Screenshot capture on failure
+- Performance baselines
 """
 
 import asyncio
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
+
+from src.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @pytest_asyncio.fixture
@@ -78,7 +87,7 @@ def api_base_url() -> str:
 
 
 def pytest_configure(config):
-    """Register custom markers."""
+    """Register custom markers and configure E2E testing."""
     config.addinivalue_line(
         "markers",
         "e2e: mark test as end-to-end test (requires running services)"
@@ -91,6 +100,43 @@ def pytest_configure(config):
         "markers",
         "sprint49: mark test as Sprint 49 feature validation"
     )
+    config.addinivalue_line(
+        "markers",
+        "sprint50: mark test as Sprint 50 feature validation"
+    )
+
+
+def pytest_runtest_makereport(item, call):
+    """Store test result for use in fixtures."""
+    if call.when == "call":
+        item.rep_call = item.rep_call if hasattr(item, "rep_call") else call
+
+
+# Screenshot and trace capture on test failure
+@pytest.fixture(autouse=True)
+async def capture_on_failure(request, page: Page = None):
+    """Capture screenshot and browser traces on test failure.
+
+    Screenshots and traces are saved for debugging failed tests.
+    Traces are automatically recorded by Playwright when traces are enabled.
+    """
+    yield
+
+    # Check if test failed
+    if hasattr(request, "node") and hasattr(request.node, "rep_call"):
+        if request.node.rep_call.failed:
+            if page is not None:
+                try:
+                    screenshots_dir = Path("tests/e2e/screenshots")
+                    screenshots_dir.mkdir(exist_ok=True)
+
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    screenshot_path = screenshots_dir / f"{request.node.name}_{timestamp}.png"
+
+                    await page.screenshot(path=str(screenshot_path))
+                    logger.info(f"Screenshot saved: {screenshot_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to capture screenshot: {e}")
 
 
 @pytest.fixture(autouse=True)

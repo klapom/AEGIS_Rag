@@ -71,7 +71,7 @@ education accessible to millions of students worldwide.
         client = AsyncQdrantClient(
             host=settings.qdrant_host,
             port=settings.qdrant_port,
-            prefer_grpc=settings.qdrant_prefer_grpc,
+            prefer_grpc=settings.qdrant_use_grpc,
         )
         yield client
         await client.close()
@@ -81,7 +81,7 @@ education accessible to millions of students worldwide.
         """Get Neo4j driver for validation."""
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
         yield driver
         await driver.close()
@@ -132,7 +132,7 @@ education accessible to millions of students worldwide.
 
         # Count chunks in Qdrant before upload
         qdrant_count_before = await qdrant_client.count(
-            collection_name=settings.qdrant_collection_name
+            collection_name=settings.qdrant_collection
         )
         initial_chunk_count = qdrant_count_before.count
 
@@ -203,7 +203,7 @@ education accessible to millions of students worldwide.
         # =====================================================================
 
         qdrant_count_after = await qdrant_client.count(
-            collection_name=settings.qdrant_collection_name
+            collection_name=settings.qdrant_collection
         )
         new_chunk_count = qdrant_count_after.count
         chunks_added = new_chunk_count - initial_chunk_count
@@ -213,7 +213,7 @@ education accessible to millions of students worldwide.
 
         # Retrieve one chunk to verify structure
         search_result = await qdrant_client.scroll(
-            collection_name=settings.qdrant_collection_name,
+            collection_name=settings.qdrant_collection,
             limit=1,
             with_payload=True,
             with_vectors=False,

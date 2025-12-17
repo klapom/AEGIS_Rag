@@ -117,13 +117,13 @@ async def get_current_user(
         secret_key = settings.api_secret_key.get_secret_value()
         payload = jwt.decode(token, secret_key, algorithms=[ALGORITHM])
 
-        # Extract username
-        username: str | None = payload.get("sub")
+        # Extract username (support both "sub" and "username" claims for compatibility)
+        username: str | None = payload.get("sub") or payload.get("username")
         if username is None:
-            logger.warning("Token missing subject claim")
+            logger.warning("Token missing subject/username claim")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token: missing subject",
+                detail="Invalid token: missing subject/username",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 

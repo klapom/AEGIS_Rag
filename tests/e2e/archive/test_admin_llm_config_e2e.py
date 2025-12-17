@@ -43,7 +43,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config", wait_until="domcontentloaded")
+                await page.goto("http://localhost:5179/admin/llm-config", wait_until="domcontentloaded")
 
                 # Wait for page to be visible
                 llm_config = page.locator('[data-testid="llm-config-page"]')
@@ -62,7 +62,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config", wait_until="domcontentloaded")
+                await page.goto("http://localhost:5179/admin/llm-config", wait_until="domcontentloaded")
 
                 use_cases = [
                     "intent_classification",
@@ -92,7 +92,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 use_cases = [
                     "intent_classification",
@@ -122,7 +122,7 @@ class TestAdminLLMConfigE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Clear localStorage
                 await page.evaluate("() => localStorage.clear()")
@@ -170,7 +170,7 @@ class TestAdminLLMConfigE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Clear localStorage to start fresh
                 await page.evaluate("() => localStorage.clear()")
@@ -214,7 +214,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 vlm_dropdown = page.locator('[data-testid="model-dropdown-vision_vlm"]')
 
@@ -254,7 +254,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 refresh_button = page.locator('[data-testid="refresh-models-button"]')
                 await expect(refresh_button).to_be_visible()
@@ -277,7 +277,7 @@ class TestAdminLLMConfigE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
                 await page.evaluate("() => localStorage.clear()")
 
                 # Change multiple use cases
@@ -328,7 +328,7 @@ class TestAdminLLMConfigE2E:
 
             try:
                 # Start at home
-                await page.goto("http://localhost:5173/")
+                await page.goto("http://localhost:5179/")
 
                 # Look for sidebar link
                 sidebar_link = page.locator('[data-testid="sidebar-llm-config-link"]')
@@ -356,7 +356,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Page should load without errors
                 llm_config_page = page.locator('[data-testid="llm-config-page"]')
@@ -375,7 +375,7 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Enable dark mode
                 await page.evaluate("() => document.documentElement.classList.add('dark')")
@@ -409,7 +409,7 @@ class TestVLMIntegrationE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
                 await page.evaluate("() => localStorage.clear()")
                 await page.reload(wait_until="domcontentloaded")
 
@@ -434,7 +434,7 @@ class TestVLMIntegrationE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
                 await page.evaluate("() => localStorage.clear()")
 
                 # Select a specific VLM model
@@ -483,7 +483,7 @@ class TestVLMIntegrationE2E:
             page = await context.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
                 await page.evaluate("() => localStorage.clear()")
 
                 # Select different models for text and VLM
@@ -535,7 +535,7 @@ class TestVLMIntegrationE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5173/admin/llm-config")
+                await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Find the VLM use case selector
                 vlm_selector = page.locator(

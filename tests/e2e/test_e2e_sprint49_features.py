@@ -71,7 +71,7 @@ Christopher Nolan is acquainted with Tom Cruise.
         client = AsyncQdrantClient(
             host=settings.qdrant_host,
             port=settings.qdrant_port,
-            prefer_grpc=settings.qdrant_prefer_grpc,
+            prefer_grpc=settings.qdrant_use_grpc,
         )
         yield client
         await client.close()

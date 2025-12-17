@@ -58,7 +58,7 @@ export function HealthDashboard() {
 
   if (error || !health) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-6">
+      <div className="flex items-center justify-center min-h-screen p-6" data-testid="health-error-state">
         <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6 space-y-4">
           <div className="flex items-center space-x-2 text-red-700">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,9 +115,9 @@ export function HealthDashboard() {
         </div>
 
         {/* Services Grid */}
-        <div>
+        <div data-testid="services-section">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">Services</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div data-testid="services-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {Object.entries(health.services).map(([key, service]) => (
               <ServiceCard key={key} name={key} service={service} />
             ))}
@@ -174,6 +174,7 @@ function StatusBadge({ status }: StatusBadgeProps) {
 
   return (
     <div
+      data-testid="overall-status"
       className={`px-4 py-1.5 rounded-full border font-semibold text-sm ${getStatusColor()}`}
     >
       {status.toUpperCase()}
@@ -249,14 +250,18 @@ function ServiceCard({ name, service }: ServiceCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-primary/50 transition-all p-4">
+    <div
+      data-testid={`service-card-${name.toLowerCase()}`}
+      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:border-primary/50 transition-all p-4"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-1.5">
           <div className="text-lg">{getIcon(name)}</div>
-          <h3 className="text-sm font-semibold text-gray-900 capitalize">{name}</h3>
+          <h3 data-testid={`service-name-${name.toLowerCase()}`} className="text-sm font-semibold text-gray-900 capitalize">{name}</h3>
         </div>
         <div
+          data-testid={`service-status-indicator-${name.toLowerCase()}`}
           className={`w-2 h-2 rounded-full ${getStatusColor(service.status)}`}
           title={service.status}
         />

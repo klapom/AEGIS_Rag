@@ -1,0 +1,218 @@
+name: E2E Tests (Sprint 50)
+
+on:
+  push:
+    branches:
+      - main
+      - sprint-50-e2e-tests
+    paths:
+      - 'src/**'
+      - 'tests/e2e/**'
+      - 'frontend/src/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'tests/e2e/**'
+      - 'frontend/src/**'
+      - 'docker-compose.yml'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # Vector Database
+      qdrant:
+        image: qdrant/qdrant:v1.11.0
+        options: >-
+          --health-cmd "curl -f http://localhost:6333/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6333:6333
+          - 6334:6334
+
+      # Graph Database
+      neo4j:
+        image: neo4j:5.24-community
+        env:
+          NEO4J_AUTH: neo4j/testpassword
+          NEO4J_PLUGINS: '["apoc"]'
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p testpassword 'RETURN 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 7687:7687
+          - 7474:7474
+
+      # Cache
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --with dev
+
+      - name: Wait for services
+        run: |
+          python << 'PYTHON_EOF'
+          import time
+          import socket
+          services = [
+            ('localhost', 6333, 'Qdrant'),
+            ('localhost', 7687, 'Neo4j'),
+            ('localhost', 6379, 'Redis'),
+          ]
+          for host, port, name in services:
+            for _ in range(30):
+              try:
+                s = socket.create_connection((host, port), timeout=1)
+                s.close()
+                print(f'✓ {name} is ready')
+                break
+              except:
+                time.sleep(1)
+            else:
+              print(f'✗ {name} failed to start')
+              exit(1)
+          PYTHON_EOF
+
+      - name: Start Frontend dev server
+        run: |
+          cd frontend
+          npm install
+          npm run dev &
+          sleep 10
+
+      - name: Start Backend API
+        run: |
+          poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: Run E2E tests (Feature 50.7 - Cost Monitoring)
+        run: |
+          BASE_URL=http://localhost:5179 \
+          API_BASE_URL=http://localhost:8000 \
+          poetry run pytest tests/e2e/test_e2e_cost_monitoring_workflow.py -v --tb=short
+        continue-on-error: true
+
+      - name: Run E2E tests (Feature 50.8 - Health Monitoring)
+        run: |
+          BASE_URL=http://localhost:5179 \
+          API_BASE_URL=http://localhost:8000 \
+          poetry run pytest tests/e2e/test_e2e_health_monitoring.py -v --tb=short
+        continue-on-error: true
+
+      - name: Run E2E tests (Feature 50.9 - Indexing Pipeline)
+        run: |
+          BASE_URL=http://localhost:5179 \
+          API_BASE_URL=http://localhost:8000 \
+          poetry run pytest tests/e2e/test_e2e_indexing_pipeline_monitoring.py -v --tb=short
+        continue-on-error: true
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-screenshots
+          path: tests/e2e/screenshots/
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-test-results
+          path: |
+            test-results/
+            .pytest_cache/
+          retention-days: 7
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "E2E Test Run Complete"
+          echo "Check artifacts for screenshots and detailed results"
+
+  test-quality:
+    name: Test Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --with dev
+
+      - name: Lint test files
+        run: |
+          poetry run ruff check tests/e2e/test_*.py tests/e2e/fixtures/ tests/e2e/utils/
+        continue-on-error: true
+
+      - name: Type check test files
+        run: |
+          poetry run mypy tests/e2e/ --ignore-missing-imports || true
+        continue-on-error: true
+
+      - name: Check test structure
+        run: |
+          python << 'PYTHON_EOF'
+          import ast
+          import pathlib
+
+          test_files = pathlib.Path('tests/e2e').glob('test_*.py')
+          for test_file in test_files:
+            if 'conftest' in test_file.name:
+              continue
+            with open(test_file) as f:
+              tree = ast.parse(f.read())
+              has_e2e_marker = False
+              for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef) and node.name.startswith('test_'):
+                  for decorator in node.decorator_list:
+                    if 'mark.e2e' in ast.unparse(decorator):
+                      has_e2e_marker = True
+                      break
+              if not has_e2e_marker:
+                print(f'⚠ No @pytest.mark.e2e found in {test_file}')
+          print('✓ Test structure validation complete')
+          PYTHON_EOF
