@@ -59,12 +59,11 @@ interface CitedSource {
 function filterCitedSources(sources: Source[], content: string): CitedSource[] {
   const citedNumbers = extractCitedNumbers(content);
 
-  // If no citations found, return all sources with their indices (fallback)
+  // Sprint 51 Fix: If no citations found, return EMPTY array
+  // This happens when the LLM determines the sources are irrelevant
+  // and doesn't cite any of them in the answer
   if (citedNumbers.size === 0) {
-    return sources.map((source, index) => ({
-      source,
-      citationNumber: index + 1,
-    }));
+    return [];
   }
 
   // Filter to only cited sources, preserving original citation numbers
