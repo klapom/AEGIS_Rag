@@ -15,6 +15,7 @@
  */
 
 import ReactMarkdown from 'react-markdown';
+import { useMemo, useRef } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { BotAvatar } from './BotAvatar';
 import { MarkdownWithCitations } from './MarkdownWithCitations';
@@ -22,7 +23,67 @@ import { SourceCardsScroll, type SourceCardsScrollRef } from './SourceCardsScrol
 import { ReasoningPanel } from './ReasoningPanel';
 import type { Source } from '../../types/chat';
 import type { ReasoningData } from '../../types/reasoning';
-import { useRef } from 'react';
+
+/**
+ * Extract citation numbers from answer text.
+ * Matches patterns like [1], [2], [10], etc.
+ *
+ * Sprint 51 Fix: Used to filter sources to only show actually cited ones.
+ */
+function extractCitedNumbers(content: string): Set<number> {
+  const matches = content.match(/\[(\d+)\]/g) || [];
+  return new Set(matches.map((m) => parseInt(m.slice(1, -1), 10)));
+}
+
+/**
+ * Cited source with its original citation number.
+ * Sprint 51 Fix: Preserve original citation number for display.
+ */
+interface CitedSource {
+  source: Source;
+  citationNumber: number;
+}
+
+/**
+ * Filter and reorder sources to only include cited ones.
+ *
+ * Sprint 51 Fix: Sources from search are ranked by search relevance (RRF),
+ * but we should only show sources that were actually cited in the answer.
+ * This prevents showing irrelevant sources with high "search relevance"
+ * that weren't used by the LLM.
+ *
+ * @param sources - All sources from citation_map
+ * @param content - Answer text with citations like [1], [2]
+ * @returns Filtered sources with their original citation numbers
+ */
+function filterCitedSources(sources: Source[], content: string): CitedSource[] {
+  const citedNumbers = extractCitedNumbers(content);
+
+  // If no citations found, return all sources with their indices (fallback)
+  if (citedNumbers.size === 0) {
+    return sources.map((source, index) => ({
+      source,
+      citationNumber: index + 1,
+    }));
+  }
+
+  // Filter to only cited sources, preserving original citation numbers
+  // Sources are 1-indexed in citation_map
+  const citedSources: CitedSource[] = [];
+  const sortedCitations = Array.from(citedNumbers).sort((a, b) => a - b);
+
+  sortedCitations.forEach((num) => {
+    const source = sources[num - 1]; // Convert 1-indexed to 0-indexed
+    if (source) {
+      citedSources.push({
+        source,
+        citationNumber: num,
+      });
+    }
+  });
+
+  return citedSources;
+}
 
 /**
  * Message data structure for MessageBubble
@@ -62,8 +123,19 @@ interface MessageBubbleProps {
  */
 export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) {
   const isUser = message.role === 'user';
-  const hasSources = message.sources && message.sources.length > 0;
   const sourceCardsRef = useRef<SourceCardsScrollRef>(null);
+
+  // Sprint 51 Fix: Filter sources to only show those actually cited in the answer
+  // This prevents showing irrelevant sources with high "search relevance" but no actual usage
+  const filteredSources = useMemo((): CitedSource[] => {
+    if (!message.sources || message.sources.length === 0) {
+      return [];
+    }
+    return filterCitedSources(message.sources, message.content);
+  }, [message.sources, message.content]);
+
+  const hasSources = filteredSources.length > 0;
+  const hasOriginalSources = message.sources && message.sources.length > 0;
 
   /**
    * Handle citation click by scrolling to the source card
@@ -107,8 +179,10 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
             <div className="whitespace-pre-wrap break-words">{message.content}</div>
           ) : (
             // Assistant messages: Markdown with optional citations
+            // Sprint 51 Fix: Use original sources for citation lookup (correct [N] mapping)
+            // but only show filtered (actually cited) sources in the cards below
             <>
-              {hasSources ? (
+              {hasOriginalSources ? (
                 <MarkdownWithCitations
                   content={message.content}
                   sources={message.sources || []}
@@ -125,10 +199,10 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
           )}
         </div>
 
-        {/* Source cards for assistant messages */}
+        {/* Source cards for assistant messages - Sprint 51: Only show cited sources */}
         {!isUser && hasSources && !message.isStreaming && (
           <div className="mt-4">
-            <SourceCardsScroll ref={sourceCardsRef} sources={message.sources || []} />
+            <SourceCardsScroll ref={sourceCardsRef} sources={filteredSources} />
           </div>
         )}
 
