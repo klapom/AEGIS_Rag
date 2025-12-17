@@ -426,42 +426,43 @@ class CoordinatorAgent:
             config["recursion_limit"] = self.recursion_limit
 
         # Stream through LangGraph workflow
-        # Note: We use astream() to get updates as each node completes
+        # Sprint 51 Fix: Use stream_mode="values" to get full accumulated state
+        # Default "updates" mode only yields state deltas, missing the answer field
         final_state = None
+        yielded_phase_types: set[str] = set()  # Track yielded phases to avoid duplicates
         try:
-            async for event in self.compiled_graph.astream(initial_state, config=config):
+            async for event in self.compiled_graph.astream(
+                initial_state, config=config, stream_mode="values"
+            ):
+                # Sprint 51 Fix: With stream_mode="values", event is the full accumulated state
                 # DEBUG: Log what astream() is yielding
                 logger.info(
                     "astream_event_received",
                     event_type=type(event).__name__,
                     is_dict=isinstance(event, dict),
                     keys=list(event.keys()) if isinstance(event, dict) else None,
+                    has_answer="answer" in event if isinstance(event, dict) else False,
                 )
 
-                # LangGraph astream yields (node_name, node_output) tuples
+                # With stream_mode="values", event is the full state dict
                 if isinstance(event, dict):
-                    # Extract node name and state from event
-                    for node_name, node_state in event.items():
-                        logger.info(
-                            "node_completed",
-                            node=node_name,
-                            query=query[:50],
-                            node_state_type=type(node_state).__name__,
-                            has_phase_event="phase_event" in node_state
-                            if isinstance(node_state, dict)
-                            else False,
+                    # Check if state has a phase_event (added by current node)
+                    if "phase_event" in event:
+                        phase_event = event["phase_event"]
+                        phase_type = (
+                            phase_event.phase_type
+                            if isinstance(phase_event, PhaseEvent)
+                            else phase_event.get("phase_type")
                         )
 
-                        # Check if node added a phase_event to state
-                        if isinstance(node_state, dict) and "phase_event" in node_state:
-                            phase_event = node_state["phase_event"]
+                        # Only yield if we haven't yielded this phase type yet
+                        if phase_type and phase_type not in yielded_phase_types:
                             logger.info(
                                 "phase_event_found",
-                                node=node_name,
-                                phase_type=phase_event.phase_type
-                                if isinstance(phase_event, PhaseEvent)
-                                else phase_event.get("phase_type"),
+                                phase_type=phase_type,
                             )
+                            yielded_phase_types.add(phase_type)
+
                             if isinstance(phase_event, PhaseEvent):
                                 # Yield phase event (will be serialized by API layer)
                                 yield phase_event
@@ -469,8 +470,8 @@ class CoordinatorAgent:
                                 # Convert dict to PhaseEvent if needed
                                 yield PhaseEvent(**phase_event)
 
-                        # Keep track of final state
-                        final_state = node_state
+                    # Keep track of final state (full accumulated state)
+                    final_state = event
 
         except Exception as e:
             logger.error(

@@ -74,7 +74,20 @@ class LightRAGClient:
         """
         # Configuration
         self.working_dir = Path(working_dir or settings.lightrag_working_dir)
-        self.llm_model = llm_model or settings.lightrag_llm_model
+
+        # Sprint 51: Read extraction model from YAML config first
+        if llm_model:
+            self.llm_model = llm_model
+        else:
+            try:
+                from src.components.llm_proxy.config import LLMProxyConfig
+
+                llm_config = LLMProxyConfig()
+                yaml_model = llm_config.get_default_model("local_ollama", "extraction")
+                self.llm_model = yaml_model or settings.lightrag_llm_model
+            except Exception:
+                self.llm_model = settings.lightrag_llm_model
+
         self.embedding_model = embedding_model or settings.lightrag_embedding_model
         self.neo4j_uri = neo4j_uri or settings.neo4j_uri
         self.neo4j_user = neo4j_user or settings.neo4j_user
@@ -949,18 +962,22 @@ class LightRAGClient:
         self,
         chunks: list[dict[str, Any]],
         entities: list[dict[str, Any]],
+        namespace_id: str = "default",
     ) -> None:
         """Store chunk nodes and MENTIONED_IN relationships in Neo4j.
 
         Sprint 14 Feature 14.1 - Phase 5: Neo4j Integration
+        Sprint 51: Added namespace_id for multi-tenant isolation.
 
         Creates Neo4j schema:
-        - :chunk nodes with text, tokens, document_id, chunk_index metadata
+        - :chunk nodes with text, tokens, document_id, chunk_index, namespace_id metadata
+        - :base entity nodes with namespace_id for isolation
         - MENTIONED_IN relationships from :base entities to :chunk nodes
 
         Args:
             chunks: list of chunk metadata from _chunk_text_with_metadata()
             entities: list of entities in LightRAG format (with source_id=chunk_id)
+            namespace_id: Namespace for multi-tenant isolation (default: "default")
         """
         await self._ensure_initialized()
 
@@ -995,6 +1012,7 @@ class LightRAGClient:
                     end_token = chunk.get("end_token", tokens)  # Default to token count
 
                     # Create chunk node
+                    # Sprint 51: Added namespace_id for multi-tenant isolation
                     await session.run(
                         """
                         MERGE (c:chunk {chunk_id: $chunk_id})
@@ -1004,6 +1022,7 @@ class LightRAGClient:
                             c.tokens = $tokens,
                             c.start_token = $start_token,
                             c.end_token = $end_token,
+                            c.namespace_id = $namespace_id,
                             c.created_at = datetime()
                         """,
                         chunk_id=chunk_id,
@@ -1013,6 +1032,7 @@ class LightRAGClient:
                         tokens=tokens,
                         start_token=start_token,
                         end_token=end_token,
+                        namespace_id=namespace_id,
                     )
 
                 logger.info("chunk_nodes_created", count=len(chunks))
@@ -1059,6 +1079,7 @@ class LightRAGClient:
                     )
 
                     try:
+                        # Sprint 51: Added namespace_id for multi-tenant isolation
                         await session.run(
                             f"""
                             MERGE (e:{labels_str} {{entity_id: $entity_id}})
@@ -1068,6 +1089,7 @@ class LightRAGClient:
                                 e.source_id = $source_id,
                                 e.file_path = $file_path,
                                 e.chunk_index = $chunk_index,
+                                e.namespace_id = $namespace_id,
                                 e.created_at = datetime()
                             """,
                             entity_id=entity_id,
@@ -1077,6 +1099,7 @@ class LightRAGClient:
                             source_id=entity.get("source_id", ""),
                             file_path=entity.get("file_path", ""),
                             chunk_index=entity.get("chunk_index", 0),
+                            namespace_id=namespace_id,
                         )
                         entities_created += 1
                     except Exception as e:
@@ -1111,6 +1134,7 @@ class LightRAGClient:
                 for chunk_id, entity_ids in entities_by_chunk.items():
                     # Create MENTIONED_IN for all entities in this chunk
                     # Sprint 49 Feature 49.5: Include source_chunk_id property
+                    # Sprint 51: Added namespace_id for multi-tenant isolation
                     await session.run(
                         """
                         UNWIND $entity_ids AS entity_id
@@ -1118,10 +1142,12 @@ class LightRAGClient:
                         MATCH (c:chunk {chunk_id: $chunk_id})
                         MERGE (e)-[r:MENTIONED_IN]->(c)
                         SET r.created_at = datetime(),
-                            r.source_chunk_id = $chunk_id
+                            r.source_chunk_id = $chunk_id,
+                            r.namespace_id = $namespace_id
                         """,
                         chunk_id=chunk_id,
                         entity_ids=entity_ids,
+                        namespace_id=namespace_id,
                     )
                     mentioned_in_count += len(entity_ids)
 
@@ -1146,10 +1172,12 @@ class LightRAGClient:
         self,
         relations: list[dict[str, Any]],
         chunk_id: str,
+        namespace_id: str = "default",
     ) -> int:
         """Store RELATES_TO relationships between entities in Neo4j.
 
         Sprint 34 Feature 34.1: LightRAG Schema Alignment (ADR-040)
+        Sprint 51: Added namespace_id for multi-tenant isolation.
 
         Args:
             relations: List of relations from RelationExtractor with keys:
@@ -1158,6 +1186,7 @@ class LightRAGClient:
                 - description (str): Relationship description
                 - strength (int): Strength 1-10
             chunk_id: Source chunk ID for provenance
+            namespace_id: Namespace for multi-tenant isolation (default: "default")
 
         Returns:
             Number of relationships created
@@ -1187,6 +1216,7 @@ class LightRAGClient:
             # Use Neo4j driver for direct operations
             async with graph._driver.session() as session:
                 # Batch create RELATES_TO relationships
+                # Sprint 51: Added namespace_id for multi-tenant isolation
                 result = await session.run(
                     """
                     UNWIND $relations AS rel
@@ -1197,6 +1227,7 @@ class LightRAGClient:
                     SET r.weight = toFloat(rel.strength) / 10.0,
                         r.description = rel.description,
                         r.source_chunk_id = $chunk_id,
+                        r.namespace_id = $namespace_id,
                         r.created_at = datetime()
                     RETURN count(r) AS created
                     """,
@@ -1210,6 +1241,7 @@ class LightRAGClient:
                         for r in relations
                     ],
                     chunk_id=chunk_id,
+                    namespace_id=namespace_id,
                 )
                 record = await result.single()
                 created = record["created"] if record else 0
@@ -1442,6 +1474,7 @@ class LightRAGClient:
         self,
         chunks: list[dict[str, Any]],
         document_id: str,
+        namespace_id: str = "default",
     ) -> dict[str, Any]:
         """Insert pre-chunked documents with existing chunk_ids (Sprint 42).
 
@@ -1451,6 +1484,7 @@ class LightRAGClient:
         Qdrant and Neo4j.
 
         Sprint 42: Unified chunk IDs between Qdrant and Neo4j for true hybrid search.
+        Sprint 51: Added namespace_id for multi-tenant isolation.
 
         Args:
             chunks: List of pre-chunked documents, each with:
@@ -1458,6 +1492,9 @@ class LightRAGClient:
                 - text: The chunk text content
                 - chunk_index: Optional index within the document
             document_id: The source document ID for provenance tracking
+            namespace_id: Namespace for multi-tenant isolation (default: "default")
+                         Admin-indexed docs use "default" (globally searchable)
+                         User project docs should use their project namespace
 
         Returns:
             Batch insertion result with entities/relations extracted
@@ -1687,6 +1724,7 @@ class LightRAGClient:
             )
 
         # Store chunks and provenance in Neo4j
+        # Sprint 51: Pass namespace_id for multi-tenant isolation
         await self._store_chunks_and_provenance_in_neo4j(
             chunks=[{
                 "chunk_id": c["source_id"],
@@ -1695,6 +1733,7 @@ class LightRAGClient:
                 "chunk_index": i,
             } for i, c in enumerate(converted_chunks)],
             entities=lightrag_entities,
+            namespace_id=namespace_id,
         )
 
         # Update aggregate stats

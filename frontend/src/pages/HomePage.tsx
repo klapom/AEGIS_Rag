@@ -200,9 +200,11 @@ export function HomePage() {
 
       if (!isAlreadyInHistory && streamingState.answer) {
         // Build reasoning data from metadata if available
+        // Sprint 51: Include phaseEvents to persist phases after answer appears
         const reasoningData = buildReasoningData(
           streamingState.metadata,
-          streamingState.intent
+          streamingState.intent,
+          streamingState.phaseEvents
         );
 
         // Sprint 47 Fix: Use stable streaming ID from ref instead of Date.now()

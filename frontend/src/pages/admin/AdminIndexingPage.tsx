@@ -20,7 +20,8 @@
  * All data-testid attributes match E2E test expectations from AdminIndexingPage POM
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { scanDirectory, streamAddDocuments, uploadFiles } from '../../api/admin';
 import type {
   ReindexProgressChunk,
@@ -150,6 +151,9 @@ export function AdminIndexingPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sprint 51: Ref for auto-scroll in progress log
+  const progressLogRef = useRef<HTMLDivElement>(null);
+
   // Scan state
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanDirectoryResponse | null>(null);
@@ -172,6 +176,13 @@ export function AdminIndexingPage() {
 
   // Sprint 33 Feature 33.5: Error Tracking state
   const [errors, setErrors] = useState<IngestionError[]>([]);
+
+  // Sprint 51: Auto-scroll progress log to show latest entry
+  useEffect(() => {
+    if (progressLogRef.current && progressHistory.length > 0) {
+      progressLogRef.current.scrollTop = progressLogRef.current.scrollHeight;
+    }
+  }, [progressHistory]);
 
   // Handle directory scan
   const handleScanDirectory = useCallback(async () => {
@@ -321,15 +332,7 @@ export function AdminIndexingPage() {
       return;
     }
 
-    // Confirmation (ADD-only mode - no deletion warning)
-    const confirmed = window.confirm(
-      `${selectedFiles.size} Datei(en) werden zum Index hinzugefuegt.\n\n` +
-        'Bestehende Dokumente bleiben erhalten.\n\n' +
-        'Fortfahren?'
-    );
-    if (!confirmed) {
-      return;
-    }
+    // Sprint 51: Removed confirmation dialog - direct start for better UX
 
     // Reset state
     setIsIndexing(true);
@@ -356,8 +359,38 @@ export function AdminIndexingPage() {
         setProgressHistory((prev) => [...prev, chunk]);
 
         // Sprint 33 Feature 33.6: Update detailed progress from SSE
-        if (chunk.detailed_progress) {
-          setDetailedProgress(chunk.detailed_progress);
+        // Sprint 51 Fix: Only update entity/relation counts if new values are higher (prevent reset to 0)
+        const detailedProgressFromChunk = chunk.detailed_progress;
+        if (detailedProgressFromChunk) {
+          setDetailedProgress((prev) => {
+            if (!prev) return detailedProgressFromChunk;
+
+            const newEntities = detailedProgressFromChunk.entities;
+            const prevEntities = prev.entities || {
+              new_entities: [],
+              new_relations: [],
+              total_entities: 0,
+              total_relations: 0
+            };
+
+            return {
+              ...detailedProgressFromChunk,
+              entities: {
+                // Preserve arrays from chunk or previous state
+                new_entities: newEntities?.new_entities || prevEntities.new_entities || [],
+                new_relations: newEntities?.new_relations || prevEntities.new_relations || [],
+                // Keep highest counts
+                total_entities: Math.max(
+                  newEntities?.total_entities || 0,
+                  prevEntities.total_entities || 0
+                ),
+                total_relations: Math.max(
+                  newEntities?.total_relations || 0,
+                  prevEntities.total_relations || 0
+                ),
+              },
+            };
+          });
         }
 
         // Sprint 33 Feature 33.6: Accumulate errors from SSE
@@ -451,6 +484,17 @@ export function AdminIndexingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-6 px-4 space-y-4">
+        {/* Back Link */}
+        <Link
+          to="/admin"
+          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Admin
+        </Link>
+
         {/* Header */}
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">Document Indexing</h1>
@@ -1049,7 +1093,10 @@ export function AdminIndexingPage() {
               <summary className="cursor-pointer text-xs font-medium text-gray-700 hover:text-gray-900">
                 Fortschritts-Log anzeigen ({progressHistory.length} Ereignisse)
               </summary>
-              <div className="mt-2 max-h-48 overflow-y-auto space-y-0.5 text-xs font-mono bg-gray-50 rounded p-2">
+              <div
+                ref={progressLogRef}
+                className="mt-2 max-h-48 overflow-y-auto space-y-0.5 text-xs font-mono bg-gray-50 rounded p-2"
+              >
                 {progressHistory.map((chunk, i) => (
                   <div key={i} className="text-gray-600">
                     <span className="text-gray-400">[{chunk.phase || 'unknown'}]</span>{' '}

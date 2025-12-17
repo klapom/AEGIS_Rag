@@ -94,6 +94,10 @@ class AgentState(MessagesState):
         default_factory=dict,
         description="Map of citation numbers to source metadata (Sprint 27 Feature 27.10)",
     )
+    answer: str = Field(
+        default="",
+        description="Generated answer from LLM (Sprint 51 Fix)",
+    )
     namespaces: list[str] | None = Field(
         default=None,
         description='Namespaces to search in. Defaults to ["default", "general"] (Sprint 41 Feature 41.4)',

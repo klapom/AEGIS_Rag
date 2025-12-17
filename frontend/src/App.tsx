@@ -8,7 +8,6 @@
  * Sprint 46 Feature 46.8: Admin Area Consolidation
  */
 
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -30,12 +29,7 @@ import { DomainTrainingPage } from './pages/admin/DomainTrainingPage';
 import { UploadPage } from './pages/admin/UploadPage';
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const handleToggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
+  // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
   return (
     <AuthProvider>
       <SettingsProvider>
@@ -50,15 +44,12 @@ function App() {
               path="/*"
               element={
                 <ProtectedRoute>
-                  <AppLayout
-                    sidebarOpen={sidebarOpen}
-                    onToggleSidebar={handleToggleSidebar}
-                  >
+                  <AppLayout>
                     <Routes>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/search" element={<SearchResultsPage />} />
-                      <Route path="/health" element={<HealthDashboard />} />
                       <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/admin/health" element={<HealthDashboard />} />
                       <Route path="/admin/legacy" element={<AdminPage />} />
                       <Route path="/admin/indexing" element={<AdminIndexingPage />} />
                       <Route path="/admin/graph" element={<GraphAnalyticsPage />} />

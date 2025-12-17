@@ -317,6 +317,19 @@ export function useStreamChat({
           }
           break;
 
+        // Sprint 51 Fix: Handle answer_chunk from backend (contains full answer)
+        case 'answer_chunk' as ChatChunk['type']: {
+          const answerData = chunk.data as { answer?: string; citation_map?: Record<number, Source> };
+          if (answerData?.answer) {
+            setAnswer(answerData.answer);
+            finalAnswerRef.current = answerData.answer;
+          }
+          if (answerData?.citation_map) {
+            setCitationMap(answerData.citation_map);
+          }
+          break;
+        }
+
         case 'complete': {
           const completeData = chunk.data;
           if (completeData) {
@@ -443,29 +456,35 @@ export function useStreamChat({
 /**
  * Build reasoning data from metadata if not directly provided
  * This handles cases where the backend sends reasoning info in different formats
+ * Sprint 51: Added phaseEvents parameter to preserve phases after answer appears
  */
 export function buildReasoningData(
   metadata: Record<string, unknown> | null,
-  intent: string
+  intent: string,
+  phaseEvents?: PhaseEvent[]
 ): ReasoningData | null {
-  if (!metadata) return null;
+  if (!metadata && !phaseEvents?.length) return null;
 
-  // If reasoning data is directly available, use it
-  if (metadata.reasoning) {
-    return metadata.reasoning as ReasoningData;
+  // If reasoning data is directly available, use it (but add phaseEvents)
+  if (metadata?.reasoning) {
+    const existingData = metadata.reasoning as ReasoningData;
+    return {
+      ...existingData,
+      phase_events: phaseEvents || existingData.phase_events,
+    };
   }
 
   // Build from individual fields if available
-  const intentType = (metadata.intent_type || intent || 'factual') as IntentType;
-  const confidence = (metadata.intent_confidence as number) || 0.8;
-  const retrievalSteps = (metadata.retrieval_steps as RetrievalStepType[]) || [];
-  const toolsUsed = (metadata.tools_used as string[]) || [];
-  const totalDuration = metadata.latency_seconds
+  const intentType = (metadata?.intent_type || intent || 'factual') as IntentType;
+  const confidence = (metadata?.intent_confidence as number) || 0.8;
+  const retrievalSteps = (metadata?.retrieval_steps as RetrievalStepType[]) || [];
+  const toolsUsed = (metadata?.tools_used as string[]) || [];
+  const totalDuration = metadata?.latency_seconds
     ? (metadata.latency_seconds as number) * 1000
     : undefined;
 
-  // Only return if we have meaningful data
-  if (!retrievalSteps.length && !toolsUsed.length) {
+  // Sprint 51: Return data if we have phase events, even without retrieval steps
+  if (!retrievalSteps.length && !toolsUsed.length && !phaseEvents?.length) {
     return null;
   }
 
@@ -473,10 +492,11 @@ export function buildReasoningData(
     intent: {
       intent: intentType,
       confidence,
-      reasoning: metadata.intent_reasoning as string | undefined,
+      reasoning: metadata?.intent_reasoning as string | undefined,
     },
     retrieval_steps: retrievalSteps,
     tools_used: toolsUsed,
     total_duration_ms: totalDuration,
+    phase_events: phaseEvents,
   };
 }

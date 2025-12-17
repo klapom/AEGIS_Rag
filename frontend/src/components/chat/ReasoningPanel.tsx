@@ -1,25 +1,29 @@
 /**
  * ReasoningPanel Component
  * Sprint 46 Feature 46.2: Transparent Reasoning Panel
+ * Sprint 51: Added phase events display to persist phases after answer
  *
  * Expandable panel showing the retrieval chain, similar to ChatGPT's
  * chain-of-thought display. Collapsed by default, shows all retrieval
  * steps when expanded.
  *
  * Sections when expanded:
+ * - Processing phases (Sprint 51)
  * - Intent classification (intent type + confidence score)
  * - Retrieval Chain with steps
  * - Tools Used section (if any)
  */
 
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Brain, Wrench } from 'lucide-react';
+import { ChevronRight, ChevronDown, Brain, Wrench, CheckCircle, XCircle, SkipForward, Loader2 } from 'lucide-react';
 import { RetrievalStep } from './RetrievalStep';
 import type {
   ReasoningData,
   IntentInfo,
   IntentType,
+  PhaseEvent,
 } from '../../types/reasoning';
+import { PHASE_NAMES } from '../../types/reasoning';
 
 interface ReasoningPanelProps {
   /** Reasoning data to display */
@@ -130,11 +134,84 @@ function ToolsSection({ tools }: { tools: string[] }) {
 }
 
 /**
+ * Sprint 51: Phases section showing completed processing phases
+ */
+function PhasesSection({ phases }: { phases: PhaseEvent[] }) {
+  if (!phases || phases.length === 0) return null;
+
+  /**
+   * Get status icon for phase
+   */
+  const getStatusIcon = (status: PhaseEvent['status']) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
+      case 'failed':
+        return <XCircle className="w-3.5 h-3.5 text-red-500" />;
+      case 'skipped':
+        return <SkipForward className="w-3.5 h-3.5 text-gray-400" />;
+      case 'in_progress':
+        return <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin" />;
+      default:
+        return <div className="w-3.5 h-3.5 rounded-full bg-gray-300" />;
+    }
+  };
+
+  /**
+   * Calculate duration in ms
+   */
+  const getDuration = (phase: PhaseEvent): number | null => {
+    if (!phase.end_time || !phase.start_time) return null;
+    return new Date(phase.end_time).getTime() - new Date(phase.start_time).getTime();
+  };
+
+  /**
+   * Format duration
+   */
+  const formatDuration = (ms: number | null): string => {
+    if (ms === null) return '';
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+
+  return (
+    <div data-testid="phases-section">
+      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+        Verarbeitungsphasen ({phases.filter(p => p.status === 'completed').length}/{phases.length})
+      </h4>
+      <div className="space-y-1">
+        {phases.map((phase) => {
+          const duration = getDuration(phase);
+          return (
+            <div
+              key={phase.phase_type}
+              className="flex items-center justify-between py-1.5 px-2 rounded bg-white border border-gray-100"
+            >
+              <div className="flex items-center gap-2">
+                {getStatusIcon(phase.status)}
+                <span className="text-sm text-gray-700">
+                  {PHASE_NAMES[phase.phase_type] || phase.phase_type}
+                </span>
+              </div>
+              {duration !== null && (
+                <span className="text-xs text-gray-500">
+                  {formatDuration(duration)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Main ReasoningPanel component
  */
 export function ReasoningPanel({
   data,
-  defaultExpanded = false,
+  defaultExpanded = true, // Sprint 51: Default to expanded to show phases
   onToggle,
 }: ReasoningPanelProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
@@ -150,7 +227,7 @@ export function ReasoningPanel({
     return null;
   }
 
-  const { intent, retrieval_steps, tools_used, total_duration_ms } = data;
+  const { intent, retrieval_steps, tools_used, total_duration_ms, phase_events } = data;
 
   return (
     <div
@@ -194,6 +271,11 @@ export function ReasoningPanel({
         >
           {/* Divider */}
           <div className="border-t border-gray-200 -mx-4" />
+
+          {/* Sprint 51: Processing Phases (shown first if available) */}
+          {phase_events && phase_events.length > 0 && (
+            <PhasesSection phases={phase_events} />
+          )}
 
           {/* Intent Classification */}
           <IntentSection intent={intent} />

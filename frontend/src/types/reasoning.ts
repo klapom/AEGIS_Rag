@@ -78,6 +78,7 @@ export interface IntentInfo {
 
 /**
  * Complete reasoning data for a response
+ * Sprint 51: Added phaseEvents for persistent phase display after answer
  */
 export interface ReasoningData {
   /** Intent classification for the query */
@@ -88,6 +89,8 @@ export interface ReasoningData {
   tools_used: string[];
   /** Total processing time in milliseconds */
   total_duration_ms?: number;
+  /** Sprint 51: Phase events from the thinking process (optional, for display after answer) */
+  phase_events?: PhaseEvent[];
 }
 
 /**

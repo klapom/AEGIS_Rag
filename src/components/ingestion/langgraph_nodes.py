@@ -45,6 +45,7 @@ import structlog
 from src.components.graph_rag.community_detector import get_community_detector
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.docling_client import DoclingContainerClient
+from src.components.ingestion.progress_events import emit_progress
 from src.components.ingestion.image_processor import ImageProcessor
 from src.components.ingestion.ingestion_state import (
     IngestionState,
@@ -1633,6 +1634,10 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 ],
                 # Timestamps
                 "ingestion_timestamp": time.time(),
+                # Sprint 51: Namespace for document isolation
+                # Admin-indexed docs use "default" namespace (globally searchable)
+                # User project docs will override this with their namespace
+                "namespace": "default",
             }
 
             point = PointStruct(
@@ -1785,16 +1790,39 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
         # Sprint 42: Use insert_prechunked_documents to preserve chunk IDs
         lightrag_insert_start = time.perf_counter()
+        total_chunks = len(prechunked_docs)
         logger.info(
             "TIMING_lightrag_insert_start",
             stage="graph_extraction",
             substage="lightrag_prechunked_insert",
-            chunk_count=len(prechunked_docs),
+            chunk_count=total_chunks,
             document_id=state["document_id"],
         )
+
+        # Sprint 51: Emit progress event for entity extraction start
+        await emit_progress(
+            document_id=state["document_id"],
+            phase="entity_extraction",
+            current=0,
+            total=total_chunks,
+            message=f"Extracting entities from {total_chunks} chunks...",
+            details={"stage": "lightrag_insert"},
+        )
+
         graph_stats = await lightrag.insert_prechunked_documents(
             chunks=prechunked_docs,
             document_id=state["document_id"],
+        )
+
+        # Sprint 51: Emit progress event for entity extraction complete
+        entities_extracted = graph_stats.get("stats", {}).get("total_entities", 0)
+        await emit_progress(
+            document_id=state["document_id"],
+            phase="entity_extraction",
+            current=total_chunks,
+            total=total_chunks,
+            message=f"Extracted {entities_extracted} entities from {total_chunks} chunks",
+            details={"total_entities": entities_extracted, "total_relations": 0},
         )
         lightrag_insert_end = time.perf_counter()
         lightrag_insert_ms = (lightrag_insert_end - lightrag_insert_start) * 1000
@@ -1868,8 +1896,19 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             )
             neo4j_chunks = []
 
+        # Sprint 51: Emit progress event for relation extraction start
+        relation_chunks_total = len(neo4j_chunks)
+        await emit_progress(
+            document_id=document_id,
+            phase="relation_extraction",
+            current=0,
+            total=relation_chunks_total,
+            message=f"Starting relation extraction for {relation_chunks_total} chunks...",
+            details={"stage": "relation_extraction_start"},
+        )
+
         # Process each chunk from Neo4j: extract relations and store to Neo4j
-        for chunk_data in neo4j_chunks:
+        for chunk_idx, chunk_data in enumerate(neo4j_chunks):
             chunk_text = chunk_data.get("chunk_text", "")
             chunk_id = chunk_data.get("chunk_id", "")
 
@@ -1922,9 +1961,12 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                 relations = await relation_extractor.extract(chunk_text, entities)
 
                 # Store relations to Neo4j with RELATES_TO relationships
+                # Sprint 51: Added namespace_id for multi-tenant isolation
                 if relations:
                     relations_created = await lightrag._store_relations_to_neo4j(
-                        relations=relations, chunk_id=chunk_id
+                        relations=relations,
+                        chunk_id=chunk_id,
+                        namespace_id="default",  # Admin-indexed docs are globally searchable
                     )
                     total_relations_created += relations_created
 
@@ -1934,6 +1976,21 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                         relations_extracted=len(relations),
                         relations_created=relations_created,
                     )
+
+                # Sprint 51: Emit progress event with extracted count
+                await emit_progress(
+                    document_id=document_id,
+                    phase="relation_extraction",
+                    current=chunk_idx + 1,
+                    total=relation_chunks_total,
+                    message=f"Extracted {len(relations) if relations else 0} relations (chunk {chunk_idx + 1}/{relation_chunks_total})",
+                    details={
+                        "chunk_id": chunk_id[:8] if chunk_id else "unknown",
+                        "relations": len(relations) if relations else 0,
+                        "total_entities": entities_extracted,  # From entity extraction phase
+                        "total_relations": total_relations_created,
+                    },
+                )
 
             except Exception as e:
                 logger.warning(
@@ -1957,6 +2014,16 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             duration_ms=round(relation_extraction_ms, 2),
             chunks_processed=len(neo4j_chunks),  # Sprint 41: Use actual Neo4j chunks count
             total_relations_created=total_relations_created,
+        )
+
+        # Sprint 51: Emit relation extraction complete summary
+        await emit_progress(
+            document_id=document_id,
+            phase="relation_extraction",
+            current=relation_chunks_total,
+            total=relation_chunks_total,
+            message=f"Extracted {total_relations_created} relations total",
+            details={"total_entities": entities_extracted, "total_relations": total_relations_created, "chunks_processed": len(neo4j_chunks)},
         )
 
         # Sprint 32 Feature 32.4: Create Section nodes in Neo4j (ADR-039)
@@ -2043,6 +2110,16 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                     relations_count=relations_created,
                 )
 
+                # Sprint 51: Emit progress event for community detection
+                await emit_progress(
+                    document_id=state["document_id"],
+                    phase="community_detection",
+                    current=0,
+                    total=1,
+                    message="Detecting entity communities...",
+                    details={"relations_count": relations_created},
+                )
+
                 # Use singleton CommunityDetector (handles GDS vs NetworkX fallback)
                 community_detector = get_community_detector()
                 communities = await community_detector.detect_communities()
@@ -2121,6 +2198,22 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                 "lightrag_insert_ms": round(lightrag_insert_ms, 2),
                 "section_nodes_ms": round(section_nodes_ms, 2),
                 "community_detection_ms": round(community_detection_ms, 2),
+            },
+        )
+
+        # Sprint 51: Final summary with total entities and relations
+        total_entities = stats.get("total_entities", 0)
+        total_relations_final = state.get("relations_count", 0)
+        await emit_progress(
+            document_id=state["document_id"],
+            phase="graph_complete",
+            current=1,
+            total=1,
+            message=f"Extracted a total of {total_entities} entities and {total_relations_final} relations",
+            details={
+                "total_entities": total_entities,
+                "total_relations": total_relations_final,
+                "communities": community_detection_stats.get("communities_detected", 0),
             },
         )
 
