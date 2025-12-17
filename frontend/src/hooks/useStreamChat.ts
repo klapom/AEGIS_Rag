@@ -144,6 +144,8 @@ export function useStreamChat({
   // This ensures we capture the final state when streaming completes
   const finalAnswerRef = useRef('');
   const finalSourcesRef = useRef<Source[]>([]);
+  // Sprint 51 Fix: Track final phase events for onComplete callback
+  const finalPhaseEventsRef = useRef<PhaseEvent[]>([]);
 
   /**
    * Sprint 48 Feature 48.10: Clear all timers
@@ -198,6 +200,8 @@ export function useStreamChat({
       // Sprint 47 Fix: Reset final state refs
       finalAnswerRef.current = '';
       finalSourcesRef.current = [];
+      // Sprint 51 Fix: Reset final phase events ref
+      finalPhaseEventsRef.current = [];
 
       // Sprint 48 Feature 48.6: Reset phase state
       setCurrentPhase(null);
@@ -353,12 +357,19 @@ export function useStreamChat({
 
           // Sprint 47 Fix: Call onComplete immediately when streaming completes
           // Use refs to get the final values and avoid dependency array issues
+          // Sprint 51 Fix: Include phaseEvents in reasoningData so phases persist in history
           if (!hasCalledOnComplete.current && finalAnswerRef.current) {
             hasCalledOnComplete.current = true;
+            // Build final reasoningData with phaseEvents included
+            const finalReasoningData = buildReasoningData(
+              completeData as Record<string, unknown> | null,
+              '', // intent already in metadata
+              finalPhaseEventsRef.current
+            ) || currentReasoningData.current;
             onCompleteRef.current?.(
               finalAnswerRef.current,
               finalSourcesRef.current,
-              currentReasoningData.current
+              finalReasoningData
             );
           }
           break;
@@ -377,6 +388,7 @@ export function useStreamChat({
 
     /**
      * Sprint 48 Feature 48.6: Handle phase event updates
+     * Sprint 51 Fix: Also track in ref for onComplete callback
      */
     const handlePhaseEvent = (event: PhaseEvent) => {
       // Update current phase based on status
@@ -389,20 +401,26 @@ export function useStreamChat({
         );
       }
 
-      // Update phase events list
+      // Update phase events list (state for UI)
       setPhaseEvents((prev) => {
         const existingIndex = prev.findIndex(
           (e) => e.phase_type === event.phase_type
         );
 
+        let newEvents: PhaseEvent[];
         if (existingIndex >= 0) {
           // Update existing event
-          const updated = [...prev];
-          updated[existingIndex] = event;
-          return updated;
+          newEvents = [...prev];
+          newEvents[existingIndex] = event;
+        } else {
+          // Add new event
+          newEvents = [...prev, event];
         }
-        // Add new event
-        return [...prev, event];
+
+        // Sprint 51 Fix: Also update ref for onComplete callback
+        finalPhaseEventsRef.current = newEvents;
+
+        return newEvents;
       });
     };
 
@@ -421,13 +439,20 @@ export function useStreamChat({
   // Sprint 47 Fix: Fallback onComplete call when streaming finishes
   // This handles edge cases where the 'complete' event might be missed
   // Uses refs to avoid triggering infinite loops from unstable dependencies
+  // Sprint 51 Fix: Include phaseEvents in reasoningData so phases persist in history
   useEffect(() => {
     if (!isStreaming && finalAnswerRef.current && !hasCalledOnComplete.current) {
       hasCalledOnComplete.current = true;
+      // Build final reasoningData with phaseEvents included
+      const finalReasoningData = buildReasoningData(
+        null, // metadata not available in fallback
+        '', // intent already in metadata
+        finalPhaseEventsRef.current
+      ) || currentReasoningData.current;
       onCompleteRef.current?.(
         finalAnswerRef.current,
         finalSourcesRef.current,
-        currentReasoningData.current
+        finalReasoningData
       );
     }
     // Sprint 47 Fix: Only depend on isStreaming to avoid re-running on every token/source
