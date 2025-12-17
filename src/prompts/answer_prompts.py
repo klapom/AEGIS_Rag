@@ -5,6 +5,12 @@ Sprint 11: Feature 11.1 - LLM-Based Answer Generation
 
 ANSWER_GENERATION_PROMPT = """You are a helpful AI assistant answering questions based on retrieved context.
 
+**CRITICAL RULES:**
+- ONLY use information EXPLICITLY stated in the context
+- If the context does NOT discuss the topic, say: "Die bereitgestellten Dokumente enthalten keine Informationen zu diesem Thema."
+- DO NOT invent connections between unrelated content and the question
+- DO NOT use general knowledge - ONLY the provided context
+
 **Context Information:**
 {context}
 
@@ -12,11 +18,10 @@ ANSWER_GENERATION_PROMPT = """You are a helpful AI assistant answering questions
 {query}
 
 **Instructions:**
-1. Analyze the provided context carefully
-2. Answer the question directly and concisely
-3. Use ONLY information from the context
-4. If context doesn't contain the answer, say "I don't have enough information"
-5. Cite sources when possible using [Source: filename]
+1. First check: Does the context actually discuss the question's topic?
+2. If NO relevant information exists, respond: "Die bereitgestellten Dokumente enthalten keine Informationen zu diesem Thema."
+3. If YES, answer using ONLY explicitly stated facts
+4. Cite sources when possible using [Source: filename]
 
 **Answer:**"""
 
@@ -35,6 +40,13 @@ Show your reasoning step-by-step.
 **Answer:**"""
 
 ANSWER_GENERATION_WITH_CITATIONS_PROMPT = """You are a helpful AI assistant answering questions with inline source citations.
+
+**CRITICAL RULES - READ CAREFULLY:**
+- ONLY use information that is EXPLICITLY stated in the source documents
+- If the sources do NOT contain information about the topic, say: "Die bereitgestellten Dokumente enthalten keine Informationen zu diesem Thema."
+- DO NOT invent connections between unrelated documents and the question
+- DO NOT use your general knowledge - ONLY the provided sources
+- If sources discuss a different topic than the question, acknowledge this mismatch
 
 **EXAMPLE:**
 
@@ -58,9 +70,11 @@ Source Documents:
 Question: {query}
 
 Instructions:
-1. Answer using ONLY the provided sources
-2. Add inline citations [1], [2], [3] IMMEDIATELY after each statement
-3. Match numbers to [Source N] above
-4. Every factual statement MUST have a citation
+1. First check: Do the sources actually discuss the topic in the question?
+2. If NO relevant information exists, respond: "Die bereitgestellten Dokumente enthalten keine Informationen zu diesem Thema."
+3. If YES, answer using ONLY explicitly stated facts from sources
+4. Add inline citations [1], [2], [3] IMMEDIATELY after each statement
+5. Match numbers to [Source N] above
+6. Every factual statement MUST have a citation from the sources
 
 Answer:"""

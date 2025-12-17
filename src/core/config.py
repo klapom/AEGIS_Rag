@@ -687,7 +687,7 @@ class Settings(BaseSettings):
     # Sprint 51: Relevance Threshold for Hybrid Search
     # Filters out irrelevant results when no document meets quality threshold
     hybrid_search_min_relevance: float = Field(
-        default=0.3,
+        default=0.5,
         ge=0.0,
         le=1.0,
         description="Minimum vector similarity score for hybrid search results. "
