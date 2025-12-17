@@ -294,6 +294,7 @@ class AnswerGenerator:
 
         Sprint 32 Fix: Ensure score and metadata are properly extracted from contexts.
         The contexts come from VectorSearchAgent which includes score and metadata.
+        Sprint 51 Fix: Normalize RRF scores to 0-1 range for display.
 
         Args:
             contexts: List of context dicts (max 10)
@@ -302,17 +303,12 @@ class AnswerGenerator:
             Dict mapping citation number to source metadata
         """
         citation_map = {}
-        for i, ctx in enumerate(contexts, 1):
-            # Truncate text to 500 chars
-            text = ctx.get("text", "")
-            truncated_text = text[:500] if len(text) > 500 else text
 
-            # Sprint 32 Fix: Extract score from multiple possible keys
-            # VectorSearchAgent stores normalized scores in 'score' field
-            # But also check alternative score fields for robustness
+        # Sprint 51 Fix: First pass - collect raw scores to find max for normalization
+        raw_scores = []
+        for ctx in contexts:
             score = ctx.get("score")
             if score is None or score == 0:
-                # Try alternative score fields
                 score = ctx.get(
                     "normalized_rerank_score",
                     ctx.get(
@@ -320,11 +316,35 @@ class AnswerGenerator:
                         ctx.get("rrf_score", ctx.get("relevance", 0.0)),
                     ),
                 )
-            # Ensure score is a float
             try:
-                score = float(score) if score is not None else 0.0
+                raw_scores.append(float(score) if score is not None else 0.0)
             except (TypeError, ValueError):
-                score = 0.0
+                raw_scores.append(0.0)
+
+        # Calculate max score for normalization (avoid division by zero)
+        max_score = max(raw_scores) if raw_scores else 1.0
+        if max_score <= 0:
+            max_score = 1.0
+
+        # Sprint 51 Fix: Detect if scores are RRF scores (typically < 0.1)
+        # RRF scores are in the range ~0.016 per ranking list
+        # If max score is < 0.1, normalize to 0-1 range
+        needs_normalization = max_score < 0.1
+
+        for i, ctx in enumerate(contexts, 1):
+            # Truncate text to 500 chars
+            text = ctx.get("text", "")
+            truncated_text = text[:500] if len(text) > 500 else text
+
+            # Get raw score
+            raw_score = raw_scores[i - 1] if i - 1 < len(raw_scores) else 0.0
+
+            # Sprint 51 Fix: Normalize score if needed
+            if needs_normalization and max_score > 0:
+                # Normalize to 0-1 range where top result is ~0.95
+                score = min((raw_score / max_score) * 0.95, 1.0)
+            else:
+                score = raw_score
 
             # Sprint 32 Fix: Extract metadata and enrich with additional context fields
             metadata = ctx.get("metadata", {})
