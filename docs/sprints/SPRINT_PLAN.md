@@ -1147,6 +1147,65 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
+## Sprint 50: Comprehensive E2E Test Coverage 📋 (PLANNED 2025-12-17)
+**Ziel:** Complete E2E test coverage for all critical user journeys with Playwright
+
+**Breakdown:**
+| Feature | SP |
+|---------|-----|
+| 50.1 Domain Creation Workflow | 8 |
+| 50.2 Upload Page Domain Classification | 5 |
+| 50.3 Graph Exploration Workflow | 13 |
+| 50.4 Chat Streaming & Citations | 8 |
+| 50.5 Session Management | 8 |
+| 50.6 Community Detection Workflow | 8 |
+| 50.7 Cost Monitoring Workflow | 5 |
+| 50.8 Health Monitoring | 3 |
+| 50.9 Indexing Pipeline Monitoring | 8 |
+| 50.10 Test Infrastructure Improvements | 6 |
+| **Total** | **72** |
+
+### Deliverables
+- 9 new E2E test files (total: 12 E2E tests)
+- Test fixtures for training datasets, documents, graph data
+- CI/CD pipeline configuration (.github/workflows/e2e.yml)
+- Complete test documentation
+- 100% critical user journey coverage
+
+### Technical Tasks
+- Domain creation workflow test
+- Upload page with AI classification test
+- Graph exploration and visualization test
+- Chat streaming with citations test
+- Session management (create, rename, share, delete) test
+- Community detection and analysis test
+- Cost dashboard and LLM config test
+- Health monitoring test
+- Indexing pipeline SSE monitoring test
+- Test infrastructure improvements (parallel execution, CI/CD)
+
+### Success Criteria
+- All 9 new E2E tests implemented and passing
+- Total: 12 E2E tests (3 existing + 9 new)
+- 100% coverage of critical user journeys
+- CI/CD pipeline configured and green
+- Tests run reliably (>99% pass rate)
+- Performance targets met (< 15 min suite)
+- Zero flaky tests
+
+### Parallel Execution Strategy
+- **Team A (Backend Agent):** Domain, Upload, Graph (26 SP)
+- **Team B (Frontend Agent):** Chat, Sessions, Communities (24 SP)
+- **Team C (API Agent):** Monitoring, Infrastructure (22 SP)
+- **Duration:** 8 days with 3 parallel teams
+
+### References
+- [SPRINT_50_PLAN.md](SPRINT_50_PLAN.md)
+- [USER_JOURNEYS_AND_TEST_PLAN.md](../e2e/USER_JOURNEYS_AND_TEST_PLAN.md)
+- Existing E2E tests: document_ingestion, hybrid_search_quality, sprint49_features
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
