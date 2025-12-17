@@ -330,6 +330,13 @@ export function useStreamChat({
           }
           if (answerData?.citation_map) {
             setCitationMap(answerData.citation_map);
+            // Sprint 51 Fix: Convert citation_map to sources array for MarkdownWithCitations
+            // Backend sends citation_map instead of individual source events
+            const sourcesFromCitationMap = Object.entries(answerData.citation_map)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([, source]) => source);
+            setSources(sourcesFromCitationMap);
+            finalSourcesRef.current = sourcesFromCitationMap;
           }
           break;
         }
@@ -340,6 +347,14 @@ export function useStreamChat({
             setMetadata(completeData as Record<string, unknown>);
             if (completeData.citation_map) {
               setCitationMap(completeData.citation_map as Record<number, Source>);
+              // Sprint 51 Fix: Convert citation_map to sources if not already populated
+              if (finalSourcesRef.current.length === 0) {
+                const sourcesFromCitationMap = Object.entries(completeData.citation_map as Record<number, Source>)
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([, source]) => source);
+                setSources(sourcesFromCitationMap);
+                finalSourcesRef.current = sourcesFromCitationMap;
+              }
             }
             // Extract reasoning data from complete event if not already set
             if (completeData.reasoning && !currentReasoningData.current) {

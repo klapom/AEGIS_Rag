@@ -207,13 +207,23 @@ export function HomePage() {
           streamingState.phaseEvents
         );
 
+        // Sprint 51 Fix: Use citationMap as fallback for sources
+        // Backend sends citation_map instead of individual source events
+        let sources = streamingState.sources;
+        if ((!sources || sources.length === 0) && streamingState.citationMap) {
+          // Convert citationMap (Record<number, Source>) to Source[]
+          sources = Object.entries(streamingState.citationMap)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([, source]) => source);
+        }
+
         // Sprint 47 Fix: Use stable streaming ID from ref instead of Date.now()
         // This prevents unnecessary re-renders caused by new IDs on each render
         historyMessages.push({
           id: streamingMessageIdRef.current,
           role: 'assistant',
           content: streamingState.answer,
-          sources: streamingState.sources,
+          sources,
           isStreaming: streamingState.isStreaming,
           reasoningData,
         });
