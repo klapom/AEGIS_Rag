@@ -431,6 +431,38 @@ class HybridSearch:
                 ),
             )
 
+            # Sprint 51: Check if any results meet minimum relevance threshold
+            # Vector scores are cosine similarity (0-1), we use max score as quality indicator
+            max_vector_score = max((r.get("score", 0) for r in vector_results), default=0)
+
+            if settings.hybrid_search_require_relevant:
+                min_relevance = settings.hybrid_search_min_relevance
+                if max_vector_score < min_relevance:
+                    logger.info(
+                        "hybrid_search_no_relevant_results",
+                        query=query[:100],
+                        max_vector_score=max_vector_score,
+                        min_relevance_threshold=min_relevance,
+                        vector_results_count=len(vector_results),
+                        message="No results meet relevance threshold - returning empty",
+                    )
+                    return {
+                        "query": query,
+                        "results": [],
+                        "total_results": 0,
+                        "returned_results": 0,
+                        "search_metadata": {
+                            "vector_results_count": len(vector_results),
+                            "bm25_results_count": len(bm25_results),
+                            "rrf_k": rrf_k,
+                            "reranking_applied": False,
+                            "diversity_stats": {},
+                            "filtered_reason": "no_relevant_results",
+                            "max_vector_score": max_vector_score,
+                            "min_relevance_threshold": min_relevance,
+                        },
+                    }
+
             # Perform Reciprocal Rank Fusion
             fused_results = reciprocal_rank_fusion(
                 rankings=[vector_results, bm25_results],

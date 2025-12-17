@@ -398,9 +398,9 @@ class Settings(BaseSettings):
     )
 
     # Gemma Relation Extraction (Sprint 13: ADR-018)
-    # Sprint 36: Updated default to gpt-oss:20b for faster tests
+    # Sprint 51: Updated default to nemotron-3-nano (fast MoE model on DGX Spark)
     gemma_model: str = Field(
-        default="gpt-oss:20b",
+        default="nemotron-3-nano",
         description="LLM model for relation extraction (Ollama) - use GEMMA_MODEL env var to override",
     )
     gemma_temperature: float = Field(
@@ -597,9 +597,9 @@ class Settings(BaseSettings):
     )
 
     # LightRAG LLM Configuration
-    # Sprint 36: Updated default to gpt-oss:20b for faster tests
+    # Sprint 51: Updated default to nemotron-3-nano (fast MoE model on DGX Spark)
     lightrag_llm_model: str = Field(
-        default="gpt-oss:20b",
+        default="nemotron-3-nano",
         description="Ollama LLM model for LightRAG entity extraction - use LIGHTRAG_LLM_MODEL env var to override",
     )
     lightrag_llm_temperature: float = Field(
@@ -683,6 +683,22 @@ class Settings(BaseSettings):
     # Retrieval Configuration
     retrieval_top_k: int = Field(default=5, description="Number of documents to retrieve")
     retrieval_score_threshold: float = Field(default=0.7, description="Minimum relevance score")
+
+    # Sprint 51: Relevance Threshold for Hybrid Search
+    # Filters out irrelevant results when no document meets quality threshold
+    hybrid_search_min_relevance: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum vector similarity score for hybrid search results. "
+        "If no result exceeds this threshold, return empty results. "
+        "0.3 = weak match, 0.5 = moderate, 0.7 = strong.",
+    )
+    hybrid_search_require_relevant: bool = Field(
+        default=True,
+        description="If True, return empty results when no document meets min_relevance threshold. "
+        "If False, always return top-k results regardless of quality.",
+    )
 
     # Vector Search Agent Configuration (Sprint 4.3)
     vector_agent_timeout: int = Field(
