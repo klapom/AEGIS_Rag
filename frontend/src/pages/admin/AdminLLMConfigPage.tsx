@@ -2,17 +2,19 @@
  * AdminLLMConfigPage Component
  * Sprint 36 Feature 36.3: Model Selection per Use Case (8 SP)
  * Sprint 51: Dynamic Ollama model loading
+ * Sprint 52 Feature 52.1: Community Summary Model Selection
  *
  * Features:
  * - Configure LLM models for each use case
  * - Support for Ollama (local), Alibaba Cloud, and OpenAI providers
  * - Dynamic loading of locally available Ollama models
  * - localStorage persistence (Phase 1)
+ * - Backend-persisted community summary model config (Sprint 52)
  * - Responsive design with dark mode support
  */
 
 import { useState, useEffect } from 'react';
-import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft } from 'lucide-react';
+import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -54,6 +56,12 @@ interface OllamaModelsResponse {
   models: OllamaModel[];
   ollama_available: boolean;
   error: string | null;
+}
+
+// Sprint 52 Feature 52.1: Community Summary Model Configuration
+interface SummaryModelConfig {
+  model_id: string;
+  updated_at: string | null;
 }
 
 // ============================================================================
@@ -187,9 +195,18 @@ export function AdminLLMConfigPage() {
   const [ollamaStatus, setOllamaStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
   const [ollamaError, setOllamaError] = useState<string | null>(null);
 
-  // Fetch Ollama models on mount
+  // Sprint 52 Feature 52.1: Community Summary Model State
+  const [summaryModelConfig, setSummaryModelConfig] = useState<SummaryModelConfig>({
+    model_id: 'ollama/qwen3:32b',
+    updated_at: null,
+  });
+  const [isSavingSummaryModel, setIsSavingSummaryModel] = useState(false);
+  const [summaryModelSaveStatus, setSummaryModelSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Fetch Ollama models and summary model config on mount
   useEffect(() => {
     fetchOllamaModels();
+    fetchSummaryModelConfig();
   }, []);
 
   // Load config from localStorage on mount
@@ -238,6 +255,52 @@ export function AdminLLMConfigPage() {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // Sprint 52 Feature 52.1: Fetch summary model config from backend
+  const fetchSummaryModelConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/summary-model`);
+      if (response.ok) {
+        const data: SummaryModelConfig = await response.json();
+        setSummaryModelConfig(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch summary model config:', e);
+    }
+  };
+
+  // Sprint 52 Feature 52.1: Save summary model config to backend
+  const handleSaveSummaryModel = async () => {
+    setIsSavingSummaryModel(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/summary-model`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model_id: summaryModelConfig.model_id }),
+      });
+
+      if (response.ok) {
+        const data: SummaryModelConfig = await response.json();
+        setSummaryModelConfig(data);
+        setSummaryModelSaveStatus('success');
+        setTimeout(() => setSummaryModelSaveStatus('idle'), 3000);
+      } else {
+        setSummaryModelSaveStatus('error');
+      }
+    } catch (e) {
+      console.error('Failed to save summary model config:', e);
+      setSummaryModelSaveStatus('error');
+    } finally {
+      setIsSavingSummaryModel(false);
+    }
+  };
+
+  const handleSummaryModelChange = (modelId: string) => {
+    setSummaryModelConfig((prev) => ({ ...prev, model_id: modelId }));
+    setSummaryModelSaveStatus('idle');
   };
 
   const handleModelChange = (useCase: UseCaseType, modelId: string) => {
@@ -408,6 +471,88 @@ export function AdminLLMConfigPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Sprint 52 Feature 52.1: Community Summary Model Configuration */}
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <FileText className="w-4 h-4" />
+            Graph Community Summary Model
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Select the LLM model used for generating community summaries in LightRAG global search mode.
+            This setting is persisted to the backend and takes effect immediately.
+          </p>
+
+          <div
+            className="border dark:border-gray-700 rounded-md p-3"
+            data-testid="summary-model-selector"
+          >
+            <div className="flex justify-between items-start mb-1.5">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Community Summary Generation
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Graph Community Entities + Relations to Summary Text
+                </p>
+              </div>
+              {summaryModelConfig.model_id && (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded ${
+                    summaryModelConfig.model_id.startsWith('ollama/')
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  }`}
+                >
+                  {summaryModelConfig.model_id.startsWith('ollama/') ? 'Local' : 'Cloud'}
+                </span>
+              )}
+            </div>
+
+            <select
+              value={summaryModelConfig.model_id}
+              onChange={(e) => handleSummaryModelChange(e.target.value)}
+              className="w-full mt-1.5 p-1.5 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              data-testid="model-dropdown-community_summary"
+            >
+              {modelOptions
+                .filter((m) => m.capabilities.includes('text'))
+                .map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} - {model.description}
+                  </option>
+                ))}
+            </select>
+
+            {summaryModelConfig.updated_at && (
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                Last updated: {new Date(summaryModelConfig.updated_at).toLocaleString()}
+              </p>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={handleSaveSummaryModel}
+                disabled={isSavingSummaryModel}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                data-testid="save-summary-model-button"
+              >
+                {isSavingSummaryModel ? (
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                ) : summaryModelSaveStatus === 'success' ? (
+                  <CheckCircle className="w-3 h-3" />
+                ) : summaryModelSaveStatus === 'error' ? (
+                  <AlertCircle className="w-3 h-3" />
+                ) : null}
+                {summaryModelSaveStatus === 'success'
+                  ? 'Saved!'
+                  : summaryModelSaveStatus === 'error'
+                  ? 'Error'
+                  : 'Save Summary Model'}
+              </button>
+            </div>
           </div>
         </div>
 

@@ -4389,6 +4389,200 @@ async def list_ollama_models() -> OllamaModelsResponse:
 
 
 # ============================================================================
+# Sprint 52 Feature 52.1: Community Summary Model Configuration
+# ============================================================================
+
+REDIS_KEY_SUMMARY_MODEL_CONFIG = "admin:summary_model_config"
+
+
+class SummaryModelConfig(BaseModel):
+    """Configuration for community summary generation model.
+
+    Sprint 52 Feature 52.1: Admin LLM Config - Community Summary Model Selection
+
+    This schema defines the model to use for generating community summaries
+    in the LightRAG global search mode.
+    """
+
+    model_id: str = Field(
+        default="ollama/qwen3:32b",
+        description="Model ID for community summary generation (format: provider/model_name)",
+    )
+    updated_at: str | None = Field(None, description="ISO 8601 timestamp of last update")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "model_id": "ollama/qwen3:32b",
+                "updated_at": "2025-12-18T10:30:00Z",
+            }
+        }
+    }
+
+
+@router.get(
+    "/llm/summary-model",
+    response_model=SummaryModelConfig,
+    summary="Get community summary model configuration",
+    description="Get the currently configured LLM model for community summary generation",
+)
+async def get_summary_model_config() -> SummaryModelConfig:
+    """Get current community summary model configuration.
+
+    **Sprint 52 Feature 52.1: Community Summary Model Selection**
+
+    Returns the configured model for generating community summaries.
+    If not configured, returns the default model (ollama/qwen3:32b).
+
+    **Example Response:**
+    ```json
+    {
+      "model_id": "ollama/qwen3:32b",
+      "updated_at": "2025-12-18T10:30:00Z"
+    }
+    ```
+
+    Returns:
+        SummaryModelConfig with current model selection
+    """
+    import json
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        config_json = await redis_client.get(REDIS_KEY_SUMMARY_MODEL_CONFIG)
+
+        if config_json:
+            config_str = (
+                config_json.decode("utf-8") if isinstance(config_json, bytes) else config_json
+            )
+            config_dict = json.loads(config_str)
+            logger.info("summary_model_config_loaded", model_id=config_dict.get("model_id"))
+            return SummaryModelConfig(**config_dict)
+
+        # Return default if not configured
+        logger.info("summary_model_config_using_default")
+        return SummaryModelConfig()
+
+    except Exception as e:
+        logger.warning("failed_to_load_summary_model_config", error=str(e))
+        return SummaryModelConfig()
+
+
+@router.put(
+    "/llm/summary-model",
+    response_model=SummaryModelConfig,
+    summary="Update community summary model configuration",
+    description="Set the LLM model to use for community summary generation",
+)
+async def update_summary_model_config(config: SummaryModelConfig) -> SummaryModelConfig:
+    """Update community summary model configuration.
+
+    **Sprint 52 Feature 52.1: Community Summary Model Selection**
+
+    Saves the selected model for community summary generation to Redis.
+    The configuration persists across restarts and is used by the
+    CommunitySummarizer when generating summaries for LightRAG global mode.
+
+    **Example Request:**
+    ```bash
+    curl -X PUT "http://localhost:8000/api/v1/admin/llm/summary-model" \\
+      -H "Content-Type: application/json" \\
+      -d '{"model_id": "ollama/llama3.2:8b"}'
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "model_id": "ollama/llama3.2:8b",
+      "updated_at": "2025-12-18T10:35:00Z"
+    }
+    ```
+
+    Args:
+        config: SummaryModelConfig with model selection
+
+    Returns:
+        Updated configuration (validated and persisted)
+
+    Raises:
+        HTTPException 500: If Redis save fails
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        # Add timestamp
+        config.updated_at = datetime.now().isoformat()
+
+        # Save to Redis
+        config_json = config.model_dump_json()
+        await redis_client.set(REDIS_KEY_SUMMARY_MODEL_CONFIG, config_json)
+
+        logger.info(
+            "summary_model_config_saved",
+            model_id=config.model_id,
+            updated_at=config.updated_at,
+        )
+
+        return config
+
+    except Exception as e:
+        logger.error("failed_to_save_summary_model_config", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save summary model configuration: {str(e)}",
+        ) from e
+
+
+async def get_configured_summary_model() -> str:
+    """Get the configured summary model name for use in CommunitySummarizer.
+
+    **Sprint 52 Feature 52.1: Community Summary Model Selection**
+
+    This is a helper function for the CommunitySummarizer to get the
+    currently configured model. Returns just the model name without
+    the provider prefix (e.g., "qwen3:32b" instead of "ollama/qwen3:32b").
+
+    Returns:
+        Model name string (without provider prefix)
+    """
+    import json
+
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+        redis_client = await redis_memory.client
+
+        config_json = await redis_client.get(REDIS_KEY_SUMMARY_MODEL_CONFIG)
+
+        if config_json:
+            config_str = (
+                config_json.decode("utf-8") if isinstance(config_json, bytes) else config_json
+            )
+            config_dict = json.loads(config_str)
+            model_id = config_dict.get("model_id", "")
+
+            # Extract model name (remove provider prefix like "ollama/")
+            if "/" in model_id:
+                return model_id.split("/", 1)[1]
+            return model_id
+
+        # Return default from settings
+        return settings.ollama_model_generation
+
+    except Exception as e:
+        logger.warning("failed_to_get_configured_summary_model", error=str(e))
+        return settings.ollama_model_generation
+
+
+# ============================================================================
 # Sprint 52: Graph Analytics Stats Endpoint
 # Feature 52.2.1: Comprehensive Graph Statistics for Admin Dashboard
 # ============================================================================

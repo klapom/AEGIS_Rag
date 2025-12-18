@@ -10,7 +10,7 @@ Features:
 - LLM-generated summaries for communities
 - Delta-based incremental updates (only summarize changed communities)
 - Neo4j storage with CommunitySummary nodes
-- Configurable LLM model via admin interface
+- Configurable LLM model via admin interface (reads from Redis config)
 - Cost tracking for summary generation
 """
 
@@ -48,6 +48,8 @@ class CommunitySummarizer:
 
     This class handles the generation and storage of community summaries,
     enabling semantic search over communities in LightRAG global mode.
+
+    Sprint 52 Feature 52.1: Model selection now reads from admin config (Redis).
     """
 
     def __init__(
@@ -60,21 +62,68 @@ class CommunitySummarizer:
 
         Args:
             neo4j_client: Neo4j client instance (default: singleton)
-            model_name: LLM model for summarization (default: from settings)
+            model_name: LLM model for summarization (default: from admin config or settings)
             prompt_template: Custom prompt template (default: DEFAULT_SUMMARY_PROMPT)
+
+        Note:
+            If model_name is not provided, it will be loaded dynamically from
+            the admin configuration (Redis) on each summary generation call.
+            This allows admins to change the model without restarting the service.
         """
         from src.components.graph_rag.neo4j_client import get_neo4j_client
 
         self.neo4j_client = neo4j_client or get_neo4j_client()
         self.llm_proxy = get_aegis_llm_proxy()
-        self.model_name = model_name or settings.ollama_model_generation
+        self._explicit_model_name = model_name  # Store explicit override if provided
         self.prompt_template = prompt_template or DEFAULT_SUMMARY_PROMPT
 
         logger.info(
             "community_summarizer_initialized",
-            model=self.model_name,
+            model=model_name or "dynamic (from admin config)",
             prompt_template_length=len(self.prompt_template),
         )
+
+    @property
+    def model_name(self) -> str:
+        """Get current model name (from explicit setting or default).
+
+        Note: For dynamic config loading, use get_model_name_async() instead.
+        """
+        if self._explicit_model_name:
+            return self._explicit_model_name
+        return settings.ollama_model_generation
+
+    @model_name.setter
+    def model_name(self, value: str) -> None:
+        """Set explicit model name override."""
+        self._explicit_model_name = value
+
+    async def get_model_name_async(self) -> str:
+        """Get the model name from admin config (Redis) or fallback to default.
+
+        Sprint 52 Feature 52.1: Dynamic model loading from admin configuration.
+
+        Returns:
+            Model name string for LLM calls
+        """
+        # If explicit model was set in constructor, use it
+        if self._explicit_model_name:
+            return self._explicit_model_name
+
+        # Try to load from admin config (Redis)
+        try:
+            from src.api.v1.admin import get_configured_summary_model
+
+            model_name = await get_configured_summary_model()
+            logger.debug("summary_model_loaded_from_config", model=model_name)
+            return model_name
+        except Exception as e:
+            logger.warning(
+                "failed_to_load_summary_model_config_using_default",
+                error=str(e),
+                fallback=settings.ollama_model_generation,
+            )
+            return settings.ollama_model_generation
 
     async def generate_summary(
         self,
@@ -140,13 +189,16 @@ class CommunitySummarizer:
             relationships=relationships_text,
         )
 
+        # Get model name from admin config (Sprint 52 Feature 52.1)
+        current_model = await self.get_model_name_async()
+
         # Create LLM task
         task = LLMTask(
             task_type=TaskType.SUMMARIZATION,
             prompt=prompt,
             max_tokens=512,  # Summaries should be concise
             temperature=0.3,  # Low temperature for consistency
-            model_local=self.model_name,
+            model_local=current_model,
         )
 
         # Generate summary via LLM proxy
@@ -263,6 +315,7 @@ class CommunitySummarizer:
         self,
         community_id: int,
         summary: str,
+        model_used: str | None = None,
     ) -> None:
         """Store community summary in Neo4j.
 
@@ -271,7 +324,11 @@ class CommunitySummarizer:
         Args:
             community_id: Community ID
             summary: Summary text
+            model_used: Model name used for generation (optional, loads from config if not provided)
         """
+        # Get model name from config if not explicitly provided
+        current_model = model_used or await self.get_model_name_async()
+
         cypher = """
         MERGE (cs:CommunitySummary {community_id: $community_id})
         SET cs.summary = $summary,
@@ -285,7 +342,7 @@ class CommunitySummarizer:
             {
                 "community_id": community_id,
                 "summary": summary,
-                "model": self.model_name,
+                "model": current_model,
                 "summary_length": len(summary),
             },
         )
@@ -294,6 +351,7 @@ class CommunitySummarizer:
             "community_summary_stored",
             community_id=community_id,
             summary_length=len(summary),
+            model=current_model,
         )
 
     async def update_summaries_for_delta(

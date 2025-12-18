@@ -7,6 +7,7 @@ Tests:
 - Summary generation with LLM
 - Neo4j storage and retrieval
 - Delta-based incremental updates
+- Dynamic model loading from admin config (Sprint 52.1)
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -496,3 +497,151 @@ class TestSingletonPattern:
                 summarizer2 = get_community_summarizer()
 
                 assert summarizer1 is summarizer2
+
+
+@pytest.mark.asyncio
+class TestDynamicModelLoading:
+    """Tests for Sprint 52.1: Dynamic model loading from admin config."""
+
+    async def test_get_model_name_async_uses_explicit_model(self, mock_neo4j_client):
+        """Test that explicit model name takes precedence over config."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                summarizer = CommunitySummarizer(model_name="explicit-model:1b")
+                model_name = await summarizer.get_model_name_async()
+
+                assert model_name == "explicit-model:1b"
+
+    async def test_get_model_name_async_loads_from_config(self, mock_neo4j_client):
+        """Test that model name is loaded from admin config when not explicit."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                # Mock the admin config function
+                with patch(
+                    "src.api.v1.admin.get_configured_summary_model",
+                    new_callable=AsyncMock,
+                    return_value="configured-model:8b",
+                ):
+                    summarizer = CommunitySummarizer()  # No explicit model
+                    model_name = await summarizer.get_model_name_async()
+
+                    assert model_name == "configured-model:8b"
+
+    async def test_get_model_name_async_fallback_on_config_error(self, mock_neo4j_client):
+        """Test that default model is used when config loading fails."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                # Mock config loading to fail
+                with patch(
+                    "src.api.v1.admin.get_configured_summary_model",
+                    new_callable=AsyncMock,
+                    side_effect=Exception("Config load failed"),
+                ):
+                    from src.core.config import settings
+
+                    summarizer = CommunitySummarizer()  # No explicit model
+                    model_name = await summarizer.get_model_name_async()
+
+                    # Should fall back to settings default
+                    assert model_name == settings.ollama_model_generation
+
+    async def test_generate_summary_uses_dynamic_model(self, mock_neo4j_client, mock_llm_proxy):
+        """Test that generate_summary uses dynamically loaded model."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ):
+                # Mock the admin config function
+                with patch(
+                    "src.api.v1.admin.get_configured_summary_model",
+                    new_callable=AsyncMock,
+                    return_value="dynamic-model:32b",
+                ):
+                    summarizer = CommunitySummarizer()  # No explicit model
+
+                    entities = [
+                        {"name": "Test Entity", "type": "CONCEPT"},
+                    ]
+
+                    await summarizer.generate_summary(1, entities, [])
+
+                    # Verify LLM proxy was called with dynamic model
+                    call_args = mock_llm_proxy.generate.call_args
+                    task = call_args[0][0]
+                    assert task.model_local == "dynamic-model:32b"
+
+    def test_model_name_property_returns_explicit(self, mock_neo4j_client):
+        """Test that model_name property returns explicit model when set."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                summarizer = CommunitySummarizer(model_name="explicit:1b")
+
+                # Property should return explicit model (sync)
+                assert summarizer.model_name == "explicit:1b"
+
+    def test_model_name_property_returns_default(self, mock_neo4j_client):
+        """Test that model_name property returns default when no explicit set."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                from src.core.config import settings
+
+                summarizer = CommunitySummarizer()  # No explicit model
+
+                # Property should return settings default (sync)
+                assert summarizer.model_name == settings.ollama_model_generation
+
+    def test_model_name_setter(self, mock_neo4j_client):
+        """Test that model_name setter updates explicit model."""
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ):
+            with patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy:
+                mock_get_proxy.return_value = AsyncMock()
+
+                summarizer = CommunitySummarizer()
+                summarizer.model_name = "new-model:4b"
+
+                assert summarizer.model_name == "new-model:4b"
+                assert summarizer._explicit_model_name == "new-model:4b"
