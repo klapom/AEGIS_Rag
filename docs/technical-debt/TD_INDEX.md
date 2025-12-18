@@ -1,10 +1,11 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-18
-**Total Open Items:** 15
-**Total Story Points:** ~238 SP
-**Archived Items:** [8 items](archive/ARCHIVE_INDEX.md)
+**Last Updated:** 2025-12-18 (Sprint 52 Complete)
+**Total Open Items:** 12
+**Total Story Points:** ~207 SP
+**Archived Items:** [10 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
+**Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 
 ---
 
@@ -25,11 +26,13 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Resolution Sprint |
 |-----|-------|-------------------|
+| TD-043 | Async Follow-up Questions | Sprint 52 |
 | TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
 | TD-045 | entity_id Property Migration | Sprint 34 |
 | TD-048 | Graph Extraction with Unified Chunks | Sprint 49 |
 | TD-050 | Duplicate Answer Streaming | Sprint 47 |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
+| TD-058 | Community Summary Generation | Sprint 52 |
 | TD-059 | Reranking via Ollama | Sprint 48 |
 | TD-060 | Unified Chunk IDs | Sprint 42 |
 | TD-061 | Ollama GPU Docker Config | Sprint 42 |
@@ -44,8 +47,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 52 |
-| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 52 |
+| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | **RESOLVED** ✅ | 5 | Sprint 52 ✓ |
+| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 53 |
 | [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | **RESOLVED** ✅ | 5 | Sprint 34 ✓ |
 | [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | **RESOLVED** ✅ | 40 | Sprint 51 ✓ |
 
@@ -59,9 +62,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
 | [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | **IN PROGRESS** | 34 | Sprint 52+ |
 | [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50+ |
-| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | **IN PROGRESS** | 13 | Sprint 52 |
+| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | **RESOLVED** ✅ | 13 | Sprint 52 ✓ |
 | [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | **RESOLVED** ✅ | 8 | Sprint 48 ✓ |
-| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 8 | Sprint 53+ |
+| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | Sprint 53+ |
 
 ### LOW Priority
 

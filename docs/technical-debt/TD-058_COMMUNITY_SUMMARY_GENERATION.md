@@ -1,7 +1,9 @@
 # TD-058: Community Summary Generation mit Delta-Tracking
 
 ## Status
-**PLANNED** (2025-12-09)
+**RESOLVED** ✅ (2025-12-18) - Phases 1-2 implemented in Sprint 52
+
+Phase 3 (Temporal Summaries) moved to TD-064.
 
 ## Context
 
@@ -213,17 +215,19 @@ Geschätzte Kosten pro Summary: ~0.01-0.05€ (je nach LLM und Entity-Anzahl)
 
 ## Implementation Plan
 
-### Phase 1: Delta-Tracking Infrastructure
-- [ ] `CommunityDelta` Dataclass
-- [ ] `track_community_changes()` nach Community Detection
-- [ ] Logging der betroffenen Communities
+### Phase 1: Delta-Tracking Infrastructure ✅ Sprint 52
+- [x] `CommunityDelta` Dataclass (`src/components/graph_rag/community_delta_tracker.py`)
+- [x] `track_community_changes()` nach Community Detection
+- [x] Logging der betroffenen Communities
+- [x] 19 Unit Tests
 
-### Phase 2: Summary Generation
-- [ ] `generate_community_summary()` mit LLM
-- [ ] `CommunitySummary` Node in Neo4j
-- [ ] Integration in `four_way_hybrid_search.py` Graph Global
+### Phase 2: Summary Generation ✅ Sprint 52
+- [x] `generate_community_summary()` mit LLM (`src/components/graph_rag/community_summarizer.py`)
+- [x] `CommunitySummary` Node in Neo4j
+- [x] Admin LLM Config für Model-Auswahl
+- [x] 24 Unit Tests
 
-### Phase 3: Temporal Summaries
+### Phase 3: Temporal Summaries → TD-064
 - [ ] Bi-temporale Summary-Speicherung
 - [ ] `get_summary_at_timestamp()` mit Fallback
 - [ ] Caching-Strategie für häufige Zeiträume

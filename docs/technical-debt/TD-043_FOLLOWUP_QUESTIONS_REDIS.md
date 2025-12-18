@@ -1,7 +1,31 @@
-# Follow-up Questions Feature Fix - Sprint 33
+# TD-043: Follow-up Questions Feature Fix
 
-## Problem Statement
-All 9 Follow-up Questions E2E tests fail because `[data-testid="followup-question"]` never appears in the frontend.
+## Status
+**RESOLVED** ✅ (2025-12-18) - Async generation implemented in Sprint 52
+
+## Sprint 52 Resolution
+
+Implemented async follow-up question generation that does NOT block answer display:
+
+### Implementation
+- **Background Task**: `store_conversation_context()` stores Q&A in Redis (30min TTL) after answer completes
+- **Async Generation**: `generate_followup_questions_async()` retrieves context and generates questions
+- **Frontend Polling**: Component polls for questions after `answerComplete=true`
+- **Loading Skeleton**: Shows while questions generate in background
+
+### Files Added/Modified (Sprint 52)
+- `src/agents/followup_generator.py` - Added async functions
+- `src/agents/coordinator.py` - Background task after answer
+- `src/api/v1/chat.py` - Async-first endpoint
+- `frontend/src/components/chat/FollowUpQuestions.tsx` - Polling logic
+- `frontend/src/components/chat/StreamingAnswer.tsx` - answerComplete prop
+
+### Tests
+- 9 new unit tests in `tests/unit/agents/test_followup_generator.py`
+
+---
+
+## Original Problem (Sprint 33)
 
 ## Root Cause Analysis
 
