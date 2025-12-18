@@ -2,7 +2,34 @@
 
 **Status:** Comprehensive Mapping
 **Created:** 2025-12-17
+**Last Updated:** 2025-12-18 (Sprint 52 Features Added)
 **Purpose:** Map all user journeys and design complete E2E test coverage
+
+## Recent Updates (Sprints 48-52)
+
+### Sprint 52 Features
+- **Community Summaries:** LLM-generated summaries for graph communities with delta-tracking
+- **Admin LLM Config:** Model selector for community summary generation
+- **Domain Management:** Stats view, Re-index, Validate, Health Status
+- **Async Follow-ups:** Non-blocking follow-up question generation
+- **CI/CD Optimization:** Auto-mocking for integration tests
+
+### Sprint 51 Features
+- **Phase Display Fixes:** Real-time phase updates during streaming
+- **Admin Navigation:** Improved layout with consolidated pages
+- **Maximum Hybrid Search:** 4-Signal retrieval (Vector + BM25 + Graph Local + Graph Global)
+- **111 E2E Tests:** Comprehensive test coverage
+
+### Sprint 49-50 Features
+- **Dynamic LLM Selection:** Auto-discover Ollama models
+- **Graph Relationship Filtering:** Multi-select filter for edge types
+- **Provenance Tracking:** source_chunk_id on relationships
+- **BGE-M3 Consolidation:** Unified embedding model
+
+### Sprint 48 Features
+- **Real-Time Phase Events:** SSE streaming for processing status
+- **Reranking via Ollama:** Cross-encoder reranking
+- **Request Timeout & Cancel:** Abort long-running queries
 
 ---
 
@@ -135,8 +162,9 @@
 
 ---
 
-### **Journey 3: Hybrid Search & Query**
-**User Goal:** Search uploaded documents using hybrid (BM25 + Vector + Graph) retrieval
+### **Journey 3: Hybrid Search & Query (Maximum Hybrid Search)**
+**User Goal:** Search uploaded documents using 4-signal hybrid retrieval
+**Feature Status:** ✅ Fully Implemented (Sprint 51 Maximum Hybrid Search)
 
 #### Steps:
 1. **Navigate to Chat** (`/`)
@@ -145,94 +173,137 @@
 
 2. **Enter Search Query**
    - Type query in chat input (e.g., "What is machine learning?")
-   - Select search mode (Hybrid/Vector/BM25/Graph) - default: Hybrid
+   - Select search mode (Hybrid/Vector/BM25/Graph) - default: Maximum Hybrid
    - Optional: Select namespaces/domains
    - Press Enter or click Send
 
-3. **Wait for Streaming Response**
-   - See phase progress indicators (Sprint 48):
-     - Retrieval phase
-     - Reasoning phase
-     - Generation phase
-   - See streaming answer text appearing
-   - See source cards scrolling in
+3. **Watch Real-Time Phase Progress** (Sprint 48)
+   - See phase progress indicators with live timing:
+     - 🔍 Intent Classification (query analysis)
+     - 📊 Vector Search (BGE-M3 similarity)
+     - 📝 BM25 Search (keyword matching)
+     - 🕸️ Graph Local (entity relationships)
+     - 🌐 Graph Global (community summaries - Sprint 52)
+     - ⚖️ RRF Fusion (Reciprocal Rank Fusion)
+     - 🔄 Reranking (cross-encoder via Ollama - Sprint 48)
+     - 💬 LLM Generation (answer synthesis)
+   - See real-time execution times per phase
+   - Phase count shows actual phases executed (not hardcoded)
 
-4. **Review Results**
-   - Read complete answer
-   - Click citations to see source chunks
+4. **Watch Streaming Answer**
+   - See answer tokens appearing in real-time
+   - See source cards appearing as retrieved
+   - Answer quality reflects 4-signal fusion
+
+5. **Review Results**
+   - Read complete answer with inline citations
+   - Click citations to see source chunks with provenance (Sprint 49)
    - Verify sources from uploaded documents
-   - Check follow-up questions
+   - See source_chunk_id tracing back to origin
 
-5. **Interact with Results**
+6. **View Async Follow-up Questions** (Sprint 52)
+   - After answer completes, see loading skeleton
+   - Follow-up questions appear asynchronously (1-3 seconds)
+   - Questions generated in background (non-blocking)
+   - Click follow-up to pre-fill chat input
+
+7. **Interact with Results**
    - Click citation to open source panel
    - Verify citation references correct document
    - Ask follow-up question
    - Share conversation (optional)
+   - Cancel long-running request (Sprint 48)
 
 #### Test Coverage:
 - ✅ Existing:
   - `test_e2e_hybrid_search_quality.py` (BM25, Vector, Hybrid quality)
   - `test_e2e_document_ingestion_workflow.py` (query with citations)
-- 🆕 Required: `test_e2e_chat_streaming_and_citations.py`
+  - `test_e2e_historical_phase_events.py` (phase tracking - Sprint 51)
+- 🆕 Required: `test_e2e_async_followup_questions.py` (Sprint 52)
 
 ---
 
 ### **Journey 4: Knowledge Graph Exploration**
 **User Goal:** Visualize and explore the knowledge graph from uploaded documents
+**Feature Status:** ✅ Enhanced (Sprint 49 + Sprint 52)
 
 #### Steps:
 1. **Navigate to Graph Analytics** (`/admin/graph`)
    - Click "Admin" → "Graph Analytics"
    - Wait for graph to load
+   - See enhanced Graph Analytics Page (Sprint 52)
 
-2. **View Graph Statistics**
-   - See total nodes, edges, communities
-   - See entity type distribution
-   - See average degree, orphaned nodes
+2. **View Graph Statistics** (Sprint 52 Enhanced)
+   - See summary cards:
+     - Total Entities (nodes)
+     - Total Relationships (edges)
+     - Total Communities
+     - Total Documents indexed
+   - See entity type distribution chart
    - See relationship type distribution
+   - See graph health metrics:
+     - Orphaned nodes count
+     - Disconnected components
+     - Average node degree
 
-3. **Apply Filters**
-   - Select entity types to display
-   - Set minimum node degree
-   - Set maximum nodes to render
-   - Adjust edge filters (RELATES_TO, CO_OCCURS, MENTIONED_IN)
-   - Set minimum edge weight
+3. **Apply Filters** (Sprint 49 Enhanced)
+   - **Entity Type Filter:** Multi-select entity types (PERSON, ORG, LOCATION, etc.)
+   - **Relationship Type Filter:** Multi-select edge types (Sprint 49.2)
+     - RELATES_TO (semantic)
+     - WORKED_AT, FOUNDED, LOCATED_IN, etc.
+   - **Min Node Degree:** Filter low-connectivity nodes
+   - **Max Nodes:** Limit render for performance
+   - **Min Edge Weight:** Filter weak connections
 
 4. **Explore Graph Visually**
    - Pan and zoom the graph
    - Click nodes to see details in NodeDetailsPanel:
      - Entity name, type, aliases
-     - Connected entities
-     - Source documents
+     - Connected entities with relationship types
+     - Source documents with provenance
    - Click edges to see relationship details:
-     - Relationship type
+     - Relationship type (deduplicated via BGE-M3 - Sprint 49.7)
      - Weight/confidence
-     - Source chunk ID (Sprint 49.5 provenance)
+     - **source_chunk_id** (Sprint 49.5 provenance tracking)
+     - Link to source document
 
-5. **Explore Communities**
-   - See community list in sidebar
+5. **Explore Communities** (Sprint 52 Enhanced)
+   - See TopCommunities list in sidebar
    - Click community to highlight in graph
+   - **View Community Summary** (Sprint 52):
+     - LLM-generated description of community theme
+     - Key entities and relationships
+     - Domain context
    - See community documents
-   - Verify semantic clustering
+   - Verify semantic clustering via BGE-M3
 
 6. **Export Graph**
    - Click "Export" button
    - Select format (GraphML, Cypher, JSON)
    - Download graph data
 
+7. **Refresh Data**
+   - Click "Refresh" button
+   - Graph reloads with latest data
+   - See loading indicator during refresh
+
 #### Test Coverage:
-- ✅ Existing: None (NEW TEST NEEDED)
-- 🆕 Required: `test_e2e_graph_exploration_workflow.py`
+- ✅ Existing:
+  - `test_e2e_graph_analytics.py` (Sprint 52 - page load, stats, refresh)
+  - `test_e2e_graph_relationship_filtering.py` (Sprint 51)
+- 🆕 Required: `test_e2e_graph_exploration_full_workflow.py`
 
 ---
 
 ### **Journey 5: Community Detection & Analysis**
 **User Goal:** Find and analyze semantic communities in the knowledge graph
+**Feature Status:** ✅ Enhanced with LLM Summaries (Sprint 52)
 
 #### Steps:
 1. **Navigate to Graph Analytics** (`/admin/graph`)
    - Load graph visualization
    - See community statistics
+   - See community summary status (generated/pending)
 
 2. **View Community List**
    - See TopCommunities component
@@ -240,25 +311,44 @@
      - Node count
      - Density
      - Semantic coherence
+   - See **Community Summary Preview** (Sprint 52):
+     - First 100 chars of LLM-generated summary
+     - "View Details" link
 
 3. **Select Community**
    - Click community in list
    - Graph highlights community nodes
    - See community documents in CommunityDocuments panel
 
-4. **Analyze Community**
+4. **View Community Summary** (Sprint 52 NEW)
+   - **LLM-Generated Summary:**
+     - Main topic/theme description
+     - Key relationships between entities
+     - Domain context (research, business, technology)
+   - Summary generated via delta-tracking (only affected communities)
+   - ~90% cost savings vs full regeneration
+
+5. **Analyze Community**
    - See key entities in community
    - See dominant entity types
    - See inter-community connections
-   - See source documents
+   - See source documents with provenance
 
-5. **Export Community Data**
+6. **Configure Summary Model** (Sprint 52 Admin)
+   - Navigate to `/admin/llm-config`
+   - Select "Graph Community Summary Model"
+   - Choose from available Ollama models
+   - Save configuration (persisted in Redis)
+
+7. **Export Community Data**
    - Export community subgraph
    - Export community document list
+   - Export community summary
 
 #### Test Coverage:
-- ✅ Existing: None (NEW TEST NEEDED)
-- 🆕 Required: `test_e2e_community_detection_workflow.py`
+- ✅ Existing:
+  - `test_e2e_graph_analytics.py` (community counts - Sprint 52)
+- 🆕 Required: `test_e2e_community_summaries.py` (Sprint 52)
 
 ---
 
@@ -336,6 +426,7 @@
 
 ### **Journey 8: Cost Monitoring & LLM Configuration**
 **User Goal:** Monitor LLM API costs and configure LLM providers
+**Feature Status:** ✅ Enhanced (Sprint 49 Dynamic Models + Sprint 52 Summary Config)
 
 #### Steps:
 1. **Navigate to Cost Dashboard** (`/admin/costs`)
@@ -346,24 +437,39 @@
    - See total costs by provider (Ollama, Alibaba Cloud, OpenAI)
    - See cost breakdown by:
      - Model (llama3.2:8b, qwen3:32b, etc.)
-     - Operation type (generation, embedding, classification)
+     - Operation type (generation, embedding, classification, **summarization**)
      - Time period (daily, weekly, monthly)
    - See budget alerts if approaching limits
+   - **Community Summary Costs** (Sprint 52):
+     - Track costs for LLM summary generation
+     - Delta-tracking saves ~90% costs
 
 3. **Configure LLM Settings** (`/admin/llm-config`)
    - Navigate to LLM Config page
+   - **Dynamic Model Discovery** (Sprint 49.1):
+     - Models auto-populated from Ollama API
+     - Embedding models (bge-m3, nomic) filtered out
+     - Vision models tagged separately
    - Select primary LLM provider
    - Configure fallback providers
    - Set API keys
    - Test LLM connectivity
 
-4. **Monitor Real-time Costs**
+4. **Configure Summary Model** (Sprint 52 NEW)
+   - See "Graph Community Summary Model" section
+   - Select model for community summaries (dropdown)
+   - Save configuration (persisted in Redis)
+   - Model used when generating/regenerating summaries
+
+5. **Monitor Real-time Costs**
    - See live cost updates during operations
    - Verify cost tracking accuracy
+   - Track summarization costs separately
 
 #### Test Coverage:
-- ✅ Existing: None (NEW TEST NEEDED)
-- 🆕 Required: `test_e2e_cost_monitoring_workflow.py`
+- ✅ Existing:
+  - `test_e2e_dynamic_llm_configuration.py` (Sprint 51 - model discovery)
+- 🆕 Required: `test_e2e_summary_model_config.py` (Sprint 52)
 
 ---
 
@@ -856,9 +962,130 @@
 
 ---
 
+### **Journey 19: Domain Management & Health Monitoring** (Sprint 52 NEW)
+**User Goal:** Monitor domain health, view statistics, and perform bulk operations
+**Feature Status:** ✅ Fully Implemented (Sprint 52)
+
+#### Steps:
+1. **Navigate to Domain Training** (`/admin/domain-training`)
+   - Click "Admin" → "Domain Training"
+   - See list of existing domains with status badges
+
+2. **Open Domain Detail View**
+   - Click on a domain row or "Details" button
+   - DomainDetailDialog opens with statistics
+
+3. **View Domain Statistics** (Sprint 52)
+   - **Document Statistics:**
+     - Total documents in domain
+     - Total chunks (from Qdrant)
+     - Total entities (from Neo4j)
+     - Total relationships (from Neo4j)
+   - **Health Status Badge:**
+     - 🟢 Healthy: All systems consistent
+     - 🟡 Degraded: Minor inconsistencies
+     - 🔴 Error: Indexing failed or data missing
+     - 🔵 Indexing: Currently processing
+   - **Indexing Progress:**
+     - Progress bar (0-100%)
+     - Last indexed timestamp
+
+4. **Perform Bulk Operations** (Sprint 52)
+   - **Re-index Domain:**
+     - Click "Re-index" button
+     - Confirmation dialog
+     - All documents re-processed
+     - Watch progress via SSE
+   - **Validate Domain:**
+     - Click "Validate" button
+     - Runs consistency checks:
+       - Domain configuration complete?
+       - Training prompts available?
+       - Orphaned entities detected?
+       - Chunks without references?
+     - See validation results:
+       - ✅ Passed checks
+       - ⚠️ Warnings
+       - ❌ Errors with recommendations
+
+5. **View Validation Results**
+   - Errors list with severity
+   - Recommendations for fixing issues
+   - Links to affected documents/entities
+
+6. **Close Dialog**
+   - Click "Close" or outside dialog
+   - Return to domain list with updated status
+
+#### API Endpoints:
+- `GET /admin/domains/{domain_name}/stats` - Get domain statistics
+- `POST /admin/domains/{domain_name}/reindex` - Trigger re-indexing
+- `POST /admin/domains/{domain_name}/validate` - Run validation
+
+#### Test Coverage:
+- ✅ Existing:
+  - `test_e2e_domain_management_enhancement.py` (Sprint 52)
+    - Statistics display
+    - Bulk operations visibility
+    - Validate operation
+    - Re-index operation
+    - Health status display
+
+---
+
+### **Journey 20: Async Follow-up Questions** (Sprint 52 NEW)
+**User Goal:** Receive contextual follow-up question suggestions without delay
+**Feature Status:** ✅ Fully Implemented (Sprint 52)
+
+#### Steps:
+1. **Submit Query** (see Journey 3)
+   - Enter question in chat
+   - Submit and watch streaming answer
+
+2. **Answer Completes**
+   - Full answer displayed with citations
+   - Loading skeleton appears below answer
+
+3. **Follow-up Questions Load Asynchronously**
+   - **Background Process:**
+     - Conversation context stored in Redis (30min TTL)
+     - LLM generates 3-5 contextual follow-up questions
+     - Runs in background (non-blocking)
+   - **Frontend Polling:**
+     - Polls every 1 second for up to 10 attempts
+     - Loading skeleton shows during wait
+   - **Questions Appear:**
+     - 3-5 clickable question cards
+     - Questions contextual to conversation
+     - Typically 1-3 seconds after answer
+
+4. **Interact with Follow-ups**
+   - Click a follow-up question
+   - Question pre-fills chat input
+   - Submit to continue conversation
+
+5. **Session Context Persistence**
+   - Context cached for 30 minutes
+   - Multiple queries in session use accumulated context
+   - Better follow-up relevance over time
+
+#### Key Requirement:
+**Follow-up questions NEVER delay the answer display.** Generation happens asynchronously after answer is complete.
+
+#### Test Coverage:
+- ✅ Existing:
+  - `tests/unit/agents/test_followup_generator.py` (9 tests - Sprint 52)
+- 🆕 Required: `test_e2e_async_followup_questions.py`
+
+---
+
 ## ✅ Existing E2E Tests
 
-### 1. `test_e2e_document_ingestion_workflow.py` (495 lines)
+**Total E2E Tests:** 111+ tests (as of Sprint 52)
+
+### Core Workflow Tests
+
+#### 1. `test_e2e_document_ingestion_workflow.py` (495 lines)
 **Status:** ✅ Implemented
 **Coverage:**
 - Document upload via UI
@@ -869,22 +1096,9 @@
 - Query with citations
 - Answer quality validation
 
-**Test Scenario:**
-```python
-1. Upload ML research document (test_ml_research.txt)
-2. Wait for ingestion completion
-3. Validate Qdrant chunks (>= 5 chunks with BGE-M3 embeddings)
-4. Validate Neo4j entities (Andrew Ng, Stanford, Google Brain)
-5. Validate Neo4j relationships with source_chunk_id
-6. Validate BM25 corpus updated
-7. Query: "Who is Andrew Ng and what did he found?"
-8. Validate answer mentions key facts
-9. Validate citations reference uploaded document
-```
-
 ---
 
-### 2. `test_e2e_hybrid_search_quality.py` (457 lines)
+#### 2. `test_e2e_hybrid_search_quality.py` (457 lines)
 **Status:** ✅ Implemented
 **Coverage:**
 - BM25 exact keyword matching
@@ -894,19 +1108,9 @@
 - Result diversity
 - Performance benchmarks
 
-**Test Scenarios:**
-```python
-1. Upload knowledge base (Python specs, ML concepts, TensorFlow docs)
-2. Test BM25: "Python 3.12.7 release date" → exact match
-3. Test Vector: "neural networks fundamentals" → semantic match
-4. Test Hybrid: "deep learning frameworks" → balanced results
-5. Validate performance: BM25 < 200ms, Vector < 300ms, Hybrid < 500ms
-6. Validate ranking quality and diversity
-```
-
 ---
 
-### 3. `test_e2e_sprint49_features.py` (409 lines)
+#### 3. `test_e2e_sprint49_features.py` (409 lines)
 **Status:** ✅ Implemented
 **Coverage:**
 - Feature 49.5: Provenance tracking validation
@@ -914,15 +1118,95 @@
 - Feature 49.7 & 49.8: Relation deduplication & synonyms
 - Feature 49.9: BGE-M3 entity deduplication
 
-**Test Scenarios:**
-```python
-1. Index Consistency: Validate Qdrant ↔ Neo4j ↔ BM25 counts
-2. Provenance: Verify source_chunk_id on relationships
-3. Deduplication: Upload film industry doc with duplicate relations
-4. Validate: ACTED_IN, STARRED_IN, PLAYED_IN → deduped to 1-2 types
-5. Synonyms: Test manual override (USES → USED_BY)
-6. BGE-M3: Verify all embeddings 1024-dim
-```
+---
+
+### Sprint 51 E2E Tests (NEW)
+
+#### 4. `test_e2e_bi_temporal_queries.py`
+**Status:** ✅ Implemented (Sprint 51.1)
+**Coverage:**
+- Historical graph state queries
+- Entity version history
+- Temporal range filtering
+
+---
+
+#### 5. `test_e2e_secure_shell_sandbox.py`
+**Status:** ✅ Implemented (Sprint 51.2)
+**Coverage:**
+- Sandboxed command execution
+- Network isolation verification
+- Filesystem isolation verification
+- Command blocklist enforcement
+
+---
+
+#### 6. `test_e2e_dynamic_llm_configuration.py`
+**Status:** ✅ Implemented (Sprint 51.3)
+**Coverage:**
+- Dynamic model discovery from Ollama
+- Embedding model filtering
+- Model selection and persistence
+
+---
+
+#### 7. `test_e2e_graph_relationship_filtering.py`
+**Status:** ✅ Implemented (Sprint 51.4)
+**Coverage:**
+- Multi-select relationship type filter
+- Graph updates on filter change
+- Filter persistence
+
+---
+
+#### 8. `test_e2e_historical_phase_events.py`
+**Status:** ✅ Implemented (Sprint 51.5)
+**Coverage:**
+- Phase event display during streaming
+- Phase timing accuracy
+- Phase history after message complete
+
+---
+
+#### 9. `test_e2e_index_consistency_validation.py`
+**Status:** ✅ Implemented (Sprint 51.6)
+**Coverage:**
+- Qdrant ↔ Neo4j ↔ BM25 consistency
+- Consistency check UI
+- Inconsistency reporting
+
+---
+
+### Sprint 52 E2E Tests (NEW)
+
+#### 10. `test_e2e_graph_analytics.py`
+**Status:** ✅ Implemented (Sprint 52)
+**Coverage:**
+- Graph analytics page load
+- Summary cards display (entities, relationships, communities)
+- Chart visualization
+- Graph health banner
+- Refresh functionality
+
+---
+
+#### 11. `test_e2e_domain_management_enhancement.py`
+**Status:** ✅ Implemented (Sprint 52)
+**Coverage:**
+- Domain statistics display
+- Health status badges
+- Re-index bulk operation
+- Validate bulk operation
+- Dialog close functionality
+
+---
+
+#### 12. `test_e2e_health_monitoring.py`
+**Status:** ✅ Implemented (Sprint 51)
+**Coverage:**
+- Service status indicators
+- Health check API
+- Error log display
 
 ---
 
