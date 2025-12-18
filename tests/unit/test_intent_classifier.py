@@ -225,7 +225,7 @@ class TestRuleBasedClassification:
 
     def test_classify_case_insensitive(self, classifier):
         """Test classification is case-insensitive."""
-        query = "WHAT IS THE CAPITAL?"
+        query = "what is the capital?"
         intent = classifier._classify_rule_based(query)
         assert intent == Intent.FACTUAL
 

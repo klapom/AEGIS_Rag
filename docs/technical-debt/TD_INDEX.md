@@ -26,13 +26,15 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD# | Title | Resolution Sprint |
 |-----|-------|-------------------|
 | TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
-| TD-048 | Graph Extraction with Unified Chunks | **Sprint 49** |
+| TD-045 | entity_id Property Migration | Sprint 34 |
+| TD-048 | Graph Extraction with Unified Chunks | Sprint 49 |
 | TD-050 | Duplicate Answer Streaming | Sprint 47 |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
+| TD-059 | Reranking via Ollama | Sprint 48 |
 | TD-060 | Unified Chunk IDs | Sprint 42 |
 | TD-061 | Ollama GPU Docker Config | Sprint 42 |
 | TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
-| TD-063 | Relation Deduplication | **Sprint 49** |
+| TD-063 | Relation Deduplication | Sprint 49 |
 
 ---
 
@@ -42,22 +44,23 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 49 |
-| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 49 |
-| [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | OPEN | 5 | Sprint 49 |
-| [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | OPEN | 40 | Sprint 51 |
+| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | OPEN | 5 | Sprint 52 |
+| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 52 |
+| [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | **RESOLVED** ✅ | 5 | Sprint 34 ✓ |
+| [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | **RESOLVED** ✅ | 40 | Sprint 51 ✓ |
 
 ### MEDIUM Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | PARTIAL | 13 | Done (Sprint 34) |
+| [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | **PARTIAL** (Core Done) | 13 | Sprint 34 ✓ |
 | [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 52+ |
-| [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 52 |
+| [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 52+ |
 | [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
-| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50 |
+| [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | **IN PROGRESS** | 34 | Sprint 52+ |
+| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50+ |
 | [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | PLANNED | 13 | Sprint 52+ |
-| [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | OPEN | 8 | **Sprint 48** |
+| [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | **RESOLVED** ✅ | 8 | Sprint 48 ✓ |
 
 ### LOW Priority
 
@@ -70,47 +73,52 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ---
 
-## Sprint 48 (Current - Real-Time Thinking Phase Events)
+## Sprint 51 (Completed - E2E Test Coverage & TD Review)
 
-**Focus:** Backend SSE Phase Events + Reranking + Nemotron + Timeout
-**Story Points:** 73 SP
+**Focus:** E2E test coverage for unutilized features + Technical Debt Review
+**Story Points:** 39 SP (without Mem0 optional feature)
+**Status:** ✅ COMPLETE
 
-| Feature | SP | Description |
-|---------|-----|-------------|
-| 48.1 | 5 | Phase Event Models & Types |
-| 48.2 | 13 | CoordinatorAgent Streaming Method |
-| 48.3 | 13 | Agent Node Instrumentation |
-| 48.4 | 8 | Chat Stream API Enhancement |
-| 48.5 | 5 | Phase Events Redis Persistence |
-| 48.6 | 8 | Frontend Phase Event Handler |
-| 48.7 | 3 | ReasoningData Builder |
-| 48.8 | 8 | **TD-059 Reranking via Ollama (bge-reranker-v2-m3)** |
-| 48.9 | 5 | **Default LLM zu Nemotron wechseln** |
-| 48.10 | 5 | **Request Timeout & Cancel** |
+**Achievements:**
+- 111 E2E tests implemented and passing (vs. 40 planned)
+- 4 TDs reviewed and updated (TD-045, TD-046, TD-047, TD-059)
+- Root documentation reorganized (13 files moved/archived)
+- Production confidence improved to >90%
+
+| Feature | SP | Status |
+|---------|-----|--------|
+| 51.1 | 13 | ✅ Bi-Temporal Queries E2E Tests |
+| 51.2 | 8 | ✅ Secure Shell Sandbox E2E Tests |
+| 51.3 | 5 | ✅ Dynamic LLM Model Configuration E2E |
+| 51.4 | 5 | ✅ Graph Relationship Type Filtering E2E |
+| 51.5 | 3 | ✅ Historical Phase Events Display E2E |
+| 51.6 | 5 | ✅ Index Consistency Validation UI + E2E |
+| TD Review | N/A | ✅ 4 TDs reviewed and status updated |
+| Doc Org | N/A | ✅ Root docs reorganized |
 
 ---
 
 ## Recommended Sprint Allocation
 
-### Sprint 49
+### Sprint 52 (Recommended Priority)
 - TD-043: Follow-up Questions Redis (5 SP)
 - TD-044: DoclingParsedDocument Interface (8 SP)
-- TD-045: entity_id Migration (5 SP)
+- **TD-053 Phase 1-2:** Admin Dashboard Configuration (21 SP)
+  - Phase 1: LLM Configuration UI (8 SP)
+  - Phase 2: User Management (13 SP)
 
-### Sprint 50
-- TD-054: Unified Chunking Service (6 SP)
+### Sprint 53
+- **TD-053 Phase 3-4:** Admin Dashboard Monitoring (16 SP)
+  - Phase 3: System Monitoring Dashboard (8 SP)
+  - Phase 4: Memory Configuration (8 SP)
+- TD-058: Community Summary Generation (13 SP)
 
-### Sprint 51
-- TD-047: Critical Path E2E Tests (40 SP) - **Dedicated sprint**
-
-### Sprint 52+
+### Sprint 54+
 - TD-051: Memory Consolidation (21 SP)
 - TD-049: User Profiling (21 SP)
 - TD-052: User Document Upload (13 SP)
-- TD-053: Admin Dashboard Full (34 SP)
 - TD-055: MCP Client (21 SP)
 - TD-056: Project Collaboration (34 SP)
-- TD-058: Community Summaries (13 SP)
 - TD-067: Dataset Annotation Tool (21 SP)
 
 ---
@@ -177,13 +185,13 @@ TD-063 (Relation Dedup) ✓ DONE (Sprint 49)
 ## Notes
 
 1. **Sprint 49 TDs resolved** - TD-048 (Provenance Tracking) and TD-063 (Relation Dedup) completed
-2. **8 items archived** - Resolved TDs moved to archive folder
-3. **TD-046** was completed in Sprint 34
-4. **TD-044** is in progress with workarounds
-5. **TD-047** is a large item (40 SP) requiring dedicated sprint
-6. **TD-059** scheduled for Sprint 48 (Reranking via Ollama) - COMPLETED
-7. **Sprint 49 achievements**: Provenance tracking, index validation, semantic deduplication via BGE-M3
-8. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
+2. **10 items archived** - Resolved TDs moved to archive folder (TD-045, TD-059 added Sprint 51)
+3. **TD-046** was completed in Sprint 34 (core), visualization pending
+4. **TD-047** exceeded baseline - 111 E2E tests vs. 40 planned (Sprint 51)
+5. **TD-053** navigation framework complete, configuration features deferred
+6. **Sprint 51 achievements**: 111 E2E tests, 4 TDs reviewed, documentation reorganized
+7. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
+8. **Next priority**: Sprint 52 should focus on TD-043/044 + TD-053 Phases 1-2
 
 ---
 

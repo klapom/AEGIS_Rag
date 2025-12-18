@@ -383,7 +383,7 @@ async def test_delete_default_domain_raises_error(domain_repository):
 @pytest.mark.asyncio
 async def test_create_training_log(domain_repository, mock_neo4j_client):
     """Test creating training log for domain."""
-    mock_neo4j_client.execute_write.return_value = [
+    mock_neo4j_client.execute_query.return_value = [
         {"id": "log-id", "status": "pending", "started_at": "2025-12-12T00:00:00"}
     ]
 
@@ -392,7 +392,7 @@ async def test_create_training_log(domain_repository, mock_neo4j_client):
     assert result["domain_name"] == "tech_docs"
     assert result["status"] == "pending"
     assert result["progress_percent"] == 0.0
-    assert mock_neo4j_client.execute_write.called
+    assert mock_neo4j_client.execute_query.called
 
 
 @pytest.mark.asyncio
