@@ -14,10 +14,11 @@
  */
 
 import type { PhaseEvent, PhaseType } from '../../types/reasoning';
-import { PHASE_NAMES, TOTAL_PHASES } from '../../types/reasoning';
+import { PHASE_NAMES } from '../../types/reasoning';
 
 /**
  * Props for the PhaseIndicator component
+ * Sprint 51 Feature 51.1: Added totalPhases prop for dynamic phase count
  */
 export interface PhaseIndicatorProps {
   /** Currently active phase (null if none in progress) */
@@ -28,6 +29,12 @@ export interface PhaseIndicatorProps {
   showDetails?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /**
+   * Sprint 51 Feature 51.1: Total number of expected phases from backend.
+   * If not provided, uses the number of received phase events as the total.
+   * This enables dynamic progress calculation without hardcoded phase counts.
+   */
+  totalPhases?: number;
 }
 
 /**
@@ -81,18 +88,32 @@ function formatDuration(ms: number): string {
 /**
  * PhaseIndicator displays real-time progress through RAG processing phases.
  * Provides visual feedback during the "thinking" phase before answer streaming begins.
+ *
+ * Sprint 51 Feature 51.1: Updated to use dynamic phase count from backend
+ * instead of hardcoded TOTAL_PHASES constant. The progress is now calculated
+ * based on actual phases received from the backend.
  */
 export function PhaseIndicator({
   currentPhase,
   phaseEvents,
   showDetails = true,
   className = '',
+  totalPhases,
 }: PhaseIndicatorProps) {
   // Calculate progress based on completed phases
+  // Sprint 51 Feature 51.1: Use dynamic total from backend or fall back to received events count
   const completedPhases = phaseEvents.filter(
     (e) => e.status === 'completed' || e.status === 'skipped'
   ).length;
-  const progress = Math.round((completedPhases / TOTAL_PHASES) * 100);
+
+  // Determine total phases: use prop if provided, otherwise use received events count
+  // This allows dynamic progress calculation without hardcoded counts
+  const effectiveTotalPhases = totalPhases ?? phaseEvents.length;
+
+  // Calculate progress percentage (avoid division by zero)
+  const progress = effectiveTotalPhases > 0
+    ? Math.round((completedPhases / effectiveTotalPhases) * 100)
+    : 0;
 
   // Get current phase display name
   const currentPhaseName = currentPhase ? PHASE_NAMES[currentPhase] : null;
@@ -132,9 +153,9 @@ export function PhaseIndicator({
         </div>
       )}
 
-      {/* Progress summary */}
+      {/* Progress summary - Sprint 51 Feature 51.1: Show dynamic phase count */}
       <div className="mt-1 text-xs text-gray-500" data-testid="phase-progress-summary">
-        {completedPhases} von {TOTAL_PHASES} Phasen abgeschlossen
+        {completedPhases} von {effectiveTotalPhases} Phasen abgeschlossen
       </div>
 
       {/* Detailed phase list */}

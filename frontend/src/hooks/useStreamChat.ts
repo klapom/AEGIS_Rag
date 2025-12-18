@@ -40,6 +40,7 @@ export const TIMEOUT_CONFIG = {
 
 /**
  * Streaming state returned by the hook
+ * Sprint 51 Feature 51.1 + 51.2: Added totalPhases and isGeneratingAnswer
  */
 export interface StreamingState {
   /** Accumulated answer text */
@@ -68,6 +69,16 @@ export interface StreamingState {
   showTimeoutWarning: boolean;
   /** Sprint 48: Function to cancel the current request */
   cancelRequest: () => void;
+  /**
+   * Sprint 51 Feature 51.1: Total number of expected phases from backend.
+   * This is dynamically determined based on the query type.
+   */
+  totalPhases: number | undefined;
+  /**
+   * Sprint 51 Feature 51.2: Whether tokens are being actively generated.
+   * True when receiving token events, used for streaming cursor display.
+   */
+  isGeneratingAnswer: boolean;
 }
 
 interface UseStreamChatOptions {
@@ -117,6 +128,12 @@ export function useStreamChat({
 
   // Sprint 48 Feature 48.10: Timeout state
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+
+  // Sprint 51 Feature 51.1: Dynamic total phases from backend
+  const [totalPhases, setTotalPhases] = useState<number | undefined>(undefined);
+
+  // Sprint 51 Feature 51.2: Track when tokens are being actively generated
+  const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
 
   const hasCalledOnComplete = useRef(false);
   const currentReasoningData = useRef<ReasoningData | null>(null);
@@ -208,6 +225,10 @@ export function useStreamChat({
       setPhaseEvents([]);
       setShowTimeoutWarning(false);
 
+      // Sprint 51 Feature 51.1 + 51.2: Reset new state
+      setTotalPhases(undefined);
+      setIsGeneratingAnswer(false);
+
       // Sprint 48 Feature 48.10: Set up timeout timers
       warningTimerRef.current = setTimeout(() => {
         setShowTimeoutWarning(true);
@@ -287,6 +308,11 @@ export function useStreamChat({
           if (data.phase_event) {
             handlePhaseEvent(data.phase_event as PhaseEvent);
           }
+
+          // Sprint 51 Feature 51.1: Extract total phases count from backend
+          if (data.total_phases !== undefined) {
+            setTotalPhases(data.total_phases as number);
+          }
           break;
         }
 
@@ -312,6 +338,8 @@ export function useStreamChat({
 
         case 'token':
           if (chunk.content) {
+            // Sprint 51 Feature 51.2: Mark that we're actively generating answer tokens
+            setIsGeneratingAnswer(true);
             setAnswer((prev) => {
               const newAnswer = prev + chunk.content;
               // Sprint 47 Fix: Track final answer in ref for onComplete
@@ -366,6 +394,8 @@ export function useStreamChat({
           setIsStreaming(false);
           setCurrentPhase(null);
           setShowTimeoutWarning(false);
+          // Sprint 51 Feature 51.2: Clear generating state on completion
+          setIsGeneratingAnswer(false);
 
           // Sprint 48: Clear timers on successful completion
           clearTimers();
@@ -395,6 +425,8 @@ export function useStreamChat({
           setIsStreaming(false);
           setCurrentPhase(null);
           setShowTimeoutWarning(false);
+          // Sprint 51 Feature 51.2: Clear generating state on error
+          setIsGeneratingAnswer(false);
           // Sprint 48: Clear timers on error
           clearTimers();
           break;
@@ -490,6 +522,10 @@ export function useStreamChat({
     // Sprint 48 Feature 48.10: Timeout and cancel
     showTimeoutWarning,
     cancelRequest,
+    // Sprint 51 Feature 51.1: Dynamic total phases from backend
+    totalPhases,
+    // Sprint 51 Feature 51.2: Token generation state for streaming cursor
+    isGeneratingAnswer,
   };
 }
 

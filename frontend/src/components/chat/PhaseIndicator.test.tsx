@@ -1,6 +1,7 @@
 /**
  * PhaseIndicator Component Tests
  * Sprint 48 Feature 48.6: Phase Event Display Tests
+ * Sprint 51 Feature 51.1: Updated for dynamic phase count (removed TOTAL_PHASES)
  *
  * Tests for the PhaseIndicator component that displays real-time
  * progress through RAG processing phases.
@@ -10,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { PhaseIndicator } from './PhaseIndicator';
 import type { PhaseEvent, PhaseType } from '../../types/reasoning';
-import { PHASE_NAMES, TOTAL_PHASES } from '../../types/reasoning';
+import { PHASE_NAMES } from '../../types/reasoning';
 
 describe('PhaseIndicator', () => {
   const createPhaseEvent = (
@@ -29,22 +30,46 @@ describe('PhaseIndicator', () => {
 
   describe('Progress calculation', () => {
     it('shows 0% progress when no phases are completed', () => {
+      // Sprint 51 Feature 51.1: With no events and no totalPhases, shows 0 of 0
       render(<PhaseIndicator currentPhase={null} phaseEvents={[]} />);
       expect(screen.getByTestId('phase-progress-summary')).toHaveTextContent(
-        `0 von ${TOTAL_PHASES} Phasen abgeschlossen`
+        '0 von 0 Phasen abgeschlossen'
       );
     });
 
-    it('calculates progress based on completed phases', () => {
+    it('shows 0% progress with totalPhases prop when no phases completed', () => {
+      // Sprint 51 Feature 51.1: With totalPhases prop, shows correct total
+      render(<PhaseIndicator currentPhase={null} phaseEvents={[]} totalPhases={5} />);
+      expect(screen.getByTestId('phase-progress-summary')).toHaveTextContent(
+        '0 von 5 Phasen abgeschlossen'
+      );
+    });
+
+    it('calculates progress based on completed phases (dynamic count)', () => {
       const events: PhaseEvent[] = [
         createPhaseEvent('intent_classification', 'completed'),
         createPhaseEvent('vector_search', 'completed'),
         createPhaseEvent('bm25_search', 'in_progress'),
       ];
 
+      // Sprint 51 Feature 51.1: Without totalPhases, uses events count as total
       render(<PhaseIndicator currentPhase="bm25_search" phaseEvents={events} />);
       expect(screen.getByTestId('phase-progress-summary')).toHaveTextContent(
-        `2 von ${TOTAL_PHASES} Phasen abgeschlossen`
+        '2 von 3 Phasen abgeschlossen'
+      );
+    });
+
+    it('calculates progress with explicit totalPhases prop', () => {
+      const events: PhaseEvent[] = [
+        createPhaseEvent('intent_classification', 'completed'),
+        createPhaseEvent('vector_search', 'completed'),
+        createPhaseEvent('bm25_search', 'in_progress'),
+      ];
+
+      // Sprint 51 Feature 51.1: With totalPhases prop, uses that as denominator
+      render(<PhaseIndicator currentPhase="bm25_search" phaseEvents={events} totalPhases={7} />);
+      expect(screen.getByTestId('phase-progress-summary')).toHaveTextContent(
+        '2 von 7 Phasen abgeschlossen'
       );
     });
 
@@ -54,9 +79,10 @@ describe('PhaseIndicator', () => {
         createPhaseEvent('vector_search', 'skipped'),
       ];
 
+      // Sprint 51 Feature 51.1: Without totalPhases, uses events count as total
       render(<PhaseIndicator currentPhase={null} phaseEvents={events} />);
       expect(screen.getByTestId('phase-progress-summary')).toHaveTextContent(
-        `2 von ${TOTAL_PHASES} Phasen abgeschlossen`
+        '2 von 2 Phasen abgeschlossen'
       );
     });
   });
@@ -91,7 +117,7 @@ describe('PhaseIndicator', () => {
       expect(progressbar).toHaveAttribute('aria-valuemax', '100');
     });
 
-    it('updates progress bar width based on completion', () => {
+    it('updates progress bar width based on completion (dynamic)', () => {
       const events: PhaseEvent[] = Array.from({ length: 5 }, (_, i) =>
         createPhaseEvent(
           ['intent_classification', 'vector_search', 'bm25_search', 'rrf_fusion', 'reranking'][i] as PhaseType,
@@ -99,12 +125,30 @@ describe('PhaseIndicator', () => {
         )
       );
 
+      // Sprint 51 Feature 51.1: Without totalPhases, 5 completed out of 5 events = 100%
       const { container } = render(
         <PhaseIndicator currentPhase={null} phaseEvents={events} />
       );
 
-      // 5 out of 9 phases = ~56%
-      const expectedProgress = Math.round((5 / TOTAL_PHASES) * 100);
+      const expectedProgress = 100; // All 5 events are completed
+      const progressFill = container.querySelector('.bg-gradient-to-r');
+      expect(progressFill).toHaveStyle({ width: `${expectedProgress}%` });
+    });
+
+    it('updates progress bar width with explicit totalPhases', () => {
+      const events: PhaseEvent[] = Array.from({ length: 5 }, (_, i) =>
+        createPhaseEvent(
+          ['intent_classification', 'vector_search', 'bm25_search', 'rrf_fusion', 'reranking'][i] as PhaseType,
+          'completed'
+        )
+      );
+
+      // Sprint 51 Feature 51.1: With totalPhases=9, 5 completed out of 9 = ~56%
+      const { container } = render(
+        <PhaseIndicator currentPhase={null} phaseEvents={events} totalPhases={9} />
+      );
+
+      const expectedProgress = Math.round((5 / 9) * 100);
       const progressFill = container.querySelector('.bg-gradient-to-r');
       expect(progressFill).toHaveStyle({ width: `${expectedProgress}%` });
     });

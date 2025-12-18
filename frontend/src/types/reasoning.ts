@@ -175,6 +175,15 @@ export const PHASE_NAMES: Record<PhaseType, string> = {
 };
 
 /**
- * Total number of possible phases for progress calculation
+ * Sprint 51 Feature 51.1: Dynamic Phase State
+ * Track phases dynamically based on backend events rather than hardcoded count.
+ * The backend determines the actual phases for each query (some phases may be skipped).
  */
-export const TOTAL_PHASES = Object.keys(PHASE_NAMES).length;
+export interface PhaseState {
+  /** List of phases received from backend */
+  phases: PhaseEvent[];
+  /** Number of completed phases */
+  completedCount: number;
+  /** Total number of phases (determined dynamically by backend) */
+  totalCount: number;
+}

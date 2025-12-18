@@ -86,6 +86,7 @@ function filterCitedSources(sources: Source[], content: string): CitedSource[] {
 
 /**
  * Message data structure for MessageBubble
+ * Sprint 51 Feature 51.2: Added isGeneratingAnswer for streaming cursor control
  */
 export interface MessageData {
   /** Unique identifier for the message */
@@ -102,6 +103,12 @@ export interface MessageData {
   isStreaming?: boolean;
   /** Optional reasoning data for transparent reasoning panel (Feature 46.2) */
   reasoningData?: ReasoningData | null;
+  /**
+   * Sprint 51 Feature 51.2: Whether tokens are actively being generated.
+   * When true, shows the blinking cursor. Separate from isStreaming which
+   * indicates the overall request is in progress (including thinking phase).
+   */
+  isGeneratingAnswer?: boolean;
 }
 
 interface MessageBubbleProps {
@@ -190,9 +197,14 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
               ) : (
                 <ReactMarkdown>{message.content}</ReactMarkdown>
               )}
-              {/* Streaming cursor */}
-              {message.isStreaming && (
-                <span className="animate-pulse text-primary ml-1">|</span>
+              {/* Streaming cursor - Sprint 51 Feature 51.2: Only show when actively generating tokens
+                  Uses isGeneratingAnswer if available, falls back to isStreaming for backwards compatibility */}
+              {(message.isGeneratingAnswer ?? message.isStreaming) && (
+                <span
+                  className="inline-block w-2 h-5 ml-1 bg-primary animate-blink"
+                  aria-label="Antwort wird generiert"
+                  data-testid="streaming-cursor"
+                />
               )}
             </>
           )}

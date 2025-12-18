@@ -65,6 +65,22 @@ describe('useStreamChat - Sprint 48', () => {
       );
       expect(typeof result.current.cancelRequest).toBe('function');
     });
+
+    // Sprint 51 Feature 51.1: totalPhases initial state
+    it('initializes with undefined totalPhases', () => {
+      const { result } = renderHook(() =>
+        useStreamChat({ query: null, mode: 'hybrid' })
+      );
+      expect(result.current.totalPhases).toBeUndefined();
+    });
+
+    // Sprint 51 Feature 51.2: isGeneratingAnswer initial state
+    it('initializes with isGeneratingAnswer as false', () => {
+      const { result } = renderHook(() =>
+        useStreamChat({ query: null, mode: 'hybrid' })
+      );
+      expect(result.current.isGeneratingAnswer).toBe(false);
+    });
   });
 
   describe('Phase event handling', () => {
@@ -428,6 +444,151 @@ describe('useStreamChat - Sprint 48', () => {
       });
 
       expect(result.current.phaseEvents).toHaveLength(0);
+    });
+  });
+
+  // Sprint 51 Feature 51.1: Dynamic total phases from backend
+  describe('Total phases from backend', () => {
+    it('extracts totalPhases from metadata', async () => {
+      const mockStream = (async function* () {
+        yield {
+          type: 'metadata',
+          data: {
+            total_phases: 7,
+          },
+        };
+        yield { type: 'complete', data: {} };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useStreamChat({ query: 'test query', mode: 'hybrid' })
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.totalPhases).toBe(7);
+    });
+
+    it('resets totalPhases on new query', async () => {
+      const mockStream1 = (async function* () {
+        yield {
+          type: 'metadata',
+          data: { total_phases: 5 },
+        };
+        yield { type: 'complete', data: {} };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream1);
+
+      const { result, rerender } = renderHook(
+        ({ query }) => useStreamChat({ query, mode: 'hybrid' }),
+        { initialProps: { query: 'first query' } }
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.totalPhases).toBe(5);
+
+      // New query should reset totalPhases
+      const mockStream2 = (async function* () {
+        yield { type: 'complete', data: {} };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream2);
+
+      rerender({ query: 'second query' });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.totalPhases).toBeUndefined();
+    });
+  });
+
+  // Sprint 51 Feature 51.2: Token generation state for streaming cursor
+  describe('Token generation state', () => {
+    it('sets isGeneratingAnswer to true when receiving tokens', async () => {
+      const mockStream = (async function* () {
+        yield { type: 'token', content: 'Hello' };
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useStreamChat({ query: 'test query', mode: 'hybrid' })
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.isGeneratingAnswer).toBe(true);
+    });
+
+    it('sets isGeneratingAnswer to false on complete', async () => {
+      const mockStream = (async function* () {
+        yield { type: 'token', content: 'Hello' };
+        yield { type: 'complete', data: {} };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useStreamChat({ query: 'test query', mode: 'hybrid' })
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.isGeneratingAnswer).toBe(false);
+    });
+
+    it('sets isGeneratingAnswer to false on error', async () => {
+      const mockStream = (async function* () {
+        yield { type: 'token', content: 'Hello' };
+        yield { type: 'error', error: 'Test error' };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useStreamChat({ query: 'test query', mode: 'hybrid' })
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.isGeneratingAnswer).toBe(false);
+    });
+
+    it('accumulates tokens in answer', async () => {
+      const mockStream = (async function* () {
+        yield { type: 'token', content: 'Hello' };
+        yield { type: 'token', content: ' World' };
+        yield { type: 'complete', data: {} };
+      })();
+
+      vi.mocked(chatApi.streamChat).mockReturnValue(mockStream);
+
+      const { result } = renderHook(() =>
+        useStreamChat({ query: 'test query', mode: 'hybrid' })
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200);
+      });
+
+      expect(result.current.answer).toBe('Hello World');
     });
   });
 });
