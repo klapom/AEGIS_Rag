@@ -319,6 +319,7 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
     It instantiates the VectorSearchAgent and processes the state.
 
     Sprint 48 Feature 48.3: Emits phase events for vector search.
+    Sprint 51 Feature 51.1: Emits granular phase events for all sub-phases.
 
     Args:
         state: Current agent state dictionary
@@ -333,60 +334,118 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
         >>> graph = StateGraph(AgentState)
         >>> graph.add_node("vector_search", vector_search_node)
     """
-    # Create phase event for vector search
-    event = PhaseEvent(
-        phase_type=PhaseType.VECTOR_SEARCH,
-        status=PhaseStatus.IN_PROGRESS,
-        start_time=datetime.utcnow(),
-    )
+    import time
+
+    start_time = time.perf_counter()
+
+    # Initialize phase_events list if not present
+    if "phase_events" not in state:
+        state["phase_events"] = []
 
     try:
-        # Execute vector search
+        # Execute vector search (this internally runs vector, BM25, graph, and RRF)
         agent = VectorSearchAgent(
             top_k=settings.retrieval_top_k,
             use_reranking=False,  # TD-059: Disabled - sentence-transformers not in container
         )
         result_state = await agent.process(state)
 
-        # Update phase event with success
-        event.status = PhaseStatus.COMPLETED
-        event.end_time = datetime.utcnow()
-        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
-
         # Extract metadata from search results
         search_metadata = result_state.get("metadata", {}).get("search", {})
-        event.metadata = {
-            "results_count": search_metadata.get("result_count", 0),
-            "vector_count": search_metadata.get("vector_results_count", 0),
-            "bm25_count": search_metadata.get("bm25_results_count", 0),
-            "reranking_applied": search_metadata.get("reranking_applied", False),
-        }
 
-        # Add phase event to state
-        result_state["phase_event"] = event
+        # Sprint 51 Fix: Emit individual phase events for each sub-phase
+        # that was executed in the four-way hybrid search
 
+        # 1. Vector Search Phase
+        if search_metadata.get("vector_results_count", 0) > 0:
+            vector_event = PhaseEvent(
+                phase_type=PhaseType.VECTOR_SEARCH,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=search_metadata.get("latency_ms", 0) * 0.3,  # Approximate 30% of total
+                metadata={
+                    "results_count": search_metadata.get("vector_results_count", 0),
+                },
+            )
+            result_state["phase_events"].append(vector_event)
+
+        # 2. BM25 Search Phase
+        if search_metadata.get("bm25_results_count", 0) > 0:
+            bm25_event = PhaseEvent(
+                phase_type=PhaseType.BM25_SEARCH,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=search_metadata.get("latency_ms", 0) * 0.3,  # Approximate 30% of total
+                metadata={
+                    "results_count": search_metadata.get("bm25_results_count", 0),
+                },
+            )
+            result_state["phase_events"].append(bm25_event)
+
+        # 3. Graph Local Search Phase (if executed)
+        if search_metadata.get("graph_local_results_count", 0) > 0:
+            graph_local_event = PhaseEvent(
+                phase_type=PhaseType.GRAPH_QUERY,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=search_metadata.get("latency_ms", 0) * 0.2,  # Approximate 20% of total
+                metadata={
+                    "results_count": search_metadata.get("graph_local_results_count", 0),
+                    "search_type": "local",
+                },
+            )
+            result_state["phase_events"].append(graph_local_event)
+
+        # 4. RRF Fusion Phase
+        rrf_event = PhaseEvent(
+            phase_type=PhaseType.RRF_FUSION,
+            status=PhaseStatus.COMPLETED,
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
+            duration_ms=search_metadata.get("latency_ms", 0) * 0.2,  # Approximate 20% of total
+            metadata={
+                "final_results_count": search_metadata.get("result_count", 0),
+                "intent": search_metadata.get("intent", "hybrid"),
+                "weights": search_metadata.get("weights", {}),
+            },
+        )
+        result_state["phase_events"].append(rrf_event)
+
+        # For compatibility, also add the last phase event as phase_event
+        result_state["phase_event"] = rrf_event
+
+        total_duration = (time.perf_counter() - start_time) * 1000
         logger.info(
-            "vector_search_phase_complete",
-            duration_ms=event.duration_ms,
-            results_count=event.metadata["results_count"],
+            "vector_search_phases_complete",
+            duration_ms=total_duration,
+            phase_count=len(result_state["phase_events"]),
+            results_count=search_metadata.get("result_count", 0),
         )
 
         return result_state
 
     except Exception as e:
-        # Mark phase event as failed
-        event.status = PhaseStatus.FAILED
-        event.error = str(e)
-        event.end_time = datetime.utcnow()
-        event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
+        # Mark as failed
+        error_event = PhaseEvent(
+            phase_type=PhaseType.VECTOR_SEARCH,
+            status=PhaseStatus.FAILED,
+            error=str(e),
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
+            duration_ms=(time.perf_counter() - start_time) * 1000,
+        )
 
-        # Add failed phase event to state
-        state["phase_event"] = event
+        state["phase_event"] = error_event
+        if "phase_events" in state:
+            state["phase_events"].append(error_event)
 
         logger.error(
             "vector_search_phase_failed",
             error=str(e),
-            duration_ms=event.duration_ms,
+            duration_ms=error_event.duration_ms,
         )
 
         # Re-raise to let error handling take over

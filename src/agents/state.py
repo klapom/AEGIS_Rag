@@ -106,6 +106,10 @@ class AgentState(MessagesState):
         default=None,
         description="Latest phase event emitted by the current node (Sprint 48 Feature 48.2)",
     )
+    phase_events: list[PhaseEvent] = Field(
+        default_factory=list,
+        description="List of all phase events for streaming (Sprint 51 Feature 51.1)",
+    )
 
 
 class QueryMetadata(BaseModel):

@@ -430,7 +430,7 @@ class CoordinatorAgent:
         # Sprint 51 Fix: Use stream_mode="values" to get full accumulated state
         # Default "updates" mode only yields state deltas, missing the answer field
         final_state = None
-        yielded_phase_types: set[str] = set()  # Track yielded phases to avoid duplicates
+        yielded_event_count = 0  # Track how many events we've already yielded
         try:
             async for event in self.compiled_graph.astream(
                 initial_state, config=config, stream_mode="values"
@@ -447,22 +447,37 @@ class CoordinatorAgent:
 
                 # With stream_mode="values", event is the full state dict
                 if isinstance(event, dict):
-                    # Check if state has a phase_event (added by current node)
-                    if "phase_event" in event:
-                        phase_event = event["phase_event"]
-                        phase_type = (
-                            phase_event.phase_type
-                            if isinstance(phase_event, PhaseEvent)
-                            else phase_event.get("phase_type")
-                        )
+                    # Debug: Check if phase_events exists
+                    has_phase_events = "phase_events" in event
+                    phase_events_count = len(event.get("phase_events", [])) if has_phase_events else 0
 
-                        # Only yield if we haven't yielded this phase type yet
-                        if phase_type and phase_type not in yielded_phase_types:
-                            logger.info(
-                                "phase_event_found",
-                                phase_type=phase_type,
+                    logger.debug(
+                        "checking_phase_events",
+                        has_phase_events=has_phase_events,
+                        phase_events_count=phase_events_count,
+                        yielded_so_far=yielded_event_count,
+                    )
+
+                    # Sprint 51 Feature 51.1: Check for phase_events list (multiple events)
+                    # Yield only NEW events that we haven't yielded yet
+                    if "phase_events" in event and isinstance(event["phase_events"], list):
+                        current_events = event["phase_events"]
+
+                        # Yield only events we haven't seen yet (based on index)
+                        for i in range(yielded_event_count, len(current_events)):
+                            phase_event = current_events[i]
+                            phase_type = (
+                                phase_event.phase_type
+                                if isinstance(phase_event, PhaseEvent)
+                                else phase_event.get("phase_type")
                             )
-                            yielded_phase_types.add(phase_type)
+
+                            logger.info(
+                                "phase_event_found_from_list",
+                                phase_type=phase_type,
+                                event_index=i,
+                                total_events=len(current_events),
+                            )
 
                             if isinstance(phase_event, PhaseEvent):
                                 # Yield phase event (will be serialized by API layer)
@@ -470,6 +485,8 @@ class CoordinatorAgent:
                             elif isinstance(phase_event, dict):
                                 # Convert dict to PhaseEvent if needed
                                 yield PhaseEvent(**phase_event)
+
+                            yielded_event_count += 1
 
                     # Keep track of final state (full accumulated state)
                     final_state = event

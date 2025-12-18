@@ -221,6 +221,7 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
     It's called by the LangGraph orchestration layer.
 
     Sprint 48 Feature 48.3: Emits phase events for intent classification.
+    Sprint 51 Feature 51.1: Adds phase events to list for streaming.
 
     Args:
         state: Current agent state
@@ -231,6 +232,10 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
     query = state.get("query", "")
 
     logger.info("router_node_processing", query=query[:100])
+
+    # Initialize phase_events list if not present
+    if "phase_events" not in state:
+        state["phase_events"] = []
 
     # Create phase event for intent classification
     event = PhaseEvent(
@@ -265,7 +270,9 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
         event.metadata = {"intent": intent.value}
 
-        # Add phase event to state
+        # Sprint 51 Feature 51.1: Add to phase_events list
+        state["phase_events"].append(event)
+        # Also add as phase_event for backward compatibility
         state["phase_event"] = event
 
         logger.info(
@@ -290,7 +297,9 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         event.end_time = datetime.utcnow()
         event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
 
-        # Add failed phase event to state
+        # Sprint 51 Feature 51.1: Add to phase_events list
+        state["phase_events"].append(event)
+        # Also add as phase_event for backward compatibility
         state["phase_event"] = event
 
         # Set default intent and error

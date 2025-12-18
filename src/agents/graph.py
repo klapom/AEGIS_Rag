@@ -38,6 +38,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
     Sprint 27 Feature 27.10: Inline Source Citations
     Sprint 48 Feature 48.3: Emits phase events for LLM generation.
+    Sprint 51 Feature 51.1: Adds phase events to list for streaming.
     Uses AnswerGenerator to synthesize answers with citation markers [1], [2], etc.
 
     Args:
@@ -52,6 +53,10 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     contexts = state.get("retrieved_contexts", [])
 
     logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts))
+
+    # Initialize phase_events list if not present
+    if "phase_events" not in state:
+        state["phase_events"] = []
 
     # Create phase event for LLM generation
     event = PhaseEvent(
@@ -87,7 +92,9 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
             "citations_count": len(citation_map),
         }
 
-        # Add phase event to state
+        # Sprint 51 Feature 51.1: Add to phase_events list
+        state["phase_events"].append(event)
+        # Also add as phase_event for backward compatibility
         state["phase_event"] = event
 
         logger.info(
@@ -107,7 +114,9 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         event.end_time = datetime.utcnow()
         event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
 
-        # Add failed phase event to state
+        # Sprint 51 Feature 51.1: Add to phase_events list
+        state["phase_events"].append(event)
+        # Also add as phase_event for backward compatibility
         state["phase_event"] = event
 
         logger.error(
