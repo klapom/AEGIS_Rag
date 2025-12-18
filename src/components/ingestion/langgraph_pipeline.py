@@ -100,6 +100,11 @@ from langgraph.graph import END, StateGraph
 
 from src.components.ingestion.format_router import ParserType, initialize_format_router
 from src.components.ingestion.ingestion_state import IngestionState
+from src.components.ingestion.progress_events import (
+    cleanup_progress_queue,
+    drain_progress_events,
+    get_or_create_progress_queue,
+)
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
     docling_parse_node,
@@ -556,31 +561,52 @@ async def run_ingestion_pipeline_streaming(
     # Create pipeline (with parser selection)
     pipeline = create_ingestion_graph(parser_type=routing_decision.parser)
 
-    # Stream state updates (astream yields after each node)
-    async for event in pipeline.astream(state):
-        # Extract node name and updated state
-        node_name = list(event.keys())[0]
-        updated_state = event[node_name]
+    # Sprint 51: Create progress queue for extraction progress tracking
+    await get_or_create_progress_queue(document_id)
 
-        # Yield progress update
-        yield {
-            "node": node_name,
-            "state": updated_state,
-            "progress": updated_state.get("overall_progress", 0.0),
-            "timestamp": updated_state.get("end_time", 0.0),
-        }
+    try:
+        # Stream state updates (astream yields after each node)
+        async for event in pipeline.astream(state):
+            # Extract node name and updated state
+            node_name = list(event.keys())[0]
+            updated_state = event[node_name]
 
-        logger.debug(
-            "ingestion_pipeline_node_complete",
+            # Sprint 51: Drain and yield progress events collected during this node
+            # Events contain timestamps showing when each extraction step occurred
+            progress_events = await drain_progress_events(document_id)
+            for progress_event in progress_events:
+                yield {
+                    "node": f"{node_name}_progress",
+                    "state": updated_state,
+                    "progress": updated_state.get("overall_progress", 0.0),
+                    "timestamp": progress_event.timestamp,
+                    "progress_event": progress_event.to_dict(),
+                }
+
+            # Yield node completion update
+            yield {
+                "node": node_name,
+                "state": updated_state,
+                "progress": updated_state.get("overall_progress", 0.0),
+                "timestamp": updated_state.get("end_time", 0.0),
+            }
+
+            logger.debug(
+                "ingestion_pipeline_node_complete",
+                document_id=document_id,
+                node=node_name,
+                progress=updated_state.get("overall_progress", 0.0),
+                progress_events_yielded=len(progress_events),
+            )
+
+        logger.info(
+            "run_ingestion_pipeline_streaming_complete",
             document_id=document_id,
-            node=node_name,
-            progress=updated_state.get("overall_progress", 0.0),
         )
 
-    logger.info(
-        "run_ingestion_pipeline_streaming_complete",
-        document_id=document_id,
-    )
+    finally:
+        # Sprint 51: Clean up progress queue
+        await cleanup_progress_queue(document_id)
 
 
 # =============================================================================

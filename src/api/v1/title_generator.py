@@ -62,7 +62,7 @@ Title:"""
             complexity=Complexity.LOW,  # Lightweight generation
             max_tokens=20,  # Very short output
             temperature=0.3,  # Low temperature for consistency
-            model_local="gpt-oss:20b",  # Fast GPT-OSS 20B for titles
+            model_local="nemotron-3-nano",  # Sprint 51: Fast Nemotron 3 Nano for titles
         )
 
         response = await llm_proxy.generate(task)

@@ -1,7 +1,7 @@
 """End-to-End Test: System Health Monitoring.
 
 This test validates the system health monitoring dashboard:
-1. User navigates to /health
+1. User navigates to /admin/health
 2. Views service status (Qdrant, Neo4j, Redis, Ollama)
 3. Checks status indicators (green/red/yellow)
 4. Tests service connections
@@ -30,7 +30,7 @@ class TestHealthMonitoring:
         """Test health dashboard loads and displays all services.
 
         Workflow Steps:
-        1. Navigate to /health
+        1. Navigate to /admin/health
         2. Verify dashboard header
         3. View service list (Qdrant, Neo4j, Redis, Ollama)
         4. Verify status indicators visible
@@ -44,9 +44,9 @@ class TestHealthMonitoring:
         - Dashboard renders without errors
         """
 
-        # Step 1: Navigate to /health
-        await page.goto(f"{base_url}/health", wait_until="networkidle")
-        print("✓ Navigated to /health")
+        # Step 1: Navigate to /admin/health
+        await page.goto(f"{base_url}/admin/health", wait_until="networkidle")
+        print("✓ Navigated to /admin/health")
 
         # Wait for page to fully load (give React time to render and fetch API)
         await asyncio.sleep(3)
@@ -167,7 +167,7 @@ class TestHealthMonitoring:
         """Test that service status indicators show correct states.
 
         Workflow Steps:
-        1. Navigate to /health
+        1. Navigate to /admin/health
         2. Check each service status (Qdrant, Neo4j, Redis, Ollama)
         3. Verify status is green (healthy), yellow (degraded), or red (unhealthy)
         4. Check status messages
@@ -180,9 +180,9 @@ class TestHealthMonitoring:
         - Status messages clear and informative
         """
 
-        await page.goto(f"{base_url}/health", wait_until="networkidle")
+        await page.goto(f"{base_url}/admin/health", wait_until="networkidle")
         await asyncio.sleep(1)
-        print("✓ Navigated to /health")
+        print("✓ Navigated to /admin/health")
 
         # Check for error state first
         error_state = page.locator("[data-testid='health-error-state']")
@@ -241,7 +241,7 @@ class TestHealthMonitoring:
         """Test service connection testing functionality.
 
         Workflow Steps:
-        1. Navigate to /health
+        1. Navigate to /admin/health
         2. Look for "test" or "retry" buttons
         3. Click test button for a service
         4. Wait for connection result
@@ -254,8 +254,8 @@ class TestHealthMonitoring:
         - Success/error states clear
         """
 
-        await page.goto(f"{base_url}/health", wait_until="networkidle")
-        print("✓ Navigated to /health")
+        await page.goto(f"{base_url}/admin/health", wait_until="networkidle")
+        print("✓ Navigated to /admin/health")
 
         # Check for error state first
         error_state = page.locator("[data-testid='health-error-state']")
@@ -313,7 +313,7 @@ class TestHealthMonitoring:
         """Test error logs and diagnostic information display.
 
         Workflow Steps:
-        1. Navigate to /health
+        1. Navigate to /admin/health
         2. Look for error log section
         3. Verify error details shown
         4. Check log timestamps
@@ -326,8 +326,8 @@ class TestHealthMonitoring:
         - Timestamps included
         """
 
-        await page.goto(f"{base_url}/health", wait_until="networkidle")
-        print("✓ Navigated to /health")
+        await page.goto(f"{base_url}/admin/health", wait_until="networkidle")
+        print("✓ Navigated to /admin/health")
 
         # Check for error state first
         error_state = page.locator("[data-testid='health-error-state']")

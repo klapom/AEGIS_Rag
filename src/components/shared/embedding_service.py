@@ -201,20 +201,67 @@ class UnifiedEmbeddingService:
 
         # Generate embedding with fresh AsyncClient (pickle-compatible approach)
         try:
+            # Sprint 51: Sanitize text to prevent NaN errors from Ollama
+            # Remove control characters and normalize unicode
+            import unicodedata
+            sanitized_text = unicodedata.normalize("NFKC", text)
+            # Remove control characters except newlines/tabs
+            sanitized_text = "".join(
+                c if c in "\n\t" or not unicodedata.category(c).startswith("C")
+                else " " for c in sanitized_text
+            )
+            # Truncate to 32k chars (~8k tokens for BGE-M3 context window)
+            max_chars = 32000
+            if len(sanitized_text) > max_chars:
+                logger.warning(
+                    "embedding_text_truncated",
+                    original_length=len(text),
+                    truncated_to=max_chars,
+                )
+                sanitized_text = sanitized_text[:max_chars]
+
             # Create fresh client for this operation (no stored state = pickle-compatible)
             client = AsyncClient(host=settings.ollama_base_url)
 
             ollama_start = time.perf_counter()
-            response = await client.embeddings(
-                model=self.model_name,
-                prompt=text,
-            )
+            try:
+                response = await client.embeddings(
+                    model=self.model_name,
+                    prompt=sanitized_text,
+                )
+            except Exception as ollama_error:
+                # Sprint 51: Handle Ollama NaN errors by returning zero embedding
+                error_str = str(ollama_error)
+                if "NaN" in error_str or "unsupported value" in error_str:
+                    logger.warning(
+                        "ollama_nan_error_fallback",
+                        text_preview=text[:100],
+                        text_length=len(text),
+                        error=error_str,
+                        action="returning_zero_embedding",
+                    )
+                    # Return zero embedding (1024 dims for BGE-M3)
+                    return [0.0] * 1024
+                raise  # Re-raise non-NaN errors
             ollama_duration_ms = (time.perf_counter() - ollama_start) * 1000
 
             embedding = response.get("embedding", [])
 
             if not embedding:
                 raise LLMError("embed_single", f"Empty embedding returned for text: {text[:100]}")
+
+            # Sprint 51: Check for NaN values in embedding and replace with zeros
+            import math
+            has_nan = any(math.isnan(v) for v in embedding)
+            if has_nan:
+                logger.warning(
+                    "embedding_contains_nan",
+                    text_preview=text[:100],
+                    text_length=len(text),
+                    action="replacing_with_zeros",
+                )
+                # Replace NaN values with 0.0 to prevent JSON serialization errors
+                embedding = [0.0 if math.isnan(v) else v for v in embedding]
 
             # Cache result
             self.cache.set(cache_key, embedding)

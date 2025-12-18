@@ -1,16 +1,21 @@
 /**
  * AdminLLMConfigPage Component
  * Sprint 36 Feature 36.3: Model Selection per Use Case (8 SP)
+ * Sprint 51: Dynamic Ollama model loading
  *
  * Features:
  * - Configure LLM models for each use case
  * - Support for Ollama (local), Alibaba Cloud, and OpenAI providers
+ * - Dynamic loading of locally available Ollama models
  * - localStorage persistence (Phase 1)
  * - Responsive design with dark mode support
  */
 
 import { useState, useEffect } from 'react';
-import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu } from 'lucide-react';
+import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // ============================================================================
 // Types
@@ -38,33 +43,24 @@ type UseCaseType =
   | 'query_decomposition'
   | 'vision_vlm';
 
+interface OllamaModel {
+  name: string;
+  size: number;
+  digest: string;
+  modified_at: string;
+}
+
+interface OllamaModelsResponse {
+  models: OllamaModel[];
+  ollama_available: boolean;
+  error: string | null;
+}
+
 // ============================================================================
-// Default Model Options
+// Cloud Model Options (static)
 // ============================================================================
 
-const defaultModelOptions: ModelOption[] = [
-  // Ollama (Local)
-  {
-    id: 'ollama/qwen3:32b',
-    provider: 'ollama',
-    name: 'Qwen3 32B (Local)',
-    description: '32B params, local inference, $0 cost',
-    capabilities: ['text'],
-  },
-  {
-    id: 'ollama/qwen3-vl:32b',
-    provider: 'ollama',
-    name: 'Qwen3-VL 32B (Local)',
-    description: '32B params, vision, local',
-    capabilities: ['text', 'vision'],
-  },
-  {
-    id: 'ollama/llama3.2:8b',
-    provider: 'ollama',
-    name: 'Llama 3.2 8B (Local)',
-    description: '8B params, fast, local',
-    capabilities: ['text'],
-  },
+const cloudModelOptions: ModelOption[] = [
   // Alibaba Cloud
   {
     id: 'alibaba/qwen-turbo',
@@ -103,6 +99,25 @@ const defaultModelOptions: ModelOption[] = [
     capabilities: ['text'],
   },
 ];
+
+// Helper to determine model capabilities based on name
+function getModelCapabilities(modelName: string): ('text' | 'vision' | 'embedding')[] {
+  const name = modelName.toLowerCase();
+  if (name.includes('embed') || name.includes('bge')) {
+    return ['embedding'];
+  }
+  if (name.includes('vl') || name.includes('vision') || name.includes('llava')) {
+    return ['text', 'vision'];
+  }
+  return ['text'];
+}
+
+// Helper to format model size
+function formatModelSize(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)}GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)}MB`;
+  return `${bytes}B`;
+}
 
 // ============================================================================
 // Use Case Definitions
@@ -165,10 +180,17 @@ const LLM_CONFIG_KEY = 'aegis-rag-llm-config';
 
 export function AdminLLMConfigPage() {
   const [config, setConfig] = useState<UseCaseConfig[]>(defaultConfig);
-  const [modelOptions] = useState<ModelOption[]>(defaultModelOptions);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>(cloudModelOptions);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ollamaStatus, setOllamaStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
+  const [ollamaError, setOllamaError] = useState<string | null>(null);
+
+  // Fetch Ollama models on mount
+  useEffect(() => {
+    fetchOllamaModels();
+  }, []);
 
   // Load config from localStorage on mount
   useEffect(() => {
@@ -181,6 +203,42 @@ export function AdminLLMConfigPage() {
       }
     }
   }, []);
+
+  const fetchOllamaModels = async () => {
+    setIsRefreshing(true);
+    setOllamaStatus('loading');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/models`);
+      const data: OllamaModelsResponse = await response.json();
+
+      if (data.ollama_available && data.models.length > 0) {
+        // Convert Ollama models to ModelOption format
+        const ollamaModels: ModelOption[] = data.models.map((m) => ({
+          id: `ollama/${m.name}`,
+          provider: 'ollama' as const,
+          name: `${m.name} (Local)`,
+          description: `${formatModelSize(m.size)}, local inference, $0 cost`,
+          capabilities: getModelCapabilities(m.name),
+        }));
+
+        // Combine Ollama models with cloud options
+        setModelOptions([...ollamaModels, ...cloudModelOptions]);
+        setOllamaStatus('available');
+        setOllamaError(null);
+      } else {
+        setModelOptions(cloudModelOptions);
+        setOllamaStatus('unavailable');
+        setOllamaError(data.error || 'No Ollama models found');
+      }
+    } catch (e) {
+      console.error('Failed to fetch Ollama models:', e);
+      setModelOptions(cloudModelOptions);
+      setOllamaStatus('unavailable');
+      setOllamaError(e instanceof Error ? e.message : 'Failed to connect');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleModelChange = (useCase: UseCaseType, modelId: string) => {
     setConfig((prev) =>
@@ -212,16 +270,7 @@ export function AdminLLMConfigPage() {
   };
 
   const handleRefreshModels = async () => {
-    setIsRefreshing(true);
-    try {
-      // TODO: Fetch available models from backend
-      // const response = await fetch('/api/v1/admin/llm/models');
-      // const models = await response.json();
-      // setModelOptions(models);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulated delay
-    } finally {
-      setIsRefreshing(false);
-    }
+    await fetchOllamaModels();
   };
 
   const getFilteredModels = (useCase: UseCaseType) => {
@@ -251,6 +300,15 @@ export function AdminLLMConfigPage() {
       data-testid="llm-config-page"
     >
       <div className="max-w-4xl mx-auto p-4">
+        {/* Back Link */}
+        <Link
+          to="/admin"
+          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Admin
+        </Link>
+
         {/* Header */}
         <div className="mb-4">
           <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
@@ -261,6 +319,32 @@ export function AdminLLMConfigPage() {
             Configure which model to use for each use case
           </p>
         </div>
+
+        {/* Ollama Status Banner */}
+        {ollamaStatus === 'loading' && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Loading Ollama models...
+            </p>
+          </div>
+        )}
+        {ollamaStatus === 'available' && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" />
+              {modelOptions.filter(m => m.provider === 'ollama').length} local Ollama models available
+            </p>
+          </div>
+        )}
+        {ollamaStatus === 'unavailable' && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+            <p className="text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Ollama not available: {ollamaError}. Using cloud models only.
+            </p>
+          </div>
+        )}
 
         {/* Use Case Model Assignment */}
         <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4">

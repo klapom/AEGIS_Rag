@@ -96,6 +96,8 @@ class ExtractionPipelineFactory:
         Uses Few-Shot prompts with llama3.2:8b or gemma-3-4b for high-quality
         domain-specific extraction.
 
+        Sprint 51: Now reads model from llm_config.yml via LLMProxyConfig
+
         Performance: ~200-300s/doc (slower but better quality)
         Quality: High - LLM understands technical context and German terms
 
@@ -103,12 +105,30 @@ class ExtractionPipelineFactory:
             LLMExtractionPipeline adapter instance
         """
         from src.components.graph_rag.extraction_service import ExtractionService
+        from src.components.llm_proxy.config import LLMProxyConfig
+
+        # Sprint 51: Read extraction model from YAML config
+        try:
+            llm_config = LLMProxyConfig()
+            extraction_model = llm_config.get_default_model("local_ollama", "extraction")
+            if not extraction_model:
+                extraction_model = getattr(config, "lightrag_llm_model", "nemotron-3-nano")
+            logger.info(
+                "extraction_model_from_yaml_config",
+                model=extraction_model,
+                source="llm_config.yml",
+            )
+        except Exception as e:
+            extraction_model = getattr(config, "lightrag_llm_model", "nemotron-3-nano")
+            logger.warning(
+                "extraction_model_yaml_fallback",
+                model=extraction_model,
+                error=str(e),
+            )
 
         logger.info(
             "llm_extraction_pipeline_creating",
-            llm_model=getattr(
-                config, "lightrag_llm_model", "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M"
-            ),
+            llm_model=extraction_model,
             temperature=0.1,
             note="Using ExtractionService with Few-Shot prompts for high-quality extraction",
         )
@@ -116,14 +136,11 @@ class ExtractionPipelineFactory:
         class LLMExtractionPipeline:
             """Adapter: ExtractionService → LightRAG format."""
 
-            def __init__(self, config):
-                # Use Gemma-3-4b (currently loaded in Ollama)
+            def __init__(self, config, model_override: str = None):
+                # Sprint 51: Use model from YAML config
+                model = model_override or getattr(config, "lightrag_llm_model", "nemotron-3-nano")
                 self.service = ExtractionService(
-                    llm_model=getattr(
-                        config,
-                        "lightrag_llm_model",
-                        "hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",
-                    ),
+                    llm_model=model,
                     ollama_base_url=getattr(config, "ollama_base_url", "http://localhost:11434"),
                     temperature=0.1,  # Low for consistent results
                     max_tokens=getattr(config, "lightrag_llm_max_tokens", 4000),
@@ -195,7 +212,7 @@ class ExtractionPipelineFactory:
 
                 return (lightrag_entities, lightrag_relations)
 
-        return LLMExtractionPipeline(config)
+        return LLMExtractionPipeline(config, model_override=extraction_model)
 
     @staticmethod
     def _create_lightrag_legacy(config) -> ExtractionPipeline:

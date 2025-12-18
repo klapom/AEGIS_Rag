@@ -103,6 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
 
     # Sprint 31: Initialize FormatRouter with Docling health check
+    docling_available = False
     try:
         from src.api.v1 import retrieval
         from src.components.ingestion import langgraph_pipeline
@@ -110,23 +111,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         logger.info("Initializing FormatRouter with Docling health check...")
         retrieval._format_router = await initialize_format_router()
+        docling_available = retrieval._format_router.docling_available
         logger.info(
             "format_router_initialized_retrieval",
-            docling_available=retrieval._format_router.docling_available,
+            docling_available=docling_available,
         )
 
         # Sprint 32: Also initialize ingestion pipeline router
-        await langgraph_pipeline.initialize_ingestion_pipeline()
-        logger.info(
-            "format_router_initialized_ingestion",
-            docling_available=langgraph_pipeline._format_router.docling_available,
-        )
+        try:
+            await langgraph_pipeline.initialize_ingestion_pipeline()
+            logger.info(
+                "format_router_initialized_ingestion",
+                docling_available=langgraph_pipeline._format_router.docling_available,
+            )
+        except Exception as pipeline_err:
+            logger.warning(
+                "ingestion_pipeline_init_failed",
+                error=str(pipeline_err),
+                note="Ingestion pipeline will initialize on first use",
+            )
     except Exception as e:
         logger.warning(
             "format_router_initialization_failed",
             error=str(e),
             note="FormatRouter will use default (Docling assumed available)",
         )
+
+    # Sprint 51: Pre-warm Docling container if available
+    # This prevents the container from being stopped after each document
+    if docling_available:
+        try:
+            from src.components.ingestion.docling_client import prewarm_docling_container
+
+            await prewarm_docling_container()
+            logger.info("docling_container_prewarmed", status="success")
+        except Exception as prewarm_err:
+            logger.warning(
+                "docling_prewarm_failed",
+                error=str(prewarm_err),
+                note="Container will be started on-demand per document",
+            )
 
     # Sprint 27 Feature 27.1: Initialize database connections
     try:
@@ -157,6 +181,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("application_shutting_down")
+
+    # Sprint 51: Clear pre-warmed Docling client reference (keep container running)
+    # Note: We intentionally do NOT stop the container on backend shutdown
+    # because it was started externally (docker compose up -d docling)
+    try:
+        from src.components.ingestion.docling_client import (
+            get_prewarmed_docling_client,
+            is_docling_container_prewarmed,
+        )
+
+        if is_docling_container_prewarmed():
+            client = get_prewarmed_docling_client()
+            if client and client.client:
+                await client.client.aclose()
+            logger.info("docling_client_closed", container_status="running")
+    except Exception as e:
+        logger.warning("docling_client_close_warning", error=str(e))
 
     # Sprint 27 Feature 27.1: Close database connections gracefully
     try:
