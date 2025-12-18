@@ -3,8 +3,8 @@
 **Status:** PLANNED
 **Branch:** `sprint-51-phase-admin-fixes`
 **Start Date:** 2025-12-18
-**Estimated Duration:** 3-4 Tage
-**Total Story Points:** 26 SP
+**Estimated Duration:** 5 Tage
+**Total Story Points:** 37 SP
 
 ---
 
@@ -34,8 +34,13 @@ Sprint 51 adressiert **kritische UX-Probleme** im Reasoning Panel und Admin-Bere
 | 51.3 | Admin Navigation & Layout | 5 | P1 | NEW |
 | 51.4 | Domain Training Status & Delete | 5 | P1 | NEW |
 | 51.5 | Intent Classification Fix | 3 | P1 | NEW |
+| 51.6 | CommunityDetector Bug Fixes | 3 | P0 | NEW |
+| 51.7 | Maximum Hybrid Search Foundation | 8 | P1 | NEW |
 
-**Total: 26 SP**
+**Total: 37 SP**
+
+> **Note:** Features 51.6 und 51.7 wurden nach Analyse der LightRAG-Integration hinzugefügt.
+> 51.6 ist Voraussetzung für LightRAG `global` mode. 51.7 implementiert 4-Signal Hybrid Search.
 
 ---
 
@@ -305,6 +310,186 @@ frontend/src/hooks/useStreamChat.ts # Intent handling
 
 ---
 
+### Feature 51.6: CommunityDetector Bug Fixes (3 SP)
+**Priority:** P0 (Blocker für LightRAG global mode)
+**Team:** Backend
+
+**Problem:**
+Community Detection läuft, aber `community_id` wird auf 0 Entities gesetzt.
+
+**Root Cause Analysis (Neo4j Query am 2025-12-18):**
+
+```
+=== COMMUNITY DATA ===
+Entities with community_id: 0   ← KEINE COMMUNITIES!
+```
+
+**Gefundene Bugs:**
+
+1. **Property-Name Bug (Zeile 376, 506):**
+```python
+# FALSCH:
+entities_query = "MATCH (e:base) RETURN e.id AS id"
+MATCH (e:base {id: entity_id})
+
+# RICHTIG:
+entities_query = "MATCH (e:base) RETURN e.entity_id AS id"
+MATCH (e:base {entity_id: $entity_id})
+```
+
+2. **Relationship-Type Bug (Zeile 379-383):**
+```python
+# FALSCH:
+MATCH (e1:base)-[r:RELATED_TO]-(e2:base)
+
+# RICHTIG:
+MATCH (e1:base)-[r:RELATES_TO]-(e2:base)
+```
+
+**Files zu ändern:**
+
+```
+src/components/graph_rag/community_detector.py
+  - Zeile 376: e.id → e.entity_id
+  - Zeile 382: e1.id, e2.id → e1.entity_id, e2.entity_id
+  - Zeile 383: RELATED_TO → RELATES_TO
+  - Zeile 506: {id: entity_id} → {entity_id: $entity_id}
+  - Zeile 544: e.id → e.entity_id
+  - Zeile 582: e.id → e.entity_id
+  - Zeile 611: e.id → e.entity_id
+```
+
+**Acceptance Criteria:**
+- [ ] CommunityDetector queries nutzen korrekte Property-Namen (entity_id)
+- [ ] CommunityDetector queries nutzen korrekte Relationship-Types (RELATES_TO)
+- [ ] Nach Re-Ingestion: Entities haben community_id
+- [ ] LightRAG `global` mode funktioniert
+
+---
+
+### Feature 51.7: Maximum Hybrid Search Foundation (8 SP)
+**Priority:** P1
+**Team:** Backend
+
+**Konzept:**
+4-Signal Hybrid Search kombiniert alle verfügbaren Retrieval-Methoden:
+
+```
+                    Query
+                      │
+       ┌──────────────┴──────────────┐
+       │                             │
+ ┌─────▼─────┐               ┌───────▼───────┐
+ │  QDRANT   │               │   LIGHTRAG    │
+ │  LAYER    │               │   (Neo4j)     │
+ ├───────────┤               ├───────────────┤
+ │ Embedding │──parallel───► │ local mode    │
+ │ (Semantic)│               │ (Entities)    │
+ ├───────────┤               ├───────────────┤
+ │ BM25      │──parallel───► │ global mode   │
+ │ (Keywords)│               │ (Communities) │
+ └─────┬─────┘               └───────┬───────┘
+       │                             │
+ ┌─────▼─────┐               ┌───────▼───────┐
+ │ RRF Fusion│               │ RRF Fusion    │
+ │ (Chunks)  │               │ (Graph)       │
+ └─────┬─────┘               └───────┬───────┘
+       │                             │
+       └──────────┬──────────────────┘
+                  │
+           ┌──────▼──────┐
+           │Cross-Modal  │
+           │  Fusion     │
+           │             │
+           │MENTIONED_IN │
+           │ alignment   │
+           └──────┬──────┘
+                  │
+           ┌──────▼──────┐
+           │  Context    │
+           │  Assembly   │
+           └─────────────┘
+```
+
+**4 Signale:**
+
+| Signal | Stärke | Schwäche |
+|--------|--------|----------|
+| **Embedding** | Semantik, Synonyme | Vage Matches |
+| **BM25** | Exakte Keywords | Keine Synonyme |
+| **LightRAG local** | Entity-Beziehungen, Multi-Hop | Braucht gute Extraktion |
+| **LightRAG global** | Thematische Cluster, Überblick | Grob-granular |
+
+**Implementation:**
+
+```python
+# src/components/retrieval/maximum_hybrid_search.py
+
+async def maximum_hybrid_search(
+    query: str,
+    top_k: int = 10
+) -> MaximumHybridResult:
+    """4-Signal Hybrid Search mit Cross-Modal Fusion."""
+
+    # 1. Alle 4 Queries parallel starten
+    embedding_task = qdrant_search(query, top_k=top_k * 2)
+    bm25_task = bm25_search(query, top_k=top_k * 2)
+    local_task = lightrag_query(query, mode="local", only_need_context=True)
+    global_task = lightrag_query(query, mode="global", only_need_context=True)
+
+    # 2. Parallel ausführen
+    embed_results, bm25_results, local_ctx, global_ctx = await asyncio.gather(
+        embedding_task, bm25_task, local_task, global_task
+    )
+
+    # 3. Layer-wise RRF
+    chunk_ranking = reciprocal_rank_fusion([embed_results, bm25_results], k=60)
+
+    # 4. Parse LightRAG contexts für Entities/Communities
+    local_entities = parse_lightrag_context(local_ctx)
+    global_summaries = parse_lightrag_context(global_ctx)
+
+    # 5. Cross-Modal Fusion via MENTIONED_IN
+    unified = cross_modal_fusion(chunk_ranking, local_entities)
+
+    return MaximumHybridResult(
+        chunks=unified[:top_k],
+        entities=local_entities,
+        communities=global_summaries,
+    )
+```
+
+**Neo4j Voraussetzungen (geprüft):**
+
+| Komponente | Status | Notes |
+|------------|--------|-------|
+| Entity-Nodes (:base) | ✅ 127 | OK |
+| Chunk-Nodes (:chunk) | ✅ 17 | OK |
+| MENTIONED_IN | ✅ 212 | Entity→Chunk Link |
+| RELATES_TO | ✅ 134 | Entity→Entity |
+| Chunk-ID Alignment | ✅ 4/4 | Qdrant↔Neo4j Match |
+| community_id | ❌ | Requires 51.6 first! |
+
+**Files zu erstellen/ändern:**
+
+```
+src/components/retrieval/maximum_hybrid_search.py  (NEW)
+src/components/retrieval/cross_modal_fusion.py     (NEW)
+src/components/retrieval/lightrag_context_parser.py (NEW)
+src/agents/coordinator_agent.py  # Integration
+tests/unit/test_maximum_hybrid.py
+```
+
+**Acceptance Criteria:**
+- [ ] 4 parallele Queries (Embed, BM25, LightRAG local, LightRAG global)
+- [ ] RRF Fusion für Chunk-Layer
+- [ ] RRF Fusion für Graph-Layer
+- [ ] Cross-Modal Fusion via MENTIONED_IN alignment
+- [ ] Context Assembly mit Chunks + Entities + Communities
+- [ ] Performance: < 500ms p95 (parallel execution)
+
+---
+
 ## Verschobene Features
 
 ### Sprint 52: Graph Time Travel (13 SP)
@@ -347,12 +532,12 @@ src/components/graph_rag/community_detector.py
 ## Timeline
 
 ### Tag 1
+- Feature 51.6 (CommunityDetector Bug Fixes) - **P0 Blocker**
 - Feature 51.1 (Phase Display) - Backend phase events
-- Feature 51.3 (Admin Navigation) - Start
 
 ### Tag 2
 - Feature 51.1 (Phase Display) - Frontend integration
-- Feature 51.3 (Admin Navigation) - Complete
+- Feature 51.3 (Admin Navigation)
 
 ### Tag 3
 - Feature 51.2 (LLM Streaming)
@@ -360,6 +545,10 @@ src/components/graph_rag/community_detector.py
 
 ### Tag 4
 - Feature 51.4 (Domain Status & Delete)
+- Feature 51.7 (Maximum Hybrid) - Foundation & Tests
+
+### Tag 5
+- Feature 51.7 (Maximum Hybrid) - Integration
 - Testing & Bug Fixes
 
 ---
@@ -372,6 +561,9 @@ src/components/graph_rag/community_detector.py
 - [ ] Domain-Status wird automatisch aktualisiert
 - [ ] Domains können gelöscht werden
 - [ ] Intent-Klassifikation funktioniert für alle 4 Typen
+- [ ] **CommunityDetector Bug gefixt** (entity_id, RELATES_TO)
+- [ ] **Entities haben community_id nach Ingestion**
+- [ ] **Maximum Hybrid Search mit 4 Signalen funktioniert**
 - [ ] Alle Tests passieren
 - [ ] Code Review abgeschlossen
 
@@ -384,6 +576,9 @@ src/components/graph_rag/community_detector.py
 | LLM Streaming kompliziert | Medium | High | Schrittweise Implementation, Token buffering |
 | Phase Events Performance | Low | Medium | Batch events, debounce UI updates |
 | Backward Compatibility | Low | Medium | Feature Flags für neue Features |
+| LightRAG Context Parsing | Medium | Medium | Structured format, fallback to raw |
+| 4-Query Latenz | Low | Medium | Parallel execution, timeouts |
+| Re-Ingestion nach 51.6 | Low | Low | Community detection runs on existing data |
 
 ---
 
