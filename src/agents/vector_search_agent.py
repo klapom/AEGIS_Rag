@@ -1,9 +1,10 @@
-"""Vector Search Agent with Hybrid Retrieval.
+"""Vector Search Agent with 4-Way Hybrid Retrieval.
 
-Integrates existing HybridSearch from Sprint 2-3 into LangGraph orchestration.
-Performs vector + BM25 search with optional reranking.
+Integrates 4-Way Hybrid Search (Vector + BM25 + Graph Local + Graph Global)
+with intent-weighted RRF from Sprint 42.
 
 Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Vector Search
+Sprint 42: Intent-Weighted RRF (TD-057)
 """
 
 from datetime import datetime
@@ -18,7 +19,7 @@ from tenacity import (
 
 from src.agents.base_agent import BaseAgent
 from src.agents.state import RetrievedContext
-from src.components.vector_search.hybrid_search import HybridSearch
+from src.components.retrieval.four_way_hybrid_search import FourWayHybridSearch
 from src.core.config import settings
 from src.core.exceptions import VectorSearchError
 from src.core.logging import get_logger
@@ -28,15 +29,15 @@ logger = get_logger(__name__)
 
 
 class VectorSearchAgent(BaseAgent):
-    """Agent for hybrid vector + keyword search.
+    """Agent for 4-way hybrid search with intent classification.
 
-    Integrates the existing HybridSearch component from Sprint 2-3.
-    Performs retrieval and updates state with results and metadata.
+    Integrates 4-Way Hybrid Search with automatic intent classification.
+    Performs retrieval and updates state with results, intent metadata, and weights.
     """
 
     def __init__(
         self,
-        hybrid_search: HybridSearch | None = None,
+        four_way_search: FourWayHybridSearch | None = None,
         top_k: int | None = None,
         use_reranking: bool = False,  # TD-059: Disabled by default
         max_retries: int = 3,
@@ -44,20 +45,20 @@ class VectorSearchAgent(BaseAgent):
         """Initialize Vector Search Agent.
 
         Args:
-            hybrid_search: HybridSearch instance (created if None)
+            four_way_search: FourWayHybridSearch instance (created if None)
             top_k: Number of results to retrieve (default from settings)
             use_reranking: Whether to apply reranking (default from settings)
             max_retries: Maximum retry attempts on failure (default: 3)
         """
         super().__init__(name="VectorSearchAgent")
-        self.hybrid_search = hybrid_search or HybridSearch()
+        self.four_way_search = four_way_search or FourWayHybridSearch()
         self.top_k = top_k or settings.retrieval_top_k
         # TD-059: Reranking disabled by default (sentence-transformers not in container)
         self.use_reranking = use_reranking
         self.max_retries = max_retries
 
         self.logger.info(
-            "VectorSearchAgent initialized",
+            "VectorSearchAgent initialized (4-Way Hybrid + Intent)",
             top_k=self.top_k,
             use_reranking=self.use_reranking,
             max_retries=self.max_retries,
@@ -109,20 +110,32 @@ class VectorSearchAgent(BaseAgent):
             # Calculate latency
             latency_ms = self._calculate_latency_ms(timing)
 
-            # Create metadata dict
+            # Create metadata dict (Sprint 42: Include intent classification)
             metadata = {
                 "latency_ms": latency_ms,
                 "result_count": len(retrieved_contexts),
-                "search_mode": "hybrid",
+                "search_mode": "4way_hybrid",
                 "vector_results_count": search_result["search_metadata"]["vector_results_count"],
                 "bm25_results_count": search_result["search_metadata"]["bm25_results_count"],
+                "graph_local_results_count": search_result["search_metadata"]["graph_local_results_count"],
+                "graph_global_results_count": search_result["search_metadata"]["graph_global_results_count"],
                 "reranking_applied": search_result["search_metadata"]["reranking_applied"],
+                # Intent classification metadata
+                "intent": search_result["search_metadata"]["intent"],
+                "intent_confidence": search_result["search_metadata"]["intent_confidence"],
+                "intent_method": search_result["search_metadata"]["intent_method"],
+                "intent_latency_ms": search_result["search_metadata"]["intent_latency_ms"],
+                "weights": search_result["search_metadata"]["weights"],
                 "error": None,
             }
 
             # Update state
             state["retrieved_contexts"] = retrieved_contexts
             state["metadata"]["search"] = metadata
+
+            # Store intent at top level for easy access (used by frontend)
+            state["metadata"]["detected_intent"] = search_result["search_metadata"]["intent"]
+            state["metadata"]["intent_confidence"] = search_result["search_metadata"]["intent_confidence"]
 
             state["metadata"]["agent_path"].append(
                 f"{self.name}: completed ({len(retrieved_contexts)} results, {latency_ms:.0f}ms)"
@@ -170,14 +183,14 @@ class VectorSearchAgent(BaseAgent):
     async def _search_with_retry(
         self, query: str, namespaces: list[str] | None = None
     ) -> dict[str, Any]:
-        """Perform hybrid search with retry logic.
+        """Perform 4-way hybrid search with intent classification and retry logic.
 
         Args:
             query: Search query
             namespaces: Optional list of namespaces to search in
 
         Returns:
-            Search results from HybridSearch
+            Search results from FourWayHybridSearch with intent metadata
 
         Raises:
             VectorSearchError: If search fails after retries
@@ -190,12 +203,39 @@ class VectorSearchAgent(BaseAgent):
 
                 filters = MetadataFilters(namespace=namespaces)
 
-            return await self.hybrid_search.hybrid_search(
+            # Execute 4-way hybrid search with intent classification
+            result = await self.four_way_search.search(
                 query=query,
                 top_k=self.top_k,
-                use_reranking=self.use_reranking,
                 filters=filters,
+                use_reranking=self.use_reranking,
+                allowed_namespaces=namespaces,
             )
+
+            # Transform result format to match expected structure
+            # FourWayHybridSearch returns: {"query", "results", "intent", "weights", "metadata"}
+            # We need to match the old format for compatibility
+            return {
+                "results": result["results"],
+                "search_metadata": {
+                    "vector_results_count": result["metadata"].vector_results_count,
+                    "bm25_results_count": result["metadata"].bm25_results_count,
+                    "graph_local_results_count": result["metadata"].graph_local_results_count,
+                    "graph_global_results_count": result["metadata"].graph_global_results_count,
+                    "reranking_applied": self.use_reranking,
+                    # Sprint 42: Intent classification metadata
+                    "intent": result["intent"],
+                    "intent_confidence": result["metadata"].intent_confidence,
+                    "intent_method": result["metadata"].intent_method,
+                    "intent_latency_ms": result["metadata"].intent_latency_ms,
+                    "weights": {
+                        "vector": result["weights"]["vector"],
+                        "bm25": result["weights"]["bm25"],
+                        "local": result["weights"]["local"],
+                        "global": result["weights"]["global"],
+                    },
+                },
+            }
         except Exception as e:
             self.logger.warning(
                 "Search attempt failed, will retry",
@@ -203,7 +243,7 @@ class VectorSearchAgent(BaseAgent):
                 query_length=len(query),
                 namespaces=namespaces,
             )
-            raise VectorSearchError(query=query, reason=f"Hybrid search failed: {e}") from e
+            raise VectorSearchError(query=query, reason=f"4-way hybrid search failed: {e}") from e
 
     def _convert_results(self, results: list[dict[str, Any]]) -> list[RetrievedContext]:
         """Convert HybridSearch results to RetrievedContext format.

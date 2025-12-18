@@ -9,7 +9,8 @@ Sprint 48 Feature 48.2: CoordinatorAgent Streaming Method (13 SP)
 """
 
 import time
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import structlog
 from langgraph.checkpoint.memory import MemorySaver
@@ -489,20 +490,32 @@ class CoordinatorAgent:
             answer = final_state.get("answer", "")
             citation_map = final_state.get("citation_map", {})
 
+            # Extract intent metadata from search results (Sprint 42)
+            search_metadata = final_state.get("metadata", {}).get("search", {})
+            detected_intent = final_state.get("metadata", {}).get("detected_intent")
+            intent_confidence = final_state.get("metadata", {}).get("intent_confidence")
+
             logger.info(
                 "coordinator_stream_complete",
                 query=query[:100],
                 latency_ms=latency_ms,
                 answer_length=len(answer) if answer else 0,
+                detected_intent=detected_intent,
+                intent_confidence=intent_confidence,
             )
 
-            # Yield final answer
+            # Yield final answer with intent metadata
             yield {
                 "answer": answer,
                 "citation_map": citation_map,
+                # Sprint 42: Include intent classification in answer metadata
+                "intent": detected_intent,
+                "intent_confidence": intent_confidence,
+                "intent_weights": search_metadata.get("weights"),
                 "metadata": {
                     "total_latency_ms": latency_ms,
                     "session_id": session_id,
+                    "search_mode": search_metadata.get("search_mode", "hybrid"),
                 },
             }
 

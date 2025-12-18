@@ -125,7 +125,8 @@ class IntentClassifier:
             use_llm: Whether to use LLM (True) or rule-based fallback only (False)
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        self.model = model or os.getenv("OLLAMA_MODEL_INTENT", "gpt-oss:20b")
+        # Sprint 51: Updated default to nemotron-3-nano (fast MoE model on DGX Spark)
+        self.model = model or os.getenv("OLLAMA_MODEL_INTENT", "nemotron-3-nano")
         self.timeout = timeout
         self.use_llm = use_llm
         self.client = httpx.AsyncClient(timeout=timeout)
@@ -158,11 +159,11 @@ class IntentClassifier:
 
         # Check cache first
         if cache_key in self._cache:
-            intent, cached_time = self._cache[cache_key]
-            logger.debug("intent_cache_hit", query=query[:50], intent=intent.value)
+            cached_intent, cached_time = self._cache[cache_key]
+            logger.debug("intent_cache_hit", query=query[:50], intent=cached_intent.value)
             return IntentClassificationResult(
-                intent=intent,
-                weights=INTENT_WEIGHT_PROFILES[intent],
+                intent=cached_intent,
+                weights=INTENT_WEIGHT_PROFILES[cached_intent],
                 confidence=1.0,  # Cached results assumed confident
                 latency_ms=0.0,
                 method="cache",
@@ -347,18 +348,28 @@ class IntentClassifier:
                 return Intent.EXPLORATORY
 
         # Keyword patterns (technical terms, codes, specific identifiers)
-        keyword_patterns = [
-            r"\b[A-Z]{2,}\b",  # Acronyms like "API", "JWT", "REST"
-            r"\b\d{4,}\b",  # Long numbers (IDs, codes)
-            r"\b[a-z]+_[a-z]+\b",  # snake_case identifiers
-            r'"[^"]+"',  # Quoted strings
-            r"'[^']+'",  # Quoted strings
-            r"\berror\b",
-            r"\bcode\b",
-            r"\bconfig\b",
-        ]
-        keyword_count = sum(1 for p in keyword_patterns if re.search(p, query_lower))
-        if keyword_count >= 2:
+        # Count actual occurrences, not just pattern matches
+        acronym_count = len(re.findall(r"\b[A-Z]{2,}\b", query))  # API, JWT, REST
+        year_count = len(re.findall(r"\b(19|20)\d{2}\b", query))  # Years like 2024
+        number_count = len(re.findall(r"\b\d{4,}\b", query))  # Long numbers (IDs, codes)
+        snake_case_count = len(re.findall(r"\b[a-z]+_[a-z]+\b", query_lower))  # snake_case
+        quoted_count = len(re.findall(r'"[^"]+"', query)) + len(re.findall(r"'[^']+'", query))
+        technical_terms = sum([
+            bool(re.search(r"\berror\b", query_lower)),
+            bool(re.search(r"\bcode\b", query_lower)),
+            bool(re.search(r"\bconfig\b", query_lower)),
+            bool(re.search(r"\bpolicy\b", query_lower)),
+            bool(re.search(r"\bviolation\b", query_lower)),
+            bool(re.search(r"\btable\b", query_lower)),
+            bool(re.search(r"\bschema\b", query_lower)),
+            bool(re.search(r"\bdatabase\b", query_lower)),
+        ])
+
+        # Keyword intent if multiple technical indicators
+        # Short queries with numbers/years are likely keyword searches
+        is_short_query = len(query.split()) <= 5
+        keyword_indicators = acronym_count + year_count + snake_case_count + quoted_count + technical_terms
+        if keyword_indicators >= 2 or acronym_count >= 3 or (is_short_query and number_count >= 1):
             return Intent.KEYWORD
 
         # Factual patterns
