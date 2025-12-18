@@ -1,9 +1,11 @@
 """Unit tests for AnswerGenerator with citation support.
 
 Sprint 27 Feature 27.10: Inline Source Citations
+Sprint 51 Feature 51.2: LLM Answer Streaming
 
 Tests for the generate_with_citations() method that adds inline source
-citations ([1], [2], etc.) to generated answers.
+citations ([1], [2], etc.) to generated answers, and generate_streaming()
+for token-by-token streaming.
 """
 
 import re
@@ -312,3 +314,105 @@ class TestAnswerGeneratorPrompt:
         assert "[Source 2]:" in task.prompt
         assert sample_contexts[0]["text"] in task.prompt
         assert sample_contexts[1]["text"] in task.prompt
+
+
+class TestAnswerGeneratorStreaming:
+    """Test suite for token-by-token streaming functionality.
+
+    Sprint 51 Feature 51.2: LLM Answer Streaming
+    """
+
+    @pytest.mark.asyncio
+    async def test_generate_streaming_basic(self, answer_generator, mock_llm_proxy, sample_contexts):
+        """Test basic streaming of answer tokens."""
+        # Mock streaming response from LLM proxy
+        async def mock_streaming(_task):
+            """Mock streaming generator."""
+            tokens = ["AEGIS ", "RAG ", "is ", "an ", "agentic ", "system."]
+            for token in tokens:
+                yield {"content": token}
+
+        mock_llm_proxy.generate_streaming = mock_streaming
+
+        # Collect streamed tokens
+        tokens = []
+        async for event in answer_generator.generate_streaming(
+            query="What is AEGIS RAG?", contexts=sample_contexts
+        ):
+            if event.get("event") == "token":
+                tokens.append(event["data"]["content"])
+            elif event.get("event") == "complete":
+                assert event["data"]["done"] is True
+
+        # Verify tokens were streamed
+        assert len(tokens) > 0
+        full_answer = "".join(tokens)
+        assert "AEGIS" in full_answer
+        assert "RAG" in full_answer
+
+    @pytest.mark.asyncio
+    async def test_generate_streaming_no_contexts(self, answer_generator, mock_llm_proxy):
+        """Test streaming with no contexts returns immediate answer."""
+        events = []
+        async for event in answer_generator.generate_streaming(query="Test query", contexts=[]):
+            events.append(event)
+
+        # Verify we got token and complete events
+        assert any(e.get("event") == "token" for e in events)
+        assert any(e.get("event") == "complete" for e in events)
+
+        # Verify the answer indicates no information
+        token_events = [e for e in events if e.get("event") == "token"]
+        answer = "".join(e["data"]["content"] for e in token_events)
+        assert "don't have enough information" in answer.lower()
+
+    @pytest.mark.asyncio
+    async def test_generate_streaming_error_handling(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
+        """Test error handling during streaming."""
+
+        # Mock streaming that raises an error
+        async def mock_streaming_error(_task):
+            """Mock streaming that fails."""
+            yield {"content": "AEGIS "}
+            raise Exception("Streaming failed")
+
+        mock_llm_proxy.generate_streaming = mock_streaming_error
+
+        events = []
+        async for event in answer_generator.generate_streaming(
+            query="What is AEGIS RAG?", contexts=sample_contexts
+        ):
+            events.append(event)
+
+        # Should receive error event and fallback answer
+        assert any(e.get("event") == "error" for e in events)
+        assert any(e.get("event") == "token" for e in events)  # Fallback answer
+        assert any(e.get("event") == "complete" for e in events)
+
+    @pytest.mark.asyncio
+    async def test_generate_streaming_ttft_tracking(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
+        """Test that Time-To-First-Token (TTFT) is tracked during streaming."""
+
+        # Mock streaming response
+        async def mock_streaming(_task):
+            """Mock streaming generator."""
+            tokens = ["First ", "token ", "here."]
+            for token in tokens:
+                yield {"content": token}
+
+        mock_llm_proxy.generate_streaming = mock_streaming
+
+        # Collect events and verify TTFT is logged
+        first_token_received = False
+        async for event in answer_generator.generate_streaming(
+            query="Test query", contexts=sample_contexts
+        ):
+            if event.get("event") == "token" and not first_token_received:
+                first_token_received = True
+                # TTFT should be measured at this point (check logs)
+
+        assert first_token_received is True

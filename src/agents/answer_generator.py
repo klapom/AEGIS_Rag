@@ -403,6 +403,142 @@ class AnswerGenerator:
         matches = re.findall(r"\[(\d+)\]", answer)
         return {int(m) for m in matches}
 
+    async def generate_streaming(
+        self,
+        query: str,
+        contexts: list[dict[str, Any]],
+        mode: str = "simple",
+    ):
+        """Stream LLM response token-by-token.
+
+        Sprint 51 Feature 51.2: LLM Answer Streaming
+
+        This method enables real-time token streaming for improved UX. Tokens are
+        yielded as they're generated, allowing the frontend to display partial answers
+        immediately.
+
+        Args:
+            query: User question
+            contexts: Retrieved document contexts
+            mode: "simple" or "multi_hop" reasoning mode
+
+        Yields:
+            dict: Token events with format:
+                - {"event": "token", "data": {"content": "token_text"}}
+                - {"event": "complete", "data": {"done": True}}
+                - {"event": "error", "data": {"error": "error_message"}}
+
+        Example:
+            >>> async for event in generator.generate_streaming(
+            ...     query="What is AEGIS?",
+            ...     contexts=[{"text": "AEGIS is...", "source": "doc.md"}]
+            ... ):
+            ...     if event["event"] == "token":
+            ...         print(event["data"]["content"], end="", flush=True)
+        """
+        import time
+
+        if not contexts:
+            # No context case - return full answer immediately
+            answer = self._no_context_answer(query)
+            yield {"event": "token", "data": {"content": answer}}
+            yield {"event": "complete", "data": {"done": True}}
+            return
+
+        # Format contexts
+        context_text = self._format_contexts(contexts)
+
+        # Select prompt based on mode
+        if mode == "multi_hop":
+            prompt = MULTI_HOP_REASONING_PROMPT.format(contexts=context_text, query=query)
+            complexity = Complexity.HIGH
+        else:
+            prompt = ANSWER_GENERATION_PROMPT.format(context=context_text, query=query)
+            complexity = Complexity.MEDIUM
+
+        logger.debug(
+            "generating_answer_streaming",
+            query=query[:100],
+            contexts_count=len(contexts),
+        )
+
+        try:
+            # Track TTFT (Time-To-First-Token)
+            start_time = time.perf_counter()
+            first_token_received = False
+            ttft_ms = None
+            accumulated_tokens = []
+
+            # Create LLM task for streaming
+            task = LLMTask(
+                task_type=TaskType.GENERATION,
+                prompt=prompt,
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=complexity,
+                temperature=self.temperature,
+                model_local=self.model_name,
+            )
+
+            # Sprint 51: Use AegisLLMProxy streaming
+            # The proxy's generate() method with stream=True returns an async generator
+            async for chunk in self.proxy.generate_streaming(task):
+                # Track TTFT on first token
+                if not first_token_received:
+                    ttft_ms = (time.perf_counter() - start_time) * 1000
+                    first_token_received = True
+                    logger.info(
+                        "ttft_measured",
+                        ttft_ms=ttft_ms,
+                        query=query[:100],
+                    )
+
+                # Extract token content from chunk
+                if isinstance(chunk, dict) and "content" in chunk:
+                    token_content = chunk["content"]
+                elif hasattr(chunk, "choices") and chunk.choices:
+                    # ANY-LLM format: chunk.choices[0].delta.content
+                    delta = chunk.choices[0].delta
+                    token_content = getattr(delta, "content", "") if delta else ""
+                else:
+                    # Fallback: convert to string
+                    token_content = str(chunk)
+
+                # Only yield non-empty tokens
+                if token_content:
+                    accumulated_tokens.append(token_content)
+                    yield {"event": "token", "data": {"content": token_content}}
+
+            # Calculate total generation time
+            total_time_ms = (time.perf_counter() - start_time) * 1000
+            full_answer = "".join(accumulated_tokens)
+
+            logger.info(
+                "answer_streaming_complete",
+                query=query[:100],
+                answer_length=len(full_answer),
+                contexts_used=len(contexts),
+                ttft_ms=ttft_ms,
+                total_time_ms=total_time_ms,
+                tokens_streamed=len(accumulated_tokens),
+            )
+
+            # Yield completion event
+            yield {"event": "complete", "data": {"done": True}}
+
+        except Exception as e:
+            logger.error(
+                "answer_streaming_failed",
+                query=query[:100],
+                error=str(e),
+            )
+            # Yield error event
+            yield {"event": "error", "data": {"error": str(e)}}
+
+            # Fallback: yield fallback answer as a single token
+            fallback = self._fallback_answer(query, contexts)
+            yield {"event": "token", "data": {"content": fallback}}
+            yield {"event": "complete", "data": {"done": True}}
+
 
 # Global instance (singleton)
 _answer_generator: AnswerGenerator | None = None

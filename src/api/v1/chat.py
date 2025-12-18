@@ -558,7 +558,13 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                         phase_event = PhaseEvent(**event["data"])
                         reasoning_data.add_phase_event(phase_event)
 
-                    # Collect answer chunks
+                    # Sprint 51 Feature 51.2: Collect individual tokens
+                    elif event.get("type") == "token":
+                        token_data = event.get("data", {})
+                        if "content" in token_data:
+                            collected_answer.append(token_data["content"])
+
+                    # Collect answer chunks (backward compatibility)
                     elif event.get("type") == "answer_chunk":
                         answer_data = event.get("data", {})
                         if "answer" in answer_data:

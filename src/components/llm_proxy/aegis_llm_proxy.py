@@ -183,6 +183,76 @@ class AegisLLMProxy:
         spent = self._monthly_spending.get(provider, 0.0)
         return spent >= limit
 
+    async def generate_streaming(self, task: LLMTask):
+        """
+        Stream LLM response token-by-token.
+
+        Sprint 51 Feature 51.2: LLM Answer Streaming
+
+        This method provides real-time token streaming for improved UX. Unlike
+        the batch generate() method, this yields tokens as they're generated.
+
+        Args:
+            task: LLM task with prompt, quality requirements, data classification
+
+        Yields:
+            dict: Token chunks from the LLM provider
+
+        Example:
+            async for chunk in proxy.generate_streaming(task):
+                if "content" in chunk:
+                    print(chunk["content"], end="", flush=True)
+        """
+        # Step 1: AEGIS ROUTING LOGIC (custom)
+        provider, reason = self._route_task(task)
+
+        logger.info(
+            "streaming_routing_decision",
+            task_id=str(task.id),
+            task_type=task.task_type,
+            provider=provider,
+            reason=reason,
+            quality=task.quality_requirement,
+            complexity=task.complexity,
+        )
+
+        # Step 2: Execute with streaming enabled
+        try:
+            async for chunk in self._execute_streaming(
+                provider=provider,
+                task=task,
+            ):
+                yield chunk
+
+        except Exception as e:
+            # Provider error → try local as last resort
+            logger.error(
+                "streaming_provider_error_fallback",
+                provider=provider,
+                error=str(e),
+                fallback="local_ollama",
+                task_id=str(task.id),
+            )
+
+            try:
+                async for chunk in self._execute_streaming(
+                    provider="local_ollama",
+                    task=task,
+                ):
+                    yield chunk
+
+            except Exception as local_error:
+                # Even local failed → raise error
+                logger.critical(
+                    "streaming_all_providers_failed",
+                    task_id=str(task.id),
+                    last_provider=provider,
+                    local_error=str(local_error),
+                )
+                raise LLMExecutionError(
+                    f"All LLM providers failed for streaming task {task.id}"
+                ) from local_error
+
     async def generate(
         self,
         task: LLMTask,
@@ -196,7 +266,7 @@ class AegisLLMProxy:
 
         Args:
             task: LLM task with prompt, quality requirements, data classification
-            stream: Enable streaming response (token-by-token)
+            stream: Enable streaming response (token-by-token) - DEPRECATED, use generate_streaming()
 
         Returns:
             LLMResponse with content, provider used, cost, latency
@@ -568,6 +638,124 @@ class AegisLLMProxy:
             tokens_input=tokens_input,  # Detailed breakdown for accurate cost calculation
             tokens_output=tokens_output,  # Detailed breakdown for accurate cost calculation
             cost_usd=cost,
+        )
+
+    async def _execute_streaming(
+        self,
+        provider: str,
+        task: LLMTask,
+    ):
+        """
+        Execute task with streaming enabled.
+
+        Sprint 51 Feature 51.2: LLM Answer Streaming
+
+        This method streams LLM responses token-by-token using the ANY-LLM
+        acompletion function with stream=True.
+
+        Args:
+            provider: Provider name (local_ollama, alibaba_cloud, openai)
+            task: LLM task
+
+        Yields:
+            dict: Token chunks with format {"content": "token_text"}
+
+        Raises:
+            Exception: If provider execution fails
+        """
+        model = self._get_model_for_provider(provider, task)
+
+        # Map internal provider name to LLMProvider enum
+        provider_map = {
+            "local_ollama": LLMProvider.OLLAMA,
+            "alibaba_cloud": LLMProvider.OPENAI,  # Alibaba DashScope uses OpenAI-compatible API
+            "openai": LLMProvider.OPENAI,
+        }
+
+        # Get provider-specific configuration
+        provider_config = self.config.providers.get(provider, {})
+
+        # Determine api_base and api_key for providers
+        api_base = None
+        api_key = None
+
+        if provider == "local_ollama":
+            api_base = provider_config.get("base_url")
+        elif provider in ["alibaba_cloud", "openai"]:
+            api_base = provider_config.get("base_url")
+            api_key = provider_config.get("api_key")
+
+        messages = [{"role": "user", "content": task.prompt}]
+
+        # Prepare acompletion kwargs
+        completion_kwargs = {
+            "model": model,
+            "messages": messages,
+            "provider": provider_map[provider],
+            "api_base": api_base,
+            "api_key": api_key,
+            "max_tokens": task.max_tokens,
+            "temperature": task.temperature,
+            "stream": True,  # Enable streaming
+        }
+
+        # Provider-specific parameters (same as _execute_with_any_llm)
+        thinking_models = ["qwen3", "gpt-oss", "nemotron"]
+        if provider == "local_ollama" and any(m in model.lower() for m in thinking_models):
+            completion_kwargs["think"] = False
+            logger.info(
+                "streaming_ollama_thinking_disabled",
+                model=model,
+                reason="performance_optimization_127x_speedup",
+            )
+
+        # Alibaba Cloud (DashScope) specific parameters
+        # NOTE: DashScope does not support streaming with enable_thinking parameter
+        # For streaming, we omit extra_body entirely
+        extra_body = {}
+        if provider == "alibaba_cloud":
+            # DashScope streaming does not support enable_thinking
+            # Reference: https://help.aliyun.com/zh/dashscope/developer-reference/api-details
+            pass  # No extra_body for streaming
+
+        if extra_body:
+            completion_kwargs["extra_body"] = extra_body
+
+        # Stream tokens from ANY-LLM acompletion
+        logger.info(
+            "streaming_started",
+            provider=provider,
+            model=model,
+            task_id=str(task.id),
+        )
+
+        try:
+            async for chunk in acompletion(**completion_kwargs):
+                # Extract content from chunk
+                # ANY-LLM format: chunk.choices[0].delta.content
+                if hasattr(chunk, "choices") and chunk.choices:
+                    delta = chunk.choices[0].delta
+                    content = getattr(delta, "content", None) if delta else None
+
+                    # Yield non-empty content
+                    if content:
+                        yield {"content": content}
+
+        except Exception as e:
+            logger.error(
+                "streaming_execution_failed",
+                provider=provider,
+                model=model,
+                error=str(e),
+                task_id=str(task.id),
+            )
+            raise
+
+        logger.info(
+            "streaming_complete",
+            provider=provider,
+            model=model,
+            task_id=str(task.id),
         )
 
     def _get_model_for_provider(self, provider: str, task: LLMTask) -> str:
