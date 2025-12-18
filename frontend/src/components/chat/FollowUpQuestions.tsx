@@ -1,54 +1,105 @@
 /**
  * FollowUpQuestions Component
  * Sprint 28 Feature 28.1: Display follow-up questions below answers
+ * Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
  *
  * Features:
- * - Fetch follow-up questions from backend API
+ * - Fetch follow-up questions from backend API (async after answer completes)
  * - Display as clickable cards (Perplexity-inspired)
  * - Loading/error states
- * - Auto-fetch when answer completes
+ * - Auto-fetch when answer completes (with polling for async generation)
+ *
+ * CRITICAL: Questions are generated asynchronously AFTER answer completes.
+ * This component polls the endpoint until questions are ready.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getFollowUpQuestions } from '../../api/chat';
 
 interface FollowUpQuestionsProps {
   sessionId: string;
   onQuestionClick: (question: string) => void;
+  /** Sprint 52.3: Trigger to start fetching (when answer completes) */
+  answerComplete?: boolean;
 }
 
-export function FollowUpQuestions({ sessionId, onQuestionClick }: FollowUpQuestionsProps) {
+export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete = false }: FollowUpQuestionsProps) {
   const [questions, setQuestions] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
+  const pollCountRef = useRef(0);
+  const maxPollAttempts = 10; // Poll for up to 10 seconds (10 * 1s)
 
   useEffect(() => {
+    // Sprint 52.3: Only start fetching when answer completes
+    if (!answerComplete || !sessionId) {
+      return;
+    }
+
+    console.log('[FollowUpQuestions] Answer complete, starting async fetch for session:', sessionId);
+    setIsLoading(true);
+    setError(null);
+    pollCountRef.current = 0;
+
     const fetchQuestions = async () => {
       if (!sessionId) {
         console.log('[FollowUpQuestions] No session ID provided');
         return;
       }
 
-      console.log('[FollowUpQuestions] Fetching questions for session:', sessionId);
-      setIsLoading(true);
-      setError(null);
-
       try {
         const fetchedQuestions = await getFollowUpQuestions(sessionId);
         console.log('[FollowUpQuestions] Received questions:', fetchedQuestions);
-        setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
+
+        if (fetchedQuestions && fetchedQuestions.length > 0) {
+          setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : []);
+          setIsLoading(false);
+          // Clear polling interval on success
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        } else {
+          // Sprint 52.3: Questions not ready yet, continue polling
+          pollCountRef.current += 1;
+          if (pollCountRef.current >= maxPollAttempts) {
+            console.log('[FollowUpQuestions] Max poll attempts reached, giving up');
+            setIsLoading(false);
+            setQuestions([]);
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+          }
+        }
       } catch (err) {
         console.error('[FollowUpQuestions] Failed to fetch follow-up questions:', err);
-        setError('Keine Fragen verfugbar');
-        // Don't show empty state - just silently fail
-        setQuestions([]);
-      } finally {
-        setIsLoading(false);
+        pollCountRef.current += 1;
+        if (pollCountRef.current >= maxPollAttempts) {
+          setError('Keine Fragen verfugbar');
+          setIsLoading(false);
+          setQuestions([]);
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        }
       }
     };
 
+    // Sprint 52.3: Immediate fetch, then poll every 1 second
     fetchQuestions();
-  }, [sessionId]);
+    pollIntervalRef.current = window.setInterval(fetchQuestions, 1000);
+
+    // Cleanup on unmount
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [sessionId, answerComplete]);
 
   // Don't render if no questions and not loading
   if (!isLoading && (!questions || questions.length === 0)) {

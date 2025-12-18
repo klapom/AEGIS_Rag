@@ -356,6 +356,161 @@ export function useClassifyDocument() {
 }
 
 // ============================================================================
+// Domain Stats Types & Hook (Feature 52.2.2)
+// ============================================================================
+
+/**
+ * Domain statistics response
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ */
+export interface DomainStatsResponse {
+  domain_name: string;
+  documents: number;
+  chunks: number;
+  entities: number;
+  relationships: number;
+  last_indexed: string | null;
+  indexing_progress: number;
+  error_count: number;
+  errors: string[];
+  health_status: 'healthy' | 'degraded' | 'error' | 'empty' | 'indexing';
+}
+
+/**
+ * Re-index domain response
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ */
+export interface ReindexDomainResponse {
+  message: string;
+  domain_name: string;
+  documents_queued: number;
+}
+
+/**
+ * Validate domain response
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ */
+export interface ValidateDomainResponse {
+  domain_name: string;
+  is_valid: boolean;
+  validation_errors: string[];
+  recommendations: string[];
+}
+
+/**
+ * Fetch domain statistics
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ *
+ * @param domainName - Domain name to get stats for
+ * @param enabled - Whether to enable fetching (default: true)
+ * @param refetchInterval - Polling interval in ms (default: 10000)
+ */
+export function useDomainStats(
+  domainName: string,
+  enabled = true,
+  refetchInterval = 10000
+) {
+  const [data, setData] = useState<DomainStatsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const isFirstLoad = useRef(true);
+
+  const fetchStats = useCallback(async () => {
+    if (!enabled || !domainName) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Only show loading on first fetch
+    if (isFirstLoad.current) {
+      setIsLoading(true);
+    }
+    setError(null);
+    try {
+      const response = await apiClient.get<DomainStatsResponse>(
+        `/admin/domains/${domainName}/stats`
+      );
+      setData(response);
+      isFirstLoad.current = false;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch domain stats'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [domainName, enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    isFirstLoad.current = true;
+    fetchStats();
+
+    // Poll at configured interval for auto-refresh
+    const intervalId = setInterval(fetchStats, refetchInterval);
+
+    return () => clearInterval(intervalId);
+  }, [fetchStats, refetchInterval, enabled]);
+
+  return { data, isLoading, error, refetch: fetchStats };
+}
+
+/**
+ * Re-index domain mutation
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ */
+export function useReindexDomain() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(async (domainName: string): Promise<ReindexDomainResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<ReindexDomainResponse>(
+        `/admin/domains/${domainName}/reindex`
+      );
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to re-index domain');
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { mutateAsync, isLoading, error };
+}
+
+/**
+ * Validate domain mutation
+ * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ */
+export function useValidateDomain() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(async (domainName: string): Promise<ValidateDomainResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<ValidateDomainResponse>(
+        `/admin/domains/${domainName}/validate`
+      );
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to validate domain');
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { mutateAsync, isLoading, error };
+}
+
+// ============================================================================
 // SSE Training Stream Types & Hook (Feature 45.13)
 // ============================================================================
 

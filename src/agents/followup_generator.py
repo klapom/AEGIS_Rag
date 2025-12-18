@@ -1,6 +1,7 @@
 """Follow-up Question Generator for conversational depth.
 
 Sprint 27 Feature 27.5: Follow-up Question Suggestions
+Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
 
 This module generates 3-5 follow-up questions after each answer to guide
 users to deeper insights and increase engagement (Perplexity-style UX).
@@ -10,9 +11,12 @@ The generator:
 2. Uses fast LLM to generate related questions
 3. Returns suggestions that explore related topics, clarify complex points,
    go deeper into details, or connect to broader context
+4. (Sprint 52.3) Stores conversation context in Redis (TTL: 30 min)
+5. (Sprint 52.3) Runs asynchronously without blocking answer display
 """
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -28,6 +32,130 @@ from src.core.exceptions import AegisRAGException
 
 logger = structlog.get_logger(__name__)
 
+# Sprint 52 Feature 52.3: Context TTL (30 minutes)
+FOLLOWUP_CONTEXT_TTL_SECONDS = 1800
+
+
+async def store_conversation_context(
+    session_id: str,
+    query: str,
+    answer: str,
+    sources: list[dict[str, Any]] | None = None,
+) -> bool:
+    """Store conversation context in Redis for async follow-up generation.
+
+    Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+
+    This function stores the Q&A context in Redis with a 30-minute TTL,
+    allowing follow-up questions to be generated asynchronously without
+    blocking the answer display.
+
+    Args:
+        session_id: Session ID for this conversation
+        query: Original user query
+        answer: Generated answer text
+        sources: Optional list of source documents
+
+    Returns:
+        True if storage succeeded, False otherwise
+
+    Example:
+        >>> success = await store_conversation_context(
+        ...     session_id="session-123",
+        ...     query="What is AEGIS RAG?",
+        ...     answer="AEGIS RAG is an agentic RAG system...",
+        ...     sources=[{"text": "Vector search component..."}]
+        ... )
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        # Build context data
+        context_data = {
+            "query": query,
+            "answer": answer,
+            "sources": sources or [],
+            "stored_at": datetime.now(UTC).isoformat(),
+        }
+
+        # Store in Redis with 30-minute TTL
+        cache_key = f"{session_id}:followup_context"
+        success = await redis_memory.store(
+            key=cache_key,
+            value=context_data,
+            namespace="cache",
+            ttl_seconds=FOLLOWUP_CONTEXT_TTL_SECONDS,
+        )
+
+        if success:
+            logger.info(
+                "followup_context_stored",
+                session_id=session_id,
+                query_preview=query[:50],
+            )
+        else:
+            logger.warning(
+                "followup_context_storage_failed",
+                session_id=session_id,
+            )
+
+        return success
+
+    except Exception as e:
+        logger.error(
+            "followup_context_storage_error",
+            session_id=session_id,
+            error=str(e),
+        )
+        return False
+
+
+async def retrieve_conversation_context(session_id: str) -> dict[str, Any] | None:
+    """Retrieve conversation context from Redis for follow-up generation.
+
+    Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+
+    Args:
+        session_id: Session ID for this conversation
+
+    Returns:
+        Context data if found, None otherwise
+    """
+    try:
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        cache_key = f"{session_id}:followup_context"
+        context = await redis_memory.retrieve(key=cache_key, namespace="cache")
+
+        if context:
+            # Extract value from Redis wrapper
+            if isinstance(context, dict) and "value" in context:
+                context = context["value"]
+
+            logger.info(
+                "followup_context_retrieved",
+                session_id=session_id,
+            )
+            return context
+
+        logger.debug(
+            "followup_context_not_found",
+            session_id=session_id,
+        )
+        return None
+
+    except Exception as e:
+        logger.error(
+            "followup_context_retrieval_error",
+            session_id=session_id,
+            error=str(e),
+        )
+        return None
+
 
 async def generate_followup_questions(
     query: str,
@@ -37,9 +165,16 @@ async def generate_followup_questions(
 ) -> list[str]:
     """Generate 3-5 follow-up questions based on Q&A context.
 
+    Sprint 27 Feature 27.5: Follow-up Question Suggestions
+    Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+
     This function uses a fast local LLM to generate insightful follow-up
     questions that encourage users to explore related topics, clarify
     complex points, or dive deeper into the subject matter.
+
+    CRITICAL: This should be called AFTER the answer is complete and
+    should NOT block the answer display. For streaming responses, use
+    generate_followup_questions_async() instead.
 
     Args:
         query: Original user query
@@ -198,7 +333,64 @@ Output ONLY a JSON array of question strings (no other text):
         return []
 
 
+async def generate_followup_questions_async(session_id: str) -> list[str]:
+    """Generate follow-up questions asynchronously using stored context.
+
+    Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+
+    This function retrieves the conversation context from Redis and
+    generates follow-up questions without blocking. It should be called
+    as a background task AFTER the answer is fully streamed.
+
+    Args:
+        session_id: Session ID for this conversation
+
+    Returns:
+        List of 3-5 follow-up question strings, empty list if context not found
+
+    Example:
+        >>> # After answer is complete, trigger background task:
+        >>> questions = await generate_followup_questions_async("session-123")
+    """
+    try:
+        # Retrieve stored context
+        context = await retrieve_conversation_context(session_id)
+
+        if not context:
+            logger.warning(
+                "followup_async_no_context",
+                session_id=session_id,
+            )
+            return []
+
+        # Generate questions from context
+        questions = await generate_followup_questions(
+            query=context.get("query", ""),
+            answer=context.get("answer", ""),
+            sources=context.get("sources", []),
+        )
+
+        logger.info(
+            "followup_async_generated",
+            session_id=session_id,
+            count=len(questions),
+        )
+
+        return questions
+
+    except Exception as e:
+        logger.error(
+            "followup_async_generation_error",
+            session_id=session_id,
+            error=str(e),
+        )
+        return []
+
+
 # Export public API
 __all__ = [
     "generate_followup_questions",
+    "generate_followup_questions_async",
+    "store_conversation_context",
+    "retrieve_conversation_context",
 ]

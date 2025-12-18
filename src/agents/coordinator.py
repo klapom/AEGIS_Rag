@@ -6,8 +6,10 @@ manages conversation persistence.
 
 Sprint 4 Feature 4.4: Coordinator Agent with State Persistence
 Sprint 48 Feature 48.2: CoordinatorAgent Streaming Method (13 SP)
+Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
 """
 
+import asyncio
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -535,6 +537,86 @@ class CoordinatorAgent:
                     "search_mode": search_metadata.get("search_mode", "hybrid"),
                 },
             }
+
+            # Sprint 52 Feature 52.3: Generate follow-up questions asynchronously
+            # CRITICAL: This runs AFTER the answer is complete and does NOT block
+            if session_id and answer:
+                # Extract sources from final state
+                sources = []
+                retrieved_contexts = final_state.get("retrieved_contexts", [])
+                for ctx in retrieved_contexts:
+                    if isinstance(ctx, dict):
+                        sources.append(ctx)
+
+                # Start async task to generate follow-up questions
+                asyncio.create_task(
+                    self._generate_followup_async(
+                        session_id=session_id,
+                        query=query,
+                        answer=answer,
+                        sources=sources,
+                    )
+                )
+
+                logger.info(
+                    "followup_generation_task_started",
+                    session_id=session_id,
+                    query_preview=query[:50],
+                )
+
+    async def _generate_followup_async(
+        self,
+        session_id: str,
+        query: str,
+        answer: str,
+        sources: list[dict[str, Any]],
+    ) -> None:
+        """Generate follow-up questions asynchronously in background.
+
+        Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+
+        This method runs as a background task and:
+        1. Stores conversation context in Redis
+        2. Generates follow-up questions (does NOT block answer display)
+        3. Questions are retrieved via GET /chat/sessions/{session_id}/followup-questions
+
+        CRITICAL: This does NOT emit SSE events. Follow-ups are pulled by frontend
+        after answer is displayed.
+
+        Args:
+            session_id: Session ID
+            query: User query
+            answer: Generated answer
+            sources: Retrieved source documents
+        """
+        try:
+            from src.agents.followup_generator import store_conversation_context
+
+            # Store context in Redis for follow-up generation
+            success = await store_conversation_context(
+                session_id=session_id,
+                query=query,
+                answer=answer,
+                sources=sources,
+            )
+
+            if success:
+                logger.info(
+                    "followup_context_stored_for_async",
+                    session_id=session_id,
+                )
+            else:
+                logger.warning(
+                    "followup_context_storage_failed_async",
+                    session_id=session_id,
+                )
+
+        except Exception as e:
+            logger.error(
+                "followup_async_task_failed",
+                session_id=session_id,
+                error=str(e),
+            )
 
     def get_session_history(self, session_id: str) -> list[dict[str, Any]]:
         """Retrieve conversation history for a session.

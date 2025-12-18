@@ -323,10 +323,11 @@ export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionI
         />
       )}
 
-      {/* Follow-up Questions - Sprint 28 Feature 28.1 */}
-      {!isStreaming && currentSessionId ? (
+      {/* Follow-up Questions - Sprint 28 Feature 28.1, Sprint 52 Feature 52.3 */}
+      {currentSessionId && (
         <FollowUpQuestions
           sessionId={currentSessionId}
+          answerComplete={!isStreaming && !!answer}
           onQuestionClick={(question) => {
             console.log('[StreamingAnswer] Follow-up question clicked:', question);
             if (onFollowUpQuestion) {
@@ -334,9 +335,6 @@ export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionI
             }
           }}
         />
-      ) : (
-        console.log('[StreamingAnswer] Follow-up rendering blocked:', { isStreaming, currentSessionId }),
-        null
       )}
 
       {/* Metadata */}

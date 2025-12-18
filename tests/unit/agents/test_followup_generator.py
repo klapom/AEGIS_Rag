@@ -1,12 +1,17 @@
 """Unit tests for follow-up question generation.
 
 Sprint 27 Feature 27.5: Follow-up Question Suggestions
+Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
 
 Tests the generate_followup_questions function for:
 - Successful question generation
 - JSON parsing and validation
 - Error handling (invalid JSON, LLM failures)
 - Edge cases (empty sources, long answers)
+
+Tests for Sprint 52.3:
+- Redis context storage and retrieval
+- Async question generation from stored context
 """
 
 import json
@@ -14,7 +19,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.followup_generator import generate_followup_questions
+from src.agents.followup_generator import (
+    generate_followup_questions,
+    generate_followup_questions_async,
+    retrieve_conversation_context,
+    store_conversation_context,
+)
 from src.components.llm_proxy.models import LLMResponse
 
 
@@ -397,3 +407,200 @@ async def test_generate_followup_questions_empty_strings():
         # Both empty
         questions = await generate_followup_questions("", "")
         assert len(questions) == 2
+
+
+# ============================================================================
+# Sprint 52 Feature 52.3: Async Follow-up Questions Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_store_conversation_context_success():
+    """Test storing conversation context in Redis."""
+    session_id = "test-session-123"
+    query = "What is AEGIS RAG?"
+    answer = "AEGIS RAG is an agentic RAG system."
+    sources = [{"text": "Source 1"}, {"text": "Source 2"}]
+
+    # Patch at the import site (inside the function)
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        mock_redis.store = AsyncMock(return_value=True)
+        mock_get_redis.return_value = mock_redis
+
+        success = await store_conversation_context(session_id, query, answer, sources)
+
+        assert success is True
+        mock_redis.store.assert_called_once()
+        call_kwargs = mock_redis.store.call_args[1]
+        assert call_kwargs["key"] == f"{session_id}:followup_context"
+        assert call_kwargs["namespace"] == "cache"
+        assert call_kwargs["ttl_seconds"] == 1800  # 30 minutes
+        # Verify context data
+        context_value = call_kwargs["value"]
+        assert context_value["query"] == query
+        assert context_value["answer"] == answer
+        assert context_value["sources"] == sources
+        assert "stored_at" in context_value
+
+
+@pytest.mark.asyncio
+async def test_store_conversation_context_redis_failure():
+    """Test handling Redis storage failure."""
+    session_id = "test-session-123"
+    query = "Test query"
+    answer = "Test answer"
+
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        mock_redis.store = AsyncMock(return_value=False)
+        mock_get_redis.return_value = mock_redis
+
+        success = await store_conversation_context(session_id, query, answer)
+
+        assert success is False
+
+
+@pytest.mark.asyncio
+async def test_store_conversation_context_exception():
+    """Test handling exception during storage."""
+    session_id = "test-session-123"
+    query = "Test query"
+    answer = "Test answer"
+
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        mock_redis.store = AsyncMock(side_effect=Exception("Redis connection failed"))
+        mock_get_redis.return_value = mock_redis
+
+        success = await store_conversation_context(session_id, query, answer)
+
+        assert success is False
+
+
+@pytest.mark.asyncio
+async def test_retrieve_conversation_context_success():
+    """Test retrieving conversation context from Redis."""
+    session_id = "test-session-123"
+    stored_context = {
+        "query": "What is AEGIS RAG?",
+        "answer": "AEGIS RAG is an agentic RAG system.",
+        "sources": [{"text": "Source 1"}],
+        "stored_at": "2025-12-18T10:00:00Z",
+    }
+
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        # Simulate Redis wrapper format
+        mock_redis.retrieve = AsyncMock(return_value={"value": stored_context})
+        mock_get_redis.return_value = mock_redis
+
+        context = await retrieve_conversation_context(session_id)
+
+        assert context == stored_context
+        mock_redis.retrieve.assert_called_once()
+        call_kwargs = mock_redis.retrieve.call_args[1]
+        assert call_kwargs["key"] == f"{session_id}:followup_context"
+        assert call_kwargs["namespace"] == "cache"
+
+
+@pytest.mark.asyncio
+async def test_retrieve_conversation_context_not_found():
+    """Test retrieving context when not found in Redis."""
+    session_id = "test-session-123"
+
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        mock_redis.retrieve = AsyncMock(return_value=None)
+        mock_get_redis.return_value = mock_redis
+
+        context = await retrieve_conversation_context(session_id)
+
+        assert context is None
+
+
+@pytest.mark.asyncio
+async def test_retrieve_conversation_context_exception():
+    """Test handling exception during retrieval."""
+    session_id = "test-session-123"
+
+    with patch("src.components.memory.get_redis_memory") as mock_get_redis:
+        mock_redis = MagicMock()
+        mock_redis.retrieve = AsyncMock(side_effect=Exception("Redis connection failed"))
+        mock_get_redis.return_value = mock_redis
+
+        context = await retrieve_conversation_context(session_id)
+
+        assert context is None
+
+
+@pytest.mark.asyncio
+async def test_generate_followup_questions_async_success():
+    """Test async follow-up generation from stored context."""
+    session_id = "test-session-123"
+    stored_context = {
+        "query": "What is AEGIS RAG?",
+        "answer": "AEGIS RAG is an agentic RAG system.",
+        "sources": [{"text": "Source 1"}],
+        "stored_at": "2025-12-18T10:00:00Z",
+    }
+
+    mock_questions = [
+        "How does the orchestration work?",
+        "What are the key components?",
+        "Can you explain the architecture?",
+    ]
+
+    with patch("src.agents.followup_generator.retrieve_conversation_context") as mock_retrieve:
+        mock_retrieve.return_value = stored_context
+
+        with patch("src.agents.followup_generator.generate_followup_questions") as mock_generate:
+            mock_generate.return_value = mock_questions
+
+            questions = await generate_followup_questions_async(session_id)
+
+            assert questions == mock_questions
+            mock_retrieve.assert_called_once_with(session_id)
+            mock_generate.assert_called_once_with(
+                query=stored_context["query"],
+                answer=stored_context["answer"],
+                sources=stored_context["sources"],
+            )
+
+
+@pytest.mark.asyncio
+async def test_generate_followup_questions_async_no_context():
+    """Test async generation when context not found."""
+    session_id = "test-session-123"
+
+    with patch("src.agents.followup_generator.retrieve_conversation_context") as mock_retrieve:
+        mock_retrieve.return_value = None
+
+        questions = await generate_followup_questions_async(session_id)
+
+        assert questions == []
+        mock_retrieve.assert_called_once_with(session_id)
+
+
+@pytest.mark.asyncio
+async def test_generate_followup_questions_async_exception():
+    """Test handling exception during async generation."""
+    session_id = "test-session-123"
+    stored_context = {
+        "query": "Test query",
+        "answer": "Test answer",
+        "sources": [],
+        "stored_at": "2025-12-18T10:00:00Z",
+    }
+
+    with patch("src.agents.followup_generator.retrieve_conversation_context") as mock_retrieve:
+        mock_retrieve.return_value = stored_context
+
+        with patch(
+            "src.agents.followup_generator.generate_followup_questions"
+        ) as mock_generate:
+            mock_generate.side_effect = Exception("LLM service unavailable")
+
+            questions = await generate_followup_questions_async(session_id)
+
+            assert questions == []

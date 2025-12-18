@@ -1646,12 +1646,16 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
     """Get follow-up question suggestions for the last answer.
 
     Sprint 27 Feature 27.5: Follow-up Question Suggestions
+    Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
 
     This endpoint:
-    1. Retrieves the last Q&A exchange from the conversation
-    2. Generates 3-5 insightful follow-up questions using LLM
+    1. Checks if questions were pre-generated asynchronously (stored context)
+    2. If not, falls back to synchronous generation from conversation
     3. Caches the questions in Redis for 5 minutes
     4. Returns questions to encourage deeper exploration
+
+    CRITICAL: Frontend should poll this endpoint AFTER answer completes.
+    Questions are generated asynchronously in the background.
 
     Args:
         session_id: Session ID to generate follow-up questions for
@@ -1681,7 +1685,33 @@ async def get_followup_questions(session_id: str) -> FollowUpQuestionsResponse:
 
         redis_memory = get_redis_memory()
 
-        # Check cache first (5min TTL)
+        # Sprint 52 Feature 52.3: Check if async generation already completed
+        # Try to retrieve from the async-generated context first
+        from src.agents.followup_generator import generate_followup_questions_async
+
+        async_questions = await generate_followup_questions_async(session_id)
+        if async_questions:
+            logger.info(
+                "followup_questions_from_async_generation",
+                session_id=session_id,
+                count=len(async_questions),
+            )
+            # Cache for future requests
+            cache_key = f"{session_id}:followup"
+            await redis_memory.store(
+                key=cache_key,
+                value={"questions": async_questions},
+                namespace="cache",
+                ttl_seconds=300,  # 5 minutes
+            )
+            return FollowUpQuestionsResponse(
+                session_id=session_id,
+                followup_questions=async_questions,
+                generated_at=_get_iso_timestamp(),
+                from_cache=False,
+            )
+
+        # Check cache (5min TTL) - fallback
         cache_key = f"{session_id}:followup"
         cached_questions = await redis_memory.retrieve(key=cache_key, namespace="cache")
 
