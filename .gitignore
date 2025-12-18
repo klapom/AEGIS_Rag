@@ -160,3 +160,6 @@ poetry.sh
 # Backup venv
 .venv.backup/
 tests/performance/results/
+
+# Frontend local data
+frontend/data/
