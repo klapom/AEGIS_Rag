@@ -149,18 +149,12 @@ education accessible to millions of students worldwide.
         print(f"✓ Baseline: {initial_chunk_count} chunks, {initial_entity_count} entities, {initial_relation_count} relations")
 
         # =====================================================================
-        # Step 3: Navigate to Admin Upload Page
+        # Step 3: Navigate to Admin Upload Page (Sprint 51: Direct URL)
         # =====================================================================
 
-        # Look for upload button/link (adjust selector based on actual UI)
-        # Try common patterns
-        upload_button = page.locator('button:has-text("Upload"), a:has-text("Upload"), [aria-label="Upload"]')
-
-        if await upload_button.count() > 0:
-            await upload_button.first.click()
-        else:
-            # Navigate directly via URL if button not found
-            await page.goto("http://localhost:5179/admin/upload")
+        # Sprint 51: Upload page is accessible directly via admin subpage
+        # No upload button in main navigation - navigate directly
+        await page.goto("http://localhost:5179/admin/upload")
 
         await page.wait_for_load_state("networkidle")
         print("✓ Navigated to upload page")

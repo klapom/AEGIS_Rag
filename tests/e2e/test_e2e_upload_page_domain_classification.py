@@ -105,8 +105,10 @@ class TestUploadPageDomainClassification:
         print("Step 2: Upload Documents (Legal, Medical, Technical)")
         print("=" * 70)
 
-        # Find file input using data-testid (input is hidden but set_input_files works)
-        file_input = page.locator('[data-testid="file-input"]')
+        # Find file input (Sprint 51: Use standard file input selector)
+        file_input = page.locator('input[type="file"]')
+        if await file_input.count() == 0:
+            file_input = page.locator('[data-testid="file-input"]')
 
         # Upload all sample documents
         await file_input.set_input_files(

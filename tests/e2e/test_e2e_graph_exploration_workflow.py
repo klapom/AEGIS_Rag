@@ -63,7 +63,7 @@ class TestGraphExplorationWorkflow:
         """Get Neo4j driver for validation."""
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
         yield driver
         await driver.close()
@@ -106,21 +106,28 @@ class TestGraphExplorationWorkflow:
         print("Step 1: Upload Documents to Create Knowledge Graph")
         print("=" * 70)
 
-        # Navigate to upload page
+        # Navigate to upload page (Sprint 51: Direct URL works)
         await page.goto(f"{base_url}/admin/upload")
         await page.wait_for_load_state("networkidle")
         await asyncio.sleep(2)  # Give React time to render
 
         # Wait for upload page to be ready
         upload_page = page.locator('[data-testid="upload-page"]')
-        try:
-            await expect(upload_page).to_be_visible(timeout=10000)
-            print("✓ Upload page loaded")
-        except Exception:
-            print("⚠ Upload page indicator not found, proceeding anyway...")
+        if await upload_page.count() == 0:
+            # Fallback: check for file input
+            upload_page = page.locator('input[type="file"]')
 
-        # Upload graph-rich documents using data-testid (input is hidden but set_input_files works)
-        file_input = page.locator('[data-testid="file-input"]')
+        try:
+            await expect(upload_page).to_be_attached(timeout=10000)
+            print("✓ Upload page loaded (file input found)")
+        except Exception:
+            print("⚠ Upload page not fully ready, but proceeding with upload...")
+
+        # Upload graph-rich documents (Sprint 51: Use standard file input selector)
+        file_input = page.locator('input[type="file"]')
+        if await file_input.count() == 0:
+            file_input = page.locator('[data-testid="file-input"]')
+
         await expect(file_input).to_be_attached(timeout=10000)
         await file_input.set_input_files([str(path) for path in indexed_graph_documents])
 

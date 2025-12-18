@@ -110,11 +110,12 @@ class TestSessionManagement:
         # Open sidebar
         await self._open_sidebar(page)
 
-        # Find and click New Chat button
+        # Find and click New Chat button (Sprint 51: Look for it in sidebar)
         new_chat_button = page.locator('[data-testid="new-chat-button"]')
         if await new_chat_button.count() == 0:
+            # Fallback: search by text if data-testid not found
             new_chat_button = page.get_by_role("button").filter(
-                has_text=re.compile(r"New Chat|Neu", re.I)
+                has_text=re.compile(r"New Chat|Neu|New|Create", re.I)
             )
 
         await expect(new_chat_button.first).to_be_visible(timeout=5000)

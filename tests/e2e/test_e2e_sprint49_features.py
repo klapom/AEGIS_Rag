@@ -81,7 +81,7 @@ Christopher Nolan is acquainted with Tom Cruise.
         """Get Neo4j driver for validation."""
         driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
         yield driver
         await driver.close()
