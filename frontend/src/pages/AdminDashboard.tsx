@@ -1,15 +1,18 @@
 /**
  * AdminDashboard Component
  * Sprint 46 Feature 46.8: Admin Area Consolidation
+ * Sprint 51: Navigation bar at top, Domains section at bottom collapsed
  *
  * Consolidated admin dashboard with collapsible sections for:
- * - Domains: Domain list with status and creation
+ * - Navigation: Quick links to admin subpages (TOP)
  * - Indexing: Document indexing status and controls
  * - Settings: System configuration overview
+ * - Domains: Domain list with status and creation (BOTTOM, collapsed)
  *
  * This replaces the previous AdminPage as the main /admin route.
  */
 
+import { AdminNavigationBar } from '../components/admin/AdminNavigationBar';
 import { DomainSection } from '../components/admin/DomainSection';
 import { IndexingSection } from '../components/admin/IndexingSection';
 import { SettingsSection } from '../components/admin/SettingsSection';
@@ -23,10 +26,7 @@ import { SettingsSection } from '../components/admin/SettingsSection';
  *   +-----------------------------------------+
  *   | Admin Dashboard                         |
  *   +-----------------------------------------+
- *   | Domains           [New Domain]          |
- *   | ├── omnitracker (ready)                 |
- *   | ├── legal (training...)                 |
- *   | └── general (fallback)                  |
+ *   | [Graph] [Costs] [LLM] [Health] [...]    | <- Navigation bar at TOP
  *   +-----------------------------------------+
  *   | Indexing          [Index Dir]           |
  *   | └── Last run: 2024-12-15 10:30          |
@@ -34,6 +34,9 @@ import { SettingsSection } from '../components/admin/SettingsSection';
  *   +-----------------------------------------+
  *   | Settings                                |
  *   | └── LLM: qwen3:8b | Embeddings: BGE     |
+ *   +-----------------------------------------+
+ *   | Domains (collapsed) [New Domain]        | <- At BOTTOM, collapsed
+ *   | └── Click to expand...                  |
  *   +-----------------------------------------+
  * ```
  */
@@ -54,51 +57,22 @@ export function AdminDashboard() {
           </p>
         </header>
 
-        {/* Sections */}
-        <div className="space-y-4">
-          {/* Domains Section */}
-          <DomainSection />
+        {/* Navigation Bar - Quick links to admin subpages */}
+        <AdminNavigationBar />
 
+        {/* Main Sections */}
+        <div className="space-y-4">
           {/* Indexing Section */}
           <IndexingSection />
 
           {/* Settings Section */}
           <SettingsSection />
-        </div>
 
-        {/* Footer with quick navigation */}
-        <footer className="pt-6 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <NavLink href="/admin/indexing" label="Full Indexing Page" />
-            <NavLink href="/admin/domain-training" label="Domain Training" />
-            <NavLink href="/admin/graph" label="Graph Analytics" />
-            <NavLink href="/admin/costs" label="Cost Dashboard" />
-            <NavLink href="/admin/llm-config" label="LLM Configuration" />
-            <NavLink href="/health" label="System Health" />
-          </div>
-        </footer>
+          {/* Domains Section - at bottom, collapsed by default */}
+          <DomainSection defaultExpanded={false} />
+        </div>
       </div>
     </div>
-  );
-}
-
-/**
- * Navigation link component
- */
-interface NavLinkProps {
-  href: string;
-  label: string;
-}
-
-function NavLink({ href, label }: NavLinkProps) {
-  return (
-    <a
-      href={href}
-      className="text-blue-600 dark:text-blue-400 hover:underline"
-      data-testid={`nav-link-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
-      {label}
-    </a>
   );
 }
 

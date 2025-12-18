@@ -110,9 +110,17 @@ function NewDomainButton({ onClick }: NewDomainButtonProps) {
 }
 
 /**
+ * DomainSection Props
+ */
+export interface DomainSectionProps {
+  /** Whether the section is expanded by default (default: true) */
+  defaultExpanded?: boolean;
+}
+
+/**
  * DomainSection - Compact domain list for admin dashboard
  */
-export function DomainSection() {
+export function DomainSection({ defaultExpanded = true }: DomainSectionProps) {
   const navigate = useNavigate();
   const { data: domains, isLoading, error } = useDomains();
   const [, setShowNewDomainDialog] = useState(false);
@@ -139,7 +147,7 @@ export function DomainSection() {
       title="Domains"
       icon={<Book className="w-5 h-5" />}
       action={<NewDomainButton onClick={handleNewDomain} />}
-      defaultExpanded={true}
+      defaultExpanded={defaultExpanded}
       testId="admin-domain-section"
       isLoading={isLoading}
       error={errorMessage}

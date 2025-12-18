@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { AdminDashboard } from './AdminDashboard';
 import * as adminApi from '../api/admin';
@@ -116,27 +116,59 @@ describe('AdminDashboard', () => {
       });
     });
 
-    it('should display domains in DomainSection', async () => {
+    it('should display domains in DomainSection when expanded', async () => {
       renderComponent();
+
+      // DomainSection is collapsed by default, need to expand it
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-domain-section')).toBeInTheDocument();
+      });
+
+      // Click the section header to expand it
+      const sectionHeader = screen.getByTestId('admin-domain-section').querySelector('[role="button"]');
+      if (sectionHeader) {
+        fireEvent.click(sectionHeader);
+      }
 
       await waitFor(() => {
         expect(screen.getByText('omnitracker')).toBeInTheDocument();
         expect(screen.getByText('legal')).toBeInTheDocument();
       });
     });
-  });
 
-  describe('quick navigation links', () => {
-    it('should render navigation links', async () => {
+    it('should have DomainSection collapsed by default', async () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByTestId('nav-link-full-indexing-page')).toBeInTheDocument();
-        expect(screen.getByTestId('nav-link-domain-training')).toBeInTheDocument();
-        expect(screen.getByTestId('nav-link-graph-analytics')).toBeInTheDocument();
-        expect(screen.getByTestId('nav-link-cost-dashboard')).toBeInTheDocument();
-        expect(screen.getByTestId('nav-link-llm-configuration')).toBeInTheDocument();
-        expect(screen.getByTestId('nav-link-system-health')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-domain-section')).toBeInTheDocument();
+      });
+
+      // The section content should not be visible when collapsed
+      // Check that the aria-expanded is false on the header button
+      const sectionHeader = screen.getByTestId('admin-domain-section').querySelector('[role="button"]');
+      expect(sectionHeader).toHaveAttribute('aria-expanded', 'false');
+    });
+  });
+
+  describe('navigation bar', () => {
+    it('should render navigation bar at top', async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-navigation-bar')).toBeInTheDocument();
+      });
+    });
+
+    it('should render all navigation links', async () => {
+      renderComponent();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-nav-graph')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-nav-costs')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-nav-llm')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-nav-health')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-nav-training')).toBeInTheDocument();
+        expect(screen.getByTestId('admin-nav-indexing')).toBeInTheDocument();
       });
     });
 
@@ -144,27 +176,15 @@ describe('AdminDashboard', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByTestId('nav-link-full-indexing-page')).toHaveAttribute(
-          'href',
-          '/admin/indexing'
-        );
-        expect(screen.getByTestId('nav-link-domain-training')).toHaveAttribute(
+        expect(screen.getByTestId('admin-nav-graph')).toHaveAttribute('href', '/admin/graph');
+        expect(screen.getByTestId('admin-nav-costs')).toHaveAttribute('href', '/admin/costs');
+        expect(screen.getByTestId('admin-nav-llm')).toHaveAttribute('href', '/admin/llm-config');
+        expect(screen.getByTestId('admin-nav-health')).toHaveAttribute('href', '/admin/health');
+        expect(screen.getByTestId('admin-nav-training')).toHaveAttribute(
           'href',
           '/admin/domain-training'
         );
-        expect(screen.getByTestId('nav-link-graph-analytics')).toHaveAttribute(
-          'href',
-          '/admin/graph'
-        );
-        expect(screen.getByTestId('nav-link-cost-dashboard')).toHaveAttribute(
-          'href',
-          '/admin/costs'
-        );
-        expect(screen.getByTestId('nav-link-llm-configuration')).toHaveAttribute(
-          'href',
-          '/admin/llm-config'
-        );
-        expect(screen.getByTestId('nav-link-system-health')).toHaveAttribute('href', '/health');
+        expect(screen.getByTestId('admin-nav-indexing')).toHaveAttribute('href', '/admin/indexing');
       });
     });
   });
