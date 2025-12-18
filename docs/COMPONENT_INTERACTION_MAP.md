@@ -1,7 +1,7 @@
 # COMPONENT INTERACTION MAP
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
 **Purpose:** Complete data flow documentation - how components communicate
-**Last Updated:** 2025-12-08 (Sprint 37 - Streaming Pipeline Architecture)
+**Last Updated:** 2025-12-18 (Sprint 51 - Maximum Hybrid Search & Phase Events)
 
 ---
 
@@ -106,6 +106,14 @@
 | IndexConsistencyValidator | Neo4j | Bolt Protocol | Cypher queries | Entity/relation integrity check (Sprint 49.6) |
 | Admin API | Ollama | HTTP | JSON | List available LLM models (Sprint 49.1) |
 | Admin API | Neo4j | Bolt Protocol | Cypher queries | List relationship types dynamically (Sprint 49.2) |
+| Vector Search Agent | CrossModalFusion | Python Call | Pydantic | 4-way hybrid search with entity boost (Sprint 51.7) |
+| CrossModalFusion | LightRAG | Python Call | Python objects | Local + global entity retrieval (Sprint 51.7) |
+| CrossModalFusion | Neo4j | Bolt Protocol | Cypher (MENTIONED_IN) | Entity-chunk alignment lookup (Sprint 51.7) |
+| Coordinator Agent | PhaseEmitter | Python Call | Pydantic | Granular phase event emission (Sprint 51.1) |
+| Coordinator Agent | FastAPI SSE | SSE Stream | JSON (PhaseEvent) | Real-time thinking display (Sprint 51.1) |
+| Answer Generator | AegisLLMProxy | Python Call | Pydantic | Token streaming with TTFT (Sprint 50) |
+| Answer Generator | FastAPI SSE | SSE Stream | JSON (Token) | Token-by-token response (Sprint 50) |
+| CommunityDetector | Neo4j | Bolt Protocol | Cypher (fixed) | Bug fix: e.id → entity_id, RELATED_TO → RELATES_TO (Sprint 51.6) |
 
 ---
 
@@ -2247,7 +2255,7 @@ frontend/src/
 
 ---
 
-**Last Updated:** 2025-12-16 (Sprint 49 - Knowledge Graph Deduplication)
+**Last Updated:** 2025-12-18 (Sprint 51 - Maximum Hybrid Search & Phase Events)
 **Status:** Active Development
 
 **Architecture Changes Since Sprint 16:**
@@ -2257,11 +2265,14 @@ frontend/src/
 - **Sprint 28:** Frontend UX enhancements (Perplexity-style interface)
 - **Sprint 34:** Knowledge graph enhancement with RELATES_TO relationships and edge visualization
 - **Sprint 49:** Knowledge graph deduplication (entity + relation dedup), embedding consolidation, index validation
+- **Sprint 50:** Token streaming with TTFT tracking for better UX
+- **Sprint 51:** Maximum hybrid search (4-signal), cross-modal fusion, phase events, CommunityDetector fixes
 
-**Current Architecture (Sprint 49):**
+**Current Architecture (Sprint 51):**
 - **Embeddings:** BGE-M3 (1024-dim, Sprint 16) - Unified for all embedding tasks (query, chunks, dedup, relations)
 - **LLM Routing:** AegisLLMProxy (Local Ollama → Alibaba Cloud → OpenAI)
-- **Search Strategy:** Hybrid (Vector BGE-M3 + BM25 Keyword + RRF Fusion)
+- **Search Strategy:** 4-Signal Hybrid (Vector BGE-M3 + BM25 + LightRAG local + global) with Intent-Weighted RRF + Cross-Modal Fusion
+- **Cross-Modal Fusion:** Entity-chunk alignment via Neo4j MENTIONED_IN relationships (Sprint 51)
 - **Graph Relationships:** RELATES_TO (semantic), MENTIONED_IN (chunk refs + source_chunk_id), HAS_SECTION (document structure)
 - **Entity Deduplication:** BGE-M3 embeddings + cosine similarity (0.85 threshold) - Sprint 49.9
 - **Relation Deduplication:** Hierarchical clustering (0.88 threshold) + type synonym mapping - Sprint 49.7
@@ -2272,5 +2283,8 @@ frontend/src/
 - **Document Formats:** 30+ formats (FormatRouter Sprint 22.3)
 - **Relation Extraction:** Pure LLM via AegisLLMProxy (Alibaba Cloud Qwen3-32B)
 - **Dynamic Discovery:** LLM model list + relationship types from Neo4j (Sprint 49.1-49.2)
+- **Phase Events:** Granular pipeline stages with SSE streaming (Sprint 51)
+- **Token Streaming:** TTFT <50ms, incremental answer generation (Sprint 50-51)
+- **CommunityDetector:** Bug fixes for LightRAG global mode (e.id → entity_id, RELATED_TO → RELATES_TO)
 
-**Next:** Sprint 50 (Continued graph optimization and scalability improvements)
+**Next:** Sprint 52 (Additional optimizations and feature refinement)

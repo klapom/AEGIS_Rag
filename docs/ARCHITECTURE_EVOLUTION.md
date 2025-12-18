@@ -62,6 +62,8 @@
 | 47 | Docling CUDA | GPU-accelerated ingestion, 3-5x speedup |
 | 48 | Phase Events | Real-time thinking events, SSE streaming, Nemotron LLM |
 | 49 | Dynamic UX | Embedding-based dedup, provenance tracking, consistency validation |
+| 50 | Token Streaming | Token-by-token answer generation with TTFT tracking |
+| 51 | Maximum Hybrid | 4-Signal Fusion, CommunityDetector fixes, Phase UI |
 
 ---
 
@@ -229,42 +231,84 @@ Layer 3: Graphiti  (Episodic, <200ms, temporal relationships)
 - **Embedding Synergy:** BGE-M3 used for queries + dedup + memory + reranking (single model)
 - **Code Location:** `src/components/graph_rag/semantic_deduplicator.py`, `src/core/provenance.py`
 
+### Sprint 50: Token Streaming & TTFT
+- **Token-by-Token Streaming:** LLM answer generation with streaming via SSE
+- **Time-to-First-Token (TTFT) Tracking:** Measure latency until first token arrives
+- **Streaming Cursor:** Visual feedback during incremental answer generation
+- **Frontend Integration:** React component updates incrementally as tokens arrive
+- **Code Location:** `src/api/v1/chat.py`, `frontend/src/components/StreamingAnswer.tsx`
+
+### Sprint 51: Maximum Hybrid Search & CommunityDetector Fixes
+- **4-Signal Hybrid Retrieval:** Vector + BM25 + LightRAG local + LightRAG global
+- **Cross-Modal Fusion:** Align chunk rankings with entity-based retrieval via MENTIONED_IN
+- **CommunityDetector Bug Fixes:**
+  - Fixed `e.id` vs `entity_id` property mismatch
+  - Fixed `RELATED_TO` vs `RELATES_TO` relationship typo
+  - P0 blocker preventing LightRAG global mode queries
+- **Phase Event System:** Granular phase emission throughout pipeline
+- **Phase Display UI:** Real-time "thinking..." indicators with step numbers
+- **Answer Metadata:** Source normalization, relevance thresholding, citation filtering
+- **Intent Classification:** Factual, keyword, exploratory, summary query types
+- **Maximum Retrieval Architecture:**
+  - Embedding search (Qdrant + BGE-M3): semantic similarity
+  - Keyword search (BM25): exact matches
+  - Local graph search (LightRAG): entity relationships in chunks
+  - Global graph search (LightRAG + Community): topic-level relationships
+- **Cross-Modal Fusion Algorithm:**
+  - Query LightRAG local + global retrieval in parallel
+  - Extract entity names from LightRAG results (ordered by rank)
+  - Find chunks mentioning those entities via Neo4j MENTIONED_IN
+  - Boost chunk scores: `final_score = rrf_score + alpha * sum(entity_boosts)`
+- **Code Location:**
+  - `src/components/vector_search/hybrid_search.py` (4-way fusion)
+  - `src/components/retrieval/cross_modal_fusion.py` (entity-chunk alignment)
+  - `src/components/graph_rag/community_detector.py` (bug fixes)
+  - `src/agents/phase_emitter.py` (phase tracking)
+  - `src/agents/coordinator.py` (orchestration with phases)
+
 ---
 
-## Current Retrieval Architecture (Sprint 42)
+## Current Retrieval Architecture (Sprint 51)
+
+### Maximum Hybrid Search: 4-Signal Fusion
 
 ```
 User Query
     │
     ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Intent Classifier (qwen3:8b)                    │
-│         factual | keyword | exploratory | summary            │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-          ┌───────────────┼───────────────┬───────────────┐
-          ▼               ▼               ▼               ▼
-    ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
-    │  Vector  │   │   BM25   │   │  Graph   │   │  Graph   │
-    │  Search  │   │  Search  │   │  Local   │   │  Global  │
-    │ (Qdrant) │   │ (rank-   │   │(Entity→  │   │(Community│
-    │          │   │  bm25)   │   │  Chunk)  │   │→ Chunk)  │
-    └────┬─────┘   └────┬─────┘   └────┬─────┘   └────┬─────┘
-         │              │              │              │
-         └──────────────┴──────────────┴──────────────┘
-                                │
-                                ▼
-              ┌─────────────────────────────────────────┐
-              │     Intent-Weighted RRF Fusion          │
-              │                                         │
-              │  score = Σ w_i(intent) * 1/(k + rank_i) │
-              └─────────────────────────────────────────┘
-                                │
-                                ▼
-                         Ranked Results
+┌──────────────────────────────────────────────────────────────────┐
+│       Intent Classifier (LLM + Rule-based)                       │
+│    factual | keyword | exploratory | summary                     │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │
+      ┌────────────────┼────────────────┬────────────────┐
+      ▼                ▼                ▼                ▼
+ ┌─────────┐      ┌─────────┐      ┌──────────┐    ┌──────────┐
+ │ Vector  │      │  BM25   │      │LightRAG │    │LightRAG │
+ │ (Qdrant)│      │ Search  │      │  Local   │    │ Global   │
+ │ BGE-M3  │      │(rank-   │      │(Entity→  │    │(Community│
+ │         │      │ bm25)   │      │ Chunk)   │    │→ Chunk)  │
+ └────┬────┘      └────┬────┘      └────┬─────┘    └────┬─────┘
+      │                │                │               │
+      └────────────────┴────────────────┴───────────────┘
+                       │
+                       ▼
+      ┌──────────────────────────────────────┐
+      │  Intent-Weighted RRF Fusion (k=60)   │
+      │  score = Σ w_i(intent) * 1/(k+rank) │
+      └──────────────────────────────────────┘
+                       │
+                       ▼
+      ┌──────────────────────────────────────────┐
+      │  Cross-Modal Fusion (MENTIONED_IN)       │
+      │  final_score = rrf + alpha * entity_boost│
+      └──────────────────────────────────────────┘
+                       │
+                       ▼
+              Ranked Results (4-Signal)
 ```
 
-**Intent Weight Profiles:**
+**Intent Weight Profiles (Sprint 51):**
 
 | Intent | Vector | BM25 | Local | Global |
 |--------|--------|------|-------|--------|
@@ -273,17 +317,28 @@ User Query
 | exploratory | 0.2 | 0.1 | 0.2 | 0.5 |
 | summary | 0.1 | 0.0 | 0.1 | 0.8 |
 
+**Cross-Modal Fusion Mechanism (Sprint 51):**
+
+1. **Parallel Retrieval:** Vector + BM25 + LightRAG local + global execute simultaneously
+2. **RRF Combination:** Intent-weighted fusion of 4 signals
+3. **Entity Extraction:** Extract entity names from LightRAG results (ranked by relevance)
+4. **Chunk Mention Lookup:** Query Neo4j for MENTIONED_IN relationships
+5. **Score Boosting:** Chunks mentioning highly-ranked entities receive bonus scores
+6. **Final Ranking:** Re-rank chunks with combined RRF + entity boost scores
+
 ---
 
 ## Performance Evolution
 
-| Metric | Sprint 2 | Sprint 21 | Sprint 37 | Sprint 42 |
-|--------|----------|-----------|-----------|-----------|
-| Vector Search | <200ms | <150ms | <100ms | <100ms |
-| Hybrid Query | <500ms | <400ms | <300ms | <350ms (4-way) |
-| Document Ingestion | 420s | 120s | 90s | 90s |
-| Test Coverage | 212 | 400+ | 500+ | 600+ |
-| Retrieval Channels | 2 | 2 | 2 | 4 |
+| Metric | Sprint 2 | Sprint 21 | Sprint 37 | Sprint 42 | Sprint 51 |
+|--------|----------|-----------|-----------|-----------|-----------|
+| Vector Search | <200ms | <150ms | <100ms | <100ms | <100ms |
+| Hybrid Query | <500ms | <400ms | <300ms | <350ms (4-way) | <400ms (with cross-modal) |
+| TTFT (1st token) | N/A | N/A | N/A | N/A | <50ms |
+| Full Answer | N/A | N/A | N/A | <1000ms | <1200ms (streamed) |
+| Document Ingestion | 420s | 120s | 90s | 90s | 90s |
+| Test Coverage | 212 | 400+ | 500+ | 600+ | 700+ |
+| Retrieval Channels | 2 | 2 | 2 | 4 | 4 (with fusion) |
 
 ---
 
@@ -304,6 +359,9 @@ User Query
 12. **Real-Time Phase Events** - Transparency into reasoning pipeline
 13. **BGE-M3 Universal Embedding** - Single model for queries, dedup, memory, reranking
 14. **Provenance Tracking** - `source_chunk_id` enables audit trails and debugging
+15. **Cross-Modal Fusion** - Combining chunk + entity rankings improves precision
+16. **Token Streaming** - TTFT <50ms, better UX for long answers
+17. **Phase Granularity** - Showing intermediate thinking steps builds user trust
 
 ### Challenges Overcome
 1. **Embedding Mismatch** - Solved with BGE-M3 system-wide
@@ -317,10 +375,13 @@ User Query
 9. **Relation Type Synonyms** - Solved with type synonym resolution + normalization
 10. **Request Cancellation** - Solved with AbortController + LangGraph loop checks
 11. **Hardcoded Configuration** - Solved with dynamic discovery in Sprint 49
+12. **LightRAG Community Queries** - Solved with CommunityDetector bug fixes (Sprint 51)
+13. **Entity-Chunk Alignment** - Solved with cross-modal fusion via MENTIONED_IN (Sprint 51)
+14. **Poor TTFT Experience** - Solved with token streaming + early response flush (Sprint 50)
 
 ---
 
-## Current System Architecture (Sprint 42)
+## Current System Architecture (Sprint 51)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -410,3 +471,14 @@ User Query
 - Provenance tracking with source_chunk_id
 - Index consistency validation
 - Dynamic model/relationship discovery
+
+### Advanced Optimization (Sprint 50-51)
+- Token-by-token LLM streaming with TTFT <50ms
+- Time-to-First-Token tracking for answer generation
+- Maximum Hybrid Search: 4-signal fusion (Vector + BM25 + Graph Local + Graph Global)
+- Cross-Modal Fusion: Entity-chunk alignment via MENTIONED_IN relationships
+- CommunityDetector bug fixes for LightRAG global mode support
+- Phase event granularity: Separate phases for each retrieval channel
+- Phase Display UI: Real-time thinking indicators with step numbers
+- Answer metadata: Source normalization, relevance thresholding, citation filtering
+- Streaming cursor: Visual feedback during incremental generation

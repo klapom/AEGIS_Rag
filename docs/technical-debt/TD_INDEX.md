@@ -1,9 +1,10 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-16
-**Total Open Items:** 12
-**Total Story Points:** ~212 SP
+**Last Updated:** 2025-12-18
+**Total Open Items:** 14
+**Total Story Points:** ~230 SP
 **Archived Items:** [8 items](archive/ARCHIVE_INDEX.md)
+**Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 
 ---
 

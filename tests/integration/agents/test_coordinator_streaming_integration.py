@@ -40,94 +40,106 @@ async def test_full_streaming_workflow():
     answer_chunks = []
     reasoning_complete = None
 
-    async def mock_astream(initial_state, config=None):
-        """Mock the compiled graph's astream to emit phase events."""
-        # Phase 1: Intent Classification
+    async def mock_astream(initial_state, config=None, stream_mode=None):
+        """Mock the compiled graph's astream with stream_mode='values' to return full state."""
+        # Build up phase events list across iterations
+        phase_events = []
+
+        # Iteration 1: Intent Classification
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.INTENT_CLASSIFICATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=75.5,
+                metadata={"detected_intent": "hybrid", "confidence": 0.95},
+            )
+        )
         yield {
-            "router": {
-                "query": query,
-                "intent": "hybrid",
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.INTENT_CLASSIFICATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=75.5,
-                    metadata={"detected_intent": "hybrid", "confidence": 0.95},
-                ),
-            }
+            "query": query,
+            "intent": "hybrid",
+            "phase_events": phase_events.copy(),
         }
 
-        # Phase 2: Vector Search
+        # Iteration 2: Vector Search
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.VECTOR_SEARCH,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=150.0,
+                metadata={"docs_retrieved": 2, "collection": "documents_v1", "top_k": 10},
+            )
+        )
         yield {
-            "vector_agent": {
-                "query": query,
-                "retrieved_contexts": [
-                    {"text": "RAG combines retrieval with generation", "score": 0.92},
-                    {"text": "Vector search finds relevant documents", "score": 0.88},
-                ],
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.VECTOR_SEARCH,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=150.0,
-                    metadata={"docs_retrieved": 2, "collection": "documents_v1", "top_k": 10},
-                ),
-            }
+            "query": query,
+            "intent": "hybrid",
+            "retrieved_contexts": [
+                {"text": "RAG combines retrieval with generation", "score": 0.92},
+                {"text": "Vector search finds relevant documents", "score": 0.88},
+            ],
+            "phase_events": phase_events.copy(),
         }
 
-        # Phase 3: Graph Query
+        # Iteration 3: Graph Query
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.GRAPH_QUERY,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=120.0,
+                metadata={"entities_found": 1, "relationships_found": 2},
+            )
+        )
         yield {
-            "graph_agent": {
-                "query": query,
-                "graph_results": [
-                    {"entity": "RAG", "type": "system", "properties": {"full_name": "Retrieval-Augmented Generation"}},
-                ],
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.GRAPH_QUERY,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=120.0,
-                    metadata={"entities_found": 1, "relationships_found": 2},
-                ),
-            }
+            "query": query,
+            "intent": "hybrid",
+            "graph_results": [
+                {"entity": "RAG", "type": "system", "properties": {"full_name": "Retrieval-Augmented Generation"}},
+            ],
+            "phase_events": phase_events.copy(),
         }
 
-        # Phase 4: Reranking
+        # Iteration 4: Reranking
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.RERANKING,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=85.0,
+                metadata={"reranked_count": 1, "model": "cross-encoder"},
+            )
+        )
         yield {
-            "reranker": {
-                "query": query,
-                "reranked_contexts": [
-                    {"text": "RAG combines retrieval with generation", "score": 0.96},
-                ],
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.RERANKING,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=85.0,
-                    metadata={"reranked_count": 1, "model": "cross-encoder"},
-                ),
-            }
+            "query": query,
+            "intent": "hybrid",
+            "reranked_contexts": [
+                {"text": "RAG combines retrieval with generation", "score": 0.96},
+            ],
+            "phase_events": phase_events.copy(),
         }
 
-        # Phase 5: LLM Generation
+        # Iteration 5: LLM Generation
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.LLM_GENERATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=250.0,
+                metadata={"tokens_generated": 35, "model": "ollama:llama3.2"},
+            )
+        )
         yield {
-            "generator": {
-                "query": query,
-                "answer": "RAG (Retrieval-Augmented Generation) combines retrieval mechanisms with LLM generation to provide more accurate and contextual answers.",
-                "citation_map": {"source1": 0},
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.LLM_GENERATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=250.0,
-                    metadata={"tokens_generated": 35, "model": "ollama:llama3.2"},
-                ),
-            }
+            "query": query,
+            "intent": "hybrid",
+            "answer": "RAG (Retrieval-Augmented Generation) combines retrieval mechanisms with LLM generation to provide more accurate and contextual answers.",
+            "citation_map": {"source1": 0},
+            "phase_events": phase_events.copy(),
         }
 
     # Mock the compiled graph
@@ -194,35 +206,41 @@ async def test_streaming_with_error_phase():
     events_received = []
     error_events = []
 
-    async def mock_astream_with_error(initial_state, config=None):
+    async def mock_astream_with_error(initial_state, config=None, stream_mode=None):
         """Mock astream that emits a failed phase event."""
+        phase_events = []
+
         # Successful intent classification
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.INTENT_CLASSIFICATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=50.0,
+            )
+        )
         yield {
-            "router": {
-                "query": query,
-                "intent": "vector",
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.INTENT_CLASSIFICATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=50.0,
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "phase_events": phase_events.copy(),
         }
 
         # Failed vector search
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.VECTOR_SEARCH,
+                status=PhaseStatus.FAILED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=100.0,
+                error="Connection timeout to Qdrant",
+            )
+        )
         yield {
-            "vector_agent": {
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.VECTOR_SEARCH,
-                    status=PhaseStatus.FAILED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=100.0,
-                    error="Connection timeout to Qdrant",
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "phase_events": phase_events.copy(),
         }
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_with_error):
@@ -250,75 +268,89 @@ async def test_streaming_with_skipped_phases():
 
     events_received = []
 
-    async def mock_astream_with_skips(initial_state, config=None):
+    async def mock_astream_with_skips(initial_state, config=None, stream_mode=None):
         """Mock astream with skipped phases."""
+        phase_events = []
+
         # Intent: vector-only
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.INTENT_CLASSIFICATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=50.0,
+            )
+        )
         yield {
-            "router": {
-                "query": query,
-                "intent": "vector",
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.INTENT_CLASSIFICATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=50.0,
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "phase_events": phase_events.copy(),
         }
 
         # Vector search
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.VECTOR_SEARCH,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=100.0,
+            )
+        )
         yield {
-            "vector_agent": {
-                "query": query,
-                "retrieved_contexts": [{"text": "result", "score": 0.9}],
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.VECTOR_SEARCH,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    duration_ms=100.0,
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "retrieved_contexts": [{"text": "result", "score": 0.9}],
+            "phase_events": phase_events.copy(),
         }
 
         # Graph query: skipped (vector-only intent)
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.GRAPH_QUERY,
+                status=PhaseStatus.SKIPPED,
+                start_time=datetime.utcnow(),
+                metadata={"reason": "vector_only_intent"},
+            )
+        )
         yield {
-            "graph_agent": {
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.GRAPH_QUERY,
-                    status=PhaseStatus.SKIPPED,
-                    start_time=datetime.utcnow(),
-                    metadata={"reason": "vector_only_intent"},
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "phase_events": phase_events.copy(),
         }
 
         # Memory retrieval: skipped
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.MEMORY_RETRIEVAL,
+                status=PhaseStatus.SKIPPED,
+                start_time=datetime.utcnow(),
+                metadata={"reason": "vector_only_intent"},
+            )
+        )
         yield {
-            "memory_agent": {
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.MEMORY_RETRIEVAL,
-                    status=PhaseStatus.SKIPPED,
-                    start_time=datetime.utcnow(),
-                    metadata={"reason": "vector_only_intent"},
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "phase_events": phase_events.copy(),
         }
 
         # LLM generation
+        phase_events.append(
+            PhaseEvent(
+                phase_type=PhaseType.LLM_GENERATION,
+                status=PhaseStatus.COMPLETED,
+                start_time=datetime.utcnow(),
+                end_time=datetime.utcnow(),
+                duration_ms=150.0,
+            )
+        )
         yield {
-            "generator": {
-                "query": query,
-                "answer": "Answer based on vector search",
-                "citation_map": {},
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.LLM_GENERATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=150.0,
-                ),
-            }
+            "query": query,
+            "intent": "vector",
+            "answer": "Answer based on vector search",
+            "citation_map": {},
+            "phase_events": phase_events.copy(),
         }
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_with_skips):
@@ -351,7 +383,7 @@ async def test_phase_event_timing_accuracy():
     events_received = []
     timings = {}
 
-    async def mock_astream_with_timing(initial_state, config=None):
+    async def mock_astream_with_timing(initial_state, config=None, stream_mode=None):
         """Mock astream with realistic timings."""
         phases = [
             (PhaseType.INTENT_CLASSIFICATION, 75),
@@ -362,24 +394,25 @@ async def test_phase_event_timing_accuracy():
             (PhaseType.LLM_GENERATION, 300),
         ]
 
-        start_time = datetime.utcnow()
+        phase_events = []
 
         for phase_type, duration_ms in phases:
             start = datetime.utcnow()
             await asyncio.sleep(0.001)  # Small delay to simulate work
             end = datetime.utcnow()
 
-            node_name = phase_type.value.replace("_", "_")
+            phase_events.append(
+                PhaseEvent(
+                    phase_type=phase_type,
+                    status=PhaseStatus.COMPLETED,
+                    start_time=start,
+                    end_time=end,
+                    duration_ms=duration_ms,
+                )
+            )
             yield {
-                node_name: {
-                    "phase_event": PhaseEvent(
-                        phase_type=phase_type,
-                        status=PhaseStatus.COMPLETED,
-                        start_time=start,
-                        end_time=end,
-                        duration_ms=duration_ms,
-                    ),
-                }
+                "query": query,
+                "phase_events": phase_events.copy(),
             }
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_with_timing):
@@ -418,7 +451,7 @@ async def test_streaming_early_termination():
 
     events_received = []
 
-    async def mock_astream_slow(initial_state, config=None):
+    async def mock_astream_slow(initial_state, config=None, stream_mode=None):
         """Mock astream with slow, long-running phases."""
         yield {
             "router": {
@@ -536,7 +569,7 @@ async def test_concurrent_streaming_sessions():
     """Test multiple concurrent streaming sessions don't interfere."""
     coordinator = CoordinatorAgent(use_persistence=False)
 
-    async def mock_astream(initial_state, config=None):
+    async def mock_astream(initial_state, config=None, stream_mode=None):
         """Mock astream yielding a simple event."""
         yield {
             "router": {
@@ -596,7 +629,7 @@ async def test_phase_event_metadata_preservation():
         "llm_generation": {"tokens_generated": 42, "model": "ollama:llama3.2", "temperature": 0.7},
     }
 
-    async def mock_astream_metadata(initial_state, config=None):
+    async def mock_astream_metadata(initial_state, config=None, stream_mode=None):
         """Mock astream that includes detailed metadata."""
         for phase_type_str, metadata in metadata_examples.items():
             phase_type = PhaseType[phase_type_str.upper()]
@@ -642,20 +675,24 @@ async def test_streaming_with_many_phase_events():
 
     event_count = 20  # Many events
 
-    async def mock_astream_many(initial_state, config=None):
+    async def mock_astream_many(initial_state, config=None, stream_mode=None):
         """Mock astream yielding many events."""
+        phase_events = []
+
         for i in range(event_count):
             phase_type = list(PhaseType)[i % len(PhaseType)]
+            phase_events.append(
+                PhaseEvent(
+                    phase_type=phase_type,
+                    status=PhaseStatus.COMPLETED,
+                    start_time=datetime.utcnow(),
+                    end_time=datetime.utcnow(),
+                    duration_ms=10.0 * (i + 1),
+                )
+            )
             yield {
-                f"node_{i}": {
-                    "phase_event": PhaseEvent(
-                        phase_type=phase_type,
-                        status=PhaseStatus.COMPLETED,
-                        start_time=datetime.utcnow(),
-                        end_time=datetime.utcnow(),
-                        duration_ms=10.0 * (i + 1),
-                    ),
-                }
+                "query": "Test",
+                "phase_events": phase_events.copy(),
             }
 
     events_received = []

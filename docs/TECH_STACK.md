@@ -3,7 +3,7 @@
 
 Aktueller Technologie-Stack des AEGIS RAG Systems.
 
-**Last Updated:** 2025-12-09
+**Last Updated:** 2025-12-18 (Sprint 51: Maximum Hybrid Search)
 
 ---
 
@@ -200,6 +200,87 @@ Poetry (pyproject.toml)
 4. BGE-M3 Embedding
 5. Graph Extraction (Pure LLM)
 6. Validation
+
+---
+
+## 4-Signal Hybrid Search Architecture (Sprint 51)
+
+### Retrieval Signals
+
+| Signal | Component | Purpose | Speed |
+|--------|-----------|---------|-------|
+| **Vector** | Qdrant + BGE-M3 | Semantic similarity search | <100ms |
+| **Keyword** | BM25 (rank-bm25) | Exact phrase matching | <30ms |
+| **Local Graph** | LightRAG local mode | Entity relationships in chunks | <150ms |
+| **Global Graph** | LightRAG global + Communities | Topic-level relationships | <150ms |
+
+### Fusion Pipeline
+
+```
+4 Parallel Searches → Intent-Weighted RRF → Cross-Modal Fusion → Final Ranking
+```
+
+**Intent-Weighted RRF:**
+- Factual queries: 0.3 vector, 0.3 BM25, 0.4 local, 0.0 global
+- Keyword queries: 0.1 vector, 0.6 BM25, 0.3 local, 0.0 global
+- Exploratory: 0.2 vector, 0.1 BM25, 0.2 local, 0.5 global
+- Summary: 0.1 vector, 0.0 BM25, 0.1 local, 0.8 global
+
+**Cross-Modal Fusion:**
+- Extract entity names from LightRAG results (ranked by relevance)
+- Query Neo4j for MENTIONED_IN relationships (entities → chunks)
+- Boost chunk scores: `final_score = rrf_score + alpha * sum(entity_boosts)`
+- Re-rank final results
+
+### CommunityDetector Bug Fixes (Sprint 51)
+
+Fixed critical issues blocking LightRAG global queries:
+1. Entity property: `e.id` → `entity_id` (Neo4j property names)
+2. Relationship type: `RELATED_TO` → `RELATES_TO` (typo fix)
+
+---
+
+## Phase Event System (Sprint 51)
+
+Real-time thinking pipeline transparency via Server-Sent Events (SSE).
+
+### Phase Types
+
+| Phase | Purpose | Metadata |
+|-------|---------|----------|
+| INTENT_CLASSIFY | Query understanding | intent, confidence |
+| RETRIEVE_VECTOR | Vector search | results_count, latency_ms |
+| RETRIEVE_BM25 | Keyword search | results_count, latency_ms |
+| RETRIEVE_GRAPH_LOCAL | Entity relationships | entities_found, latency_ms |
+| RETRIEVE_GRAPH_GLOBAL | Community retrieval | topics_found, latency_ms |
+| FUSION | RRF + cross-modal | fusion_method, output_count |
+| RERANK | Cross-encoder re-ranking | rerank_model, output_count |
+| GENERATION | LLM answer generation | model, tokens |
+| STREAMING | Token-by-token output | ttft_ms, tokens_per_sec |
+
+### Event Emission Strategy
+
+- **Start Event:** Emitted when phase begins
+- **End Event:** Emitted when phase completes (with latency + metadata)
+- **Frontend Display:** "Thinking... Step 1/8" format
+- **Persistence:** Phase events stored in conversation history
+- **Metadata:** Retrieved count, latency, model name, error details
+
+### Token Streaming (Sprint 50-51)
+
+```
+Phase: GENERATION → (Start)
+  "Generating answer with llama3.2:8b..."
+                    ↓
+Phase: STREAMING → (Tokens 1-10)
+  TTFT: 45ms
+  Tokens/sec: 15.3
+  Current: "RAG is Retrieval-Augmented Generation..."
+                    ↓
+Phase: STREAMING → (Complete)
+  Total tokens: 125
+  Duration: 8.2s
+```
 
 ---
 
