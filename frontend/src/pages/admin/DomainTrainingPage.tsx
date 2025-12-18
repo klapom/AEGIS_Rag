@@ -52,7 +52,7 @@ export function DomainTrainingPage() {
       </div>
 
       {/* Domain List */}
-      <DomainList domains={domains} isLoading={isLoading} />
+      <DomainList domains={domains} isLoading={isLoading} onRefresh={refetch} />
 
       {/* New Domain Wizard Dialog */}
       {showNewDomain && <NewDomainWizard onClose={handleCloseWizard} />}

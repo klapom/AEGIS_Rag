@@ -12,7 +12,7 @@ Key Endpoints:
 - GET /admin/domains/{name} - Get domain details
 - POST /admin/domains/{name}/train - Start DSPy training
 - GET /admin/domains/{name}/training-status - Monitor training progress
-- DELETE /admin/domains/{name} - Delete domain
+- DELETE /admin/domains/{name} - Delete domain and all associated data (51.4)
 - GET /admin/domains/available-models - List Ollama models
 - POST /admin/domains/classify - Classify document to domain
 - POST /admin/domains/ingest-batch - Batch ingestion grouped by LLM model (45.10)
@@ -923,19 +923,50 @@ async def get_training_stream_stats(
     return stats
 
 
-@router.delete("/{domain_name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_domain(domain_name: str) -> None:
-    """Delete a domain configuration.
+class DomainDeletionResponse(BaseModel):
+    """Response model for domain deletion.
 
-    Permanently deletes a domain and all associated training logs.
+    Provides statistics on what was deleted across all storage backends.
+    """
+
+    message: str = Field(..., description="Deletion status message")
+    domain_name: str = Field(..., description="Name of deleted domain")
+    deleted_counts: dict[str, int] = Field(
+        ...,
+        description="Counts of deleted items per backend (qdrant_points, neo4j_entities, neo4j_chunks, bm25_documents)",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-critical warnings during deletion",
+    )
+
+
+@router.delete("/{domain_name}", response_model=DomainDeletionResponse)
+async def delete_domain(domain_name: str) -> DomainDeletionResponse:
+    """Delete a domain and all its associated data.
+
+    This will:
+    1. Delete domain record from Neo4j (Domain node + training logs)
+    2. Delete all documents in domain's namespace from Qdrant
+    3. Delete all entities/relationships/chunks with matching namespace from Neo4j
+    4. Clean up BM25 index entries for the domain
+
     The default 'general' domain cannot be deleted.
+
+    **WARNING**: This is a destructive operation that cannot be undone.
+    All documents, entities, and relationships associated with this domain
+    will be permanently deleted.
 
     Args:
         domain_name: Domain to delete
 
+    Returns:
+        Deletion statistics showing what was removed from each backend
+
     Raises:
         HTTPException 400: If trying to delete default 'general' domain
         HTTPException 404: If domain not found
+        HTTPException 409: If domain is currently training
         HTTPException 500: If database operation fails
     """
     logger.info("delete_domain_request", name=domain_name)
@@ -949,18 +980,138 @@ async def delete_domain(domain_name: str) -> None:
 
     try:
         from src.components.domain_training import get_domain_repository
+        from src.core.namespace import get_namespace_manager
 
         repo = get_domain_repository()
-        deleted = await repo.delete_domain(domain_name)
+        namespace_manager = get_namespace_manager()
 
-        if not deleted:
+        # Check if domain exists and get its status
+        domain = await repo.get_domain(domain_name)
+
+        if not domain:
             logger.warning("domain_not_found_for_deletion", name=domain_name)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Domain '{domain_name}' not found",
             )
 
-        logger.info("domain_deleted", name=domain_name)
+        # Prevent deletion if domain is currently training
+        if domain.get("status") == "training":
+            logger.warning(
+                "delete_domain_training_in_progress",
+                name=domain_name,
+                status=domain.get("status"),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Cannot delete domain '{domain_name}' while training is in progress",
+            )
+
+        warnings: list[str] = []
+        deleted_counts: dict[str, int] = {
+            "qdrant_points": 0,
+            "neo4j_entities": 0,
+            "neo4j_chunks": 0,
+            "neo4j_relationships": 0,
+            "bm25_documents": 0,
+        }
+
+        # Step 1: Delete namespace data (Qdrant + Neo4j entities/chunks)
+        # Use domain_name as namespace_id (domains map 1:1 with namespaces)
+        namespace_id = domain_name
+        try:
+            namespace_stats = await namespace_manager.delete_namespace(namespace_id)
+            deleted_counts["qdrant_points"] = namespace_stats.get("qdrant_points_deleted", 0)
+            deleted_counts["neo4j_entities"] = namespace_stats.get("neo4j_nodes_deleted", 0)
+            deleted_counts["neo4j_relationships"] = namespace_stats.get(
+                "neo4j_relationships_deleted", 0
+            )
+
+            logger.info(
+                "namespace_data_deleted",
+                domain=domain_name,
+                namespace_id=namespace_id,
+                stats=namespace_stats,
+            )
+
+        except Exception as e:
+            warning_msg = f"Failed to delete namespace data: {str(e)}"
+            logger.warning(
+                "namespace_deletion_partial_failure",
+                domain=domain_name,
+                error=str(e),
+            )
+            warnings.append(warning_msg)
+
+        # Step 2: Clean up BM25 index
+        # BM25 corpus is filtered at query time, but we should remove entries for memory efficiency
+        try:
+            from src.components.vector_search.bm25_retrieval import get_bm25_retrieval
+
+            bm25 = get_bm25_retrieval()
+
+            # Remove documents matching domain from BM25 corpus
+            # BM25Retrieval stores corpus with metadata including namespace_id
+            if hasattr(bm25, "corpus") and bm25.corpus:
+                original_count = len(bm25.corpus)
+
+                # Filter out documents from this domain's namespace
+                bm25.corpus = [
+                    doc
+                    for doc in bm25.corpus
+                    if doc.get("metadata", {}).get("namespace_id") != namespace_id
+                ]
+
+                deleted_count = original_count - len(bm25.corpus)
+                deleted_counts["bm25_documents"] = deleted_count
+
+                # Rebuild BM25 index if corpus changed
+                if deleted_count > 0:
+                    bm25._build_index()  # noqa: SLF001
+
+                logger.info(
+                    "bm25_corpus_cleaned",
+                    domain=domain_name,
+                    deleted_count=deleted_count,
+                    remaining_count=len(bm25.corpus),
+                )
+
+        except Exception as e:
+            warning_msg = f"Failed to clean BM25 index: {str(e)}"
+            logger.warning(
+                "bm25_cleanup_failed",
+                domain=domain_name,
+                error=str(e),
+            )
+            warnings.append(warning_msg)
+
+        # Step 3: Delete domain configuration and training logs
+        deleted = await repo.delete_domain(domain_name)
+
+        if not deleted:
+            # This should not happen since we already checked domain exists
+            logger.error(
+                "domain_deletion_inconsistent_state",
+                name=domain_name,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Domain deletion encountered inconsistent state",
+            )
+
+        logger.info(
+            "domain_fully_deleted",
+            name=domain_name,
+            deleted_counts=deleted_counts,
+            warnings=warnings,
+        )
+
+        return DomainDeletionResponse(
+            message=f"Domain '{domain_name}' and all associated data deleted successfully",
+            domain_name=domain_name,
+            deleted_counts=deleted_counts,
+            warnings=warnings,
+        )
 
     except HTTPException:
         raise

@@ -556,27 +556,66 @@ def test_get_training_status_failed(client, mock_domain_repository):
 
 
 # ============================================================================
-# Test: Delete Domain
+# Test: Delete Domain (Sprint 51 Feature 51.4)
 # ============================================================================
 
 
-def test_delete_domain_success(client, mock_domain_repository):
-    """Test successful domain deletion."""
+def test_delete_domain_success(client, mock_domain_repository, sample_domain):
+    """Test successful domain deletion with cascading cleanup.
+
+    Sprint 51 Feature 51.4: Enhanced domain deletion that cleans up:
+    - Domain configuration in Neo4j
+    - Namespace data in Qdrant and Neo4j
+    - BM25 index entries
+    """
+    # Domain is in ready state (not training)
+    sample_domain["status"] = "ready"
+    mock_domain_repository.get_domain.return_value = sample_domain
     mock_domain_repository.delete_domain.return_value = True
 
-    response = client.delete("/api/v1/admin/domains/tech_docs")
+    # Mock namespace deletion
+    with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
+        mock_ns_instance = MagicMock()
+        mock_ns_mgr.return_value = mock_ns_instance
+        mock_ns_instance.delete_namespace = AsyncMock(return_value={
+            "qdrant_points_deleted": 150,
+            "neo4j_nodes_deleted": 75,
+            "neo4j_relationships_deleted": 120,
+        })
 
-    assert response.status_code == 204
-    mock_domain_repository.delete_domain.assert_called_once_with("tech_docs")
+        # Mock BM25 cleanup
+        with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
+            mock_bm25_instance = MagicMock()
+            mock_bm25.return_value = mock_bm25_instance
+            mock_bm25_instance.corpus = [
+                {"text": "doc1", "metadata": {"namespace_id": "tech_docs"}},
+                {"text": "doc2", "metadata": {"namespace_id": "other"}},
+            ]
+            mock_bm25_instance._build_index = MagicMock()
+
+            response = client.delete("/api/v1/admin/domains/tech_docs")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["domain_name"] == "tech_docs"
+            assert "deleted successfully" in data["message"]
+            assert "deleted_counts" in data
+            assert data["deleted_counts"]["qdrant_points"] == 150
+            assert data["deleted_counts"]["neo4j_entities"] == 75
+            assert data["deleted_counts"]["neo4j_relationships"] == 120
+
+            mock_domain_repository.get_domain.assert_called_once_with("tech_docs")
+            mock_domain_repository.delete_domain.assert_called_once_with("tech_docs")
 
 
 def test_delete_domain_not_found(client, mock_domain_repository):
     """Test deleting non-existent domain returns 404."""
-    mock_domain_repository.delete_domain.return_value = False
+    mock_domain_repository.get_domain.return_value = None
 
     response = client.delete("/api/v1/admin/domains/nonexistent")
 
     assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
 
 
 def test_delete_general_domain_fails(client, mock_domain_repository):
@@ -587,8 +626,92 @@ def test_delete_general_domain_fails(client, mock_domain_repository):
     assert "cannot delete" in response.json()["detail"].lower() or \
            "default" in response.json()["detail"].lower()
 
-    # Verify delete_domain was not called
+    # Verify get_domain was not called (rejected before checking existence)
+    mock_domain_repository.get_domain.assert_not_called()
+
+
+def test_delete_domain_training_in_progress(client, mock_domain_repository, sample_domain):
+    """Test that deleting a domain fails when training is in progress.
+
+    Sprint 51 Feature 51.4: Prevent deletion if domain is currently training.
+    """
+    sample_domain["status"] = "training"
+    mock_domain_repository.get_domain.return_value = sample_domain
+
+    response = client.delete("/api/v1/admin/domains/tech_docs")
+
+    assert response.status_code == 409
+    assert "training" in response.json()["detail"].lower() or \
+           "in progress" in response.json()["detail"].lower()
+
+    # Verify deletion was not attempted
     mock_domain_repository.delete_domain.assert_not_called()
+
+
+def test_delete_domain_partial_cleanup_warnings(client, mock_domain_repository, sample_domain):
+    """Test domain deletion handles partial failures gracefully.
+
+    Sprint 51 Feature 51.4: Non-critical cleanup failures should generate warnings
+    but not prevent domain deletion.
+    """
+    sample_domain["status"] = "ready"
+    mock_domain_repository.get_domain.return_value = sample_domain
+    mock_domain_repository.delete_domain.return_value = True
+
+    with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
+        mock_ns_instance = MagicMock()
+        mock_ns_mgr.return_value = mock_ns_instance
+
+        # Simulate namespace deletion failure
+        mock_ns_instance.delete_namespace = AsyncMock(
+            side_effect=Exception("Qdrant connection timeout")
+        )
+
+        # Mock BM25 cleanup
+        with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
+            mock_bm25_instance = MagicMock()
+            mock_bm25.return_value = mock_bm25_instance
+            mock_bm25_instance.corpus = []
+
+            response = client.delete("/api/v1/admin/domains/tech_docs")
+
+            # Domain should still be deleted despite namespace cleanup failure
+            assert response.status_code == 200
+            data = response.json()
+            assert data["domain_name"] == "tech_docs"
+            assert len(data["warnings"]) > 0
+            assert any("namespace" in w.lower() for w in data["warnings"])
+
+            # Domain itself should still be deleted
+            mock_domain_repository.delete_domain.assert_called_once()
+
+
+def test_delete_domain_empty_namespace(client, mock_domain_repository, sample_domain):
+    """Test deleting domain with no associated documents."""
+    sample_domain["status"] = "ready"
+    mock_domain_repository.get_domain.return_value = sample_domain
+    mock_domain_repository.delete_domain.return_value = True
+
+    with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
+        mock_ns_instance = MagicMock()
+        mock_ns_mgr.return_value = mock_ns_instance
+        mock_ns_instance.delete_namespace = AsyncMock(return_value={
+            "qdrant_points_deleted": 0,
+            "neo4j_nodes_deleted": 0,
+            "neo4j_relationships_deleted": 0,
+        })
+
+        with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
+            mock_bm25_instance = MagicMock()
+            mock_bm25.return_value = mock_bm25_instance
+            mock_bm25_instance.corpus = []
+
+            response = client.delete("/api/v1/admin/domains/tech_docs")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["deleted_counts"]["qdrant_points"] == 0
+            assert data["deleted_counts"]["neo4j_entities"] == 0
 
 
 # ============================================================================
@@ -837,14 +960,37 @@ def test_create_domain_returns_201_created(client, mock_domain_repository, sampl
     assert response.status_code == 201
 
 
-def test_delete_domain_returns_204_no_content(client, mock_domain_repository):
-    """Test DELETE domain returns 204 No Content."""
+def test_delete_domain_returns_deletion_stats(client, mock_domain_repository, sample_domain):
+    """Test DELETE domain returns 200 with deletion statistics.
+
+    Sprint 51 Feature 51.4: Changed from 204 No Content to 200 with
+    detailed deletion statistics for transparency.
+    """
+    sample_domain["status"] = "ready"
+    mock_domain_repository.get_domain.return_value = sample_domain
     mock_domain_repository.delete_domain.return_value = True
 
-    response = client.delete("/api/v1/admin/domains/tech_docs")
+    with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
+        mock_ns_instance = MagicMock()
+        mock_ns_mgr.return_value = mock_ns_instance
+        mock_ns_instance.delete_namespace = AsyncMock(return_value={
+            "qdrant_points_deleted": 42,
+            "neo4j_nodes_deleted": 28,
+            "neo4j_relationships_deleted": 50,
+        })
 
-    assert response.status_code == 204
-    assert response.content == b""  # 204 should have no content
+        with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
+            mock_bm25_instance = MagicMock()
+            mock_bm25.return_value = mock_bm25_instance
+            mock_bm25_instance.corpus = []
+
+            response = client.delete("/api/v1/admin/domains/tech_docs")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "deleted_counts" in data
+            assert "message" in data
+            assert "domain_name" in data
 
 
 def test_training_status_returns_200_ok(client, mock_domain_repository):

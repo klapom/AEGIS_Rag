@@ -128,9 +128,13 @@ async def reindex_progress_stream(
 
     start_time = time.time()
 
+    # Sprint 51: Helper for consistent timestamps
+    def _ts() -> str:
+        return time.strftime("%H:%M:%S", time.localtime())
+
     try:
         # Phase 1: Initialization
-        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': 'Initializing re-indexing pipeline...'})}\n\n"
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': f'[{_ts()}] Initializing re-indexing pipeline...'})}\n\n"
 
         # Initialize services
         embedding_service = get_embedding_service()
@@ -248,7 +252,7 @@ async def reindex_progress_stream(
                     logger.error("reindex_document_failed", document_path=doc_path, error=error_msg)
 
                     # Continue with remaining documents
-                    message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                    message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30 + (completed_docs / total_docs) * 30, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
 
             points_indexed = total_chunks
@@ -610,25 +614,94 @@ async def add_documents_stream(
     start_time = time.time()
     total_docs = len(file_paths)
 
+    # Sprint 51: Helper for consistent timestamps
+    def _ts() -> str:
+        return time.strftime("%H:%M:%S", time.localtime())
+
     try:
         # Phase 1: Initialization
-        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': f'Adding {total_docs} document(s) to index...'})}\n\n"
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 0, 'message': f'[{_ts()}] Adding {total_docs} document(s) to index...'})}\n\n"
 
         if total_docs == 0:
-            yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': 'No documents to add', 'documents_processed': 0, 'documents_total': 0})}\n\n"
+            yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': f'[{_ts()}] No documents to add', 'documents_processed': 0, 'documents_total': 0})}\n\n"
             return
 
-        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 5, 'message': f'Preparing to index {total_docs} document(s)'})}\n\n"
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'initialization', 'progress_percent': 5, 'message': f'[{_ts()}] Preparing to index {total_docs} document(s)'})}\n\n"
 
         # Phase 2: Indexing (use LangGraph pipeline with Docling) - NO DELETION
         # Sprint 33: Use streaming pipeline for granular progress updates
         if not dry_run:
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10, 'message': f'Indexing {total_docs} document(s)...'})}\n\n"
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 10, 'message': f'[{_ts()}] Indexing {total_docs} document(s)...'})}\n\n"
 
             # Import LangGraph streaming pipeline (lazy import)
             import hashlib
 
             from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline_streaming
+            from src.components.ingestion.progress_events import (
+                cleanup_progress_queue,
+                drain_progress_events,
+                get_or_create_progress_queue,
+            )
+
+            # Sprint 51: Helper for real-time progress polling during pipeline execution
+            async def stream_with_progress_polling(
+                pipeline_stream,
+                document_id: str,
+                poll_interval: float = 1.0,
+            ):
+                """Merge pipeline events with periodic progress polling (every poll_interval seconds).
+
+                This allows progress events to be sent to the frontend in real-time,
+                rather than waiting for LangGraph node completion.
+                """
+                output_queue: asyncio.Queue = asyncio.Queue()
+                stop_polling = asyncio.Event()
+
+                async def progress_poller():
+                    """Background task: poll progress queue every poll_interval seconds."""
+                    while not stop_polling.is_set():
+                        try:
+                            events = await drain_progress_events(document_id)
+                            for event in events:
+                                await output_queue.put({"type": "progress", "event": event})
+                        except Exception as e:
+                            logger.warning("progress_polling_error", error=str(e))
+                        # Wait for poll_interval or until stopped
+                        try:
+                            await asyncio.wait_for(stop_polling.wait(), timeout=poll_interval)
+                        except asyncio.TimeoutError:
+                            pass  # Continue polling
+
+                async def pipeline_consumer():
+                    """Consume pipeline stream and forward to output queue."""
+                    try:
+                        async for update in pipeline_stream:
+                            await output_queue.put({"type": "pipeline", "update": update})
+                    finally:
+                        await output_queue.put({"type": "done"})
+
+                # Start background tasks
+                poller_task = asyncio.create_task(progress_poller())
+                consumer_task = asyncio.create_task(pipeline_consumer())
+
+                try:
+                    while True:
+                        item = await output_queue.get()
+                        if item["type"] == "done":
+                            break
+                        yield item
+                finally:
+                    # Cleanup: stop poller and cancel tasks
+                    stop_polling.set()
+                    poller_task.cancel()
+                    try:
+                        await poller_task
+                    except asyncio.CancelledError:
+                        pass
+                    # Drain any remaining progress events
+                    final_events = await drain_progress_events(document_id)
+                    for event in final_events:
+                        yield {"type": "progress", "event": event}
 
             batch_id = f"add_batch_{int(time.time())}"
             total_chunks = 0
@@ -640,6 +713,7 @@ async def add_documents_stream(
             # Node name to human-readable phase mapping
             # NOTE: Node names from LangGraph have NO "_node" suffix!
             # See langgraph_pipeline.py: graph.add_node("memory_check", ...)
+            # Sprint 51: Added *_progress variants for granular extraction updates
             node_phases = {
                 "memory_check": ("memory_check", "Checking document memory..."),
                 "parse": ("parse", "Parsing document..."),
@@ -647,7 +721,13 @@ async def add_documents_stream(
                 "chunking": ("chunking", "Creating text chunks..."),
                 "embedding": ("embedding", "Generating embeddings..."),
                 "graph": ("graph", "Extracting entities and relations..."),
+                # Sprint 51: Progress events for granular extraction feedback
+                "graph_progress": ("graph", None),  # Will use progress_event message
             }
+
+            def _format_timestamp() -> str:
+                """Get current timestamp in HH:MM:SS format."""
+                return time.strftime("%H:%M:%S", time.localtime())
 
             # Node name to progress percentage (within document: 10% to 90% of doc's share)
             node_progress = {
@@ -677,22 +757,84 @@ async def add_documents_stream(
 
                     last_state = None
 
-                    # Stream progress for each pipeline node
-                    async for update in run_ingestion_pipeline_streaming(
+                    # Sprint 51: Create progress queue for real-time polling
+                    await get_or_create_progress_queue(document_id)
+
+                    # Create pipeline stream
+                    pipeline_stream = run_ingestion_pipeline_streaming(
                         document_path=doc_path,
                         document_id=document_id,
                         batch_id=batch_id,
                         batch_index=doc_index,
                         total_documents=total_docs,
+                    )
+
+                    # Sprint 51: Stream with real-time progress polling (every 1 second)
+                    async for item in stream_with_progress_polling(
+                        pipeline_stream, document_id, poll_interval=1.0
                     ):
+                        # Handle real-time progress events from background poller
+                        if item["type"] == "progress":
+                            progress_event = item["event"].to_dict()
+                            event_timestamp = progress_event.get("timestamp", _format_timestamp())
+                            event_message = progress_event.get("message", "Processing...")
+                            event_phase = progress_event.get("phase", "graph")
+
+                            # Calculate progress based on extraction phase
+                            event_current = progress_event.get("current", 0)
+                            event_total = progress_event.get("total", 1)
+                            if event_phase == "entity_extraction":
+                                phase_progress = 0.70 + (event_current / max(event_total, 1)) * 0.10
+                            elif event_phase == "relation_extraction":
+                                phase_progress = 0.80 + (event_current / max(event_total, 1)) * 0.10
+                            elif event_phase == "community_detection":
+                                phase_progress = 0.90 + (event_current / max(event_total, 1)) * 0.05
+                            else:
+                                phase_progress = 0.75
+
+                            overall_progress = doc_base_progress + (phase_progress * doc_progress_range)
+                            message = f"[{event_timestamp}] {Path(doc_path).name}: {event_message}"
+
+                            # Sprint 51: Include entity/relation counts for Live Metrics
+                            event_details = progress_event.get("details", {})
+                            detailed_progress = {
+                                "current_file": Path(doc_path).name,
+                                "entities": {
+                                    "total_entities": event_details.get("total_entities", 0),
+                                    "total_relations": event_details.get("total_relations", 0),
+                                },
+                            }
+
+                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'extraction_phase': event_phase, 'detailed_progress': detailed_progress})}\n\n"
+
+                            logger.debug(
+                                "realtime_progress_event",
+                                document_path=doc_path,
+                                phase=event_phase,
+                                current=event_current,
+                                total=event_total,
+                            )
+                            continue
+
+                        # Handle pipeline events (node completions)
+                        update = item["update"]
                         node_name = update.get("node", "unknown")
                         state = update.get("state", {})
                         last_state = state
+                        progress_event = update.get("progress_event")
 
                         # Get phase info
                         phase_info = node_phases.get(
                             node_name, ("indexing", f"Processing {node_name}...")
                         )
+
+                        # Skip progress events from pipeline (already handled by real-time poller)
+                        if progress_event:
+                            # Progress events are now handled by the background poller
+                            # Skip to avoid duplicates
+                            continue
+
+                        # Regular node completion - add timestamp
                         node_progress_val = node_progress.get(node_name, 0.5)
 
                         # Calculate overall progress
@@ -709,7 +851,9 @@ async def add_documents_stream(
                             pipeline_status="in_progress",
                         )
 
-                        message = f"{Path(doc_path).name}: {phase_info[1]}"
+                        # Sprint 51: Add timestamp to all messages
+                        timestamp = _format_timestamp()
+                        message = f"[{timestamp}] {Path(doc_path).name}: {phase_info[1]}"
                         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                         logger.debug(
@@ -738,7 +882,7 @@ async def add_documents_stream(
                             "details": str(error_list),
                         }
 
-                        message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                        message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
                         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
                     else:
                         # Success - count chunks
@@ -757,7 +901,7 @@ async def add_documents_stream(
                                 pipeline_status="completed",
                             )
 
-                            message = f"Added {Path(doc_path).name}: {chunk_count} chunks"
+                            message = f"[{_ts()}] Added {Path(doc_path).name}: {chunk_count} chunks"
                             yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                             logger.info(
@@ -767,6 +911,9 @@ async def add_documents_stream(
                                 completed=completed_docs,
                                 total=total_docs,
                             )
+
+                    # Sprint 51: Cleanup progress queue after document
+                    await cleanup_progress_queue(document_id)
 
                 except Exception as e:
                     failed_docs += 1
@@ -781,24 +928,27 @@ async def add_documents_stream(
                         "details": "",
                     }
 
-                    message = f"FAILED: {Path(doc_path).name} - {error_msg}"
+                    message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
 
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'Added {total_chunks} chunks from {completed_docs} document(s)'})}\n\n"
+                    # Sprint 51: Cleanup progress queue even on error
+                    await cleanup_progress_queue(document_id)
+
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'[{_ts()}] Added {total_chunks} chunks from {completed_docs} document(s)'})}\n\n"
         else:
-            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': '[DRY RUN] Skipped indexing'})}\n\n"
+            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 90, 'message': f'[{_ts()}] [DRY RUN] Skipped indexing'})}\n\n"
             completed_docs = total_docs
             failed_docs = 0
             total_chunks = 0
 
         # Phase 3: Validation + BM25 Refresh
-        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 92, 'message': 'Validating index...'})}\n\n"
+        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 92, 'message': f'[{_ts()}] Validating index...'})}\n\n"
 
         # Sprint 33: Refresh BM25 index after adding documents
         # This ensures BM25 keyword search is synchronized with Qdrant vector store
         if not dry_run and completed_docs > 0:
             try:
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': 'Refreshing BM25 keyword index...'})}\n\n"
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 95, 'message': f'[{_ts()}] Refreshing BM25 keyword index...'})}\n\n"
 
                 from src.api.v1.retrieval import get_hybrid_search
 
@@ -812,10 +962,10 @@ async def add_documents_stream(
                     documents_indexed=bm25_stats.get("documents_indexed", 0),
                 )
 
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'BM25 index refreshed ({bm25_corpus_size} documents)'})}\n\n"
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'[{_ts()}] BM25 index refreshed ({bm25_corpus_size} documents)'})}\n\n"
             except Exception as e:
                 logger.warning("bm25_refresh_failed", error=str(e))
-                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'BM25 refresh failed: {str(e)} (non-critical)'})}\n\n"
+                yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'validation', 'progress_percent': 98, 'message': f'[{_ts()}] BM25 refresh failed: {str(e)} (non-critical)'})}\n\n"
 
         # Completion
         elapsed_time = time.time() - start_time
@@ -823,15 +973,20 @@ async def add_documents_stream(
         total_processed = success_count + failed_docs
 
         # Sprint 49 Feature 49.4: Determine status based on success/failure counts
+        # Sprint 51: Include entity/relation totals in completion message
+        total_entities_count = len(all_entities)
+        total_relations_count = len(all_relations)
+        entity_info = f", {total_entities_count} entities, {total_relations_count} relations" if total_entities_count > 0 else ""
+
         if failed_docs == 0:
             # All succeeded
-            completion_message = f"Successfully added {success_count} document(s) ({total_chunks} chunks) in {elapsed_time:.1f}s"
+            completion_message = f"[{_ts()}] Successfully added {success_count} document(s) ({total_chunks} chunks{entity_info}) in {elapsed_time:.1f}s"
         elif success_count == 0:
             # All failed
-            completion_message = f"Failed to add {failed_docs} document(s) in {elapsed_time:.1f}s"
+            completion_message = f"[{_ts()}] Failed to add {failed_docs} document(s) in {elapsed_time:.1f}s"
         else:
             # Partial success
-            completion_message = f"Partially completed: {success_count} document(s) indexed ({total_chunks} chunks), {failed_docs} failed in {elapsed_time:.1f}s"
+            completion_message = f"[{_ts()}] Partially completed: {success_count} document(s) indexed ({total_chunks} chunks{entity_info}), {failed_docs} failed in {elapsed_time:.1f}s"
 
         yield f"data: {json.dumps({'status': 'completed', 'phase': 'completed', 'progress_percent': 100, 'message': completion_message, 'documents_processed': success_count, 'documents_total': total_docs, 'chunks_created': total_chunks, 'failed_documents': failed_docs})}\n\n"
 
@@ -4124,3 +4279,110 @@ async def reset_relation_synonyms() -> RelationOverridesResetResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset relation synonyms: {str(e)}",
         ) from e
+
+
+# ============================================================================
+# Sprint 51: LLM Model Management
+# Feature: List available Ollama models
+# ============================================================================
+
+
+class OllamaModel(BaseModel):
+    """Information about an Ollama model."""
+
+    name: str = Field(..., description="Model name (e.g., 'qwen3:8b')")
+    size: int = Field(..., description="Model size in bytes")
+    digest: str = Field(..., description="Model digest/hash")
+    modified_at: str = Field(..., description="Last modified timestamp")
+
+
+class OllamaModelsResponse(BaseModel):
+    """Response containing list of available Ollama models."""
+
+    models: list[OllamaModel] = Field(default_factory=list, description="List of available models")
+    ollama_available: bool = Field(..., description="Whether Ollama is reachable")
+    error: str | None = Field(None, description="Error message if Ollama is not available")
+
+
+@router.get(
+    "/llm/models",
+    response_model=OllamaModelsResponse,
+    summary="List available Ollama models",
+    description="Fetch all locally installed Ollama models for LLM configuration",
+)
+async def list_ollama_models() -> OllamaModelsResponse:
+    """List all available Ollama models.
+
+    **Sprint 51: LLM Configuration Enhancement**
+
+    Queries the local Ollama instance to get a list of all installed models.
+    This endpoint is used by the LLM Configuration page to dynamically
+    populate model selection dropdowns.
+
+    **Example Response:**
+    ```json
+    {
+      "models": [
+        {
+          "name": "qwen3:8b",
+          "size": 4912345678,
+          "digest": "sha256:abc123...",
+          "modified_at": "2025-01-15T10:30:00Z"
+        },
+        {
+          "name": "llama3.2:8b",
+          "size": 4500000000,
+          "digest": "sha256:def456...",
+          "modified_at": "2025-01-14T08:00:00Z"
+        }
+      ],
+      "ollama_available": true,
+      "error": null
+    }
+    ```
+
+    Returns:
+        OllamaModelsResponse with list of models or error info
+    """
+    import httpx
+
+    ollama_url = settings.ollama_base_url or "http://localhost:11434"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{ollama_url}/api/tags")
+            response.raise_for_status()
+            data = response.json()
+
+            models = [
+                OllamaModel(
+                    name=m.get("name", ""),
+                    size=m.get("size", 0),
+                    digest=m.get("digest", ""),
+                    modified_at=m.get("modified_at", ""),
+                )
+                for m in data.get("models", [])
+            ]
+
+            logger.info("ollama_models_listed", count=len(models))
+
+            return OllamaModelsResponse(
+                models=models,
+                ollama_available=True,
+                error=None,
+            )
+
+    except httpx.ConnectError as e:
+        logger.warning("ollama_not_reachable", error=str(e))
+        return OllamaModelsResponse(
+            models=[],
+            ollama_available=False,
+            error=f"Ollama not reachable at {ollama_url}",
+        )
+    except Exception as e:
+        logger.error("ollama_models_fetch_failed", error=str(e), exc_info=True)
+        return OllamaModelsResponse(
+            models=[],
+            ollama_available=False,
+            error=str(e),
+        )

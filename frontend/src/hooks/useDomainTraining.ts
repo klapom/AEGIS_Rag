@@ -76,24 +76,34 @@ export interface ClassifyDocumentResponse {
 // ============================================================================
 
 /**
- * Fetch all domains
+ * Fetch all domains with auto-refresh
+ * Sprint 51 Feature 51.4: Auto-refresh domain status
  *
  * Note: The API endpoint requires a trailing slash (/admin/domains/)
  * and returns a direct array of Domain objects, not wrapped in { domains: [...] }
+ *
+ * @param options.refetchInterval - Polling interval in ms (default: 5000)
+ * @param options.enabled - Whether to enable auto-refresh (default: true)
  */
-export function useDomains() {
+export function useDomains(options?: { refetchInterval?: number; enabled?: boolean }) {
+  const { refetchInterval = 5000, enabled = true } = options || {};
   const [data, setData] = useState<Domain[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const isFirstLoad = useRef(true);
 
   const fetchDomains = useCallback(async () => {
-    setIsLoading(true);
+    // Only show loading on first fetch, not on polls (prevents flickering)
+    if (isFirstLoad.current) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       // API returns Domain[] directly (not wrapped in { domains: [...] })
       // Trailing slash is required by FastAPI router configuration
       const response = await apiClient.get<Domain[]>('/admin/domains/');
       setData(response);
+      isFirstLoad.current = false;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch domains'));
     } finally {
@@ -102,8 +112,16 @@ export function useDomains() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
+
+    isFirstLoad.current = true;
     fetchDomains();
-  }, [fetchDomains]);
+
+    // Poll at configured interval for auto-refresh (default: 5 seconds)
+    const intervalId = setInterval(fetchDomains, refetchInterval);
+
+    return () => clearInterval(intervalId);
+  }, [fetchDomains, refetchInterval, enabled]);
 
   return { data, isLoading, error, refetch: fetchDomains };
 }
@@ -126,6 +144,46 @@ export function useCreateDomain() {
       return response;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create domain');
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { mutateAsync, isLoading, error };
+}
+
+/**
+ * Delete domain response
+ * Sprint 51 Feature 51.4: Domain deletion
+ */
+export interface DeleteDomainResponse {
+  message: string;
+  domain: string;
+}
+
+/**
+ * Delete a domain
+ * Sprint 51 Feature 51.4: Domain deletion
+ *
+ * Calls DELETE /admin/domains/{domain_id}
+ * This will remove all indexed documents for the domain
+ */
+export function useDeleteDomain() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(async (domainId: string): Promise<DeleteDomainResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.delete<DeleteDomainResponse>(
+        `/admin/domains/${domainId}`
+      );
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to delete domain');
       setError(error);
       throw error;
     } finally {
