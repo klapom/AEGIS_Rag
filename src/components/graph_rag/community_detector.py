@@ -280,7 +280,7 @@ class CommunityDetector:
                     $projectionName,
                     'Entity',
                     {
-                        RELATED_TO: {
+                        RELATES_TO: {
                             orientation: 'UNDIRECTED'
                         }
                     }
@@ -298,7 +298,7 @@ class CommunityDetector:
                     gamma: $resolution
                 })
                 YIELD nodeId, communityId
-                RETURN gds.util.asNode(nodeId).id AS entity_id, communityId
+                RETURN gds.util.asNode(nodeId).entity_id AS entity_id, communityId
                 """
             else:  # louvain
                 cypher = """
@@ -307,7 +307,7 @@ class CommunityDetector:
                     includeIntermediateCommunities: false
                 })
                 YIELD nodeId, communityId
-                RETURN gds.util.asNode(nodeId).id AS entity_id, communityId
+                RETURN gds.util.asNode(nodeId).entity_id AS entity_id, communityId
                 """
 
             results = await self.neo4j_client.execute_read(
@@ -373,23 +373,45 @@ class CommunityDetector:
 
         try:
             # Fetch all entities and relationships
-            entities_query = "MATCH (e:base) RETURN e.id AS id"
+            entities_query = "MATCH (e:base) RETURN e.entity_id AS id"
             entities = await self.neo4j_client.execute_read(entities_query)
 
             relationships_query = """
-            MATCH (e1:base)-[r:RELATED_TO]-(e2:base)
-            RETURN DISTINCT e1.id AS source, e2.id AS target
+            MATCH (e1:base)-[r:RELATES_TO]-(e2:base)
+            RETURN DISTINCT e1.entity_id AS source, e2.entity_id AS target
             """
             relationships = await self.neo4j_client.execute_read(relationships_query)
 
             # Build NetworkX graph
             graph = nx.Graph()
 
+            # Sprint 51: Filter out None entity IDs to prevent "None cannot be a node" error
+            valid_entity_ids = set()
             for entity in entities:
-                graph.add_node(entity["id"])
+                entity_id = entity.get("id")
+                if entity_id is not None:
+                    graph.add_node(entity_id)
+                    valid_entity_ids.add(entity_id)
+                else:
+                    logger.warning(
+                        "skipping_none_entity_id",
+                        entity=entity,
+                        reason="entity ID is None",
+                    )
 
+            # Only add edges where both source and target are valid
             for rel in relationships:
-                graph.add_edge(rel["source"], rel["target"])
+                source = rel.get("source")
+                target = rel.get("target")
+                if source in valid_entity_ids and target in valid_entity_ids:
+                    graph.add_edge(source, target)
+                else:
+                    logger.debug(
+                        "skipping_invalid_relationship",
+                        source=source,
+                        target=target,
+                        reason="source or target not in valid entities",
+                    )
 
             logger.info(
                 "networkx_graph_built", nodes=graph.number_of_nodes(), edges=graph.number_of_edges()
@@ -481,7 +503,7 @@ class CommunityDetector:
                 # Update all entities in this community
                 cypher = """
                 UNWIND $entity_ids AS entity_id
-                MATCH (e:base {id: entity_id})
+                MATCH (e:base {entity_id: entity_id})
                 SET e.community_id = $community_id
                 RETURN count(e) AS updated_count
                 """
@@ -519,7 +541,7 @@ class CommunityDetector:
         try:
             cypher = """
             MATCH (e:base {community_id: $community_id})
-            RETURN e.id AS entity_id, e.community_label AS label
+            RETURN e.entity_id AS entity_id, e.community_label AS label
             """
 
             results = await self.neo4j_client.execute_read(
@@ -557,7 +579,7 @@ class CommunityDetector:
             Community ID or None if not assigned
         """
         try:
-            cypher = "MATCH (e:base {id: $entity_id}) RETURN e.community_id AS community_id"
+            cypher = "MATCH (e:base {entity_id: $entity_id}) RETURN e.community_id AS community_id"
             result = await self.neo4j_client.execute_read(cypher, {"entity_id": entity_id})
 
             if result and result[0].get("community_id"):
@@ -586,7 +608,7 @@ class CommunityDetector:
             WHERE e.community_id IS NOT NULL
             WITH e.community_id AS community_id,
                  e.community_label AS label,
-                 collect(e.id) AS entity_ids
+                 collect(e.entity_id) AS entity_ids
             WHERE size(entity_ids) >= $min_size
             RETURN community_id, label, entity_ids, size(entity_ids) AS size
             """
