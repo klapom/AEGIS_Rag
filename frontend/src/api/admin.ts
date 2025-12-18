@@ -373,3 +373,51 @@ export async function getNamespaces(): Promise<NamespaceListResponse> {
 
   return response.json();
 }
+
+// ============================================================================
+// Sprint 52: Graph Analytics Stats API
+// Feature 52.2.1: Graph Analytics Page
+// ============================================================================
+
+/**
+ * Graph statistics for admin dashboard
+ * Sprint 52 Feature 52.2.1
+ */
+export interface GraphStats {
+  total_entities: number;
+  total_relationships: number;
+  entity_types: Record<string, number>;
+  relationship_types: Record<string, number>;
+  community_count: number;
+  community_sizes: number[];
+  orphan_nodes: number;
+  avg_degree: number;
+  summary_status: {
+    generated: number;
+    pending: number;
+  };
+  graph_health: 'healthy' | 'warning' | 'critical' | 'unknown';
+  timestamp: string;
+}
+
+/**
+ * Fetch comprehensive graph statistics for admin dashboard
+ * Sprint 52 Feature 52.2.1: Graph Analytics Page
+ *
+ * @returns GraphStats with entity/relationship counts, community statistics, and health metrics
+ */
+export async function fetchGraphStats(): Promise<GraphStats> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/graph/stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}

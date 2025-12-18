@@ -1,8 +1,8 @@
 # Technical Debt Index
 
 **Last Updated:** 2025-12-18
-**Total Open Items:** 14
-**Total Story Points:** ~230 SP
+**Total Open Items:** 15
+**Total Story Points:** ~238 SP
 **Archived Items:** [8 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 
@@ -59,8 +59,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
 | [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | **IN PROGRESS** | 34 | Sprint 52+ |
 | [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50+ |
-| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | PLANNED | 13 | Sprint 52+ |
+| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | **IN PROGRESS** | 13 | Sprint 52 |
 | [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | **RESOLVED** ✅ | 8 | Sprint 48 ✓ |
+| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 8 | Sprint 53+ |
 
 ### LOW Priority
 
@@ -100,18 +101,20 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ## Recommended Sprint Allocation
 
-### Sprint 52 (Recommended Priority)
-- TD-043: Follow-up Questions Redis (5 SP)
-- TD-044: DoclingParsedDocument Interface (8 SP)
-- **TD-053 Phase 1-2:** Admin Dashboard Configuration (21 SP)
-  - Phase 1: LLM Configuration UI (8 SP)
-  - Phase 2: User Management (13 SP)
+### Sprint 52 (ACTIVE)
+- **TD-058: Community Summary Generation (13 SP)**
+  - Phase 1: Delta-Tracking Infrastructure (5 SP)
+  - Phase 2: Summary Generation + Admin LLM Config (8 SP)
+- **TD-053: Admin Dashboard Phase 1 (10 SP)**
+  - Graph Analytics Page (5 SP)
+  - Domain Management Enhancement (5 SP)
+- **TD-043: Async Follow-up Questions (5 SP)**
+- CI/CD Pipeline Optimization (3 SP)
 
 ### Sprint 53
-- **TD-053 Phase 3-4:** Admin Dashboard Monitoring (16 SP)
-  - Phase 3: System Monitoring Dashboard (8 SP)
-  - Phase 4: Memory Configuration (8 SP)
-- TD-058: Community Summary Generation (13 SP)
+- **TD-064: Temporal Community Summaries (8 SP)** - deferred from Sprint 52
+- **TD-053 Phase 2:** Admin Dashboard Monitoring (16 SP)
+- TD-044: DoclingParsedDocument Interface (8 SP)
 
 ### Sprint 54+
 - TD-051: Memory Consolidation (21 SP)

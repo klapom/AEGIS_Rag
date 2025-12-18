@@ -207,12 +207,16 @@ class CommunityDetector:
         self,
         algorithm: str | None = None,
         resolution: float | None = None,
+        track_delta: bool = True,
     ) -> list[Community]:
         """Run community detection on the knowledge graph.
+
+        Sprint 52 Feature 52.1: Added delta tracking for incremental summary updates.
 
         Args:
             algorithm: Detection algorithm ('leiden' or 'louvain')
             resolution: Resolution parameter (default: from settings)
+            track_delta: Track community changes for incremental updates (default: True)
 
         Returns:
             List of detected Community objects
@@ -227,6 +231,19 @@ class CommunityDetector:
         logger.info("community_detection_started", algorithm=algo, resolution=res)
 
         try:
+            # Sprint 52: Snapshot communities BEFORE detection
+            entities_before = {}
+            if track_delta:
+                from src.components.graph_rag.community_delta_tracker import (
+                    get_entity_communities_snapshot,
+                )
+
+                entities_before = await get_entity_communities_snapshot(self.neo4j_client)
+                logger.info(
+                    "community_snapshot_captured",
+                    entities_count=len(entities_before),
+                )
+
             # Check if GDS is available
             gds_available = await self._check_gds_availability() if self.use_gds else False
 
@@ -238,6 +255,40 @@ class CommunityDetector:
 
             # Store community IDs on entity nodes
             await self._store_communities(communities)
+
+            # Sprint 52: Track changes and trigger summary updates
+            if track_delta and entities_before:
+                from src.components.graph_rag.community_delta_tracker import (
+                    get_entity_communities_snapshot,
+                    track_community_changes,
+                )
+
+                entities_after = await get_entity_communities_snapshot(self.neo4j_client)
+
+                delta = await track_community_changes(entities_before, entities_after)
+
+                logger.info(
+                    "community_delta_tracked",
+                    new=len(delta.new_communities),
+                    updated=len(delta.updated_communities),
+                    merged=len(delta.merged_communities),
+                    split=len(delta.split_communities),
+                    total_affected=len(delta.get_affected_communities()),
+                )
+
+                # Trigger summary updates for affected communities
+                if delta.has_changes():
+                    from src.components.graph_rag.community_summarizer import (
+                        get_community_summarizer,
+                    )
+
+                    summarizer = get_community_summarizer()
+                    summaries = await summarizer.update_summaries_for_delta(delta)
+
+                    logger.info(
+                        "community_summaries_updated_after_detection",
+                        summaries_generated=len(summaries),
+                    )
 
             # Filter by minimum size
             communities = [c for c in communities if c.size >= self.min_size]

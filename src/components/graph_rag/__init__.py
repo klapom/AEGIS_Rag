@@ -1,5 +1,14 @@
 """Graph RAG components for Neo4j-backed LightRAG integration."""
 
+from src.components.graph_rag.community_delta_tracker import (
+    CommunityDelta,
+    get_entity_communities_snapshot,
+    track_community_changes,
+)
+from src.components.graph_rag.community_summarizer import (
+    CommunitySummarizer,
+    get_community_summarizer,
+)
 from src.components.graph_rag.hybrid_relation_deduplicator import (
     HybridRelationDeduplicator,
     get_hybrid_relation_deduplicator,
@@ -43,4 +52,10 @@ __all__ = [
     # Hybrid Relation Deduplication (Sprint 49.8)
     "HybridRelationDeduplicator",
     "get_hybrid_relation_deduplicator",
+    # Community Summary Generation (Sprint 52.1)
+    "CommunityDelta",
+    "track_community_changes",
+    "get_entity_communities_snapshot",
+    "CommunitySummarizer",
+    "get_community_summarizer",
 ]

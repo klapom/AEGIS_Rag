@@ -139,7 +139,8 @@ class TestDetectCommunities:
         ]
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 5}]
 
-        communities = await detector.detect_communities()
+        # Disable delta tracking to avoid additional snapshot queries
+        communities = await detector.detect_communities(track_delta=False)
 
         assert isinstance(communities, list)
         assert all(isinstance(c, Community) for c in communities)
@@ -393,7 +394,8 @@ class TestErrorHandling:
         mock_neo4j_client.execute_write.return_value = [{"updated_count": 2}]
 
         # Should fallback to NetworkX instead of raising
-        communities = await detector.detect_communities()
+        # Disable delta tracking to avoid additional snapshot queries
+        communities = await detector.detect_communities(track_delta=False)
         assert isinstance(communities, list)
 
     @pytest.mark.asyncio

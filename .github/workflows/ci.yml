@@ -282,13 +282,13 @@ jobs:
 
   # ============================================================
   # JOB 6: INTEGRATION TESTS (with Docker Services)
-  # DISABLED: Integration tests require Docling container and Ollama
-  # Run locally on DGX Spark with full infrastructure
+  # Sprint 52.4: Re-enabled with auto-mocking for LLM/embeddings
+  # Tests marked with @pytest.mark.requires_llm are skipped in CI
   # ============================================================
   integration-tests:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
-    if: false  # Disabled - requires Docling container + Ollama
+    # Re-enabled with CI auto-mocking via tests/integration/conftest.py
 
     services:
       qdrant:
@@ -398,10 +398,10 @@ jobs:
 
           echo "🎉 All services ready for integration tests"
 
-      - name: Run Integration Tests
-        timeout-minutes: 20  # Increased from default 10 to 20
+      - name: Run Integration Tests (with Auto-Mocking)
+        timeout-minutes: 20
         env:
-          CI: true  # Enable LLM auto-mocking via conftest.py
+          CI: true  # Triggers LLM/embedding auto-mocking in conftest.py
           QDRANT_HOST: localhost
           QDRANT_PORT: 6333
           NEO4J_URI: bolt://localhost:7687
@@ -409,12 +409,16 @@ jobs:
           NEO4J_PASSWORD: ""  # No auth in CI
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          # NOTE: No Ollama in CI - tests auto-mocked via tests/integration/conftest.py
-          # Tests marked with @pytest.mark.requires_llm need real Ollama and are skipped
+          # Sprint 52.4: LLM and embeddings auto-mocked via conftest.py
+          # Tests marked with @pytest.mark.requires_llm are auto-skipped (need real Ollama)
+          # Tests marked with @pytest.mark.cloud are auto-skipped (need API keys)
         run: |
-          echo "Running integration tests (excluding LLM-dependent tests)..."
+          echo "Running integration tests with auto-mocking..."
+          echo "CI=true enables LLM/embedding mocks for all tests"
+          echo "Tests marked with @pytest.mark.requires_llm will be skipped"
+          echo "Tests marked with @pytest.mark.cloud will be skipped"
+          echo ""
           poetry run pytest tests/integration/ \
-            -m "not requires_llm and not cloud" \
             --cov=src \
             --cov-report=xml \
             --cov-report=html \
@@ -933,7 +937,7 @@ jobs:
             - ✅ Python Import Validation
             - ✅ Naming Conventions
             - ✅ Unit Tests (>50% coverage)
-            - ✅ Integration Tests
+            - ✅ Integration Tests (with LLM/embedding auto-mocking)
 
             ### Frontend Tests
             - ✅ Frontend Build & Type Check
