@@ -40,7 +40,7 @@ async def generate_conversation_title(query: str, answer: str, max_length: int =
     query_short = query[:200]
     answer_short = answer[:300]
 
-    prompt = f"""Generate a concise title (3-5 words) for this conversation.
+    prompt = f"""Generate a concise title ({max_length} words max) for this conversation.
 The title should capture the main topic being discussed.
 Do NOT use quotes around the title.
 Do NOT include phrases like "Discussion about" or "Question regarding".
@@ -70,10 +70,10 @@ Title:"""
         # Clean up the title
         title = response.content.strip().strip('"').strip("'")
 
-        # Truncate if too long (more than 7 words)
+        # Truncate if too long (more than max_length + 2 words)
         words = title.split()
-        if len(words) > 7:
-            title = " ".join(words[:5]) + "..."
+        if len(words) > max_length + 2:
+            title = " ".join(words[:max_length]) + "..."
 
         logger.info(
             "title_generated",

@@ -30,7 +30,7 @@ Usage:
 import asyncio
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import structlog
@@ -206,14 +206,14 @@ async def drain_progress_events(document_id: str) -> list[ProgressEvent]:
     return events
 
 
-def format_progress_message(phase: str, current: int, total: int, base_message: str = "") -> str:
+def format_progress_message(phase: str, current: int, total: int, _base_message: str = "") -> str:
     """Format a progress message with timestamp and chunk info.
 
     Args:
         phase: Current phase
         current: Current chunk (1-indexed)
         total: Total chunks
-        base_message: Optional base message
+        _base_message: Optional base message (reserved for future use)
 
     Returns:
         Formatted message like "[12:34:56] Extracting entities (chunk 1/5)"

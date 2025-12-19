@@ -505,13 +505,13 @@ class Neo4jClient:
         # Driver is initialized lazily on first use
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, _exc_type, _exc_val, _exc_tb) -> None:
         """Async context manager exit.
 
         Args:
-            exc_type: Exception type
-            exc_val: Exception value
-            exc_tb: Exception traceback
+            _exc_type: Exception type (unused, required by protocol)
+            _exc_val: Exception value (unused, required by protocol)
+            _exc_tb: Exception traceback (unused, required by protocol)
         """
         await self.close()
 

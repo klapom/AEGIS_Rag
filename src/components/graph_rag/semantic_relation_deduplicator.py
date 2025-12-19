@@ -27,7 +27,6 @@ from typing import Any
 import numpy as np
 import structlog
 from redis.asyncio import Redis
-from scipy.spatial.distance import cosine
 from sklearn.cluster import AgglomerativeClustering
 
 from src.components.shared.embedding_service import get_embedding_service

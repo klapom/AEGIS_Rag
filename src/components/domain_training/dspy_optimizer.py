@@ -371,7 +371,7 @@ class DSPyOptimizer:
         semantic_matcher = get_semantic_matcher(threshold=0.75)
 
         # Define metric function with event emission and semantic matching
-        def entity_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
+        def entity_extraction_metric(example: Any, pred: Any, _trace: Any = None) -> float:
             """Calculate F1 score for entity extraction using semantic matching."""
             gold_entities = set(example.entities)
             pred_entities = set(pred.entities) if hasattr(pred, "entities") else set()
@@ -593,7 +593,7 @@ class DSPyOptimizer:
         semantic_matcher = get_semantic_matcher(threshold=0.70, predicate_weight=0.4)
 
         # Define metric function with event emission and semantic matching
-        def relation_extraction_metric(example: Any, pred: Any, trace: Any = None) -> float:
+        def relation_extraction_metric(example: Any, pred: Any, _trace: Any = None) -> float:
             """Calculate F1 score for relation extraction using semantic matching."""
             gold_relations = [
                 {"subject": r["subject"], "predicate": r["predicate"], "object": r["object"]}

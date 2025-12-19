@@ -56,7 +56,9 @@ import structlog
 from structlog.types import EventDict, Processor
 
 
-def add_app_context(logger: logging.Logger, method_name: str, event_dict: EventDict) -> EventDict:
+def add_app_context(
+    _logger: logging.Logger, _method_name: str, event_dict: EventDict
+) -> EventDict:
     """
     Add application context to all log messages.
 
@@ -65,8 +67,8 @@ def add_app_context(logger: logging.Logger, method_name: str, event_dict: EventD
     same aggregator (e.g., Elasticsearch, Loki).
 
     Args:
-        logger: Python stdlib logger instance
-        method_name: Log method name (info, warning, error, etc.)
+        _logger: Python stdlib logger instance (required by structlog signature)
+        _method_name: Log method name (required by structlog signature)
         event_dict: Current event dictionary
 
     Returns:

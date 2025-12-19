@@ -337,7 +337,7 @@ class DocumentIngestionPipeline:
         self,
         input_dir: str | Path,
         batch_size: int = 100,
-        required_exts: list[str] | None = None,
+        _required_exts: list[str] | None = None,
     ) -> dict[str, Any]:
         """Complete ingestion pipeline: load, chunk, embed, index.
 
