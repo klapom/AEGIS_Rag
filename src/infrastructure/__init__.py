@@ -42,6 +42,14 @@ from src.infrastructure.exceptions import (
     VectorSearchError,
 )
 
+# DI Container (Sprint 57)
+from src.infrastructure.di import (
+    Container,
+    get_container,
+    resolve,
+    register,
+)
+
 # Model exports
 from src.infrastructure.models import (
     CentralityMetrics,
@@ -67,6 +75,11 @@ from src.infrastructure.models import (
 )
 
 __all__ = [
+    # DI Container (Sprint 57)
+    "Container",
+    "get_container",
+    "resolve",
+    "register",
     # Config
     "Settings",
     "get_settings",

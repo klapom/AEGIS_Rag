@@ -1,9 +1,9 @@
 # REFACTORING Open Point List (OPL)
 
-**Stand:** 2025-12-19 (Sprint 56 in Arbeit)
+**Stand:** 2025-12-19 (Sprint 57 in Arbeit)
 **Sprint-Range:** 53-58
 **Ziel:** Alle Einträge bis Ende Sprint 58 aufgelöst
-**Letztes Update:** Sprint 56 - Feature 56.3 ingestion → domains/document_processing Migration abgeschlossen
+**Letztes Update:** Sprint 57 - Protocol definitions und DI Container implementiert
 
 ---
 
@@ -607,19 +607,55 @@ Vollständige Migration zu `src/domains/document_processing/` mit Entfernung von
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-007 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 57 |
+| **Implementiert** | Sprint 57 (2025-12-19) |
 | **Auflösung geplant** | Sprint 58 |
-| **Feature** | 57.x - Interface Extraction |
+| **Feature** | 57.1-57.6 - Protocol Definitions & DI Container |
 
 **Problem:**
-Einige Module verwenden noch konkrete Typen statt Protocols.
+Einige Module verwenden noch konkrete Typen statt Protocols, was Testbarkeit und Flexibilität einschränkt.
 
-**Temporäre Lösung:**
-Graduelle Migration mit `# type: ignore` wo nötig.
+**Lösung implementiert (Sprint 57):**
+1. ✅ Protocol definitions für alle 5 Domains erstellt
+2. ✅ DI Container implementiert (`src/infrastructure/di/`)
+3. ✅ Alle Protocols in Domain `__init__.py` exportiert
+
+**Implementierte Protocols:**
+
+| Domain | Protocols | Datei |
+|--------|-----------|-------|
+| knowledge_graph | EntityExtractor, RelationExtractor, GraphStorage, GraphQueryService, CommunityService, LLMConfigProvider, DeduplicationService, GraphAnalytics | `protocols.py` |
+| document_processing | DocumentParser, ChunkingService, ImageEnricher, IngestionPipeline, EmbeddingGenerator, FormatRouter | `protocols.py` |
+| llm_integration | LLMProvider, LLMRouter, CostTracker, ToolExecutor, VLMProvider | `protocols.py` |
+| vector_search | EmbeddingService, VectorStore, HybridSearchService, RerankingService | `protocols.py` |
+| memory | ConversationMemory, SessionStore, CacheService, MemoryConsolidation | `protocols.py` |
+
+**DI Container:**
+```python
+# src/infrastructure/di/container.py
+Container:
+  - register(interface, factory, singleton=True)
+  - resolve(interface) -> T
+  - reset()  # For testing
+  - override(interface, factory)  # For testing
+```
+
+**Verwendungsstellen (bestehende konkrete Typen):**
+- `src/agents/*.py` - Agent implementations
+- `src/api/v1/*.py` - API endpoints
+- `src/components/*/*.py` - Component modules
+- `tests/` - Test files mit direkten Imports
+
+**Verbleibende Schritte (Sprint 58):**
+1. [ ] Bestehende Klassen als Protocol-Implementierungen markieren
+2. [ ] Factories für alle Services erstellen
+3. [ ] Tests auf Protocol-based Mocks umstellen
+4. [ ] Konkrete Type-Hints durch Protocols ersetzen
+5. [ ] OPL-007 Status auf RESOLVED setzen
 
 **Finale Lösung:**
-Vollständige Protocol-Implementierung.
+Vollständige Protocol-based dependency injection mit DI Container.
 
 ---
 
@@ -639,12 +675,17 @@ Nach Sprint 58 sollte diese Datei nur noch REMOVED-Einträge enthalten (als Doku
 | 54 | OPL-003, OPL-004 | IN_PROGRESS (implementiert) |
 | 55 | OPL-005 | IN_PROGRESS (implementiert) |
 | 56 | OPL-006, OPL-008, OPL-009, OPL-010 | IN_PROGRESS (implementiert) |
-| 57 | OPL-007 | OPEN |
+| 57 | OPL-007 | IN_PROGRESS (implementiert) |
 | 58 | Cleanup | - |
 
-**Total Open:** 1 (OPL-007)
-**Total In Progress:** 9 (OPL-001 bis OPL-006, OPL-008, OPL-009, OPL-010)
+**Total Open:** 0
+**Total In Progress:** 10 (OPL-001 bis OPL-010)
 **Target End Sprint 58:** 0
+
+**Sprint 57 Fortschritt:**
+- ✅ 27 Protocol definitions erstellt
+- ✅ DI Container implementiert
+- ✅ Alle Domains mit Protocols exportiert
 
 ---
 

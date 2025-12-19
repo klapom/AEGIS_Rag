@@ -9,9 +9,24 @@ Subdomains:
 
 Usage:
     from src.domains.memory import (
-        get_conversation_history,
-        RedisMemory,
+        ConversationMemory,
+        SessionStore,
+        CacheService,
     )
 """
 
-__all__ = []
+# Protocols (Sprint 57)
+from src.domains.memory.protocols import (
+    ConversationMemory,
+    SessionStore,
+    CacheService,
+    MemoryConsolidation,
+)
+
+__all__ = [
+    # Protocols (Sprint 57)
+    "ConversationMemory",
+    "SessionStore",
+    "CacheService",
+    "MemoryConsolidation",
+]

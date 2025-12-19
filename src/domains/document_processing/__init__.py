@@ -21,6 +21,16 @@ For backward compatibility, these are also available from:
 
 # OPL-010: Re-export from components/ingestion until Sprint 58
 
+# Protocols (Sprint 57)
+from src.domains.document_processing.protocols import (
+    DocumentParser,
+    ChunkingService,
+    ImageEnricher,
+    IngestionPipeline,
+    EmbeddingGenerator,
+    FormatRouter as FormatRouterProtocol,
+)
+
 # Parsing
 from src.domains.document_processing.parsing import (
     DoclingContainerClient,
@@ -69,6 +79,13 @@ from src.domains.document_processing.enrichment import (
 )
 
 __all__ = [
+    # Protocols (Sprint 57)
+    "DocumentParser",
+    "ChunkingService",
+    "ImageEnricher",
+    "IngestionPipeline",
+    "EmbeddingGenerator",
+    "FormatRouterProtocol",
     # Parsing
     "DoclingContainerClient",
     "DoclingParsedDocument",

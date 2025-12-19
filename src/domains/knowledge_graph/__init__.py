@@ -26,6 +26,18 @@ For backward compatibility, these are also available from:
 
 # OPL-009: Re-export from components/graph_rag until Sprint 58
 
+# Protocols (Sprint 57)
+from src.domains.knowledge_graph.protocols import (
+    EntityExtractor,
+    RelationExtractor,
+    GraphStorage,
+    GraphQueryService,
+    CommunityService,
+    LLMConfigProvider,
+    DeduplicationService,
+    GraphAnalytics,
+)
+
 # Persistence
 from src.domains.knowledge_graph.persistence import (
     Neo4jClient,
@@ -111,6 +123,15 @@ from src.domains.knowledge_graph.utilities import (
 )
 
 __all__ = [
+    # Protocols (Sprint 57)
+    "EntityExtractor",
+    "RelationExtractor",
+    "GraphStorage",
+    "GraphQueryService",
+    "CommunityService",
+    "LLMConfigProvider",
+    "DeduplicationService",
+    "GraphAnalytics",
     # Persistence
     "Neo4jClient",
     "get_neo4j_client",

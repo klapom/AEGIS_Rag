@@ -1,8 +1,9 @@
 # Sprint 57: Interfaces & Protocols
 
-**Status:** PLANNED
-**Branch:** `sprint-57-interfaces-protocols`
-**Start Date:** TBD (nach Sprint 56)
+**Status:** COMPLETE
+**Branch:** `main`
+**Start Date:** 2025-12-19
+**End Date:** 2025-12-19
 **Estimated Duration:** 5 Tage
 **Total Story Points:** 35 SP
 

@@ -20,6 +20,15 @@ Usage:
     response = await proxy.generate(task)
 """
 
+# Protocols (Sprint 57)
+from src.domains.llm_integration.protocols import (
+    LLMProvider,
+    LLMRouter,
+    CostTracker as CostTrackerProtocol,
+    ToolExecutor,
+    VLMProvider,
+)
+
 # Models (data structures)
 from src.domains.llm_integration.models import (
     Complexity,
@@ -60,6 +69,12 @@ from src.domains.llm_integration.cost import (
 )
 
 __all__ = [
+    # Protocols (Sprint 57)
+    "LLMProvider",
+    "LLMRouter",
+    "CostTrackerProtocol",
+    "ToolExecutor",
+    "VLMProvider",
     # Models
     "TaskType",
     "DataClassification",

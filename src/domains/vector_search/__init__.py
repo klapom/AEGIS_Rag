@@ -9,10 +9,24 @@ Subdomains:
 
 Usage:
     from src.domains.vector_search import (
-        hybrid_search,
-        QdrantClientWrapper,
-        get_embedding_service,
+        EmbeddingService,
+        VectorStore,
+        HybridSearchService,
     )
 """
 
-__all__ = []
+# Protocols (Sprint 57)
+from src.domains.vector_search.protocols import (
+    EmbeddingService,
+    VectorStore,
+    HybridSearchService,
+    RerankingService,
+)
+
+__all__ = [
+    # Protocols (Sprint 57)
+    "EmbeddingService",
+    "VectorStore",
+    "HybridSearchService",
+    "RerankingService",
+]
