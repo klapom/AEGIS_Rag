@@ -17,12 +17,15 @@ Test Coverage:
 
 import pytest
 
-from src.components.ingestion.langgraph_nodes import (
-    AdaptiveChunk,
-    SectionMetadata,
+# Sprint 54: Functions moved to nodes/ package
+from src.components.ingestion.nodes.adaptive_chunking import (
+    adaptive_section_chunking,
     _create_chunk,
     _merge_sections,
-    adaptive_section_chunking,
+)
+from src.components.ingestion.nodes.models import (
+    AdaptiveChunk,
+    SectionMetadata,
 )
 
 # =============================================================================

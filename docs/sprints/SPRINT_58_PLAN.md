@@ -1,8 +1,8 @@
 # Sprint 58: Test Coverage 80% & OPL Cleanup
 
-**Status:** PLANNED
-**Branch:** `sprint-58-test-coverage`
-**Start Date:** TBD (nach Sprint 57)
+**Status:** IN PROGRESS
+**Branch:** `main`
+**Start Date:** 2025-12-19
 **Estimated Duration:** 5 Tage
 **Total Story Points:** 45 SP
 
