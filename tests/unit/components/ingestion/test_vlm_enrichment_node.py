@@ -118,7 +118,7 @@ def mock_image_processor():
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__valid_document__enriches_successfully(
     mock_processor_class, base_state, mock_docling_document, page_dimensions, mock_image_processor
 ):
@@ -180,7 +180,7 @@ async def test_image_enrichment_node__no_pictures__skips_gracefully(base_state):
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__no_page_dimensions__still_processes(
     mock_processor_class, base_state, mock_docling_document, mock_image_processor
 ):
@@ -207,7 +207,7 @@ async def test_image_enrichment_node__no_page_dimensions__still_processes(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__bbox_extraction__correct_structure(
     mock_processor_class, base_state, mock_docling_document, page_dimensions, mock_image_processor
 ):
@@ -245,7 +245,7 @@ async def test_image_enrichment_node__bbox_extraction__correct_structure(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__no_provenance__no_bbox(
     mock_processor_class, base_state, page_dimensions, mock_image_processor
 ):
@@ -276,7 +276,7 @@ async def test_image_enrichment_node__no_provenance__no_bbox(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__metadata_structure__complete(
     mock_processor_class, base_state, mock_docling_document, page_dimensions, mock_image_processor
 ):
@@ -316,7 +316,7 @@ async def test_image_enrichment_node__metadata_structure__complete(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__vlm_error_on_one_image__continues(
     mock_processor_class, base_state, mock_docling_document, page_dimensions
 ):
@@ -347,7 +347,7 @@ async def test_image_enrichment_node__vlm_error_on_one_image__continues(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__filtered_image__skips_gracefully(
     mock_processor_class, base_state, mock_docling_document, page_dimensions
 ):
@@ -373,7 +373,7 @@ async def test_image_enrichment_node__filtered_image__skips_gracefully(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__critical_error__fails_gracefully(
     mock_processor_class, base_state, mock_docling_document, page_dimensions
 ):
@@ -401,7 +401,7 @@ async def test_image_enrichment_node__critical_error__fails_gracefully(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__with_caption__combines_caption_and_description(
     mock_processor_class, base_state, page_dimensions, mock_image_processor
 ):
@@ -431,7 +431,7 @@ async def test_image_enrichment_node__with_caption__combines_caption_and_descrip
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__no_caption__uses_description_only(
     mock_processor_class, base_state, page_dimensions, mock_image_processor
 ):
@@ -463,7 +463,7 @@ async def test_image_enrichment_node__no_caption__uses_description_only(
 
 
 @pytest.mark.asyncio
-@patch("src.components.ingestion.langgraph_nodes.ImageProcessor")
+@patch("src.components.ingestion.nodes.image_enrichment.ImageProcessor")
 async def test_image_enrichment_node__updates_overall_progress(
     mock_processor_class, base_state, mock_docling_document, page_dimensions, mock_image_processor
 ):

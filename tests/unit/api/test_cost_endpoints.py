@@ -152,7 +152,7 @@ def mock_cost_tracker(temp_cost_db: Path):
     tracker = CostTracker(db_path=temp_cost_db)
 
     with patch(
-        "src.api.v1.admin.get_cost_tracker",
+        "src.api.v1.admin_costs.get_cost_tracker",
         return_value=tracker,
     ):
         yield tracker
@@ -458,7 +458,7 @@ def test_cost_stats_empty_database(client: TestClient, tmp_path: Path):
     empty_db_path = tmp_path / "empty_cost_tracking.db"
     empty_tracker = CostTracker(db_path=empty_db_path)
 
-    with patch("src.api.v1.admin.get_cost_tracker", return_value=empty_tracker):
+    with patch("src.api.v1.admin_costs.get_cost_tracker", return_value=empty_tracker):
         response = client.get("/api/v1/admin/costs/stats?time_range=7d")
         assert response.status_code == 200
 
@@ -485,7 +485,7 @@ def test_cost_history_empty_database(client: TestClient, tmp_path: Path):
     empty_db_path = tmp_path / "empty_cost_tracking.db"
     empty_tracker = CostTracker(db_path=empty_db_path)
 
-    with patch("src.api.v1.admin.get_cost_tracker", return_value=empty_tracker):
+    with patch("src.api.v1.admin_costs.get_cost_tracker", return_value=empty_tracker):
         response = client.get("/api/v1/admin/costs/history?time_range=7d")
         assert response.status_code == 200
 

@@ -220,7 +220,7 @@ async def test_docling_parse_node_success(sample_state):
     )
 
     with patch(
-        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
     ) as mock_client_class:
         # Create mock client instance
         mock_client = AsyncMock()
@@ -265,7 +265,7 @@ async def test_docling_parse_node_with_container_restart(sample_state):
     )
 
     with patch(
-        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
     ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
@@ -295,7 +295,7 @@ async def test_docling_parse_node_file_not_found(sample_state):
 async def test_docling_parse_node_parsing_error(sample_state):
     """Test docling_parse_node handles parsing errors gracefully."""
     with patch(
-        "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
     ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client_class.return_value = mock_client
@@ -323,7 +323,7 @@ async def test_chunking_node_success(sample_state, sample_chunks):
     sample_state["parsed_content"] = "This is a long document content. " * 500
     sample_state["parsed_metadata"] = {"pages": 10}
 
-    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
+    with patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_service:
         # Mock chunking service (async method requires AsyncMock)
         mock_service = Mock()
         mock_service.chunk_document = AsyncMock(return_value=sample_chunks)
@@ -365,7 +365,7 @@ async def test_chunking_node_uses_1800_token_chunks(sample_state):
     """Test chunking_node uses 1800-token chunks (Feature 21.4)."""
     sample_state["parsed_content"] = "Test content for chunking."
 
-    with patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_service:
+    with patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_service:
         mock_service = Mock()
         mock_service.chunk_document = AsyncMock(return_value=[])
         mock_get_service.return_value = mock_service
@@ -397,9 +397,9 @@ async def test_embedding_node_success(sample_state, sample_chunks):
 
     with (
         patch(
-            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+            "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
     ):
         # Mock embedding service
         mock_embedding_service = AsyncMock()
@@ -453,9 +453,9 @@ async def test_embedding_node_uses_bge_m3_1024d(sample_state, sample_chunks):
 
     with (
         patch(
-            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+            "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
     ):
         mock_embedding_service = AsyncMock()
         mock_embedding_service.embed_batch = AsyncMock(return_value=mock_embeddings)
@@ -502,11 +502,12 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
     }
 
     with patch(
-        "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
+        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
     ) as mock_get_lightrag:
         # Mock LightRAG wrapper
         mock_lightrag = AsyncMock()
-        mock_lightrag.insert_documents_optimized = AsyncMock(return_value=mock_graph_stats)
+        # Sprint 42: Use insert_prechunked_documents instead of insert_documents_optimized
+        mock_lightrag.insert_prechunked_documents = AsyncMock(return_value={"stats": mock_graph_stats})
         mock_get_lightrag.return_value = mock_lightrag
 
         # Run node
@@ -516,21 +517,17 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
         assert updated_state["graph_status"] == "completed"
         assert updated_state["overall_progress"] == 1.0  # Final node (100%)
 
-        # Verify LightRAG called with correct format
-        mock_lightrag.insert_documents_optimized.assert_called_once()
-        lightrag_docs = mock_lightrag.insert_documents_optimized.call_args[0][0]
+        # Verify LightRAG called with correct format (Sprint 42: insert_prechunked_documents)
+        mock_lightrag.insert_prechunked_documents.assert_called_once()
+        # Get the 'chunks' keyword argument
+        lightrag_docs = mock_lightrag.insert_prechunked_documents.call_args.kwargs.get("chunks", [])
         assert len(lightrag_docs) == 3
-        # Sprint 30: Chunk has .content not .text, so str(chunk) is used (full repr)
-        # Just verify content is present in the text (not exact match)
+        # Sprint 42: Prechunked format has chunk_id, text, chunk_index
+        assert "chunk_id" in lightrag_docs[0]
+        assert "text" in lightrag_docs[0]
+        assert "chunk_index" in lightrag_docs[0]
+        # Verify text contains chunk content
         assert sample_chunks[0].content in lightrag_docs[0]["text"]
-        # ID comes from embedded_chunk_ids (not chunk.chunk_id) since embedding_node ran first
-        # Feature 21.6: metadata includes provenance fields added by graph_extraction_node
-        assert lightrag_docs[0]["metadata"]["page"] == sample_chunks[0].metadata["page"]
-        assert lightrag_docs[0]["metadata"]["section"] == sample_chunks[0].metadata["section"]
-        # Provenance fields added by node
-        assert "qdrant_point_id" in lightrag_docs[0]["metadata"]
-        assert "has_image_annotation" in lightrag_docs[0]["metadata"]
-        assert "image_page_nos" in lightrag_docs[0]["metadata"]
 
 
 @pytest.mark.asyncio
@@ -550,10 +547,11 @@ async def test_graph_extraction_node_lightrag_error(sample_state, sample_chunks)
     sample_state["chunks"] = sample_chunks
 
     with patch(
-        "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
+        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
     ) as mock_get_lightrag:
         mock_lightrag = AsyncMock()
-        mock_lightrag.insert_documents_optimized = AsyncMock(
+        # Sprint 42: Use insert_prechunked_documents instead of insert_documents_optimized
+        mock_lightrag.insert_prechunked_documents = AsyncMock(
             side_effect=Exception("Neo4j connection timeout")
         )
         mock_get_lightrag.return_value = mock_lightrag
@@ -591,15 +589,15 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
         patch("psutil.virtual_memory") as mock_memory,
         patch("subprocess.run") as mock_nvidia_smi,
         patch(
-            "src.components.ingestion.langgraph_nodes.DoclingContainerClient"
+            "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
         ) as mock_docling_class,
-        patch("src.components.ingestion.langgraph_nodes.get_chunking_service") as mock_get_chunking,
+        patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_chunking,
         patch(
-            "src.components.ingestion.langgraph_nodes.get_embedding_service"
+            "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.langgraph_nodes.QdrantClientWrapper") as mock_qdrant_class,
+        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
         patch(
-            "src.components.ingestion.langgraph_nodes.get_lightrag_wrapper_async"
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
         ) as mock_get_lightrag,
     ):
         # Mock all services

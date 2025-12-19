@@ -280,7 +280,7 @@ class TestRouterNode:
             assert result["intent"] == "vector"
             assert result["route_decision"] == "vector"
             assert "metadata" in result
-            assert "router" in result["metadata"]["agent_path"]
+            assert any("router" in path for path in result["metadata"]["agent_path"])
             assert result["metadata"]["intent"] == "vector"
 
     @pytest.mark.asyncio

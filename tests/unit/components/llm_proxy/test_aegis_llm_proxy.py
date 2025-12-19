@@ -77,7 +77,7 @@ def mock_config():
 @pytest.fixture
 def aegis_proxy(mock_config):
     """Create AegisLLMProxy instance with mocked cost tracker."""
-    with patch("src.components.llm_proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
+    with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
         mock_tracker_instance = MagicMock()
         mock_tracker_instance.get_monthly_spending.return_value = {
             "alibaba_cloud": 0.0,
@@ -124,7 +124,7 @@ async def test_token_parsing_with_usage_field(aegis_proxy, sample_task):
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -161,7 +161,7 @@ async def test_token_parsing_without_usage_field(aegis_proxy, sample_task):
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -195,7 +195,7 @@ async def test_token_parsing_zero_tokens_edge_case(aegis_proxy, sample_task):
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -217,7 +217,7 @@ async def test_token_parsing_missing_usage_entirely(aegis_proxy, sample_task):
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -243,7 +243,7 @@ async def test_cost_calculation_with_accurate_split(aegis_proxy, sample_task):
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -273,7 +273,7 @@ async def test_cost_calculation_with_fallback_estimation(aegis_proxy, sample_tas
     )
 
     with patch(
-        "src.components.llm_proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion", new_callable=AsyncMock
     ) as mock_acompletion:
         mock_acompletion.return_value = mock_response
 
@@ -285,7 +285,7 @@ async def test_cost_calculation_with_fallback_estimation(aegis_proxy, sample_tas
 
 def test_calculate_cost_accurate_split(mock_config):
     """Test _calculate_cost method with accurate input/output split."""
-    with patch("src.components.llm_proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
+    with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
         mock_tracker_instance = MagicMock()
         mock_tracker_instance.get_monthly_spending.return_value = {}
         mock_tracker.return_value = mock_tracker_instance
@@ -317,7 +317,7 @@ def test_calculate_cost_accurate_split(mock_config):
 
 def test_calculate_cost_fallback_legacy(mock_config):
     """Test _calculate_cost falls back to legacy pricing when split unavailable."""
-    with patch("src.components.llm_proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
+    with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
         mock_tracker_instance = MagicMock()
         mock_tracker_instance.get_monthly_spending.return_value = {}
         mock_tracker.return_value = mock_tracker_instance

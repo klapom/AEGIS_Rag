@@ -419,6 +419,7 @@ class TestLightRAGWrapperSprint16:
                 assert call_kwargs["chunk_token_size"] == 99999
                 assert call_kwargs["chunk_overlap_token_size"] == 0
 
+    @pytest.mark.skip(reason="Sprint 55: _chunk_text_with_metadata removed in lightrag package refactoring")
     def test_chunk_text_with_unified_service(self):
         """Test that _chunk_text_with_metadata uses direct tiktoken chunking.
 
@@ -457,6 +458,7 @@ class TestLightRAGWrapperSprint16:
         assert first_chunk["chunk_index"] == 0
         assert "doc_001" in first_chunk["chunk_id"] or "chunk-0" in first_chunk["chunk_id"]
 
+    @pytest.mark.skip(reason="Sprint 55: _store_chunks_and_provenance_in_neo4j removed in lightrag package refactoring")
     @pytest.mark.asyncio
     async def test_chunk_id_provenance_tracking(self, mock_lightrag_instance):
         """Test that chunk_id provenance is stored in Neo4j.

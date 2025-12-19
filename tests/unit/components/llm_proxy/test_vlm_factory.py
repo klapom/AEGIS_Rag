@@ -11,9 +11,9 @@ Tests:
 IMPORTANT: Lazy Import Pattern
     VLM Factory uses lazy imports inside functions. When mocking:
     - Patch at SOURCE module, not at vlm_factory
-    - OllamaVLMClient: patch 'src.components.llm_proxy.ollama_vlm.OllamaVLMClient'
-    - DashScopeVLMClient: patch 'src.components.llm_proxy.dashscope_vlm.DashScopeVLMClient'
-    - get_llm_proxy_config: patch 'src.components.llm_proxy.config.get_llm_proxy_config'
+    - OllamaVLMClient: patch 'src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient'
+    - DashScopeVLMClient: patch 'src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient'
+    - get_llm_proxy_config: patch 'src.domains.llm_integration.config.get_llm_proxy_config'
 """
 
 import os
@@ -88,7 +88,7 @@ class TestGetVLMBackendFromConfig:
         with patch.dict(os.environ, clean_env, clear=True):
             # Patch config loading to fail (simulate no config file)
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.config.get_llm_proxy_config", side_effect=Exception("No config")):
+            with patch("src.domains.llm_integration.config.get_llm_proxy_config", side_effect=Exception("No config")):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.OLLAMA
 
@@ -113,7 +113,7 @@ class TestGetVLMBackendFromConfig:
 
         with patch.dict(os.environ, clean_env, clear=True):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.config.get_llm_proxy_config", return_value=mock_config):
+            with patch("src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.DASHSCOPE
 
@@ -123,7 +123,7 @@ class TestGetVLMBackendFromConfig:
 
         with patch.dict(os.environ, clean_env, clear=True):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.config.get_llm_proxy_config", side_effect=Exception("Failed")):
+            with patch("src.domains.llm_integration.config.get_llm_proxy_config", side_effect=Exception("Failed")):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.OLLAMA
 
@@ -134,7 +134,7 @@ class TestGetVLMClient:
     def test_explicit_ollama_backend(self):
         """Test creating Ollama client with explicit backend."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -146,7 +146,7 @@ class TestGetVLMClient:
     def test_explicit_dashscope_backend(self):
         """Test creating DashScope client with explicit backend."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -159,7 +159,7 @@ class TestGetVLMClient:
         """Test factory uses config when backend not explicitly specified."""
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+            with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -170,7 +170,7 @@ class TestGetVLMClient:
     def test_creates_new_instance_each_call(self):
         """Test factory creates new instance (not singleton)."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_instance1 = MagicMock()
             mock_instance2 = MagicMock()
             mock_class.side_effect = [mock_instance1, mock_instance2]
@@ -193,7 +193,7 @@ class TestGetVLMClient:
     def test_ollama_lazy_import(self):
         """Test OllamaVLMClient is lazily imported."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -204,7 +204,7 @@ class TestGetVLMClient:
     def test_dashscope_lazy_import(self):
         """Test DashScopeVLMClient is lazily imported."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -226,7 +226,7 @@ class TestSharedVLMClientSingleton:
     async def test_shared_client_returns_same_instance(self):
         """Test get_shared_vlm_client returns same instance on repeated calls."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_client = MagicMock()
             mock_class.return_value = mock_client
 
@@ -241,7 +241,7 @@ class TestSharedVLMClientSingleton:
     async def test_shared_client_singleton_across_calls(self):
         """Test singleton persists across multiple calls."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_client = MagicMock()
             mock_class.return_value = mock_client
 
@@ -262,7 +262,7 @@ class TestSharedVLMClientSingleton:
     async def test_close_shared_client(self):
         """Test close_shared_vlm_client() properly closes connection."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_client = AsyncMock()
             mock_class.return_value = mock_client
 
@@ -276,7 +276,7 @@ class TestSharedVLMClientSingleton:
     async def test_close_and_reconnect(self):
         """Test reconnecting after close creates new instance."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_client1 = AsyncMock()
             mock_client2 = AsyncMock()
             mock_class.side_effect = [mock_client1, mock_client2]
@@ -302,7 +302,7 @@ class TestSharedVLMClientSingleton:
     async def test_reset_vlm_client_clears_singleton(self):
         """Test reset_vlm_client() clears singleton without closing."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             mock_client1 = MagicMock()
             mock_client2 = MagicMock()
             mock_class.side_effect = [mock_client1, mock_client2]
@@ -338,7 +338,7 @@ class TestVLMFactoryIntegration:
             assert backend == VLMBackend.DASHSCOPE
 
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+            with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -350,7 +350,7 @@ class TestVLMFactoryIntegration:
         """Test shared client respects environment configuration."""
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+            with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -364,7 +364,7 @@ class TestVLMFactoryIntegration:
 
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.components.llm_proxy.config.get_llm_proxy_config", return_value=mock_config):
+            with patch("src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config):
                 backend = get_vlm_backend_from_config()
                 # Env var should take priority
                 assert backend == VLMBackend.OLLAMA
@@ -383,7 +383,7 @@ class TestVLMFactoryErrorHandling:
     def test_missing_dependency_handling(self):
         """Test handling when client dependency is missing."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient", side_effect=ImportError("Missing httpx")):
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient", side_effect=ImportError("Missing httpx")):
             with pytest.raises(ImportError):
                 get_vlm_client(VLMBackend.OLLAMA)
 
@@ -391,7 +391,7 @@ class TestVLMFactoryErrorHandling:
     async def test_singleton_exception_recovery(self):
         """Test singleton can recover from exceptions."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.components.llm_proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
             # First call raises exception
             mock_class.side_effect = Exception("Connection failed")
 

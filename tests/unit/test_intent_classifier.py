@@ -104,8 +104,8 @@ class TestRuleBasedClassification:
 
     @pytest.fixture
     def classifier(self):
-        """Create IntentClassifier with LLM disabled."""
-        return IntentClassifier(use_llm=False)
+        """Create IntentClassifier with rule-based method."""
+        return IntentClassifier(method="rule_based")
 
     def test_classify_factual_what_is(self, classifier):
         """Test 'What is X?' patterns classified as factual."""
@@ -248,7 +248,7 @@ class TestParseIntent:
 
     @pytest.fixture
     def classifier(self):
-        return IntentClassifier(use_llm=False)
+        return IntentClassifier(method="rule_based")
 
     def test_parse_intent_direct_match_factual(self, classifier):
         """Test direct match for 'factual'."""
@@ -317,7 +317,7 @@ class TestLLMClassification:
     @pytest.fixture
     async def classifier(self, mock_http_client):
         """Create IntentClassifier with mocked HTTP client."""
-        classifier = IntentClassifier(use_llm=True)
+        classifier = IntentClassifier(method="llm")
         classifier.client = mock_http_client
         return classifier
 
@@ -419,7 +419,7 @@ class TestCaching:
 
     @pytest.fixture
     def classifier(self):
-        return IntentClassifier(use_llm=False)
+        return IntentClassifier(method="rule_based")
 
     @pytest.mark.asyncio
     async def test_cache_hit(self, classifier):
@@ -488,7 +488,7 @@ class TestCaching:
 
     def test_clear_cache(self):
         """Test cache can be cleared."""
-        classifier = IntentClassifier(use_llm=False)
+        classifier = IntentClassifier(method="rule_based")
 
         # Add items to cache
         classifier._cache["test1"] = (Intent.FACTUAL, 0)
@@ -511,7 +511,7 @@ class TestClassifyMethod:
     @pytest.fixture
     async def classifier_rule_based(self):
         """Create rule-based classifier."""
-        return IntentClassifier(use_llm=False)
+        return IntentClassifier(method="rule_based")
 
     @pytest.mark.asyncio
     async def test_classify_returns_result_object(self, classifier_rule_based):
@@ -547,7 +547,7 @@ class TestClassifyMethod:
         mock_client = AsyncMock()
         mock_client.post.side_effect = httpx.TimeoutException("Timeout")
 
-        classifier = IntentClassifier(use_llm=True)
+        classifier = IntentClassifier(method="llm")
         classifier.client = mock_client
 
         result = await classifier.classify("What is the answer?")
@@ -601,7 +601,7 @@ class TestSingletonFunctions:
     async def test_classify_intent_function(self):
         """Test classify_intent convenience function."""
         # Create a real classifier with rule-based (no LLM dependency)
-        classifier = IntentClassifier(use_llm=False)
+        classifier = IntentClassifier(method="rule_based")
 
         with patch(
             "src.components.retrieval.intent_classifier.get_intent_classifier",
@@ -623,7 +623,7 @@ class TestFullScenarios:
 
     @pytest.fixture
     async def classifier(self):
-        return IntentClassifier(use_llm=False)
+        return IntentClassifier(method="rule_based")
 
     @pytest.mark.asyncio
     async def test_scenario_factual_query(self, classifier):

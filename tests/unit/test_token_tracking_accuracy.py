@@ -170,7 +170,7 @@ class TestTokenParsing:
         self, mock_response_with_usage, temp_db_path, mock_llm_proxy_config
     ):
         """Test parsing tokens when usage object is complete."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
+        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage
 
             proxy = AegisLLMProxy(config=mock_llm_proxy_config)
@@ -197,7 +197,7 @@ class TestTokenParsing:
         self, mock_response_without_usage, temp_db_path, mock_llm_proxy_config
     ):
         """Test fallback to 50/50 split when usage field missing."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
+        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             # Simulate response with only total_tokens (no usage object)
             response = MagicMock()
             response.choices = [MagicMock()]
@@ -224,7 +224,7 @@ class TestTokenParsing:
         self, mock_response_with_zero_tokens, temp_db_path, mock_llm_proxy_config
     ):
         """Test handling of zero token responses."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
+        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_zero_tokens
 
             proxy = AegisLLMProxy(config=mock_llm_proxy_config)
@@ -245,7 +245,7 @@ class TestTokenParsing:
         self, mock_response_partial_usage, temp_db_path, mock_llm_proxy_config
     ):
         """Test handling of None values in usage object."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
+        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_partial_usage
 
             proxy = AegisLLMProxy(config=mock_llm_proxy_config)
@@ -507,7 +507,7 @@ class TestEdgeCases:
         self, mock_response_with_usage, temp_db_path, mock_llm_proxy_config
     ):
         """Test that full generate() flow preserves token accuracy."""
-        with patch("src.components.llm_proxy.aegis_llm_proxy.acompletion") as mock_acomp:
+        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.acompletion") as mock_acomp:
             mock_acomp.return_value = mock_response_with_usage
 
             proxy = AegisLLMProxy(config=mock_llm_proxy_config)

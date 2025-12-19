@@ -23,7 +23,7 @@ def mock_settings():
     """Mock settings for testing."""
     with patch("src.components.retrieval.ollama_reranker.settings") as mock:
         mock.ollama_base_url = "http://localhost:11434"
-        mock.reranker_model = "bge-reranker-v2-m3"
+        mock.reranker_ollama_model = "bge-reranker-v2-m3"  # Fixed: use correct attribute name
         yield mock
 
 
