@@ -1275,6 +1275,95 @@ Alle Modelle müssen mit der vollständigen Pipeline (inkl. Relation Dedup) neu 
 
 ---
 
+## Sprint 53: Quick Wins - Circular Dependencies & Admin Refactoring ✅ (COMPLETE 2025-12-19)
+**Ziel:** Auflösung zirkulärer Dependencies + Admin.py Split
+
+**Start:** 2025-12-18
+**End:** 2025-12-19
+**Status:** COMPLETE
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 53.1 Circular Dependency Fix: Admin → CommunitySummarizer | 5 | ✅ DONE |
+| 53.2 Circular Dependency Fix: Extraction Factory Self-Import | 3 | ✅ DONE |
+| 53.3 Admin.py Split: Indexing Module | 8 | ✅ DONE |
+| 53.4 Admin.py Split: Cost Module | 5 | ✅ DONE |
+| 53.5 Admin.py Split: LLM Config Module | 5 | ✅ DONE |
+| 53.6 Admin.py Split: Graph Analytics Module | 5 | ✅ DONE |
+| 53.7 Dead Code Removal | 3 | ✅ DONE |
+
+### Deliverables
+- Protocol-basierte Dependency Injection für LLM Config
+- 4 neue Admin-Module (admin_indexing, admin_costs, admin_llm, admin_graph)
+- admin.py reduziert von 4796 LOC auf ~500 LOC
+- Singleton Registry für Graph Components
+- Dead Code entfernt (Vulture-Findings)
+
+### Success Criteria
+- ✅ 0 zirkuläre Dependencies
+- ✅ admin.py < 500 LOC
+- ✅ 4 neue Admin-Module erstellt
+- ✅ Alle Tests passieren
+
+### References
+- [SPRINT_53_PLAN.md](SPRINT_53_PLAN.md)
+- [ADR-046: Comprehensive Refactoring Strategy](../adr/ADR-046_COMPREHENSIVE_REFACTORING_STRATEGY.md)
+
+---
+
+## Sprint 54: langgraph_nodes.py Modularization ✅ (COMPLETE 2025-12-19)
+**Ziel:** Split langgraph_nodes.py (2227 LOC) in modulares nodes/ Package
+
+**Start:** 2025-12-19
+**End:** 2025-12-19
+**Status:** COMPLETE
+
+**Breakdown:**
+| Feature | SP | Status |
+|---------|-----|--------|
+| 54.1 Create nodes/ Package Structure | 3 | ✅ DONE |
+| 54.2 Extract memory_management Node | 5 | ✅ DONE (150 LOC) |
+| 54.3 Extract document_parsers Node | 8 | ✅ DONE (410 LOC) |
+| 54.4 Extract image_enrichment Node | 6 | ✅ DONE (302 LOC) |
+| 54.5 Extract adaptive_chunking Node | 6 | ✅ DONE (555 LOC) |
+| 54.6 Extract vector_embedding Node | 5 | ✅ DONE (262 LOC) |
+| 54.7 Extract graph_extraction Node | 8 | ✅ DONE (551 LOC) |
+| 54.8 Legacy Wrapper & OPL Update | 3 | ✅ DONE (65 LOC facade) |
+
+### Deliverables
+- **nodes/__init__.py** - Package entry with all exports (72 LOC)
+- **nodes/models.py** - Shared dataclasses SectionMetadata, AdaptiveChunk (65 LOC)
+- **nodes/memory_management.py** - RAM/VRAM checks (150 LOC)
+- **nodes/document_parsers.py** - Docling parsing (410 LOC)
+- **nodes/image_enrichment.py** - VLM image processing (302 LOC)
+- **nodes/adaptive_chunking.py** - Section-aware chunking (555 LOC)
+- **nodes/vector_embedding.py** - BGE-M3 embeddings + Qdrant (262 LOC)
+- **nodes/graph_extraction.py** - Neo4j entities/relations (551 LOC)
+- **langgraph_nodes.py** - 65 LOC facade (down from 2227 LOC)
+
+### Key Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| langgraph_nodes.py | 2227 LOC | 65 LOC |
+| Largest module | 2227 LOC | 555 LOC (adaptive_chunking) |
+| Total node modules | 1 | 8 |
+| Backward compatibility | N/A | 100% (facade pattern) |
+
+### Success Criteria
+- ✅ langgraph_nodes.py < 100 LOC (65 LOC achieved)
+- ✅ 8 neue Node-Module in nodes/ Package
+- ✅ Alle Imports funktionieren (direkt und via Facade)
+- ✅ REFACTORING_OPL.md aktualisiert (OPL-003, OPL-004, DC-002)
+- ✅ Keine neuen zirkulären Dependencies
+
+### References
+- [SPRINT_54_PLAN.md](SPRINT_54_PLAN.md)
+- [ADR-046: Comprehensive Refactoring Strategy](../adr/ADR-046_COMPREHENSIVE_REFACTORING_STRATEGY.md)
+- [REFACTORING_OPL.md](../refactoring/REFACTORING_OPL.md)
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |

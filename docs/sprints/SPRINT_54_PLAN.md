@@ -1,9 +1,10 @@
 # Sprint 54: langgraph_nodes.py Refactoring
 
-**Status:** PLANNED
-**Branch:** `sprint-54-langgraph-nodes-split`
-**Start Date:** TBD (nach Sprint 53)
-**Estimated Duration:** 5 Tage
+**Status:** ✅ COMPLETE
+**Branch:** `main`
+**Start Date:** 2025-12-19
+**End Date:** 2025-12-19
+**Duration:** 1 Tag
 **Total Story Points:** 42 SP
 
 ---
@@ -507,13 +508,13 @@ Agent 4: OPL Update & Verification
 
 ## Acceptance Criteria (Sprint Complete)
 
-- [ ] `langgraph_nodes.py` von 2227 LOC auf <100 LOC reduziert
-- [ ] 6 neue Node-Module in `nodes/` Package
-- [ ] Alle Imports funktionieren (direkt und via Facade)
-- [ ] Alle Unit Tests passieren
-- [ ] Alle Integration Tests passieren
-- [ ] REFACTORING_OPL.md aktualisiert (OPL-003, OPL-004)
-- [ ] Keine neuen zirkulären Dependencies
+- [x] `langgraph_nodes.py` von 2227 LOC auf <100 LOC reduziert (65 LOC achieved)
+- [x] 8 neue Node-Module in `nodes/` Package (including models.py and __init__.py)
+- [x] Alle Imports funktionieren (direkt und via Facade)
+- [x] Alle Unit Tests passieren
+- [x] Alle Integration Tests passieren
+- [x] REFACTORING_OPL.md aktualisiert (OPL-003, OPL-004, DC-002)
+- [x] Keine neuen zirkulären Dependencies
 
 ---
 
@@ -531,16 +532,16 @@ Agent 4: OPL Update & Verification
 ## Definition of Done
 
 ### Per Feature
-- [ ] Node-Modul extrahiert und funktional
-- [ ] Unit Tests angepasst
-- [ ] Import in `__init__.py`
-- [ ] REFACTORING_OPL.md geprüft
+- [x] Node-Modul extrahiert und funktional
+- [x] Unit Tests angepasst
+- [x] Import in `__init__.py`
+- [x] REFACTORING_OPL.md geprüft
 
 ### Sprint Complete
-- [ ] Alle 6 Node-Module erstellt
-- [ ] Legacy Facade funktional
-- [ ] CI/CD grün
-- [ ] OPL-003, OPL-004 dokumentiert
+- [x] Alle 8 Node-Module erstellt (6 node modules + models.py + __init__.py)
+- [x] Legacy Facade funktional (langgraph_nodes.py = 65 LOC)
+- [x] CI/CD grün
+- [x] OPL-003, OPL-004, DC-002 dokumentiert
 
 ---
 
