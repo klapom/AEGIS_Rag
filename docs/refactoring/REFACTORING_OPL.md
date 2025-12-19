@@ -1,8 +1,9 @@
 # REFACTORING Open Point List (OPL)
 
-**Stand:** 2025-12-19
+**Stand:** 2025-12-19 (nach Sprint 54)
 **Sprint-Range:** 53-58
 **Ziel:** Alle Einträge bis Ende Sprint 58 aufgelöst
+**Letztes Update:** Sprint 54 - langgraph_nodes.py Split abgeschlossen
 
 ---
 
@@ -118,17 +119,24 @@ Alle Imports auf neue Module umstellen, Re-Exports entfernen.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-003 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 54 |
+| **Implementiert** | Sprint 54 (2025-12-19) |
 | **Auflösung geplant** | Sprint 55 |
-| **Feature** | 54.1-54.6 - langgraph_nodes Split |
+| **Feature** | 54.1-54.8 - langgraph_nodes Split |
 
 **Problem:**
 `langgraph_pipeline.py` importiert Node-Funktionen direkt aus `langgraph_nodes.py`.
 
-**Temporäre Lösung:**
+**Lösung implementiert (Sprint 54):**
+1. ✅ `nodes/` Package erstellt mit 8 Modulen
+2. ✅ `langgraph_nodes.py` auf Facade reduziert (65 LOC)
+3. ✅ Re-Exports für Backward-Compatibility eingerichtet
+4. ✅ Alle Imports verifiziert und funktional
+
+**Temporäre Lösung (aktiv):**
 ```python
-# src/components/ingestion/langgraph_nodes.py - After split
+# src/components/ingestion/langgraph_nodes.py - Facade (65 LOC)
 # OPL-003: Backward-compat aliases until Sprint 55
 from src.components.ingestion.nodes.memory_management import memory_check_node
 from src.components.ingestion.nodes.document_parsers import docling_parse_node
@@ -148,11 +156,17 @@ __all__ = [
 ]
 ```
 
-**Verwendungsstellen:**
-- `src/components/ingestion/langgraph_pipeline.py:35-45`
-- `src/components/ingestion/streaming_pipeline.py:20-30`
+**Verwendungsstellen (22+ Dateien):**
+- `src/components/ingestion/langgraph_pipeline.py`
+- `src/components/ingestion/streaming_pipeline.py`
 - `tests/unit/components/ingestion/test_langgraph_nodes_unit.py`
-- 22+ Dateien (siehe Analyse)
+- `tests/integration/components/ingestion/test_langgraph_pipeline.py`
+- Weitere Tests und Scripts
+
+**Verbleibende Schritte (Sprint 55):**
+1. [ ] Alle Verwendungsstellen auf direkte `nodes/` Imports umstellen
+2. [ ] Re-Export-Facade entfernen oder minimal halten
+3. [ ] OPL-003 Status auf RESOLVED setzen
 
 **Finale Lösung:**
 Direkte Imports aus `nodes/` Submodulen.
@@ -164,21 +178,54 @@ Direkte Imports aus `nodes/` Submodulen.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-004 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 54 |
+| **Implementiert** | Sprint 54 (2025-12-19) |
 | **Auflösung geplant** | Sprint 56 |
 | **Feature** | 54.1 - langgraph_nodes Split |
 
 **Problem:**
 Dataclasses `SectionMetadata` und `AdaptiveChunk` werden in mehreren Nodes verwendet.
 
-**Temporäre Lösung:**
-Dataclasses in separates Modul, aber noch in `langgraph_nodes.py` re-exportiert.
+**Lösung implementiert (Sprint 54):**
+1. ✅ `nodes/models.py` erstellt (65 LOC)
+2. ✅ `SectionMetadata` und `AdaptiveChunk` extrahiert
+3. ✅ Re-Exports in `nodes/__init__.py` und `langgraph_nodes.py`
+
+**Temporäre Lösung (aktiv):**
+```python
+# src/components/ingestion/nodes/models.py (65 LOC)
+@dataclass
+class SectionMetadata:
+    heading: str
+    level: int
+    page_no: int
+    bbox: dict[str, float]
+    text: str
+    token_count: int
+    metadata: dict[str, Any]
+
+@dataclass
+class AdaptiveChunk:
+    text: str
+    token_count: int
+    section_headings: list[str]
+    section_pages: list[int]
+    section_bboxes: list[dict[str, float]]
+    primary_section: str
+    metadata: dict[str, Any]
+```
 
 **Verwendungsstellen:**
 - `src/components/ingestion/nodes/adaptive_chunking.py`
-- `src/components/ingestion/nodes/document_parsers.py`
+- `src/components/ingestion/nodes/document_parsers.py` (importiert nicht direkt)
 - `src/components/ingestion/section_extraction.py`
+- Backward-compat: `langgraph_nodes.py` re-exportiert
+
+**Verbleibende Schritte (Sprint 56):**
+1. [ ] Move to `src/components/ingestion/models.py`
+2. [ ] Update alle Imports
+3. [ ] OPL-004 Status auf RESOLVED setzen
 
 **Finale Lösung:**
 Move to `src/components/ingestion/models.py` in Sprint 56 (Domain Boundaries).
@@ -283,14 +330,15 @@ Nach Sprint 58 sollte diese Datei nur noch REMOVED-Einträge enthalten (als Doku
 
 | Sprint | OPL-IDs | Status |
 |--------|---------|--------|
-| 53 | OPL-001, OPL-002 | OPEN |
-| 54 | OPL-003, OPL-004 | OPEN |
+| 53 | OPL-001, OPL-002 | IN_PROGRESS |
+| 54 | OPL-003, OPL-004 | IN_PROGRESS (implementiert) |
 | 55 | OPL-005 | OPEN |
 | 56 | OPL-006 | OPEN |
 | 57 | OPL-007 | OPEN |
 | 58 | Cleanup | - |
 
-**Total Open:** 7
+**Total Open:** 5 (OPL-005 bis OPL-007)
+**Total In Progress:** 4 (OPL-001 bis OPL-004)
 **Target End Sprint 58:** 0
 
 ---
@@ -359,12 +407,27 @@ grep -r "from src.api.v1.admin import" src/ tests/ --include="*.py"
 | **ID** | DC-002 |
 | **Kategorie** | DEPRECATED |
 | **Erstellt** | Sprint 54 |
+| **Implementiert** | Sprint 54 (2025-12-19) |
 | **Entfernung** | Sprint 55 |
 | **Dateien** | `src/components/ingestion/langgraph_nodes.py` |
 
+**Status:** ✅ IMPLEMENTIERT - Originale extrahiert, Facade erstellt
+
 **Betroffene Elemente:**
-- Komplette Node-Implementierungen (nach Extraktion in nodes/)
-- Nur Re-Exports bleiben (OPL-003)
+- ✅ Komplette Node-Implementierungen (extrahiert nach nodes/)
+- ✅ Nur Re-Exports bleiben (OPL-003)
+- Facade: 65 LOC (reduziert von 2227 LOC)
+
+**Neue Module erstellt:**
+| Modul | LOC | Inhalt |
+|-------|-----|--------|
+| `nodes/models.py` | 65 | SectionMetadata, AdaptiveChunk |
+| `nodes/memory_management.py` | 150 | memory_check_node |
+| `nodes/document_parsers.py` | 410 | docling_*, llamaindex_parse_node |
+| `nodes/image_enrichment.py` | 302 | image_enrichment_node |
+| `nodes/adaptive_chunking.py` | 555 | chunking_node, adaptive_section_chunking |
+| `nodes/vector_embedding.py` | 262 | embedding_node |
+| `nodes/graph_extraction.py` | 551 | graph_extraction_node |
 
 **Verification vor Entfernung:**
 ```bash
