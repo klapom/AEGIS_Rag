@@ -1,13 +1,12 @@
 """VLM Factory Pattern - Backward Compatibility Facade.
 
 Sprint 56: Re-exports from src.domains.llm_integration.proxy
-OPL-006: These re-exports will be removed in Sprint 58.
 
-Migrate to:
+Recommended import:
     from src.domains.llm_integration.proxy import get_vlm_client, VLMBackend
 """
 
-# OPL-006: Re-export from new domain location
+# Re-export from domain location
 from src.domains.llm_integration.proxy import (
     VLMBackend,
     VLMClient,

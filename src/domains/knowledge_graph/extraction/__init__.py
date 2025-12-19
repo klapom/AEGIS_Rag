@@ -10,7 +10,7 @@ Usage:
     )
 """
 
-# OPL-009: Re-export from components/graph_rag until Sprint 58
+# Re-export from components/graph_rag
 from src.components.graph_rag.relation_extractor import (
     RelationExtractor,
     create_relation_extractor_from_config,

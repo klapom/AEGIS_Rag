@@ -24,7 +24,7 @@ For backward compatibility, these are also available from:
     from src.components.graph_rag import ...
 """
 
-# OPL-009: Re-export from components/graph_rag until Sprint 58
+# Re-export from components/graph_rag
 
 # Protocols (Sprint 57)
 from src.domains.knowledge_graph.protocols import (

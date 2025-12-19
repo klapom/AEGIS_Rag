@@ -19,7 +19,7 @@ For backward compatibility, these are also available from:
     from src.components.ingestion import ...
 """
 
-# OPL-010: Re-export from components/ingestion until Sprint 58
+# Re-export from components/ingestion
 
 # Protocols (Sprint 57)
 from src.domains.document_processing.protocols import (

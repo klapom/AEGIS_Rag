@@ -9,7 +9,7 @@ Usage:
     )
 """
 
-# OPL-010: Re-export from components/ingestion until Sprint 58
+# Re-export from components/ingestion
 from src.components.ingestion.nodes.image_enrichment import (
     image_enrichment_node,
 )

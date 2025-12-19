@@ -669,8 +669,8 @@ async def reset_relation_synonyms() -> RelationOverridesResetResponse:
 # See: admin_llm.py, admin_graph.py
 # ============================================================================
 
-# OPL-001: Backward-compatibility re-exports (to be removed in Sprint 54)
-# Any code importing these from admin.py will still work.
+# Re-exports for backward compatibility with external scripts
+# These can be imported from src.components.graph_rag.llm_config_provider directly
 from src.components.graph_rag.llm_config_provider import (
     REDIS_KEY_SUMMARY_MODEL_CONFIG,
     get_configured_summary_model,

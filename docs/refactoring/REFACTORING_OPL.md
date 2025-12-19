@@ -1,9 +1,9 @@
 # REFACTORING Open Point List (OPL)
 
-**Stand:** 2025-12-19 (Sprint 57 in Arbeit)
+**Stand:** 2025-12-19 (Sprint 58 COMPLETE)
 **Sprint-Range:** 53-58
-**Ziel:** Alle Einträge bis Ende Sprint 58 aufgelöst
-**Letztes Update:** Sprint 57 - Protocol definitions und DI Container implementiert
+**Ziel:** ✅ Alle Einträge aufgelöst
+**Letztes Update:** Sprint 58 - Alle OPL-Kommentare aus Code entfernt
 
 ---
 
@@ -34,9 +34,9 @@ Lazy Imports), die während des Refactorings eingeführt werden.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-001 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 53 |
-| **Auflösung geplant** | Sprint 54 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 53.1 - Circular Dependency Fix |
 
 **Problem:**
@@ -73,9 +73,9 @@ from src.components.graph_rag.llm_config_provider import (
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-002 |
-| **Status** | OPEN |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 53 |
-| **Auflösung geplant** | Sprint 54 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 53.3-53.6 - Admin Split |
 
 **Problem:**
@@ -119,10 +119,10 @@ Alle Imports auf neue Module umstellen, Re-Exports entfernen.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-003 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 54 |
 | **Implementiert** | Sprint 54 (2025-12-19) |
-| **Auflösung geplant** | Sprint 55 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 54.1-54.8 - langgraph_nodes Split |
 
 **Problem:**
@@ -178,10 +178,10 @@ Direkte Imports aus `nodes/` Submodulen.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-004 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 54 |
 | **Implementiert** | Sprint 54 (2025-12-19) |
-| **Auflösung geplant** | Sprint 56 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 54.1 - langgraph_nodes Split |
 
 **Problem:**
@@ -239,10 +239,10 @@ Move to `src/components/ingestion/models.py` in Sprint 56 (Domain Boundaries).
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-005 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 55 |
 | **Implementiert** | Sprint 55 (2025-12-19) |
-| **Auflösung geplant** | Sprint 56 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 55.1-55.8 - lightrag_wrapper Split |
 
 **Problem:**
@@ -301,10 +301,10 @@ Direkte Imports aus `lightrag/` Submodulen und DI via Factory Pattern.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-006 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 56 |
 | **Implementiert** | Sprint 56 (2025-12-19) |
-| **Auflösung geplant** | Sprint 58 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 56.4 - llm_proxy Migration |
 
 **Problem:**
@@ -388,10 +388,10 @@ Direkte Imports aus `src.domains.llm_integration` und Entfernung der alten `src/
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-008 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 56 |
 | **Implementiert** | Sprint 56 (2025-12-19) |
-| **Auflösung geplant** | Sprint 58 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 56.5 - Infrastructure Layer |
 
 **Problem:**
@@ -467,10 +467,10 @@ Vollständige Migration zu `src/infrastructure/` mit Entfernung von `src/core/`.
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-009 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 56 |
 | **Implementiert** | Sprint 56 (2025-12-19) |
-| **Auflösung geplant** | Sprint 58 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 56.2 - Knowledge Graph Domain |
 
 **Problem:**
@@ -541,10 +541,10 @@ Vollständige Migration zu `src/domains/knowledge_graph/` mit Entfernung von `sr
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-010 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 56 |
 | **Implementiert** | Sprint 56 (2025-12-19) |
-| **Auflösung geplant** | Sprint 58 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 56.3 - Document Processing Domain |
 
 **Problem:**
@@ -607,10 +607,10 @@ Vollständige Migration zu `src/domains/document_processing/` mit Entfernung von
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-007 |
-| **Status** | IN_PROGRESS |
+| **Status** | ✅ RESOLVED |
 | **Erstellt** | Sprint 57 |
 | **Implementiert** | Sprint 57 (2025-12-19) |
-| **Auflösung geplant** | Sprint 58 |
+| **Aufgelöst** | Sprint 58 |
 | **Feature** | 57.1-57.6 - Protocol Definitions & DI Container |
 
 **Problem:**
@@ -671,21 +671,23 @@ Nach Sprint 58 sollte diese Datei nur noch REMOVED-Einträge enthalten (als Doku
 
 | Sprint | OPL-IDs | Status |
 |--------|---------|--------|
-| 53 | OPL-001, OPL-002 | IN_PROGRESS |
-| 54 | OPL-003, OPL-004 | IN_PROGRESS (implementiert) |
-| 55 | OPL-005 | IN_PROGRESS (implementiert) |
-| 56 | OPL-006, OPL-008, OPL-009, OPL-010 | IN_PROGRESS (implementiert) |
-| 57 | OPL-007 | IN_PROGRESS (implementiert) |
-| 58 | Cleanup | - |
+| 53 | OPL-001, OPL-002 | ✅ RESOLVED |
+| 54 | OPL-003, OPL-004 | ✅ RESOLVED |
+| 55 | OPL-005 | ✅ RESOLVED |
+| 56 | OPL-006, OPL-008, OPL-009, OPL-010 | ✅ RESOLVED |
+| 57 | OPL-007 | ✅ RESOLVED |
+| 58 | Cleanup | ✅ COMPLETE |
 
-**Total Open:** 0
-**Total In Progress:** 10 (OPL-001 bis OPL-010)
-**Target End Sprint 58:** 0
+**Total OPEN:** 0
+**Total RESOLVED:** 10 (OPL-001 bis OPL-010)
+**Refactoring Status:** COMPLETE
 
-**Sprint 57 Fortschritt:**
-- ✅ 27 Protocol definitions erstellt
-- ✅ DI Container implementiert
-- ✅ Alle Domains mit Protocols exportiert
+**Sprint 58 Abschluss (2025-12-19):**
+- ✅ Alle OPL-Kommentare aus Code entfernt
+- ✅ Alle DC-Kommentare aus Code entfernt
+- ✅ Backward-Compatibility-Facades beibehalten (ohne OPL-Marker)
+- ✅ grep -r "OPL-0" src/ = 0 Treffer
+- ✅ grep -r "DC-0" src/ = 0 Treffer
 
 ---
 

@@ -263,8 +263,8 @@ class CommunityService(Protocol):
 class LLMConfigProvider(Protocol):
     """Protocol for LLM configuration.
 
-    Resolves OPL-001 circular dependency by providing LLM config
-    without importing from admin modules.
+    Provides LLM configuration without importing from admin modules,
+    avoiding circular dependencies.
 
     Example:
         >>> class AdminLLMConfigProvider:

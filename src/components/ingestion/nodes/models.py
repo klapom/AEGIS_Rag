@@ -4,9 +4,6 @@ Sprint 54 Feature 54.1: Extracted from langgraph_nodes.py
 
 These dataclasses define the core data structures used across
 all ingestion pipeline nodes.
-
-OPL-004: These dataclasses are defined here temporarily.
-Final location: src/components/ingestion/models.py (Sprint 56)
 """
 
 from dataclasses import dataclass

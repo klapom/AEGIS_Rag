@@ -2,13 +2,12 @@
 Pydantic models for LLM proxy component - Backward Compatibility Facade.
 
 Sprint 56: Re-exports from src.domains.llm_integration.models
-OPL-006: These re-exports will be removed in Sprint 58.
 
-Migrate to:
+Recommended import:
     from src.domains.llm_integration.models import LLMTask, TaskType
 """
 
-# OPL-006: Re-export from new domain location
+# Re-export from domain location
 from src.domains.llm_integration.models import (
     Complexity,
     DataClassification,

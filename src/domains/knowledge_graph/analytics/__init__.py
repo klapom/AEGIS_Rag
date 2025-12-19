@@ -9,7 +9,7 @@ Usage:
     )
 """
 
-# OPL-009: Re-export from components/graph_rag until Sprint 58
+# Re-export from components/graph_rag
 from src.components.graph_rag.analytics_engine import (
     GraphAnalyticsEngine,
     get_analytics_engine,

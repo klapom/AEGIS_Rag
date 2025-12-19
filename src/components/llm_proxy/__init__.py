@@ -2,16 +2,12 @@
 LLM Proxy Component - Backward Compatibility Layer.
 
 Sprint 56: Re-exports from src.domains.llm_integration for backward compatibility.
-OPL-006: These re-exports will be removed in Sprint 58.
 
-Migrate to:
+Recommended import:
     from src.domains.llm_integration import get_aegis_llm_proxy, LLMTask
-
-See: docs/refactoring/REFACTORING_OPL.md
 """
 
-# OPL-006: Re-export from new domain location
-# DC-004: These re-exports will be removed in Sprint 58
+# Re-export from domain location
 from src.domains.llm_integration import (
     # Models
     Complexity,

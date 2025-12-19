@@ -10,7 +10,7 @@ Usage:
     )
 """
 
-# OPL-009: Re-export from components/graph_rag until Sprint 58
+# Re-export from components/graph_rag
 from src.components.graph_rag.neo4j_client import (
     Neo4jClient,
     get_neo4j_client,

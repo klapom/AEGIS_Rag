@@ -10,7 +10,7 @@ Usage:
     )
 """
 
-# OPL-010: Re-export from components/ingestion until Sprint 58
+# Re-export from components/ingestion
 from src.components.ingestion.ingestion_state import (
     IngestionState,
     add_error,

@@ -10,7 +10,7 @@ Usage:
     )
 """
 
-# OPL-010: Re-export from components/ingestion until Sprint 58
+# Re-export from components/ingestion
 from src.components.ingestion.nodes.adaptive_chunking import (
     chunking_node,
     adaptive_section_chunking,
