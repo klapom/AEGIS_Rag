@@ -1,0 +1,262 @@
+"""Vector Embedding Node for LangGraph Ingestion Pipeline.
+
+Sprint 54 Feature 54.6: Extracted from langgraph_nodes.py
+
+This module handles embedding generation and Qdrant upload:
+- Generate BGE-M3 embeddings (1024D) via Ollama
+- Create Qdrant payloads with full provenance
+- Upload to Qdrant vector database
+
+Node: embedding_node
+"""
+
+import hashlib
+import time
+import uuid
+
+import structlog
+from qdrant_client.models import PointStruct
+
+from src.components.ingestion.ingestion_state import (
+    IngestionState,
+    add_error,
+    calculate_progress,
+)
+from src.components.shared.embedding_service import get_embedding_service
+from src.components.vector_search.qdrant_client import QdrantClientWrapper
+from src.core.config import settings
+from src.core.exceptions import IngestionError
+
+logger = structlog.get_logger(__name__)
+
+
+async def embedding_node(state: IngestionState) -> IngestionState:
+    """Node 4: Generate embeddings + upload to Qdrant with full provenance (Feature 21.6).
+
+    Feature 21.6 Changes:
+    - Handles enhanced chunks (with image_bboxes)
+    - Uses chunk.contextualize() for hierarchical context
+    - Stores full BBox provenance in Qdrant payload
+    - Includes page dimensions for frontend rendering
+
+    Workflow:
+    1. Extract contextualized text from chunks
+    2. Generate BGE-M3 embeddings (1024D) via Ollama
+    3. Create Qdrant payloads with full provenance
+    4. Upload to Qdrant vector database
+
+    Args:
+        state: Current ingestion state
+
+    Returns:
+        Updated state with embedded chunk IDs
+
+    Raises:
+        IngestionError: If embedding or upload fails
+
+    Example:
+        >>> state = await embedding_node(state)
+        >>> len(state["embedded_chunk_ids"])
+        8  # 8 chunks uploaded to Qdrant
+        >>> state["embedding_status"]
+        'completed'
+    """
+    embedding_node_start = time.perf_counter()
+    logger.info(
+        "TIMING_embedding_start",
+        stage="embedding",
+        document_id=state["document_id"],
+    )
+
+    state["embedding_status"] = "running"
+    state["embedding_start_time"] = time.time()
+
+    try:
+        # Get enhanced chunks (Feature 21.6: list of {chunk, image_bboxes})
+        chunk_data_list = state.get("chunks", [])
+        if not chunk_data_list:
+            raise IngestionError(
+                document_id=state.get("document_id", "unknown"),
+                reason="No chunks to embed (chunks list is empty)",
+            )
+
+        # Get embedding service (BGE-M3, 1024D)
+        embedding_service = get_embedding_service()
+
+        # Feature 21.6: Extract contextualized text (includes headings, captions, page)
+        texts = []
+        for chunk_data in chunk_data_list:
+            chunk = chunk_data["chunk"] if isinstance(chunk_data, dict) else chunk_data
+            # Use contextualize() for hierarchical context
+            if hasattr(chunk, "contextualize"):
+                contextualized_text = chunk.contextualize()
+                texts.append(contextualized_text)
+            else:
+                # Fallback for legacy chunks
+                texts.append(chunk.content if hasattr(chunk, "content") else str(chunk))
+
+        # Generate embeddings
+        embedding_gen_start = time.perf_counter()
+        logger.info(
+            "TIMING_embedding_generation_start",
+            stage="embedding",
+            substage="embedding_generation",
+            chunk_count=len(texts),
+            total_chars=sum(len(t) for t in texts),
+        )
+        embeddings = await embedding_service.embed_batch(texts)
+        embedding_gen_end = time.perf_counter()
+        embedding_gen_ms = (embedding_gen_end - embedding_gen_start) * 1000
+        embeddings_per_sec = len(texts) / (embedding_gen_ms / 1000) if embedding_gen_ms > 0 else 0
+
+        logger.info(
+            "TIMING_embedding_generation_complete",
+            stage="embedding",
+            substage="embedding_generation",
+            duration_ms=round(embedding_gen_ms, 2),
+            embeddings_generated=len(embeddings),
+            throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
+            embedding_dim=len(embeddings[0]) if embeddings else 0,
+        )
+
+        # Upload to Qdrant
+        qdrant = QdrantClientWrapper()
+        collection_name = settings.qdrant_collection
+
+        # Ensure collection exists
+        await qdrant.create_collection(
+            collection_name=collection_name,
+            vector_size=1024,  # BGE-M3 dimension
+        )
+
+        # Create Qdrant points with full provenance
+        page_dimensions = state.get("page_dimensions", {})
+        points = []
+        chunk_ids = []
+
+        for chunk_data, embedding, contextualized_text in zip(
+            chunk_data_list, embeddings, texts, strict=False
+        ):
+            # Handle both enhanced and legacy chunk formats
+            if isinstance(chunk_data, dict):
+                chunk = chunk_data["chunk"]
+                image_bboxes = chunk_data.get("image_bboxes", [])
+            else:
+                chunk = chunk_data
+                image_bboxes = []
+
+            # Generate deterministic chunk ID (Sprint 30: Use UUID format for Qdrant)
+            chunk_text = chunk.text if hasattr(chunk, "text") else str(chunk)
+            chunk_name = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
+            # Convert to UUID using uuid5 (deterministic, namespace-based)
+            chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_name))
+            chunk_ids.append(chunk_id)
+
+            # Feature 21.6: Create payload with full provenance
+            page_no = (
+                chunk.meta.page_no
+                if hasattr(chunk, "meta") and hasattr(chunk.meta, "page_no")
+                else None
+            )
+            headings = (
+                chunk.meta.headings
+                if hasattr(chunk, "meta") and hasattr(chunk.meta, "headings")
+                else []
+            )
+
+            payload = {
+                # Content
+                "content": chunk_text,
+                "contextualized_content": contextualized_text,
+                # Document Provenance
+                "document_id": state["document_id"],
+                "document_path": str(state["document_path"]),
+                "page_no": page_no,
+                "headings": headings,
+                "chunk_id": chunk_id,
+                # Page Dimensions (for frontend rendering)
+                "page_dimensions": page_dimensions.get(page_no) if page_no else None,
+                # Image Annotations with BBox (CRITICAL for Feature 21.6!)
+                "contains_images": len(image_bboxes) > 0,
+                "image_annotations": [
+                    {
+                        "description": img["description"],
+                        "vlm_model": img["vlm_model"],
+                        "bbox_absolute": (
+                            img["bbox_full"]["bbox_absolute"] if img["bbox_full"] else None
+                        ),
+                        "page_context": (
+                            img["bbox_full"]["page_context"] if img["bbox_full"] else None
+                        ),
+                        "bbox_normalized": (
+                            img["bbox_full"]["bbox_normalized"] if img["bbox_full"] else None
+                        ),
+                    }
+                    for img in image_bboxes
+                ],
+                # Timestamps
+                "ingestion_timestamp": time.time(),
+                # Sprint 51: Namespace for document isolation
+                # Admin-indexed docs use "default" namespace (globally searchable)
+                # User project docs will override this with their namespace
+                "namespace": "default",
+            }
+
+            point = PointStruct(
+                id=chunk_id,
+                vector=embedding,
+                payload=payload,
+            )
+            points.append(point)
+
+        # Upload batch
+        qdrant_upsert_start = time.perf_counter()
+        await qdrant.upsert_points(
+            collection_name=collection_name,
+            points=points,
+            batch_size=100,
+        )
+        qdrant_upsert_end = time.perf_counter()
+        qdrant_upsert_ms = (qdrant_upsert_end - qdrant_upsert_start) * 1000
+
+        logger.info(
+            "TIMING_qdrant_upsert_complete",
+            stage="embedding",
+            substage="qdrant_upsert",
+            duration_ms=round(qdrant_upsert_ms, 2),
+            points_uploaded=len(points),
+            batch_size=100,
+            collection=collection_name,
+        )
+
+        # Store point IDs
+        state["embedded_chunk_ids"] = chunk_ids
+        state["embedding_status"] = "completed"
+        state["embedding_end_time"] = time.time()
+        state["overall_progress"] = calculate_progress(state)
+
+        embedding_node_end = time.perf_counter()
+        total_embedding_ms = (embedding_node_end - embedding_node_start) * 1000
+
+        logger.info(
+            "TIMING_embedding_complete",
+            stage="embedding",
+            duration_ms=round(total_embedding_ms, 2),
+            document_id=state["document_id"],
+            points_uploaded=len(points),
+            points_with_images=sum(1 for p in points if p.payload.get("contains_images")),
+            collection=collection_name,
+            timing_breakdown={
+                "embedding_generation_ms": round(embedding_gen_ms, 2),
+                "qdrant_upsert_ms": round(qdrant_upsert_ms, 2),
+            },
+        )
+
+        return state
+
+    except Exception as e:
+        logger.error("node_embedding_error", document_id=state["document_id"], error=str(e))
+        add_error(state, "embedding", str(e), "error")
+        state["embedding_status"] = "failed"
+        state["embedding_end_time"] = time.time()
+        raise

@@ -1,14 +1,7 @@
-"""LangGraph Ingestion Pipeline Nodes - Backward Compatibility Facade.
+"""LangGraph Ingestion Pipeline Nodes.
 
-Sprint 54: This file is now a facade that re-exports from the new modularized nodes package.
-All functionality has been moved to src/components/ingestion/nodes/ for better maintainability.
-
-MIGRATION NOTICE:
-    Old imports (still work):
-        from src.components.ingestion.langgraph_nodes import memory_check_node
-
-    New imports (preferred):
-        from src.components.ingestion.nodes import memory_check_node
+Sprint 54: Modularized node functions for better maintainability.
+Each node handles one specific stage of document ingestion.
 
 Node Pipeline:
 1. memory_check_node       -> Check RAM/VRAM availability
@@ -18,35 +11,49 @@ Node Pipeline:
 5. embedding_node          -> Generate BGE-M3 vectors -> Qdrant
 6. graph_extraction_node   -> Extract entities/relations -> Neo4j
 
-See ADR-046 for details on the modularization strategy.
+Usage:
+    from src.components.ingestion.nodes import (
+        memory_check_node,
+        docling_parse_node,
+        image_enrichment_node,
+        chunking_node,
+        embedding_node,
+        graph_extraction_node,
+    )
+
+For backward compatibility, these are also re-exported from:
+    from src.components.ingestion.langgraph_nodes import ...
 """
 
-# Re-export everything from the new nodes package for backward compatibility
-# All existing imports from this file will continue to work
-
 # Data models
-from src.components.ingestion.nodes.models import (
-    AdaptiveChunk,
-    SectionMetadata,
-)
+from src.components.ingestion.nodes.models import AdaptiveChunk, SectionMetadata
 
-# Node functions
+# Sprint 54.2: memory_management
 from src.components.ingestion.nodes.memory_management import memory_check_node
+
+# Sprint 54.3: document_parsers
 from src.components.ingestion.nodes.document_parsers import (
     docling_extraction_node,
     docling_parse_node,
     llamaindex_parse_node,
 )
+
+# Sprint 54.4: image_enrichment
 from src.components.ingestion.nodes.image_enrichment import image_enrichment_node
+
+# Sprint 54.5: adaptive_chunking
 from src.components.ingestion.nodes.adaptive_chunking import (
     adaptive_section_chunking,
     chunking_node,
     merge_small_chunks,
 )
+
+# Sprint 54.6: vector_embedding
 from src.components.ingestion.nodes.vector_embedding import embedding_node
+
+# Sprint 54.7: graph_extraction
 from src.components.ingestion.nodes.graph_extraction import graph_extraction_node
 
-# Export all symbols for backward compatibility
 __all__ = [
     # Data models
     "SectionMetadata",
