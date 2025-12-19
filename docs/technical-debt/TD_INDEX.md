@@ -1,11 +1,14 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-18 (Sprint 52 Complete)
-**Total Open Items:** 12
-**Total Story Points:** ~207 SP
+**Last Updated:** 2025-12-19 (Sprint 60 Planning)
+**Total Open Items:** 18
+**Total Story Points:** ~251 SP
 **Archived Items:** [10 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
+**Sprint 53-58:** Refactoring Initiative (ADR-046)
+**Sprint 59:** Agentic Features, Tool Use
+**Sprint 60:** Documentation Consolidation, Technical Investigations
 
 ---
 
@@ -15,8 +18,9 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~53 SP       |
-| MEDIUM   | 6     | ~122 SP      |
-| LOW      | 3     | ~37 SP       |
+| MEDIUM   | 8     | ~148 SP      |
+| LOW      | 4     | ~58 SP       |
+| Investigation | 6 | ~44 SP     |
 
 ---
 
@@ -74,6 +78,17 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 52+ |
 | [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 52+ |
 | [TD-067](TD-067_DATASET_ANNOTATION_TOOL.md) | Dataset Annotation Tool | BACKLOG | 21 | Future |
+
+### Investigation / Review
+
+| TD# | Title | Status | SP | Target Sprint |
+|-----|-------|--------|-----|---------------|
+| [TD-068](TD-068_CLOUD_LLM_SUPPORT.md) | Cloud LLM Support (AnyLLM/Dashscope) | OPEN | 13 | Sprint 61+ |
+| [TD-069](TD-069_MULTIHOP_ENDPOINT_REVIEW.md) | Multihop Endpoint Status Review | OPEN | 3 | Sprint 60 |
+| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | Sprint 61+ |
+| [TD-071](TD-071_VLLM_VS_OLLAMA_INVESTIGATION.md) | vLLM vs Ollama Investigation | OPEN | 5 | Sprint 60 |
+| [TD-072](TD-072_SENTENCE_TRANSFORMERS_RERANKING.md) | Sentence-Transformers Reranking | OPEN | 5 | Sprint 60 |
+| [TD-073](TD-073_SENTENCE_TRANSFORMERS_EMBEDDINGS.md) | Sentence-Transformers Embeddings | OPEN | 5 | Sprint 60 |
 
 ---
 
