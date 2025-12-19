@@ -53,7 +53,23 @@ export interface ChatResponse {
 
 // SSE Streaming Types
 
-export type ChatChunkType = 'metadata' | 'token' | 'source' | 'error' | 'complete';
+/**
+ * SSE Chunk Types
+ * Sprint 15: Original types (metadata, token, source, error, complete)
+ * Sprint 48: Added phase_event for real-time thinking display
+ * Sprint 51: Added answer_chunk and reasoning_complete for structured responses
+ * Sprint 52: Added citation_map for real-time citation streaming
+ */
+export type ChatChunkType =
+  | 'metadata'
+  | 'token'
+  | 'source'
+  | 'error'
+  | 'complete'
+  | 'phase_event'      // Sprint 48: Real-time phase progress
+  | 'answer_chunk'     // Sprint 51: Structured answer with citations
+  | 'reasoning_complete' // Sprint 51: Final reasoning summary with all phases
+  | 'citation_map';    // Sprint 52: Citation metadata streamed before answer tokens
 
 /**
  * Citation metadata for a single source

@@ -20,6 +20,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.agents.phase_events_queue import stream_phase_event
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.models import (
     Complexity,
@@ -222,6 +223,8 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
 
     Sprint 48 Feature 48.3: Emits phase events for intent classification.
     Sprint 51 Feature 51.1: Adds phase events to list for streaming.
+    Sprint 52: Real-time phase event emission via queue.
+    Sprint 52 Fix: Respect user-selected mode instead of overwriting with LLM classification.
 
     Args:
         state: Current agent state
@@ -230,18 +233,74 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         Updated state with intent field set and phase_event
     """
     query = state.get("query", "")
+    session_id = state.get("session_id")
+    user_selected_intent = state.get("intent", "").lower()
 
-    logger.info("router_node_processing", query=query[:100])
+    logger.info("router_node_processing", query=query[:100], user_intent=user_selected_intent)
 
     # Initialize phase_events list if not present
     if "phase_events" not in state:
         state["phase_events"] = []
 
-    # Create phase event for intent classification
+    # Sprint 52 Fix: If user explicitly selected a mode, respect it
+    # Only run LLM classification for "auto" or unspecified intents
+    valid_user_intents = {"vector", "graph", "hybrid", "memory"}
+    if user_selected_intent in valid_user_intents:
+        logger.info(
+            "router_using_user_intent",
+            query=query[:100],
+            user_intent=user_selected_intent,
+            reason="user_selected_mode",
+        )
+
+        # Sprint 52: Emit SKIPPED event since we're using user selection
+        stream_phase_event(
+            phase_type=PhaseType.INTENT_CLASSIFICATION,
+            status=PhaseStatus.SKIPPED,
+            metadata={"reason": "user_selected_mode", "intent": user_selected_intent},
+        )
+
+        # Create skipped phase event
+        event = PhaseEvent(
+            phase_type=PhaseType.INTENT_CLASSIFICATION,
+            status=PhaseStatus.SKIPPED,
+            start_time=datetime.utcnow(),
+            end_time=datetime.utcnow(),
+            duration_ms=0,
+            metadata={"reason": "user_selected_mode", "intent": user_selected_intent},
+        )
+
+        # Update state with user-selected intent
+        state["route_decision"] = user_selected_intent
+
+        # Update metadata
+        if "metadata" not in state:
+            state["metadata"] = {}
+        if "agent_path" not in state["metadata"]:
+            state["metadata"]["agent_path"] = []
+
+        state["metadata"]["agent_path"].append("router (user mode)")
+        state["metadata"]["intent"] = user_selected_intent
+        state["metadata"]["intent_source"] = "user_selected"
+
+        # Add phase event to state
+        state["phase_events"].append(event)
+        state["phase_event"] = event
+
+        return state
+
+    # Sprint 52: Emit IN_PROGRESS event immediately via LangGraph stream
+    stream_phase_event(
+        phase_type=PhaseType.INTENT_CLASSIFICATION,
+        status=PhaseStatus.IN_PROGRESS,
+    )
+
+    # Create phase event for intent classification (also track in state)
+    start_time = datetime.utcnow()
     event = PhaseEvent(
         phase_type=PhaseType.INTENT_CLASSIFICATION,
         status=PhaseStatus.IN_PROGRESS,
-        start_time=datetime.utcnow(),
+        start_time=start_time,
     )
 
     try:
@@ -261,14 +320,23 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         if "agent_path" not in state["metadata"]:
             state["metadata"]["agent_path"] = []
 
-        state["metadata"]["agent_path"].append("router")
+        state["metadata"]["agent_path"].append("router (llm)")
         state["metadata"]["intent"] = intent.value
+        state["metadata"]["intent_source"] = "llm_classified"
 
         # Complete phase event successfully
         event.status = PhaseStatus.COMPLETED
         event.end_time = datetime.utcnow()
         event.duration_ms = (event.end_time - event.start_time).total_seconds() * 1000
         event.metadata = {"intent": intent.value}
+
+        # Sprint 52: Emit COMPLETED event immediately via LangGraph stream
+        stream_phase_event(
+            phase_type=PhaseType.INTENT_CLASSIFICATION,
+            status=PhaseStatus.COMPLETED,
+            duration_ms=event.duration_ms,
+            metadata={"intent": intent.value},
+        )
 
         # Sprint 51 Feature 51.1: Add to phase_events list
         state["phase_events"].append(event)

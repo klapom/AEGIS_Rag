@@ -11,6 +11,7 @@ Implements the foundational graph with optional checkpointing for conversation h
 """
 
 import asyncio
+import time
 from datetime import datetime
 from typing import Any, Literal
 
@@ -19,6 +20,7 @@ from langgraph.graph import END, START, StateGraph
 
 from src.agents.graph_query_agent import graph_query_node
 from src.agents.memory_agent import memory_node
+from src.agents.phase_events_queue import stream_citation_map, stream_phase_event, stream_token
 from src.agents.router import route_query as router_node_with_phase_events
 from src.agents.state import AgentState, create_initial_state
 from src.agents.vector_search_agent import vector_search_node
@@ -33,12 +35,14 @@ router_node = router_node_with_phase_events
 
 
 async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Generate LLM-based answer with inline source citations.
+    """Generate LLM-based answer with inline source citations and token streaming.
 
     Sprint 11 Feature 11.1: Replaces simple_answer_node with proper LLM generation.
     Sprint 27 Feature 27.10: Inline Source Citations
     Sprint 48 Feature 48.3: Emits phase events for LLM generation.
     Sprint 51 Feature 51.1: Adds phase events to list for streaming.
+    Sprint 52: Real-time phase event emission via LangGraph stream_writer.
+    Sprint 52: Token-by-token streaming to chat window.
     Uses AnswerGenerator to synthesize answers with citation markers [1], [2], etc.
 
     Args:
@@ -58,6 +62,12 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     if "phase_events" not in state:
         state["phase_events"] = []
 
+    # Sprint 52: Emit IN_PROGRESS event immediately via LangGraph stream
+    stream_phase_event(
+        phase_type=PhaseType.LLM_GENERATION,
+        status=PhaseStatus.IN_PROGRESS,
+    )
+
     # Create phase event for LLM generation
     event = PhaseEvent(
         phase_type=PhaseType.LLM_GENERATION,
@@ -66,9 +76,36 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        # Generate answer with inline citations (Sprint 27 Feature 27.10)
+        # Generate answer with inline citations and streaming (Sprint 52)
         generator = get_answer_generator()
-        answer, citation_map = await generator.generate_with_citations(query, contexts)
+
+        # Sprint 52: Stream tokens in real-time to chat window
+        answer = ""
+        citation_map = {}
+
+        async for token_event in generator.generate_with_citations_streaming(query, contexts):
+            event_type = token_event.get("event")
+
+            if event_type == "citation_map":
+                # Citation map is sent first - emit via stream
+                citation_map = token_event.get("data", {})
+                stream_citation_map(citation_map)
+
+            elif event_type == "token":
+                # Stream each token to the UI in real-time
+                token_content = token_event.get("data", {}).get("content", "")
+                if token_content:
+                    stream_token(token_content)
+
+            elif event_type == "complete":
+                # Final answer with full text
+                answer = token_event.get("data", {}).get("answer", "")
+                citation_map = token_event.get("data", {}).get("citation_map", citation_map)
+
+            elif event_type == "error":
+                # Log error but continue (fallback will follow)
+                error_msg = token_event.get("data", {}).get("error", "Unknown error")
+                logger.warning("llm_streaming_error", error=error_msg)
 
         # Add to messages (LangGraph format)
         if "messages" not in state:
@@ -90,7 +127,16 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
             "answer_length": len(answer),
             "contexts_used": len(contexts),
             "citations_count": len(citation_map),
+            "streaming": True,  # Sprint 52: Mark as streamed
         }
+
+        # Sprint 52: Emit COMPLETED event via LangGraph stream
+        stream_phase_event(
+            phase_type=PhaseType.LLM_GENERATION,
+            status=PhaseStatus.COMPLETED,
+            duration_ms=event.duration_ms,
+            metadata=event.metadata,
+        )
 
         # Sprint 51 Feature 51.1: Add to phase_events list
         state["phase_events"].append(event)
@@ -103,6 +149,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
             contexts_used=len(contexts),
             citations_count=len(citation_map),
             duration_ms=event.duration_ms,
+            streaming=True,
         )
 
         return state
@@ -135,6 +182,8 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     Sprint 42: True Hybrid Mode - combines vector semantic search with
     graph entity/relationship search for comprehensive retrieval.
     Sprint 48 Feature 48.3: Emits phase events for hybrid search phases.
+    Sprint 52: Real-time phase event emission via LangGraph stream_writer.
+              Uses asyncio.wait(FIRST_COMPLETED) to emit events as each task finishes.
 
     Args:
         state: Current agent state
@@ -144,18 +193,62 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
     """
     logger.info("hybrid_search_node_start", query=state.get("query", "")[:100])
 
-    # Create phase events for both search types
-    # These will be emitted by the individual agent nodes
-    # Here we just coordinate the parallel execution
+    # Sprint 52: Track start times for accurate duration measurement
+    bm25_start = time.perf_counter()
+    graph_start = time.perf_counter()
+
+    # Sprint 52: Emit IN_PROGRESS events for parallel searches via LangGraph stream
+    stream_phase_event(
+        phase_type=PhaseType.BM25_SEARCH,
+        status=PhaseStatus.IN_PROGRESS,
+    )
+    stream_phase_event(
+        phase_type=PhaseType.GRAPH_QUERY,
+        status=PhaseStatus.IN_PROGRESS,
+    )
 
     # Run both searches in parallel
     vector_task = asyncio.create_task(vector_search_node(state.copy()))
     graph_task = asyncio.create_task(graph_query_node(state.copy()))
 
-    # Wait for both to complete
-    vector_result, graph_result = await asyncio.gather(
-        vector_task, graph_task, return_exceptions=True
-    )
+    # Sprint 52: Use asyncio.wait with FIRST_COMPLETED to emit events as each task finishes
+    # This gives real-time feedback instead of waiting for both
+    task_info = {
+        vector_task: (PhaseType.BM25_SEARCH, bm25_start),
+        graph_task: (PhaseType.GRAPH_QUERY, graph_start),
+    }
+    results = {}
+    pending = {vector_task, graph_task}
+
+    while pending:
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+
+        for task in done:
+            phase_type, start_time = task_info[task]
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            try:
+                result = task.result()
+                count = len(result.get("retrieved_contexts", [])) if isinstance(result, dict) else 0
+                stream_phase_event(
+                    phase_type=phase_type,
+                    status=PhaseStatus.COMPLETED,
+                    duration_ms=duration_ms,
+                    metadata={"results_count": count},
+                )
+                results[task] = result
+            except Exception as e:
+                stream_phase_event(
+                    phase_type=phase_type,
+                    status=PhaseStatus.FAILED,
+                    duration_ms=duration_ms,
+                    error=str(e),
+                )
+                results[task] = e
+
+    # Extract results
+    vector_result = results.get(vector_task)
+    graph_result = results.get(graph_task)
 
     # Merge retrieved contexts
     merged_contexts = []
@@ -179,6 +272,12 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
         logger.info("hybrid_graph_results", count=len(graph_contexts))
     else:
         logger.warning("hybrid_graph_failed", error=str(graph_result))
+
+    # Sprint 52: Emit RRF fusion IN_PROGRESS via LangGraph stream
+    stream_phase_event(
+        phase_type=PhaseType.RRF_FUSION,
+        status=PhaseStatus.IN_PROGRESS,
+    )
 
     # Sprint 48 Feature 48.3: Create phase event for RRF fusion
     fusion_event = PhaseEvent(
@@ -231,6 +330,14 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
             "graph_count": graph_count,
             "merged_count": len(unique_contexts),
         }
+
+        # Sprint 52: Emit COMPLETED event via LangGraph stream
+        stream_phase_event(
+            phase_type=PhaseType.RRF_FUSION,
+            status=PhaseStatus.COMPLETED,
+            duration_ms=fusion_event.duration_ms,
+            metadata=fusion_event.metadata,
+        )
 
         # Add phase event to state
         state["phase_event"] = fusion_event

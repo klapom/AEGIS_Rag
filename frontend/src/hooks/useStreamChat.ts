@@ -26,7 +26,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { streamChat, type ChatChunk } from '../api/chat';
 import type { Source } from '../types/chat';
-import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType, PhaseEvent, PhaseType } from '../types/reasoning';
+import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType, PhaseEvent, PhaseType, FourWayResults, IntentWeights, ChannelSamples } from '../types/reasoning';
 
 /**
  * Sprint 48 Feature 48.10: Timeout configuration
@@ -317,10 +317,25 @@ export function useStreamChat({
         }
 
         // Sprint 48 Feature 48.6: Handle phase_event chunk type
-        case 'phase_event' as ChatChunk['type']: {
-          const phaseData = chunk.data as unknown as PhaseEvent;
+        case 'phase_event': {
+          const phaseData = chunk.data as PhaseEvent;
           if (phaseData) {
             handlePhaseEvent(phaseData);
+          }
+          break;
+        }
+
+        // Sprint 52: Handle reasoning_complete to capture all phase events
+        case 'reasoning_complete': {
+          const reasoningCompleteData = chunk.data as { phase_events?: PhaseEvent[] };
+          if (reasoningCompleteData?.phase_events) {
+            // Only process COMPLETED events from the summary to preserve duration_ms
+            // IN_PROGRESS events have duration_ms: null and would overwrite the correct values
+            for (const event of reasoningCompleteData.phase_events) {
+              if (event.status === 'completed' || event.status === 'failed') {
+                handlePhaseEvent(event);
+              }
+            }
           }
           break;
         }
@@ -347,11 +362,43 @@ export function useStreamChat({
               return newAnswer;
             });
           }
+          // Sprint 52: Also handle token in data format from LangGraph stream
+          if (chunk.data?.content) {
+            setIsGeneratingAnswer(true);
+            setAnswer((prev) => {
+              const newAnswer = prev + chunk.data!.content;
+              finalAnswerRef.current = newAnswer;
+              return newAnswer;
+            });
+          }
           break;
 
+        // Sprint 52: Handle citation_map event streamed before tokens
+        case 'citation_map': {
+          const citationMapData = chunk.data as Record<number, Source>;
+          if (citationMapData) {
+            setCitationMap(citationMapData);
+            // Convert to sources array for display
+            const sourcesFromCitationMap = Object.entries(citationMapData)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([, source]) => source);
+            setSources(sourcesFromCitationMap);
+            finalSourcesRef.current = sourcesFromCitationMap;
+          }
+          break;
+        }
+
         // Sprint 51 Fix: Handle answer_chunk from backend (contains full answer)
-        case 'answer_chunk' as ChatChunk['type']: {
-          const answerData = chunk.data as { answer?: string; citation_map?: Record<number, Source> };
+        // Sprint 52 Fix: Also extract metadata including 4-way search results
+        case 'answer_chunk': {
+          const answerData = chunk.data as {
+            answer?: string;
+            citation_map?: Record<number, Source>;
+            intent?: string;
+            intent_confidence?: number;
+            intent_weights?: Record<string, number>;
+            metadata?: Record<string, unknown>;
+          };
           if (answerData?.answer) {
             setAnswer(answerData.answer);
             finalAnswerRef.current = answerData.answer;
@@ -365,6 +412,22 @@ export function useStreamChat({
               .map(([, source]) => source);
             setSources(sourcesFromCitationMap);
             finalSourcesRef.current = sourcesFromCitationMap;
+          }
+          // Sprint 52 Fix: Set metadata from answer_chunk for 4-way display
+          // The answer_chunk now contains all metadata including four_way_results
+          setMetadata(answerData as Record<string, unknown>);
+
+          // Sprint 52 Fix: Also build and set reasoningData immediately
+          // so the 4-way section renders without waiting for stream end
+          const updatedReasoningData = buildReasoningData(
+            answerData as Record<string, unknown>,
+            answerData.intent || '',
+            finalPhaseEventsRef.current,
+            answerData.intent_weights
+          );
+          if (updatedReasoningData) {
+            setReasoningData(updatedReasoningData);
+            currentReasoningData.current = updatedReasoningData;
           }
           break;
         }
@@ -406,11 +469,45 @@ export function useStreamChat({
           if (!hasCalledOnComplete.current && finalAnswerRef.current) {
             hasCalledOnComplete.current = true;
             // Build final reasoningData with phaseEvents included
-            const finalReasoningData = buildReasoningData(
+            // Sprint 52: Pass intent_weights for 4-way search display
+            // Sprint 52 Fix: Preserve 4-way data from answer_chunk if complete event doesn't have it
+            let finalReasoningData = buildReasoningData(
               completeData as Record<string, unknown> | null,
               '', // intent already in metadata
-              finalPhaseEventsRef.current
-            ) || currentReasoningData.current;
+              finalPhaseEventsRef.current,
+              completeData?.intent_weights as Record<string, number> | undefined
+            );
+
+            // If we built new data but it's missing 4-way info or correct intent, merge from previous
+            if (finalReasoningData && currentReasoningData.current) {
+              // Sprint 52 Fix: Merge intent if final has 'factual' but current has the real intent
+              const shouldMergeIntent =
+                finalReasoningData.intent.intent === 'factual' &&
+                currentReasoningData.current.intent.intent !== 'factual';
+
+              if (!finalReasoningData.four_way_results && currentReasoningData.current.four_way_results) {
+                finalReasoningData = {
+                  ...finalReasoningData,
+                  four_way_results: currentReasoningData.current.four_way_results,
+                  intent_weights: currentReasoningData.current.intent_weights,
+                  intent_method: currentReasoningData.current.intent_method,
+                  intent_latency_ms: currentReasoningData.current.intent_latency_ms,
+                  channel_samples: currentReasoningData.current.channel_samples,
+                };
+              }
+
+              // Sprint 52 Fix: Preserve the correct intent from answer_chunk
+              if (shouldMergeIntent) {
+                finalReasoningData = {
+                  ...finalReasoningData,
+                  intent: currentReasoningData.current.intent,
+                };
+              }
+            }
+
+            // Fall back to current if we couldn't build new data
+            finalReasoningData = finalReasoningData || currentReasoningData.current;
+
             onCompleteRef.current?.(
               finalAnswerRef.current,
               finalSourcesRef.current,
@@ -436,6 +533,7 @@ export function useStreamChat({
     /**
      * Sprint 48 Feature 48.6: Handle phase event updates
      * Sprint 51 Fix: Also track in ref for onComplete callback
+     * Sprint 52 Fix: Preserve duration_ms - never overwrite COMPLETED with IN_PROGRESS
      */
     const handlePhaseEvent = (event: PhaseEvent) => {
       // Update current phase based on status
@@ -456,9 +554,27 @@ export function useStreamChat({
 
         let newEvents: PhaseEvent[];
         if (existingIndex >= 0) {
-          // Update existing event
-          newEvents = [...prev];
-          newEvents[existingIndex] = event;
+          const existing = prev[existingIndex];
+
+          // Sprint 52 Fix: Never overwrite a COMPLETED event with IN_PROGRESS
+          // Also preserve duration_ms if the existing event has it
+          const shouldUpdate =
+            event.status === 'completed' ||
+            event.status === 'failed' ||
+            (existing.status !== 'completed' && existing.status !== 'failed');
+
+          if (shouldUpdate) {
+            // If existing has duration_ms but new doesn't, preserve it
+            const mergedEvent = {
+              ...event,
+              duration_ms: event.duration_ms ?? existing.duration_ms,
+            };
+            newEvents = [...prev];
+            newEvents[existingIndex] = mergedEvent;
+          } else {
+            // Keep existing event (don't overwrite COMPLETED with IN_PROGRESS)
+            newEvents = prev;
+          }
         } else {
           // Add new event
           newEvents = [...prev, event];
@@ -491,11 +607,28 @@ export function useStreamChat({
     if (!isStreaming && finalAnswerRef.current && !hasCalledOnComplete.current) {
       hasCalledOnComplete.current = true;
       // Build final reasoningData with phaseEvents included
-      const finalReasoningData = buildReasoningData(
+      // Sprint 52 Fix: Preserve 4-way data from currentReasoningData if available
+      let finalReasoningData = buildReasoningData(
         null, // metadata not available in fallback
         '', // intent already in metadata
         finalPhaseEventsRef.current
-      ) || currentReasoningData.current;
+      );
+
+      // Merge 4-way data from current if available
+      if (finalReasoningData && currentReasoningData.current?.four_way_results) {
+        finalReasoningData = {
+          ...finalReasoningData,
+          four_way_results: currentReasoningData.current.four_way_results,
+          intent_weights: currentReasoningData.current.intent_weights,
+          intent_method: currentReasoningData.current.intent_method,
+          intent_latency_ms: currentReasoningData.current.intent_latency_ms,
+          channel_samples: currentReasoningData.current.channel_samples,
+        };
+      }
+
+      // Fall back to current if we couldn't build new data
+      finalReasoningData = finalReasoningData || currentReasoningData.current;
+
       onCompleteRef.current?.(
         finalAnswerRef.current,
         finalSourcesRef.current,
@@ -537,8 +670,18 @@ export function useStreamChat({
 export function buildReasoningData(
   metadata: Record<string, unknown> | null,
   intent: string,
-  phaseEvents?: PhaseEvent[]
+  phaseEvents?: PhaseEvent[],
+  intentWeights?: Record<string, number>
 ): ReasoningData | null {
+  // Sprint 52 Debug: Log input parameters
+  console.log('[buildReasoningData] Input:', {
+    hasMetadata: !!metadata,
+    metadataKeys: metadata ? Object.keys(metadata) : [],
+    intent,
+    phaseEventsCount: phaseEvents?.length,
+    intentWeights,
+  });
+
   if (!metadata && !phaseEvents?.length) return null;
 
   // If reasoning data is directly available, use it (but add phaseEvents)
@@ -551,16 +694,41 @@ export function buildReasoningData(
   }
 
   // Build from individual fields if available
-  const intentType = (metadata?.intent_type || intent || 'factual') as IntentType;
+  // Sprint 52 Fix: Backend sends 'intent', not 'intent_type'
+  const intentType = (metadata?.intent || metadata?.intent_type || intent || 'factual') as IntentType;
   const confidence = (metadata?.intent_confidence as number) || 0.8;
   const retrievalSteps = (metadata?.retrieval_steps as RetrievalStepType[]) || [];
   const toolsUsed = (metadata?.tools_used as string[]) || [];
   const totalDuration = metadata?.latency_seconds
     ? (metadata.latency_seconds as number) * 1000
-    : undefined;
+    : metadata?.total_latency_ms as number | undefined;
+
+  // Sprint 52: Extract 4-way search results from nested metadata
+  // Backend sends: completeData.metadata.four_way_results
+  const nestedMetadata = metadata?.metadata as Record<string, unknown> | undefined;
+  const fourWayMetadata = nestedMetadata?.four_way_results as FourWayResults | undefined;
+  const intentMethodData = nestedMetadata?.intent_method as string | undefined;
+  const intentLatencyData = nestedMetadata?.intent_latency_ms as number | undefined;
+  // Sprint 52: Extract channel samples (text snippets per channel)
+  const channelSamplesData = nestedMetadata?.channel_samples as ChannelSamples | undefined;
+
+  // Sprint 52 Debug: Log 4-way extraction
+  console.log('[buildReasoningData] 4-way extraction:', {
+    nestedMetadataKeys: nestedMetadata ? Object.keys(nestedMetadata) : [],
+    fourWayMetadata,
+    intentMethodData,
+    intentLatencyData,
+    hasChannelSamples: !!channelSamplesData,
+  });
+  const intentWeightsData = intentWeights ? {
+    vector: intentWeights.vector || 0,
+    bm25: intentWeights.bm25 || 0,
+    local: intentWeights.local || 0,
+    global: intentWeights.global_ || intentWeights.global || 0,
+  } as IntentWeights : undefined;
 
   // Sprint 51: Return data if we have phase events, even without retrieval steps
-  if (!retrievalSteps.length && !toolsUsed.length && !phaseEvents?.length) {
+  if (!retrievalSteps.length && !toolsUsed.length && !phaseEvents?.length && !fourWayMetadata) {
     return null;
   }
 
@@ -574,5 +742,12 @@ export function buildReasoningData(
     tools_used: toolsUsed,
     total_duration_ms: totalDuration,
     phase_events: phaseEvents,
+    // Sprint 52: 4-way search metadata
+    four_way_results: fourWayMetadata,
+    intent_weights: intentWeightsData,
+    intent_method: intentMethodData,
+    intent_latency_ms: intentLatencyData,
+    // Sprint 52: Channel samples (text snippets per channel)
+    channel_samples: channelSamplesData,
   };
 }

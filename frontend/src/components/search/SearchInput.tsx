@@ -2,16 +2,16 @@
  * SearchInput Component
  * Sprint 15 Feature 15.3: Large search input with mode selector (ADR-021)
  * Sprint 42: Added namespace/project selection for search filtering
+ * Sprint 52: ChatGPT-style floating input with auto-grow textarea
  *
- * Perplexity-inspired search input with:
- * - Large centered input field
- * - Mode selector chips (Hybrid, Vector, Graph, Memory)
- * - Namespace/Project selector for filtering
- * - Input icons and submit button
- * - Keyboard shortcuts (Enter to submit)
+ * ChatGPT-inspired search input with:
+ * - Auto-growing textarea that expands with content
+ * - Inline project selector chip
+ * - Fixed Hybrid mode (mode selector removed)
+ * - Clean, minimal design
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { NamespaceSelector } from './NamespaceSelector';
 
 export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory';
@@ -28,24 +28,45 @@ export function SearchInput({
   autoFocus = true
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<SearchMode>('hybrid');
+  // Sprint 52: Fixed to hybrid mode (mode selector removed)
+  const mode: SearchMode = 'hybrid';
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set to scrollHeight but cap at max height (200px ~ 8 lines)
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, []);
 
   useEffect(() => {
-    if (autoFocus && inputRef.current) {
-      inputRef.current.focus();
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
     }
   }, [autoFocus]);
+
+  // Adjust height whenever query changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [query, adjustTextareaHeight]);
 
   const handleSubmit = () => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) {
-      // Don't submit empty or whitespace-only queries
       return;
     }
     onSubmit(trimmedQuery, mode, selectedNamespaces);
-    setQuery(''); // Clear input immediately after sending
+    setQuery('');
+    // Reset textarea height after clearing
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -53,38 +74,41 @@ export function SearchInput({
       e.preventDefault();
       handleSubmit();
     }
-    // Shift+Enter allows line breaks
   };
 
   return (
-    <div className="max-w-3xl mx-auto w-full space-y-6">
-      {/* Search Input */}
-      <div className="relative">
+    <div className="w-full space-y-3 overflow-visible">
+      {/* Main input container with rounded border */}
+      <div className="relative bg-white border border-gray-300 rounded-2xl shadow-sm
+                      focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20
+                      transition-all duration-200 hover:border-gray-400">
+        {/* Textarea - auto-grows with content */}
         <textarea
-          ref={inputRef}
+          ref={textareaRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          rows={3}
+          rows={1}
           data-testid="message-input"
-          className="w-full min-h-[4rem] px-6 pr-20 py-4 text-lg border-2 border-gray-300 rounded-2xl
-                     focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20
-                     placeholder-gray-400 transition-all duration-200
-                     hover:border-gray-400 resize-none"
+          className="w-full px-4 py-3 pr-14 text-base bg-transparent border-none
+                     focus:outline-none focus:ring-0
+                     placeholder-gray-400 resize-none
+                     min-h-[48px] max-h-[200px] overflow-y-auto"
+          style={{ height: 'auto' }}
         />
 
-        {/* Submit Button */}
+        {/* Submit Button - positioned at bottom right */}
         <button
           onClick={handleSubmit}
           disabled={!query.trim()}
           data-testid="send-button"
           aria-label="Suche starten"
-          className="absolute right-3 top-1/2 -translate-y-1/2
-                     w-10 h-10 flex items-center justify-center
+          className="absolute right-2 bottom-2
+                     w-9 h-9 flex items-center justify-center
                      bg-primary hover:bg-primary-hover
-                     disabled:bg-gray-300 disabled:cursor-not-allowed
-                     text-white rounded-xl transition-all duration-200
+                     disabled:bg-gray-200 disabled:cursor-not-allowed
+                     text-white rounded-lg transition-all duration-200
                      transform hover:scale-105 active:scale-95"
           title="Suche starten (Enter)"
         >
@@ -104,91 +128,23 @@ export function SearchInput({
         </button>
       </div>
 
-      {/* Namespace/Project Selector - Sprint 42 */}
-      <NamespaceSelector
-        selectedNamespaces={selectedNamespaces}
-        onSelectionChange={setSelectedNamespaces}
-      />
+      {/* Bottom row: Project selector - overflow-visible for dropdown */}
+      <div className="flex items-center justify-between overflow-visible">
+        {/* Compact Project Selector */}
+        <NamespaceSelector
+          selectedNamespaces={selectedNamespaces}
+          onSelectionChange={setSelectedNamespaces}
+          compact={true}
+        />
 
-      {/* Mode Selector Chips */}
-      <div className="flex justify-center space-x-3">
-        <ModeChip
-          active={mode === 'hybrid'}
-          onClick={() => setMode('hybrid')}
-          icon="🔀"
-          label="Hybrid"
-          description="Vector + Graph + BM25"
-        />
-        <ModeChip
-          active={mode === 'vector'}
-          onClick={() => setMode('vector')}
-          icon="🔍"
-          label="Vector"
-          description="Semantic similarity"
-        />
-        <ModeChip
-          active={mode === 'graph'}
-          onClick={() => setMode('graph')}
-          icon="🕸️"
-          label="Graph"
-          description="Entity relationships"
-        />
-        <ModeChip
-          active={mode === 'memory'}
-          onClick={() => setMode('memory')}
-          icon="💭"
-          label="Memory"
-          description="Conversation history"
-        />
-      </div>
-
-      {/* Help Text */}
-      <div className="text-center text-sm text-gray-500">
-        <kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded">
-          Enter
-        </kbd>
-        {' '}zum Senden · {' '}
-        <kbd className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded">
-          Shift+Enter
-        </kbd>
-        {' '}für Zeilenumbruch
+        {/* Help Text - right aligned */}
+        <div className="text-xs text-gray-400 hidden sm:block">
+          <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-200 rounded">
+            Enter
+          </kbd>
+          {' '}senden
+        </div>
       </div>
     </div>
-  );
-}
-
-interface ModeChipProps {
-  active: boolean;
-  onClick: () => void;
-  icon: string;
-  label: string;
-  description: string;
-}
-
-function ModeChip({ active, onClick, icon, label, description }: ModeChipProps) {
-  return (
-    <button
-      onClick={onClick}
-      title={description}
-      data-testid={`mode-${label.toLowerCase()}-button`} // TD-38: Add testid for E2E tests
-      aria-label={`${label} Mode`} // TD-38: Improved accessibility
-      role="button"
-      aria-pressed={active}
-      className={`
-        px-5 py-2.5 rounded-full border-2
-        flex items-center space-x-2
-        transition-all duration-200
-        transform hover:scale-105 active:scale-95
-        ${active
-          ? 'bg-primary text-white border-primary shadow-md'
-          : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:shadow-sm'
-        }
-      `}
-    >
-      <span className="text-lg" role="img" aria-label={label}>
-        {icon}
-      </span>
-      <span className="font-medium text-sm">{label}</span>
-    </button>
   );
 }

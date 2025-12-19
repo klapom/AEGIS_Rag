@@ -524,12 +524,16 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         Sprint 17 Feature 17.2: Collect answer during streaming and save to Redis
         Sprint 48 Feature 48.4: Phase events streaming with timeout handling
         Sprint 48 Feature 48.5: Phase events persistence
+        Sprint 52: Real-time phase events via LangGraph custom stream
         """
         # Accumulate data for persistence
         reasoning_data = ReasoningData()
         collected_answer = []
         collected_sources = []
         collected_intent = None
+
+        # Sprint 52: Track emitted phases to avoid duplicates
+        emitted_phases: set[str] = set()
 
         try:
             # Send initial metadata
@@ -545,39 +549,88 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             coordinator = get_coordinator()
 
             # Sprint 48 Feature 48.4: Global request timeout (90s)
+            # Sprint 52: Direct iteration - phase events now come through LangGraph stream
             async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
-                # Stream from CoordinatorAgent using process_query_stream()
                 async for event in coordinator.process_query_stream(
                     query=request.query,
                     session_id=session_id,
                     intent=request.intent,
                     namespaces=request.namespaces,
                 ):
-                    # Sprint 48 Feature 48.5: Accumulate phase events for persistence
-                    if event.get("type") == "phase_event":
-                        phase_event = PhaseEvent(**event["data"])
-                        reasoning_data.add_phase_event(phase_event)
+                    # Sprint 52: Handle PhaseEvent objects directly from LangGraph custom stream
+                    if isinstance(event, PhaseEvent):
+                        event_key = f"{event.phase_type.value}_{event.status.value}"
+                        if event_key not in emitted_phases:
+                            emitted_phases.add(event_key)
+                            reasoning_data.add_phase_event(event)
+                            yield _format_sse_message({
+                                "type": "phase_event",
+                                "data": event.model_dump(mode='json'),
+                            })
+                        continue
 
-                    # Sprint 51 Feature 51.2: Collect individual tokens
-                    elif event.get("type") == "token":
-                        token_data = event.get("data", {})
-                        if "content" in token_data:
-                            collected_answer.append(token_data["content"])
+                    # Handle dict events (backward compatibility)
+                    if isinstance(event, dict):
+                        event_type = event.get("type")
 
-                    # Collect answer chunks (backward compatibility)
-                    elif event.get("type") == "answer_chunk":
-                        answer_data = event.get("data", {})
-                        if "answer" in answer_data:
-                            collected_answer.append(answer_data["answer"])
-                        if "intent" in answer_data:
-                            collected_intent = answer_data["intent"]
+                        # Sprint 48 Feature 48.5: Accumulate phase events for persistence
+                        if event_type == "phase_event":
+                            phase_event = PhaseEvent(**event["data"])
+                            event_key = f"{phase_event.phase_type.value}_{phase_event.status.value}"
+                            if event_key not in emitted_phases:
+                                emitted_phases.add(event_key)
+                                reasoning_data.add_phase_event(phase_event)
+                                yield _format_sse_message(event)
+                            continue
 
-                    # Collect sources
-                    elif event.get("type") == "source":
-                        collected_sources.append(event.get("source", {}))
+                        # Sprint 52: Stream tokens to UI in real-time
+                        elif event_type == "token":
+                            token_data = event.get("data", {})
+                            if "content" in token_data:
+                                token_content = token_data["content"]
+                                collected_answer.append(token_content)
+                                # Stream token to frontend immediately
+                                yield _format_sse_message(event)
+                            continue
 
-                    # Stream event to client
-                    yield _format_sse_message(event)
+                        # Sprint 52: Stream citation map before tokens
+                        elif event_type == "citation_map":
+                            # Forward citation map to frontend
+                            yield _format_sse_message(event)
+                            continue
+
+                        # Collect answer chunks (backward compatibility)
+                        elif event_type == "answer_chunk":
+                            answer_data = event.get("data", {})
+                            if "answer" in answer_data:
+                                collected_answer.append(answer_data["answer"])
+                            if "intent" in answer_data:
+                                collected_intent = answer_data["intent"]
+
+                        # Collect sources
+                        elif event_type == "source":
+                            collected_sources.append(event.get("source", {}))
+
+                        # Sprint 52 Fix: Handle answer event from coordinator
+                        # Coordinator yields {"answer": ..., "citation_map": ..., "metadata": ...}
+                        # without a "type" field, so we need to wrap it as answer_chunk
+                        if event_type is None and "answer" in event:
+                            # This is the final answer from coordinator
+                            # Don't append to collected_answer if we streamed tokens
+                            # (answer is already collected from tokens)
+                            if not collected_answer:
+                                collected_answer.append(event.get("answer", ""))
+                            if "intent" in event:
+                                collected_intent = event["intent"]
+                            # Wrap as answer_chunk for frontend (contains metadata)
+                            yield _format_sse_message({
+                                "type": "answer_chunk",
+                                "data": event,
+                            })
+                            continue
+
+                        # Stream event to client
+                        yield _format_sse_message(event)
 
             # Signal completion
             yield "data: [DONE]\n\n"

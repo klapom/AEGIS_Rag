@@ -126,6 +126,8 @@ class VectorSearchAgent(BaseAgent):
                 "intent_method": search_result["search_metadata"]["intent_method"],
                 "intent_latency_ms": search_result["search_metadata"]["intent_latency_ms"],
                 "weights": search_result["search_metadata"]["weights"],
+                # Sprint 52: Channel samples extracted BEFORE fusion for UI display
+                "channel_samples": search_result["search_metadata"].get("channel_samples"),
                 "error": None,
             }
 
@@ -234,6 +236,8 @@ class VectorSearchAgent(BaseAgent):
                         "local": result["weights"]["local"],
                         "global": result["weights"]["global"],
                     },
+                    # Sprint 52: Channel samples extracted BEFORE fusion for UI display
+                    "channel_samples": result["metadata"].channel_samples,
                 },
             }
         except Exception as e:

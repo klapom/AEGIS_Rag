@@ -77,8 +77,66 @@ export interface IntentInfo {
 }
 
 /**
+ * Sprint 52: Channel sample result for detailed display
+ * Sprint 52: Added keywords, matched_entities, community_id for channel-specific metadata
+ */
+export interface ChannelSample {
+  /** Truncated text content */
+  text: string;
+  /** Relevance score */
+  score: number;
+  /** Source document ID */
+  document_id: string;
+  /** Document title */
+  title: string;
+  /** BM25: Keywords used for the search */
+  keywords?: string[];
+  /** Graph Local/Global: Matched entities from the graph */
+  matched_entities?: string[];
+  /** Graph Global: Community ID */
+  community_id?: string | number;
+}
+
+/**
+ * Sprint 52: 4-Way Hybrid Search Channel Results
+ */
+export interface FourWayResults {
+  /** Vector/embedding search results count */
+  vector_count: number;
+  /** BM25/keyword search results count */
+  bm25_count: number;
+  /** Graph local (entity → chunk) results count */
+  graph_local_count: number;
+  /** Graph global (community → entity → chunk) results count */
+  graph_global_count: number;
+  /** Total results across all channels */
+  total_count?: number;
+}
+
+/**
+ * Sprint 52: Per-channel sample results for detailed display
+ */
+export interface ChannelSamples {
+  vector: ChannelSample[];
+  bm25: ChannelSample[];
+  graph_local: ChannelSample[];
+  graph_global: ChannelSample[];
+}
+
+/**
+ * Sprint 52: Intent weights for 4-way channels
+ */
+export interface IntentWeights {
+  vector: number;
+  bm25: number;
+  local: number;
+  global: number;
+}
+
+/**
  * Complete reasoning data for a response
  * Sprint 51: Added phaseEvents for persistent phase display after answer
+ * Sprint 52: Added 4-way search metadata for expandable UI display
  */
 export interface ReasoningData {
   /** Intent classification for the query */
@@ -91,6 +149,16 @@ export interface ReasoningData {
   total_duration_ms?: number;
   /** Sprint 51: Phase events from the thinking process (optional, for display after answer) */
   phase_events?: PhaseEvent[];
+  /** Sprint 52: 4-way channel results */
+  four_way_results?: FourWayResults;
+  /** Sprint 52: Intent-based weights used for RRF fusion */
+  intent_weights?: IntentWeights;
+  /** Sprint 52: Method used for intent classification (llm or rule-based) */
+  intent_method?: string;
+  /** Sprint 52: Latency of intent classification in ms */
+  intent_latency_ms?: number;
+  /** Sprint 52: Per-channel sample results for detailed display */
+  channel_samples?: ChannelSamples;
 }
 
 /**

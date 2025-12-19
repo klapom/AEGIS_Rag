@@ -540,6 +540,144 @@ class AnswerGenerator:
             yield {"event": "complete", "data": {"done": True}}
 
 
+    async def generate_with_citations_streaming(
+        self,
+        query: str,
+        contexts: list[dict[str, Any]],
+    ):
+        """Stream LLM response token-by-token with citation support.
+
+        Sprint 52: LLM Answer Streaming with Citations
+
+        This method combines citation generation with real-time token streaming.
+        It yields tokens as they're generated while maintaining citation mapping.
+
+        Args:
+            query: User question
+            contexts: Retrieved document contexts
+
+        Yields:
+            dict: Token events with format:
+                - {"event": "token", "data": {"content": "token_text"}}
+                - {"event": "citation_map", "data": {...}}  # Sent before tokens
+                - {"event": "complete", "data": {"done": True, "answer": "full_answer"}}
+                - {"event": "error", "data": {"error": "error_message"}}
+        """
+        import time
+
+        # Handle no contexts case
+        if not contexts:
+            answer = self._no_context_answer(query)
+            yield {"event": "citation_map", "data": {}}
+            yield {"event": "token", "data": {"content": answer}}
+            yield {"event": "complete", "data": {"done": True, "answer": answer}}
+            return
+
+        # Limit to top 10 sources
+        top_contexts = contexts[:10]
+
+        # Build citation map FIRST and emit it
+        citation_map = self._build_citation_map(top_contexts)
+        yield {"event": "citation_map", "data": citation_map}
+
+        # Format contexts with source IDs for prompt
+        context_text = self._format_contexts_with_citations(top_contexts)
+
+        # Build prompt for citation generation
+        prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+
+        logger.debug(
+            "generating_answer_with_citations_streaming",
+            query=query[:100],
+            contexts_count=len(top_contexts),
+        )
+
+        try:
+            # Track TTFT
+            start_time = time.perf_counter()
+            first_token_received = False
+            ttft_ms = None
+            accumulated_tokens = []
+
+            # Create LLM task for streaming
+            task = LLMTask(
+                task_type=TaskType.GENERATION,
+                prompt=prompt,
+                quality_requirement=QualityRequirement.MEDIUM,
+                complexity=Complexity.MEDIUM,
+                temperature=self.temperature,
+                model_local=self.model_name,
+            )
+
+            # Stream tokens from AegisLLMProxy
+            async for chunk in self.proxy.generate_streaming(task):
+                # Track TTFT on first token
+                if not first_token_received:
+                    ttft_ms = (time.perf_counter() - start_time) * 1000
+                    first_token_received = True
+                    logger.info(
+                        "ttft_measured_with_citations",
+                        ttft_ms=ttft_ms,
+                        query=query[:100],
+                    )
+
+                # Extract token content from chunk
+                if isinstance(chunk, dict) and "content" in chunk:
+                    token_content = chunk["content"]
+                elif hasattr(chunk, "choices") and chunk.choices:
+                    delta = chunk.choices[0].delta
+                    token_content = getattr(delta, "content", "") if delta else ""
+                else:
+                    token_content = str(chunk)
+
+                # Only yield non-empty tokens
+                if token_content:
+                    accumulated_tokens.append(token_content)
+                    yield {"event": "token", "data": {"content": token_content}}
+
+            # Calculate total generation time
+            total_time_ms = (time.perf_counter() - start_time) * 1000
+            full_answer = "".join(accumulated_tokens)
+
+            # Extract cited sources for logging
+            cited_sources = self._extract_cited_sources(full_answer)
+
+            logger.info(
+                "answer_with_citations_streaming_complete",
+                query=query[:100],
+                answer_length=len(full_answer),
+                contexts_used=len(top_contexts),
+                citations_used=len(cited_sources),
+                ttft_ms=ttft_ms,
+                total_time_ms=total_time_ms,
+            )
+
+            # Yield completion event with full answer
+            yield {
+                "event": "complete",
+                "data": {
+                    "done": True,
+                    "answer": full_answer,
+                    "citation_map": citation_map,
+                },
+            }
+
+        except Exception as e:
+            logger.error(
+                "answer_with_citations_streaming_failed",
+                query=query[:100],
+                error=str(e),
+            )
+            # Yield error and fallback
+            yield {"event": "error", "data": {"error": str(e)}}
+            fallback = self._fallback_answer(query, top_contexts)
+            yield {"event": "token", "data": {"content": fallback}}
+            yield {
+                "event": "complete",
+                "data": {"done": True, "answer": fallback, "citation_map": citation_map},
+            }
+
+
 # Global instance (singleton)
 _answer_generator: AnswerGenerator | None = None
 

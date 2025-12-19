@@ -730,7 +730,13 @@ class AegisLLMProxy:
         )
 
         try:
-            async for chunk in acompletion(**completion_kwargs):
+            # Sprint 52 Fix: acompletion with stream=True returns a coroutine
+            # that must be awaited to get the async generator. The await returns
+            # the stream iterator which can then be async-iterated.
+            stream_coroutine = acompletion(**completion_kwargs)
+            stream_iterator = await stream_coroutine
+
+            async for chunk in stream_iterator:
                 # Extract content from chunk
                 # ANY-LLM format: chunk.choices[0].delta.content
                 if hasattr(chunk, "choices") and chunk.choices:

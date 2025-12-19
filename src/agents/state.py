@@ -148,7 +148,10 @@ class QueryMetadata(BaseModel):
 
 
 def create_initial_state(
-    query: str, intent: str = "hybrid", namespaces: list[str] | None = None
+    query: str,
+    intent: str = "hybrid",
+    namespaces: list[str] | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Create initial agent state from user query.
 
@@ -156,6 +159,7 @@ def create_initial_state(
         query: User's query string
         intent: Detected intent (default: "hybrid")
         namespaces: Namespaces to search in (default: None, will use ["default", "general"])
+        session_id: Session identifier for real-time phase event streaming (Sprint 52)
 
     Returns:
         Dictionary representing the initial AgentState
@@ -167,6 +171,7 @@ def create_initial_state(
         "retrieved_contexts": [],
         "search_mode": intent if intent in ["vector", "graph", "hybrid"] else "hybrid",
         "namespaces": namespaces,
+        "session_id": session_id,  # Sprint 52: For real-time phase events
         "metadata": {
             "timestamp": datetime.now(UTC).isoformat(),
             "agent_path": [],

@@ -44,6 +44,19 @@ logger = structlog.get_logger(__name__)
 
 
 @dataclass
+class ChannelSample:
+    """Sample result from a search channel for display."""
+
+    text: str
+    score: float
+    document_id: str
+    title: str
+    keywords: list[str] | None = None  # For BM25 samples
+    matched_entities: list[str] | None = None  # For Graph samples
+    community_id: str | int | None = None  # For Graph Global samples
+
+
+@dataclass
 class FourWaySearchMetadata:
     """Metadata from 4-Way Hybrid Search execution."""
 
@@ -59,6 +72,8 @@ class FourWaySearchMetadata:
     total_latency_ms: float
     channels_executed: list[str]
     namespaces_searched: list[str]
+    # Sprint 52: Channel samples for UI display (extracted before fusion)
+    channel_samples: dict[str, list[dict[str, Any]]] | None = None
 
 
 class FourWayHybridSearch:
@@ -214,6 +229,13 @@ class FourWayHybridSearch:
             else:
                 channel_results[channel] = result
 
+        # Sprint 52: Extract channel samples BEFORE fusion for UI display
+        # This preserves the source_channel information that would be lost after RRF
+        query_terms = query.lower().split()  # For BM25 keyword display
+        channel_samples = self._extract_channel_samples(
+            channel_results, query_terms, max_per_channel=3
+        )
+
         # Step 3: Prepare rankings and weights for RRF
         rankings = []
         weight_values = []
@@ -327,6 +349,7 @@ class FourWayHybridSearch:
             total_latency_ms=total_latency_ms,
             channels_executed=channels_executed,
             namespaces_searched=allowed_namespaces,
+            channel_samples=channel_samples,  # Sprint 52: Pass through for UI display
         )
 
         logger.info(
@@ -374,7 +397,7 @@ class FourWayHybridSearch:
             namespace_filter = Filter(
                 must=[
                     FieldCondition(
-                        key="namespace_id",
+                        key="namespace",  # Field name in Qdrant payload
                         match=MatchAny(any=allowed_namespaces),
                     )
                 ]
@@ -714,6 +737,64 @@ class FourWayHybridSearch:
         except Exception as e:
             logger.warning("graph_global_search_failed", error=str(e))
             return []
+
+    def _extract_channel_samples(
+        self,
+        channel_results: dict[str, list[dict[str, Any]]],
+        query_terms: list[str],
+        max_per_channel: int = 3,
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Extract sample results from each channel before RRF fusion.
+
+        Sprint 52: This preserves source_channel info that would be lost after fusion.
+        Used to display channel-specific samples in the UI ReasoningPanel.
+
+        Args:
+            channel_results: Results from each channel (vector, bm25, graph_local, graph_global)
+            query_terms: Query terms for BM25 keyword display
+            max_per_channel: Maximum samples per channel (default: 3)
+
+        Returns:
+            Dictionary mapping channel names to sample lists with channel-specific metadata
+        """
+        samples: dict[str, list[dict[str, Any]]] = {}
+
+        for channel, results in channel_results.items():
+            channel_samples = []
+            for result in results[:max_per_channel]:
+                # Base sample info
+                sample: dict[str, Any] = {
+                    "text": (result.get("text", "") or "")[:200],  # Truncate for UI
+                    "score": round(result.get("score", 0.0), 3),
+                    "document_id": result.get("document_id", ""),
+                    "title": result.get("source", result.get("document_path", "Unknown")),
+                }
+
+                # Add channel-specific metadata
+                if channel == "bm25":
+                    # For BM25: Show the query keywords
+                    sample["keywords"] = query_terms[:5]  # Limit to 5 keywords
+
+                elif channel == "graph_local":
+                    # For Graph Local: Show matched entities
+                    sample["matched_entities"] = result.get("matched_entities", [])[:5]
+
+                elif channel == "graph_global":
+                    # For Graph Global: Show community ID
+                    sample["community_id"] = result.get("community_id")
+
+                channel_samples.append(sample)
+
+            if channel_samples:
+                samples[channel] = channel_samples
+
+        logger.debug(
+            "channel_samples_extracted",
+            channels=list(samples.keys()),
+            counts={k: len(v) for k, v in samples.items()},
+        )
+
+        return samples
 
 
 # Singleton instance

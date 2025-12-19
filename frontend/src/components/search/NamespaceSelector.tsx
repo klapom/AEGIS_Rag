@@ -6,12 +6,14 @@
  * Fetches namespaces from backend and allows multi-select.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getNamespaces, type NamespaceInfo } from '../../api/admin';
 
 interface NamespaceSelectorProps {
   selectedNamespaces: string[];
   onSelectionChange: (namespaces: string[]) => void;
+  /** Sprint 52: Compact mode for inline display */
+  compact?: boolean;
 }
 
 // Display-friendly labels for namespace types
@@ -33,11 +35,36 @@ const NAMESPACE_TYPE_ICONS: Record<string, string> = {
 export function NamespaceSelector({
   selectedNamespaces,
   onSelectionChange,
+  compact = false,
 }: NamespaceSelectorProps) {
   const [namespaces, setNamespaces] = useState<NamespaceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Sprint 52: Ref for click-outside detection
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sprint 52: Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    // Add listener with slight delay to avoid immediate close
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
 
   useEffect(() => {
     let isMounted = true;
@@ -129,21 +156,24 @@ export function NamespaceSelector({
   const totalCount = namespaces.length;
 
   return (
-    <div className="w-full">
+    <div ref={containerRef} className={compact ? "relative" : "w-full"}>
       {/* Collapsed view - clickable header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+        className={compact
+          ? "flex items-center space-x-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-full border border-gray-200 transition-colors text-sm"
+          : "w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+        }
         data-testid="namespace-selector-toggle"
       >
-        <div className="flex items-center space-x-2">
-          <span className="text-gray-500">📂</span>
-          <span className="text-sm font-medium text-gray-700">
-            Projekte ({selectedCount}/{totalCount} ausgewählt)
+        <div className="flex items-center space-x-1.5">
+          <span className={compact ? "text-sm" : "text-gray-500"}>📂</span>
+          <span className={compact ? "text-gray-600" : "text-sm font-medium text-gray-700"}>
+            {compact ? `Projekte (${selectedCount}/${totalCount} ausgewählt)` : `Projekte (${selectedCount}/${totalCount} ausgewählt)`}
           </span>
         </div>
         <svg
-          className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -154,7 +184,10 @@ export function NamespaceSelector({
 
       {/* Expanded view - namespace list */}
       {isExpanded && (
-        <div className="mt-2 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className={compact
+          ? "absolute bottom-full left-0 mb-2 w-72 p-3 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+          : "mt-2 p-3 bg-white border border-gray-200 rounded-lg shadow-sm"
+        }>
           {/* Quick actions */}
           <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
             <span className="text-xs text-gray-500 uppercase tracking-wider">Schnellauswahl</span>

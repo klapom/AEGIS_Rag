@@ -2,12 +2,14 @@
  * SourceCard Component
  * Sprint 15 Feature 15.4: Individual source card display
  * Sprint 19 Feature: Source click with chunk preview modal
+ * Sprint 52 Feature: Replaced modal with inline expandable details
  *
  * Displays metadata and preview of a single source document
- * Click opens modal with full chunk context or graph visualization
+ * Click expands to show full chunk context and search type
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { Source } from '../../types/chat';
 
 /**
@@ -127,24 +129,69 @@ interface SourceCardProps {
   index: number;
 }
 
-export function SourceCard({ source, index }: SourceCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const getRetrievalModeIcon = (mode: string) => {
-    switch (mode) {
-      case 'vector':
-        return '🔍';
-      case 'graph':
-        return '🕸️';
-      case 'memory':
-        return '💭';
-      case 'bm25':
-        return '📝';
-      default:
-        return '📄';
-    }
-  };
+/**
+ * Get icon for search/retrieval type
+ */
+function getSearchTypeIcon(searchType: string): string {
+  switch (searchType?.toLowerCase()) {
+    case 'vector':
+    case 'embedding':
+      return '🔍';
+    case 'bm25':
+    case 'keyword':
+      return '📝';
+    case 'graph':
+      return '🕸️';
+    case 'memory':
+      return '💭';
+    default:
+      return '📄';
+  }
+}
 
-  const isGraphSource = source.retrieval_modes?.includes('graph') ?? false;
+/**
+ * Get display name for search type
+ */
+function getSearchTypeName(searchType: string): string {
+  switch (searchType?.toLowerCase()) {
+    case 'vector':
+      return 'Vector/Embedding';
+    case 'bm25':
+      return 'BM25/Keyword';
+    case 'graph':
+      return 'Graph';
+    case 'memory':
+      return 'Memory';
+    default:
+      return searchType || 'Unbekannt';
+  }
+}
+
+/**
+ * Get color class for search type badge
+ */
+function getSearchTypeColor(searchType: string): string {
+  switch (searchType?.toLowerCase()) {
+    case 'vector':
+    case 'embedding':
+      return 'bg-blue-100 text-blue-700 border-blue-200';
+    case 'bm25':
+    case 'keyword':
+      return 'bg-amber-100 text-amber-700 border-amber-200';
+    case 'graph':
+      return 'bg-purple-100 text-purple-700 border-purple-200';
+    case 'memory':
+      return 'bg-green-100 text-green-700 border-green-200';
+    default:
+      return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+}
+
+export function SourceCard({ source, index }: SourceCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Sprint 52: Get search type from metadata
+  const searchType = source.metadata?.search_type as string | undefined;
 
   // Sprint 19: Extract readable document name from metadata
   // Sprint 32 Fix: Check title/source from citation_map first
@@ -175,125 +222,144 @@ export function SourceCard({ source, index }: SourceCardProps) {
     return 'Unbekanntes Dokument';
   };
 
+  // Get the full context text
+  const fullText = cleanTextForDisplay(extractContextText(source.context || source.text)) || 'Kein Kontext verfügbar';
+
+  // Get source file path
+  const sourcePath = source.source || source.metadata?.source || source.title;
+
   return (
-    <>
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 hover:border-primary/50">
+      {/* Clickable Header */}
       <div
-        onClick={() => setIsModalOpen(true)}
-        className="flex-shrink-0 w-80 p-5 bg-white border-2 border-gray-200
-                   rounded-xl hover:shadow-lg hover:border-primary/50
-                   transition-all duration-200 cursor-pointer group"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
       >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center
-                          group-hover:bg-primary/20 transition-colors">
-            <span className="text-lg font-bold text-primary">{index}</span>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Index Badge */}
+          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-primary">{index}</span>
           </div>
+
+          {/* Document Name */}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-gray-900 truncate" title={getDocumentName()}>
               {getDocumentName()}
             </div>
+          </div>
+
+          {/* Search Type Badge - Sprint 52 */}
+          {searchType && (
+            <span
+              className={`px-2 py-1 text-xs font-medium rounded-md border flex items-center gap-1 flex-shrink-0 ${getSearchTypeColor(searchType)}`}
+              title={`Suchmethode: ${getSearchTypeName(searchType)}`}
+            >
+              <span>{getSearchTypeIcon(searchType)}</span>
+              <span>{getSearchTypeName(searchType)}</span>
+            </span>
+          )}
+
+          {/* Score Badge */}
+          {source.score != null && source.score > 0 && (
+            <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-md flex-shrink-0">
+              {(source.score * 100).toFixed(0)}%
+            </span>
+          )}
+        </div>
+
+        {/* Expand/Collapse Icon */}
+        <div className="ml-2 text-gray-400">
+          {isExpanded ? (
+            <ChevronDown className="w-5 h-5" />
+          ) : (
+            <ChevronRight className="w-5 h-5" />
+          )}
+        </div>
+      </div>
+
+      {/* Expandable Content - Sprint 52 */}
+      {isExpanded && (
+        <div className="px-4 pb-4 border-t border-gray-100">
+          {/* Full Chunk Content */}
+          <div className="mt-3">
+            <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+              Chunk-Inhalt
+            </h4>
+            <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto">
+              {fullText}
+            </div>
+          </div>
+
+          {/* Metadata Section */}
+          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+            {/* Source Path */}
+            {sourcePath && (
+              <div className="col-span-2">
+                <span className="text-gray-500">Quelle:</span>
+                <span className="ml-2 text-gray-700 break-all">{sourcePath}</span>
+              </div>
+            )}
+
+            {/* Search Type */}
+            {searchType && (
+              <div>
+                <span className="text-gray-500">Suchmethode:</span>
+                <span className="ml-2 text-gray-700">{getSearchTypeName(searchType)}</span>
+              </div>
+            )}
+
+            {/* Rank */}
+            {source.metadata?.rank != null && (
+              <div>
+                <span className="text-gray-500">Rang:</span>
+                <span className="ml-2 text-gray-700">#{source.metadata.rank}</span>
+              </div>
+            )}
+
+            {/* Document ID */}
+            {source.document_id && (
+              <div>
+                <span className="text-gray-500">Doc-ID:</span>
+                <span className="ml-2 text-gray-700 font-mono text-xs">{source.document_id}</span>
+              </div>
+            )}
+
+            {/* Namespace */}
+            {source.metadata?.namespace && (
+              <div>
+                <span className="text-gray-500">Namespace:</span>
+                <span className="ml-2 text-gray-700">{source.metadata.namespace}</span>
+              </div>
+            )}
+
+            {/* Chunk Index */}
             {source.chunk_index !== undefined && (
-              <div className="text-xs text-gray-500">
-                Chunk {source.chunk_index}
-                {source.total_chunks && ` / ${source.total_chunks}`}
+              <div>
+                <span className="text-gray-500">Chunk:</span>
+                <span className="ml-2 text-gray-700">
+                  {source.chunk_index}
+                  {source.total_chunks && ` / ${source.total_chunks}`}
+                </span>
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Metadata */}
-      <div className="space-y-2 mb-4">
-        {/* Score - Sprint 32 Fix: Check for both null and undefined */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-500">Relevanz:</span>
-          <div className="flex items-center space-x-2">
-            {source.score != null && source.score > 0 ? (
-              <>
-                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${Math.min(source.score * 100, 100)}%` }}
-                  />
-                </div>
-                <span className="font-medium text-gray-900 text-xs">
-                  {(source.score * 100).toFixed(0)}%
-                </span>
-              </>
-            ) : (
-              <span className="font-medium text-gray-400 text-xs">N/A</span>
-            )}
-          </div>
-        </div>
-
-        {/* Retrieval Modes */}
-        {source.retrieval_modes && source.retrieval_modes.length > 0 && (
-          <div className="flex items-center space-x-1">
-            {source.retrieval_modes.map((mode) => (
-              <span
-                key={mode}
-                className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-md
-                           flex items-center space-x-1"
-                title={mode}
-              >
-                <span>{getRetrievalModeIcon(mode)}</span>
-                <span className="capitalize">{mode}</span>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Sprint 32 Fix: Removed inline preview - now shown only on click (modal) */}
-      <p className="text-sm text-gray-500 italic">
-        Klicken für Details
-      </p>
-
-      {/* Entity Tags */}
-      {source.entities && source.entities.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex flex-wrap gap-1.5">
-            {source.entities.slice(0, 4).map((entity, i) => (
-              <EntityTag key={i} entity={entity} />
-            ))}
-            {source.entities.length > 4 && (
-              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-md">
-                +{source.entities.length - 4} mehr
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Metadata Footer */}
-      {source.metadata && (
-        <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 space-y-1">
-          {source.metadata.source && (
-            <div className="truncate" title={source.metadata.source}>
-              📎 {source.metadata.source}
-            </div>
-          )}
-          {source.metadata.created_at && (
-            <div>
-              🕒 {new Date(source.metadata.created_at).toLocaleDateString('de-DE')}
+          {/* Entity Tags */}
+          {source.entities && source.entities.length > 0 && (
+            <div className="mt-3">
+              <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                Entitäten ({source.entities.length})
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {source.entities.map((entity, i) => (
+                  <EntityTag key={i} entity={entity} />
+                ))}
+              </div>
             </div>
           )}
         </div>
       )}
     </div>
-
-    {/* Source Detail Modal */}
-    {isModalOpen && (
-      <SourceDetailModal
-        source={source}
-        index={index}
-        isGraphSource={isGraphSource}
-        onClose={() => setIsModalOpen(false)}
-      />
-    )}
-    </>
   );
 }
 
@@ -324,298 +390,5 @@ function EntityTag({ entity }: EntityTagProps) {
     >
       {entity.name}
     </span>
-  );
-}
-
-// Source Detail Modal Component
-interface SourceDetailModalProps {
-  source: Source;
-  index: number;
-  isGraphSource: boolean;
-  onClose: () => void;
-}
-
-function SourceDetailModal({ source, index, isGraphSource, onClose }: SourceDetailModalProps) {
-  // Sprint 32: State for expand/collapse context text
-  const [isContextExpanded, setIsContextExpanded] = useState(false);
-
-  // Sprint 19: Extract readable document name
-  // Sprint 32 Fix: Check title/source from citation_map first
-  const getDocumentName = () => {
-    // Check title first (from citation_map, usually the best display name)
-    if (source.title && source.title !== 'Unknown') {
-      // If title is a file path, extract just the filename
-      if (source.title.includes('/') || source.title.includes('\\')) {
-        const filename = source.title.split(/[/\\]/).pop() || source.title;
-        return filename.replace(/\.[^/.]+$/, '');
-      }
-      return source.title;
-    }
-    // Check direct source field (from citation_map - the document path)
-    if (source.source && source.source !== 'Unknown') {
-      const filename = source.source.split(/[/\\]/).pop() || source.source;
-      return filename.replace(/\.[^/.]+$/, '');
-    }
-    // Check metadata.source (from SSE source events)
-    if (source.metadata?.source) {
-      const filename = source.metadata.source.split(/[/\\]/).pop() || source.metadata.source;
-      return filename.replace(/\.[^/.]+$/, '');
-    }
-    // Check document_id as fallback
-    if (source.document_id && source.document_id !== 'Document') {
-      return source.document_id;
-    }
-    return 'Unbekanntes Dokument';
-  };
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      {/* Modal Content */}
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold text-primary">{index}</span>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                {getDocumentName()}
-              </h2>
-              {source.chunk_index !== undefined && (
-                <p className="text-sm text-gray-500">
-                  Chunk {source.chunk_index}
-                  {source.total_chunks && ` / ${source.total_chunks}`}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Schließen"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          {/* Graph Source Notice */}
-          {isGraphSource && (
-            <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <span className="text-2xl">🕸️</span>
-                <div>
-                  <h3 className="font-semibold text-purple-900 mb-1">Graph-Quelle</h3>
-                  <p className="text-sm text-purple-700">
-                    Diese Quelle stammt aus dem Knowledge Graph. Eine grafische Visualisierung folgt in einem späteren Sprint.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Metadata Grid - Sprint 32 Fix: Check for both null and undefined */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-500 mb-2">Relevanz-Score</div>
-              {source.score != null && source.score > 0 ? (
-                <div className="flex items-center space-x-3">
-                  <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${Math.min(source.score * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className="font-bold text-lg text-gray-900">
-                    {(source.score * 100).toFixed(0)}%
-                  </span>
-                </div>
-              ) : (
-                <span className="text-gray-400 text-lg">N/A</span>
-              )}
-            </div>
-
-            {source.retrieval_modes && source.retrieval_modes.length > 0 && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-500 mb-2">Retrieval-Modi</div>
-                <div className="flex flex-wrap gap-2">
-                  {source.retrieval_modes.map((mode) => (
-                    <span
-                      key={mode}
-                      className="px-3 py-1 text-sm bg-white border border-gray-300 text-gray-700 rounded-lg capitalize"
-                    >
-                      {mode}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Full Context - Sprint 32 Fix: Extract text from Python object strings + expand/collapse */}
-          {(() => {
-            const fullText = cleanTextForDisplay(extractContextText(source.context || source.text)) || 'Kein Kontext verfügbar';
-            const MAX_LENGTH = 500;
-            const isLongText = fullText.length > MAX_LENGTH;
-            const displayText = isLongText && !isContextExpanded
-              ? fullText.slice(0, MAX_LENGTH) + '...'
-              : fullText;
-
-            return (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Kontext</h3>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                    {displayText}
-                  </p>
-                  {isLongText && (
-                    <button
-                      onClick={() => setIsContextExpanded(!isContextExpanded)}
-                      className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                    >
-                      {isContextExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Entities */}
-          {source.entities && source.entities.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Entitäten ({source.entities.length})
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {source.entities.map((entity, i) => (
-                  <EntityTag key={i} entity={entity} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Metadata - Sprint 32 Fix: Extract from text if source.metadata is empty */}
-          {(() => {
-            // Get metadata from source.metadata or extract from Python object string
-            const rawText = source.context || source.text || '';
-            const extractedMeta = extractMetadataFromText(rawText);
-            const metadata = (source.metadata && Object.keys(source.metadata).length > 0)
-              ? source.metadata
-              : extractedMeta;
-
-            if (!metadata) return null;
-
-            return (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Metadaten</h3>
-                <div className="p-4 bg-gray-50 rounded-lg space-y-2 text-sm">
-                  {(metadata.source || metadata.file_path) && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Quelle:</span>
-                      <span className="text-gray-900 break-all">
-                        {String(metadata.source || metadata.file_path)}
-                      </span>
-                    </div>
-                  )}
-                  {metadata.format && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Format:</span>
-                      <span className="text-gray-900 uppercase">{String(metadata.format)}</span>
-                    </div>
-                  )}
-                  {metadata.file_type && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Dateityp:</span>
-                      <span className="text-gray-900">{String(metadata.file_type)}</span>
-                    </div>
-                  )}
-                  {metadata.file_size != null && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Dateigröße:</span>
-                      <span className="text-gray-900">
-                        {Number(metadata.file_size) > 1024
-                          ? `${(Number(metadata.file_size) / 1024).toFixed(1)} KB`
-                          : `${metadata.file_size} Bytes`}
-                      </span>
-                    </div>
-                  )}
-                  {metadata.page_count != null && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Seiten:</span>
-                      <span className="text-gray-900">{String(metadata.page_count)}</span>
-                    </div>
-                  )}
-                  {metadata.page && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Seite:</span>
-                      <span className="text-gray-900">{String(metadata.page)}</span>
-                    </div>
-                  )}
-                  {(metadata.created_at || metadata.creation_date) && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Erstellt:</span>
-                      <span className="text-gray-900">
-                        {(() => {
-                          const dateStr = String(metadata.created_at || metadata.creation_date);
-                          try {
-                            return new Date(dateStr).toLocaleString('de-DE');
-                          } catch {
-                            return dateStr;
-                          }
-                        })()}
-                      </span>
-                    </div>
-                  )}
-                  {metadata.parser && (
-                    <div className="flex items-start">
-                      <span className="text-gray-500 w-32 flex-shrink-0">Parser:</span>
-                      <span className="text-gray-900 capitalize">{String(metadata.parser)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Klicken Sie außerhalb des Modals oder drücken Sie ESC zum Schließen
-            </p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-            >
-              Schließen
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Backdrop Click Handler */}
-      <div
-        className="absolute inset-0 -z-10"
-        onClick={onClose}
-      />
-    </div>
   );
 }

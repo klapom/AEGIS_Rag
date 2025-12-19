@@ -93,6 +93,10 @@ export function ConversationView({
   // Sprint 47: Track thinking start time for elapsed time display
   const [thinkingStartTime, setThinkingStartTime] = useState<number | null>(null);
 
+  // Sprint 52: Get last message early for scroll tracking
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const isLastMessageStreaming = lastMessage?.isStreaming ?? false;
+
   /**
    * Check if the user is scrolled near the bottom of the messages container
    */
@@ -120,17 +124,15 @@ export function ConversationView({
   }, [isNearBottom]);
 
   /**
-   * Auto-scroll when new messages arrive or while streaming
+   * Auto-scroll when new messages arrive
    * Only scrolls if user hasn't manually scrolled up
    */
   useEffect(() => {
     const hasNewMessages = messages.length > prevMessageCount.current;
     prevMessageCount.current = messages.length;
 
-    // Auto-scroll conditions:
-    // 1. New message arrived and user is near bottom
-    // 2. Streaming content updated and user is near bottom
-    if ((hasNewMessages || isStreaming) && !userHasScrolledUp.current) {
+    // Auto-scroll when new message arrives and user is near bottom
+    if (hasNewMessages && !userHasScrolledUp.current) {
       scrollToBottom();
     }
 
@@ -139,7 +141,19 @@ export function ConversationView({
       userHasScrolledUp.current = false;
       scrollToBottom();
     }
-  }, [messages, isStreaming, scrollToBottom]);
+  }, [messages.length, scrollToBottom]);
+
+  /**
+   * Sprint 52: Auto-scroll during streaming when content updates
+   * This ensures the latest streamed content stays visible above the floating input
+   */
+  const lastMessageContent = lastMessage?.content ?? '';
+  useEffect(() => {
+    // Only scroll during active streaming if user hasn't scrolled up
+    if (isStreaming && lastMessage?.isStreaming && !userHasScrolledUp.current) {
+      scrollToBottom('smooth');
+    }
+  }, [lastMessageContent, isStreaming, lastMessage?.isStreaming, scrollToBottom]);
 
   /**
    * Initial scroll to bottom when component mounts with existing messages
@@ -175,22 +189,16 @@ export function ConversationView({
    */
   const shouldShowTypingIndicator = showTypingIndicator ?? (isStreaming && messages.length > 0);
 
-  /**
-   * Get the last message for streaming state detection
-   */
-  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-  const isLastMessageStreaming = lastMessage?.isStreaming ?? false;
-
   return (
     <div
-      className="flex flex-col h-full bg-gray-50"
+      className="relative flex flex-col h-full bg-gray-50"
       data-testid="conversation-view"
     >
-      {/* Messages Area - Scrollable, flex-grow to fill available space */}
+      {/* Messages Area - Scrollable, with bottom padding for floating input */}
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto scroll-smooth"
+        className="flex-1 overflow-y-auto scroll-smooth pb-32"
         data-testid="messages-container"
         role="log"
         aria-label="Konversationsverlauf"
@@ -243,17 +251,24 @@ export function ConversationView({
         )}
       </div>
 
-      {/* Input Area - Fixed at bottom, flex-shrink-0 */}
+      {/* Input Area - Floating at bottom with gradient fade */}
+      {/* Sprint 52: overflow-visible allows dropdown to extend above input area */}
       <div
-        className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg"
+        className="absolute bottom-0 left-0 right-0 pointer-events-none overflow-visible"
         data-testid="input-area"
       >
-        <div className="max-w-4xl mx-auto py-4 px-6">
-          <SearchInput
-            onSubmit={onSendMessage}
-            placeholder={placeholder}
-            autoFocus={messages.length === 0}
-          />
+        {/* Gradient fade effect */}
+        <div className="h-8 bg-gradient-to-t from-gray-50 to-transparent" />
+
+        {/* Input container - overflow-visible for dropdown */}
+        <div className="bg-gray-50 pb-4 pt-2 pointer-events-auto overflow-visible">
+          <div className="max-w-3xl mx-auto px-4 overflow-visible">
+            <SearchInput
+              onSubmit={onSendMessage}
+              placeholder={placeholder}
+              autoFocus={messages.length === 0}
+            />
+          </div>
         </div>
       </div>
     </div>

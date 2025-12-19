@@ -29,6 +29,155 @@ from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 logger = structlog.get_logger(__name__)
 
 
+def _extract_channel_samples(
+    retrieved_contexts: list[dict[str, Any]],
+    query: str,
+    max_per_channel: int = 3,
+) -> dict[str, list[dict[str, Any]]]:
+    """Extract sample results from each channel for display.
+
+    Groups retrieved contexts by source_channel and returns top samples
+    from each channel with truncated text for UI display.
+
+    Sprint 52: Added query parameter to extract BM25 keywords.
+    Sprint 52: Added matched_entities for graph channels.
+
+    Args:
+        retrieved_contexts: List of retrieved context dicts
+        query: Original user query (for BM25 keyword extraction)
+        max_per_channel: Maximum samples per channel (default: 3)
+
+    Returns:
+        Dict mapping channel names to lists of sample results
+    """
+    channel_samples: dict[str, list[dict[str, Any]]] = {
+        "vector": [],
+        "bm25": [],
+        "graph_local": [],
+        "graph_global": [],
+    }
+
+    # Extract BM25 keywords from query (same logic as four_way_hybrid_search.py)
+    bm25_keywords = query.lower().split() if query else []
+
+    for ctx in retrieved_contexts:
+        if not isinstance(ctx, dict):
+            continue
+
+        # Get source channel (might be in different fields)
+        source = ctx.get("source_channel") or ctx.get("search_type") or "unknown"
+
+        # Normalize channel names
+        if source in ("vector", "embedding"):
+            channel = "vector"
+        elif source in ("bm25", "keyword"):
+            channel = "bm25"
+        elif source in ("graph_local", "local"):
+            channel = "graph_local"
+        elif source in ("graph_global", "global"):
+            channel = "graph_global"
+        else:
+            continue  # Skip unknown channels
+
+        # Only add if under limit
+        if len(channel_samples[channel]) >= max_per_channel:
+            continue
+
+        # Extract text (truncate for display)
+        text = ctx.get("text") or ctx.get("content") or ""
+        if len(text) > 200:
+            text = text[:200] + "..."
+
+        # Create sample entry with base fields
+        sample: dict[str, Any] = {
+            "text": text,
+            "score": ctx.get("score") or ctx.get("rrf_score") or 0,
+            "document_id": ctx.get("document_id") or ctx.get("doc_id") or "",
+            "title": ctx.get("title") or ctx.get("document_title") or "",
+        }
+
+        # Add channel-specific metadata
+        if channel == "bm25":
+            # BM25: Add search keywords used
+            sample["keywords"] = bm25_keywords
+        elif channel == "graph_local":
+            # Graph Local: Add matched entities from result
+            matched_entities = ctx.get("matched_entities", [])
+            sample["matched_entities"] = matched_entities
+        elif channel == "graph_global":
+            # Graph Global: Add community ID and try to get entities
+            sample["community_id"] = ctx.get("community_id")
+            # Graph global doesn't return matched_entities directly,
+            # but we can include any available entity info
+            matched_entities = ctx.get("matched_entities", [])
+            if matched_entities:
+                sample["matched_entities"] = matched_entities
+
+        channel_samples[channel].append(sample)
+
+    return channel_samples
+
+
+def _calculate_effective_weights(
+    raw_weights: dict[str, float],
+    vector_count: int,
+    bm25_count: int,
+    graph_local_count: int,
+    graph_global_count: int,
+) -> dict[str, float]:
+    """Calculate effective weights based on actual results.
+
+    If a channel has 0 results, its effective weight is 0.
+    Remaining weight is redistributed proportionally.
+
+    Args:
+        raw_weights: Original intent-based weights
+        vector_count: Number of vector results
+        bm25_count: Number of BM25 results
+        graph_local_count: Number of graph local results
+        graph_global_count: Number of graph global results
+
+    Returns:
+        Dict with effective weights for each channel
+    """
+    if not raw_weights:
+        # Default equal weights if no raw weights
+        return {"vector": 0.25, "bm25": 0.25, "local": 0.25, "global_": 0.25}
+
+    # Map counts to channels
+    counts = {
+        "vector": vector_count,
+        "bm25": bm25_count,
+        "local": graph_local_count,
+        "global_": graph_global_count,
+    }
+
+    # Calculate total weight of channels with results
+    active_weight = 0.0
+    for channel, count in counts.items():
+        if count > 0:
+            weight_key = channel if channel in raw_weights else channel.rstrip("_")
+            active_weight += raw_weights.get(weight_key, 0) or raw_weights.get(channel, 0)
+
+    # If no channels have results, return zeros
+    if active_weight == 0:
+        return {"vector": 0.0, "bm25": 0.0, "local": 0.0, "global_": 0.0}
+
+    # Calculate effective weights (redistribute to active channels)
+    effective = {}
+    for channel, count in counts.items():
+        weight_key = channel if channel in raw_weights else channel.rstrip("_")
+        raw_weight = raw_weights.get(weight_key, 0) or raw_weights.get(channel, 0)
+
+        if count > 0 and raw_weight > 0:
+            # Normalize: channel's share of active weight
+            effective[channel] = raw_weight / active_weight
+        else:
+            effective[channel] = 0.0
+
+    return effective
+
+
 class CoordinatorAgent:
     """Main orchestrator agent for the multi-agent RAG system.
 
@@ -341,12 +490,23 @@ class CoordinatorAgent:
                         "data": event.model_dump(mode='json'),
                     }
 
-                elif isinstance(event, dict) and "answer" in event:
-                    # Final answer received
-                    yield {
-                        "type": "answer_chunk",
-                        "data": event,
-                    }
+                elif isinstance(event, dict):
+                    event_type = event.get("type")
+
+                    if event_type == "token":
+                        # Sprint 52: Stream token directly to SSE handler
+                        yield event
+
+                    elif event_type == "citation_map":
+                        # Sprint 52: Stream citation map directly to SSE handler
+                        yield event
+
+                    elif "answer" in event:
+                        # Final answer received
+                        yield {
+                            "type": "answer_chunk",
+                            "data": event,
+                        }
 
             # Emit final reasoning summary
             yield {
@@ -415,11 +575,12 @@ class CoordinatorAgent:
             intent=intent,
         )
 
-        # Create initial state
+        # Create initial state with session_id for real-time phase events
         initial_state = create_initial_state(
             query=query,
             intent=intent or "hybrid",
             namespaces=namespaces,
+            session_id=session_id,  # Sprint 52: Pass session_id for real-time phase events
         )
 
         # Create session config
@@ -429,69 +590,58 @@ class CoordinatorAgent:
             config["recursion_limit"] = self.recursion_limit
 
         # Stream through LangGraph workflow
-        # Sprint 51 Fix: Use stream_mode="values" to get full accumulated state
-        # Default "updates" mode only yields state deltas, missing the answer field
+        # Sprint 52: Use stream_mode=["custom", "values"] to get:
+        # - "custom": Real-time phase events via get_stream_writer() DURING node execution
+        # - "values": Full accumulated state AFTER each node completes
         final_state = None
-        yielded_event_count = 0  # Track how many events we've already yielded
         try:
-            async for event in self.compiled_graph.astream(
-                initial_state, config=config, stream_mode="values"
+            async for chunk in self.compiled_graph.astream(
+                initial_state, config=config, stream_mode=["custom", "values"]
             ):
-                # Sprint 51 Fix: With stream_mode="values", event is the full accumulated state
-                # DEBUG: Log what astream() is yielding
-                logger.info(
-                    "astream_event_received",
-                    event_type=type(event).__name__,
-                    is_dict=isinstance(event, dict),
-                    keys=list(event.keys()) if isinstance(event, dict) else None,
-                    has_answer="answer" in event if isinstance(event, dict) else False,
-                )
+                # With combined stream_mode, chunk is tuple: (stream_type, data)
+                stream_type, data = chunk
 
-                # With stream_mode="values", event is the full state dict
-                if isinstance(event, dict):
-                    # Debug: Check if phase_events exists
-                    has_phase_events = "phase_events" in event
-                    phase_events_count = len(event.get("phase_events", [])) if has_phase_events else 0
+                if stream_type == "custom":
+                    # Sprint 52: Real-time events from get_stream_writer()
+                    # These are emitted DURING node execution, not after!
+                    if isinstance(data, dict):
+                        event_type = data.get("type")
 
-                    logger.debug(
-                        "checking_phase_events",
-                        has_phase_events=has_phase_events,
-                        phase_events_count=phase_events_count,
-                        yielded_so_far=yielded_event_count,
-                    )
-
-                    # Sprint 51 Feature 51.1: Check for phase_events list (multiple events)
-                    # Yield only NEW events that we haven't yielded yet
-                    if "phase_events" in event and isinstance(event["phase_events"], list):
-                        current_events = event["phase_events"]
-
-                        # Yield only events we haven't seen yet (based on index)
-                        for i in range(yielded_event_count, len(current_events)):
-                            phase_event = current_events[i]
-                            phase_type = (
-                                phase_event.phase_type
-                                if isinstance(phase_event, PhaseEvent)
-                                else phase_event.get("phase_type")
-                            )
-
+                        if event_type == "phase_event":
+                            phase_data = data.get("data", {})
                             logger.info(
-                                "phase_event_found_from_list",
-                                phase_type=phase_type,
-                                event_index=i,
-                                total_events=len(current_events),
+                                "custom_phase_event_received",
+                                phase_type=phase_data.get("phase_type"),
+                                status=phase_data.get("status"),
                             )
+                            # Convert to PhaseEvent and yield immediately
+                            if "phase_type" in phase_data:
+                                yield PhaseEvent(**phase_data)
 
-                            if isinstance(phase_event, PhaseEvent):
-                                # Yield phase event (will be serialized by API layer)
-                                yield phase_event
-                            elif isinstance(phase_event, dict):
-                                # Convert dict to PhaseEvent if needed
-                                yield PhaseEvent(**phase_event)
+                        elif event_type == "token":
+                            # Sprint 52: Real-time token streaming from LLM
+                            # Yield directly as dict for SSE handler
+                            yield {"type": "token", "data": data.get("data", {})}
 
-                            yielded_event_count += 1
+                        elif event_type == "citation_map":
+                            # Sprint 52: Citation map streamed before tokens
+                            # Yield directly as dict for SSE handler
+                            logger.info(
+                                "custom_citation_map_received",
+                                citations_count=len(data.get("data", {})),
+                            )
+                            yield {"type": "citation_map", "data": data.get("data", {})}
 
-                    # Keep track of final state (full accumulated state)
-                    final_state = event
+                elif stream_type == "values":
+                    # Full accumulated state after node completion
+                    if isinstance(data, dict):
+                        logger.debug(
+                            "values_state_received",
+                            has_answer="answer" in data,
+                            keys=list(data.keys())[:5],
+                        )
+                        # Keep track of final state
+                        final_state = data
 
         except Exception as e:
             logger.error(
@@ -523,18 +673,77 @@ class CoordinatorAgent:
                 intent_confidence=intent_confidence,
             )
 
+            # Sprint 52: Get channel samples from search metadata (extracted BEFORE RRF fusion)
+            # This preserves source_channel info that would be lost after fusion
+            channel_samples = search_metadata.get("channel_samples")
+
+            if not channel_samples:
+                # Fallback: Extract from post-fusion retrieved_contexts (less accurate)
+                retrieved_contexts = final_state.get("retrieved_contexts", [])
+
+                # Sprint 52 Debug: Log source_channel distribution
+                channel_distribution = {}
+                for ctx in retrieved_contexts:
+                    if isinstance(ctx, dict):
+                        ch = ctx.get("source_channel") or ctx.get("search_type") or "unknown"
+                        channel_distribution[ch] = channel_distribution.get(ch, 0) + 1
+                logger.info(
+                    "channel_samples_fallback_debug",
+                    total_contexts=len(retrieved_contexts),
+                    channel_distribution=channel_distribution,
+                    sample_keys=list(retrieved_contexts[0].keys()) if retrieved_contexts else [],
+                )
+
+                channel_samples = _extract_channel_samples(retrieved_contexts, query, max_per_channel=3)
+            else:
+                logger.info(
+                    "channel_samples_from_metadata",
+                    channels=list(channel_samples.keys()),
+                    counts={k: len(v) for k, v in channel_samples.items()},
+                )
+
+            # Get raw counts
+            vector_count = search_metadata.get("vector_results_count", 0)
+            bm25_count = search_metadata.get("bm25_results_count", 0)
+            graph_local_count = search_metadata.get("graph_local_results_count", 0)
+            graph_global_count = search_metadata.get("graph_global_results_count", 0)
+            total_count = vector_count + bm25_count + graph_local_count + graph_global_count
+
+            # Calculate effective weights based on actual results
+            # If a channel has 0 results, its effective weight is 0
+            raw_weights = search_metadata.get("weights", {})
+            effective_weights = _calculate_effective_weights(
+                raw_weights, vector_count, bm25_count, graph_local_count, graph_global_count
+            )
+
             # Yield final answer with intent metadata
+            # Sprint 52: Include full 4-way search metadata for frontend display
+            # IMPORTANT: "answer" must be at top level for process_query_stream check
             yield {
                 "answer": answer,
                 "citation_map": citation_map,
                 # Sprint 42: Include intent classification in answer metadata
                 "intent": detected_intent,
                 "intent_confidence": intent_confidence,
-                "intent_weights": search_metadata.get("weights"),
+                "intent_weights": effective_weights,  # Use effective weights
                 "metadata": {
                     "total_latency_ms": latency_ms,
                     "session_id": session_id,
                     "search_mode": search_metadata.get("search_mode", "hybrid"),
+                    # Sprint 52: 4-way channel results for UI display
+                    "four_way_results": {
+                        "vector_count": vector_count,
+                        "bm25_count": bm25_count,
+                        "graph_local_count": graph_local_count,
+                        "graph_global_count": graph_global_count,
+                        "total_count": total_count,
+                    },
+                    # Sprint 52: Per-channel result samples for detailed display
+                    "channel_samples": channel_samples,
+                    "intent_method": search_metadata.get("intent_method"),
+                    "intent_latency_ms": search_metadata.get("intent_latency_ms"),
+                    # Include raw weights for comparison
+                    "raw_weights": raw_weights,
                 },
             }
 

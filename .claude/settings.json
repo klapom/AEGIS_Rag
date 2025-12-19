@@ -140,17 +140,17 @@
       "Bash(:*git rm:*)",
       "Bash(:*rm:*)",
       "Bash(:*poetry show gradio)",
-      "Bash(:*gh pr create:*)",           // Pull Requests erstellen
-      "Bash(:*gh pr list:*)",             // PRs listen
-      "Bash(:*gh pr view:*)",             // PR Details
-      "Bash(:*git commit -m*)",           // Erweitert git commit
-      "Bash(watch:*)",                   // Watch-Befehl für Monitoring
-      "Bash(nvidia-smi:*)",              // GPU Monitoring (falls vorhanden)
-      "Bash(:*docker volume:*)",          // Docker Volume Management
-      "Bash(:*poetry env:*)",             // Poetry Environment Info
-      "Read(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)",  // Explizite Read-Permission
-      "Edit(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)", // Explizite Edit-Permission
-      "Write(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)", // Explizite Write-Permission
+      "Bash(:*gh pr create:*)",
+      "Bash(:*gh pr list:*)",
+      "Bash(:*gh pr view:*)",
+      "Bash(:*git commit -m*)",
+      "Bash(watch:*)",
+      "Bash(nvidia-smi:*)",
+      "Bash(:*docker volume:*)",
+      "Bash(:*poetry env:*)",
+      "Read(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)",
+      "Edit(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)",
+      "Write(c:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/**)",
       "Bash(cd:*)"
     ],
     "deny": [
