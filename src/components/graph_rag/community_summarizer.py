@@ -110,9 +110,12 @@ class CommunitySummarizer:
         if self._explicit_model_name:
             return self._explicit_model_name
 
-        # Try to load from admin config (Redis)
+        # Try to load from config provider (Redis)
+        # Sprint 53 Feature 53.1: Import from llm_config_provider to break circular dep
         try:
-            from src.api.v1.admin import get_configured_summary_model
+            from src.components.graph_rag.llm_config_provider import (
+                get_configured_summary_model,
+            )
 
             model_name = await get_configured_summary_model()
             logger.debug("summary_model_loaded_from_config", model=model_name)

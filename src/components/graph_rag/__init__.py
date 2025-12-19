@@ -9,6 +9,16 @@ from src.components.graph_rag.community_summarizer import (
     CommunitySummarizer,
     get_community_summarizer,
 )
+# Sprint 53 Feature 53.1: LLM Config Provider and Protocols
+from src.components.graph_rag.llm_config_provider import (
+    REDIS_KEY_SUMMARY_MODEL_CONFIG,
+    get_configured_summary_model,
+)
+from src.components.graph_rag.protocols import (
+    CommunityDetector,
+    GraphStorage,
+    LLMConfigProvider,
+)
 from src.components.graph_rag.hybrid_relation_deduplicator import (
     HybridRelationDeduplicator,
     get_hybrid_relation_deduplicator,
@@ -58,4 +68,11 @@ __all__ = [
     "get_entity_communities_snapshot",
     "CommunitySummarizer",
     "get_community_summarizer",
+    # LLM Config Provider (Sprint 53.1)
+    "get_configured_summary_model",
+    "REDIS_KEY_SUMMARY_MODEL_CONFIG",
+    # Protocols (Sprint 53.1)
+    "LLMConfigProvider",
+    "GraphStorage",
+    "CommunityDetector",
 ]

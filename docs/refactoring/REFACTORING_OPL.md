@@ -28,40 +28,42 @@ Lazy Imports), die während des Refactorings eingeführt werden.
 
 ## Sprint 53: Quick Wins
 
-### OPL-001: Lazy Import für LLM Config Provider
+### OPL-001: Re-Export für get_configured_summary_model in admin.py
 
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-001 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 53 |
-| **Auflösung geplant** | Sprint 53 (Ende) |
+| **Auflösung geplant** | Sprint 54 |
 | **Feature** | 53.1 - Circular Dependency Fix |
 
 **Problem:**
-`CommunitySummarizer` benötigt LLM Config aus Admin-Modul, aber direkter Import erzeugt Zyklus.
+`CommunitySummarizer` benötigte LLM Config aus Admin-Modul, direkter Import erzeugte Zyklus.
 
-**Temporäre Lösung:**
+**Lösung implementiert (Sprint 53):**
+1. ✅ `llm_config_provider.py` erstellt mit `get_configured_summary_model()`
+2. ✅ `protocols.py` mit `LLMConfigProvider` Protocol erstellt
+3. ✅ `community_summarizer.py` importiert jetzt aus `llm_config_provider`
+4. ✅ Zirkulärer Import aufgelöst
+
+**Temporärer Re-Export (Backward-Compat):**
 ```python
-# src/components/graph_rag/community_summarizer.py
-# OPL-001: Lazy Import bis Protocol implementiert
-def _get_llm_config() -> str:
-    from src.api.v1.admin_llm import get_community_summary_model_config
-    return get_community_summary_model_config()
+# src/api/v1/admin.py:4547-4553
+# OPL-001: Re-export from llm_config_provider for backward compatibility
+from src.components.graph_rag.llm_config_provider import (
+    get_configured_summary_model,
+    REDIS_KEY_SUMMARY_MODEL_CONFIG,
+)
 ```
 
-**Verwendungsstellen:**
-- `src/components/graph_rag/community_summarizer.py:50`
+**Verwendungsstellen des Re-Exports:**
+- Keine bekannten externen Nutzer (kann in Sprint 54 entfernt werden)
 
-**Finale Lösung:**
-Protocol-basierte Dependency Injection via `LLMConfigProvider`.
-
-**Auflösungsschritte:**
-1. [ ] `protocols.py` mit `LLMConfigProvider` erstellen
-2. [ ] `CommunitySummarizer.__init__` auf DI umstellen
-3. [ ] Lazy Import entfernen
-4. [ ] Tests anpassen
-5. [ ] OPL-001 Status auf RESOLVED setzen
+**Verbleibende Schritte:**
+1. [ ] Verifizieren dass kein externer Code `from admin import get_configured_summary_model` nutzt
+2. [ ] Re-Export in Sprint 54 entfernen
+3. [ ] OPL-001 Status auf RESOLVED setzen
 
 ---
 

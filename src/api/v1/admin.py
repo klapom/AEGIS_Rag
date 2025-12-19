@@ -4390,9 +4390,13 @@ async def list_ollama_models() -> OllamaModelsResponse:
 
 # ============================================================================
 # Sprint 52 Feature 52.1: Community Summary Model Configuration
+# Sprint 53 Feature 53.1: REDIS_KEY imported from llm_config_provider
 # ============================================================================
 
-REDIS_KEY_SUMMARY_MODEL_CONFIG = "admin:summary_model_config"
+# OPL-001: Import from llm_config_provider to break circular dependency
+# This import is kept here for backward compatibility with any code that
+# imports REDIS_KEY_SUMMARY_MODEL_CONFIG from admin.py
+from src.components.graph_rag.llm_config_provider import REDIS_KEY_SUMMARY_MODEL_CONFIG
 
 
 class SummaryModelConfig(BaseModel):
@@ -4540,46 +4544,13 @@ async def update_summary_model_config(config: SummaryModelConfig) -> SummaryMode
         ) from e
 
 
-async def get_configured_summary_model() -> str:
-    """Get the configured summary model name for use in CommunitySummarizer.
-
-    **Sprint 52 Feature 52.1: Community Summary Model Selection**
-
-    This is a helper function for the CommunitySummarizer to get the
-    currently configured model. Returns just the model name without
-    the provider prefix (e.g., "qwen3:32b" instead of "ollama/qwen3:32b").
-
-    Returns:
-        Model name string (without provider prefix)
-    """
-    import json
-
-    try:
-        from src.components.memory import get_redis_memory
-
-        redis_memory = get_redis_memory()
-        redis_client = await redis_memory.client
-
-        config_json = await redis_client.get(REDIS_KEY_SUMMARY_MODEL_CONFIG)
-
-        if config_json:
-            config_str = (
-                config_json.decode("utf-8") if isinstance(config_json, bytes) else config_json
-            )
-            config_dict = json.loads(config_str)
-            model_id = config_dict.get("model_id", "")
-
-            # Extract model name (remove provider prefix like "ollama/")
-            if "/" in model_id:
-                return model_id.split("/", 1)[1]
-            return model_id
-
-        # Return default from settings
-        return settings.ollama_model_generation
-
-    except Exception as e:
-        logger.warning("failed_to_get_configured_summary_model", error=str(e))
-        return settings.ollama_model_generation
+# OPL-001: Re-export from llm_config_provider for backward compatibility
+# Sprint 53 Feature 53.1: Function moved to llm_config_provider.py
+# Any code importing this from admin.py will still work.
+# TODO: Remove this re-export in Sprint 54 after verifying no external usage.
+from src.components.graph_rag.llm_config_provider import (
+    get_configured_summary_model,
+)
 
 
 # ============================================================================
