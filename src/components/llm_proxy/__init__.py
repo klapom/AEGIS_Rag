@@ -1,35 +1,19 @@
 """
-LLM Proxy Component - Mozilla ANY-LLM Integration.
+LLM Proxy Component - Backward Compatibility Layer.
 
-This module provides AegisRAG-specific LLM routing on top of Mozilla's
-ANY-LLM framework, enabling three-tier execution (Local → Ollama Cloud → OpenAI).
+Sprint 56: Re-exports from src.domains.llm_integration for backward compatibility.
+OPL-006: These re-exports will be removed in Sprint 58.
 
-Sprint Context: Sprint 23 (2025-11-11+) - Feature 23.4
-Related ADR: ADR-033 (Mozilla ANY-LLM Integration)
+Migrate to:
+    from src.domains.llm_integration import get_aegis_llm_proxy, LLMTask
 
-Components:
-    - AegisLLMProxy: Main proxy class with routing logic
-    - LLMTask, LLMResponse: Pydantic models for requests/responses
-    - LLMProxyConfig: Configuration management
-
-Usage:
-    from src.components.llm_proxy import get_aegis_llm_proxy, LLMTask
-
-    proxy = get_aegis_llm_proxy()
-    task = LLMTask(
-        task_type=TaskType.EXTRACTION,
-        prompt="Extract entities from text...",
-        quality_requirement=QualityRequirement.HIGH,
-    )
-    response = await proxy.generate(task)
+See: docs/refactoring/REFACTORING_OPL.md
 """
 
-# AegisLLMProxy (ready to use once ANY-LLM SDK is installed)
-from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy, get_aegis_llm_proxy
-
-# Cost tracking (Sprint 23 - persistent SQLite tracking)
-from src.components.llm_proxy.cost_tracker import CostTracker
-from src.components.llm_proxy.models import (
+# OPL-006: Re-export from new domain location
+# DC-004: These re-exports will be removed in Sprint 58
+from src.domains.llm_integration import (
+    # Models
     Complexity,
     DataClassification,
     ExecutionLocation,
@@ -37,11 +21,15 @@ from src.components.llm_proxy.models import (
     LLMTask,
     QualityRequirement,
     TaskType,
-)
-
-# VLM Factory (Sprint 36 - Feature 36.1)
-from src.components.llm_proxy.vlm_factory import (
+    # Main proxy
+    AegisLLMProxy,
+    get_aegis_llm_proxy,
+    # Cost tracking
+    CostTracker,
+    get_cost_tracker,
+    # VLM Factory
     VLMBackend,
+    VLMClient,
     close_shared_vlm_client,
     get_shared_vlm_client,
     get_vlm_backend_from_config,
@@ -62,8 +50,10 @@ __all__ = [
     "get_aegis_llm_proxy",
     # Cost tracking
     "CostTracker",
+    "get_cost_tracker",
     # VLM Factory (Sprint 36 - Feature 36.1)
     "VLMBackend",
+    "VLMClient",
     "get_vlm_client",
     "get_vlm_backend_from_config",
     "get_shared_vlm_client",

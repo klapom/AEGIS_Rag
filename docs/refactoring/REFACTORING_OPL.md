@@ -1,9 +1,9 @@
 # REFACTORING Open Point List (OPL)
 
-**Stand:** 2025-12-19 (nach Sprint 55)
+**Stand:** 2025-12-19 (Sprint 56 in Arbeit)
 **Sprint-Range:** 53-58
 **Ziel:** Alle Einträge bis Ende Sprint 58 aufgelöst
-**Letztes Update:** Sprint 55 - lightrag_wrapper.py Split abgeschlossen
+**Letztes Update:** Sprint 56 - Feature 56.3 ingestion → domains/document_processing Migration abgeschlossen
 
 ---
 
@@ -296,24 +296,307 @@ Direkte Imports aus `lightrag/` Submodulen und DI via Factory Pattern.
 
 ## Sprint 56: Domain Boundaries
 
-### OPL-006: Cross-Domain Imports
+### OPL-006: llm_proxy → domains/llm_integration Migration
 
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-006 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 56 |
-| **Auflösung geplant** | Sprint 57 |
-| **Feature** | 56.x - Domain Boundaries |
+| **Implementiert** | Sprint 56 (2025-12-19) |
+| **Auflösung geplant** | Sprint 58 |
+| **Feature** | 56.4 - llm_proxy Migration |
 
 **Problem:**
-Während Domain-Restrukturierung werden temporäre Cross-Domain Imports benötigt.
+`src/components/llm_proxy/` enthält LLM-bezogene Logik die in die neue Domain-Struktur migriert werden muss.
 
-**Temporäre Lösung:**
-Explicit re-exports in Domain `__init__.py` files.
+**Lösung implementiert (Sprint 56):**
+1. ✅ `src/domains/llm_integration/` Package erstellt
+2. ✅ Alle Module migriert:
+   - `models.py` → `domains/llm_integration/models.py`
+   - `config.py` → `domains/llm_integration/config.py`
+   - `aegis_llm_proxy.py` → `domains/llm_integration/proxy/aegis_llm_proxy.py`
+   - `cost_tracker.py` → `domains/llm_integration/cost/cost_tracker.py`
+   - `vlm_*.py` → `domains/llm_integration/proxy/vlm_*.py`
+3. ✅ Backward-Compat Facades in alten Dateien erstellt
+4. ✅ Alle Imports verifiziert und funktional
+
+**Temporäre Lösung (aktiv):**
+```python
+# src/components/llm_proxy/__init__.py - Facade
+# OPL-006: Re-exports until Sprint 58
+from src.domains.llm_integration import (
+    AegisLLMProxy,
+    get_aegis_llm_proxy,
+    LLMTask,
+    TaskType,
+    CostTracker,
+    # ... weitere Re-Exports
+)
+```
+
+**Betroffene Backward-Compat Dateien:**
+- `src/components/llm_proxy/__init__.py`
+- `src/components/llm_proxy/aegis_llm_proxy.py`
+- `src/components/llm_proxy/models.py`
+- `src/components/llm_proxy/config.py`
+- `src/components/llm_proxy/cost_tracker.py`
+- `src/components/llm_proxy/vlm_factory.py`
+- `src/components/llm_proxy/vlm_protocol.py`
+- `src/components/llm_proxy/ollama_vlm.py`
+- `src/components/llm_proxy/dashscope_vlm.py`
+
+**Verwendungsstellen (40+ Dateien):**
+- `src/components/retrieval/graph_rag_retriever.py`
+- `src/components/memory/graphiti_wrapper.py`
+- `src/evaluation/ragas_evaluator.py`
+- `src/agents/answer_generator.py`
+- `src/api/v1/title_generator.py`
+- Weitere Module und Tests
+
+**Verbleibende Schritte (Sprint 58):**
+1. [ ] Alle Verwendungsstellen auf `src.domains.llm_integration` umstellen
+2. [ ] Backward-Compat Facades entfernen
+3. [ ] DC-004 für llm_proxy Dateien erstellen
+4. [ ] OPL-006 Status auf RESOLVED setzen
+
+**Neue Domain-Struktur:**
+```
+src/domains/llm_integration/
+├── __init__.py           # Public API
+├── models.py             # LLMTask, LLMResponse, TaskType, etc.
+├── config.py             # LLMProxyConfig, get_llm_proxy_config()
+├── proxy/
+│   ├── __init__.py       # Proxy public API
+│   ├── aegis_llm_proxy.py # Main proxy class (~800 LOC)
+│   ├── vlm_protocol.py   # VLMClient Protocol
+│   ├── vlm_factory.py    # VLM Factory Pattern
+│   ├── ollama_vlm.py     # Ollama VLM Client
+│   └── dashscope_vlm.py  # DashScope VLM Client
+└── cost/
+    ├── __init__.py       # Cost public API
+    └── cost_tracker.py   # SQLite cost tracking (~350 LOC)
+```
 
 **Finale Lösung:**
-Interface-basierte Kommunikation zwischen Domains (Sprint 57).
+Direkte Imports aus `src.domains.llm_integration` und Entfernung der alten `src/components/llm_proxy/` Facades.
+
+---
+
+### OPL-008: infrastructure/ Layer von core/
+
+| Feld | Wert |
+|------|------|
+| **ID** | OPL-008 |
+| **Status** | IN_PROGRESS |
+| **Erstellt** | Sprint 56 |
+| **Implementiert** | Sprint 56 (2025-12-19) |
+| **Auflösung geplant** | Sprint 58 |
+| **Feature** | 56.5 - Infrastructure Layer |
+
+**Problem:**
+`src/core/` enthält Cross-Cutting Concerns (config, logging, exceptions, models), die in eine
+dedizierte `infrastructure/` Schicht migriert werden müssen für bessere Architektur-Trennung.
+
+**Lösung implementiert (Sprint 56):**
+1. ✅ `src/infrastructure/config/settings.py` - Re-exports von `core/config.py`
+2. ✅ `src/infrastructure/logging/structlog_config.py` - Re-exports von `core/logging.py`
+3. ✅ `src/infrastructure/exceptions/aegis_exceptions.py` - Re-exports von `core/exceptions.py`
+4. ✅ `src/infrastructure/models/base_models.py` - Re-exports von `core/models.py`
+5. ✅ `src/infrastructure/__init__.py` - Public API mit allen Exports
+6. ✅ Alle Imports verifiziert und funktional
+
+**Temporäre Lösung (aktiv):**
+```python
+# src/infrastructure/config/settings.py - Re-export Facade
+# OPL-008: Re-exports until Sprint 58
+from src.core.config import Settings, get_settings, settings
+
+# src/infrastructure/logging/structlog_config.py - Re-export Facade
+from src.core.logging import add_app_context, get_logger, setup_logging
+
+# src/infrastructure/exceptions/aegis_exceptions.py - Re-export Facade
+from src.core.exceptions import AegisRAGException, ValidationError, ...
+
+# src/infrastructure/models/base_models.py - Re-export Facade
+from src.core.models import QueryRequest, QueryResponse, ErrorCode, ...
+```
+
+**Infrastructure Package Struktur:**
+```
+src/infrastructure/
+├── __init__.py              # Public API (alle exports)
+├── config/
+│   ├── __init__.py          # Config exports
+│   └── settings.py          # Re-export from core/config.py
+├── logging/
+│   ├── __init__.py          # Logging exports
+│   └── structlog_config.py  # Re-export from core/logging.py
+├── exceptions/
+│   ├── __init__.py          # Exception exports
+│   └── aegis_exceptions.py  # Re-export from core/exceptions.py
+└── models/
+    ├── __init__.py          # Model exports
+    └── base_models.py       # Re-export from core/models.py
+```
+
+**Export Counts:**
+- `config`: 3 exports (Settings, get_settings, settings)
+- `logging`: 3 exports (setup_logging, get_logger, add_app_context)
+- `exceptions`: 17 exports (alle Exception-Klassen)
+- `models`: 20 exports (alle Pydantic-Modelle)
+
+**Verwendungsstellen (potenziell 100+ Dateien):**
+- Nahezu alle Module importieren aus `src.core.*`
+- Keine Änderung an Verwendungsstellen nötig (Re-Export-Strategie)
+
+**Verbleibende Schritte (Sprint 58):**
+1. [ ] Eigentlichen Code von `core/` nach `infrastructure/` verschieben
+2. [ ] `core/` auf Re-Exports von infrastructure umstellen (Umkehr)
+3. [ ] Alle direkten `core/` Imports auf `infrastructure/` umstellen
+4. [ ] `core/` Package entfernen
+5. [ ] OPL-008 Status auf RESOLVED setzen
+
+**Finale Lösung:**
+Vollständige Migration zu `src/infrastructure/` mit Entfernung von `src/core/`.
+
+---
+
+### OPL-009: graph_rag/ → domains/knowledge_graph/ Migration
+
+| Feld | Wert |
+|------|------|
+| **ID** | OPL-009 |
+| **Status** | IN_PROGRESS |
+| **Erstellt** | Sprint 56 |
+| **Implementiert** | Sprint 56 (2025-12-19) |
+| **Auflösung geplant** | Sprint 58 |
+| **Feature** | 56.2 - Knowledge Graph Domain |
+
+**Problem:**
+`src/components/graph_rag/` enthält die gesamte Knowledge Graph Logik, die in die neue Domain-Struktur
+migriert werden muss für bessere Architektur-Trennung nach DDD.
+
+**Lösung implementiert (Sprint 56):**
+1. ✅ `src/domains/knowledge_graph/` Package erstellt mit 7 Subdomains
+2. ✅ Re-export-Facades für alle Subdomains erstellt
+3. ✅ Alle Imports verifiziert und funktional
+
+**Temporäre Lösung (aktiv):**
+```python
+# src/domains/knowledge_graph/<subdomain>/__init__.py
+# OPL-009: Re-exports until Sprint 58
+from src.components.graph_rag.<module> import ...
+```
+
+**Knowledge Graph Domain Struktur:**
+```
+src/domains/knowledge_graph/
+├── __init__.py              # Public API (60+ exports)
+├── persistence/             # Neo4j storage
+│   └── __init__.py          # Neo4jClient, GraphQueryTemplates, etc.
+├── querying/                # LightRAG integration
+│   └── __init__.py          # LightRAGClient, DualLevelSearch
+├── extraction/              # Entity/relation extraction
+│   └── __init__.py          # RelationExtractor, ExtractionService
+├── deduplication/           # Entity/relation deduplication
+│   └── __init__.py          # SemanticDeduplicator, HybridRelationDeduplicator
+├── communities/             # Community detection & summarization
+│   └── __init__.py          # CommunityDetector, CommunitySummarizer
+├── analytics/               # Graph analytics & recommendations
+│   └── __init__.py          # GraphAnalyticsEngine, RecommendationEngine
+└── utilities/               # Protocols & utilities
+    └── __init__.py          # GraphStorage, LLMConfigProvider
+```
+
+**Export Counts by Subdomain:**
+- `persistence`: 7 exports
+- `querying`: 8 exports
+- `extraction`: 11 exports
+- `deduplication`: 10 exports
+- `communities`: 10 exports
+- `analytics`: 4 exports
+- `utilities`: 7 exports
+
+**Verwendungsstellen (40+ Dateien):**
+- `src/agents/graph_retrieval_agent.py`
+- `src/components/retrieval/graph_rag_retriever.py`
+- `src/api/v1/admin*.py`
+- Tests und weitere Module
+
+**Verbleibende Schritte (Sprint 58):**
+1. [ ] Eigentlichen Code von `graph_rag/` nach `knowledge_graph/` verschieben
+2. [ ] `components/graph_rag/` auf Re-Exports von domain umstellen
+3. [ ] Alle direkten `graph_rag/` Imports auf `knowledge_graph/` umstellen
+4. [ ] `components/graph_rag/` Package entfernen
+5. [ ] OPL-009 Status auf RESOLVED setzen
+
+**Finale Lösung:**
+Vollständige Migration zu `src/domains/knowledge_graph/` mit Entfernung von `src/components/graph_rag/`.
+
+---
+
+### OPL-010: ingestion/ → domains/document_processing/ Migration
+
+| Feld | Wert |
+|------|------|
+| **ID** | OPL-010 |
+| **Status** | IN_PROGRESS |
+| **Erstellt** | Sprint 56 |
+| **Implementiert** | Sprint 56 (2025-12-19) |
+| **Auflösung geplant** | Sprint 58 |
+| **Feature** | 56.3 - Document Processing Domain |
+
+**Problem:**
+`src/components/ingestion/` enthält die gesamte Document Processing Logik, die in die neue Domain-Struktur
+migriert werden muss für bessere Architektur-Trennung nach DDD.
+
+**Lösung implementiert (Sprint 56):**
+1. ✅ `src/domains/document_processing/` Package erstellt mit 4 Subdomains
+2. ✅ Re-export-Facades für alle Subdomains erstellt
+3. ✅ Alle Imports verifiziert und funktional
+
+**Temporäre Lösung (aktiv):**
+```python
+# src/domains/document_processing/<subdomain>/__init__.py
+# OPL-010: Re-exports until Sprint 58
+from src.components.ingestion.<module> import ...
+```
+
+**Document Processing Domain Struktur:**
+```
+src/domains/document_processing/
+├── __init__.py              # Public API (35+ exports)
+├── parsing/                 # Docling integration
+│   └── __init__.py          # DoclingContainerClient, FormatRouter
+├── pipeline/                # LangGraph pipeline
+│   └── __init__.py          # run_ingestion_pipeline, IngestionState
+├── chunking/                # Adaptive chunking
+│   └── __init__.py          # chunking_node, SectionMetadata
+└── enrichment/              # Image/VLM enrichment
+    └── __init__.py          # image_enrichment_node, ImageProcessor
+```
+
+**Export Counts by Subdomain:**
+- `parsing`: 11 exports
+- `pipeline`: 12 exports
+- `chunking`: 5 exports
+- `enrichment`: 3 exports
+
+**Verwendungsstellen (30+ Dateien):**
+- `src/api/v1/ingestion.py`
+- `src/agents/ingestion_agent.py`
+- Tests und weitere Module
+
+**Verbleibende Schritte (Sprint 58):**
+1. [ ] Eigentlichen Code von `ingestion/` nach `document_processing/` verschieben
+2. [ ] `components/ingestion/` auf Re-Exports von domain umstellen
+3. [ ] Alle direkten `ingestion/` Imports auf `document_processing/` umstellen
+4. [ ] `components/ingestion/` Package entfernen
+5. [ ] OPL-010 Status auf RESOLVED setzen
+
+**Finale Lösung:**
+Vollständige Migration zu `src/domains/document_processing/` mit Entfernung von `src/components/ingestion/`.
 
 ---
 
@@ -355,12 +638,12 @@ Nach Sprint 58 sollte diese Datei nur noch REMOVED-Einträge enthalten (als Doku
 | 53 | OPL-001, OPL-002 | IN_PROGRESS |
 | 54 | OPL-003, OPL-004 | IN_PROGRESS (implementiert) |
 | 55 | OPL-005 | IN_PROGRESS (implementiert) |
-| 56 | OPL-006 | OPEN |
+| 56 | OPL-006, OPL-008, OPL-009, OPL-010 | IN_PROGRESS (implementiert) |
 | 57 | OPL-007 | OPEN |
 | 58 | Cleanup | - |
 
-**Total Open:** 2 (OPL-006, OPL-007)
-**Total In Progress:** 5 (OPL-001 bis OPL-005)
+**Total Open:** 1 (OPL-007)
+**Total In Progress:** 9 (OPL-001 bis OPL-006, OPL-008, OPL-009, OPL-010)
 **Target End Sprint 58:** 0
 
 ---

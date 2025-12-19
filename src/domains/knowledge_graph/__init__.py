@@ -1,0 +1,177 @@
+"""Knowledge Graph Domain - Public API.
+
+Sprint 56.2: Domain boundary for graph-based knowledge management.
+
+Subdomains:
+- extraction: Entity and relation extraction from text
+- deduplication: Semantic entity and relation deduplication
+- communities: Community detection and summarization
+- querying: Graph queries via LightRAG
+- persistence: Neo4j storage operations
+- analytics: Graph analytics and recommendations
+- utilities: Protocols, templates, and utilities
+
+Usage:
+    from src.domains.knowledge_graph import (
+        LightRAGClient,
+        get_lightrag_client,
+        Neo4jClient,
+        get_neo4j_client,
+        CommunitySummarizer,
+    )
+
+For backward compatibility, these are also available from:
+    from src.components.graph_rag import ...
+"""
+
+# OPL-009: Re-export from components/graph_rag until Sprint 58
+
+# Persistence
+from src.domains.knowledge_graph.persistence import (
+    Neo4jClient,
+    get_neo4j_client,
+    get_neo4j_client_async,
+    GraphQueryTemplates,
+    CypherQueryBuilder,
+    TemporalQueryBuilder,
+    get_temporal_query_builder,
+)
+
+# Querying
+from src.domains.knowledge_graph.querying import (
+    LightRAGClient,
+    LightRAGWrapper,
+    get_lightrag_client,
+    get_lightrag_client_async,
+    get_lightrag_wrapper,
+    get_lightrag_wrapper_async,
+    DualLevelSearch,
+    get_dual_level_search,
+)
+
+# Extraction
+from src.domains.knowledge_graph.extraction import (
+    RelationExtractor,
+    create_relation_extractor_from_config,
+    ParallelExtractor,
+    get_parallel_extractor,
+    extract_parallel,
+    ExtractionPipelineFactory,
+    create_extraction_pipeline_from_config,
+    ExtractionService,
+    get_extraction_service,
+    ExtractionBenchmark,
+    run_benchmark,
+)
+
+# Deduplication
+from src.domains.knowledge_graph.deduplication import (
+    SemanticDeduplicator,
+    MultiCriteriaDeduplicator,
+    create_deduplicator_from_config,
+    RelationDeduplicator,
+    create_relation_deduplicator_from_config,
+    SemanticRelationDeduplicator,
+    create_semantic_relation_deduplicator,
+    SYMMETRIC_RELATIONS,
+    HybridRelationDeduplicator,
+    get_hybrid_relation_deduplicator,
+)
+
+# Communities
+from src.domains.knowledge_graph.communities import (
+    CommunityDetector as CommunityDetectorClass,
+    get_community_detector,
+    CommunitySummarizer,
+    get_community_summarizer,
+    CommunityDelta,
+    track_community_changes,
+    get_entity_communities_snapshot,
+    CommunitySearch,
+    get_community_search,
+)
+
+# Analytics
+from src.domains.knowledge_graph.analytics import (
+    GraphAnalyticsEngine,
+    get_analytics_engine,
+    RecommendationEngine,
+    get_recommendation_engine,
+)
+
+# Utilities
+from src.domains.knowledge_graph.utilities import (
+    GraphStorage,
+    CommunityDetectorProtocol,
+    LLMConfigProvider,
+    GraphVisualizationExporter,
+    get_visualization_exporter,
+    get_configured_summary_model,
+    REDIS_KEY_SUMMARY_MODEL_CONFIG,
+)
+
+__all__ = [
+    # Persistence
+    "Neo4jClient",
+    "get_neo4j_client",
+    "get_neo4j_client_async",
+    "GraphQueryTemplates",
+    "CypherQueryBuilder",
+    "TemporalQueryBuilder",
+    "get_temporal_query_builder",
+    # Querying
+    "LightRAGClient",
+    "LightRAGWrapper",
+    "get_lightrag_client",
+    "get_lightrag_client_async",
+    "get_lightrag_wrapper",
+    "get_lightrag_wrapper_async",
+    "DualLevelSearch",
+    "get_dual_level_search",
+    # Extraction
+    "RelationExtractor",
+    "create_relation_extractor_from_config",
+    "ParallelExtractor",
+    "get_parallel_extractor",
+    "extract_parallel",
+    "ExtractionPipelineFactory",
+    "create_extraction_pipeline_from_config",
+    "ExtractionService",
+    "get_extraction_service",
+    "ExtractionBenchmark",
+    "run_benchmark",
+    # Deduplication
+    "SemanticDeduplicator",
+    "MultiCriteriaDeduplicator",
+    "create_deduplicator_from_config",
+    "RelationDeduplicator",
+    "create_relation_deduplicator_from_config",
+    "SemanticRelationDeduplicator",
+    "create_semantic_relation_deduplicator",
+    "SYMMETRIC_RELATIONS",
+    "HybridRelationDeduplicator",
+    "get_hybrid_relation_deduplicator",
+    # Communities
+    "CommunityDetectorClass",
+    "get_community_detector",
+    "CommunitySummarizer",
+    "get_community_summarizer",
+    "CommunityDelta",
+    "track_community_changes",
+    "get_entity_communities_snapshot",
+    "CommunitySearch",
+    "get_community_search",
+    # Analytics
+    "GraphAnalyticsEngine",
+    "get_analytics_engine",
+    "RecommendationEngine",
+    "get_recommendation_engine",
+    # Utilities/Protocols
+    "GraphStorage",
+    "CommunityDetectorProtocol",
+    "LLMConfigProvider",
+    "GraphVisualizationExporter",
+    "get_visualization_exporter",
+    "get_configured_summary_model",
+    "REDIS_KEY_SUMMARY_MODEL_CONFIG",
+]
