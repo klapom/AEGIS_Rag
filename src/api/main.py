@@ -26,6 +26,7 @@ from src.api.v1.admin import router as admin_router
 from src.api.v1.admin_costs import router as admin_costs_router
 from src.api.v1.admin_graph import router as admin_graph_router
 from src.api.v1.admin_llm import router as admin_llm_router
+from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feature 46.4
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
@@ -334,13 +335,14 @@ logger.info(
     note="Sprint 18 TD-41: Admin router with /stats endpoint - prefix fixed!",
 )
 
-# Sprint 53: Admin module split - Cost, LLM, Graph endpoints
+# Sprint 53: Admin module split - Cost, LLM, Graph, Indexing endpoints
 app.include_router(admin_costs_router, prefix="/api/v1")
 app.include_router(admin_llm_router, prefix="/api/v1")
 app.include_router(admin_graph_router, prefix="/api/v1")
+app.include_router(admin_indexing_router, prefix="/api/v1")
 logger.info(
     "admin_split_routers_registered",
-    routers=["admin_costs", "admin_llm", "admin_graph"],
+    routers=["admin_costs", "admin_llm", "admin_graph", "admin_indexing"],
     note="Sprint 53: Admin module split for maintainability",
 )
 
