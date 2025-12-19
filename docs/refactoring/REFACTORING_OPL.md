@@ -1,9 +1,9 @@
 # REFACTORING Open Point List (OPL)
 
-**Stand:** 2025-12-19 (nach Sprint 54)
+**Stand:** 2025-12-19 (nach Sprint 55)
 **Sprint-Range:** 53-58
 **Ziel:** Alle Einträge bis Ende Sprint 58 aufgelöst
-**Letztes Update:** Sprint 54 - langgraph_nodes.py Split abgeschlossen
+**Letztes Update:** Sprint 55 - lightrag_wrapper.py Split abgeschlossen
 
 ---
 
@@ -239,36 +239,58 @@ Move to `src/components/ingestion/models.py` in Sprint 56 (Domain Boundaries).
 | Feld | Wert |
 |------|------|
 | **ID** | OPL-005 |
-| **Status** | OPEN |
+| **Status** | IN_PROGRESS |
 | **Erstellt** | Sprint 55 |
+| **Implementiert** | Sprint 55 (2025-12-19) |
 | **Auflösung geplant** | Sprint 56 |
-| **Feature** | 55.1-55.6 - lightrag_wrapper Split |
+| **Feature** | 55.1-55.8 - lightrag_wrapper Split |
 
 **Problem:**
 `get_lightrag_wrapper_async()` ist als Singleton implementiert und wird in 40+ Dateien verwendet.
 
-**Temporäre Lösung:**
-```python
-# src/components/graph_rag/lightrag_wrapper.py - Facade
-# OPL-005: Singleton wrapper for backward compat until Sprint 56
-from src.components.graph_rag.lightrag.client import LightRAGClient
-from src.components.graph_rag.registry import get_instance, set_instance
+**Lösung implementiert (Sprint 55):**
+1. ✅ `lightrag/` Package erstellt mit 6 Modulen
+2. ✅ `lightrag_wrapper.py` auf Facade reduziert (47 LOC)
+3. ✅ Re-Exports für Backward-Compatibility eingerichtet
+4. ✅ Alle Imports verifiziert und funktional
 
-async def get_lightrag_wrapper_async() -> LightRAGClient:
-    """Backward-compatible singleton accessor."""
-    instance = get_instance("lightrag_client")
-    if instance is None:
-        from src.components.graph_rag.lightrag.initialization import create_lightrag_client
-        instance = await create_lightrag_client()
-        set_instance("lightrag_client", instance)
-    return instance
+**Temporäre Lösung (aktiv):**
+```python
+# src/components/graph_rag/lightrag_wrapper.py - Facade (47 LOC)
+# OPL-005: Backward-compat aliases until Sprint 56
+from src.components.graph_rag.lightrag.client import (
+    LightRAGClient,
+    LightRAGWrapper,
+    get_lightrag_client,
+    get_lightrag_client_async,
+    get_lightrag_wrapper,
+    get_lightrag_wrapper_async,
+)
+
+# Re-export for backward compatibility
+__all__ = [
+    "LightRAGClient",
+    "LightRAGWrapper",
+    "get_lightrag_client",
+    "get_lightrag_client_async",
+    "get_lightrag_wrapper",
+    "get_lightrag_wrapper_async",
+]
 ```
 
-**Verwendungsstellen:**
-- 40+ Dateien (siehe Analyse)
+**Verwendungsstellen (40+ Dateien):**
+- `src/components/graph_rag/dual_level_search.py`
+- `src/components/ingestion/nodes/graph_extraction.py`
+- `src/agents/graph_retrieval_agent.py`
+- Tests und weitere Module
+
+**Verbleibende Schritte (Sprint 56):**
+1. [ ] Alle Verwendungsstellen auf direkte `lightrag/` Imports umstellen
+2. [ ] Re-Export-Facade entfernen oder minimal halten
+3. [ ] OPL-005 Status auf RESOLVED setzen
 
 **Finale Lösung:**
-Dependency Injection via Factory Pattern in Sprint 56.
+Direkte Imports aus `lightrag/` Submodulen und DI via Factory Pattern.
 
 ---
 
@@ -332,13 +354,13 @@ Nach Sprint 58 sollte diese Datei nur noch REMOVED-Einträge enthalten (als Doku
 |--------|---------|--------|
 | 53 | OPL-001, OPL-002 | IN_PROGRESS |
 | 54 | OPL-003, OPL-004 | IN_PROGRESS (implementiert) |
-| 55 | OPL-005 | OPEN |
+| 55 | OPL-005 | IN_PROGRESS (implementiert) |
 | 56 | OPL-006 | OPEN |
 | 57 | OPL-007 | OPEN |
 | 58 | Cleanup | - |
 
-**Total Open:** 5 (OPL-005 bis OPL-007)
-**Total In Progress:** 4 (OPL-001 bis OPL-004)
+**Total Open:** 2 (OPL-006, OPL-007)
+**Total In Progress:** 5 (OPL-001 bis OPL-005)
 **Target End Sprint 58:** 0
 
 ---
@@ -444,12 +466,33 @@ grep -r "from src.components.ingestion.langgraph_nodes import" src/ --include="*
 | **ID** | DC-003 |
 | **Kategorie** | DEPRECATED |
 | **Erstellt** | Sprint 55 |
+| **Implementiert** | Sprint 55 (2025-12-19) |
 | **Entfernung** | Sprint 56 |
 | **Dateien** | `src/components/graph_rag/lightrag_wrapper.py` |
 
+**Status:** ✅ IMPLEMENTIERT - Originale extrahiert, Facade erstellt
+
 **Betroffene Elemente:**
-- LightRAGClient Implementierung (nach Migration zu lightrag/)
-- Nur Singleton-Funktion bleibt (OPL-005)
+- ✅ Komplette LightRAGClient Implementierung (extrahiert nach lightrag/)
+- ✅ Nur Re-Exports bleiben (OPL-005)
+- Facade: 47 LOC (reduziert von 1823 LOC)
+
+**Neue Module erstellt:**
+| Modul | LOC | Inhalt |
+|-------|-----|--------|
+| `lightrag/types.py` | 155 | QueryMode, LightRAGConfig, dataclasses |
+| `lightrag/initialization.py` | 210 | create_lightrag_instance, UnifiedEmbeddingFunc |
+| `lightrag/converters.py` | 245 | chunk_text_with_metadata, convert_* functions |
+| `lightrag/ingestion.py` | 450 | extract_per_chunk, insert_* functions |
+| `lightrag/neo4j_storage.py` | 340 | store_chunks_and_provenance, store_relates_to |
+| `lightrag/client.py` | 295 | LightRAGClient, singleton getters |
+| `lightrag/__init__.py` | 110 | Package exports |
+
+**Verification vor Entfernung:**
+```bash
+# Prüfe direkte Imports (sollten nur noch von lightrag/ kommen)
+grep -r "from src.components.graph_rag.lightrag_wrapper import" src/ --include="*.py"
+```
 
 ---
 
