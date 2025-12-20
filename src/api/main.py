@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -43,7 +44,17 @@ from src.core.logging import get_logger, setup_logging
 
 # Initialize settings and logging
 settings = get_settings()
-setup_logging(log_level=settings.log_level, json_logs=settings.json_logs)
+
+# Detect Docker environment to avoid duplicate timestamps
+# Docker already adds timestamps to all logs, so we don't need structlog timestamps
+in_docker = os.path.exists("/.dockerenv") or os.getenv("CONTAINER_ENV") == "true"
+include_timestamp = not in_docker
+
+setup_logging(
+    log_level=settings.log_level,
+    json_logs=settings.json_logs,
+    include_timestamp=include_timestamp,
+)
 logger = get_logger(__name__)
 
 # Prometheus metrics

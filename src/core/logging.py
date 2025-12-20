@@ -87,7 +87,7 @@ def add_app_context(_logger: logging.Logger, _method_name: str, event_dict: Even
     return event_dict
 
 
-def setup_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
+def setup_logging(log_level: str = "INFO", json_logs: bool = False, include_timestamp: bool = True) -> None:
     """
     Configure structured logging for the application.
 
@@ -99,6 +99,9 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
         log_level: Minimum log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         json_logs: If True, output logs in JSON format for production.
                    If False, use colored console format for development.
+        include_timestamp: If True, include timestamps in console output.
+                          Set to False in Docker to avoid duplicate timestamps
+                          (Docker already adds timestamps to all logs).
 
     Example:
         >>> # Development setup (colored console output)
@@ -111,11 +114,14 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
         >>> logger = get_logger(__name__)
         >>> logger.error("database_error", error="Connection timeout")
 
+        >>> # Docker setup (avoid duplicate timestamps)
+        >>> setup_logging(log_level="INFO", json_logs=False, include_timestamp=False)
+
     Processor Chain:
         1. merge_contextvars: Add context variables (e.g., request_id)
         2. add_log_level: Add log level to event dict
         3. add_logger_name: Add logger name (module path)
-        4. TimeStamper: Add ISO timestamp
+        4. TimeStamper: Add ISO timestamp (only if include_timestamp=True)
         5. StackInfoRenderer: Render stack traces
         6. add_app_context: Add app name and version
         7. dict_tracebacks/ExceptionRenderer: Format exceptions
@@ -127,6 +133,7 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
         - Third-party loggers (httpx, qdrant, neo4j) silenced to WARNING
         - Stack traces automatically included for logger.exception() calls
         - Context variables persist across async boundaries (use contextvars)
+        - In Docker, set include_timestamp=False to avoid triple timestamps
 
     See Also:
         - get_logger(): Get a logger instance
@@ -137,10 +144,16 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False) -> None:
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
-        structlog.processors.TimeStamper(fmt="iso"),
+    ]
+
+    # Add timestamp processor only if requested (avoid duplication with Docker timestamps)
+    if include_timestamp:
+        shared_processors.append(structlog.processors.TimeStamper(fmt="iso"))
+
+    shared_processors.extend([
         structlog.processors.StackInfoRenderer(),
         add_app_context,
-    ]
+    ])
 
     if json_logs:
         # Production: JSON logs for machine parsing
