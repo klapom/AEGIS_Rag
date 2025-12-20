@@ -61,69 +61,6 @@ function cleanTextForDisplay(text: string): string {
     .trim();
 }
 
-/**
- * Extract metadata from Python object strings.
- *
- * Sprint 32 Fix: Parse metadata embedded in stringified Python objects like:
- * "metadata={'source': 'path.txt', 'format': 'txt', 'page_count': 1}"
- *
- * Returns parsed metadata object or null if not found/parseable.
- */
-function extractMetadataFromText(text: string | undefined): Record<string, unknown> | null {
-  if (!text) return null;
-
-  // Match metadata={...} pattern - handles nested braces
-  const metadataMatch = text.match(/metadata=(\{[^}]*\})/);
-  if (!metadataMatch) return null;
-
-  try {
-    // Convert Python dict syntax to JSON:
-    // - Single quotes to double quotes
-    // - True/False to true/false
-    // - None to null
-    let jsonStr = metadataMatch[1]
-      .replace(/'/g, '"')
-      .replace(/True/g, 'true')
-      .replace(/False/g, 'false')
-      .replace(/None/g, 'null');
-
-    return JSON.parse(jsonStr);
-  } catch {
-    // If parsing fails, try to extract individual fields manually
-    const result: Record<string, unknown> = {};
-
-    // Extract source field
-    const sourceMatch = text.match(/['"]source['"]:\s*['"]([^'"]+)['"]/);
-    if (sourceMatch) result.source = sourceMatch[1];
-
-    // Extract format field
-    const formatMatch = text.match(/['"]format['"]:\s*['"]([^'"]+)['"]/);
-    if (formatMatch) result.format = formatMatch[1];
-
-    // Extract file_path field
-    const filePathMatch = text.match(/['"]file_path['"]:\s*['"]([^'"]+)['"]/);
-    if (filePathMatch) result.file_path = filePathMatch[1];
-
-    // Extract page_count field
-    const pageCountMatch = text.match(/['"]page_count['"]:\s*(\d+)/);
-    if (pageCountMatch) result.page_count = parseInt(pageCountMatch[1], 10);
-
-    // Extract creation_date field
-    const creationDateMatch = text.match(/['"]creation_date['"]:\s*['"]([^'"]+)['"]/);
-    if (creationDateMatch) result.creation_date = creationDateMatch[1];
-
-    // Extract file_type field
-    const fileTypeMatch = text.match(/['"]file_type['"]:\s*['"]([^'"]+)['"]/);
-    if (fileTypeMatch) result.file_type = fileTypeMatch[1];
-
-    // Extract file_size field
-    const fileSizeMatch = text.match(/['"]file_size['"]:\s*(\d+)/);
-    if (fileSizeMatch) result.file_size = parseInt(fileSizeMatch[1], 10);
-
-    return Object.keys(result).length > 0 ? result : null;
-  }
-}
-
 interface SourceCardProps {
   source: Source;
   index: number;

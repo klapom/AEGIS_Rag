@@ -76,18 +76,22 @@ describe('HomePage E2E Tests', () => {
       expect(searchInput).toHaveFocus(); // Auto-focus enabled
     });
 
-    it('should render all mode chips (Hybrid, Vector, Graph, Memory)', () => {
+    // Sprint 52: Mode selector removed - SearchInput now uses fixed hybrid mode
+    it('should render search input without mode chips', () => {
       render(
         <BrowserRouter>
           <HomePage />
         </BrowserRouter>
       );
 
-      // TD-38: Use getByRole with accessible names instead of ambiguous getByText
-      expect(screen.getByRole('button', { name: /Hybrid Mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Vector Mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Graph Mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Memory Mode/i })).toBeInTheDocument();
+      // Verify search input exists
+      expect(screen.getByPlaceholderText(/Fragen Sie alles/i)).toBeInTheDocument();
+
+      // Verify mode chips are NOT rendered (removed in Sprint 52)
+      expect(screen.queryByRole('button', { name: /Hybrid Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Vector Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Graph Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Memory Mode/i })).not.toBeInTheDocument();
     });
 
     it('should render quick prompt examples', () => {
@@ -260,135 +264,7 @@ describe('HomePage E2E Tests', () => {
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
-    it('should switch to vector mode when Vector chip is clicked', async () => {
-      render(
-        <BrowserRouter>
-          <HomePage />
-        </BrowserRouter>
-      );
-
-      // TD-38: Use getByRole with accessible name instead of getByText
-      const vectorChip = screen.getByRole('button', { name: /Vector Mode/i });
-      fireEvent.click(vectorChip);
-
-      const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
-      fireEvent.change(input, { target: { value: 'test' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      // Sprint 31: Verify inline chat with vector mode
-      await waitFor(() => {
-        const messages = screen.getAllByTestId('message');
-        expect(messages.length).toBeGreaterThan(0);
-
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
-        expect(userMessage).toBeInTheDocument();
-      });
-
-      // Mode is passed to StreamingAnswer component
-      // No navigation occurs
-      expect(mockNavigate).not.toHaveBeenCalled();
-    });
-
-    it('should switch to graph mode when Graph chip is clicked', async () => {
-      render(
-        <BrowserRouter>
-          <HomePage />
-        </BrowserRouter>
-      );
-
-      // TD-38: Use getByRole with accessible name instead of getByText
-      const graphChip = screen.getByRole('button', { name: /Graph Mode/i });
-      fireEvent.click(graphChip);
-
-      const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
-      fireEvent.change(input, { target: { value: 'test' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      // Sprint 31: Verify inline chat with graph mode
-      await waitFor(() => {
-        const messages = screen.getAllByTestId('message');
-        expect(messages.length).toBeGreaterThan(0);
-
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
-        expect(userMessage).toBeInTheDocument();
-      });
-
-      // Mode is passed to StreamingAnswer component
-      // No navigation occurs
-      expect(mockNavigate).not.toHaveBeenCalled();
-    });
-
-    it('should switch to memory mode when Memory chip is clicked', async () => {
-      render(
-        <BrowserRouter>
-          <HomePage />
-        </BrowserRouter>
-      );
-
-      // TD-38: Use getByRole with accessible name instead of getByText
-      const memoryChip = screen.getByRole('button', { name: /Memory Mode/i });
-      fireEvent.click(memoryChip);
-
-      const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
-      fireEvent.change(input, { target: { value: 'test' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      // Sprint 31: Verify inline chat with memory mode
-      await waitFor(() => {
-        const messages = screen.getAllByTestId('message');
-        expect(messages.length).toBeGreaterThan(0);
-
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
-        expect(userMessage).toBeInTheDocument();
-      });
-
-      // Mode is passed to StreamingAnswer component
-      // No navigation occurs
-      expect(mockNavigate).not.toHaveBeenCalled();
-    });
-
-    it('should maintain selected mode across multiple submissions', async () => {
-      render(
-        <BrowserRouter>
-          <HomePage />
-        </BrowserRouter>
-      );
-
-      // TD-38: Select vector mode with accessible selector
-      const vectorChip = screen.getByRole('button', { name: /Vector Mode/i });
-      fireEvent.click(vectorChip);
-
-      // First submission
-      const input = screen.getByPlaceholderText(/Fragen Sie alles/i);
-      fireEvent.change(input, { target: { value: 'first query' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      // Sprint 31: Verify first query appears
-      await waitFor(() => {
-        const messages = screen.getAllByTestId('message');
-        expect(messages.length).toBeGreaterThan(0);
-
-        const userMessage = messages.find((msg) => msg.textContent?.includes('first query'));
-        expect(userMessage).toBeInTheDocument();
-      });
-
-      // Second submission (mode should still be vector)
-      fireEvent.change(input, { target: { value: 'second query' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-
-      // Sprint 31: Verify second query appears (mode persists)
-      await waitFor(() => {
-        const allMessages = screen.getAllByTestId('message');
-        // Should have 2 user messages now
-        expect(allMessages.length).toBeGreaterThanOrEqual(2);
-
-        const secondUserMessage = allMessages.find((msg) => msg.textContent?.includes('second query'));
-        expect(secondUserMessage).toBeInTheDocument();
-      });
-
-      // No navigation should occur for either submission
-      expect(mockNavigate).not.toHaveBeenCalled();
-    });
+    // Sprint 52: Mode selector removed - tests now use fixed hybrid mode
   });
 
   describe('Quick Prompts', () => {
