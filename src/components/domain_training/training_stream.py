@@ -163,9 +163,9 @@ class TrainingEventStream:
         if log_path:
             path = Path(log_path)
             path.parent.mkdir(parents=True, exist_ok=True)
-            file_handle = open(
+            file_handle = open(  # noqa: SIM115 - Closed in close_stream()
                 path, "w", encoding="utf-8"
-            )  # noqa: SIM115 - Closed in close_stream()
+            )
             logger.info("jsonl_log_file_created", path=str(path))
 
         state = StreamState(
