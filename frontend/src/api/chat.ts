@@ -32,12 +32,18 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
  * @yields ChatChunk objects (metadata, tokens, sources, errors)
  */
 export async function* streamChat(request: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatChunk> {
+  // Sprint 53-58 Refactoring Fix: Ensure namespace is always sent
+  const requestWithNamespace = {
+    ...request,
+    namespaces: request.namespaces || ['default'],
+  };
+
   const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(requestWithNamespace),
     signal,  // Pass AbortSignal to fetch
   });
 
@@ -103,12 +109,18 @@ export async function* streamChat(request: ChatRequest, signal?: AbortSignal): A
  * @returns Chat response with complete answer
  */
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
+  // Sprint 53-58 Refactoring Fix: Ensure namespace is always sent
+  const requestWithNamespace = {
+    ...request,
+    namespaces: request.namespaces || ['default'],
+  };
+
   const response = await fetch(`${API_BASE_URL}/api/v1/chat/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(requestWithNamespace),
   });
 
   if (!response.ok) {
