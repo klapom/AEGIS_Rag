@@ -38,8 +38,16 @@ describe('HomePage E2E Tests', () => {
     mockNavigate.mockClear();
     // Setup fetch mock for both SSE streaming and JSON API calls
     // StreamingAnswer needs SSE mock, FollowUpQuestions needs JSON mock
+    // NamespaceSelector needs namespaces API mock
     setupGlobalFetchMock(
       vi.fn().mockImplementation((url: string) => {
+        // Mock namespaces API (JSON response) - Sprint 41 namespace isolation
+        if (url.includes('/admin/namespaces')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ namespaces: ['default'] }),
+          });
+        }
         // Mock follow-up questions API (JSON response)
         if (url.includes('/followup-questions')) {
           return Promise.resolve({
@@ -149,19 +157,18 @@ describe('HomePage E2E Tests', () => {
       fireEvent.change(input, { target: { value: 'test query' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      // Sprint 31: Verify inline chat rendering instead of navigation
+      // Sprint 46: Verify inline chat rendering with ConversationView
       await waitFor(() => {
-        // User message should appear in conversation history
+        // User message should appear in conversation history (Sprint 46: "Sie" label + query text)
         const messages = screen.getAllByTestId('message');
         expect(messages.length).toBeGreaterThan(0);
 
-        // Verify the user message contains our query text
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
+        // Sprint 46: User messages show "Sie" label and query text directly
+        const userMessage = messages.find((msg) => msg.textContent?.includes('Sie') && msg.textContent?.includes('test query'));
         expect(userMessage).toBeInTheDocument();
-        expect(userMessage?.textContent).toContain('test query');
-      });
+      }, { timeout: 2000 });
 
-      // No navigation should occur
+      // No navigation should occur (inline chat)
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
@@ -179,18 +186,18 @@ describe('HomePage E2E Tests', () => {
       const submitButton = screen.getByRole('button', { name: /Suche starten/i });
       fireEvent.click(submitButton);
 
-      // Sprint 31: Verify inline chat rendering instead of navigation
+      // Sprint 46: Verify inline chat rendering with ConversationView
       await waitFor(() => {
         // User message should appear in conversation history
         const messages = screen.getAllByTestId('message');
         expect(messages.length).toBeGreaterThan(0);
 
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
+        // Sprint 46: User messages show "Sie" label and query text
+        const userMessage = messages.find((msg) => msg.textContent?.includes('Sie') && msg.textContent?.includes('another test'));
         expect(userMessage).toBeInTheDocument();
-        expect(userMessage?.textContent).toContain('another test');
-      });
+      }, { timeout: 2000 });
 
-      // No navigation should occur
+      // No navigation should occur (inline chat)
       expect(mockNavigate).not.toHaveBeenCalled();
     });
 
@@ -223,22 +230,23 @@ describe('HomePage E2E Tests', () => {
       fireEvent.change(input, { target: { value: '  test query  ' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      // Sprint 31: Verify trimmed query appears in chat
+      // Sprint 46: Verify trimmed query appears in chat
       await waitFor(() => {
         const messages = screen.getAllByTestId('message');
         expect(messages.length).toBeGreaterThan(0);
 
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
+        // Sprint 46: User messages show "Sie" label and trimmed query text
+        const userMessage = messages.find((msg) => msg.textContent?.includes('Sie') && msg.textContent?.includes('test query'));
         expect(userMessage).toBeInTheDocument();
-        expect(userMessage?.textContent).toContain('test query');
-      });
+      }, { timeout: 2000 });
 
-      // No navigation should occur
+      // No navigation should occur (inline chat)
       expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 
   describe('Mode Selection', () => {
+    // Sprint 52: Mode selector removed - SearchInput now uses fixed hybrid mode
     it('should default to hybrid mode', async () => {
       render(
         <BrowserRouter>
@@ -250,21 +258,19 @@ describe('HomePage E2E Tests', () => {
       fireEvent.change(input, { target: { value: 'test' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      // Sprint 31: Verify inline chat with default hybrid mode
+      // Sprint 46: Verify inline chat with default hybrid mode
       await waitFor(() => {
         const messages = screen.getAllByTestId('message');
         expect(messages.length).toBeGreaterThan(0);
 
-        const userMessage = messages.find((msg) => msg.textContent?.includes('Frage'));
+        // Sprint 46: User messages show "Sie" label and query text
+        const userMessage = messages.find((msg) => msg.textContent?.includes('Sie') && msg.textContent?.includes('test'));
         expect(userMessage).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
 
-      // Mode is passed to StreamingAnswer component (hybrid is default)
-      // No navigation occurs
+      // Sprint 52: Mode is fixed to hybrid, no navigation occurs
       expect(mockNavigate).not.toHaveBeenCalled();
     });
-
-    // Sprint 52: Mode selector removed - tests now use fixed hybrid mode
   });
 
   describe('Quick Prompts', () => {
@@ -392,8 +398,9 @@ describe('HomePage E2E Tests', () => {
         </BrowserRouter>
       );
 
+      // Sprint 46: SearchInput shows "Enter senden" keyboard hint
       expect(screen.getByText('Enter')).toBeInTheDocument();
-      expect(screen.getByText(/zum Senden/i)).toBeInTheDocument();
+      expect(screen.getByText(/senden/i)).toBeInTheDocument();
     });
 
     it('should not submit on Shift+Enter', () => {
