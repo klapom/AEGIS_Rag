@@ -599,7 +599,21 @@ class CoordinatorAgent:
                 initial_state, config=config, stream_mode=["custom", "values"]
             ):
                 # With combined stream_mode, chunk is tuple: (stream_type, data)
-                stream_type, data = chunk
+                # Handle varying tuple lengths from different LangGraph versions
+                if isinstance(chunk, tuple):
+                    if len(chunk) >= 2:
+                        stream_type, data = chunk[0], chunk[1]
+                    elif len(chunk) == 1:
+                        # Single value - skip or log warning
+                        logger.warning("unexpected_single_value_chunk", chunk=str(chunk)[:100])
+                        continue
+                    else:
+                        # Empty tuple - skip
+                        continue
+                else:
+                    # Not a tuple - unexpected format
+                    logger.warning("unexpected_chunk_format", chunk_type=type(chunk).__name__)
+                    continue
 
                 if stream_type == "custom":
                     # Sprint 52: Real-time events from get_stream_writer()
