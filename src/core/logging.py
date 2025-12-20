@@ -164,10 +164,21 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False, include_time
         ]
     else:
         # Development: Console logs for human reading
+        # In Docker, remove timestamp from console output (Docker provides it)
+        console_renderer_kwargs = {"colors": True}
+        if not include_timestamp:
+            # Remove timestamp column by setting custom columns without timestamp
+            from structlog.dev import Column
+            console_renderer_kwargs["columns"] = [
+                Column("level", structlog.dev.ConsoleRenderer.get_default_level_styles()),
+                Column("event"),
+                Column("logger"),
+            ]
+
         processors = [
             *shared_processors,
             structlog.processors.ExceptionRenderer(),
-            structlog.dev.ConsoleRenderer(colors=True),
+            structlog.dev.ConsoleRenderer(**console_renderer_kwargs),
         ]
 
     # Configure structlog
