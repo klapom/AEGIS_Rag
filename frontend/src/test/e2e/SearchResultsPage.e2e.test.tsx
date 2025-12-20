@@ -250,17 +250,19 @@ describe('SearchResultsPage E2E Tests', () => {
       expect(searchInput).not.toHaveFocus();
     });
 
-    it('should render all mode selection chips', () => {
+    // Sprint 52: Mode selector removed - search bar now uses fixed hybrid mode
+    it('should render search bar without mode selection chips', () => {
       render(
         <MemoryRouter initialEntries={['/search?q=test&mode=hybrid']}>
           <SearchResultsPage />
         </MemoryRouter>
       );
 
-      expect(screen.getByText('Hybrid')).toBeInTheDocument();
-      expect(screen.getByText('Vector')).toBeInTheDocument();
-      expect(screen.getByText('Graph')).toBeInTheDocument();
-      expect(screen.getByText('Memory')).toBeInTheDocument();
+      // Verify mode chips are NOT rendered (removed in Sprint 52)
+      expect(screen.queryByRole('button', { name: /Hybrid Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Vector Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Graph Mode/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Memory Mode/i })).not.toBeInTheDocument();
     });
   });
 

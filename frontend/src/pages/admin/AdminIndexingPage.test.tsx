@@ -14,6 +14,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { BrowserRouter } from 'react-router-dom';
 import { AdminIndexingPage } from './AdminIndexingPage';
 import * as adminApi from '../../api/admin';
 import type { ScanDirectoryResponse, ReindexProgressChunk } from '../../types/admin';
@@ -78,6 +79,15 @@ function createMockProgressChunk(overrides?: Partial<ReindexProgressChunk>): Rei
   };
 }
 
+// Helper: Render component with router context
+function renderWithRouter() {
+  return render(
+    <BrowserRouter>
+      <AdminIndexingPage />
+    </BrowserRouter>
+  );
+}
+
 describe('AdminIndexingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -85,12 +95,12 @@ describe('AdminIndexingPage', () => {
 
   describe('directory selection', () => {
     it('should render directory input', () => {
-      render(<AdminIndexingPage />);
+      renderWithRouter();
       expect(screen.getByTestId('directory-input')).toBeInTheDocument();
     });
 
     it('should update directory state on input change', async () => {
-      render(<AdminIndexingPage />);
+      renderWithRouter();
       const input = screen.getByTestId('directory-input') as HTMLInputElement;
 
       await userEvent.clear(input);
@@ -100,7 +110,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should enable scan button when directory entered', async () => {
-      render(<AdminIndexingPage />);
+      renderWithRouter();
       const input = screen.getByTestId('directory-input') as HTMLInputElement;
       const scanButton = screen.getByTestId('scan-directory');
 
@@ -111,7 +121,7 @@ describe('AdminIndexingPage', () => {
     });
 
     it('should toggle recursive checkbox', async () => {
-      render(<AdminIndexingPage />);
+      renderWithRouter();
       const checkbox = screen.getByTestId('recursive-checkbox') as HTMLInputElement;
 
       expect(checkbox.checked).toBe(false);
@@ -128,7 +138,7 @@ describe('AdminIndexingPage', () => {
     it('should call scanDirectory API on scan button click', async () => {
       const mockScanDirectory = vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const scanButton = screen.getByTestId('scan-directory');
       await userEvent.click(scanButton);
@@ -143,7 +153,7 @@ describe('AdminIndexingPage', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(createMockScanResult()), 100))
       );
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -162,7 +172,7 @@ describe('AdminIndexingPage', () => {
     it('should display scan results after success', async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -180,7 +190,7 @@ describe('AdminIndexingPage', () => {
     it('should display error message on scan failure', async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockRejectedValue(new Error('Invalid path'));
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, '/invalid/path');
@@ -197,7 +207,7 @@ describe('AdminIndexingPage', () => {
     it('should display scan statistics', async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -215,7 +225,7 @@ describe('AdminIndexingPage', () => {
     beforeEach(async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -294,7 +304,7 @@ describe('AdminIndexingPage', () => {
     beforeEach(async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -307,29 +317,18 @@ describe('AdminIndexingPage', () => {
       });
     });
 
-    it('should show confirmation dialog before indexing', async () => {
-      const mockConfirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-      const startButton = screen.getByTestId('start-indexing');
-      await userEvent.click(startButton);
-
-      expect(mockConfirm).toHaveBeenCalled();
-
-      mockConfirm.mockRestore();
-    });
-
-    it('should start indexing on confirmation', async () => {
+    // Sprint 51: Confirmation dialog removed for better UX - indexing starts immediately
+    it('should start indexing immediately on button click', async () => {
       const mockStreamAddDocuments = vi.spyOn(adminApi, 'streamAddDocuments').mockImplementation(async function* () {
         yield createMockProgressChunk({ progress_percent: 25 });
         yield createMockProgressChunk({ progress_percent: 50 });
         yield createMockProgressChunk({ progress_percent: 100, status: 'completed' });
       });
 
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-
       const startButton = screen.getByTestId('start-indexing');
       await userEvent.click(startButton);
 
+      // Indexing should start immediately without confirmation dialog
       await waitFor(() => {
         expect(mockStreamAddDocuments).toHaveBeenCalled();
       });
@@ -421,7 +420,7 @@ describe('AdminIndexingPage', () => {
     beforeEach(async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
@@ -574,7 +573,7 @@ describe('AdminIndexingPage', () => {
 
   describe('edge cases', () => {
     it('should handle directory input', async () => {
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input') as HTMLInputElement;
       const scanButton = screen.getByTestId('scan-directory');
@@ -600,7 +599,7 @@ describe('AdminIndexingPage', () => {
         },
       });
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, '/empty');
@@ -616,7 +615,7 @@ describe('AdminIndexingPage', () => {
     it('should handle file selection state', async () => {
       vi.spyOn(adminApi, 'scanDirectory').mockResolvedValue(createMockScanResult());
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const scanButton = screen.getByTestId('scan-directory');
       await userEvent.click(scanButton);
@@ -636,7 +635,7 @@ describe('AdminIndexingPage', () => {
         () => new Promise((resolve) => setTimeout(() => resolve(createMockScanResult()), 200))
       );
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input') as HTMLInputElement;
       const checkbox = screen.getByTestId('recursive-checkbox') as HTMLInputElement;
@@ -661,7 +660,7 @@ describe('AdminIndexingPage', () => {
 
       vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-      render(<AdminIndexingPage />);
+      renderWithRouter();
 
       const input = screen.getByTestId('directory-input');
       await userEvent.type(input, 'data/sample_documents');
