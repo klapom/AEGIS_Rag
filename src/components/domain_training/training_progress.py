@@ -137,10 +137,9 @@ class TrainingProgressTracker:
     }
 
     # Type alias for progress callback - supports both sync and async
-    ProgressCallback = Union[
-        Callable[["ProgressEvent"], None],
-        Callable[["ProgressEvent"], Awaitable[None]],
-    ]
+    ProgressCallback = (
+        Callable[["ProgressEvent"], None] | Callable[["ProgressEvent"], Awaitable[None]]
+    )
 
     def __init__(
         self,

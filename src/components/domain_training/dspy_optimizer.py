@@ -114,10 +114,7 @@ class DSPyOptimizer:
     """
 
     # Type alias for progress callback - supports both sync and async
-    ProgressCallback = Union[
-        Callable[[str, float], None],
-        Callable[[str, float], Awaitable[None]],
-    ]
+    ProgressCallback = Callable[[str, float], None] | Callable[[str, float], Awaitable[None]]
 
     def __init__(self, llm_model: str = "qwen3:32b") -> None:
         """Initialize DSPy optimizer with Ollama backend.

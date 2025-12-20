@@ -80,10 +80,11 @@ class SemanticMatcher:
 
     def _check_availability(self) -> bool:
         """Check if we can load the embedding model."""
-        try:
-            from sentence_transformers import SentenceTransformer
+        import importlib.util
+
+        if importlib.util.find_spec("sentence_transformers") is not None:
             return True
-        except ImportError:
+        else:
             logger.warning(
                 "sentence_transformers_not_available",
                 fallback="exact_matching",
@@ -107,7 +108,7 @@ class SemanticMatcher:
 
         return self._embedder
 
-    @lru_cache(maxsize=1000)
+    @lru_cache(maxsize=1000)  # noqa: B019 - Singleton service, acceptable risk
     def _get_embedding(self, text: str) -> tuple[float, ...]:
         """Get embedding for text with caching.
 
@@ -119,7 +120,7 @@ class SemanticMatcher:
         """
         embedder = self._get_embedder()
         if embedder is None:
-            return tuple()
+            return ()
 
         embedding = embedder.encode(text, normalize_embeddings=True)
         return tuple(embedding.tolist())

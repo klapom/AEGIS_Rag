@@ -270,9 +270,6 @@ class SemanticDeduplicator:
 
         # Build mapping: we need to track which names were merged
         # This is a simplified approach - we map all variants to the representative
-        names = [e.get("name", e.get("entity_name", "UNKNOWN")) for e in entities]
-        deduped_names = {e.get("name", e.get("entity_name", "")).lower() for e in deduped}
-
         mapping: dict[str, str] = {}
         for entity in entities:
             name = entity.get("name", entity.get("entity_name", ""))

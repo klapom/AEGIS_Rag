@@ -160,7 +160,7 @@ class DomainRepository:
 
         except Exception as e:
             logger.error("domain_repository_initialization_failed", error=str(e))
-            raise DatabaseConnectionError("Neo4j", f"Domain repository initialization failed: {e}")
+            raise DatabaseConnectionError("Neo4j", f"Domain repository initialization failed: {e}") from e
 
     async def create_domain(
         self,
@@ -204,7 +204,7 @@ class DomainRepository:
 
         try:
             # Create domain node
-            result = await self.neo4j_client.execute_write(
+            await self.neo4j_client.execute_write(
                 """
                 CREATE (d:Domain {
                     id: $id,
