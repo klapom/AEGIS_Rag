@@ -491,9 +491,12 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
         # Criterion 3: Substring containment (for abbreviations)
         len_n1 = len(n1_lower)
         len_n2 = len(n2_lower)
-        if len_n1 >= self.min_length_for_substring and len_n2 >= self.min_length_for_substring:
-            if n1_lower in n2_lower or n2_lower in n1_lower:
-                return True, "substring"
+        if (
+            len_n1 >= self.min_length_for_substring
+            and len_n2 >= self.min_length_for_substring
+            and (n1_lower in n2_lower or n2_lower in n1_lower)
+        ):
+            return True, "substring"
 
         return False, "none"
 

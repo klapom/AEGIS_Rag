@@ -95,11 +95,9 @@ from src.domains.knowledge_graph.protocols import (
     EntityExtractor,
     GraphAnalytics,
     GraphQueryService,
-    GraphStorage,
-    LLMConfigProvider,
-    RelationExtractor,
 )
 
+# Note: GraphStorage, LLMConfigProvider, RelationExtractor imported from utilities/extraction
 # Querying
 from src.domains.knowledge_graph.querying import (
     DualLevelSearch,

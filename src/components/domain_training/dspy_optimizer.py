@@ -32,7 +32,7 @@ Usage:
 import asyncio
 import inspect
 from collections.abc import Awaitable, Callable
-from typing import Any, Union
+from typing import Any
 
 import structlog
 

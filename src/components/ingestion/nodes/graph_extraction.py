@@ -97,10 +97,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         prechunked_docs = []
         for idx, chunk_data in enumerate(chunk_data_list):
             # Handle both enhanced and legacy chunk formats
-            if isinstance(chunk_data, dict):
-                chunk = chunk_data["chunk"]
-            else:
-                chunk = chunk_data
+            chunk = chunk_data["chunk"] if isinstance(chunk_data, dict) else chunk_data
 
             # Get chunk ID (from embedded_chunk_ids if available)
             chunk_id = embedded_chunk_ids[idx] if idx < len(embedded_chunk_ids) else f"chunk_{idx}"

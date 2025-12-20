@@ -237,7 +237,7 @@ class SemanticRelationDeduplicator:
                 max_concurrent=10,
             )
 
-            for rel_type, embedding in zip(unique_types, embeddings_list):
+            for rel_type, embedding in zip(unique_types, embeddings_list, strict=True):
                 embeddings_dict[rel_type] = embedding
 
         except Exception as e:
@@ -335,7 +335,7 @@ class SemanticRelationDeduplicator:
 
         # Build clusters: cluster_id → [type1, type2, ...]
         clusters: dict[int, list[str]] = {}
-        for rel_type, cluster_id in zip(type_list, cluster_labels):
+        for rel_type, cluster_id in zip(type_list, cluster_labels, strict=True):
             if cluster_id not in clusters:
                 clusters[cluster_id] = []
             clusters[cluster_id].append(rel_type)

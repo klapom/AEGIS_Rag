@@ -260,7 +260,6 @@ def _infer_entity_type(entity_name: str, description: str) -> str:
         Entity type (ORGANIZATION, PERSON, LOCATION, TECHNOLOGY, CONCEPT)
     """
     desc_lower = description.lower()
-    name_lower = entity_name.lower()
 
     # Location indicators
     if any(kw in desc_lower for kw in ["city", "country", "capital", "region", "province"]):
@@ -309,4 +308,4 @@ def extract_entity_names(parsed_result: dict[str, Any]) -> list[str]:
     for community in parsed_result.get("communities", []):
         entity_names.update(community.get("entities", []))
 
-    return sorted(list(entity_names))
+    return sorted(entity_names)
