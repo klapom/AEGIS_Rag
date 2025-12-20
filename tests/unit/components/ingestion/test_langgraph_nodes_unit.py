@@ -519,8 +519,9 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
 
         # Verify LightRAG called with correct format (Sprint 42: insert_prechunked_documents)
         mock_lightrag.insert_prechunked_documents.assert_called_once()
-        # Get the 'chunks' keyword argument
-        lightrag_docs = mock_lightrag.insert_prechunked_documents.call_args.kwargs.get("chunks", [])
+        # Get the 'chunks' keyword argument (use index-based access for AsyncMock compatibility)
+        call_kwargs = mock_lightrag.insert_prechunked_documents.call_args[1]  # call_args = (args, kwargs)
+        lightrag_docs = call_kwargs.get("chunks", [])
         assert len(lightrag_docs) == 3
         # Sprint 42: Prechunked format has chunk_id, text, chunk_index
         assert "chunk_id" in lightrag_docs[0]
