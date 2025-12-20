@@ -632,16 +632,15 @@ class CoordinatorAgent:
                             )
                             yield {"type": "citation_map", "data": data.get("data", {})}
 
-                elif stream_type == "values":
+                elif stream_type == "values" and isinstance(data, dict):
                     # Full accumulated state after node completion
-                    if isinstance(data, dict):
-                        logger.debug(
-                            "values_state_received",
-                            has_answer="answer" in data,
-                            keys=list(data.keys())[:5],
-                        )
-                        # Keep track of final state
-                        final_state = data
+                    logger.debug(
+                        "values_state_received",
+                        has_answer="answer" in data,
+                        keys=list(data.keys())[:5],
+                    )
+                    # Keep track of final state
+                    final_state = data
 
         except Exception as e:
             logger.error(

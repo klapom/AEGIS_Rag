@@ -137,7 +137,7 @@ class DomainAnalyzer:
                     error=str(e),
                     exc_info=True,
                 )
-                raise ValueError(f"Failed to extract text from '{file.filename}': {str(e)}")
+                raise ValueError(f"Failed to extract text from '{file.filename}': {str(e)}") from e
 
         # Validate we have enough text
         if not sample_texts or all(len(text.strip()) < 10 for text in sample_texts):
@@ -234,7 +234,7 @@ class DomainAnalyzer:
                 try:
                     text = content.decode("utf-8", errors="ignore")
                 except Exception:
-                    raise ValueError(f"Unsupported file format: {suffix}")
+                    raise ValueError(f"Unsupported file format: {suffix}") from None
 
             # Truncate to max length
             text = text[:self.max_sample_length]
@@ -282,9 +282,9 @@ class DomainAnalyzer:
                 Path(tmp_path).unlink(missing_ok=True)
 
         except ImportError:
-            raise ValueError("docx2txt not installed - cannot extract DOCX text")
+            raise ValueError("docx2txt not installed - cannot extract DOCX text") from None
         except Exception as e:
-            raise ValueError(f"DOCX extraction failed: {str(e)}")
+            raise ValueError(f"DOCX extraction failed: {str(e)}") from e
 
     async def _extract_from_html(self, content: bytes) -> str:
         """Extract text from HTML using simple tag removal.

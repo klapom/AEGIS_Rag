@@ -20,6 +20,8 @@ import structlog
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+# Sprint 53: Import reindex timestamp function from admin_indexing
+from src.api.v1.admin_indexing import get_last_reindex_timestamp
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
@@ -27,10 +29,6 @@ from src.core.config import settings
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-
-# Sprint 53: Import reindex timestamp function from admin_indexing
-from src.api.v1.admin_indexing import get_last_reindex_timestamp
 
 # ============================================================================
 # Sprint 17 Feature 17.6: Admin Statistics API

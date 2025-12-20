@@ -1474,8 +1474,8 @@ async def ingest_batch(
         logger.info(
             "ingestion_items_prepared",
             total_items=len(items),
-            unique_domains=len(set(item.domain for item in items)),
-            unique_models=len(set(item.llm_model for item in items)),
+            unique_domains=len({item.domain for item in items}),
+            unique_models=len({item.llm_model for item in items}),
         )
 
         # Process in background

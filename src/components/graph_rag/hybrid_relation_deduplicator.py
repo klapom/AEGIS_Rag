@@ -25,7 +25,6 @@ from typing import Any
 import structlog
 
 from src.components.graph_rag.relation_deduplicator import RelationDeduplicator
-from src.components.memory import get_redis_memory
 
 logger = structlog.get_logger(__name__)
 
@@ -212,6 +211,9 @@ class HybridRelationDeduplicator:
             e.g., {"USES": "USED_BY", "ACTED_IN": "STARRED_IN"}
         """
         try:
+            # Lazy import to avoid circular dependency
+            from src.components.memory import get_redis_memory
+
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
 
@@ -247,6 +249,9 @@ class HybridRelationDeduplicator:
             >>> await dedup.add_manual_override("USES", "USED_BY")
         """
         try:
+            # Lazy import to avoid circular dependency
+            from src.components.memory import get_redis_memory
+
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
 
@@ -286,6 +291,9 @@ class HybridRelationDeduplicator:
             True if override was removed, False if it didn't exist
         """
         try:
+            # Lazy import to avoid circular dependency
+            from src.components.memory import get_redis_memory
+
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
 
@@ -326,6 +334,9 @@ class HybridRelationDeduplicator:
             Number of overrides that were cleared
         """
         try:
+            # Lazy import to avoid circular dependency
+            from src.components.memory import get_redis_memory
+
             redis_memory = get_redis_memory()
             redis_client = await redis_memory.client
 

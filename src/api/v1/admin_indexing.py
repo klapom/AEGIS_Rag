@@ -14,6 +14,7 @@ This module provides endpoints for:
 """
 
 import asyncio
+import contextlib
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
@@ -663,10 +664,8 @@ async def add_documents_stream(
                         except Exception as e:
                             logger.warning("progress_polling_error", error=str(e))
                         # Wait for poll_interval or until stopped
-                        try:
+                        with contextlib.suppress(TimeoutError):
                             await asyncio.wait_for(stop_polling.wait(), timeout=poll_interval)
-                        except TimeoutError:
-                            pass  # Continue polling
 
                 async def pipeline_consumer():
                     """Consume pipeline stream and forward to output queue."""
@@ -691,14 +690,10 @@ async def add_documents_stream(
                     stop_polling.set()
                     poller_task.cancel()
                     consumer_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await poller_task
-                    except asyncio.CancelledError:
-                        pass
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await consumer_task
-                    except asyncio.CancelledError:
-                        pass
                     # Drain any remaining progress events
                     final_events = await drain_progress_events(document_id)
                     for event in final_events:
@@ -971,7 +966,6 @@ async def add_documents_stream(
         # Completion
         elapsed_time = time.time() - start_time
         success_count = completed_docs
-        total_processed = success_count + failed_docs
 
         # Sprint 49 Feature 49.4: Determine status based on success/failure counts
         # Sprint 51: Include entity/relation totals in completion message

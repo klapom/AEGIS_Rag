@@ -86,7 +86,7 @@ def test_initialization_with_base_deduplicator():
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_add_manual_override(mock_get_redis, mock_redis_memory):
     """Test adding a manual synonym override."""
     redis_memory, redis_client = mock_redis_memory
@@ -104,7 +104,7 @@ async def test_add_manual_override(mock_get_redis, mock_redis_memory):
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_add_manual_override_normalizes_types(mock_get_redis, mock_redis_memory):
     """Test that add_manual_override normalizes type names."""
     redis_memory, redis_client = mock_redis_memory
@@ -122,7 +122,7 @@ async def test_add_manual_override_normalizes_types(mock_get_redis, mock_redis_m
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_remove_manual_override_success(mock_get_redis, mock_redis_memory):
     """Test removing an existing manual override."""
     redis_memory, redis_client = mock_redis_memory
@@ -140,7 +140,7 @@ async def test_remove_manual_override_success(mock_get_redis, mock_redis_memory)
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_remove_manual_override_not_found(mock_get_redis, mock_redis_memory):
     """Test removing a non-existent override."""
     redis_memory, redis_client = mock_redis_memory
@@ -154,7 +154,7 @@ async def test_remove_manual_override_not_found(mock_get_redis, mock_redis_memor
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_get_all_manual_overrides(mock_get_redis, mock_redis_memory):
     """Test retrieving all manual overrides."""
     redis_memory, redis_client = mock_redis_memory
@@ -176,7 +176,7 @@ async def test_get_all_manual_overrides(mock_get_redis, mock_redis_memory):
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_get_all_manual_overrides_empty(mock_get_redis, mock_redis_memory):
     """Test retrieving overrides when none exist."""
     redis_memory, redis_client = mock_redis_memory
@@ -190,7 +190,7 @@ async def test_get_all_manual_overrides_empty(mock_get_redis, mock_redis_memory)
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_clear_all_manual_overrides(mock_get_redis):
     """Test clearing all manual overrides."""
     # Create mock Redis client
@@ -224,7 +224,7 @@ async def test_clear_all_manual_overrides(mock_get_redis):
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_clear_all_manual_overrides_empty(mock_get_redis, mock_redis_memory):
     """Test clearing when no overrides exist."""
     redis_memory, redis_client = mock_redis_memory
@@ -244,7 +244,7 @@ async def test_clear_all_manual_overrides_empty(mock_get_redis, mock_redis_memor
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_types_with_manual_overrides(mock_get_redis, mock_redis_memory):
     """Test type deduplication with manual overrides."""
     redis_memory, redis_client = mock_redis_memory
@@ -264,7 +264,7 @@ async def test_deduplicate_types_with_manual_overrides(mock_get_redis, mock_redi
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_types_manual_overrides_take_precedence(mock_get_redis, mock_redis_memory):
     """Test that manual overrides take precedence over automatic normalization."""
     redis_memory, redis_client = mock_redis_memory
@@ -283,7 +283,7 @@ async def test_deduplicate_types_manual_overrides_take_precedence(mock_get_redis
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_types_without_manual_overrides(mock_get_redis, mock_redis_memory):
     """Test type deduplication without manual overrides."""
     redis_memory, redis_client = mock_redis_memory
@@ -299,7 +299,7 @@ async def test_deduplicate_types_without_manual_overrides(mock_get_redis, mock_r
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_types_empty_list(mock_get_redis, mock_redis_memory):
     """Test type deduplication with empty list."""
     redis_memory, redis_client = mock_redis_memory
@@ -312,7 +312,7 @@ async def test_deduplicate_types_empty_list(mock_get_redis, mock_redis_memory):
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_types_redis_failure_graceful(mock_get_redis, mock_redis_memory):
     """Test graceful handling of Redis failures."""
     redis_memory, redis_client = mock_redis_memory
@@ -332,7 +332,7 @@ async def test_deduplicate_types_redis_failure_graceful(mock_get_redis, mock_red
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_relations_with_manual_overrides(mock_get_redis, mock_redis_memory):
     """Test full relation deduplication with manual overrides."""
     redis_memory, redis_client = mock_redis_memory
@@ -358,7 +358,7 @@ async def test_deduplicate_relations_with_manual_overrides(mock_get_redis, mock_
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_relations_preserves_original_type(mock_get_redis, mock_redis_memory):
     """Test that original type is preserved when requested."""
     redis_memory, redis_client = mock_redis_memory
@@ -379,7 +379,7 @@ async def test_deduplicate_relations_preserves_original_type(mock_get_redis, moc
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_relations_with_entity_mapping(mock_get_redis, mock_redis_memory):
     """Test deduplication with entity name remapping."""
     redis_memory, redis_client = mock_redis_memory
@@ -401,7 +401,7 @@ async def test_deduplicate_relations_with_entity_mapping(mock_get_redis, mock_re
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_relations_empty_list(mock_get_redis, mock_redis_memory):
     """Test deduplication with empty list."""
     redis_memory, redis_client = mock_redis_memory
@@ -414,7 +414,7 @@ async def test_deduplicate_relations_empty_list(mock_get_redis, mock_redis_memor
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_deduplicate_relations_disable_manual_overrides(mock_get_redis, mock_redis_memory):
     """Test disabling manual overrides."""
     redis_memory, redis_client = mock_redis_memory
@@ -440,7 +440,7 @@ async def test_deduplicate_relations_disable_manual_overrides(mock_get_redis, mo
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_add_manual_override_with_spaces_and_dashes(mock_get_redis, mock_redis_memory):
     """Test that spaces and dashes are normalized."""
     redis_memory, redis_client = mock_redis_memory
@@ -457,7 +457,7 @@ async def test_add_manual_override_with_spaces_and_dashes(mock_get_redis, mock_r
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_get_manual_overrides_handles_string_values(mock_get_redis, mock_redis_memory):
     """Test that string values (not bytes) are handled correctly."""
     redis_memory, redis_client = mock_redis_memory
@@ -479,7 +479,7 @@ async def test_get_manual_overrides_handles_string_values(mock_get_redis, mock_r
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_add_manual_override_redis_error(mock_get_redis, mock_redis_memory):
     """Test error handling when Redis fails."""
     redis_memory, redis_client = mock_redis_memory
@@ -493,7 +493,7 @@ async def test_add_manual_override_redis_error(mock_get_redis, mock_redis_memory
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_remove_manual_override_redis_error(mock_get_redis, mock_redis_memory):
     """Test error handling when Redis delete fails."""
     redis_memory, redis_client = mock_redis_memory
@@ -507,7 +507,7 @@ async def test_remove_manual_override_redis_error(mock_get_redis, mock_redis_mem
 
 
 @pytest.mark.asyncio
-@patch("src.components.graph_rag.hybrid_relation_deduplicator.get_redis_memory")
+@patch("src.components.memory.get_redis_memory")
 async def test_clear_manual_overrides_redis_error(mock_get_redis):
     """Test graceful error handling when Redis hgetall fails."""
     redis_client = AsyncMock()
