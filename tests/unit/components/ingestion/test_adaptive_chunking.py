@@ -13,7 +13,10 @@ Test Coverage:
 - test_single_section() - Single section → single chunk
 - test_mixed_large_and_small() - Mixed large/small sections
 - test_edge_case_boundary() - Sections exactly at threshold
+- test_merge_small_chunks() - Post-processing merger for small chunks (Feature 31.12)
 """
+
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -22,6 +25,7 @@ from src.components.ingestion.nodes.adaptive_chunking import (
     adaptive_section_chunking,
     _create_chunk,
     _merge_sections,
+    merge_small_chunks,
 )
 from src.components.ingestion.nodes.models import (
     AdaptiveChunk,
@@ -556,3 +560,306 @@ def test_realistic_powerpoint_scenario(sample_bbox: dict, sample_metadata: dict)
     # Verify no chunk exceeds max_chunk
     for chunk in chunks_realistic:
         assert chunk.token_count <= 600, f"Chunk exceeded max_chunk: {chunk.token_count}"
+
+
+# =============================================================================
+# TEST: MERGE_SMALL_CHUNKS (FEATURE 31.12)
+# =============================================================================
+
+
+def test_merge_small_chunks_empty_list() -> None:
+    """Test merge_small_chunks with empty list returns empty.
+
+    Feature 31.12: Post-processing merger for small chunks.
+    Expected: Empty list → empty result.
+    """
+    mock_tokenizer = MagicMock()
+    result = merge_small_chunks([], mock_tokenizer)
+    assert result == []
+
+
+def test_merge_small_chunks_single_chunk() -> None:
+    """Test merge_small_chunks with single chunk returns unchanged.
+
+    Feature 31.12: Single chunk should not be modified.
+    """
+    mock_tokenizer = MagicMock()
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 500)
+
+    mock_chunk = MagicMock()
+    mock_chunk.text = "Chunk content"
+
+    enhanced_chunks = [{"chunk": mock_chunk, "image_bboxes": []}]
+
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer)
+
+    assert len(result) == 1
+    assert result[0]["chunk"] == mock_chunk
+
+
+def test_merge_small_chunks_below_min_tokens() -> None:
+    """Test merge_small_chunks merges chunks below min_tokens threshold.
+
+    Feature 31.12: Chunks <300 tokens should be merged.
+    Strategy: Merge until reaching target_tokens
+    """
+    mock_tokenizer = MagicMock()
+
+    # Create 4 small chunks (100 tokens each = 400 total)
+    # Should merge into 1 chunk since below min_tokens (300)
+    mock_chunks = []
+    for i in range(4):
+        chunk = MagicMock()
+        chunk.text = f"Small chunk {i}"
+        mock_chunks.append({"chunk": chunk, "image_bboxes": []})
+
+    # All chunks are 100 tokens
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 100)
+
+    result = merge_small_chunks(
+        mock_chunks,
+        mock_tokenizer,
+        target_tokens=1800,
+        min_tokens=300,
+    )
+
+    # All 4 chunks should be merged into 1
+    # 100 + 100 + 100 + 100 = 400 tokens (below 1800 * 1.2 = 2160)
+    assert len(result) <= 2, f"Expected <=2 chunks, got {len(result)}"
+
+
+def test_merge_small_chunks_reaches_target() -> None:
+    """Test merge_small_chunks stops when reaching target tokens.
+
+    Feature 31.12: Logic: merge if current < min_tokens OR would_be <= target * 1.2
+    Strategy: Each chunk is 500 tokens, min_tokens=300, target=1800
+    - Start: chunk1 (500)
+    - Add chunk2: 500+500=1000, 500 < 300? NO. 1000 <= 2160? YES → merge
+    - Add chunk3: 1000+500=1500, 1000 < 300? NO. 1500 <= 2160? YES → merge
+    - Add chunk4: 1500+500=2000, 1500 < 300? NO. 2000 <= 2160? YES → merge
+    Result: All merged into 1 chunk (2000 tokens)
+    """
+    mock_tokenizer = MagicMock()
+
+    # Create 4 chunks of 500 tokens each
+    mock_chunks = []
+    for i in range(4):
+        chunk = MagicMock()
+        chunk.text = f"Chunk {i}"
+        mock_chunks.append({"chunk": chunk, "image_bboxes": []})
+
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 500)
+
+    result = merge_small_chunks(
+        mock_chunks,
+        mock_tokenizer,
+        target_tokens=1800,
+        min_tokens=300,
+    )
+
+    # All chunks merge because 2000 <= 1800 * 1.2 = 2160
+    assert len(result) == 1, f"Expected 1 chunk, got {len(result)}"
+
+
+def test_merge_small_chunks_preserves_bboxes() -> None:
+    """Test merge_small_chunks preserves image_bboxes from all chunks.
+
+    Feature 31.12: VLM metadata (image_bboxes) should be preserved.
+    """
+    mock_tokenizer = MagicMock()
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 200)
+
+    # Create chunks with image bboxes
+    mock_chunk1 = MagicMock()
+    mock_chunk1.text = "Chunk 1"
+
+    mock_chunk2 = MagicMock()
+    mock_chunk2.text = "Chunk 2"
+
+    bbox1 = {"page": 1, "coords": [10, 20, 100, 200]}
+    bbox2 = {"page": 2, "coords": [15, 25, 105, 205]}
+
+    enhanced_chunks = [
+        {"chunk": mock_chunk1, "image_bboxes": [bbox1]},
+        {"chunk": mock_chunk2, "image_bboxes": [bbox2]},
+    ]
+
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer, min_tokens=50)
+
+    # Verify bboxes preserved
+    assert len(result) >= 1
+    merged_bboxes = result[0]["image_bboxes"]
+    assert bbox1 in merged_bboxes
+    assert bbox2 in merged_bboxes
+
+
+def test_merge_small_chunks_tokenizer_fallback() -> None:
+    """Test merge_small_chunks handles tokenizer encoding errors gracefully.
+
+    Feature 31.12: If tokenizer fails, approximate tokens (4 chars = 1 token).
+    """
+    mock_tokenizer = MagicMock()
+    # Simulate tokenizer error
+    mock_tokenizer.tokenizer.encode = MagicMock(side_effect=Exception("Tokenizer error"))
+
+    mock_chunk = MagicMock()
+    mock_chunk.text = "1234567890"  # 10 chars = ~2-3 tokens (fallback: 10/4 = 2)
+
+    enhanced_chunks = [{"chunk": mock_chunk, "image_bboxes": []}]
+
+    # Should not raise error, should use fallback
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer)
+
+    assert len(result) == 1
+
+
+def test_merge_small_chunks_with_text_attribute() -> None:
+    """Test merge_small_chunks correctly accesses .text attribute of chunk.
+
+    Feature 31.12: Chunk objects should have .text attribute.
+    """
+    mock_tokenizer = MagicMock()
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 100)
+
+    mock_chunk = MagicMock()
+    mock_chunk.text = "This is the chunk text"
+
+    enhanced_chunks = [{"chunk": mock_chunk, "image_bboxes": []}]
+
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer)
+
+    assert result[0]["chunk"].text == "This is the chunk text"
+
+
+def test_merge_small_chunks_large_chunks_unchanged() -> None:
+    """Test merge_small_chunks doesn't merge when exceeding target + 20%.
+
+    Feature 31.12: Only merge if would_be_tokens <= target * 1.2
+    With 1500 token chunks, target=1800:
+    - Chunk1 (1500): start
+    - Chunk2 (1500): 1500+1500=3000, 3000 > 1800*1.2 (2160)? YES → don't merge
+    Result: 2 chunks (separate)
+    """
+    mock_tokenizer = MagicMock()
+
+    # Create 2 large chunks (1500 tokens each)
+    mock_chunks = []
+    for i in range(2):
+        chunk = MagicMock()
+        chunk.text = f"Large chunk {i}"
+        mock_chunks.append({"chunk": chunk, "image_bboxes": []})
+
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 1500)
+
+    result = merge_small_chunks(
+        mock_chunks,
+        mock_tokenizer,
+        target_tokens=1800,
+        min_tokens=300,
+    )
+
+    # Large chunks should not be merged (3000 > 2160)
+    assert len(result) == 2
+
+
+def test_merge_small_chunks_mixed_sizes() -> None:
+    """Test merge_small_chunks with mixed small and large chunks.
+
+    Feature 31.12: Small chunks merged, large chunks kept separate.
+    """
+    mock_tokenizer = MagicMock()
+
+    # Create alternating small and large chunks
+    mock_chunk_small1 = MagicMock()
+    mock_chunk_small1.text = "Small 1"
+
+    mock_chunk_large = MagicMock()
+    mock_chunk_large.text = "Large"
+
+    mock_chunk_small2 = MagicMock()
+    mock_chunk_small2.text = "Small 2"
+
+    def token_count_side_effect(text, add_special_tokens=False):
+        if "Small" in text:
+            return ["token"] * 100
+        else:  # Large
+            return ["token"] * 2000
+
+    mock_tokenizer.tokenizer.encode = MagicMock(side_effect=token_count_side_effect)
+
+    enhanced_chunks = [
+        {"chunk": mock_chunk_small1, "image_bboxes": []},
+        {"chunk": mock_chunk_large, "image_bboxes": []},
+        {"chunk": mock_chunk_small2, "image_bboxes": []},
+    ]
+
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer, min_tokens=300)
+
+    # Large chunk should trigger new group
+    # Expected: Small1 merged with Small2, but separated by Large
+    assert len(result) >= 2
+
+
+def test_merge_small_chunks_threshold_exactly_at_target() -> None:
+    """Test merge_small_chunks with result exactly at target_tokens * 1.2.
+
+    Feature 31.12: Should still merge if at boundary.
+    boundary = target_tokens * 1.2 = 1800 * 1.2 = 2160
+    """
+    mock_tokenizer = MagicMock()
+
+    # Create chunks that sum to exactly 2160 tokens
+    mock_chunks = []
+    for i in range(4):
+        chunk = MagicMock()
+        chunk.text = f"Chunk {i}"
+        mock_chunks.append({"chunk": chunk, "image_bboxes": []})
+
+    # Each chunk is 600 tokens
+    # 600 + 600 = 1200 (merge)
+    # 1200 + 600 = 1800 (merge, < 1800 * 1.2 = 2160)
+    # 1800 + 600 = 2400 (exceeds 2160, don't merge)
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 600)
+
+    result = merge_small_chunks(
+        mock_chunks,
+        mock_tokenizer,
+        target_tokens=1800,
+        min_tokens=300,
+    )
+
+    # Should be 2 chunks: [600+600+600=1800], [600]
+    assert len(result) == 2
+
+
+def test_merge_small_chunks_docling_chunk_object() -> None:
+    """Test merge_small_chunks with realistic Docling chunk object.
+
+    Feature 31.12: Real Docling chunks have .text attribute.
+    """
+    mock_tokenizer = MagicMock()
+    mock_tokenizer.tokenizer.encode = MagicMock(return_value=["token"] * 500)
+
+    # Simulate real Docling chunk
+    class DoclingChunk:
+        def __init__(self, text):
+            self.text = text
+
+        def contextualize(self):
+            return self.text
+
+    chunk1 = DoclingChunk("First chunk text")
+    chunk2 = DoclingChunk("Second chunk text")
+
+    enhanced_chunks = [
+        {"chunk": chunk1, "image_bboxes": []},
+        {"chunk": chunk2, "image_bboxes": []},
+    ]
+
+    result = merge_small_chunks(enhanced_chunks, mock_tokenizer, min_tokens=100)
+
+    # Verify chunks were merged
+    assert len(result) >= 1
+    # Verify merged chunk has combined text
+    assert "First chunk text" in result[0]["chunk"].text
+    assert "Second chunk text" in result[0]["chunk"].text

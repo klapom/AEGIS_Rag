@@ -690,8 +690,13 @@ async def add_documents_stream(
                     # Cleanup: stop poller and cancel tasks
                     stop_polling.set()
                     poller_task.cancel()
+                    consumer_task.cancel()
                     try:
                         await poller_task
+                    except asyncio.CancelledError:
+                        pass
+                    try:
+                        await consumer_task
                     except asyncio.CancelledError:
                         pass
                     # Drain any remaining progress events

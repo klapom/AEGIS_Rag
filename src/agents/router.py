@@ -233,7 +233,6 @@ async def route_query(state: dict[str, Any]) -> dict[str, Any]:
         Updated state with intent field set and phase_event
     """
     query = state.get("query", "")
-    session_id = state.get("session_id")
     user_selected_intent = state.get("intent", "").lower()
 
     logger.info("router_node_processing", query=query[:100], user_intent=user_selected_intent)

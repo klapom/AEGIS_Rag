@@ -553,9 +553,9 @@ class TestDynamicModelLoading:
             ) as mock_get_proxy:
                 mock_get_proxy.return_value = AsyncMock()
 
-                # Mock config loading to fail
+                # Mock config loading to fail (Sprint 53-58: function moved to llm_config_provider)
                 with patch(
-                    "src.api.v1.admin.get_configured_summary_model",
+                    "src.components.graph_rag.llm_config_provider.get_configured_summary_model",
                     new_callable=AsyncMock,
                     side_effect=Exception("Config load failed"),
                 ):
