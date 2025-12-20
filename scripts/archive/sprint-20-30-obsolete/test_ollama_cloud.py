@@ -119,7 +119,7 @@ async def test_ollama_cloud():
 
             print(f"        Response: {content}")
             print(f"        Tokens used: {tokens_used}")
-            print(f"        SUCCESS!")
+            print("        SUCCESS!")
             print()
 
             # Calculate approximate cost

@@ -12,7 +12,7 @@ Tests:
 - Error handling and validation
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -22,7 +22,6 @@ from src.components.domain_training.domain_repository import (
     get_domain_repository,
 )
 from src.core.exceptions import DatabaseConnectionError
-
 
 # ============================================================================
 # Helper Functions

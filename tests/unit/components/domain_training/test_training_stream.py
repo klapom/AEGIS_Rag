@@ -14,9 +14,7 @@ Tests:
 import asyncio
 import json
 import tempfile
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -28,7 +26,6 @@ from src.components.domain_training.training_stream import (
     get_training_stream,
     reset_training_stream,
 )
-
 
 # ============================================================================
 # TrainingEvent Tests

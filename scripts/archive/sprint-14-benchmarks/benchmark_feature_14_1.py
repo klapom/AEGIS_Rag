@@ -13,9 +13,8 @@ Compares with baseline (LightRAG default extraction).
 """
 
 import asyncio
-import time
 import statistics
-from pathlib import Path
+import time
 
 from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 from src.core.config import settings
@@ -62,7 +61,7 @@ async def benchmark_single_document():
     elapsed = time.time() - start
 
     # Results
-    print(f"\n✓ Results:")
+    print("\n✓ Results:")
     print(f"  - Total Time: {elapsed:.2f}s")
     print(f"  - Success: {result['success']}/{result['total']}")
     print(f"  - Chunks Created: {result['stats']['total_chunks']}")
@@ -119,7 +118,7 @@ async def benchmark_batch_processing():
     throughput = result["success"] / elapsed
     avg_time = elapsed / result["success"]
 
-    print(f"\n✓ Results:")
+    print("\n✓ Results:")
     print(f"  - Total Time: {elapsed:.2f}s")
     print(f"  - Success: {result['success']}/{result['total']}")
     print(f"  - Throughput: {throughput:.2f} docs/s")
@@ -173,7 +172,7 @@ async def benchmark_chunking_performance():
     avg_time = statistics.mean(times)
     std_dev = statistics.stdev(times)
 
-    print(f"\n✓ Results (10 iterations):")
+    print("\n✓ Results (10 iterations):")
     print(f"  - Avg Time: {avg_time*1000:.2f}ms")
     print(f"  - Std Dev: {std_dev*1000:.2f}ms")
     print(f"  - Chunks Created: {len(chunks)}")
@@ -229,16 +228,16 @@ async def main():
         print("\n" + "#" * 80)
         print("# BENCHMARK SUMMARY")
         print("#" * 80)
-        print(f"\n1. Single Document:")
+        print("\n1. Single Document:")
         print(f"   - Time: {results['single_doc']['elapsed']:.2f}s")
         print(f"   - Entities: {results['single_doc']['entities']}")
         print(f"   - Relations: {results['single_doc']['relations']}")
 
-        print(f"\n2. Batch Processing (10 docs):")
+        print("\n2. Batch Processing (10 docs):")
         print(f"   - Throughput: {results['batch']['throughput_docs_per_sec']:.2f} docs/s")
         print(f"   - Avg Time/Doc: {results['batch']['avg_time_per_doc']:.2f}s")
 
-        print(f"\n3. Chunking:")
+        print("\n3. Chunking:")
         print(f"   - Speed: {results['chunking']['throughput_tokens_per_sec']:.0f} tokens/s")
         print(f"   - Avg Time: {results['chunking']['avg_time_ms']:.2f}ms")
 

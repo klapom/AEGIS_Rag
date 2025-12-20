@@ -8,14 +8,14 @@ Strategy:
 
 This reduces combinatorics while still testing all chunk sizes meaningfully.
 """
-import json
-import time
-import requests
 import argparse
+import json
 import sys
+import time
 from datetime import datetime
-from datasets import load_dataset
 
+import requests
+from datasets import load_dataset
 
 # Entity extraction prompt
 ENTITY_PROMPT = """Extract all named entities from the following text. Return ONLY a valid JSON array.
@@ -339,7 +339,7 @@ def main():
         print(f"    Question: {sample['question'][:80]}...")
         sys.stdout.flush()
 
-        print(f"  Chunk size 10000:")
+        print("  Chunk size 10000:")
         sys.stdout.flush()
         result = benchmark_sample(args.model, sample, 10000)
         all_results.append(result)

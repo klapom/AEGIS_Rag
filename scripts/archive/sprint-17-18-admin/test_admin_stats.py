@@ -76,7 +76,7 @@ async def main():
 
             print("  - Calling get_system_stats() directly...")
             stats = await get_system_stats()
-            print(f"  ✓ Success! Stats retrieved:")
+            print("  ✓ Success! Stats retrieved:")
             print(f"    - Qdrant chunks: {stats.qdrant_total_chunks}")
             print(f"    - Collection: {stats.qdrant_collection_name}")
             print(f"    - Vector dim: {stats.qdrant_vector_dimension}")

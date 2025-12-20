@@ -9,11 +9,10 @@ This module provides:
 - Performance baselines
 """
 
-import asyncio
 import os
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -39,7 +38,6 @@ async def browser(playwright_instance: Playwright) -> AsyncGenerator[Browser, No
     - HEADED=1 to run in headed mode (see browser UI)
     - SLOWMO=500 to slow down operations for debugging
     """
-    import os
 
     browser = await playwright_instance.chromium.launch(
         headless=not os.getenv("HEADED"),
@@ -75,14 +73,12 @@ async def page(context: BrowserContext) -> AsyncGenerator[Page, None]:
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Base URL for the application."""
-    import os
     return os.getenv("BASE_URL", "http://localhost:5179")
 
 
 @pytest.fixture(scope="session")
 def api_base_url() -> str:
     """Base URL for the API."""
-    import os
     return os.getenv("API_BASE_URL", "http://localhost:8000")
 
 

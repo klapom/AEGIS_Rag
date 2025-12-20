@@ -71,7 +71,7 @@ async def main():
             print(f"   [INFO] Collection might not exist: {e}")
 
         # Step 2: Clear Neo4j
-        print(f"\n[2/7] Clearing Neo4j database...")
+        print("\n[2/7] Clearing Neo4j database...")
         try:
             lightrag_wrapper = await get_lightrag_wrapper_async()
             await lightrag_wrapper.clear_database()
@@ -80,7 +80,7 @@ async def main():
             print(f"   [WARNING] Neo4j clear failed: {e}")
 
         # Step 3: Clear LightRAG working directory
-        print(f"\n[3/7] Clearing LightRAG working directory...")
+        print("\n[3/7] Clearing LightRAG working directory...")
         lightrag_dir = Path(settings.lightrag_working_dir)
         if lightrag_dir.exists():
             try:
@@ -106,7 +106,7 @@ async def main():
                 batch_size=100,
             )
 
-            print(f"   [OK] Qdrant indexing complete")
+            print("   [OK] Qdrant indexing complete")
             print(f"       Documents loaded: {stats.get('documents_loaded', 0)}")
             print(f"       Chunks created: {stats.get('chunks_created', 0)}")
             print(f"       Points indexed: {stats.get('points_indexed', 0)}")
@@ -134,7 +134,7 @@ async def main():
         if lightrag_docs:
             # Use the optimized insert method (includes start_token fix from d8e52c0)
             graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
-            print(f"   [OK] Neo4j indexing complete")
+            print("   [OK] Neo4j indexing complete")
             print(f"       Chunks stored: {graph_stats.get('chunks_stored', 0)}")
             print(f"       Entities extracted: {graph_stats.get('entities_extracted', 0)}")
             print(f"       Relations extracted: {graph_stats.get('relations_extracted', 0)}")
@@ -142,31 +142,31 @@ async def main():
             print("   [WARNING] No documents to index")
 
         # Step 6: Verify Qdrant
-        print(f"\n[6/7] Verifying Qdrant...")
+        print("\n[6/7] Verifying Qdrant...")
         qdrant_info = await qdrant_client.get_collection_info(collection_name)
         if qdrant_info:
             print(f"   Collection '{collection_name}' has {qdrant_info.points_count} points")
         else:
-            print(f"   [WARNING] Could not verify Qdrant collection")
+            print("   [WARNING] Could not verify Qdrant collection")
 
         # Step 7: Verify Neo4j
-        print(f"\n[7/7] Verifying Neo4j...")
+        print("\n[7/7] Verifying Neo4j...")
         graph_stats = await lightrag_wrapper.get_graph_stats()
         print(f"   Chunks: {graph_stats.get('total_chunks', 0)}")
         print(f"   Entities: {graph_stats.get('total_entities', 0)}")
         print(f"   Relations: {graph_stats.get('total_relations', 0)}")
 
         print("\n[SUCCESS] Indexing complete!")
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"   - Document: {test_file.name}")
         print(f"   - Collection: {collection_name}")
         print(f"   - Qdrant: {qdrant_info.points_count if qdrant_info else 'N/A'} vectors")
         print(
             f"   - Neo4j: {graph_stats.get('total_entities', 0)} entities, {graph_stats.get('total_relations', 0)} relations"
         )
-        print(f"\n   Bug Fixes Applied:")
+        print("\n   Bug Fixes Applied:")
         print(f"   ✅ Path traversal fix (79abe52): allowed_base_path={temp_path}")
-        print(f"   ✅ start_token fix (d8e52c0): handled in lightrag_wrapper.py:883-907")
+        print("   ✅ start_token fix (d8e52c0): handled in lightrag_wrapper.py:883-907")
 
     except Exception as e:
         logger.exception("indexing_failed", error=str(e))

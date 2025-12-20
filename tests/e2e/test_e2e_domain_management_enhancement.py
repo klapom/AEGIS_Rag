@@ -10,7 +10,6 @@ This test validates the domain detail view and bulk operations:
 """
 
 import asyncio
-import re
 
 import pytest
 import pytest_asyncio

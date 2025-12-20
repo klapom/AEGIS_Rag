@@ -39,7 +39,7 @@ def main():
 
     # Display current configuration
     backend = getattr(settings, "embedding_backend", "ollama")
-    print(f"Current Configuration:")
+    print("Current Configuration:")
     print(f"  Backend: {backend}")
 
     if backend == "sentence-transformers":

@@ -12,8 +12,6 @@ These tests verify:
 
 from datetime import datetime
 
-import pytest
-
 from src.agents.reasoning_data import ReasoningData
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 

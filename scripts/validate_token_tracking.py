@@ -7,9 +7,9 @@ Run: poetry run python scripts/validate_token_tracking.py
 """
 
 import asyncio
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.cost_tracker import CostTracker
@@ -112,7 +112,7 @@ async def test_fallback_to_legacy():
 
         # Should handle missing usage gracefully
         assert result.tokens_used >= 0
-        print(f"✓ Handled missing usage field gracefully")
+        print("✓ Handled missing usage field gracefully")
         print(f"✓ Tokens used: {result.tokens_used}")
 
         # Cleanup
@@ -146,7 +146,7 @@ async def test_cost_comparison_accurate_vs_legacy():
         tokens_total=tokens_total,
     )
 
-    print(f"Scenario: 1,000 input + 4,000 output = 5,000 total tokens")
+    print("Scenario: 1,000 input + 4,000 output = 5,000 total tokens")
     print(f"✓ Accurate cost: ${cost_accurate:.6f}")
     print(f"✓ Legacy cost: ${cost_legacy:.6f}")
     print(f"✓ Difference: ${abs(cost_accurate - cost_legacy):.6f}")

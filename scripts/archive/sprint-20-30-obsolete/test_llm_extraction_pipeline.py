@@ -52,12 +52,12 @@ async def main():
 
     try:
         # Load one page for testing
-        print(f"\n[1/4] Loading document (first page only)...")
+        print("\n[1/4] Loading document (first page only)...")
         loader = SimpleDirectoryReader(input_files=[str(test_file)])
         documents = loader.load_data()
 
         if not documents:
-            print(f"\n[ERROR] No documents loaded")
+            print("\n[ERROR] No documents loaded")
             return
 
         # Take second page (first is just title)
@@ -69,13 +69,13 @@ async def main():
         print(f"      Preview: {text[:200]}...")
 
         # Create extraction pipeline from config
-        print(f"\n[2/4] Creating extraction pipeline...")
+        print("\n[2/4] Creating extraction pipeline...")
         pipeline = ExtractionPipelineFactory.create(settings)
         print(f"      Pipeline type: {type(pipeline).__name__}")
 
         # Extract entities and relations
-        print(f"\n[3/4] Extracting entities and relations...")
-        print(f"      (This may take 30-60s for LLM extraction)")
+        print("\n[3/4] Extracting entities and relations...")
+        print("      (This may take 30-60s for LLM extraction)")
 
         start_time = time.time()
         entities, relations = await pipeline.extract(text, doc_id)
@@ -86,7 +86,7 @@ async def main():
         print(f"      Relations: {len(relations)}")
 
         # Display results
-        print(f"\n[4/4] Results:")
+        print("\n[4/4] Results:")
         print(f"\n{'='*80}")
         print(f"EXTRACTED ENTITIES ({len(entities)})")
         print(f"{'='*80}")
@@ -127,7 +127,7 @@ async def main():
 
         # Performance summary
         print(f"\n{'='*80}")
-        print(f"PERFORMANCE SUMMARY")
+        print("PERFORMANCE SUMMARY")
         print(f"{'='*80}")
         print(f"Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}")
         print(f"Extraction Time: {elapsed_time:.1f}s")
@@ -138,7 +138,7 @@ async def main():
 
         # Quality assessment
         print(f"\n{'='*80}")
-        print(f"QUALITY ASSESSMENT")
+        print("QUALITY ASSESSMENT")
         print(f"{'='*80}")
 
         if len(entities) > 0:
@@ -166,14 +166,14 @@ async def main():
             print(f"Technologies: {tech_count}")
 
             if generic_count / len(entities) > 0.5:
-                print(f"\n⚠️  HIGH NOISE: >50% generic entities (consider LLM extraction)")
+                print("\n⚠️  HIGH NOISE: >50% generic entities (consider LLM extraction)")
             else:
-                print(f"\n✅ GOOD QUALITY: <50% noise")
+                print("\n✅ GOOD QUALITY: <50% noise")
         else:
-            print(f"⚠️  NO ENTITIES EXTRACTED (text too short or no entities found)")
+            print("⚠️  NO ENTITIES EXTRACTED (text too short or no entities found)")
 
         print(f"\n{'='*80}")
-        print(f"TEST COMPLETE")
+        print("TEST COMPLETE")
         print(f"{'='*80}")
 
     except Exception as e:

@@ -16,14 +16,12 @@ Test validates user journey from entering a query to viewing cited sources.
 
 import asyncio
 import re
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from playwright.async_api import Page, expect
-
-from src.core.config import settings
 
 
 class TestChatStreamingAndCitations:
@@ -329,7 +327,7 @@ These models use transformer architecture with billions of parameters.
         source_cards = page.locator('[data-testid="source-cards-scroll"], .source-cards')
         source_cards_count = await source_cards.count()
         if source_cards_count > 0:
-            print(f"[TEST] Found source cards scroll component")
+            print("[TEST] Found source cards scroll component")
             # Count individual source cards
             cards = source_cards.locator('[data-testid="source-card"], .source-card')
             cards_count = await cards.count()
@@ -647,7 +645,7 @@ These models use transformer architecture with billions of parameters.
         print("CHAT STREAMING & CITATIONS WORKFLOW TEST COMPLETE")
         print("=" * 70)
         print("Summary:")
-        print(f"  - Query submitted: Yes")
+        print("  - Query submitted: Yes")
         print(f"  - Streaming started: {streaming_started}")
         print(f"  - Response received: {len(response_text)} chars")
         print(f"  - Citations found: {citation_count}")

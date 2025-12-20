@@ -13,6 +13,7 @@ This script tests:
 import asyncio
 import sys
 from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
 # Add project root to path
@@ -20,12 +21,13 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import structlog
-from src.components.llm_proxy import get_aegis_llm_proxy, LLMTask, TaskType
+
 from src.components.ingestion.image_processor import (
     ImageProcessor,
     ImageProcessorConfig,
     generate_vlm_description_with_proxy,
 )
+from src.components.llm_proxy import LLMTask, TaskType, get_aegis_llm_proxy
 
 logger = structlog.get_logger(__name__)
 

@@ -1,7 +1,7 @@
 """Test the metadata cleanup to see actual sizes."""
 
-import sys
 import json
+import sys
 from pathlib import Path
 
 # Add project root to path
@@ -9,6 +9,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from llama_index.core import SimpleDirectoryReader
+
 from src.components.vector_search.ingestion import DocumentIngestionPipeline
 
 

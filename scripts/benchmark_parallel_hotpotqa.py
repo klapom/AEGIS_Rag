@@ -177,7 +177,7 @@ async def main():
     print("\n" + "=" * 80)
     print("PARALLEL PIPELINE BENCHMARK (HotPotQA)")
     print("=" * 80)
-    print(f"Models: gemma3:4b + qwen2.5:7b (parallel)")
+    print("Models: gemma3:4b + qwen2.5:7b (parallel)")
     print(f"Medium samples: {len(samples['medium'])} samples")
     print(f"Large sample: {len(samples['large'])} samples")
     print("=" * 80)
@@ -214,7 +214,7 @@ async def main():
         print(f"    Question: {sample['question'][:80]}...")
         sys.stdout.flush()
 
-        print(f"  Chunk size 10000:")
+        print("  Chunk size 10000:")
         sys.stdout.flush()
         result = await benchmark_parallel_sample(extractor, sample, 10000)
         all_results.append(result)
@@ -258,14 +258,14 @@ async def main():
         # Expected individual results from previous benchmarks
         # gemma3:4b at 500: 104+95=199 unique entities (across 2 samples)
         # qwen2.5:7b at 500: 92+68=160 unique entities (across 2 samples)
-        print(f"\nParallel (gemma3:4b + qwen2.5:7b combined):")
+        print("\nParallel (gemma3:4b + qwen2.5:7b combined):")
         print(f"  Unique Entities: {total_parallel_ent}")
         print(f"  Unique Relations: {total_parallel_rel}")
         print(f"  Total Time: {total_parallel_time:.1f}s")
 
-        print(f"\nExpected from individual benchmarks (500 chars, 2 medium samples):")
-        print(f"  gemma3:4b alone: ~199 entities, ~185 relations, ~227s")
-        print(f"  qwen2.5:7b alone: ~160 entities, ~124 relations, ~306s")
+        print("\nExpected from individual benchmarks (500 chars, 2 medium samples):")
+        print("  gemma3:4b alone: ~199 entities, ~185 relations, ~227s")
+        print("  qwen2.5:7b alone: ~160 entities, ~124 relations, ~306s")
 
     # Save results
     output_file = f"reports/benchmark_parallel_hotpotqa_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"

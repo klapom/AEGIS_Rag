@@ -12,7 +12,7 @@ SRC_DIR = BASE_DIR / "src"
 def fix_file(file_path: Path) -> bool:
     """Fix escaped triple quotes in a single file."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         original_content = content

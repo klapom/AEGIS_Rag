@@ -49,7 +49,7 @@ def load_hotpotqa_samples(
         List of sample dicts with question, ground_truth, contexts
     """
     samples = []
-    with open(jsonl_path, "r") as f:
+    with open(jsonl_path) as f:
         for i, line in enumerate(f):
             if i >= num_samples:
                 break
@@ -151,9 +151,9 @@ async def run_pipeline_on_txt_files(
         List of pipeline results per file
     """
     # Import pipeline components
-    from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum, get_chunking_service
     from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
     from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
+    from src.core.chunking_service import ChunkingConfig, ChunkStrategyEnum, get_chunking_service
     from src.core.config import settings
 
     # Initialize services
@@ -182,7 +182,7 @@ async def run_pipeline_on_txt_files(
 
         try:
             # Read TXT file
-            with open(txt_path, "r", encoding="utf-8") as f:
+            with open(txt_path, encoding="utf-8") as f:
                 text_content = f.read()
 
             # Step 1: Chunking
@@ -490,7 +490,7 @@ async def main():
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         args.report = f"reports/ragas_txt_pipeline_eval_{timestamp}.json"
 
-    print(f"\nRAGAS TXT Pipeline Evaluation - Sprint 43 Feature 43.11")
+    print("\nRAGAS TXT Pipeline Evaluation - Sprint 43 Feature 43.11")
     print(f"{'=' * 60}")
     print(f"Samples: {args.samples}")
     print(f"Input: {args.input}")

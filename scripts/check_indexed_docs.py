@@ -1,8 +1,9 @@
 """Quick script to check what documents are indexed in Qdrant."""
 
 import asyncio
-from qdrant_client import AsyncQdrantClient
 from collections import defaultdict
+
+from qdrant_client import AsyncQdrantClient
 
 
 async def main():

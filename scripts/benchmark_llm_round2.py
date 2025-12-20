@@ -4,10 +4,11 @@ LLM Extraction Benchmark Round 2
 Tests multiple models against qwen3:32b baseline using the same RAGAS sample.
 """
 import json
-import time
-import requests
 import sys
+import time
 from datetime import datetime
+
+import requests
 
 # Same RAGAS sample as Round 1 (833 chars from 3 HotPotQA samples)
 TEST_SAMPLES = [
@@ -262,7 +263,7 @@ def main():
     print(f"Test text: {len(full_text)} characters")
     print(f"Chunk size: {CHUNK_SIZE} characters")
     print(f"Models to test: {len(MODELS_TO_TEST)}")
-    print(f"Baseline: qwen3:32b")
+    print("Baseline: qwen3:32b")
 
     results = []
 

@@ -3,6 +3,7 @@
 
 import json
 import time
+
 from ollama import Client
 
 TEST_TEXT = """
@@ -127,18 +128,18 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
 
         # Speed improvement
         speedup = (q8_result["time"] - q4_result["time"]) / q8_result["time"] * 100
-        print(f"\nSpeed:")
+        print("\nSpeed:")
         print(f"  Q4_K_M is {speedup:.1f}% faster than Q8_0")
         print(f"  ({q4_result['time']:.2f}s vs {q8_result['time']:.2f}s)")
 
         # Size saving
         size_saving = (4.13 - 2.49) / 4.13 * 100
-        print(f"\nDisk Space:")
+        print("\nDisk Space:")
         print(f"  Q4_K_M saves {size_saving:.1f}% disk space")
-        print(f"  (2.49 GB vs 4.13 GB)")
+        print("  (2.49 GB vs 4.13 GB)")
 
         # Quality comparison
-        print(f"\nQuality:")
+        print("\nQuality:")
         if q8_result["entity_count"] == q4_result["entity_count"]:
             print(f"  [OK] Identical quality: {q4_result['entity_count']} entities")
         else:
@@ -166,7 +167,7 @@ Sprint 13 TD-31: Testing production-optimized Q4_K_M vs reference Q8_0
     # Save detailed results
     with open("gemma_quantization_comparison.json", "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\n[OK] Detailed results saved to: gemma_quantization_comparison.json")
+    print("\n[OK] Detailed results saved to: gemma_quantization_comparison.json")
 
 
 if __name__ == "__main__":

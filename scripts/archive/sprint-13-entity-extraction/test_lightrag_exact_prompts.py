@@ -5,10 +5,10 @@ Sprint 13 TD-31: Verify models can follow LightRAG's delimiter-separated format.
 """
 
 import json
-import re
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
 
 # ============================================================================
@@ -529,7 +529,7 @@ Start Time: {datetime.now().isoformat()}
     if successful:
         # Best by total extraction (entities + relations)
         best = max(successful, key=lambda r: r["entity_count"] + r["relation_count"])
-        print(f"Most Comprehensive Extraction:")
+        print("Most Comprehensive Extraction:")
         print(f"  Model: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}")
         print(f"  Mode: {best['mode']}")
         print(f"  Test: {best['test_name']}")
@@ -538,7 +538,7 @@ Start Time: {datetime.now().isoformat()}
 
         # Fastest valid
         fastest = min(successful, key=lambda r: r["time"])
-        print(f"\nFastest Valid Extraction:")
+        print("\nFastest Valid Extraction:")
         print(
             f"  Model: {fastest['model'].split('/')[-1] if '/' in fastest['model'] else fastest['model']}"
         )
@@ -556,7 +556,7 @@ Start Time: {datetime.now().isoformat()}
             ),
         )
         score = (balanced["entity_count"] + balanced["relation_count"]) / balanced["time"]
-        print(f"\nBest Balance (throughput):")
+        print("\nBest Balance (throughput):")
         print(
             f"  Model: {balanced['model'].split('/')[-1] if '/' in balanced['model'] else balanced['model']}"
         )
@@ -638,7 +638,7 @@ Start Time: {datetime.now().isoformat()}
     with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\n[OK] Detailed results saved to: {output_file}")
-    print(f"[OK] Detailed logs saved to: logs/lightrag_exact_prompts/")
+    print("[OK] Detailed logs saved to: logs/lightrag_exact_prompts/")
 
 
 if __name__ == "__main__":

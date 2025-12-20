@@ -1,8 +1,8 @@
 """Analyze which metadata fields are valuable for RAG and which can be removed."""
 
+import json
 import sys
 from pathlib import Path
-import json
 
 # Add project root to path
 project_root = Path(__file__).parent.parent

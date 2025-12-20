@@ -13,6 +13,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import structlog
+
 from src.components.ingestion.docling_client import DoclingContainerClient
 
 logger = structlog.get_logger(__name__)
@@ -112,6 +113,7 @@ async def debug_docling_output():
             if base64_images:
                 import base64
                 from io import BytesIO
+
                 from PIL import Image
 
                 logger.info("=" * 80)

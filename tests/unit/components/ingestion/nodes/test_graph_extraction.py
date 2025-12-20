@@ -16,7 +16,6 @@ Test Coverage:
 - test_graph_extraction_vram_leak_detected() - VRAM leak tracking
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,7 +23,6 @@ import pytest
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.nodes.graph_extraction import graph_extraction_node
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # FIXTURES
@@ -161,31 +159,27 @@ async def test_graph_extraction_success(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify graph extraction succeeded
-                        assert result["graph_status"] == "completed"
-                        assert "graph_start_time" in result
-                        assert "graph_end_time" in result
+        # Verify graph extraction succeeded
+        assert result["graph_status"] == "completed"
+        assert "graph_start_time" in result
+        assert "graph_end_time" in result
 
-                        # Verify LightRAG called
-                        mock_lightrag_wrapper.insert_prechunked_documents.assert_called_once()
+        # Verify LightRAG called
+        mock_lightrag_wrapper.insert_prechunked_documents.assert_called_once()
 
 
 # =============================================================================
@@ -235,33 +229,29 @@ async def test_graph_extraction_lightrag_insert(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        await graph_extraction_node(base_state)
+        await graph_extraction_node(base_state)
 
-                        # Verify insert_prechunked_documents called
-                        call_args = mock_lightrag_wrapper.insert_prechunked_documents.call_args
-                        chunks = call_args.kwargs["chunks"]
+        # Verify insert_prechunked_documents called
+        call_args = mock_lightrag_wrapper.insert_prechunked_documents.call_args
+        chunks = call_args.kwargs["chunks"]
 
-                        # Verify chunk format
-                        assert len(chunks) == 2
-                        assert chunks[0]["chunk_id"] == "chunk_001"
-                        assert chunks[0]["text"] == "Chunk 1 content"
-                        assert chunks[1]["chunk_id"] == "chunk_002"
+        # Verify chunk format
+        assert len(chunks) == 2
+        assert chunks[0]["chunk_id"] == "chunk_001"
+        assert chunks[0]["text"] == "Chunk 1 content"
+        assert chunks[1]["chunk_id"] == "chunk_002"
 
 
 # =============================================================================
@@ -308,28 +298,24 @@ async def test_graph_extraction_relation_extraction(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        return_value=mock_relation_extractor,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                    return_value=mock_relation_extractor,
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify relations stored
-                        assert result["relations_count"] > 0
-                        mock_lightrag_wrapper._store_relations_to_neo4j.assert_called()
+        # Verify relations stored
+        assert result["relations_count"] > 0
+        mock_lightrag_wrapper._store_relations_to_neo4j.assert_called()
 
 
 # =============================================================================
@@ -371,27 +357,23 @@ async def test_graph_extraction_section_nodes(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify section nodes created
-                        assert "section_node_stats" in result
-                        mock_neo4j_client.create_section_nodes.assert_called_once()
+        # Verify section nodes created
+        assert "section_node_stats" in result
+        mock_neo4j_client.create_section_nodes.assert_called_once()
 
 
 # =============================================================================
@@ -418,27 +400,23 @@ async def test_graph_extraction_community_detection(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=mock_community_detector,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=mock_community_detector,
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify community detection ran
-                        assert "community_detection_stats" in result
-                        assert result["community_detection_stats"]["communities_detected"] == 2
+        # Verify community detection ran
+        assert "community_detection_stats" in result
+        assert result["community_detection_stats"]["communities_detected"] == 2
 
 
 # =============================================================================
@@ -478,27 +456,23 @@ async def test_graph_extraction_community_skipped_no_relations(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=mock_community_detector,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=mock_community_detector,
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify community detection skipped
-                        assert "community_detection_stats" in result
-                        mock_community_detector.detect_communities.assert_not_called()
+        # Verify community detection skipped
+        assert "community_detection_stats" in result
+        mock_community_detector.detect_communities.assert_not_called()
 
 
 # =============================================================================
@@ -529,40 +503,36 @@ async def test_graph_extraction_state_updated(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify required fields
-                        assert "graph_status" in result
-                        assert result["graph_status"] == "completed"
-                        assert "graph_start_time" in result
-                        assert "graph_end_time" in result
-                        assert "entities" in result
-                        assert "relations" in result
-                        assert "relations_count" in result
-                        assert "community_detection_stats" in result
-                        assert "overall_progress" in result
+        # Verify required fields
+        assert "graph_status" in result
+        assert result["graph_status"] == "completed"
+        assert "graph_start_time" in result
+        assert "graph_end_time" in result
+        assert "entities" in result
+        assert "relations" in result
+        assert "relations_count" in result
+        assert "community_detection_stats" in result
+        assert "overall_progress" in result
 
-                        # Verify types
-                        assert isinstance(result["graph_start_time"], float)
-                        assert isinstance(result["graph_end_time"], float)
-                        assert isinstance(result["entities"], list)
-                        assert isinstance(result["relations"], list)
+        # Verify types
+        assert isinstance(result["graph_start_time"], float)
+        assert isinstance(result["graph_end_time"], float)
+        assert isinstance(result["entities"], list)
+        assert isinstance(result["relations"], list)
 
 
 # =============================================================================
@@ -584,9 +554,8 @@ async def test_graph_extraction_error_handling(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         side_effect=RuntimeError("LightRAG error"),
-    ):
-        with pytest.raises(RuntimeError):
-            await graph_extraction_node(base_state)
+    ), pytest.raises(RuntimeError):
+        await graph_extraction_node(base_state)
 
 
 # =============================================================================
@@ -613,27 +582,23 @@ async def test_graph_extraction_progress_events(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        return_value=mock_relation_extractor,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        mock_emit,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                    return_value=mock_relation_extractor,
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        mock_emit,
-                    ):
-                        await graph_extraction_node(base_state)
+        await graph_extraction_node(base_state)
 
-                        # Verify progress events emitted
-                        assert mock_emit.called
+        # Verify progress events emitted
+        assert mock_emit.called
 
 
 # =============================================================================
@@ -683,26 +648,22 @@ async def test_graph_extraction_enhanced_chunks_with_images(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(state)
+        result = await graph_extraction_node(state)
 
-                        # Verify extraction succeeded with enhanced chunks
-                        assert result["graph_status"] == "completed"
+        # Verify extraction succeeded with enhanced chunks
+        assert result["graph_status"] == "completed"
 
 
 # =============================================================================
@@ -726,23 +687,19 @@ async def test_graph_extraction_chunk_count_tracking(
     with patch(
         "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
         return_value=mock_lightrag_wrapper,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+        return_value=mock_neo4j_client,
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+        return_value=MagicMock(),
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+    ), patch(
+        "src.components.ingestion.nodes.graph_extraction.emit_progress",
+        new_callable=AsyncMock,
     ):
-        with patch(
-            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-                return_value=MagicMock(),
-            ):
-                with patch(
-                    "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-                ):
-                    with patch(
-                        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-                        new_callable=AsyncMock,
-                    ):
-                        result = await graph_extraction_node(base_state)
+        result = await graph_extraction_node(base_state)
 
-                        # Verify extraction stats available
-                        assert result["graph_status"] == "completed"
+        # Verify extraction stats available
+        assert result["graph_status"] == "completed"

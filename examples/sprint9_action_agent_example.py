@@ -7,10 +7,11 @@ Sprint 9 Features 9.7 & 9.8
 """
 
 import asyncio
+
+from src.agents.action_agent import ActionAgent
 from src.components.mcp.client import MCPClient
 from src.components.mcp.models import MCPServer, TransportType
 from src.components.mcp.tool_executor import ToolExecutor
-from src.agents.action_agent import ActionAgent
 
 
 async def example_file_operations():

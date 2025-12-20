@@ -6,7 +6,7 @@ Run this to verify that IntentClassifier works with real llama3.2:3b model.
 import asyncio
 import time
 
-from src.agents.router import IntentClassifier, QueryIntent
+from src.agents.router import IntentClassifier
 
 
 async def main():
@@ -14,9 +14,9 @@ async def main():
     print("=" * 70)
     print("Testing Intent Classification with Real Ollama LLM")
     print("=" * 70)
-    print(f"Model: llama3.2:3b")
-    print(f"Base URL: http://localhost:11434")
-    print(f"Temperature: 0.0 (deterministic)")
+    print("Model: llama3.2:3b")
+    print("Base URL: http://localhost:11434")
+    print("Temperature: 0.0 (deterministic)")
     print()
 
     # Create classifier

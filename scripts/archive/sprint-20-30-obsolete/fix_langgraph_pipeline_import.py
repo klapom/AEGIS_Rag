@@ -7,7 +7,7 @@ file_path = Path(
     "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/src/components/ingestion/langgraph_pipeline.py"
 )
 
-with open(file_path, "r", encoding="utf-8") as f:
+with open(file_path, encoding="utf-8") as f:
     content = f.read()
 
 # Fix the malformed import

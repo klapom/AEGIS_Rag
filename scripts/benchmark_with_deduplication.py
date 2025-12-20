@@ -187,9 +187,9 @@ async def main():
     print("\n" + "=" * 80)
     print("PARALLEL BENCHMARK WITH MULTI-CRITERIA DEDUPLICATION")
     print("=" * 80)
-    print(f"Models: gemma3:4b + qwen2.5:7b (parallel)")
+    print("Models: gemma3:4b + qwen2.5:7b (parallel)")
     print(f"Samples: {len(samples['medium'])} medium samples")
-    print(f"Chunk size: 500 (focus on highest coverage scenario)")
+    print("Chunk size: 500 (focus on highest coverage scenario)")
     print("=" * 80)
     sys.stdout.flush()
 
@@ -220,7 +220,7 @@ async def main():
         result = await benchmark_with_deduplication(extractor, deduplicator, sample, chunk_size)
         all_results.append(result)
 
-        print(f"\n    Results:")
+        print("\n    Results:")
         print(f"      Raw entities: {result['raw_entities']}")
         print(f"      Simple dedup (lowercase): {result['simple_dedup_entities']}")
         print(f"      Multi-criteria dedup: {result['multi_dedup_entities']}")

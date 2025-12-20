@@ -3,6 +3,7 @@
 
 import json
 import time
+
 from ollama import Client
 
 # Test document
@@ -124,7 +125,7 @@ def main():
     # Save results
     with open("quick_test_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\n[OK] Results saved to: quick_test_results.json")
+    print("\n[OK] Results saved to: quick_test_results.json")
 
 
 if __name__ == "__main__":

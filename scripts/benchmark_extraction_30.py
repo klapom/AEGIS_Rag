@@ -25,7 +25,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.components.graph_rag.extraction_benchmark import (
     ExtractionBenchmark,
     ExtractionStrategy,
-    ExtractionMetrics,
 )
 
 logger = structlog.get_logger(__name__)
@@ -222,7 +221,7 @@ def print_comparison_report(
     print("=" * 80)
 
     # Sample Summary
-    print(f"\n📊 SAMPLES SUMMARY")
+    print("\n📊 SAMPLES SUMMARY")
     print("-" * 40)
     print(f"Total samples: {len(samples)}")
 
@@ -238,7 +237,7 @@ def print_comparison_report(
     print(f"Average text length: {avg_text_length:.0f} chars")
 
     # Strategy Comparison
-    print(f"\n⚡ PERFORMANCE COMPARISON")
+    print("\n⚡ PERFORMANCE COMPARISON")
     print("-" * 80)
 
     seq = sequential_result
@@ -318,15 +317,15 @@ def print_comparison_report(
         print("✅ UNIFIED recommended for production use:")
         print(f"   • Significant speedup ({speedup:.1f}x) with acceptable quality trade-off")
         print(f"   • Lower LLM costs ({call_reduction:.0f}% fewer calls)")
-        print(f"   • Better throughput for bulk ingestion")
+        print("   • Better throughput for bulk ingestion")
     elif speedup >= 1.1:
         print("⚠️ UNIFIED provides marginal improvement:")
         print(f"   • Moderate speedup ({speedup:.1f}x)")
-        print(f"   • Consider quality requirements before switching")
+        print("   • Consider quality requirements before switching")
     else:
         print("❌ SEQUENTIAL recommended:")
         print(f"   • Minimal speedup ({speedup:.1f}x)")
-        print(f"   • Better extraction quality")
+        print("   • Better extraction quality")
 
 
 def save_results_json(

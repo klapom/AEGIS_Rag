@@ -8,7 +8,6 @@ This module provides fixtures for testing AI-powered domain classification:
 """
 
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -554,7 +553,7 @@ def sample_documents_various_domains(
     sample_legal_contract: Path,
     sample_medical_research_paper: Path,
     sample_technical_documentation: Path,
-) -> List[Path]:
+) -> list[Path]:
     """Get all sample documents from various domains.
 
     Returns:

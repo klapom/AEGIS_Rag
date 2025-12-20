@@ -268,7 +268,7 @@ def run_benchmarks(
 
         # GPU Summary
         if results["gpu_info"]:
-            print(f"\n=== GPU Metrics ===")
+            print("\n=== GPU Metrics ===")
             print(f"GPU: {results['gpu_info']['gpu_name']}")
             print(f"VRAM Usage: {results['gpu_info']['vram_usage_pct']:.1f}%")
             print(f"Temperature: {results['gpu_info']['temperature_c']}°C")

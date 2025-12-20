@@ -14,19 +14,12 @@ Test validates AI classification, confidence scoring, and domain-based retrieval
 
 import asyncio
 import re
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator, List
 
 import pytest
 import pytest_asyncio
 from playwright.async_api import Page, expect
-
-from tests.e2e.fixtures.sample_documents import (
-    sample_documents_various_domains,
-    sample_legal_contract,
-    sample_medical_research_paper,
-    sample_technical_documentation,
-)
 
 
 class TestUploadPageDomainClassification:
@@ -61,7 +54,7 @@ class TestUploadPageDomainClassification:
         self,
         authenticated_page: Page,
         base_url: str,
-        sample_documents_various_domains: List[Path],
+        sample_documents_various_domains: list[Path],
     ):
         """Test document upload with automatic domain classification.
 

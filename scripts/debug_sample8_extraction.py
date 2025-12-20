@@ -17,9 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.components.graph_rag.extraction_benchmark import (
+    UNIFIED_EXTRACTION_PROMPT,
     ExtractionBenchmark,
     ExtractionStrategy,
-    UNIFIED_EXTRACTION_PROMPT,
 )
 from src.components.llm_proxy import get_aegis_llm_proxy
 from src.components.llm_proxy.models import (
@@ -81,7 +81,7 @@ async def debug_extraction(sample: dict):
     print("DEBUG: Sample 8 (Q146) Extraction")
     print("=" * 80)
 
-    print(f"\n--- Sample Info ---")
+    print("\n--- Sample Info ---")
     print(f"Sample ID: {sample['sample_id']}")
     print(f"Index: {sample['index']}")
     print(f"Question: {sample['question']}")
@@ -89,7 +89,7 @@ async def debug_extraction(sample: dict):
     print(f"Context preview: {sample['context'][:500]}...")
 
     # Step 1: Test direct LLM call with UNIFIED prompt
-    print(f"\n--- Step 1: Direct LLM Call (UNIFIED) ---")
+    print("\n--- Step 1: Direct LLM Call (UNIFIED) ---")
 
     proxy = get_aegis_llm_proxy()
     prompt = UNIFIED_EXTRACTION_PROMPT.format(text=sample['context'])
@@ -109,7 +109,7 @@ async def debug_extraction(sample: dict):
     print("Calling LLM...")
     response = await proxy.generate(task)
 
-    print(f"\n--- Raw LLM Response ---")
+    print("\n--- Raw LLM Response ---")
     print(f"Response length: {len(response.content)} chars")
     print(f"Input tokens: {response.tokens_input}")
     print(f"Output tokens: {response.tokens_output}")
@@ -118,7 +118,7 @@ async def debug_extraction(sample: dict):
     print(f"{'-' * 40}")
 
     # Step 2: Try to parse the response
-    print(f"\n--- Step 2: JSON Parsing ---")
+    print("\n--- Step 2: JSON Parsing ---")
 
     cleaned = response.content.strip()
 
@@ -133,12 +133,12 @@ async def debug_extraction(sample: dict):
     # Try direct parsing
     try:
         data = json.loads(cleaned)
-        print(f"Direct parse SUCCESS!")
+        print("Direct parse SUCCESS!")
         print(f"Entities: {len(data.get('entities', []))}")
         print(f"Relationships: {len(data.get('relationships', []))}")
 
         if data.get('entities'):
-            print(f"\nFirst 5 entities:")
+            print("\nFirst 5 entities:")
             for e in data['entities'][:5]:
                 print(f"  - {e.get('name')} ({e.get('type')})")
 
@@ -162,7 +162,7 @@ async def debug_extraction(sample: dict):
                     continue
 
     # Step 3: Test with ExtractionBenchmark
-    print(f"\n--- Step 3: ExtractionBenchmark Test ---")
+    print("\n--- Step 3: ExtractionBenchmark Test ---")
 
     benchmark = ExtractionBenchmark(max_tokens=8192)
 
@@ -174,7 +174,7 @@ async def debug_extraction(sample: dict):
             strategy=ExtractionStrategy.UNIFIED,
         )
 
-        print(f"Extraction completed!")
+        print("Extraction completed!")
         print(f"Entities: {result.metrics.entities_extracted}")
         print(f"Typed relations: {result.metrics.typed_relations_extracted}")
         print(f"Semantic relations: {result.metrics.semantic_relations_extracted}")
@@ -197,7 +197,7 @@ async def debug_extraction(sample: dict):
         traceback.print_exc()
 
     # Step 4: Test with SEQUENTIAL for comparison
-    print(f"\n--- Step 4: SEQUENTIAL Comparison ---")
+    print("\n--- Step 4: SEQUENTIAL Comparison ---")
 
     try:
         result_seq = await benchmark.extract(
@@ -207,7 +207,7 @@ async def debug_extraction(sample: dict):
             strategy=ExtractionStrategy.SEQUENTIAL,
         )
 
-        print(f"SEQUENTIAL completed!")
+        print("SEQUENTIAL completed!")
         print(f"Entities: {result_seq.metrics.entities_extracted}")
         print(f"Typed relations: {result_seq.metrics.typed_relations_extracted}")
         print(f"Semantic relations: {result_seq.metrics.semantic_relations_extracted}")

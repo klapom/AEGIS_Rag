@@ -15,11 +15,9 @@ Usage:
 
 import ast
 import sys
-from pathlib import Path
-from typing import List, Tuple
 
 
-def check_python_imports(file_path: str) -> Tuple[bool, List[str]]:
+def check_python_imports(file_path: str) -> tuple[bool, list[str]]:
     """Check if a Python file has valid imports.
 
     Args:
@@ -32,7 +30,7 @@ def check_python_imports(file_path: str) -> Tuple[bool, List[str]]:
 
     try:
         # Read file
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             source = f.read()
 
         # Parse AST to find imports
@@ -96,7 +94,7 @@ def check_python_imports(file_path: str) -> Tuple[bool, List[str]]:
         return False, errors
 
 
-def main(filenames: List[str]) -> int:
+def main(filenames: list[str]) -> int:
     """Main entry point for pre-commit hook.
 
     Args:

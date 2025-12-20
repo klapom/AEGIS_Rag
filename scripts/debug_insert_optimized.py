@@ -31,7 +31,7 @@ async def main():
         "id": "debug_test_full_flow",
     }
 
-    print(f"\n[1] Testing insert_documents_optimized with test document...")
+    print("\n[1] Testing insert_documents_optimized with test document...")
     print(f"    Document ID: {test_doc['id']}")
     print(f"    Text length: {len(test_doc['text'])}")
 
@@ -47,13 +47,13 @@ async def main():
         print("\n[3] Calling insert_documents_optimized...")
         result = await lightrag.insert_documents_optimized([test_doc])
 
-        print(f"\n[4] Results:")
+        print("\n[4] Results:")
         print(f"    Total: {result.get('total', 0)}")
         print(f"    Success: {result.get('success', 0)}")
         print(f"    Failed: {result.get('failed', 0)}")
 
         stats = result.get('stats', {})
-        print(f"\n    Stats:")
+        print("\n    Stats:")
         print(f"      Total chunks: {stats.get('total_chunks', 0)}")
         print(f"      Total entities: {stats.get('total_entities', 0)}")
         print(f"      Total relations: {stats.get('total_relations', 0)}")
@@ -98,7 +98,7 @@ async def main():
             RETURN labels(n) as labels, n.entity_id as entity_id, n.entity_name as name
             LIMIT 10
         """)
-        print(f"\n    Recent entities from debug test:")
+        print("\n    Recent entities from debug test:")
         for r in result_recent:
             print(f"      {r}")
 

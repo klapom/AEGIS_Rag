@@ -22,12 +22,10 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import httpx
 import yaml
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 console = Console()
@@ -45,7 +43,7 @@ MODELS = {
 }
 
 
-async def load_test_questions() -> List[Dict]:
+async def load_test_questions() -> list[dict]:
     """Load test questions from YAML file."""
     questions_file = Path(__file__).parent / "test_questions.yaml"
 
@@ -54,12 +52,12 @@ async def load_test_questions() -> List[Dict]:
         console.print("[yellow]Please create test_questions.yaml first.[/yellow]")
         raise FileNotFoundError(f"{questions_file} does not exist")
 
-    with open(questions_file, "r", encoding="utf-8") as f:
+    with open(questions_file, encoding="utf-8") as f:
         data = yaml.safe_load(f)
         return data.get("questions", [])
 
 
-async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
+async def retrieve_context(question: str, top_k: int = 5) -> list[str]:
     """
     Retrieve relevant context from Qdrant for the question.
 
@@ -81,7 +79,7 @@ async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
 
             if embed_response.status_code != 200:
                 console.print(
-                    f"[yellow]Warning: Embedding failed, using question without context[/yellow]"
+                    "[yellow]Warning: Embedding failed, using question without context[/yellow]"
                 )
                 return []
 
@@ -98,7 +96,7 @@ async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
             )
 
             if search_response.status_code != 200:
-                console.print(f"[yellow]Warning: Qdrant search failed[/yellow]")
+                console.print("[yellow]Warning: Qdrant search failed[/yellow]")
                 return []
 
             results = search_response.json()["result"]
@@ -121,9 +119,9 @@ async def retrieve_context(question: str, top_k: int = 5) -> List[str]:
 async def generate_answer(
     model: str,
     question: str,
-    context: List[str],
+    context: list[str],
     language: str,
-) -> Dict:
+) -> dict:
     """
     Generate answer using specified model with RAG context.
 
@@ -224,10 +222,10 @@ async def generate_answer(
 
 async def evaluate_single_question(
     model: str,
-    question_data: Dict,
+    question_data: dict,
     question_num: int,
     total_questions: int,
-) -> Dict:
+) -> dict:
     """Evaluate a single question with specified model."""
     question = question_data["question"]
     language = question_data["language"]
@@ -272,7 +270,7 @@ async def evaluate_single_question(
     }
 
 
-async def evaluate_model(model: str, questions: List[Dict]) -> List[Dict]:
+async def evaluate_model(model: str, questions: list[dict]) -> list[dict]:
     """Evaluate model on all test questions."""
     console.print(f"\n[bold cyan]{'='*60}[/bold cyan]")
     console.print(f"[bold cyan]Evaluating Model: {model}[/bold cyan]")
@@ -295,7 +293,7 @@ async def evaluate_model(model: str, questions: List[Dict]) -> List[Dict]:
     return results
 
 
-def calculate_aggregate_metrics(results: List[Dict]) -> Dict:
+def calculate_aggregate_metrics(results: list[dict]) -> dict:
     """Calculate aggregate performance metrics."""
     successful = [r for r in results if r.get("success", False)]
 
@@ -321,7 +319,7 @@ def calculate_aggregate_metrics(results: List[Dict]) -> Dict:
     }
 
 
-def print_summary_table(all_results: Dict[str, List[Dict]]):
+def print_summary_table(all_results: dict[str, list[dict]]):
     """Print comparison table of all models."""
     console.print(f"\n[bold cyan]{'='*60}[/bold cyan]")
     console.print("[bold cyan]BENCHMARK SUMMARY[/bold cyan]")

@@ -9,7 +9,7 @@ Tests focus on:
 """
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -471,10 +471,9 @@ class TestStreamingExecution:
             aegis_proxy_with_config,
             "_execute_streaming",
             side_effect=mock_fail,
-        ):
-            with pytest.raises(LLMExecutionError, match="All LLM providers failed"):
-                async for _ in aegis_proxy_with_config.generate_streaming(task):
-                    pass
+        ), pytest.raises(LLMExecutionError, match="All LLM providers failed"):
+            async for _ in aegis_proxy_with_config.generate_streaming(task):
+                pass
 
 
 class TestMetricsTracking:

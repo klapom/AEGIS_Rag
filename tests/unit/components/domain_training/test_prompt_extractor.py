@@ -15,19 +15,17 @@ Tests:
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from src.components.domain_training.prompt_extractor import (
-    extract_prompt_from_dspy_result,
-    format_prompt_for_production,
-    save_prompt_template,
     _format_entity_example,
     _format_relation_example,
     _get_example_format,
+    extract_prompt_from_dspy_result,
+    format_prompt_for_production,
+    save_prompt_template,
 )
-
 
 # ============================================================================
 # Fixtures

@@ -13,7 +13,6 @@ Test validates cost tracking across all LLM providers.
 
 import asyncio
 import re
-from pathlib import Path
 
 import pytest
 from playwright.async_api import Page, expect

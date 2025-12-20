@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Fix missing typing imports (Dict, List, Set, Any) in Python files."""
 
-import re
 from pathlib import Path
 
 BASE_DIR = Path(
@@ -17,7 +16,7 @@ def needs_typing_import(content: str, type_name: str) -> bool:
         return False
     # Check if already imported
     if (
-        f"from typing import" in content
+        "from typing import" in content
         and type_name in content[: content.find("\nclass ") if "\nclass " in content else 1000]
     ):
         return True  # Check more carefully
@@ -101,7 +100,7 @@ def add_typing_imports(content: str) -> str:
 def fix_file(file_path: Path) -> bool:
     """Fix missing typing imports in a single file."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         original_content = content

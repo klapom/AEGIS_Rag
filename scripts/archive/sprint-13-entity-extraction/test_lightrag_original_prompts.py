@@ -5,8 +5,8 @@ Sprint 13 TD-31: Test if models can follow LightRAG's delimiter-separated format
 """
 
 import json
-import re
 import time
+
 from ollama import Client
 
 # LightRAG Original Delimiters

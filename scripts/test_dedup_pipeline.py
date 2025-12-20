@@ -25,7 +25,6 @@ async def main():
     from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
     from src.components.graph_rag.semantic_deduplicator import (
         MultiCriteriaDeduplicator,
-        SemanticDeduplicator,
         create_deduplicator_from_config,
     )
     from src.core.config import get_settings
@@ -158,7 +157,7 @@ async def main():
     # Deduplicate
     deduped_entities = deduplicator.deduplicate(all_entities)
 
-    print(f"\n--- After Deduplication ---")
+    print("\n--- After Deduplication ---")
     print(f"Entities: {len(all_entities)} -> {len(deduped_entities)}")
     print(f"Removed: {len(all_entities) - len(deduped_entities)} duplicates")
 
@@ -196,7 +195,7 @@ async def main():
     with open(output_path, "w") as f:
         json.dump(original_data, f, indent=2, default=str)
 
-    print(f"\n" + "=" * 80)
+    print("\n" + "=" * 80)
     print(f"Results saved to: {output_path}")
     print("=" * 80)
 
@@ -244,8 +243,8 @@ async def main():
         print(f"  - [{e['type']}] {name}")
 
     print(f"\nSynthetic dedup: {len(synthetic_entities)} -> {len(synthetic_deduped)}")
-    print(f"Expected: 9 -> 5 (Nicolas variants merged, Simpsons variants merged)")
-    print(f"AI/UI should remain separate (too short for edit/substring)")
+    print("Expected: 9 -> 5 (Nicolas variants merged, Simpsons variants merged)")
+    print("AI/UI should remain separate (too short for edit/substring)")
 
 
 if __name__ == "__main__":

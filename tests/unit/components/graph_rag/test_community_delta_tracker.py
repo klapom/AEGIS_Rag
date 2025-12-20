@@ -8,7 +8,7 @@ Tests:
 - get_entity_communities_snapshot from Neo4j
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 

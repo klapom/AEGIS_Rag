@@ -116,7 +116,7 @@ async def test_vlm_indexing():
                 total_errors += error_count
                 successful_docs += 1
 
-                print(f"STATUS: SUCCESS")
+                print("STATUS: SUCCESS")
                 print(f"  - Document ID: {doc_id}")
                 print(f"  - Chunks created: {chunk_count}")
                 print(f"  - VLM images processed: {vlm_count}")
@@ -124,7 +124,7 @@ async def test_vlm_indexing():
 
                 # Show VLM metadata
                 if vlm_count > 0:
-                    print(f"\n  VLM Image Details:")
+                    print("\n  VLM Image Details:")
                     for i, vlm_meta in enumerate(
                         state.get("vlm_metadata", [])[:3], 1
                     ):  # Show first 3
@@ -136,7 +136,7 @@ async def test_vlm_indexing():
 
                 # Show errors if any
                 if error_count > 0:
-                    print(f"\n  Non-fatal Errors:")
+                    print("\n  Non-fatal Errors:")
                     for i, error in enumerate(state.get("errors", [])[:3], 1):
                         error_node = error.get("node", "unknown")
                         error_msg = error.get("message", "")[:80]
@@ -145,7 +145,7 @@ async def test_vlm_indexing():
             else:
                 failed_docs += 1
                 error_msg = result.get("error", "Unknown error")
-                print(f"STATUS: FAILED")
+                print("STATUS: FAILED")
                 print(f"  - Document ID: {doc_id}")
                 print(f"  - Error: {error_msg}")
 
@@ -162,7 +162,7 @@ async def test_vlm_indexing():
     print("\n" + "=" * 80)
     print("BATCH INGESTION COMPLETED")
     print("=" * 80)
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  - Total documents: {len(doc_paths)}")
     print(f"  - Successful: {successful_docs}")
     print(f"  - Failed: {failed_docs}")

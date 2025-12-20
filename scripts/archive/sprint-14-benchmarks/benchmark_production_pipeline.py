@@ -16,13 +16,13 @@ Date: 2025-10-27
 """
 
 import asyncio
-import time
-import statistics
 import json
+import statistics
 import sys
-from pathlib import Path
-from typing import List, Dict, Any
+import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -102,9 +102,9 @@ TEST_SCENARIOS = {
 async def benchmark_scenario(
     extractor: ThreePhaseExtractor,
     scenario_name: str,
-    scenario_config: Dict[str, Any],
+    scenario_config: dict[str, Any],
     iterations: int = 3,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Benchmark a specific test scenario.
 
     Args:
@@ -183,7 +183,7 @@ async def benchmark_scenario(
 
 async def benchmark_batch_processing(
     extractor: ThreePhaseExtractor, batch_size: int = 10, doc_size: str = "small"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Benchmark batch document processing.
 
     Args:
@@ -248,7 +248,7 @@ async def main():
     print(f"\nTimestamp: {datetime.now().isoformat()}")
 
     settings = get_settings()
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  - Extraction Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}")
     print(f"  - Enable Dedup: {getattr(settings, 'enable_semantic_dedup', True)}")
     print(f"  - Max Retries: {getattr(settings, 'extraction_max_retries', 3)}")
@@ -313,7 +313,7 @@ async def main():
         with open(output_file, "w") as f:
             json.dump(all_results, f, indent=2)
 
-        print(f"\n✅ All benchmarks completed successfully!")
+        print("\n✅ All benchmarks completed successfully!")
         print(f"📊 Results saved to: {output_file}")
 
         # Check against performance targets

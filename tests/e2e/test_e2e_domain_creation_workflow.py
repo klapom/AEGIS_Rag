@@ -15,17 +15,14 @@ Test validates DSPy training pipeline and domain persistence.
 import asyncio
 import json
 import re
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from playwright.async_api import Page, expect
 
 from tests.e2e.fixtures.training_datasets import (
-    legal_domain_training_dataset,
-    medical_domain_training_dataset,
-    technical_domain_training_dataset,
     validate_training_dataset,
 )
 

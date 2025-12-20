@@ -17,10 +17,8 @@ import json
 import re
 import sys
 import time
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import requests
 
@@ -460,7 +458,7 @@ def main():
     chunk_sizes = list(range(500, 4001, 500)) + [10000]
 
     print("="*70)
-    print(f"MODEL CHUNK SIZE BENCHMARK")
+    print("MODEL CHUNK SIZE BENCHMARK")
     print("="*70)
     print(f"Model: {args.model}")
     print(f"Samples: {min(args.samples, 10)}")

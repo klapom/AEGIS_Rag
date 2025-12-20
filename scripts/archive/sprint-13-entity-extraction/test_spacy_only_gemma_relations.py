@@ -10,11 +10,10 @@ Sprint 13 TD-31: Advanced 3-phase strategy:
 
 import json
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
-from typing import List, Dict, Any, Tuple
-import numpy as np
 
 # Try to import spaCy
 try:
@@ -29,8 +28,8 @@ except ImportError:
 
 # Try to import sentence-transformers for semantic deduplication
 try:
-    from sentence_transformers import SentenceTransformer
     import torch
+    from sentence_transformers import SentenceTransformer
 
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
@@ -191,7 +190,7 @@ class SemanticDeduplicator:
             print(f"[INFO] GPU: {torch.cuda.get_device_name(0)}")
             print(f"[INFO] VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
-    def deduplicate(self, entities: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def deduplicate(self, entities: list[dict[str, str]]) -> list[dict[str, str]]:
         """Deduplicate entities using semantic similarity.
 
         Strategy:
@@ -271,7 +270,7 @@ class SemanticDeduplicator:
         return deduplicated
 
 
-def extract_entities_spacy(text: str, nlp) -> List[Dict[str, str]]:
+def extract_entities_spacy(text: str, nlp) -> list[dict[str, str]]:
     """Extract entities using spaCy NER.
 
     Args:
@@ -301,7 +300,7 @@ def extract_entities_spacy(text: str, nlp) -> List[Dict[str, str]]:
 
 
 def convert_json_to_lightrag(
-    entities: List[Dict[str, str]], relations: List[Dict[str, str]]
+    entities: list[dict[str, str]], relations: list[dict[str, str]]
 ) -> str:
     """Convert entity and relation lists to LightRAG delimiter-separated format."""
     lines = []
@@ -720,7 +719,7 @@ Start Time: {datetime.now().isoformat()}
         100 * sum(1 for r in results if r["status"] in ["PASS", "PARTIAL"]) / len(results)
     )
 
-    print(f"spaCy + Semantic Dedup + Gemma:")
+    print("spaCy + Semantic Dedup + Gemma:")
     print(f"  Average Phase 1 (spaCy NER):       {avg_phase1:.2f}s")
     print(f"  Average Phase 2 (Deduplication):   {avg_phase2:.2f}s")
     print(f"  Average Phase 3 (Gemma Relations): {avg_phase3:.2f}s")
@@ -742,7 +741,7 @@ Start Time: {datetime.now().isoformat()}
     if deduplicator:
         print(f"[OK] Semantic deduplication: ENABLED (threshold={deduplicator.threshold})")
     else:
-        print(f"[WARNING] Semantic deduplication: DISABLED")
+        print("[WARNING] Semantic deduplication: DISABLED")
     print(f"{'='*80}")
 
 

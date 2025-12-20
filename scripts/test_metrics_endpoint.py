@@ -8,13 +8,6 @@ import sys
 # Test 1: Import metrics module
 try:
     from src.core.metrics import (
-        llm_cost_usd,
-        llm_errors_total,
-        llm_latency_seconds,
-        llm_requests_total,
-        llm_tokens_used,
-        monthly_budget_remaining_usd,
-        monthly_spend_usd,
         track_llm_error,
         track_llm_request,
         update_budget_metrics,

@@ -24,14 +24,12 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import httpx
 import yaml
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 
@@ -100,7 +98,7 @@ SAMPLING_CONFIGS = [
 ]
 
 
-async def load_test_questions(quick: bool = False) -> List[Dict]:
+async def load_test_questions(quick: bool = False) -> list[dict]:
     """Load test questions from YAML file."""
     # Try NO-RAG version first (for when DB is empty)
     questions_file_norag = Path(__file__).parent / "test_questions_norag.yaml"
@@ -108,15 +106,15 @@ async def load_test_questions(quick: bool = False) -> List[Dict]:
 
     if questions_file_norag.exists():
         console.print("[yellow]Using NO-RAG test questions (no document context needed)[/yellow]")
-        with open(questions_file_norag, "r", encoding="utf-8") as f:
+        with open(questions_file_norag, encoding="utf-8") as f:
             data = yaml.safe_load(f)
             questions = data.get("questions", [])
     elif questions_file.exists():
-        with open(questions_file, "r", encoding="utf-8") as f:
+        with open(questions_file, encoding="utf-8") as f:
             data = yaml.safe_load(f)
             questions = data.get("questions", [])
     else:
-        console.print(f"[red]Error: No test questions file found![/red]")
+        console.print("[red]Error: No test questions file found![/red]")
         raise FileNotFoundError("test_questions.yaml or test_questions_norag.yaml")
 
     if quick:
@@ -127,11 +125,11 @@ async def load_test_questions(quick: bool = False) -> List[Dict]:
 
 
 async def test_single_question(
-    config: Dict,
-    question_data: Dict,
+    config: dict,
+    question_data: dict,
     question_num: int,
     total_questions: int,
-) -> Dict:
+) -> dict:
     """Test a single question with specified sampling configuration."""
     question = question_data["question"]
     language = question_data["language"]
@@ -213,7 +211,7 @@ async def test_single_question(
             }
 
     except httpx.TimeoutException:
-        console.print(f"[red]ERROR - Timeout after 120s[/red]")
+        console.print("[red]ERROR - Timeout after 120s[/red]")
         return {
             "success": False,
             "error": "Timeout",
@@ -235,11 +233,11 @@ async def test_single_question(
 
 
 async def evaluate_config(
-    config: Dict,
-    questions: List[Dict],
+    config: dict,
+    questions: list[dict],
     config_num: int,
     total_configs: int,
-) -> List[Dict]:
+) -> list[dict]:
     """Evaluate a single configuration on all questions."""
     console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
     console.print(
@@ -265,7 +263,7 @@ async def evaluate_config(
     return results
 
 
-def calculate_config_metrics(results: List[Dict]) -> Dict:
+def calculate_config_metrics(results: list[dict]) -> dict:
     """Calculate aggregate metrics for a configuration."""
     successful = [r for r in results if r.get("success", False)]
 
@@ -291,7 +289,7 @@ def calculate_config_metrics(results: List[Dict]) -> Dict:
     }
 
 
-def print_comparison_table(all_results: Dict[str, List[Dict]]):
+def print_comparison_table(all_results: dict[str, list[dict]]):
     """Print comparison table of all configurations."""
     console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
     console.print("[bold cyan]PARAMETER EVALUATION SUMMARY[/bold cyan]")
@@ -344,7 +342,7 @@ def print_comparison_table(all_results: Dict[str, List[Dict]]):
     config_details = {c["name"]: c for c in SAMPLING_CONFIGS}
 
     console.print("\n[bold yellow]Configuration Details:[/bold yellow]")
-    for config_name in all_results.keys():
+    for config_name in all_results:
         if config_name in config_details:
             config = config_details[config_name]
             console.print(f"\n[cyan]{config_name}:[/cyan]")

@@ -72,7 +72,7 @@ async def main():
 
         # Display metadata
         if "metadata" in result_state:
-            print(f"\n7. Metadata:")
+            print("\n7. Metadata:")
             metadata = result_state["metadata"]
 
             if "search" in metadata:
@@ -84,7 +84,7 @@ async def main():
                 print(f"   Latency: {search_meta.get('latency_ms', 0):.2f}ms")
 
             if "agent_path" in metadata:
-                print(f"\n   Agent path:")
+                print("\n   Agent path:")
                 for step in metadata["agent_path"]:
                     print(f"     - {step}")
 

@@ -30,11 +30,9 @@ Usage:
 import ast
 import re
 import sys
-from pathlib import Path
-from typing import List, Tuple, Optional
 
 
-def check_router_prefix(file_path: str) -> Tuple[bool, List[str]]:
+def check_router_prefix(file_path: str) -> tuple[bool, list[str]]:
     """Check if router prefix follows conventions.
 
     Args:
@@ -54,7 +52,7 @@ def check_router_prefix(file_path: str) -> Tuple[bool, List[str]]:
         return True, []
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             source = f.read()
 
         # Parse AST
@@ -100,12 +98,12 @@ def check_router_prefix(file_path: str) -> Tuple[bool, List[str]]:
 
         return True, []
 
-    except Exception as e:
+    except Exception:
         # Don't fail on unexpected errors (could be non-router file)
         return True, []
 
 
-def check_main_router_registration(file_path: str) -> Tuple[bool, List[str]]:
+def check_main_router_registration(file_path: str) -> tuple[bool, list[str]]:
     """Check if main.py router registrations include prefix.
 
     Args:
@@ -120,7 +118,7 @@ def check_main_router_registration(file_path: str) -> Tuple[bool, List[str]]:
     warnings = []
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             source = f.read()
 
         # Look for app.include_router() calls
@@ -143,7 +141,7 @@ def check_main_router_registration(file_path: str) -> Tuple[bool, List[str]]:
         return True, []
 
 
-def main(filenames: List[str]) -> int:
+def main(filenames: list[str]) -> int:
     """Main entry point for pre-commit hook.
 
     Args:

@@ -57,17 +57,17 @@ async def main():
             graph, "MATCH (c:chunk) RETURN DISTINCT c.document_id as doc_id LIMIT 5"
         )
 
-        print(f"\nCOUNTS:")
+        print("\nCOUNTS:")
         print(f"  Chunks: {chunk_count}")
         print(f"  Entities: {entity_count}")
         print(f"  Relations (MENTIONED_IN): {rel_count}")
 
-        print(f"\nDOCUMENT IDs:")
+        print("\nDOCUMENT IDs:")
         for doc in doc_result:
             print(f"  - {doc['doc_id']}")
 
         # Get entity labels and names
-        print(f"\nENTITIES:")
+        print("\nENTITIES:")
         entities = await run_query(
             graph,
             """
@@ -84,7 +84,7 @@ async def main():
             print(f"  {i}. [{label}] {name}")
 
         # Get relations summary
-        print(f"\nRELATIONSHIPS:")
+        print("\nRELATIONSHIPS:")
         rels = await run_query(
             graph,
             """

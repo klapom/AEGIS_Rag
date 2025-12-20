@@ -32,9 +32,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
-import httpx
 import yaml
 from rich.console import Console
 from rich.panel import Panel
@@ -63,7 +61,7 @@ MODELS = {
 # ============================================================================
 
 
-async def load_ground_truth() -> Dict:
+async def load_ground_truth() -> dict:
     """Load ground truth annotations for entity/relation extraction."""
     gt_file = Path(__file__).parent / "ground_truth.yaml"
 
@@ -75,7 +73,7 @@ async def load_ground_truth() -> Dict:
         console.print("[yellow]Please fill in ground truth data and run again.[/yellow]")
         return {"test_cases": []}
 
-    with open(gt_file, "r", encoding="utf-8") as f:
+    with open(gt_file, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -134,7 +132,7 @@ def create_ground_truth_template(output_path: Path):
         yaml.dump(template, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
-async def extract_entities_relations(text: str, model: str) -> Tuple[List[Dict], List[Dict]]:
+async def extract_entities_relations(text: str, model: str) -> tuple[list[dict], list[dict]]:
     """
     Extract entities and relations using Three-Phase Pipeline.
 
@@ -158,8 +156,8 @@ async def extract_entities_relations(text: str, model: str) -> Tuple[List[Dict],
 
 
 def calculate_entity_metrics(
-    predicted: List[Dict], ground_truth: List[Dict], match_threshold: float = 0.8
-) -> Dict:
+    predicted: list[dict], ground_truth: list[dict], match_threshold: float = 0.8
+) -> dict:
     """
     Calculate Precision, Recall, F1 for entity extraction.
 
@@ -181,7 +179,7 @@ def calculate_entity_metrics(
         """Normalize entity name for comparison."""
         return text.lower().strip()
 
-    def entities_match(pred: Dict, gt: Dict) -> bool:
+    def entities_match(pred: dict, gt: dict) -> bool:
         """Check if predicted entity matches ground truth entity."""
         pred_name = normalize(pred.get("name", ""))
         gt_name = normalize(gt.get("name", ""))
@@ -231,8 +229,8 @@ def calculate_entity_metrics(
 
 
 def calculate_relation_metrics(
-    predicted: List[Dict], ground_truth: List[Dict], match_threshold: float = 0.7
-) -> Dict:
+    predicted: list[dict], ground_truth: list[dict], match_threshold: float = 0.7
+) -> dict:
     """
     Calculate Precision, Recall, F1 for relation extraction.
 
@@ -249,12 +247,11 @@ def calculate_relation_metrics(
     Returns:
         Dict with precision, recall, f1, and counts
     """
-    from difflib import SequenceMatcher
 
     def normalize(text: str) -> str:
         return text.lower().strip()
 
-    def relations_match(pred: Dict, gt: Dict) -> bool:
+    def relations_match(pred: dict, gt: dict) -> bool:
         """Check if predicted relation matches ground truth."""
         pred_src = normalize(pred.get("source", ""))
         pred_tgt = normalize(pred.get("target", ""))
@@ -298,7 +295,7 @@ def calculate_relation_metrics(
     }
 
 
-async def evaluate_extraction(model: str) -> Dict:
+async def evaluate_extraction(model: str) -> dict:
     """
     Evaluate entity and relation extraction for a model.
 
@@ -423,7 +420,7 @@ async def evaluate_extraction(model: str) -> Dict:
 # ============================================================================
 
 
-async def load_chat_questions() -> List[Dict]:
+async def load_chat_questions() -> list[dict]:
     """Load chat evaluation questions."""
     questions_file = Path(__file__).parent / "test_questions.yaml"
 
@@ -431,12 +428,12 @@ async def load_chat_questions() -> List[Dict]:
         console.print(f"[yellow]Warning: {questions_file} not found[/yellow]")
         return []
 
-    with open(questions_file, "r", encoding="utf-8") as f:
+    with open(questions_file, encoding="utf-8") as f:
         data = yaml.safe_load(f)
         return data.get("questions", [])
 
 
-async def evaluate_chat(model: str) -> Dict:
+async def evaluate_chat(model: str) -> dict:
     """
     Evaluate RAG chat generation for a model.
 
@@ -541,7 +538,7 @@ async def main():
     console.print(f"\n[bold green]Results saved to {args.output}[/bold green]")
 
 
-def print_summary_table(results: Dict, mode: str):
+def print_summary_table(results: dict, mode: str):
     """Print summary table of evaluation results."""
     console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
     console.print("[bold cyan]EVALUATION SUMMARY[/bold cyan]")

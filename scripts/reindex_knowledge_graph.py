@@ -112,9 +112,10 @@ async def reindex_documents(source_dir: Path, batch_size: int = 5) -> dict:
     Returns:
         Indexing statistics
     """
-    from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
     import uuid
     from datetime import datetime
+
+    from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 
     # Find all supported documents
     supported_extensions = {".pdf", ".pptx", ".docx", ".txt", ".md"}

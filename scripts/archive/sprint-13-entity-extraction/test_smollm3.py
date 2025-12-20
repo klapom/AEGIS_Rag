@@ -4,8 +4,8 @@ Test SmolLM3 model with LightRAG delimiter format.
 
 import asyncio
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -76,7 +76,7 @@ async def test_smollm3():
     prompt = LIGHTRAG_PROMPT.format(text=TEST_TEXT.strip())
 
     print(f"Model: {model_name}")
-    print(f"Test: Apple Inc. founding story")
+    print("Test: Apple Inc. founding story")
     print()
 
     client = ollama.AsyncClient()

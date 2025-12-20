@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load environment, then override with localhost for direct access
 from dotenv import load_dotenv
+
 load_dotenv(".env.dgx-spark")
 
 # Override hostnames for running outside Docker
@@ -32,8 +33,7 @@ os.environ["QDRANT_PORT"] = "6333"
 os.environ["QDRANT_GRPC_PORT"] = "6334"
 
 # Import after env setup
-from src.core.namespace import NamespaceManager, get_namespace_manager
-
+from src.core.namespace import get_namespace_manager
 
 TEST_NAMESPACE = "eval_sprint41"
 TEST_DOCUMENT = "data/test_evaluation/namespace_test_document.md"

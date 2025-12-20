@@ -15,8 +15,8 @@ Test validates knowledge graph construction, visualization, and interaction.
 
 import asyncio
 import re
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator, List
 
 import pytest
 import pytest_asyncio
@@ -24,12 +24,6 @@ from neo4j import AsyncGraphDatabase
 from playwright.async_api import Page, expect
 
 from src.core.config import settings
-from tests.e2e.fixtures.graph_data import (
-    deep_learning_pioneers_document,
-    google_brain_document,
-    indexed_graph_documents,
-    stanford_ai_lab_document,
-)
 
 
 class TestGraphExplorationWorkflow:
@@ -75,7 +69,7 @@ class TestGraphExplorationWorkflow:
         self,
         authenticated_page: Page,
         base_url: str,
-        indexed_graph_documents: List[Path],
+        indexed_graph_documents: list[Path],
         neo4j_driver,
     ):
         """Test complete graph exploration workflow from upload to export.

@@ -6,12 +6,12 @@ Tests chunk sizes: 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 10000
 
 The text is a concatenation of Wikipedia-style information about various topics.
 """
+import argparse
 import json
 import time
-import requests
-import argparse
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import requests
 
 # ~12000 character sample with diverse entities and relationships
 # Concatenated from multiple factual topics to simulate real document processing

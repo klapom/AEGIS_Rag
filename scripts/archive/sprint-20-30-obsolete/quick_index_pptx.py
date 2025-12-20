@@ -8,8 +8,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.components.vector_search.ingestion import DocumentIngestionPipeline
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
+from src.components.vector_search.ingestion import DocumentIngestionPipeline
 
 
 async def main():
@@ -56,13 +56,13 @@ async def main():
 
         # Insert to LightRAG
         await lightrag.insert(full_text)
-        print(f"   ✓ Indexed to LightRAG")
+        print("   ✓ Indexed to LightRAG")
 
         print("\n" + "=" * 60)
         print("✅ INDEXING COMPLETE")
         print("=" * 60)
         print(f"Qdrant: {result['chunk_ids_count']} chunks")
-        print(f"Neo4j: Entities + Relations stored")
+        print("Neo4j: Entities + Relations stored")
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")

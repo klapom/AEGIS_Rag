@@ -10,10 +10,10 @@ Sprint 13 TD-31: Test relation extraction performance with fixed entity lists.
 
 import json
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
-from typing import List, Dict
 
 # ============================================================================
 # LIGHTRAG DELIMITERS

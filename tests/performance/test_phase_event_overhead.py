@@ -19,7 +19,6 @@ import pytest
 from src.agents.reasoning_data import ReasoningData
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
-
 # ============================================================================
 # Creation Performance Tests
 # ============================================================================
@@ -43,7 +42,7 @@ def test_phase_event_creation_performance():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / iterations
 
-    print(f"\nPhaseEvent creation performance:")
+    print("\nPhaseEvent creation performance:")
     print(f"  Total time: {total_time_ms:.2f}ms for {iterations} events")
     print(f"  Average: {avg_time_ms:.4f}ms per event")
 
@@ -82,7 +81,7 @@ def test_phase_event_with_metadata_creation():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / iterations
 
-    print(f"\nPhaseEvent with metadata creation:")
+    print("\nPhaseEvent with metadata creation:")
     print(f"  Total time: {total_time_ms:.2f}ms for {iterations} events")
     print(f"  Average: {avg_time_ms:.4f}ms per event")
 
@@ -117,7 +116,7 @@ def test_phase_event_serialization_performance():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / iterations
 
-    print(f"\nPhaseEvent serialization performance:")
+    print("\nPhaseEvent serialization performance:")
     print(f"  Total time: {total_time_ms:.2f}ms for {iterations} serializations")
     print(f"  Average: {avg_time_ms:.4f}ms per serialization")
 
@@ -167,7 +166,7 @@ def test_phase_event_json_serialization_performance():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / iterations
 
-    print(f"\nPhaseEvent JSON serialization performance:")
+    print("\nPhaseEvent JSON serialization performance:")
     print(f"  Total time: {total_time_ms:.2f}ms for {iterations} JSON conversions")
     print(f"  Average: {avg_time_ms:.4f}ms per JSON conversion")
 
@@ -202,7 +201,7 @@ def test_reasoning_data_phase_accumulation():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / num_events
 
-    print(f"\nReasoningData phase accumulation:")
+    print("\nReasoningData phase accumulation:")
     print(f"  Total time: {total_time_ms:.2f}ms for {num_events} events")
     print(f"  Average: {avg_time_ms:.4f}ms per event")
 
@@ -247,7 +246,7 @@ def test_reasoning_data_to_dict_performance():
     total_time_ms = (end - start) * 1000
     avg_time_ms = total_time_ms / iterations
 
-    print(f"\nReasoningData.to_dict() performance:")
+    print("\nReasoningData.to_dict() performance:")
     print(f"  Total time: {total_time_ms:.2f}ms for {iterations} calls")
     print(f"  Average: {avg_time_ms:.4f}ms per call")
 
@@ -262,7 +261,6 @@ def test_reasoning_data_to_dict_performance():
 @pytest.mark.performance
 def test_phase_event_memory_footprint():
     """Test PhaseEvent memory footprint is reasonable."""
-    import sys
 
     event = PhaseEvent(
         phase_type=PhaseType.VECTOR_SEARCH,
@@ -282,7 +280,7 @@ def test_phase_event_memory_footprint():
     metadata_size = sys.getsizeof(event.metadata)
     total_size = size_bytes + metadata_size
 
-    print(f"\nPhaseEvent memory footprint:")
+    print("\nPhaseEvent memory footprint:")
     print(f"  Event object: {size_bytes} bytes")
     print(f"  Metadata dict: {metadata_size} bytes")
     print(f"  Total estimate: {total_size} bytes")
@@ -294,7 +292,6 @@ def test_phase_event_memory_footprint():
 @pytest.mark.performance
 def test_reasoning_data_memory_growth():
     """Test ReasoningData memory usage grows linearly with events."""
-    import sys
 
     reasoning_empty = ReasoningData()
     empty_size = sys.getsizeof(reasoning_empty)
@@ -320,7 +317,7 @@ def test_reasoning_data_memory_growth():
 
     full_size = sys.getsizeof(reasoning_full)
 
-    print(f"\nReasoningData memory growth:")
+    print("\nReasoningData memory growth:")
     print(f"  Empty: {empty_size} bytes")
     print(f"  With 100 events: {full_size} bytes")
     print(f"  Growth: {full_size - empty_size} bytes")
@@ -360,7 +357,7 @@ def test_phase_event_stream_throughput():
     elapsed_seconds = end - start
     throughput = iterations / elapsed_seconds
 
-    print(f"\nPhaseEvent stream throughput:")
+    print("\nPhaseEvent stream throughput:")
     print(f"  Events created and serialized: {iterations}")
     print(f"  Time: {elapsed_seconds:.2f}s")
     print(f"  Throughput: {throughput:.0f} events/second")
@@ -403,7 +400,7 @@ def test_reasoning_data_batch_operations():
     total_events = len(reasoning.phase_events)
     total_time_ms = (end - start) * 1000
 
-    print(f"\nReasoningData batch operations:")
+    print("\nReasoningData batch operations:")
     print(f"  Total events: {total_events}")
     print(f"  Total time: {total_time_ms:.2f}ms")
     print(f"  Average per batch: {total_time_ms / 10:.2f}ms")
@@ -451,7 +448,7 @@ def test_phase_event_vs_dict():
         }
     dict_time = time.perf_counter() - start
 
-    print(f"\nPhaseEvent vs dict comparison:")
+    print("\nPhaseEvent vs dict comparison:")
     print(f"  Pydantic: {pydantic_time * 1000:.2f}ms for {iterations} operations")
     print(f"  Plain dict: {dict_time * 1000:.2f}ms for {iterations} operations")
     print(f"  Overhead: {(pydantic_time / dict_time - 1) * 100:.1f}%")
@@ -490,7 +487,7 @@ def test_high_volume_event_creation():
         batch_time = (time.perf_counter() - start) * 1000
         batch_times.append(batch_time)
 
-    print(f"\nHigh volume event creation (10,000 events):")
+    print("\nHigh volume event creation (10,000 events):")
     print(f"  Batches: {batches} x {batch_size} events")
     print(f"  Batch times (ms): {[f'{t:.2f}' for t in batch_times]}")
     print(f"  Average: {sum(batch_times) / len(batch_times):.2f}ms per batch")

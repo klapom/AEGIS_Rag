@@ -12,7 +12,6 @@ Test validates data consistency across all storage layers.
 """
 
 import asyncio
-import time
 from pathlib import Path
 
 import pytest
@@ -20,7 +19,6 @@ from neo4j import AsyncGraphDatabase
 from playwright.async_api import Page, expect
 from qdrant_client import AsyncQdrantClient
 
-from src.components.vector_search.bm25_search import BM25Search
 from src.core.config import settings
 
 
@@ -371,10 +369,10 @@ education accessible to millions of students worldwide.
         print("\n" + "="*70)
         print("✅ COMPLETE DOCUMENT INGESTION WORKFLOW TEST PASSED")
         print("="*70)
-        print(f"Summary:")
+        print("Summary:")
         print(f"  - Chunks added: {chunks_added}")
         print(f"  - Entities extracted: {entities_added}")
         print(f"  - Relations extracted: {relations_added}")
         print(f"  - Relations with source_chunk_id: {relations_with_chunk_id}")
-        print(f"  - Query answered correctly: Yes")
+        print("  - Query answered correctly: Yes")
         print(f"  - Citations valid: {citation_count > 0}")

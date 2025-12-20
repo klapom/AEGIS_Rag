@@ -5,7 +5,7 @@ import re
 
 file_path = "C:/Users/Klaus Pommer/OneDrive - Pommer IT-Consulting GmbH/99_Studium_Klaus/AEGIS_Rag/src/components/memory/redis_manager.py"
 
-with open(file_path, "r", encoding="utf-8") as f:
+with open(file_path, encoding="utf-8") as f:
     content = f.read()
 
 # Fix 1: Add type narrowing check after initialize() for all self._client usages
@@ -41,7 +41,7 @@ while i < len(lines):
     new_lines.append(line)
 
     # Check if this is an initialize() call
-    if "await self.initialize()" in line and not "def initialize" in line:
+    if "await self.initialize()" in line and "def initialize" not in line:
         # Check if next line already has a type narrowing check
         if i + 1 < len(lines):
             next_line = lines[i + 1]

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load environment, then override with localhost for direct access
 from dotenv import load_dotenv
+
 load_dotenv(".env.dgx-spark")
 
 # Override hostnames for running outside Docker

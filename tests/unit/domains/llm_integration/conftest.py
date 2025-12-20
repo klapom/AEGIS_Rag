@@ -1,10 +1,9 @@
 """Pytest configuration and fixtures for LLM integration domain tests."""
 
-import sqlite3
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 

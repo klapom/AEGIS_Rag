@@ -9,12 +9,9 @@ Tests cover:
 - Error scenarios
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.api.v1.admin_indexing import (
     get_last_reindex_timestamp,

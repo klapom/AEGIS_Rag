@@ -11,7 +11,6 @@ This script systematically fixes common MyPy strict mode errors:
 
 import re
 from pathlib import Path
-from typing import List, Tuple
 
 # Base directory
 BASE_DIR = Path(
@@ -162,10 +161,10 @@ def fix_returning_any(content: str) -> str:
     return "\n".join(new_lines)
 
 
-def process_file(file_path: Path) -> Tuple[bool, List[str]]:
+def process_file(file_path: Path) -> tuple[bool, list[str]]:
     """Process a single Python file and apply all fixes."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         original_content = content

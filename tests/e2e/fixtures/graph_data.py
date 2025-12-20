@@ -8,7 +8,6 @@ This module provides fixtures for testing knowledge graph visualization and expl
 """
 
 from pathlib import Path
-from typing import List
 
 import pytest
 
@@ -661,7 +660,7 @@ def indexed_graph_documents(
     stanford_ai_lab_document: Path,
     google_brain_document: Path,
     deep_learning_pioneers_document: Path,
-) -> List[Path]:
+) -> list[Path]:
     """Get all graph-rich documents for knowledge graph testing.
 
     These documents form an interesting knowledge graph with:

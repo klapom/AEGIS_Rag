@@ -10,7 +10,7 @@ This script tests:
 import asyncio
 import sys
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # Add src to path
@@ -51,22 +51,22 @@ async def test_conversation_archiving():
                 {
                     "role": "user",
                     "content": "What is RAG?",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "RAG stands for Retrieval-Augmented Generation. It's a technique that combines retrieval of relevant documents with LLM generation.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "user",
                     "content": "How does vector search work in RAG?",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "Vector search uses embeddings to find semantically similar documents. Qdrant stores these vectors for efficient similarity search.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             ],
             "title": "RAG and Vector Search",
@@ -77,22 +77,22 @@ async def test_conversation_archiving():
                 {
                     "role": "user",
                     "content": "Tell me about Neo4j and graph databases",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "Neo4j is a graph database that stores data as nodes and relationships. It's excellent for modeling connected data and knowledge graphs.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "user",
                     "content": "How do you use Neo4j with LLMs?",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "You can use Neo4j to store entity relationships extracted by LLMs, creating a knowledge graph that can be queried for context retrieval.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             ],
             "title": "Neo4j and Graph RAG",
@@ -103,22 +103,22 @@ async def test_conversation_archiving():
                 {
                     "role": "user",
                     "content": "What are the best practices for chunking documents?",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "Good chunking strategies include semantic chunking (respecting document structure), overlapping chunks, and adaptive chunk sizes based on content type.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "user",
                     "content": "How do you handle code files?",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
                 {
                     "role": "assistant",
                     "content": "Code files should be chunked at function/class boundaries to preserve semantic meaning. Use language-specific parsers for better results.",
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 },
             ],
             "title": "Document Chunking Strategies",
@@ -131,8 +131,8 @@ async def test_conversation_archiving():
         # Store conversation in Redis
         conversation_data = {
             "messages": conv["messages"],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "message_count": len(conv["messages"]),
             "title": conv["title"],
         }
@@ -278,16 +278,16 @@ async def test_conversation_archiving():
             {
                 "role": "user",
                 "content": "This is an old conversation",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             {
                 "role": "assistant",
                 "content": "Yes, this should be auto-archived",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         ],
-        "created_at": (datetime.now(timezone.utc) - timedelta(days=8)).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": (datetime.now(UTC) - timedelta(days=8)).isoformat(),
+        "updated_at": datetime.now(UTC).isoformat(),
         "message_count": 2,
         "title": "Old Conversation",
     }
@@ -325,9 +325,9 @@ async def test_conversation_archiving():
     print("=" * 80)
     print(f"✓ Created {len(test_sessions)} test conversations")
     print(f"✓ Archived {len(archived_point_ids)} conversations to Qdrant")
-    print(f"✓ Verified conversations removed from Redis")
-    print(f"✓ Semantic search returned relevant results")
-    print(f"✓ Background archiving job processed old conversations")
+    print("✓ Verified conversations removed from Redis")
+    print("✓ Semantic search returned relevant results")
+    print("✓ Background archiving job processed old conversations")
     print("=" * 80)
 
 

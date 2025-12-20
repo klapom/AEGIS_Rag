@@ -11,9 +11,7 @@ Tests:
 - Error handling for invalid data
 """
 
-from unittest.mock import MagicMock, patch
 import pytest
-
 
 # ============================================================================
 # Test: Initialization

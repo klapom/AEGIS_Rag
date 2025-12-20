@@ -27,7 +27,7 @@ async def main():
     # Configuration
     collection_name = settings.qdrant_collection
 
-    print(f"[*] Configuration:")
+    print("[*] Configuration:")
     print(f"   Collection: {collection_name}")
     print(f"   Qdrant: {settings.qdrant_host}:{settings.qdrant_port}")
     print()

@@ -28,7 +28,6 @@ from ollama import AsyncClient
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -283,7 +282,7 @@ def parse_annotation_file(file_path: Path) -> list[dict[str, Any]]:
     """
     entities = {}  # Use dict to count mentions per entity
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         lines = f.readlines()
 
     current_entity = None
@@ -337,14 +336,14 @@ async def main():
     print(f"      Loaded {len(entities)} entities")
 
     # Initialize validator
-    print(f"\n[2/4] Initializing LLM validator (gemma-3-4b Q4_K_M)...")
+    print("\n[2/4] Initializing LLM validator (gemma-3-4b Q4_K_M)...")
     validator = LLMEntityValidator(
         llm_model="hf.co/MaziyarPanahi/gemma-3-4b-it-GGUF:Q4_K_M",  # Available in Docker Ollama
         temperature=0.1,  # Low for consistent decisions
     )
 
     # Validate entities
-    print(f"\n[3/4] Validating entities with LLM...")
+    print("\n[3/4] Validating entities with LLM...")
     print(f"      (This will take ~{len(entities) * 3}s for {len(entities)} entities)\n")
 
     results = []
@@ -385,7 +384,7 @@ async def main():
         )
 
     # Output results
-    print(f"\n[4/4] Writing results...")
+    print("\n[4/4] Writing results...")
 
     if len(entities) == 0:
         print("\n[ERROR] No entities found in annotation file!")
@@ -395,7 +394,7 @@ async def main():
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("# LLM Entity Validation Results\n")
         f.write("# Option 4: Hybrid SpaCy→LLM Validation Pipeline\n")
-        f.write(f"# Generated: 2025-11-07\n\n")
+        f.write("# Generated: 2025-11-07\n\n")
 
         f.write("## Summary\n\n")
         f.write(f"- **Total Entities:** {len(entities)}\n")

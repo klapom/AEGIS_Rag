@@ -26,7 +26,7 @@ def process_round2_benchmark(input_file: str, output_file: str, deduplicator: Mu
     print(f"Processing: {input_file}")
     print(f"{'='*80}")
 
-    with open(input_file, 'r') as f:
+    with open(input_file) as f:
         data = json.load(f)
 
     # Process each model's results

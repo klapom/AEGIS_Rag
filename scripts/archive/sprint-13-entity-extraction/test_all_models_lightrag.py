@@ -5,16 +5,15 @@ Tests each model with the correct LightRAG delimiter format (<|#|>).
 
 import asyncio
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
 import time
+from pathlib import Path
+from typing import Any
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import ollama
-
 
 # Test document from E2E test
 TEST_TEXT = """
@@ -71,7 +70,7 @@ Extract entities and relationships from the following text:
 """
 
 
-async def test_model(model_name: str, client: ollama.AsyncClient) -> Dict[str, Any]:
+async def test_model(model_name: str, client: ollama.AsyncClient) -> dict[str, Any]:
     """Test a single model with LightRAG-style extraction."""
     result = {
         "model": model_name,
@@ -145,7 +144,7 @@ async def main():
     print("LIGHTRAG MODEL COMPATIBILITY TEST")
     print("=" * 100)
     print(f"\nTesting {len(llm_models)} models with LightRAG delimiter format (<|#|>)")
-    print(f"Test document: Apple Inc. founding story (4 expected entities, 3+ relationships)\n")
+    print("Test document: Apple Inc. founding story (4 expected entities, 3+ relationships)\n")
 
     results = []
 
@@ -200,7 +199,7 @@ async def main():
             )
             print(f"   - Generation time: {r['generation_time_seconds']}s")
             print(f"   - Completion marker: {'[OK]' if r['has_completion_marker'] else '[X]'}")
-            print(f"   - Output preview:")
+            print("   - Output preview:")
             print(f"     {r['output_preview'][:200]}...")
     else:
         print("\n" + "=" * 100)

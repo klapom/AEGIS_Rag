@@ -73,7 +73,7 @@ async def test_single_pdf(pdf_path: str):
                 vlm_count = len(state.get("vlm_metadata", []))
                 error_count = len(state.get("errors", []))
 
-                print(f"STATUS: SUCCESS")
+                print("STATUS: SUCCESS")
                 print(f"  - Document ID: {doc_id}")
                 print(f"  - Chunks created: {chunk_count}")
                 print(f"  - VLM images processed: {vlm_count}")
@@ -81,7 +81,7 @@ async def test_single_pdf(pdf_path: str):
 
                 # Show VLM metadata
                 if vlm_count > 0:
-                    print(f"\n  VLM Image Details:")
+                    print("\n  VLM Image Details:")
                     for i, vlm_meta in enumerate(state.get("vlm_metadata", []), 1):
                         image_id = vlm_meta.get("image_id", "unknown")
                         description = vlm_meta.get("description", "")[:100]
@@ -89,14 +89,14 @@ async def test_single_pdf(pdf_path: str):
 
                 # Show errors if any
                 if error_count > 0:
-                    print(f"\n  Non-fatal Errors:")
+                    print("\n  Non-fatal Errors:")
                     for i, error in enumerate(state.get("errors", [])[:3], 1):
                         error_node = error.get("node", "unknown")
                         error_msg = error.get("message", "")[:80]
                         print(f"    {i}. [{error_node}] {error_msg}...")
             else:
                 error_msg = result.get("error", "Unknown error")
-                print(f"STATUS: FAILED")
+                print("STATUS: FAILED")
                 print(f"  - Document ID: {doc_id}")
                 print(f"  - Error: {error_msg}")
 
@@ -113,7 +113,7 @@ async def test_single_pdf(pdf_path: str):
     print("\n" + "=" * 80)
     print("INGESTION COMPLETED")
     print("=" * 80)
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  - Duration: {total_time:.1f}s")
     print(f"  - File size: {file_size_mb:.2f} MB")
     print(f"  - Processing speed: {file_size_mb / (total_time / 60):.2f} MB/min")

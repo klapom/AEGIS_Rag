@@ -10,7 +10,6 @@ These fixtures are used by conftest.py and automatically available to all tests.
 """
 
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
@@ -19,7 +18,7 @@ import pytest
 def sample_documents_dir(tmp_path_factory) -> Path:
     """Create a temporary directory with sample test documents."""
     doc_dir = tmp_path_factory.mktemp("sample_docs")
-    
+
     # Create various sample documents
     samples = {
         "tech_doc.txt": """# Technical Document: Machine Learning Algorithms
@@ -68,10 +67,10 @@ Results show 85% effectiveness with combination therapy approaches.
 4. Termination Conditions
 """,
     }
-    
+
     for filename, content in samples.items():
         (doc_dir / filename).write_text(content, encoding="utf-8")
-    
+
     return doc_dir
 
 

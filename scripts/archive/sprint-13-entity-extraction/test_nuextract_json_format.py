@@ -7,8 +7,9 @@ then convert to LightRAG's delimiter-separated format.
 
 import json
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
 
 # ============================================================================

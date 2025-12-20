@@ -13,14 +13,13 @@ These tests verify the complete streaming workflow with real components:
 
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from src.agents.coordinator import CoordinatorAgent
 from src.agents.reasoning_data import ReasoningData
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
-
 
 # ============================================================================
 # Full Streaming Workflow Integration Tests

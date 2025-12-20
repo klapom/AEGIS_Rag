@@ -23,11 +23,10 @@ from src.core.config import settings
 async def check_ollama_available() -> bool:
     """Check if Ollama is available and responsive."""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                return resp.status == 200
+        async with aiohttp.ClientSession() as session, session.get(
+            f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
+        ) as resp:
+            return resp.status == 200
     except Exception:
         return False
 
@@ -35,15 +34,14 @@ async def check_ollama_available() -> bool:
 async def check_model_available(model: str = "bge-reranker-v2-m3") -> bool:
     """Check if the reranker model is available in Ollama."""
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
-            ) as resp:
-                if resp.status != 200:
-                    return False
-                data = await resp.json()
-                models = data.get("models", [])
-                return any(m.get("name", "").startswith(model) for m in models)
+        async with aiohttp.ClientSession() as session, session.get(
+            f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
+        ) as resp:
+            if resp.status != 200:
+                return False
+            data = await resp.json()
+            models = data.get("models", [])
+            return any(m.get("name", "").startswith(model) for m in models)
     except Exception:
         return False
 

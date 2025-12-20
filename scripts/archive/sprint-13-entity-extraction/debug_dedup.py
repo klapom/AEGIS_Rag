@@ -6,8 +6,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.core.config import get_settings
 from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
+from src.core.config import get_settings
 
 # Get settings
 settings = get_settings()

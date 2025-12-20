@@ -11,7 +11,7 @@ This script:
 
 import asyncio
 import sys
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 
 async def main():
@@ -23,7 +23,7 @@ async def main():
 
     try:
         # Import required modules
-        from src.api.v1.chat import save_conversation_turn, get_followup_questions
+        from src.api.v1.chat import get_followup_questions, save_conversation_turn
         from src.components.memory import get_redis_memory
 
         print("\n[1] Getting Redis memory manager...")

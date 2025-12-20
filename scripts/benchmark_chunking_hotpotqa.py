@@ -6,13 +6,13 @@ Tests chunk sizes: 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000
 
 This allows proper testing of how chunk size affects entity extraction.
 """
+import argparse
 import json
 import time
-import requests
-import argparse
 from datetime import datetime
-from datasets import load_dataset
 
+import requests
+from datasets import load_dataset
 
 # Entity extraction prompt
 ENTITY_PROMPT = """Extract all named entities from the following text. Return ONLY a valid JSON array.

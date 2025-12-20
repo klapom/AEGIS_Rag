@@ -20,8 +20,7 @@ References:
 
 import asyncio
 import re
-from pathlib import Path
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio

@@ -14,19 +14,17 @@ Usage:
 import subprocess
 import sys
 import time
-from pathlib import Path
-from typing import List, Tuple
 
 
 class CIFixTester:
     """Test CI fixes locally before pushing."""
 
     def __init__(self):
-        self.passed: List[str] = []
-        self.failed: List[str] = []
-        self.warnings: List[str] = []
+        self.passed: list[str] = []
+        self.failed: list[str] = []
+        self.warnings: list[str] = []
 
-    def run_test(self, name: str, command: List[str], description: str) -> bool:
+    def run_test(self, name: str, command: list[str], description: str) -> bool:
         """Run a single test and track results."""
         print(f"\n{'=' * 70}")
         print(f"TEST: {name}")

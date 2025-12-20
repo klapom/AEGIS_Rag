@@ -19,8 +19,9 @@ if sys.platform == "win32":
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 from neo4j import AsyncGraphDatabase
+
+from src.components.graph_rag.lightrag_wrapper import LightRAGWrapper
 from src.core.config import settings
 
 
@@ -86,14 +87,14 @@ async def test_insert_and_provenance():
     # Insert
     result = await wrapper.insert_documents_optimized([test_doc])
 
-    print(f"\n✓ Insertion complete:")
+    print("\n✓ Insertion complete:")
     print(f"  - Total: {result['total']}")
     print(f"  - Success: {result['success']}")
     print(f"  - Failed: {result['failed']}")
     print(f"  - Time: {result['total_time_seconds']:.2f}s")
 
     stats = result["stats"]
-    print(f"\n✓ Statistics:")
+    print("\n✓ Statistics:")
     print(f"  - Chunks: {stats['total_chunks']}")
     print(f"  - Entities: {stats['total_entities']}")
     print(f"  - Relations: {stats['total_relations']}")

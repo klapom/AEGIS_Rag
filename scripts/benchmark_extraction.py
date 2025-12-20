@@ -146,7 +146,7 @@ async def run_single_extraction(text: str, strategy: str = "unified"):
     print(f"EXTRACTION RESULT ({strategy.upper()})")
     print("=" * 70)
 
-    print(f"\nMetrics:")
+    print("\nMetrics:")
     print(f"  Total time: {result.metrics.total_time_ms:.1f}ms")
     print(f"  LLM calls: {result.metrics.llm_calls}")
     print(f"  Input tokens: {result.metrics.total_input_tokens}")

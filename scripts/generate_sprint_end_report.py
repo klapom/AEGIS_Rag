@@ -472,7 +472,7 @@ def _generate_medium_priority_actions(args) -> str:
             actions.append(f"- [ ] Convert {args.fixmes} FIXMEs to GitHub issues")
 
         if int(args.complexity or 0) > 20:
-            actions.append(f"- [ ] Refactor remaining high-complexity functions")
+            actions.append("- [ ] Refactor remaining high-complexity functions")
 
     except (ValueError, TypeError):
         pass

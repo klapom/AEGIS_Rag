@@ -98,7 +98,7 @@ async def main():
         if chunk_sample_result and chunk_sample_result[0].get("content"):
             content = chunk_sample_result[0]["content"]
             preview = content[:200] if len(content) > 200 else content
-            print(f"   Sample chunk (first 200 chars):")
+            print("   Sample chunk (first 200 chars):")
             print(f"   {preview}...")
         else:
             print("   No chunk content found")
@@ -114,7 +114,7 @@ async def main():
         print("\n" + "=" * 60)
         if entity_count < 10 and chunk_count > 50:
             print("⚠️  WARNING: Very low entity count for chunk count!")
-            print(f"   Expected: ~10-50 entities for 103 chunks")
+            print("   Expected: ~10-50 entities for 103 chunks")
             print(f"   Actual: Only {entity_count} entities")
             print("\n   Possible causes:")
             print("   1. spaCy NER not running during extraction")

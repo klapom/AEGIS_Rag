@@ -6,8 +6,9 @@ Sprint 13 TD-31: Compare simple vs detailed prompts for NuExtract models.
 
 import json
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
 
 # ============================================================================

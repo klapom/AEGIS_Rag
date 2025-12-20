@@ -13,17 +13,15 @@ Tests:
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.components.domain_training.training_progress import (
     ProgressEvent,
-    TrainingPhase,
 )
 from src.components.domain_training.training_runner import run_dspy_optimization
 from src.components.domain_training.training_stream import EventType
-
 
 # ============================================================================
 # Fixtures

@@ -23,7 +23,6 @@ Usage:
 import asyncio
 import sys
 from datetime import datetime
-from typing import Any, Dict, List
 
 # Color codes for terminal output
 GREEN = "\033[92m"
@@ -316,9 +315,9 @@ def test_training_progress_imports() -> bool:
 
     try:
         from src.components.domain_training import (
-            TrainingProgressTracker,
-            TrainingPhase,
             ProgressEvent,
+            TrainingPhase,
+            TrainingProgressTracker,
         )
         print_test(
             "Import TrainingProgressTracker class",
@@ -426,8 +425,8 @@ def test_additional_components() -> bool:
     try:
         from src.components.domain_training import (
             GroupedIngestionProcessor,
-            IngestionItem,
             IngestionBatch,
+            IngestionItem,
             get_grouped_ingestion_processor,
         )
         print_test(
@@ -622,7 +621,7 @@ async def test_component_initialization() -> bool:
 
     # Test TrainingProgressTracker initialization
     try:
-        from src.components.domain_training import TrainingProgressTracker, TrainingPhase
+        from src.components.domain_training import TrainingProgressTracker
 
         tracker = TrainingProgressTracker(
             training_run_id="test-run-123",
@@ -823,7 +822,7 @@ def test_configuration() -> bool:
 # Main Test Runner
 # ============================================================================
 
-async def run_all_tests() -> Dict[str, bool]:
+async def run_all_tests() -> dict[str, bool]:
     """Run all tests and return results."""
     results = {}
 
@@ -845,7 +844,7 @@ async def run_all_tests() -> Dict[str, bool]:
     return results
 
 
-def print_summary(results: Dict[str, bool]) -> None:
+def print_summary(results: dict[str, bool]) -> None:
     """Print test summary and statistics."""
     print_section("SUMMARY")
 

@@ -25,14 +25,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from langgraph.graph import END, StateGraph
 
+from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
     embedding_node,
     graph_extraction_node,
 )
-from src.components.vector_search.qdrant_client import get_qdrant_client
-from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.core.config import settings
 
 # Configure logging
@@ -172,7 +171,7 @@ async def main():
     combined_text = "\n\n".join(RAGAS_TEST_SAMPLE["contexts"])
     document_id = hashlib.sha256(combined_text.encode()).hexdigest()[:16]
 
-    logger.info(f"\n[2] Test document:")
+    logger.info("\n[2] Test document:")
     logger.info(f"  Question ID: {RAGAS_TEST_SAMPLE['question_id']}")
     logger.info(f"  Document ID: {document_id}")
     logger.info(f"  Text length: {len(combined_text)} chars")
@@ -191,7 +190,7 @@ async def main():
     try:
         final_state = await pipeline.ainvoke(state)
 
-        logger.info(f"\n[4] Pipeline Results:")
+        logger.info("\n[4] Pipeline Results:")
         logger.info(f"  Chunking status: {final_state.get('chunking_status', 'unknown')}")
         logger.info(f"  Embedding status: {final_state.get('embedding_status', 'unknown')}")
         logger.info(f"  Graph status: {final_state.get('graph_status', 'unknown')}")
@@ -229,7 +228,7 @@ async def main():
 
     try:
         from qdrant_client import QdrantClient
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         qdrant_sync = QdrantClient(host="localhost", port=6333)
 

@@ -16,14 +16,12 @@ Usage:
     python scripts/generate_document_ingestion_report.py --pdf preview_mega.pdf --output custom_report.html
 """
 
-import asyncio
 import argparse
-import json
-import base64
+import asyncio
 import re
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+
 import structlog
 
 from src.components.ingestion.docling_client import DoclingContainerClient
@@ -112,7 +110,7 @@ def extract_images_from_markdown(md_content: str) -> dict:
     return images
 
 
-def get_image_base64(image_data: dict, json_content: dict, md_images: dict) -> Optional[str]:
+def get_image_base64(image_data: dict, json_content: dict, md_images: dict) -> str | None:
     """Extract image as base64 from markdown content."""
     image_ref = image_data.get("ref", "")
 
@@ -132,7 +130,7 @@ def format_currency(amount: float) -> str:
     return f"${amount:.6f}" if amount < 0.01 else f"${amount:.4f}"
 
 
-def get_metrics_html(doc_metrics: Dict) -> str:
+def get_metrics_html(doc_metrics: dict) -> str:
     """Generate AI Processing Metrics section for HTML report."""
     vlm_calls = doc_metrics.get("vlm_calls", 0)
     total_cost = doc_metrics.get("total_cost", 0.0)
@@ -178,7 +176,7 @@ def get_metrics_html(doc_metrics: Dict) -> str:
 
 
 def generate_html_report(
-    parsed_docs: List[Dict], output_file: Path, cost_tracker: Optional[CostTracker] = None
+    parsed_docs: list[dict], output_file: Path, cost_tracker: CostTracker | None = None
 ):
     """Generate comprehensive HTML report with metrics and cost tracking."""
 
@@ -696,9 +694,10 @@ async def analyze_documents(pdf_path: Path, use_cloud_vlm: bool = False):
             }
 
             # Extract base64 images from markdown content
-            import re
             import base64
+            import re
             from io import BytesIO
+
             from PIL import Image
 
             # Pattern: ![alt](data:image/png;base64,iVBORw0KGgo...)
@@ -823,7 +822,7 @@ async def analyze_documents(pdf_path: Path, use_cloud_vlm: bool = False):
         print(f"  Avg Latency: {metrics.get('avg_latency_ms', 0):.0f}ms")
 
         provider_counts = metrics.get("provider_counts", {})
-        print(f"  Provider Distribution:")
+        print("  Provider Distribution:")
         for provider, count in provider_counts.items():
             if count > 0:
                 print(f"    - {provider}: {count} calls")

@@ -12,6 +12,7 @@ Tests:
 import asyncio
 import sys
 from pathlib import Path
+
 from PIL import Image, ImageDraw
 
 # Add project root to path
@@ -19,8 +20,9 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import structlog
-from src.components.llm_proxy.dashscope_vlm import get_dashscope_vlm_client
+
 from src.components.llm_proxy.cost_tracker import CostTracker
+from src.components.llm_proxy.dashscope_vlm import get_dashscope_vlm_client
 
 logger = structlog.get_logger(__name__)
 

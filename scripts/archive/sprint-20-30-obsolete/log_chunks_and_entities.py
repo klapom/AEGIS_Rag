@@ -67,7 +67,7 @@ async def main():
                 print(f"  ID: {chunk_id}")
                 print(f"  Index: {index}")
                 print(f"  Tokens: {tokens}")
-                print(f"  Text Preview:")
+                print("  Text Preview:")
                 print(f"  {preview_safe}...")
                 print()
         else:
@@ -101,7 +101,7 @@ async def main():
                 label_str = ":".join(labels)
                 print(f"\n--- Entity {i} ---")
                 print(f"  Labels: {label_str}")
-                print(f"  Properties:")
+                print("  Properties:")
                 for key, val in props.items():
                     if isinstance(val, str) and len(val) > 100:
                         val = val[:100] + "..."

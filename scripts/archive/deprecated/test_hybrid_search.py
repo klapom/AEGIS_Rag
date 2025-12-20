@@ -13,9 +13,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from src.components.vector_search.embeddings import EmbeddingService
 from src.components.vector_search.hybrid_search import HybridSearch
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
-from src.components.vector_search.embeddings import EmbeddingService
 
 
 async def test_search_queries():
@@ -87,10 +87,10 @@ async def test_search_queries():
             traceback.print_exc()
 
     print("[SUCCESS] All search queries completed!")
-    print(f"\nSummary:")
+    print("\nSummary:")
     print(f"   - Tested {len(test_queries)} different queries")
-    print(f"   - Collection: aegis_documents")
-    print(f"   - Embedding model: nomic-embed-text")
+    print("   - Collection: aegis_documents")
+    print("   - Embedding model: nomic-embed-text")
 
 
 if __name__ == "__main__":

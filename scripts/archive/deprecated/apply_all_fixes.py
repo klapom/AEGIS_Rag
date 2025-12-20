@@ -8,7 +8,6 @@ This script applies all three categories of fixes:
 Run this before executing test suite.
 """
 
-import re
 import sys
 from pathlib import Path
 

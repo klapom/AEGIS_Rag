@@ -63,7 +63,9 @@ async def main():
     # Step 2: Test LLMExtractionPipeline via factory
     print("\n[2] Testing LLMExtractionPipeline via factory...")
     try:
-        from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
+        from src.components.graph_rag.extraction_factory import (
+            create_extraction_pipeline_from_config,
+        )
 
         pipeline = create_extraction_pipeline_from_config()
         print(f"    Pipeline type: {type(pipeline).__name__}")
@@ -121,7 +123,12 @@ async def main():
     print("\n[4] Testing AegisLLMProxy...")
     try:
         from src.components.llm_proxy import get_aegis_llm_proxy
-        from src.components.llm_proxy.models import LLMTask, TaskType, Complexity, QualityRequirement
+        from src.components.llm_proxy.models import (
+            Complexity,
+            LLMTask,
+            QualityRequirement,
+            TaskType,
+        )
 
         proxy = get_aegis_llm_proxy()
 

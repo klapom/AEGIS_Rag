@@ -9,7 +9,6 @@ These tests ensure:
 3. Protocol definitions are properly exposed
 """
 
-import pytest
 
 
 class TestLLMIntegrationDomain:
@@ -25,13 +24,9 @@ class TestLLMIntegrationDomain:
     def test_import_models(self):
         """Test model classes are importable."""
         from src.domains.llm_integration import (
-            LLMTask,
             LLMResponse,
+            LLMTask,
             TaskType,
-            Complexity,
-            DataClassification,
-            QualityRequirement,
-            ExecutionLocation,
         )
 
         assert LLMTask is not None
@@ -49,11 +44,7 @@ class TestLLMIntegrationDomain:
         """Test VLM factory exports are importable."""
         from src.domains.llm_integration import (
             VLMBackend,
-            VLMClient,
             get_vlm_client,
-            get_vlm_backend_from_config,
-            get_shared_vlm_client,
-            close_shared_vlm_client,
         )
 
         assert VLMBackend is not None
@@ -63,14 +54,14 @@ class TestLLMIntegrationDomain:
         """Test backward compatibility via components/llm_proxy."""
         from src.components.llm_proxy import (
             AegisLLMProxy,
-            get_aegis_llm_proxy,
             CostTracker,
-            VLMBackend,
         )
 
         # Verify they are the same classes
         from src.domains.llm_integration import (
             AegisLLMProxy as DomainProxy,
+        )
+        from src.domains.llm_integration import (
             CostTracker as DomainCostTracker,
         )
 
@@ -85,10 +76,7 @@ class TestKnowledgeGraphDomain:
         """Test protocol definitions are importable."""
         from src.domains.knowledge_graph import (
             EntityExtractor,
-            RelationExtractor,
             GraphStorage,
-            GraphQueryService,
-            CommunityService,
         )
 
         # Protocols should be importable
@@ -100,7 +88,6 @@ class TestKnowledgeGraphDomain:
         from src.domains.knowledge_graph import (
             Neo4jClient,
             get_neo4j_client,
-            GraphQueryTemplates,
         )
 
         assert Neo4jClient is not None
@@ -111,8 +98,6 @@ class TestKnowledgeGraphDomain:
         from src.domains.knowledge_graph import (
             LightRAGClient,
             LightRAGWrapper,
-            get_lightrag_client,
-            DualLevelSearch,
         )
 
         assert LightRAGClient is not None
@@ -123,7 +108,6 @@ class TestKnowledgeGraphDomain:
         from src.domains.knowledge_graph import (
             ExtractionService,
             get_extraction_service,
-            ParallelExtractor,
         )
 
         assert ExtractionService is not None
@@ -132,9 +116,8 @@ class TestKnowledgeGraphDomain:
     def test_import_deduplication(self):
         """Test deduplication exports are importable."""
         from src.domains.knowledge_graph import (
-            SemanticDeduplicator,
-            HybridRelationDeduplicator,
             SYMMETRIC_RELATIONS,
+            SemanticDeduplicator,
         )
 
         assert SemanticDeduplicator is not None
@@ -145,7 +128,6 @@ class TestKnowledgeGraphDomain:
         from src.domains.knowledge_graph import (
             CommunitySummarizer,
             get_community_summarizer,
-            CommunitySearch,
         )
 
         assert CommunitySummarizer is not None
@@ -156,7 +138,6 @@ class TestKnowledgeGraphDomain:
         from src.domains.knowledge_graph import (
             GraphAnalyticsEngine,
             get_analytics_engine,
-            RecommendationEngine,
         )
 
         assert GraphAnalyticsEngine is not None
@@ -169,10 +150,8 @@ class TestDocumentProcessingDomain:
     def test_import_protocols(self):
         """Test protocol definitions are importable."""
         from src.domains.document_processing import (
-            DocumentParser,
             ChunkingService,
-            ImageEnricher,
-            IngestionPipeline,
+            DocumentParser,
         )
 
         assert DocumentParser is not None
@@ -181,10 +160,8 @@ class TestDocumentProcessingDomain:
     def test_import_parsing(self):
         """Test parsing exports are importable."""
         from src.domains.document_processing import (
-            DoclingContainerClient,
-            DoclingParsedDocument,
-            FormatRouter,
             DOCLING_FORMATS,
+            DoclingContainerClient,
         )
 
         assert DoclingContainerClient is not None
@@ -196,7 +173,6 @@ class TestDocumentProcessingDomain:
             IngestionState,
             create_initial_state,
             run_ingestion_pipeline,
-            create_ingestion_graph,
         )
 
         assert IngestionState is not None
@@ -206,9 +182,8 @@ class TestDocumentProcessingDomain:
     def test_import_chunking(self):
         """Test chunking exports are importable."""
         from src.domains.document_processing import (
-            chunking_node,
-            adaptive_section_chunking,
             SectionMetadata,
+            chunking_node,
         )
 
         assert callable(chunking_node)
@@ -217,8 +192,8 @@ class TestDocumentProcessingDomain:
     def test_import_enrichment(self):
         """Test enrichment exports are importable."""
         from src.domains.document_processing import (
-            image_enrichment_node,
             ImageProcessor,
+            image_enrichment_node,
         )
 
         assert callable(image_enrichment_node)
@@ -231,10 +206,10 @@ class TestMemoryDomain:
     def test_import_memory_protocols(self):
         """Test memory domain protocol exports are importable."""
         from src.domains.memory import (
-            ConversationMemory,
-            SessionStore,
             CacheService,
+            ConversationMemory,
             MemoryConsolidation,
+            SessionStore,
         )
 
         # Sprint 57: These are Protocol definitions
@@ -251,9 +226,9 @@ class TestVectorSearchDomain:
         """Test vector search domain protocol exports are importable."""
         from src.domains.vector_search import (
             EmbeddingService,
-            VectorStore,
             HybridSearchService,
             RerankingService,
+            VectorStore,
         )
 
         # Sprint 57: These are Protocol definitions
@@ -269,11 +244,11 @@ class TestBackwardCompatibility:
     def test_components_graph_rag_imports(self):
         """Test components/graph_rag backward compatibility."""
         from src.components.graph_rag import (
-            Neo4jClient,
-            get_neo4j_client,
             CommunitySummarizer,
-            get_community_summarizer,
+            Neo4jClient,
             SemanticDeduplicator,
+            get_community_summarizer,
+            get_neo4j_client,
         )
 
         assert Neo4jClient is not None
@@ -287,8 +262,8 @@ class TestBackwardCompatibility:
         from src.components.graph_rag.lightrag import (
             LightRAGClient,
             LightRAGWrapper,
-            get_lightrag_client,
             QueryMode,
+            get_lightrag_client,
         )
 
         assert LightRAGClient is not None
@@ -299,9 +274,9 @@ class TestBackwardCompatibility:
     def test_components_ingestion_imports(self):
         """Test components/ingestion backward compatibility."""
         from src.components.ingestion import (
+            DoclingContainerClient,
             create_initial_state,
             run_ingestion_pipeline,
-            DoclingContainerClient,
         )
 
         assert callable(create_initial_state)
@@ -311,10 +286,10 @@ class TestBackwardCompatibility:
     def test_components_memory_imports(self):
         """Test components/memory backward compatibility."""
         from src.components.memory import (
-            get_redis_memory,
             MemoryRouter,
-            get_memory_router,
             RedisMemoryManager,
+            get_memory_router,
+            get_redis_memory,
         )
 
         assert callable(get_redis_memory)
@@ -325,11 +300,11 @@ class TestBackwardCompatibility:
     def test_components_vector_search_imports(self):
         """Test components/vector_search backward compatibility."""
         from src.components.vector_search import (
-            QdrantClientWrapper,
-            get_qdrant_client,
-            HybridSearch,
             EmbeddingService,
+            HybridSearch,
+            QdrantClientWrapper,
             get_embedding_service,
+            get_qdrant_client,
         )
 
         assert QdrantClientWrapper is not None

@@ -16,9 +16,7 @@ Clear Neo4j manually and reindex Performance Tuning.pptx with the fix.
 """
 
 import asyncio
-import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 # Add project root to path
@@ -29,7 +27,6 @@ import structlog
 from llama_index.core import SimpleDirectoryReader
 
 from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -51,7 +48,7 @@ async def main():
 
     try:
         # Step 1: Clear Neo4j manually
-        print(f"\n[1/2] Clearing Neo4j...")
+        print("\n[1/2] Clearing Neo4j...")
         lightrag = await get_lightrag_wrapper_async()
 
         if lightrag.rag and lightrag.rag.chunk_entity_relation_graph:
@@ -64,7 +61,7 @@ async def main():
             return
 
         # Step 2: Index to Neo4j
-        print(f"\n[2/2] Indexing to Neo4j...")
+        print("\n[2/2] Indexing to Neo4j...")
 
         # Load document
         loader = SimpleDirectoryReader(input_files=[str(test_file)])
@@ -88,7 +85,7 @@ async def main():
         # Index
         graph_stats = await lightrag.insert_documents_optimized(lightrag_docs)
 
-        print(f"\n   [OK] Indexing complete!")
+        print("\n   [OK] Indexing complete!")
         print(f"       Total entities: {graph_stats.get('total_entities', 0)}")
         print(f"       Total relations: {graph_stats.get('total_relations', 0)}")
         print(f"       Total chunks: {graph_stats.get('total_chunks', 0)}")

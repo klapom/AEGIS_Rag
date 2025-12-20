@@ -17,14 +17,13 @@ Test Coverage:
 
 import subprocess
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.nodes.memory_management import memory_check_node
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # FIXTURES

@@ -10,7 +10,7 @@ Tests:
 - Dynamic model loading from admin config (Sprint 52.1)
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -58,33 +58,31 @@ class TestCommunitySummarizerInit:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                assert summarizer.neo4j_client is not None
-                assert summarizer.llm_proxy is not None
-                assert summarizer.model_name is not None
-                assert summarizer.prompt_template is not None
+            assert summarizer.neo4j_client is not None
+            assert summarizer.llm_proxy is not None
+            assert summarizer.model_name is not None
+            assert summarizer.prompt_template is not None
 
     def test_custom_model_name(self, mock_neo4j_client):
         """Test initialization with custom model."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer(model_name="custom-model:latest")
+            summarizer = CommunitySummarizer(model_name="custom-model:latest")
 
-                assert summarizer.model_name == "custom-model:latest"
+            assert summarizer.model_name == "custom-model:latest"
 
     def test_custom_prompt_template(self, mock_neo4j_client):
         """Test initialization with custom prompt."""
@@ -93,15 +91,14 @@ class TestCommunitySummarizerInit:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer(prompt_template=custom_prompt)
+            summarizer = CommunitySummarizer(prompt_template=custom_prompt)
 
-                assert summarizer.prompt_template == custom_prompt
+            assert summarizer.prompt_template == custom_prompt
 
 
 @pytest.mark.asyncio
@@ -113,74 +110,71 @@ class TestGenerateSummary:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                entities = [
-                    {"name": "Neural Networks", "type": "CONCEPT"},
-                    {"name": "Deep Learning", "type": "CONCEPT"},
-                ]
+            entities = [
+                {"name": "Neural Networks", "type": "CONCEPT"},
+                {"name": "Deep Learning", "type": "CONCEPT"},
+            ]
 
-                relationships = [
-                    {
-                        "source": "Neural Networks",
-                        "target": "Deep Learning",
-                        "type": "RELATES_TO",
-                    }
-                ]
+            relationships = [
+                {
+                    "source": "Neural Networks",
+                    "target": "Deep Learning",
+                    "type": "RELATES_TO",
+                }
+            ]
 
-                summary = await summarizer.generate_summary(5, entities, relationships)
+            summary = await summarizer.generate_summary(5, entities, relationships)
 
-                assert isinstance(summary, str)
-                assert len(summary) > 0
-                assert "machine learning" in summary.lower()
+            assert isinstance(summary, str)
+            assert len(summary) > 0
+            assert "machine learning" in summary.lower()
 
-                # Verify LLM proxy was called
-                mock_llm_proxy.generate.assert_called_once()
+            # Verify LLM proxy was called
+            mock_llm_proxy.generate.assert_called_once()
 
     async def test_generate_summary_empty_community(self, mock_neo4j_client, mock_llm_proxy):
         """Test handling of empty community."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                summary = await summarizer.generate_summary(5, [], [])
+            summary = await summarizer.generate_summary(5, [], [])
 
-                assert "Empty community" in summary
-                # LLM should not be called for empty communities
-                mock_llm_proxy.generate.assert_not_called()
+            assert "Empty community" in summary
+            # LLM should not be called for empty communities
+            mock_llm_proxy.generate.assert_not_called()
 
     async def test_generate_summary_no_relationships(self, mock_neo4j_client, mock_llm_proxy):
         """Test summary generation with entities but no relationships."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                entities = [
-                    {"name": "Entity1", "type": "CONCEPT"},
-                    {"name": "Entity2", "type": "CONCEPT"},
-                ]
+            entities = [
+                {"name": "Entity1", "type": "CONCEPT"},
+                {"name": "Entity2", "type": "CONCEPT"},
+            ]
 
-                summary = await summarizer.generate_summary(5, entities, [])
+            summary = await summarizer.generate_summary(5, entities, [])
 
-                assert isinstance(summary, str)
-                assert len(summary) > 0
+            assert isinstance(summary, str)
+            assert len(summary) > 0
 
     async def test_generate_summary_llm_failure(self, mock_neo4j_client):
         """Test fallback when LLM fails."""
@@ -190,23 +184,22 @@ class TestGenerateSummary:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=failing_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=failing_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                entities = [
-                    {"name": "Entity1", "type": "CONCEPT"},
-                    {"name": "Entity2", "type": "CONCEPT"},
-                ]
+            entities = [
+                {"name": "Entity1", "type": "CONCEPT"},
+                {"name": "Entity2", "type": "CONCEPT"},
+            ]
 
-                summary = await summarizer.generate_summary(5, entities, [])
+            summary = await summarizer.generate_summary(5, entities, [])
 
-                # Should fall back to simple entity listing
-                assert "Community containing" in summary
-                assert "Entity1" in summary
+            # Should fall back to simple entity listing
+            assert "Community containing" in summary
+            assert "Entity1" in summary
 
 
 @pytest.mark.asyncio
@@ -225,18 +218,17 @@ class TestGetCommunityData:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                entities = await summarizer._get_community_entities(5)
+            summarizer = CommunitySummarizer()
+            entities = await summarizer._get_community_entities(5)
 
-                assert len(entities) == 2
-                assert entities[0]["name"] == "Entity1"
-                assert entities[0]["type"] == "PERSON"
+            assert len(entities) == 2
+            assert entities[0]["name"] == "Entity1"
+            assert entities[0]["type"] == "PERSON"
 
     async def test_get_community_relationships(self, mock_neo4j_client):
         """Test retrieval of community relationships."""
@@ -250,18 +242,17 @@ class TestGetCommunityData:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                relationships = await summarizer._get_community_relationships(5)
+            summarizer = CommunitySummarizer()
+            relationships = await summarizer._get_community_relationships(5)
 
-                assert len(relationships) == 2
-                assert relationships[0]["source"] == "Entity1"
-                assert relationships[0]["target"] == "Entity2"
+            assert len(relationships) == 2
+            assert relationships[0]["source"] == "Entity1"
+            assert relationships[0]["target"] == "Entity2"
 
 
 @pytest.mark.asyncio
@@ -273,25 +264,24 @@ class TestStoreSummary:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                await summarizer._store_summary(5, "Test summary content")
+            summarizer = CommunitySummarizer()
+            await summarizer._store_summary(5, "Test summary content")
 
-                # Verify Neo4j write was called
-                mock_neo4j_client.execute_write.assert_called_once()
+            # Verify Neo4j write was called
+            mock_neo4j_client.execute_write.assert_called_once()
 
-                # Check parameters
-                call_args = mock_neo4j_client.execute_write.call_args
-                params = call_args[0][1]
+            # Check parameters
+            call_args = mock_neo4j_client.execute_write.call_args
+            params = call_args[0][1]
 
-                assert params["community_id"] == 5
-                assert params["summary"] == "Test summary content"
-                assert params["summary_length"] == len("Test summary content")
+            assert params["community_id"] == 5
+            assert params["summary"] == "Test summary content"
+            assert params["summary_length"] == len("Test summary content")
 
 
 @pytest.mark.asyncio
@@ -303,18 +293,17 @@ class TestUpdateSummariesForDelta:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                delta = CommunityDelta()  # Empty delta
-                summaries = await summarizer.update_summaries_for_delta(delta)
+            delta = CommunityDelta()  # Empty delta
+            summaries = await summarizer.update_summaries_for_delta(delta)
 
-                assert len(summaries) == 0
-                mock_llm_proxy.generate.assert_not_called()
+            assert len(summaries) == 0
+            mock_llm_proxy.generate.assert_not_called()
 
     async def test_update_summaries_new_communities(self, mock_neo4j_client, mock_llm_proxy):
         """Test updating summaries for new communities."""
@@ -335,25 +324,24 @@ class TestUpdateSummariesForDelta:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                delta = CommunityDelta(new_communities={5, 6})
-                summaries = await summarizer.update_summaries_for_delta(delta)
+            delta = CommunityDelta(new_communities={5, 6})
+            summaries = await summarizer.update_summaries_for_delta(delta)
 
-                assert len(summaries) == 2
-                assert 5 in summaries
-                assert 6 in summaries
+            assert len(summaries) == 2
+            assert 5 in summaries
+            assert 6 in summaries
 
-                # Verify summaries were generated
-                assert mock_llm_proxy.generate.call_count == 2
+            # Verify summaries were generated
+            assert mock_llm_proxy.generate.call_count == 2
 
-                # Verify summaries were stored
-                assert mock_neo4j_client.execute_write.call_count == 2
+            # Verify summaries were stored
+            assert mock_neo4j_client.execute_write.call_count == 2
 
     async def test_update_summaries_mixed_changes(self, mock_neo4j_client, mock_llm_proxy):
         """Test updating summaries for mixed delta changes."""
@@ -375,26 +363,25 @@ class TestUpdateSummariesForDelta:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                delta = CommunityDelta(
-                    new_communities={5},
-                    updated_communities={10},
-                    merged_communities={15: 20},
-                )
+            delta = CommunityDelta(
+                new_communities={5},
+                updated_communities={10},
+                merged_communities={15: 20},
+            )
 
-                summaries = await summarizer.update_summaries_for_delta(delta)
+            summaries = await summarizer.update_summaries_for_delta(delta)
 
-                # Should update 3 communities: 5 (new), 10 (updated), 20 (merge target)
-                assert len(summaries) == 3
-                assert 5 in summaries
-                assert 10 in summaries
-                assert 20 in summaries
+            # Should update 3 communities: 5 (new), 10 (updated), 20 (merge target)
+            assert len(summaries) == 3
+            assert 5 in summaries
+            assert 10 in summaries
+            assert 20 in summaries
 
 
 @pytest.mark.asyncio
@@ -422,18 +409,17 @@ class TestRegenerateAllSummaries:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
-            ):
-                summarizer = CommunitySummarizer()
+            summarizer = CommunitySummarizer()
 
-                summaries = await summarizer.regenerate_all_summaries()
+            summaries = await summarizer.regenerate_all_summaries()
 
-                assert len(summaries) == 2
-                assert 5 in summaries
-                assert 10 in summaries
+            assert len(summaries) == 2
+            assert 5 in summaries
+            assert 10 in summaries
 
 
 @pytest.mark.asyncio
@@ -449,16 +435,15 @@ class TestGetSummary:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                summary = await summarizer.get_summary(5)
+            summarizer = CommunitySummarizer()
+            summary = await summarizer.get_summary(5)
 
-                assert summary == "Existing summary text"
+            assert summary == "Existing summary text"
 
     async def test_get_summary_not_found(self, mock_neo4j_client):
         """Test getting non-existent summary."""
@@ -467,16 +452,15 @@ class TestGetSummary:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                summary = await summarizer.get_summary(999)
+            summarizer = CommunitySummarizer()
+            summary = await summarizer.get_summary(999)
 
-                assert summary is None
+            assert summary is None
 
 
 class TestSingletonPattern:
@@ -486,17 +470,16 @@ class TestSingletonPattern:
         """Test that get_community_summarizer returns singleton."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j:
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_llm:
-                mock_neo4j.return_value = AsyncMock()
-                mock_llm.return_value = AsyncMock()
+        ) as mock_neo4j, patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_llm:
+            mock_neo4j.return_value = AsyncMock()
+            mock_llm.return_value = AsyncMock()
 
-                summarizer1 = get_community_summarizer()
-                summarizer2 = get_community_summarizer()
+            summarizer1 = get_community_summarizer()
+            summarizer2 = get_community_summarizer()
 
-                assert summarizer1 is summarizer2
+            assert summarizer1 is summarizer2
 
 
 @pytest.mark.asyncio
@@ -508,16 +491,15 @@ class TestDynamicModelLoading:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer(model_name="explicit-model:1b")
-                model_name = await summarizer.get_model_name_async()
+            summarizer = CommunitySummarizer(model_name="explicit-model:1b")
+            model_name = await summarizer.get_model_name_async()
 
-                assert model_name == "explicit-model:1b"
+            assert model_name == "explicit-model:1b"
 
     @pytest.mark.skip(reason="Mock not correctly applied - needs refactoring for domains/ structure")
     async def test_get_model_name_async_loads_from_config(self, mock_neo4j_client):
@@ -525,47 +507,45 @@ class TestDynamicModelLoading:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
+
+            # Mock the admin config function
             with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+                "src.api.v1.admin.get_configured_summary_model",
+                new_callable=AsyncMock,
+                return_value="configured-model:8b",
+            ):
+                summarizer = CommunitySummarizer()  # No explicit model
+                model_name = await summarizer.get_model_name_async()
 
-                # Mock the admin config function
-                with patch(
-                    "src.api.v1.admin.get_configured_summary_model",
-                    new_callable=AsyncMock,
-                    return_value="configured-model:8b",
-                ):
-                    summarizer = CommunitySummarizer()  # No explicit model
-                    model_name = await summarizer.get_model_name_async()
-
-                    assert model_name == "configured-model:8b"
+                assert model_name == "configured-model:8b"
 
     async def test_get_model_name_async_fallback_on_config_error(self, mock_neo4j_client):
         """Test that default model is used when config loading fails."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
+
+            # Mock config loading to fail (Sprint 53-58: function moved to llm_config_provider)
             with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+                "src.components.graph_rag.llm_config_provider.get_configured_summary_model",
+                new_callable=AsyncMock,
+                side_effect=Exception("Config load failed"),
+            ):
+                from src.core.config import settings
 
-                # Mock config loading to fail (Sprint 53-58: function moved to llm_config_provider)
-                with patch(
-                    "src.components.graph_rag.llm_config_provider.get_configured_summary_model",
-                    new_callable=AsyncMock,
-                    side_effect=Exception("Config load failed"),
-                ):
-                    from src.core.config import settings
+                summarizer = CommunitySummarizer()  # No explicit model
+                model_name = await summarizer.get_model_name_async()
 
-                    summarizer = CommunitySummarizer()  # No explicit model
-                    model_name = await summarizer.get_model_name_async()
-
-                    # Should fall back to settings default
-                    assert model_name == settings.ollama_model_generation
+                # Should fall back to settings default
+                assert model_name == settings.ollama_model_generation
 
     @pytest.mark.skip(reason="Mock not correctly applied - needs refactoring for domains/ structure")
     async def test_generate_summary_uses_dynamic_model(self, mock_neo4j_client, mock_llm_proxy):
@@ -573,77 +553,73 @@ class TestDynamicModelLoading:
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+            return_value=mock_llm_proxy,
         ):
+            # Mock the admin config function
             with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-                return_value=mock_llm_proxy,
+                "src.api.v1.admin.get_configured_summary_model",
+                new_callable=AsyncMock,
+                return_value="dynamic-model:32b",
             ):
-                # Mock the admin config function
-                with patch(
-                    "src.api.v1.admin.get_configured_summary_model",
-                    new_callable=AsyncMock,
-                    return_value="dynamic-model:32b",
-                ):
-                    summarizer = CommunitySummarizer()  # No explicit model
+                summarizer = CommunitySummarizer()  # No explicit model
 
-                    entities = [
-                        {"name": "Test Entity", "type": "CONCEPT"},
-                    ]
+                entities = [
+                    {"name": "Test Entity", "type": "CONCEPT"},
+                ]
 
-                    await summarizer.generate_summary(1, entities, [])
+                await summarizer.generate_summary(1, entities, [])
 
-                    # Verify LLM proxy was called with dynamic model
-                    call_args = mock_llm_proxy.generate.call_args
-                    task = call_args[0][0]
-                    assert task.model_local == "dynamic-model:32b"
+                # Verify LLM proxy was called with dynamic model
+                call_args = mock_llm_proxy.generate.call_args
+                task = call_args[0][0]
+                assert task.model_local == "dynamic-model:32b"
 
     def test_model_name_property_returns_explicit(self, mock_neo4j_client):
         """Test that model_name property returns explicit model when set."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer(model_name="explicit:1b")
+            summarizer = CommunitySummarizer(model_name="explicit:1b")
 
-                # Property should return explicit model (sync)
-                assert summarizer.model_name == "explicit:1b"
+            # Property should return explicit model (sync)
+            assert summarizer.model_name == "explicit:1b"
 
     def test_model_name_property_returns_default(self, mock_neo4j_client):
         """Test that model_name property returns default when no explicit set."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                from src.core.config import settings
+            from src.core.config import settings
 
-                summarizer = CommunitySummarizer()  # No explicit model
+            summarizer = CommunitySummarizer()  # No explicit model
 
-                # Property should return settings default (sync)
-                assert summarizer.model_name == settings.ollama_model_generation
+            # Property should return settings default (sync)
+            assert summarizer.model_name == settings.ollama_model_generation
 
     def test_model_name_setter(self, mock_neo4j_client):
         """Test that model_name setter updates explicit model."""
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j_client,
-        ):
-            with patch(
-                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-            ) as mock_get_proxy:
-                mock_get_proxy.return_value = AsyncMock()
+        ), patch(
+            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+        ) as mock_get_proxy:
+            mock_get_proxy.return_value = AsyncMock()
 
-                summarizer = CommunitySummarizer()
-                summarizer.model_name = "new-model:4b"
+            summarizer = CommunitySummarizer()
+            summarizer.model_name = "new-model:4b"
 
-                assert summarizer.model_name == "new-model:4b"
-                assert summarizer._explicit_model_name == "new-model:4b"
+            assert summarizer.model_name == "new-model:4b"
+            assert summarizer._explicit_model_name == "new-model:4b"

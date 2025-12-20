@@ -22,9 +22,9 @@ import pytest
 
 # Sprint 54: Functions moved to nodes/ package
 from src.components.ingestion.nodes.adaptive_chunking import (
-    adaptive_section_chunking,
     _create_chunk,
     _merge_sections,
+    adaptive_section_chunking,
     merge_small_chunks,
 )
 from src.components.ingestion.nodes.models import (

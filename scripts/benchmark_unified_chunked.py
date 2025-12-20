@@ -280,32 +280,32 @@ def print_summary(result: ChunkedBenchmarkResult, samples: list[ChunkedSample]):
     print(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 80)
 
-    print(f"\n--- OVERVIEW ---")
+    print("\n--- OVERVIEW ---")
     print(f"Samples processed: {result.samples_processed}")
     print(f"Total chunks processed: {result.total_chunks_processed}")
     print(f"Total time: {result.total_time_ms/1000:.1f}s ({result.total_time_ms/60000:.1f}min)")
 
-    print(f"\n--- PERFORMANCE ---")
+    print("\n--- PERFORMANCE ---")
     print(f"Avg time per chunk: {result.avg_time_per_chunk_ms:.0f}ms")
     print(f"Avg entities per chunk: {result.avg_entities_per_chunk:.1f}")
     print(f"Avg relationships per chunk: {result.avg_relationships_per_chunk:.1f}")
 
-    print(f"\n--- TOTALS ---")
+    print("\n--- TOTALS ---")
     print(f"Total entities extracted: {result.total_entities}")
     print(f"Total relationships extracted: {result.total_relationships}")
 
     # Compare with raw (unchunked) baseline from previous benchmark
-    print(f"\n--- COMPARISON WITH RAW BENCHMARK ---")
-    print(f"Previous RAW UNIFIED (7000-8000 chars per sample):")
-    print(f"  Avg time: 881,200ms (~881s)")
-    print(f"  Avg entities: 74.6 per sample")
-    print(f"")
-    print(f"Current CHUNKED UNIFIED (800-1800 tokens per chunk):")
+    print("\n--- COMPARISON WITH RAW BENCHMARK ---")
+    print("Previous RAW UNIFIED (7000-8000 chars per sample):")
+    print("  Avg time: 881,200ms (~881s)")
+    print("  Avg entities: 74.6 per sample")
+    print("")
+    print("Current CHUNKED UNIFIED (800-1800 tokens per chunk):")
     print(f"  Avg time per chunk: {result.avg_time_per_chunk_ms:.0f}ms")
     print(f"  Avg entities per chunk: {result.avg_entities_per_chunk:.1f}")
 
     # Per-sample breakdown
-    print(f"\n--- PER-SAMPLE BREAKDOWN ---")
+    print("\n--- PER-SAMPLE BREAKDOWN ---")
     for sample_result in result.per_sample_results:
         print(f"\n{sample_result['sample_id']}:")
         print(f"  Original: {sample_result['original_chars']} chars → {sample_result['num_chunks']} chunks")

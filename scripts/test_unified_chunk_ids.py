@@ -17,9 +17,9 @@ import structlog
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline
 from src.components.vector_search.qdrant_client import get_qdrant_client
-from src.components.graph_rag.neo4j_client import Neo4jClient
 from src.core.config import settings
 
 # Configure logging

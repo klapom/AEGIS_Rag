@@ -22,13 +22,10 @@ Requirements:
 import asyncio
 import sys
 import time
-from pathlib import Path
-from typing import List
 
 import httpx
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 console = Console()
@@ -54,7 +51,7 @@ async def check_ollama_running() -> bool:
         return False
 
 
-async def list_available_models() -> List[str]:
+async def list_available_models() -> list[str]:
     """List all models available in Ollama."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -164,7 +161,7 @@ async def preload_model(model_name: str, keep_alive: str = "30m") -> dict:
         }
 
 
-async def preload_all_models(models: List[str], keep_alive: str = "30m") -> List[dict]:
+async def preload_all_models(models: list[str], keep_alive: str = "30m") -> list[dict]:
     """Preload multiple models."""
     console.print(f"\n[yellow]Preloading {len(models)} model(s)...[/yellow]")
     console.print(f"[dim]Keep alive: {keep_alive}[/dim]\n")
@@ -181,7 +178,7 @@ async def preload_all_models(models: List[str], keep_alive: str = "30m") -> List
     return results
 
 
-def print_summary(results: List[dict]):
+def print_summary(results: list[dict]):
     """Print summary table of preload results."""
     console.print(f"\n[bold cyan]{'='*70}[/bold cyan]")
     console.print("[bold cyan]PRELOAD SUMMARY[/bold cyan]")
@@ -289,10 +286,10 @@ async def main():
 
     missing_models = [m for m in models_to_load if m not in available_models]
     if missing_models:
-        console.print(f"\n[yellow]Warning: Some models not found:[/yellow]")
+        console.print("\n[yellow]Warning: Some models not found:[/yellow]")
         for model in missing_models:
             console.print(f"  [red]✗[/red] {model}")
-        console.print(f"\n[yellow]Pull missing models with:[/yellow]")
+        console.print("\n[yellow]Pull missing models with:[/yellow]")
         for model in missing_models:
             console.print(f"  ollama pull {model}")
 

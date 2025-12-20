@@ -4,13 +4,11 @@ This script shows how the citation feature works similar to Perplexity.ai.
 """
 
 import asyncio
-from typing import Any
 
 
 async def demo_citation_generation():
     """Demonstrate citation generation with mock data."""
     from src.agents.answer_generator import AnswerGenerator
-    from src.components.llm_proxy.models import LLMResponse
 
     # Sample contexts (what would come from retrieval)
     contexts = [

@@ -10,11 +10,9 @@ Tests cover:
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
-import pytest
 import httpx
-from fastapi.testclient import TestClient
+import pytest
 
 
 @pytest.fixture

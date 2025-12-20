@@ -45,7 +45,6 @@ from typing import Any
 
 import httpx
 
-
 BASE_URL = os.environ.get("AEGIS_BASE_URL", "http://localhost:8000")
 ADMIN_PASSWORD = os.environ.get("AEGIS_ADMIN_PASSWORD", "admin123")
 

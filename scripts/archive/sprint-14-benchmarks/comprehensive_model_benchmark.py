@@ -7,6 +7,7 @@ Sprint 13 TD-31: Test Gemma-3-4b quantizations across diverse extraction tasks.
 import json
 import time
 from typing import Any
+
 from ollama import Client
 
 # ============================================================================
@@ -372,7 +373,7 @@ Complexity levels: SIMPLE, MEDIUM, COMPLEX, VERY COMPLEX
     with open("comprehensive_benchmark_results.json", "w") as f:
         json.dump(output, f, indent=2)
 
-    print(f"\n[OK] Detailed results saved to: comprehensive_benchmark_results.json")
+    print("\n[OK] Detailed results saved to: comprehensive_benchmark_results.json")
 
 
 if __name__ == "__main__":

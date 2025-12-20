@@ -20,8 +20,6 @@ Test Coverage:
 - test_state_updated_correctly() - All state fields updated
 """
 
-import time
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -33,7 +31,6 @@ from src.components.ingestion.nodes.document_parsers import (
     llamaindex_parse_node,
 )
 from src.core.exceptions import IngestionError
-
 
 # =============================================================================
 # FIXTURES
@@ -282,18 +279,17 @@ async def test_docling_prewarmed_container(
     with patch(
         "src.components.ingestion.nodes.document_parsers.get_prewarmed_docling_client",
         return_value=prewarmed_client,
+    ), patch(
+        "src.components.ingestion.nodes.document_parsers.is_docling_container_prewarmed",
+        return_value=True,
     ):
-        with patch(
-            "src.components.ingestion.nodes.document_parsers.is_docling_container_prewarmed",
-            return_value=True,
-        ):
-            result = await docling_extraction_node(base_state)
+        result = await docling_extraction_node(base_state)
 
-            # Verify pre-warmed container used
-            assert result["docling_status"] == "completed"
-            prewarmed_client.parse_document.assert_called_once()
-            # stop_container should NOT be called (prewarmed)
-            prewarmed_client.stop_container.assert_not_called()
+        # Verify pre-warmed container used
+        assert result["docling_status"] == "completed"
+        prewarmed_client.parse_document.assert_called_once()
+        # stop_container should NOT be called (prewarmed)
+        prewarmed_client.stop_container.assert_not_called()
 
 
 # =============================================================================

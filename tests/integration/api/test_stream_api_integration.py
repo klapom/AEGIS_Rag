@@ -14,18 +14,14 @@ These tests verify:
 import asyncio
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 from src.api.v1.chat import (
     REQUEST_TIMEOUT_SECONDS,
-    chat_stream,
-    get_coordinator,
 )
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
-
 
 # ============================================================================
 # Stream API Tests
@@ -279,7 +275,6 @@ async def test_stream_endpoint_metadata_included():
 @pytest.mark.integration
 async def test_stream_timeout_error_event():
     """Test stream emits timeout error event after timeout."""
-    from src.api.v1.chat import REQUEST_TIMEOUT_SECONDS
 
     async def slow_stream(*args, **kwargs):
         """Stream that takes too long."""
@@ -481,7 +476,6 @@ async def test_phase_events_saved_after_stream_completes():
 @pytest.mark.integration
 async def test_stream_and_non_stream_consistency(test_client):
     """Test stream and non-stream endpoints return consistent data."""
-    from src.api.v1.chat import chat
 
     query = "What is AEGIS RAG?"
     session_id = "test-consistency"

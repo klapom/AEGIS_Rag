@@ -16,7 +16,6 @@ from typing import Any
 
 from ollama import AsyncClient
 
-
 # Test document (same as used in tests)
 TEST_TEXT = """
 Python is a programming language created by Guido van Rossum.
@@ -252,7 +251,7 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
     print(f"{'='*80}")
 
     # Entity extraction
-    print(f"\n[1/2] Running entity extraction...")
+    print("\n[1/2] Running entity extraction...")
     entity_result = await extract_entities(model, client)
     print(f"  [OK] Entities: {entity_result['entity_count']}")
     print(f"  [OK] Time: {entity_result['execution_time']:.2f}s")
@@ -260,7 +259,7 @@ async def benchmark_model(model: str, client: AsyncClient) -> dict[str, Any]:
         print(f"  [WARN] Parse Error: {entity_result['parse_error']}")
 
     # Relation extraction
-    print(f"\n[2/2] Running relation extraction...")
+    print("\n[2/2] Running relation extraction...")
     relation_result = await extract_relations(model, client)
     print(f"  [OK] Relations: {relation_result['relation_count']}")
     print(f"  [OK] Time: {relation_result['execution_time']:.2f}s")

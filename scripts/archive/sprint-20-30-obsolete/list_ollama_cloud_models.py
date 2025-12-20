@@ -16,8 +16,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from any_llm import LLMProvider, list_models
 from dotenv import load_dotenv
-from any_llm import list_models, LLMProvider
 
 # Load environment variables
 load_dotenv()
@@ -83,7 +83,7 @@ async def list_available_models():
 async def test_common_models():
     """Test common model names directly."""
 
-    from any_llm import acompletion, LLMProvider
+    from any_llm import LLMProvider, acompletion
 
     api_key = os.getenv("OLLAMA_CLOUD_API_KEY")
     base_url = os.getenv("OLLAMA_CLOUD_BASE_URL")

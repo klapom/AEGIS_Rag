@@ -13,7 +13,6 @@ Tests:
 - Edge cases and error handling
 """
 
-import os
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -23,7 +22,6 @@ from src.components.domain_training.semantic_matcher import (
     SemanticMatcher,
     get_semantic_matcher,
 )
-
 
 # ============================================================================
 # Fixtures

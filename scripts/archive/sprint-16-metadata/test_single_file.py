@@ -8,11 +8,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from llama_index.core import SimpleDirectoryReader
+from qdrant_client.models import Distance
+
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
-from qdrant_client.models import Distance
-from llama_index.core import SimpleDirectoryReader
 
 
 async def main():
@@ -33,7 +34,7 @@ async def main():
     print(
         f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
     )
-    print(f"  [OK] Qdrant Client ready")
+    print("  [OK] Qdrant Client ready")
     print(f"  [OK] Collection: {collection_name}")
     print()
 
@@ -123,7 +124,7 @@ async def main():
         print("[SUCCESS] TEST COMPLETE")
         print("=" * 80)
         print(f"Points indexed: {collection_info.points_count}")
-        print(f"UUID format: VERIFIED")
+        print("UUID format: VERIFIED")
         print("=" * 80)
     else:
         print("[ERROR] Failed to verify collection")

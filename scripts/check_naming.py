@@ -6,7 +6,6 @@ Validates Python code against AEGIS RAG naming conventions.
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
 class NamingChecker:
@@ -39,7 +38,7 @@ class NamingChecker:
     }
 
     def __init__(self):
-        self.errors: List[Tuple[str, int, str]] = []
+        self.errors: list[tuple[str, int, str]] = []
 
     def check_file(self, filepath: Path) -> bool:
         """Check a single Python file for naming violations."""
@@ -52,7 +51,7 @@ class NamingChecker:
 
         # Check content
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 lines = f.readlines()
                 self._check_content(filepath, lines)
         except Exception as e:
@@ -80,7 +79,7 @@ class NamingChecker:
 
         return False
 
-    def _check_content(self, filepath: Path, lines: List[str]):
+    def _check_content(self, filepath: Path, lines: list[str]):
         """Check file content for naming violations."""
         for line_no, line in enumerate(lines, 1):
             line = line.strip()

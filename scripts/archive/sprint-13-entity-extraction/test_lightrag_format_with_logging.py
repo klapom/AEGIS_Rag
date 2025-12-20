@@ -10,6 +10,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+
 from ollama import Client
 
 # ============================================================================
@@ -236,7 +237,7 @@ def log_test_execution(log_data: dict, log_file: Path):
     """Write detailed log entry."""
     with open(log_file, "a", encoding="utf-8") as f:
         f.write("\n" + "=" * 100 + "\n")
-        f.write(f"TEST EXECUTION LOG\n")
+        f.write("TEST EXECUTION LOG\n")
         f.write("=" * 100 + "\n\n")
 
         f.write(f"Timestamp: {log_data['timestamp']}\n")
@@ -272,17 +273,17 @@ def log_test_execution(log_data: dict, log_file: Path):
         f.write(f"Has Delimiter (##): {validation['has_delimiter']}\n")
 
         if validation["errors"]:
-            f.write(f"\nErrors:\n")
+            f.write("\nErrors:\n")
             for error in validation["errors"]:
                 f.write(f"  - {error}\n")
 
         if validation["entities"]:
-            f.write(f"\nExtracted Entities:\n")
+            f.write("\nExtracted Entities:\n")
             for entity in validation["entities"][:5]:  # First 5
                 f.write(f"  - {entity['name']} ({entity['type']})\n")
 
         if validation["relations"]:
-            f.write(f"\nExtracted Relations:\n")
+            f.write("\nExtracted Relations:\n")
             for relation in validation["relations"][:5]:  # First 5
                 f.write(f"  - {relation['source']} -> {relation['target']}\n")
 
@@ -422,7 +423,7 @@ def test_model(model: str, test_case: dict, client: Client, use_think_false: boo
 
 def main():
     print(
-        """
+        f"""
 ================================================================================
     LightRAG Format Test with Detailed Logging
 ================================================================================
@@ -434,9 +435,7 @@ Testing models with LightRAG's original format (from test_lightrag_prompts.py)
 - Format: ("relationship"<|#|>source<|#|>target<|#|>description<|#|>strength)
 
 Logs will be saved to: {LOG_DIR}
-    """.format(
-            LOG_DIR=LOG_DIR
-        )
+    """
     )
 
     client = Client()
@@ -461,7 +460,7 @@ Logs will be saved to: {LOG_DIR}
         for test_case in TEST_CASES:
             # Test default mode
             print(f"\n  Test {test_case['id']}: {test_case['name']} [{test_case['complexity']}]")
-            print(f"    [default]...", end=" ", flush=True)
+            print("    [default]...", end=" ", flush=True)
 
             result = test_model(model, test_case, client, use_think_false=False)
             results.append(result)
@@ -477,7 +476,7 @@ Logs will be saved to: {LOG_DIR}
 
             # Test think=False
             time.sleep(0.5)
-            print(f"    [think=False]...", end=" ", flush=True)
+            print("    [think=False]...", end=" ", flush=True)
 
             result = test_model(model, test_case, client, use_think_false=True)
             results.append(result)
@@ -504,7 +503,7 @@ Logs will be saved to: {LOG_DIR}
     print(f"Failed: {len(failed)}")
 
     if successful:
-        print(f"\nBest Performance:")
+        print("\nBest Performance:")
         best = max(successful, key=lambda r: r["entity_count"] + r["relation_count"])
         print(f"  Model: {best['model'].split('/')[-1] if '/' in best['model'] else best['model']}")
         print(f"  Test: {best['test_name']}")

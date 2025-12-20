@@ -130,7 +130,6 @@ async def load_and_ingest_dataset(
     Returns:
         Dictionary with ingestion statistics
     """
-    from src.evaluation.benchmark_loader import BenchmarkDatasetLoader
     from src.evaluation.corpus_ingestion import BenchmarkCorpusIngestionPipeline
 
     config = TRACK_A_DATASETS[dataset_name]

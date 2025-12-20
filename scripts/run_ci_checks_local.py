@@ -13,7 +13,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple
 
 # ANSI color codes
 GREEN = "\033[92m"
@@ -47,10 +46,10 @@ def print_warning(text: str) -> None:
 
 
 def run_command(
-    command: List[str],
+    command: list[str],
     description: str,
     allow_failure: bool = False,
-) -> Tuple[bool, str]:
+) -> tuple[bool, str]:
     """Run a command and return success status and output.
 
     Args:
@@ -160,9 +159,9 @@ def main() -> None:
             error_count = int(match.group(1))
             print(f"\n{YELLOW}MyPy Errors: {error_count}{RESET}")
             if error_count < 500:
-                print_success(f"Error count acceptable (<500)")
+                print_success("Error count acceptable (<500)")
             else:
-                print_warning(f"Error count high (>500)")
+                print_warning("Error count high (>500)")
 
     # ============================================================
     # 3. Code Quality - Ruff

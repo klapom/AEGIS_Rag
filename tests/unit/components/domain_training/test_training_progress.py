@@ -14,9 +14,8 @@ Test Coverage:
 - Event history management
 """
 
-import pytest
 from datetime import datetime
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 
 from src.components.domain_training.training_progress import (
     ProgressEvent,

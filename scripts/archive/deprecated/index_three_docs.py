@@ -11,7 +11,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from llama_index.core import SimpleDirectoryReader, Settings
+from llama_index.core import Settings, SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.vector_stores.qdrant import QdrantVectorStore
@@ -34,7 +34,7 @@ async def main():
     ]
 
     # Step 1: Initialize Qdrant Client
-    print(f"\n[1/6] Connecting to Qdrant...")
+    print("\n[1/6] Connecting to Qdrant...")
     qdrant_client = QdrantClient(url="http://localhost:6333")
 
     # Check if collection exists, delete if it does
@@ -67,7 +67,7 @@ async def main():
     print("   [OK] Embedding model ready")
 
     # Step 3: Load Specific Documents
-    print(f"\n[3/6] Loading specific documents...")
+    print("\n[3/6] Loading specific documents...")
     documents = []
     for file_path in files_to_index:
         if file_path.exists():
@@ -81,7 +81,7 @@ async def main():
     print(f"   [OK] Loaded {len(documents)} documents")
 
     # Step 4: Chunk Documents
-    print(f"\n[4/6] Chunking documents...")
+    print("\n[4/6] Chunking documents...")
     splitter = SentenceSplitter(
         chunk_size=512,
         chunk_overlap=128,
@@ -90,14 +90,14 @@ async def main():
     print(f"   [OK] Created {len(nodes)} chunks")
 
     # Step 5: Create Vector Store and Index
-    print(f"\n[5/6] Generating embeddings and indexing...")
+    print("\n[5/6] Generating embeddings and indexing...")
     vector_store = QdrantVectorStore(
         client=qdrant_client,
         collection_name=collection_name,
     )
 
     # Index nodes (this generates embeddings and stores in Qdrant)
-    from llama_index.core import VectorStoreIndex, StorageContext
+    from llama_index.core import StorageContext, VectorStoreIndex
 
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
     index = VectorStoreIndex(
@@ -109,18 +109,18 @@ async def main():
     print(f"   [OK] Indexed {len(nodes)} chunks")
 
     # Step 6: Verify
-    print(f"\n[6/6] Verifying indexing...")
+    print("\n[6/6] Verifying indexing...")
     collection_info = qdrant_client.get_collection(collection_name)
     print(f"   Collection '{collection_name}' has {collection_info.points_count} points")
 
     print("\n[SUCCESS] Indexing complete!")
-    print(f"\nSummary:")
+    print("\nSummary:")
     print(f"   - Documents loaded: {len(documents)}")
     print(f"   - Chunks created: {len(nodes)}")
     print(f"   - Points indexed: {collection_info.points_count}")
     print(f"   - Collection: {collection_name}")
     print(f"   - Embedding model: {embedding_model} ({vector_dim}D)")
-    print(f"\nIndexed files:")
+    print("\nIndexed files:")
     for file_path in files_to_index:
         print(f"   - {file_path.name}")
 

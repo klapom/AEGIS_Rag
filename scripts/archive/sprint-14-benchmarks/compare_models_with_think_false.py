@@ -6,6 +6,7 @@ Sprint 13 TD-31: Test which models support thinking mode and compare performance
 
 import json
 import time
+
 from ollama import Client
 
 TEST_TEXT = """
@@ -134,7 +135,7 @@ Sprint 13 TD-31: Testing which models support thinking mode
             result_no_think = test_model(model, client, use_think_false=True)
             results.append(result_no_think)
         else:
-            print(f"  --> Skipping think=False test (not supported)")
+            print("  --> Skipping think=False test (not supported)")
 
     # COMPARISON TABLE
     print(f"\n{'='*80}")
@@ -172,7 +173,7 @@ Sprint 13 TD-31: Testing which models support thinking mode
         print(f"\n{model_short}:")
 
         if not default_result.get("supports_think_param", True):
-            print(f"  [INFO] Does NOT support think parameter")
+            print("  [INFO] Does NOT support think parameter")
             print(f"  Entities: {default_result['entity_count']}")
             print(f"  Time: {default_result['time']:.2f}s")
         else:
@@ -188,7 +189,7 @@ Sprint 13 TD-31: Testing which models support thinking mode
 
                     entity_diff = default_result["entity_count"] - no_think_result["entity_count"]
 
-                    print(f"  [INFO] Supports think parameter")
+                    print("  [INFO] Supports think parameter")
                     print(
                         f"  Default mode:  {default_result['entity_count']} entities in {default_result['time']:.2f}s"
                     )

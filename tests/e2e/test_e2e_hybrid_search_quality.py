@@ -257,7 +257,7 @@ time series forecasting, and reinforcement learning applications.
             # Verify it contains the exact technical terms
             assert "Python" in top_text and ("3.12" in top_text or "asyncio" in top_text), \
                 f"BM25 top result should contain exact query terms, got: {top_text[:100]}"
-            print(f"✓ BM25 correctly retrieved document with exact terms")
+            print("✓ BM25 correctly retrieved document with exact terms")
 
         # =====================================================================
         # Test 2: Unique identifier query (version number)
@@ -556,4 +556,4 @@ time series forecasting, and reinforcement learning applications.
         assert results["hybrid"]["max"] < 500, f"Hybrid too slow: {results['hybrid']['max']:.2f}ms"
 
         print("\n✅ Search Performance Benchmarks - PASSED")
-        print(f"  All search types meet performance targets")
+        print("  All search types meet performance targets")

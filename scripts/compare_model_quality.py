@@ -115,7 +115,7 @@ def calculate_overlap(set_a: set, set_b: set) -> dict:
 def load_hotpotqa_samples(jsonl_path: str, num_samples: int = 3) -> list[dict]:
     """Load HotPotQA samples from JSONL file."""
     samples = []
-    with open(jsonl_path, "r", encoding="utf-8") as f:
+    with open(jsonl_path, encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_samples:
                 break

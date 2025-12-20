@@ -1,8 +1,8 @@
 """Script to trigger re-indexing via Admin API with SSE progress tracking."""
 
-import requests
 import sys
-from pathlib import Path
+
+import requests
 
 
 def trigger_reindex(input_dir: str):

@@ -47,7 +47,7 @@ def remove_unused_ignores(mypy_output_file: str, dry_run: bool = False) -> None:
 def fix_file(file_path: str, line_numbers: list[int], dry_run: bool) -> None:
     """Remove type:ignore comments from specific lines."""
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
     except FileNotFoundError:
         print(f"Skipping {file_path} (not found)")

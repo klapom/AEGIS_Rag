@@ -15,6 +15,7 @@ Tests cover:
 from datetime import datetime, timedelta
 
 import pytest
+
 # Note: qdrant_client.models types may be Pydantic models that don't work with isinstance()
 # We import them for type hints but use attribute checks instead of isinstance()
 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue  # noqa: F401

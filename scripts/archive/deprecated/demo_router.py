@@ -9,7 +9,7 @@ Sprint 4 Feature 4.2: Query Router Demo
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from src.agents.router import IntentClassifier, QueryIntent
+from src.agents.router import IntentClassifier
 
 
 async def demo_classification():

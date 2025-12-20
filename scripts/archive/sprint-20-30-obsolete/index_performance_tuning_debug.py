@@ -59,7 +59,7 @@ async def main():
             print(f"   [INFO] Collection might not exist: {e}")
 
         # Step 2: Clear Neo4j
-        print(f"\n[2/5] Clearing Neo4j database...")
+        print("\n[2/5] Clearing Neo4j database...")
         try:
             lightrag_wrapper = await get_lightrag_wrapper_async()
             await lightrag_wrapper.clear_database()
@@ -68,7 +68,7 @@ async def main():
             print(f"   [WARNING] Neo4j clear failed: {e}")
 
         # Step 3: Clear LightRAG working directory
-        print(f"\n[3/5] Clearing LightRAG working directory...")
+        print("\n[3/5] Clearing LightRAG working directory...")
         lightrag_dir = Path(settings.lightrag_working_dir)
         if lightrag_dir.exists():
             try:
@@ -90,13 +90,13 @@ async def main():
                 batch_size=100,
             )
 
-            print(f"   [OK] Qdrant indexing complete")
+            print("   [OK] Qdrant indexing complete")
             print(f"       Documents loaded: {stats.get('documents_loaded', 0)}")
             print(f"       Chunks created: {stats.get('chunks_created', 0)}")
             print(f"       Points indexed: {stats.get('points_indexed', 0)}")
 
         # Step 5: Index to Neo4j with DETAILED LOGGING
-        print(f"\n[5/5] Indexing to Neo4j/LightRAG with DEBUG logging...")
+        print("\n[5/5] Indexing to Neo4j/LightRAG with DEBUG logging...")
 
         # Load document
         loader = SimpleDirectoryReader(input_files=[str(test_file)])
@@ -120,11 +120,11 @@ async def main():
         if lightrag_docs:
             # IMPORTANT: Add debug logging to the wrapper
             # We'll call the method and monitor its execution
-            print(f"\n   [DEBUG] Calling insert_documents_optimized...")
-            print(f"   [DEBUG] This uses Three-Phase Pipeline:")
-            print(f"           Phase 1: SpaCy NER extraction")
-            print(f"           Phase 2: Entity deduplication")
-            print(f"           Phase 3: Gemma LLM refinement")
+            print("\n   [DEBUG] Calling insert_documents_optimized...")
+            print("   [DEBUG] This uses Three-Phase Pipeline:")
+            print("           Phase 1: SpaCy NER extraction")
+            print("           Phase 2: Entity deduplication")
+            print("           Phase 3: Gemma LLM refinement")
             print()
 
             # Enable verbose logging by setting environment variable
@@ -135,13 +135,13 @@ async def main():
             # Call the optimized insertion
             graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
 
-            print(f"\n   [OK] Neo4j indexing complete")
+            print("\n   [OK] Neo4j indexing complete")
             print(f"       Chunks stored: {graph_stats.get('chunks_stored', 0)}")
             print(f"       Entities extracted: {graph_stats.get('entities_extracted', 0)}")
             print(f"       Relations extracted: {graph_stats.get('relations_extracted', 0)}")
 
             # VERIFY the data immediately
-            print(f"\n   [VERIFICATION] Checking Neo4j data...")
+            print("\n   [VERIFICATION] Checking Neo4j data...")
 
             # Quick verification query
             if lightrag_wrapper.rag and lightrag_wrapper.rag.chunk_entity_relation_graph:
@@ -181,7 +181,7 @@ async def main():
                 """
                 )
 
-                print(f"\n       Sample entities:")
+                print("\n       Sample entities:")
                 for i, ent in enumerate(sample_entities, 1):
                     label = ":".join(ent["labels"])
                     name = ent.get("name", "UNNAMED!")

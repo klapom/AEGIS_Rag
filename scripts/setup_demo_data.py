@@ -202,9 +202,7 @@ def main():
         result = asyncio.run(setup_demo_data(force=args.force))
 
         # Exit code based on result
-        if result["status"] == "success":
-            sys.exit(0)
-        elif result["status"] == "skipped":
+        if result["status"] == "success" or result["status"] == "skipped":
             sys.exit(0)
         else:
             sys.exit(1)

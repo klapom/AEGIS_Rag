@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Load environment
 from dotenv import load_dotenv
+
 load_dotenv(".env.dgx-spark")
 
 # Override hostnames for running outside Docker
@@ -26,7 +27,7 @@ os.environ["QDRANT_HOST"] = "localhost"
 os.environ["QDRANT_PORT"] = "6333"
 os.environ["QDRANT_GRPC_PORT"] = "6334"
 
-from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
+from qdrant_client.models import Distance, PayloadSchemaType, PointStruct, VectorParams
 
 
 async def create_qdrant_collection():

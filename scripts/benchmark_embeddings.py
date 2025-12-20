@@ -48,28 +48,25 @@ Dependencies:
     - statistics: For percentile calculations
 """
 
+import argparse
 import asyncio
 import json
-import time
-import tracemalloc
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict
-import argparse
 import statistics
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
 
 try:
     from qdrant_client import QdrantClient
-    from qdrant_client.models import Distance, VectorParams, PointStruct
+    from qdrant_client.models import Distance, PointStruct, VectorParams
 except ImportError:
     print("ERROR: qdrant-client not installed. Run: poetry add qdrant-client")
     exit(1)
 
 from src.components.shared.embedding_service import (
     UnifiedEmbeddingService,
-    get_embedding_service,
 )
-from src.core.config import get_settings
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -94,27 +91,27 @@ class EmbeddingMetrics:
     collection_size_mb: float  # Qdrant collection size
 
     # Retrieval quality (if test queries provided)
-    ndcg_at_10: Optional[float] = None
-    mrr: Optional[float] = None  # Mean Reciprocal Rank
-    precision_at_5: Optional[float] = None
+    ndcg_at_10: float | None = None
+    mrr: float | None = None  # Mean Reciprocal Rank
+    precision_at_5: float | None = None
 
     # Cross-layer similarity (if Graphiti vectors available)
     cross_layer_similarity_possible: bool = False
-    avg_cross_layer_similarity: Optional[float] = None
+    avg_cross_layer_similarity: float | None = None
 
 
 @dataclass
 class BenchmarkConfig:
     """Configuration for benchmark run."""
 
-    models: List[str]
+    models: list[str]
     test_corpus_path: str
     num_documents: int = 100  # How many documents to test
     batch_size: int = 32
     output_path: str = "results/embedding_benchmark.json"
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
-    test_queries: Optional[List[Dict[str, Any]]] = None  # For retrieval quality
+    test_queries: list[dict[str, Any]] | None = None  # For retrieval quality
 
 
 class EmbeddingBenchmark:
@@ -123,9 +120,9 @@ class EmbeddingBenchmark:
     def __init__(self, config: BenchmarkConfig):
         self.config = config
         self.qdrant_client = QdrantClient(host=config.qdrant_host, port=config.qdrant_port)
-        self.results: Dict[str, EmbeddingMetrics] = {}
+        self.results: dict[str, EmbeddingMetrics] = {}
 
-    async def run(self) -> Dict[str, EmbeddingMetrics]:
+    async def run(self) -> dict[str, EmbeddingMetrics]:
         """Run complete benchmark suite."""
         logger.info(f"Starting embedding benchmark for models: {self.config.models}")
 
@@ -192,8 +189,8 @@ class EmbeddingBenchmark:
         )
 
     async def _benchmark_latency(
-        self, embedding_service: UnifiedEmbeddingService, texts: List[str]
-    ) -> Dict[str, float]:
+        self, embedding_service: UnifiedEmbeddingService, texts: list[str]
+    ) -> dict[str, float]:
         """Benchmark embedding generation latency."""
         # Single embedding latency (10 runs)
         single_latencies = []
@@ -228,9 +225,9 @@ class EmbeddingBenchmark:
     async def _benchmark_memory(
         self,
         embedding_service: UnifiedEmbeddingService,
-        texts: List[str],
+        texts: list[str],
         embedding_dim: int,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Benchmark memory usage."""
         # Estimate model size (rough approximation)
         # nomic-embed-text: ~274MB, BGE-M3: ~2.2GB
@@ -284,9 +281,9 @@ class EmbeddingBenchmark:
     async def _benchmark_retrieval_quality(
         self,
         embedding_service: UnifiedEmbeddingService,
-        texts: List[str],
+        texts: list[str],
         embedding_dim: int,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Benchmark retrieval quality using test queries."""
         # TODO: Implement NDCG@10, MRR, Precision@5
         # This requires:
@@ -298,7 +295,7 @@ class EmbeddingBenchmark:
         logger.info("Retrieval quality benchmarking not yet implemented")
         return {}
 
-    def _load_test_corpus(self) -> List[Dict[str, Any]]:
+    def _load_test_corpus(self) -> list[dict[str, Any]]:
         """Load test corpus from file."""
         corpus_path = Path(self.config.test_corpus_path)
 
@@ -306,10 +303,10 @@ class EmbeddingBenchmark:
             logger.warning(f"Test corpus not found at {corpus_path}, generating synthetic corpus")
             return self._generate_synthetic_corpus()
 
-        with open(corpus_path, "r", encoding="utf-8") as f:
+        with open(corpus_path, encoding="utf-8") as f:
             return json.load(f)
 
-    def _generate_synthetic_corpus(self) -> List[Dict[str, Any]]:
+    def _generate_synthetic_corpus(self) -> list[dict[str, Any]]:
         """Generate synthetic test corpus."""
         synthetic_docs = []
         for i in range(self.config.num_documents):

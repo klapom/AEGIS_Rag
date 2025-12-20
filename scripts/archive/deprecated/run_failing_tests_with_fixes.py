@@ -122,7 +122,7 @@ async def main():
             if result["returncode"] != 0:
                 print(f"\n## {test_name}")
                 print(f"Previous Issue: {result['previous_issue']}")
-                print(f"\nOutput (last 50 lines):")
+                print("\nOutput (last 50 lines):")
                 print("```")
                 lines = result["stdout"].split("\n")[-50:]
                 print("\n".join(lines))

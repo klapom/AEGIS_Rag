@@ -59,7 +59,7 @@ class ChunkLogger:
             f.write(
                 f"Extraction Pipeline: {getattr(settings, 'extraction_pipeline', 'three_phase')}\n"
             )
-            f.write(f"Chunking Strategy: LightRAG's internal chunking (adaptive)\n")
+            f.write("Chunking Strategy: LightRAG's internal chunking (adaptive)\n")
             f.write("=" * 100 + "\n\n")
 
     def log_chunk(self, chunk_id: int, content: str, metadata: dict = None):
@@ -82,7 +82,7 @@ class ChunkLogger:
             f.write(f"Size: {char_count} chars, {token_count} tokens\n")
             if metadata:
                 f.write(f"Metadata: {json.dumps(metadata, indent=2)}\n")
-            f.write(f"\nContent:\n")
+            f.write("\nContent:\n")
             f.write("-" * 100 + "\n")
             f.write(content + "\n")
             f.write("-" * 100 + "\n")
@@ -110,12 +110,12 @@ class ChunkLogger:
             if metadata:
                 f.write(f"Metadata: {json.dumps(metadata, indent=2)}\n")
 
-            f.write(f"\nPROMPT:\n")
+            f.write("\nPROMPT:\n")
             f.write("-" * 100 + "\n")
             f.write(prompt + "\n")
             f.write("-" * 100 + "\n")
 
-            f.write(f"\nRESPONSE:\n")
+            f.write("\nRESPONSE:\n")
             f.write("-" * 100 + "\n")
             f.write(response + "\n")
             f.write("-" * 100 + "\n")
@@ -191,7 +191,7 @@ async def main():
 
     print(f"\nFile: {test_file.name}")
     print(f"Log File: {log_file.name}")
-    print(f"Limit: First 20 pages")
+    print("Limit: First 20 pages")
 
     if not test_file.exists():
         print(f"\n[ERROR] File not found: {test_file}")
@@ -199,7 +199,7 @@ async def main():
 
     try:
         # Step 1: Clear Neo4j
-        print(f"\n[1/4] Clearing Neo4j...")
+        print("\n[1/4] Clearing Neo4j...")
         lightrag = await get_lightrag_wrapper_async()
 
         if lightrag.rag and lightrag.rag.chunk_entity_relation_graph:
@@ -212,7 +212,7 @@ async def main():
             return
 
         # Step 2: Load documents (first 20 pages)
-        print(f"\n[2/4] Loading first 20 pages...")
+        print("\n[2/4] Loading first 20 pages...")
         loader = SimpleDirectoryReader(input_files=[str(test_file)])
         all_documents = loader.load_data()
         documents = all_documents[:20]  # Limit to 20 pages
@@ -220,7 +220,7 @@ async def main():
         print(f"   Loaded {len(documents)} pages (total in file: {len(all_documents)})")
 
         # Step 3: Log chunks and index
-        print(f"\n[3/4] Indexing with chunk logging...")
+        print("\n[3/4] Indexing with chunk logging...")
         print(f"   (This will take ~{len(documents) * 15}s)\n")
 
         start_time = time.time()
@@ -255,7 +255,7 @@ async def main():
                 )
 
         # Index with LightRAG (this will make LLM calls internally)
-        print(f"\n   Starting extraction and indexing...")
+        print("\n   Starting extraction and indexing...")
         graph_stats = await lightrag.insert_documents_optimized(lightrag_docs)
 
         elapsed_time = time.time() - start_time
@@ -266,7 +266,7 @@ async def main():
         print(f"       Total chunks: {graph_stats.get('total_chunks', 0)}")
 
         # Step 4: Write summary
-        print(f"\n[4/4] Writing summary to log file...")
+        print("\n[4/4] Writing summary to log file...")
         chunk_logger.log_summary()
 
         print(f"\n{'='*80}")
@@ -278,7 +278,7 @@ async def main():
         print(f"Avg Time/Page: {elapsed_time/len(documents):.1f}s")
 
         # Quick summary
-        print(f"\nCHUNK SUMMARY:")
+        print("\nCHUNK SUMMARY:")
         total_chars = sum(s["char_count"] for s in chunk_logger.chunk_stats)
         total_tokens = sum(s["token_count"] for s in chunk_logger.chunk_stats)
         avg_chars = total_chars / len(chunk_logger.chunk_stats)

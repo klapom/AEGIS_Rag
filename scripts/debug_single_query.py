@@ -14,7 +14,6 @@ Run: poetry run python scripts/debug_single_query.py
 """
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -25,7 +24,6 @@ import structlog
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich import print as rprint
 
 # Configure detailed logging
 structlog.configure(
@@ -77,7 +75,7 @@ async def debug_embedding(query: str) -> list[float]:
     embedding_service = get_embedding_service()
     embedding = await embedding_service.embed_single(query)
 
-    console.print(f"[green]✓ Embedding generated[/green]")
+    console.print("[green]✓ Embedding generated[/green]")
     console.print(f"  - Model: {embedding_service.model_name}")
     console.print(f"  - Dimension: {len(embedding)}")
     console.print(f"  - First 5 values: {[round(x, 4) for x in embedding[:5]]}")
@@ -125,7 +123,7 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
 
     console.print(f"[yellow]Query:[/yellow] {query[:60]}...")
     console.print(f"[yellow]Namespace:[/yellow] {namespace}")
-    console.print(f"[yellow]Top-k:[/yellow] 5")
+    console.print("[yellow]Top-k:[/yellow] 5")
 
     # Call search (returns dict, not dataclass)
     results = await search.search(
@@ -135,7 +133,7 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
         use_reranking=True
     )
 
-    console.print(f"\n[green]✓ Search completed[/green]")
+    console.print("\n[green]✓ Search completed[/green]")
     console.print(f"  - Total results: {len(results.get('results', []))}")
     console.print(f"  - Intent: {results.get('intent', 'N/A')}")
 
@@ -147,14 +145,14 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
 
         # Show weights used
         weights = metadata.weights
-        console.print(f"\n[blue]Weights Applied:[/blue]")
+        console.print("\n[blue]Weights Applied:[/blue]")
         console.print(f"  - Vector: {weights.get('vector', 0)}")
         console.print(f"  - BM25: {weights.get('bm25', 0)}")
         console.print(f"  - Local: {weights.get('local', 0)}")
         console.print(f"  - Global: {weights.get('global', 0)}")
 
         # Show channel contributions
-        console.print(f"\n[blue]Channel Contributions:[/blue]")
+        console.print("\n[blue]Channel Contributions:[/blue]")
         console.print(f"  - Vector: {metadata.vector_results_count} results")
         console.print(f"  - BM25: {metadata.bm25_results_count} results")
         console.print(f"  - Graph Local: {metadata.graph_local_results_count} results")
@@ -184,7 +182,7 @@ async def debug_four_way_search(query: str, namespace: str = "eval_hotpotqa") ->
     console.print(table)
 
     # Show full contexts
-    console.print(f"\n[blue]Full Retrieved Contexts:[/blue]")
+    console.print("\n[blue]Full Retrieved Contexts:[/blue]")
     for i, doc in enumerate(result_docs[:5], 1):
         text = doc.get("text", "") or doc.get("content", "N/A")
         console.print(f"\n[yellow]Context {i}:[/yellow]")
@@ -218,7 +216,7 @@ Answer:"""
     console.print(f"[yellow]Prompt length:[/yellow] {len(prompt)} chars")
     console.print(f"[yellow]Number of contexts:[/yellow] {len(contexts)}")
 
-    console.print(f"\n[blue]Full Prompt:[/blue]")
+    console.print("\n[blue]Full Prompt:[/blue]")
     console.print(Panel(prompt, title="LLM Prompt", border_style="blue"))
 
     # Create LLMTask object
@@ -231,7 +229,7 @@ Answer:"""
     console.print("\n[yellow]Calling LLM...[/yellow]")
     response = await llm.generate(task)
 
-    console.print(f"\n[green]✓ LLM Response:[/green]")
+    console.print("\n[green]✓ LLM Response:[/green]")
     console.print(f"  - Provider: {response.provider}")
     console.print(f"  - Model: {response.model}")
     console.print(f"  - Latency: {response.latency_ms:.0f}ms" if response.latency_ms else "  - Latency: N/A")
@@ -293,13 +291,13 @@ async def run_full_debug(question_idx: int = 0):
     truth_lower = ground_truth.lower()
 
     if truth_lower in answer_lower:
-        console.print(f"\n[bold green]✓ Answer contains ground truth![/bold green]")
+        console.print("\n[bold green]✓ Answer contains ground truth![/bold green]")
     else:
-        console.print(f"\n[bold red]✗ Answer does NOT contain ground truth[/bold red]")
+        console.print("\n[bold red]✗ Answer does NOT contain ground truth[/bold red]")
         console.print(f"[red]Expected '{ground_truth}' in answer[/red]")
 
     # Check context coverage
-    console.print(f"\n[blue]Expected Contexts Coverage:[/blue]")
+    console.print("\n[blue]Expected Contexts Coverage:[/blue]")
     for i, expected in enumerate(expected_contexts, 1):
         found = any(expected[:50] in ctx for ctx in retrieved_contexts)
         status = "[green]✓[/green]" if found else "[red]✗[/red]"

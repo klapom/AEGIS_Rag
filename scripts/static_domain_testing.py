@@ -18,8 +18,6 @@ import os
 import re
 import sys
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # Color codes for terminal output
 GREEN = "\033[92m"
@@ -108,7 +106,7 @@ def validate_domain_training_files() -> bool:
 def check_file_content(file_path: str, pattern: str) -> bool:
     """Check if file contains pattern."""
     try:
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             content = f.read()
             return re.search(pattern, content) is not None
     except FileNotFoundError:
@@ -160,7 +158,7 @@ def validate_module_exports() -> bool:
             "get_training_data_augmenter",
         ]
 
-        with open(init_file, 'r') as f:
+        with open(init_file) as f:
             content = f.read()
 
         # Check each export is in __all__
@@ -187,7 +185,7 @@ def validate_domain_repository_structure() -> bool:
     all_passed = True
     file_path = "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/domain_repository.py"
 
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         content = f.read()
 
     # Check class definition
@@ -242,7 +240,7 @@ def validate_domain_classifier_structure() -> bool:
     all_passed = True
     file_path = "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/domain_classifier.py"
 
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         content = f.read()
 
     # Check class definition
@@ -304,7 +302,7 @@ def validate_dspy_optimizer_structure() -> bool:
     all_passed = True
     file_path = "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/dspy_optimizer.py"
 
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         content = f.read()
 
     # Check class definition
@@ -365,7 +363,7 @@ def validate_api_endpoints() -> bool:
     all_passed = True
     api_file = "/home/admin/projects/aegisrag/AEGIS_Rag/src/api/v1/domain_training.py"
 
-    with open(api_file, 'r') as f:
+    with open(api_file) as f:
         content = f.read()
 
     # Check router definition
@@ -413,7 +411,7 @@ def validate_main_app_integration() -> bool:
     all_passed = True
     main_file = "/home/admin/projects/aegisrag/AEGIS_Rag/src/api/main.py"
 
-    with open(main_file, 'r') as f:
+    with open(main_file) as f:
         content = f.read()
 
     # Check router import
@@ -449,7 +447,7 @@ def validate_configuration() -> bool:
     # Check settings file
     settings_file = "/home/admin/projects/aegisrag/AEGIS_Rag/src/core/config.py"
 
-    with open(settings_file, 'r') as f:
+    with open(settings_file) as f:
         content = f.read()
 
     # Check for domain-related settings
@@ -546,7 +544,7 @@ def check_code_quality() -> bool:
     # Check domain_training init file
     init_file = "/home/admin/projects/aegisrag/AEGIS_Rag/src/components/domain_training/__init__.py"
 
-    with open(init_file, 'r') as f:
+    with open(init_file) as f:
         content = f.read()
 
     # Check docstring
@@ -633,7 +631,7 @@ def validate_sprint_requirements() -> bool:
             all_passed = False
             continue
 
-        with open(file_path, 'r') as f:
+        with open(file_path) as f:
             content = f.read()
 
         # Check all required items are present
@@ -656,7 +654,7 @@ def validate_sprint_requirements() -> bool:
 # Main Test Runner
 # ============================================================================
 
-def run_all_tests() -> Dict[str, bool]:
+def run_all_tests() -> dict[str, bool]:
     """Run all static analysis tests."""
     results = {}
 
@@ -676,7 +674,7 @@ def run_all_tests() -> Dict[str, bool]:
     return results
 
 
-def print_summary(results: Dict[str, bool]) -> None:
+def print_summary(results: dict[str, bool]) -> None:
     """Print test summary and statistics."""
     print_section("SUMMARY")
 

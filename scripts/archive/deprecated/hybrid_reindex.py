@@ -11,12 +11,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from llama_index.core import SimpleDirectoryReader
+from qdrant_client.models import Distance
+
+from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
-from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.core.config import settings
-from qdrant_client.models import Distance
-from llama_index.core import SimpleDirectoryReader
 
 
 async def main():
@@ -38,8 +39,8 @@ async def main():
     print(
         f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
     )
-    print(f"  [OK] Qdrant Client ready")
-    print(f"  [OK] LightRAG Wrapper ready")
+    print("  [OK] Qdrant Client ready")
+    print("  [OK] LightRAG Wrapper ready")
     print(f"  [OK] Collection: {collection_name}")
     print()
 
@@ -117,7 +118,7 @@ async def main():
         # Insert into LightRAG (entities + relationships + graph)
         if lightrag_docs:
             graph_stats = await lightrag_wrapper.insert_documents_optimized(lightrag_docs)
-            print(f"  [OK] Neo4j indexing complete:")
+            print("  [OK] Neo4j indexing complete:")
             print(f"      - Entities: {graph_stats.get('stats', {}).get('total_entities', 0)}")
             print(f"      - Relations: {graph_stats.get('stats', {}).get('total_relations', 0)}")
             print(f"      - Chunks: {graph_stats.get('stats', {}).get('total_chunks', 0)}")

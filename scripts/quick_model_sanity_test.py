@@ -4,10 +4,10 @@ Quick Model Sanity Test for Entity Extraction
 Tests if a model can produce valid JSON entity extraction output.
 """
 import json
-import time
-import requests
 import sys
-from typing import Optional
+import time
+
+import requests
 
 # Test sample (500 chars from RAGAS)
 TEST_TEXT = """Arthur's Magazine (1844–1846) was an American literary periodical published in Philadelphia in the 19th century. First for Women is a woman's magazine published by Bauer Media Group in the USA. The Oberoi family is an Indian family that is famous for its involvement in hotels, namely through The Oberoi Group. The Oberoi Group is a hotel company with its head office in Delhi. Allison Beth "Allie" Goertz (born March 2, 1991) is an American musician."""
@@ -106,7 +106,7 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
         if entities is None:
             result["status"] = "json_parse_failed"
             result["error"] = f"Could not parse JSON from: {raw_response[:200]}..."
-            print(f"    FAILED: Could not parse JSON")
+            print("    FAILED: Could not parse JSON")
             print(f"    Response: {raw_response[:300]}...")
             return result
 
@@ -163,7 +163,7 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
         if relations is None:
             result["status"] = "partial_success"
             result["error"] = "Relation JSON parse failed"
-            print(f"    PARTIAL: Entities OK, relations failed")
+            print("    PARTIAL: Entities OK, relations failed")
         else:
             result["relations_extracted"] = len(relations)
             result["sample_relations"] = relations[:3]
@@ -172,8 +172,8 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
 
     except requests.exceptions.Timeout:
         result["status"] = "partial_success"
-        result["error"] = f"Relation extraction timed out"
-        print(f"    TIMEOUT on relations")
+        result["error"] = "Relation extraction timed out"
+        print("    TIMEOUT on relations")
     except Exception as e:
         result["status"] = "partial_success"
         result["error"] = f"Relation error: {e}"
@@ -185,7 +185,7 @@ def test_model(model_name: str, timeout: int = 120) -> dict:
     return result
 
 
-def parse_json_array(text: str) -> Optional[list]:
+def parse_json_array(text: str) -> list | None:
     """Try to extract a JSON array from text."""
     # Clean up common issues
     text = text.strip()

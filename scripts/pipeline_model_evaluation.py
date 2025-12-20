@@ -23,7 +23,6 @@ import asyncio
 import json
 import os
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -52,7 +51,7 @@ def load_hotpotqa_samples(jsonl_path: str, num_samples: int = 10) -> list[dict]:
         List of sample dicts with contexts, question, ground_truth
     """
     samples = []
-    with open(jsonl_path, "r", encoding="utf-8") as f:
+    with open(jsonl_path, encoding="utf-8") as f:
         for i, line in enumerate(f):
             if i >= num_samples:
                 break

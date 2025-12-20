@@ -117,7 +117,7 @@ Christopher Nolan is acquainted with Tom Cruise.
         assert response.ok, f"Index consistency endpoint failed: {response.status}"
         consistency_data = await response.json()
 
-        print(f"✓ Index Consistency Report received")
+        print("✓ Index Consistency Report received")
 
         # Validate response structure (Feature 49.6)
         assert "total_chunks" in consistency_data, "Missing total_chunks in response"
@@ -326,7 +326,7 @@ Christopher Nolan is acquainted with Tom Cruise.
             record = await result.single()
 
             if record:
-                print(f"✓ Sample relationship provenance:")
+                print("✓ Sample relationship provenance:")
                 print(f"  Entity: {record['entity']}")
                 print(f"  Chunk: {record['chunk'][:30]}...")
                 print(f"  source_chunk_id: {record['source_chunk_id'][:30]}...")

@@ -12,11 +12,8 @@ Tests:
 - Semantic matching with cosine similarity
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
-
 import pytest
-
 
 # ============================================================================
 # Tests: Initialization

@@ -17,14 +17,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from langgraph.graph import END, StateGraph
 
-from src.components.graph_rag.lightrag_wrapper import get_lightrag_wrapper_async
 from src.components.ingestion.ingestion_state import IngestionState
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
     embedding_node,
     graph_extraction_node,
 )
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -154,10 +152,10 @@ async def run_evaluations(ingested_docs: list, num_evals: int = 5):
         num_evals = len(ingested_docs)
 
     # Import search components
-    from src.components.vector_search.hybrid_search import HybridSearch
     from src.components.graph_rag.dual_level_search import DualLevelSearch
     from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
     from src.components.llm_proxy.models import LLMTask, TaskType
+    from src.components.vector_search.hybrid_search import HybridSearch
 
     # Initialize components
     hybrid_search = HybridSearch()

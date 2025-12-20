@@ -8,10 +8,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from qdrant_client.models import Distance
+
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
 from src.core.config import settings
-from qdrant_client.models import Distance
 
 
 async def main():
@@ -32,7 +33,7 @@ async def main():
     print(
         f"  [OK] Embedding Service: {embedding_service.model_name} (dim={embedding_service.embedding_dim})"
     )
-    print(f"  [OK] Qdrant Client ready")
+    print("  [OK] Qdrant Client ready")
     print(f"  [OK] Collection: {collection_name}")
     print()
 

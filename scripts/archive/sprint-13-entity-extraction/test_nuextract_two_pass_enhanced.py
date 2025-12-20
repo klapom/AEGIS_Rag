@@ -11,10 +11,10 @@ Sprint 13 TD-31: Implement 2-pass strategy:
 
 import json
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 from ollama import Client
-from typing import List, Dict, Any, Tuple
 
 # Try to import spaCy
 try:
@@ -251,7 +251,7 @@ SPACY_TO_LIGHTRAG_TYPE = {
 }
 
 
-def extract_entities_spacy(text: str, nlp) -> List[Dict[str, str]]:
+def extract_entities_spacy(text: str, nlp) -> list[dict[str, str]]:
     """Extract entities using spaCy NER.
 
     Args:
@@ -281,8 +281,8 @@ def extract_entities_spacy(text: str, nlp) -> List[Dict[str, str]]:
 
 
 def fuse_entities(
-    nuextract_entities: List[Dict[str, str]], spacy_entities: List[Dict[str, str]]
-) -> List[Dict[str, str]]:
+    nuextract_entities: list[dict[str, str]], spacy_entities: list[dict[str, str]]
+) -> list[dict[str, str]]:
     """Fuse NuExtract and spaCy entities with conflict resolution.
 
     Resolution strategy:
@@ -334,7 +334,7 @@ def fuse_entities(
 
 
 def convert_json_to_lightrag(
-    entities: List[Dict[str, str]], relations: List[Dict[str, str]]
+    entities: list[dict[str, str]], relations: list[dict[str, str]]
 ) -> str:
     """Convert entity and relation lists to LightRAG delimiter-separated format."""
     lines = []
@@ -778,21 +778,21 @@ Start Time: {datetime.now().isoformat()}
         100 * sum(1 for r in results if r["status"] in ["PASS", "PARTIAL"]) / len(results)
     )
 
-    print(f"TWO-PASS + spaCy:")
+    print("TWO-PASS + spaCy:")
     print(f"  Average Time: {avg_time:.1f}s")
     print(f"  Average Entity Accuracy: {avg_entity_acc:.1f}%")
     print(f"  Average Relation Accuracy: {avg_relation_acc:.1f}%")
     print(f"  Success Rate: {success_rate:.0f}%")
     print()
 
-    print(f"BASELINE (Two-Pass without enhanced examples):")
-    print(f"  Average Time: 5.6s")
-    print(f"  Average Entity Accuracy: 153.3%")
-    print(f"  Average Relation Accuracy: 44.7%")
-    print(f"  Success Rate: 100%")
+    print("BASELINE (Two-Pass without enhanced examples):")
+    print("  Average Time: 5.6s")
+    print("  Average Entity Accuracy: 153.3%")
+    print("  Average Relation Accuracy: 44.7%")
+    print("  Success Rate: 100%")
     print()
 
-    print(f"DELTA (Enhanced vs Baseline Two-Pass):")
+    print("DELTA (Enhanced vs Baseline Two-Pass):")
     print(f"  Time: {avg_time - 5.6:+.1f}s ({100*(avg_time - 5.6)/5.6:+.1f}%)")
     print(
         f"  Entity Accuracy: {avg_entity_acc - 153.3:+.1f}% ({100*(avg_entity_acc - 153.3)/153.3:+.1f}%)"

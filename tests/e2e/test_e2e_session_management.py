@@ -21,7 +21,7 @@ References:
 
 import asyncio
 import re
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -739,8 +739,8 @@ class TestSessionManagement:
         print("SESSION MANAGEMENT WORKFLOW TEST COMPLETE")
         print("=" * 70)
         print("Summary:")
-        print(f"  - Session creation: Yes")
+        print("  - Session creation: Yes")
         print(f"  - Sessions in sidebar: {initial_count} -> {session_count}")
-        print(f"  - Session switching: Yes")
+        print("  - Session switching: Yes")
         print(f"  - Share tested: {share_tested}")
         print(f"  - Delete tested: {count_before_delete > 1}")
