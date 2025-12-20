@@ -25,7 +25,7 @@ def test_hybrid_search_init_default():
     """Test HybridSearch initialization with defaults."""
     with (
         patch("src.components.vector_search.hybrid_search.QdrantClientWrapper"),
-        patch("src.components.vector_search.hybrid_search.EmbeddingService"),
+        patch("src.components.vector_search.hybrid_search.UnifiedEmbeddingService"),
         patch("src.components.vector_search.hybrid_search.BM25Search"),
     ):
 
@@ -442,15 +442,19 @@ async def test_hybrid_search_only_bm25_results(mock_qdrant_client, mock_embeddin
         return_value=[{"text": "result", "score": 10.0, "metadata": {"id": "doc1"}, "rank": 1}]
     )
 
-    search = HybridSearch(
-        qdrant_client=mock_qdrant_client,
-        embedding_service=mock_embedding_service,
-        bm25_search=mock_bm25,
-    )
+    # Sprint 51: Disable relevance threshold check to test BM25-only scenario
+    with patch("src.components.vector_search.hybrid_search.settings") as mock_settings:
+        mock_settings.hybrid_search_require_relevant = False
 
-    result = await search.hybrid_search("test query", top_k=10)
+        search = HybridSearch(
+            qdrant_client=mock_qdrant_client,
+            embedding_service=mock_embedding_service,
+            bm25_search=mock_bm25,
+        )
 
-    assert len(result["results"]) > 0, "Should return BM25 results"
+        result = await search.hybrid_search("test query", top_k=10)
+
+        assert len(result["results"]) > 0, "Should return BM25 results"
 
 
 @pytest.mark.unit
@@ -467,5 +471,5 @@ async def test_vector_search_empty_query(
 
     await search.vector_search("", top_k=5)
 
-    # Should still call embedding service with empty string
-    mock_embedding_service.embed_text.assert_called_once_with("")
+    # Should still call embedding service with empty string (Sprint 25: embed_single)
+    mock_embedding_service.embed_single.assert_called_once_with("")

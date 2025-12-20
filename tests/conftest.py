@@ -334,7 +334,7 @@ def mock_ollama_embedding_model():
 
 @pytest.fixture
 def mock_embedding_service(mock_ollama_embedding_model, sample_embedding):
-    """Mock EmbeddingService for unit tests.
+    """Mock UnifiedEmbeddingService for unit tests (Sprint 25 API).
 
     Returns:
         Mock embedding service with configured behavior
@@ -349,10 +349,10 @@ def mock_embedding_service(mock_ollama_embedding_model, sample_embedding):
     service._cache = LRUCache(max_size=10000)  # Use actual LRUCache instead of dict
     service._embedding_model = mock_ollama_embedding_model
 
-    # Configure methods
-    service.embed_text = AsyncMock(return_value=sample_embedding)
+    # Configure methods (Sprint 25: embed_single instead of embed_text)
+    service.embed_single = AsyncMock(return_value=sample_embedding)
     service.embed_batch = AsyncMock(return_value=[[0.1 + i * 0.01] * 1024 for i in range(5)])
-    service.get_embedding_dimension = MagicMock(return_value=1024)
+    service.embedding_dim = 1024  # Property instead of method
     service.clear_cache = MagicMock()
     service.get_cache_size = MagicMock(return_value=0)
     service._get_cache_key = MagicMock(return_value="test_hash")

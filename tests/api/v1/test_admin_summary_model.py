@@ -206,7 +206,7 @@ class TestGetConfiguredSummaryModel:
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
-            from src.api.v1.admin import get_configured_summary_model
+            from src.components.graph_rag.llm_config_provider import get_configured_summary_model
 
             model_name = await get_configured_summary_model()
 
@@ -228,7 +228,7 @@ class TestGetConfiguredSummaryModel:
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
-            from src.api.v1.admin import get_configured_summary_model
+            from src.components.graph_rag.llm_config_provider import get_configured_summary_model
             from src.core.config import settings
 
             model_name = await get_configured_summary_model()
@@ -243,7 +243,7 @@ class TestGetConfiguredSummaryModel:
         ) as mock_get_redis:
             mock_get_redis.side_effect = Exception("Redis connection failed")
 
-            from src.api.v1.admin import get_configured_summary_model
+            from src.components.graph_rag.llm_config_provider import get_configured_summary_model
             from src.core.config import settings
 
             model_name = await get_configured_summary_model()

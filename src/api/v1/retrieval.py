@@ -40,6 +40,7 @@ from src.components.vector_search import (
 )
 from src.core.config import get_settings
 from src.core.exceptions import (
+    AegisRAGException,
     InvalidFileFormatError,
     ValidationError,
     VectorSearchError,
@@ -404,6 +405,9 @@ async def ingest(
         logger.warning("Invalid ingestion path", error=str(e), input_dir=ingest_params.input_dir)
         raise HTTPException(status_code=400, detail="Invalid directory path") from None
     except HTTPException:
+        raise
+    except AegisRAGException:
+        # Sprint 22 Feature 22.2.2: Let custom exceptions bubble up to global handler
         raise
     except Exception as e:
         logger.error(

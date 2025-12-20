@@ -1,5 +1,8 @@
 """Unit tests for DocumentIngestionPipeline.
 
+DEPRECATED: Sprint 21 ADR-028 deprecated LlamaIndex-based ingestion.
+These tests are outdated. Use tests for DoclingContainerClient instead.
+
 Tests document ingestion including:
 - Loading documents from directory
 - Chunking with sentence splitter
@@ -8,9 +11,14 @@ Tests document ingestion including:
 - Error handling
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+
+# Sprint 21-25: Skip entire module - tests deprecated llama_index ingestion
+pytest.importorskip(
+    "llama_index", reason="llama_index not installed (deprecated - use DoclingContainerClient)"
+)
+
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.components.vector_search.ingestion import (
     DocumentIngestionPipeline,
@@ -28,7 +36,7 @@ def test_ingestion_pipeline_init_default():
     """Test DocumentIngestionPipeline initialization with defaults."""
     with (
         patch("src.components.vector_search.ingestion.QdrantClientWrapper"),
-        patch("src.components.vector_search.ingestion.EmbeddingService"),
+        patch("src.components.vector_search.ingestion.UnifiedEmbeddingService"),
     ):
 
         pipeline = DocumentIngestionPipeline()

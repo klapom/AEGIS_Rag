@@ -85,19 +85,20 @@ def test_reranker_initialization_defaults():
 
 
 @pytest.mark.unit
-def test_reranker_initialization_custom_params():
+def test_reranker_initialization_custom_params(tmp_path):
     """Test CrossEncoderReranker accepts custom parameters."""
     with patch("src.components.retrieval.reranker.settings") as mock_settings:
         mock_settings.reranker_model = "default-model"
         mock_settings.reranker_cache_dir = "./data/models"
 
+        custom_cache = tmp_path / "custom_cache"
         reranker = CrossEncoderReranker(
-            model_name="custom-model", batch_size=64, cache_dir="/custom/cache"
+            model_name="custom-model", batch_size=64, cache_dir=str(custom_cache)
         )
 
         assert reranker.model_name == "custom-model"
         assert reranker.batch_size == 64
-        assert reranker.cache_dir == Path("/custom/cache")
+        assert reranker.cache_dir == custom_cache
 
 
 @pytest.mark.unit
@@ -111,7 +112,7 @@ def test_reranker_model_lazy_loading():
 
         assert reranker._model is None
 
-        with patch("src.components.retrieval.reranker.CrossEncoder") as mock_ce:
+        with patch("sentence_transformers.CrossEncoder") as mock_ce:
             mock_model = MagicMock()
             mock_ce.return_value = mock_model
 
@@ -131,7 +132,7 @@ def test_reranker_model_loaded_once():
 
         reranker = CrossEncoderReranker()
 
-        with patch("src.components.retrieval.reranker.CrossEncoder") as mock_ce:
+        with patch("sentence_transformers.CrossEncoder") as mock_ce:
             mock_model = MagicMock()
             mock_ce.return_value = mock_model
 
@@ -301,18 +302,19 @@ async def test_rerank_score_normalization():
 
 
 @pytest.mark.unit
-def test_get_model_info():
+def test_get_model_info(tmp_path):
     """Test get_model_info returns correct information."""
     with patch("src.components.retrieval.reranker.settings") as mock_settings:
         mock_settings.reranker_model = "cross-encoder/ms-marco-MiniLM-L-6-v2"
         mock_settings.reranker_cache_dir = "./data/models"
 
-        reranker = CrossEncoderReranker(batch_size=64, cache_dir="/custom/cache")
+        custom_cache = tmp_path / "custom_cache"
+        reranker = CrossEncoderReranker(batch_size=64, cache_dir=str(custom_cache))
 
         info = reranker.get_model_info()
 
         assert info["model_name"] == "cross-encoder/ms-marco-MiniLM-L-6-v2"
-        assert info["cache_dir"] == str(Path("/custom/cache"))
+        assert info["cache_dir"] == str(custom_cache)
         assert info["batch_size"] == 64
         assert info["is_loaded"] is False
 
@@ -326,7 +328,7 @@ def test_get_model_info_after_loading():
 
         reranker = CrossEncoderReranker()
 
-        with patch("src.components.retrieval.reranker.CrossEncoder") as mock_ce:
+        with patch("sentence_transformers.CrossEncoder") as mock_ce:
             mock_model = MagicMock()
             mock_ce.return_value = mock_model
 

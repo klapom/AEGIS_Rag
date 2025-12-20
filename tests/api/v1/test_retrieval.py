@@ -171,7 +171,9 @@ def test_search_invalid_type(client):
     # P1 Security: Pydantic pattern validation returns 422, not 400
     assert response.status_code == 422, "Should return 422 Validation Error"
     data = response.json()
-    assert data["error"] == "ValidationError"
+    # Sprint 22 Feature 22.2.2: Standardized error response format
+    assert data["error"]["code"] == "UNPROCESSABLE_ENTITY"
+    assert "validation" in data["error"]["message"].lower()
 
 
 @pytest.mark.unit
@@ -254,7 +256,11 @@ def test_search_error_handling(client):
 
         assert response.status_code == 500, "Should return 500 on error"
         # P1 Security: Error messages are sanitized, don't expose internal details
-        assert "Search operation failed" in response.json()["detail"]
+        # Sprint 22 Feature 22.2.2: Standardized error response format
+        data = response.json()
+        # VectorSearchError is a custom AegisRAGException with its own error code
+        assert data["error"]["code"] == "VECTOR_SEARCH_FAILED"
+        assert data["error"]["message"] is not None
 
 
 # ============================================================================
@@ -315,7 +321,11 @@ def test_ingest_directory_not_found(client):
     )
 
     assert response.status_code == 400, "Should return 400 Bad Request"
-    assert "does not exist" in response.json()["detail"]
+    # Sprint 22 Feature 22.2.2: Standardized error response format
+    data = response.json()
+    # ValidationError returns VALIDATION_FAILED error code
+    assert data["error"]["code"] == "VALIDATION_FAILED"
+    assert "does not exist" in data["error"]["message"].lower()
 
 
 @pytest.mark.unit
@@ -334,7 +344,10 @@ def test_ingest_not_a_directory(client, tmp_path):
     )
 
     assert response.status_code == 400
-    assert "not a directory" in response.json()["detail"]
+    # Sprint 22 Feature 22.2.2: Standardized error response format
+    data = response.json()
+    assert data["error"]["code"] == "BAD_REQUEST"
+    assert "not a directory" in data["error"]["message"].lower() or "directory" in data["error"]["message"].lower()
 
 
 @pytest.mark.unit
@@ -392,7 +405,10 @@ def test_ingest_error_handling(client, temp_test_dir):
 
         assert response.status_code == 500
         # P1 Security: Error messages are sanitized, don't expose internal details
-        assert "Document ingestion failed" in response.json()["detail"]
+        # Sprint 22 Feature 22.2.2: Standardized error response format
+        data = response.json()
+        assert data["error"]["code"] == "INTERNAL_SERVER_ERROR"
+        assert data["error"]["message"] is not None
 
 
 # ============================================================================
@@ -433,7 +449,10 @@ def test_prepare_bm25_error(client):
         response = client.post("/api/v1/retrieval/prepare-bm25")
 
         assert response.status_code == 500
-        assert "BM25 preparation failed" in response.json()["detail"]
+        # Sprint 22 Feature 22.2.2: Standardized error response format
+        data = response.json()
+        assert data["error"]["code"] == "INTERNAL_SERVER_ERROR"
+        assert data["error"]["message"] is not None
 
 
 # ============================================================================
@@ -510,7 +529,10 @@ def test_get_stats_error(client):
         response = client.get("/api/v1/retrieval/stats")
 
         assert response.status_code == 500
-        assert "Failed to get stats" in response.json()["detail"]
+        # Sprint 22 Feature 22.2.2: Standardized error response format
+        data = response.json()
+        assert data["error"]["code"] == "INTERNAL_SERVER_ERROR"
+        assert data["error"]["message"] is not None
 
 
 # ============================================================================

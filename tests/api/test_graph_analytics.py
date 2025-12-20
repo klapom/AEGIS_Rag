@@ -173,7 +173,7 @@ class TestGraphAnalyticsAPI:
 
         mock_engine = AsyncMock()
         mock_engine.calculate_centrality = AsyncMock(
-            side_effect=DatabaseConnectionError("Connection failed")
+            side_effect=DatabaseConnectionError(database="Neo4j", reason="Connection failed")
         )
         mock_get_engine.return_value = mock_engine
 

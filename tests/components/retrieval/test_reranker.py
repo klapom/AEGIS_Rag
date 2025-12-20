@@ -104,7 +104,7 @@ def test_reranker_initialization_custom():
 
 
 @pytest.mark.unit
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 def test_lazy_model_loading(mock_ce_class):
     """Test that model is only loaded on first access."""
     mock_model = MagicMock()
@@ -134,7 +134,7 @@ def test_lazy_model_loading(mock_ce_class):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_basic(mock_ce_class, sample_documents):
     """Test basic reranking functionality."""
     mock_model = MagicMock()
@@ -161,7 +161,7 @@ async def test_rerank_basic(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_top_k(mock_ce_class, sample_documents):
     """Test top-k filtering in reranking."""
     mock_model = MagicMock()
@@ -181,7 +181,7 @@ async def test_rerank_top_k(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_score_threshold(mock_ce_class, sample_documents):
     """Test score threshold filtering."""
     mock_model = MagicMock()
@@ -204,7 +204,7 @@ async def test_rerank_score_threshold(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_score_normalization(mock_ce_class, sample_documents):
     """Test that rerank scores are normalized with sigmoid."""
     mock_model = MagicMock()
@@ -227,7 +227,7 @@ async def test_rerank_score_normalization(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_preserves_metadata(mock_ce_class, sample_documents):
     """Test that metadata is preserved through reranking."""
     mock_model = MagicMock()
@@ -244,7 +244,7 @@ async def test_rerank_preserves_metadata(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_original_scores_preserved(mock_ce_class, sample_documents):
     """Test that original scores are preserved."""
     mock_model = MagicMock()
@@ -267,7 +267,7 @@ async def test_rerank_original_scores_preserved(mock_ce_class, sample_documents)
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_empty_documents(mock_ce_class):
     """Test reranking with empty document list."""
     mock_model = MagicMock()
@@ -282,7 +282,7 @@ async def test_rerank_empty_documents(mock_ce_class):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_single_document(mock_ce_class):
     """Test reranking with single document."""
     mock_model = MagicMock()
@@ -309,7 +309,7 @@ async def test_rerank_single_document(mock_ce_class):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_top_k_larger_than_docs(mock_ce_class, sample_documents):
     """Test top-k larger than number of documents."""
     mock_model = MagicMock()
@@ -327,7 +327,7 @@ async def test_rerank_top_k_larger_than_docs(mock_ce_class, sample_documents):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_missing_text_field(mock_ce_class):
     """Test reranking with documents missing text field."""
     mock_model = MagicMock()
@@ -370,7 +370,7 @@ def test_get_model_info_before_loading():
 
 
 @pytest.mark.unit
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 def test_get_model_info_after_loading(mock_ce_class):
     """Test get_model_info after model is loaded."""
     mock_model = MagicMock()
@@ -390,7 +390,7 @@ def test_get_model_info_after_loading(mock_ce_class):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-@patch("src.components.retrieval.reranker.CrossEncoder")
+@patch("sentence_transformers.CrossEncoder")
 async def test_rerank_batch_size_respected(mock_ce_class, sample_documents):
     """Test that batch_size parameter is passed to model.predict."""
     mock_model = MagicMock()

@@ -35,7 +35,7 @@ async def test_scan_directory_success(
     (test_dir / "sheet.xlsx").write_text("Excel content")
     (test_dir / "unknown.xyz").write_text("Unknown content")
 
-    with patch("src.api.v1.admin.Path") as mock_path:
+    with patch("src.api.v1.admin_indexing.Path") as mock_path:
         # Mock directory existence and globbing
         mock_dir = MagicMock()
         mock_dir.exists.return_value = True
@@ -47,7 +47,7 @@ async def test_scan_directory_success(
 
         response = await test_client_async.post(
             "/api/v1/admin/indexing/scan-directory",
-            json={"directory_path": str(test_dir)},
+            json={"path": str(test_dir)},
         )
 
         assert response.status_code in [200, 400, 500]  # Accept reasonable responses
@@ -63,7 +63,7 @@ async def test_scan_directory_not_found(test_client_async: AsyncClient) -> None:
     """
     response = await test_client_async.post(
         "/api/v1/admin/indexing/scan-directory",
-        json={"directory_path": "/nonexistent/path/12345"},
+        json={"path": "/nonexistent/path/12345"},
     )
 
     # Should return error (400 or 404)
@@ -89,7 +89,7 @@ async def test_scan_directory_recursive(
     sub_dir.mkdir()
     (sub_dir / "file2.pdf").write_text("PDF 2")
 
-    with patch("src.api.v1.admin.Path") as mock_path:
+    with patch("src.api.v1.admin_indexing.Path") as mock_path:
         # Mock recursive globbing
         mock_dir = MagicMock()
         mock_dir.exists.return_value = True
@@ -101,16 +101,14 @@ async def test_scan_directory_recursive(
 
         response = await test_client_async.post(
             "/api/v1/admin/indexing/scan-directory",
-            json={"directory_path": str(docs_dir), "recursive": True},
+            json={"path": str(docs_dir), "recursive": True},
         )
 
         assert response.status_code in [200, 400, 500]
 
 
 @pytest.mark.asyncio
-async def test_scan_directory_categorizes_files(
-    test_client_async: AsyncClient, mock_directory_scan_result: dict[str, Any]
-) -> None:
+async def test_scan_directory_categorizes_files(test_client_async: AsyncClient) -> None:
     """Test files are correctly categorized (docling/llamaindex/unsupported).
 
     Verifies:
@@ -120,7 +118,7 @@ async def test_scan_directory_categorizes_files(
     """
     response = await test_client_async.post(
         "/api/v1/admin/indexing/scan-directory",
-        json={"directory_path": "/test/documents", "recursive": False},
+        json={"path": "/test/documents", "recursive": False},
     )
 
     assert response.status_code in [200, 400, 500]
@@ -182,8 +180,13 @@ async def test_list_jobs_with_filter(test_client_async: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason="Sprint 53-58: POST /ingestion/jobs removed - jobs created via /reindex endpoints"
+)
 async def test_create_indexing_job(test_client_async: AsyncClient) -> None:
     """Test POST /api/v1/admin/ingestion/jobs creates job.
+
+    DEPRECATED: Sprint 53-58 changed job creation to use /reindex endpoints.
 
     Verifies:
     - Job is created
@@ -193,7 +196,7 @@ async def test_create_indexing_job(test_client_async: AsyncClient) -> None:
     response = await test_client_async.post(
         "/api/v1/admin/ingestion/jobs",
         json={
-            "directory_path": "/test/documents",
+            "path": "/test/documents",
             "recursive": True,
         },
     )
@@ -213,7 +216,7 @@ async def test_get_job_by_id(test_client_async: AsyncClient) -> None:
     # First create a job
     create_response = await test_client_async.post(
         "/api/v1/admin/ingestion/jobs",
-        json={"directory_path": "/test/docs", "recursive": False},
+        json={"path": "/test/docs", "recursive": False},
     )
 
     if create_response.status_code in [200, 201]:
@@ -360,7 +363,7 @@ async def test_delete_job_success(test_client_async: AsyncClient) -> None:
     # First create a job
     create_response = await test_client_async.post(
         "/api/v1/admin/ingestion/jobs",
-        json={"directory_path": "/test/docs", "recursive": False},
+        json={"path": "/test/docs", "recursive": False},
     )
 
     if create_response.status_code in [200, 201]:
@@ -396,6 +399,9 @@ async def test_delete_job_not_found(test_client_async: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint"
+)
 async def test_start_indexing_job_streams_progress(test_client_async: AsyncClient) -> None:
     """Test POST /api/v1/admin/indexing/start returns SSE stream.
 
@@ -404,7 +410,7 @@ async def test_start_indexing_job_streams_progress(test_client_async: AsyncClien
     - Progress updates are sent
     - Stream terminates on completion
     """
-    with patch("src.api.v1.admin.reindex_progress_stream") as mock_stream:
+    with patch("src.api.v1.admin_indexing.reindex_progress_stream") as mock_stream:
         async def mock_gen():
             yield json.dumps({
                 "status": "in_progress",
@@ -428,6 +434,9 @@ async def test_start_indexing_job_streams_progress(test_client_async: AsyncClien
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint"
+)
 async def test_indexing_stream_progress_format(test_client_async: AsyncClient) -> None:
     """Test SSE progress messages have correct format.
 
@@ -501,7 +510,7 @@ async def test_invalid_directory_path(test_client_async: AsyncClient) -> None:
     """
     response = await test_client_async.post(
         "/api/v1/admin/indexing/scan-directory",
-        json={"directory_path": "../../../etc/passwd"},
+        json={"path": "../../../etc/passwd"},
     )
 
     assert response.status_code in [400, 403, 500]
@@ -557,7 +566,7 @@ async def test_rate_limiting_on_scan(test_client_async: AsyncClient) -> None:
     for _ in range(5):
         response = await test_client_async.post(
             "/api/v1/admin/indexing/scan-directory",
-            json={"directory_path": "/test"},
+            json={"path": "/test"},
         )
         responses.append(response.status_code)
 
@@ -590,6 +599,9 @@ async def test_admin_endpoints_require_auth(test_client_async: AsyncClient) -> N
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason="Sprint 53-58: POST /ingestion/jobs removed - workflow changed to use /reindex"
+)
 async def test_complete_indexing_workflow(test_client_async: AsyncClient) -> None:
     """Test complete workflow: scan → create job → monitor → cancel.
 
@@ -602,14 +614,14 @@ async def test_complete_indexing_workflow(test_client_async: AsyncClient) -> Non
     # Step 1: Scan directory
     scan_response = await test_client_async.post(
         "/api/v1/admin/indexing/scan-directory",
-        json={"directory_path": "/test/documents", "recursive": True},
+        json={"path": "/test/documents", "recursive": True},
     )
     assert scan_response.status_code in [200, 400, 500]
 
     # Step 2: Create job
     job_response = await test_client_async.post(
         "/api/v1/admin/ingestion/jobs",
-        json={"directory_path": "/test/documents", "recursive": True},
+        json={"path": "/test/documents", "recursive": True},
     )
     assert job_response.status_code in [200, 201, 400, 404]
 
@@ -662,7 +674,7 @@ async def test_concurrent_jobs(test_client_async: AsyncClient) -> None:
     for i in range(3):
         response = await test_client_async.post(
             "/api/v1/admin/ingestion/jobs",
-            json={"directory_path": f"/test/docs_{i}", "recursive": False},
+            json={"path": f"/test/docs_{i}", "recursive": False},
         )
 
         if response.status_code in [200, 201]:

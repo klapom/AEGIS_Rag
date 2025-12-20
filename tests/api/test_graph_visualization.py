@@ -1,6 +1,6 @@
 """Tests for Graph Visualization API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -155,7 +155,7 @@ class TestGraphVisualizationAPI:
 
         mock_exporter = AsyncMock()
         mock_exporter.export_subgraph = AsyncMock(
-            side_effect=DatabaseConnectionError("Connection failed")
+            side_effect=DatabaseConnectionError(database="Neo4j", reason="Connection failed")
         )
         mock_get_exporter.return_value = mock_exporter
 
@@ -211,7 +211,12 @@ class TestQuerySubgraphEndpoint:
             ]
         )
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.post(
@@ -237,7 +242,12 @@ class TestQuerySubgraphEndpoint:
         mock_neo4j = AsyncMock()
         mock_session = AsyncMock()
         mock_session.run = AsyncMock(side_effect=Exception("Database error"))
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.post(
@@ -298,7 +308,12 @@ class TestGraphStatisticsEndpoint:
                 return mock_orphan_result
 
         mock_session.run = AsyncMock(side_effect=run_side_effect)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/statistics")
@@ -324,7 +339,12 @@ class TestGraphStatisticsEndpoint:
         mock_result.data = AsyncMock(return_value=[])
 
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/statistics")
@@ -421,7 +441,12 @@ class TestCommunityDocumentsEndpoint:
         mock_result = AsyncMock()
         mock_result.single = AsyncMock(return_value={"entity_names": ["Transformer", "Attention"]})
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         # Mock embedding service
@@ -457,7 +482,12 @@ class TestCommunityDocumentsEndpoint:
         mock_result = AsyncMock()
         mock_result.single = AsyncMock(return_value=None)
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         response = client.get("/api/v1/graph/viz/communities/nonexistent/documents")
@@ -477,7 +507,12 @@ class TestCommunityDocumentsEndpoint:
         mock_result = AsyncMock()
         mock_result.single = AsyncMock(return_value={"entity_names": ["Entity1", "Entity2"]})
         mock_session.run = AsyncMock(return_value=mock_result)
-        mock_neo4j.get_driver.return_value.session = AsyncMock(return_value=mock_session)
+        # Create async context manager for session
+        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        # Mock driver property (not get_driver method)
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session_ctx)
+        mock_neo4j.driver = mock_driver
         mock_get_neo4j.return_value = mock_neo4j
 
         # Mock embedding and search
