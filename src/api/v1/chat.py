@@ -637,7 +637,7 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
             logger.info("chat_stream_completed", session_id=session_id)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(
                 "chat_stream_timeout",
                 session_id=session_id,

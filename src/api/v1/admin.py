@@ -14,10 +14,11 @@ For LLM config endpoints, see admin_llm.py
 For graph analytics, see admin_graph.py
 """
 
+from typing import Literal
+
 import structlog
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
-from typing import Literal
 
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import get_qdrant_client
@@ -671,7 +672,3 @@ async def reset_relation_synonyms() -> RelationOverridesResetResponse:
 
 # Re-exports for backward compatibility with external scripts
 # These can be imported from src.components.graph_rag.llm_config_provider directly
-from src.components.graph_rag.llm_config_provider import (
-    REDIS_KEY_SUMMARY_MODEL_CONFIG,
-    get_configured_summary_model,
-)

@@ -16,7 +16,7 @@ These protocols define interfaces for:
 - Hybrid search (Vector + BM25 + RRF)
 """
 
-from typing import Protocol, Any, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

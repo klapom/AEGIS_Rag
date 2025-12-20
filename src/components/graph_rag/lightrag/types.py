@@ -7,7 +7,6 @@ This module contains dataclasses and type aliases used across the lightrag packa
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
 
 
 class QueryMode(Enum):

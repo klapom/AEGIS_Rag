@@ -20,8 +20,10 @@ Example:
 """
 
 import asyncio
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
+
 import structlog
-from typing import Type, TypeVar, Any, Callable, Awaitable
 
 logger = structlog.get_logger(__name__)
 
@@ -41,8 +43,8 @@ class Container:
     """
 
     _instance: "Container | None" = None
-    _registrations: dict[Type, tuple[Callable, bool]]
-    _singletons: dict[Type, Any]
+    _registrations: dict[type, tuple[Callable, bool]]
+    _singletons: dict[type, Any]
 
     def __init__(self) -> None:
         """Initialize container with empty registrations."""
@@ -62,7 +64,7 @@ class Container:
 
     def register(
         self,
-        interface: Type[T],
+        interface: type[T],
         factory: Callable[[], T | Awaitable[T]],
         singleton: bool = True,
     ) -> None:
@@ -83,7 +85,7 @@ class Container:
             singleton=singleton,
         )
 
-    async def resolve(self, interface: Type[T]) -> T:
+    async def resolve(self, interface: type[T]) -> T:
         """Resolve a service instance.
 
         Args:
@@ -121,7 +123,7 @@ class Container:
 
         return instance
 
-    def is_registered(self, interface: Type) -> bool:
+    def is_registered(self, interface: type) -> bool:
         """Check if an interface is registered.
 
         Args:
@@ -151,7 +153,7 @@ class Container:
 
     def override(
         self,
-        interface: Type[T],
+        interface: type[T],
         factory: Callable[[], T | Awaitable[T]],
     ) -> None:
         """Override a registration (for testing).
@@ -181,7 +183,7 @@ def get_container() -> Container:
     return Container.get()
 
 
-async def resolve(interface: Type[T]) -> T:
+async def resolve(interface: type[T]) -> T:
     """Resolve a service from the global container.
 
     Args:
@@ -197,7 +199,7 @@ async def resolve(interface: Type[T]) -> T:
 
 
 def register(
-    interface: Type[T],
+    interface: type[T],
     factory: Callable[[], T | Awaitable[T]],
     singleton: bool = True,
 ) -> None:

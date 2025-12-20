@@ -18,9 +18,9 @@ Usage:
 # Protocols (Sprint 57)
 from src.domains.vector_search.protocols import (
     EmbeddingService,
-    VectorStore,
     HybridSearchService,
     RerankingService,
+    VectorStore,
 )
 
 __all__ = [

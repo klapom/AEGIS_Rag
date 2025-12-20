@@ -16,8 +16,8 @@ from src.components.graph_rag.neo4j_client import (
     get_neo4j_client,
     get_neo4j_client_async,
 )
-from src.components.graph_rag.query_templates import GraphQueryTemplates
 from src.components.graph_rag.query_builder import CypherQueryBuilder
+from src.components.graph_rag.query_templates import GraphQueryTemplates
 from src.components.graph_rag.temporal_query_builder import (
     TemporalQueryBuilder,
     get_temporal_query_builder,

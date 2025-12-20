@@ -11,18 +11,20 @@ Usage:
 """
 
 # Re-export from components/graph_rag
+from src.components.graph_rag.llm_config_provider import (
+    REDIS_KEY_SUMMARY_MODEL_CONFIG,
+    get_configured_summary_model,
+)
+from src.components.graph_rag.protocols import (
+    CommunityDetector as CommunityDetectorProtocol,
+)
 from src.components.graph_rag.protocols import (
     GraphStorage,
-    CommunityDetector as CommunityDetectorProtocol,
     LLMConfigProvider,
 )
 from src.components.graph_rag.visualization_export import (
     GraphVisualizationExporter,
     get_visualization_exporter,
-)
-from src.components.graph_rag.llm_config_provider import (
-    get_configured_summary_model,
-    REDIS_KEY_SUMMARY_MODEL_CONFIG,
 )
 
 __all__ = [

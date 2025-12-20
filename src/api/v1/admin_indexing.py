@@ -665,7 +665,7 @@ async def add_documents_stream(
                         # Wait for poll_interval or until stopped
                         try:
                             await asyncio.wait_for(stop_polling.wait(), timeout=poll_interval)
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             pass  # Continue polling
 
                 async def pipeline_consumer():

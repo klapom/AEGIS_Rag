@@ -21,8 +21,9 @@ IMPORTANT: These protocols are designed to be extensible for Sprint 59
 Agentic Features (CodeExecutor, SandboxedRunner).
 """
 
-from typing import Protocol, Any, AsyncIterator, runtime_checkable
+from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

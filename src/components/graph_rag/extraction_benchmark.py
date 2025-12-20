@@ -349,13 +349,13 @@ class ExtractionBenchmark:
 
         This is the baseline for comparison.
         """
-        from src.prompts.extraction_prompts import (
-            ENTITY_EXTRACTION_PROMPT,
-            RELATIONSHIP_EXTRACTION_PROMPT,
-        )
         from src.components.graph_rag.relation_extractor import (
             SYSTEM_PROMPT_RELATION,
             USER_PROMPT_TEMPLATE_RELATION,
+        )
+        from src.prompts.extraction_prompts import (
+            ENTITY_EXTRACTION_PROMPT,
+            RELATIONSHIP_EXTRACTION_PROMPT,
         )
 
         # Pass 1: Entity extraction
@@ -464,7 +464,7 @@ class ExtractionBenchmark:
         This is a middle-ground: 2 calls but can be parallelized after entities.
         """
         # First: Unified entity + typed relationships
-        entity_typed_prompt = """Extract entities and their typed relationships from the text.
+        entity_typed_prompt = f"""Extract entities and their typed relationships from the text.
 
 ---TEXT---
 {text}
@@ -475,7 +475,7 @@ Return JSON only:
   "entities": [{{"name": "...", "type": "PERSON|ORGANIZATION|LOCATION|CONCEPT|PRODUCT|EVENT", "description": "..."}}],
   "relationships": [{{"source": "...", "target": "...", "type": "WORKS_AT|KNOWS|LOCATED_IN|CREATED|USES|PART_OF", "description": "..."}}]
 }}
-""".format(text=text)
+"""
 
         task1 = LLMTask(
             task_type=TaskType.EXTRACTION,

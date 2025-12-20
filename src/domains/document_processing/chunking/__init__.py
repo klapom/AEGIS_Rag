@@ -12,12 +12,12 @@ Usage:
 
 # Re-export from components/ingestion
 from src.components.ingestion.nodes.adaptive_chunking import (
-    chunking_node,
     adaptive_section_chunking,
+    chunking_node,
 )
 from src.components.ingestion.nodes.models import (
-    SectionMetadata,
     AdaptiveChunk,
+    SectionMetadata,
 )
 from src.components.ingestion.section_extraction import (
     extract_section_hierarchy,

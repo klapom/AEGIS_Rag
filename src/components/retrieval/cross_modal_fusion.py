@@ -22,7 +22,6 @@ Academic Reference:
     - Entity-chunk alignment inspired by GraphRAG (Edge et al., 2024)
 """
 
-import asyncio
 from typing import Any
 
 import structlog

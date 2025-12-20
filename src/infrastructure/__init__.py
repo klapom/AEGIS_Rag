@@ -18,8 +18,13 @@ Usage:
 # Config exports
 from src.infrastructure.config import Settings, get_settings, settings
 
-# Logging exports
-from src.infrastructure.logging import add_app_context, get_logger, setup_logging
+# DI Container (Sprint 57)
+from src.infrastructure.di import (
+    Container,
+    get_container,
+    register,
+    resolve,
+)
 
 # Exception exports
 from src.infrastructure.exceptions import (
@@ -42,13 +47,8 @@ from src.infrastructure.exceptions import (
     VectorSearchError,
 )
 
-# DI Container (Sprint 57)
-from src.infrastructure.di import (
-    Container,
-    get_container,
-    resolve,
-    register,
-)
+# Logging exports
+from src.infrastructure.logging import add_app_context, get_logger, setup_logging
 
 # Model exports
 from src.infrastructure.models import (

@@ -9,24 +9,25 @@ from src.components.graph_rag.community_summarizer import (
     CommunitySummarizer,
     get_community_summarizer,
 )
+from src.components.graph_rag.hybrid_relation_deduplicator import (
+    HybridRelationDeduplicator,
+    get_hybrid_relation_deduplicator,
+)
+
 # Sprint 53 Feature 53.1: LLM Config Provider and Protocols
 from src.components.graph_rag.llm_config_provider import (
     REDIS_KEY_SUMMARY_MODEL_CONFIG,
     get_configured_summary_model,
 )
-from src.components.graph_rag.protocols import (
-    CommunityDetector,
-    GraphStorage,
-    LLMConfigProvider,
-)
-from src.components.graph_rag.hybrid_relation_deduplicator import (
-    HybridRelationDeduplicator,
-    get_hybrid_relation_deduplicator,
-)
 from src.components.graph_rag.neo4j_client import (
     Neo4jClient,
     get_neo4j_client,
     get_neo4j_client_async,
+)
+from src.components.graph_rag.protocols import (
+    CommunityDetector,
+    GraphStorage,
+    LLMConfigProvider,
 )
 from src.components.graph_rag.relation_deduplicator import (
     RelationDeduplicator,

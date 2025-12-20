@@ -41,7 +41,6 @@ from src.components.retrieval.lightrag_context_parser import (
     parse_lightrag_global_context,
     parse_lightrag_local_context,
 )
-from src.core.config import settings
 from src.utils.fusion import reciprocal_rank_fusion
 
 # Lazy import to avoid circular dependency
@@ -277,7 +276,6 @@ async def _qdrant_search(
 
     try:
         # Use vector_search from HybridSearch (handles embeddings)
-        from src.components.retrieval.filters import MetadataFilters
 
         filters = None
         if namespaces:

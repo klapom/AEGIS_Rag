@@ -527,7 +527,6 @@ async def extract_parallel(
 # =============================================================================
 
 if __name__ == "__main__":
-    import sys
 
     test_text = """Arthur's Magazine (1844-1846) was an American literary periodical published
     in Philadelphia in the 19th century. First for Women is a woman's magazine
@@ -545,27 +544,27 @@ if __name__ == "__main__":
         extractor = ParallelExtractor()
         result = await extractor.extract(test_text, "test_doc")
 
-        print(f"\nResults:")
+        print("\nResults:")
         print(f"  Total time: {result.metrics.total_time_ms:.0f}ms")
         print(f"  Entities: {result.metrics.merged_entities}")
         print(f"  Relations: {result.metrics.merged_relations}")
         print(f"  Dedup entities: {result.metrics.deduplication_removed_entities}")
         print(f"  Dedup relations: {result.metrics.deduplication_removed_relations}")
 
-        print(f"\nPer-model breakdown:")
+        print("\nPer-model breakdown:")
         for model in result.metrics.models_used:
             print(f"  {model}:")
             print(f"    Entities: {result.metrics.entities_per_model.get(model, 0)}")
             print(f"    Relations: {result.metrics.relations_per_model.get(model, 0)}")
             print(f"    Time: {result.metrics.model_times_ms.get(model, 0):.0f}ms")
 
-        print(f"\nMerged Entities:")
+        print("\nMerged Entities:")
         for e in result.entities[:5]:
             print(f"  [{e.type}] {e.name}")
         if len(result.entities) > 5:
             print(f"  ... and {len(result.entities) - 5} more")
 
-        print(f"\nMerged Relations:")
+        print("\nMerged Relations:")
         for r in result.relationships[:5]:
             print(f"  {r.source} --[{r.type}]--> {r.target}")
         if len(result.relationships) > 5:

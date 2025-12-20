@@ -11,23 +11,23 @@ Usage:
 """
 
 # Re-export from components/graph_rag
-from src.components.graph_rag.semantic_deduplicator import (
-    SemanticDeduplicator,
-    MultiCriteriaDeduplicator,
-    create_deduplicator_from_config,
+from src.components.graph_rag.hybrid_relation_deduplicator import (
+    HybridRelationDeduplicator,
+    get_hybrid_relation_deduplicator,
 )
 from src.components.graph_rag.relation_deduplicator import (
     RelationDeduplicator,
     create_relation_deduplicator_from_config,
 )
+from src.components.graph_rag.semantic_deduplicator import (
+    MultiCriteriaDeduplicator,
+    SemanticDeduplicator,
+    create_deduplicator_from_config,
+)
 from src.components.graph_rag.semantic_relation_deduplicator import (
+    SYMMETRIC_RELATIONS,
     SemanticRelationDeduplicator,
     create_semantic_relation_deduplicator,
-    SYMMETRIC_RELATIONS,
-)
-from src.components.graph_rag.hybrid_relation_deduplicator import (
-    HybridRelationDeduplicator,
-    get_hybrid_relation_deduplicator,
 )
 
 __all__ = [

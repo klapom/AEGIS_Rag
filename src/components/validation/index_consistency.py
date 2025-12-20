@@ -353,7 +353,7 @@ class IndexConsistencyValidator:
                     entity_id=record["entity_id"],
                     entity_name=record["entity_name"],
                     chunk_id=record["chunk_id"],
-                    message=f"MENTIONED_IN relationship missing source_chunk_id",
+                    message="MENTIONED_IN relationship missing source_chunk_id",
                     metadata={"rel_type": record["rel_type"]},
                 )
                 issues.append(issue)
@@ -375,7 +375,7 @@ class IndexConsistencyValidator:
                     severity="warning",
                     entity_id=record["entity_id"],
                     entity_name=record["entity_name"],
-                    message=f"RELATES_TO relationship missing source_chunk_id",
+                    message="RELATES_TO relationship missing source_chunk_id",
                     metadata={
                         "rel_type": record["rel_type"],
                         "target_entity": record["target_name"],

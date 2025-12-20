@@ -100,11 +100,6 @@ from langgraph.graph import END, StateGraph
 
 from src.components.ingestion.format_router import ParserType, initialize_format_router
 from src.components.ingestion.ingestion_state import IngestionState
-from src.components.ingestion.progress_events import (
-    cleanup_progress_queue,
-    drain_progress_events,
-    get_or_create_progress_queue,
-)
 from src.components.ingestion.langgraph_nodes import (
     chunking_node,
     docling_parse_node,
@@ -113,6 +108,11 @@ from src.components.ingestion.langgraph_nodes import (
     image_enrichment_node,  # Sprint 33: VLM image processing
     llamaindex_parse_node,
     memory_check_node,
+)
+from src.components.ingestion.progress_events import (
+    cleanup_progress_queue,
+    drain_progress_events,
+    get_or_create_progress_queue,
 )
 
 logger = structlog.get_logger(__name__)

@@ -265,10 +265,10 @@ class DomainAnalyzer:
             Extracted text
         """
         try:
-            import docx2txt
-
             # docx2txt.process() requires a file path, so we need to save temp file
             import tempfile
+
+            import docx2txt
 
             with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
                 tmp.write(file_obj.read())

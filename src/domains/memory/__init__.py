@@ -17,10 +17,10 @@ Usage:
 
 # Protocols (Sprint 57)
 from src.domains.memory.protocols import (
-    ConversationMemory,
-    SessionStore,
     CacheService,
+    ConversationMemory,
     MemoryConsolidation,
+    SessionStore,
 )
 
 __all__ = [

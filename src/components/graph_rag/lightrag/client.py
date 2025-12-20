@@ -23,23 +23,22 @@ from tenacity import (
     wait_exponential,
 )
 
-from src.components.graph_rag.lightrag.initialization import (
-    create_lightrag_instance,
-    get_default_config,
-)
 from src.components.graph_rag.lightrag.ingestion import (
     insert_documents,
     insert_documents_optimized,
     insert_prechunked_documents,
 )
+from src.components.graph_rag.lightrag.initialization import (
+    create_lightrag_instance,
+    get_default_config,
+)
 from src.components.graph_rag.lightrag.neo4j_storage import (
+    check_neo4j_health,
     clear_neo4j_database,
     get_neo4j_stats,
-    check_neo4j_health,
     store_relates_to_relationships,
 )
-from src.components.graph_rag.lightrag.types import LightRAGConfig, QueryMode
-from src.core.config import settings
+from src.components.graph_rag.lightrag.types import LightRAGConfig
 from src.core.models import GraphQueryResult
 
 logger = structlog.get_logger(__name__)

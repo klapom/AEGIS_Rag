@@ -19,11 +19,12 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import structlog
 
@@ -363,8 +364,8 @@ class PipelineMonitor:
             "",
             "## Summary",
             "",
-            f"| Metric | Value |",
-            f"|--------|-------|",
+            "| Metric | Value |",
+            "|--------|-------|",
             f"| Total Samples | {meta['total_samples']} |",
             f"| Successful | {meta['successful']} |",
             f"| Failed | {meta['failed']} |",
@@ -387,8 +388,8 @@ class PipelineMonitor:
                 lines.extend([
                     f"### {stage_name.title()}",
                     "",
-                    f"| Metric | Value |",
-                    f"|--------|-------|",
+                    "| Metric | Value |",
+                    "|--------|-------|",
                 ])
 
                 for key, value in stage_data.items():
@@ -455,7 +456,7 @@ class ModelComparisonReport:
             model_name: Name of the model
             json_path: Path to JSON report file
         """
-        with open(json_path, "r", encoding="utf-8") as f:
+        with open(json_path, encoding="utf-8") as f:
             report = json.load(f)
         self.model_reports[model_name] = report
 

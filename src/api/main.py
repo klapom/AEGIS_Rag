@@ -22,12 +22,13 @@ from src.api.middleware.exception_handler import (
 from src.api.middleware.request_id import RequestIDMiddleware
 from src.api.routers import graph_viz
 from src.api.v1.admin import router as admin_router
+
 # Sprint 53: Admin module split
 from src.api.v1.admin_costs import router as admin_costs_router
-from src.api.v1.admin_graph import router as admin_graph_router
-from src.api.v1.admin_llm import router as admin_llm_router
-from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feature 46.4
+from src.api.v1.admin_graph import router as admin_graph_router
+from src.api.v1.admin_indexing import router as admin_indexing_router
+from src.api.v1.admin_llm import router as admin_llm_router
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router

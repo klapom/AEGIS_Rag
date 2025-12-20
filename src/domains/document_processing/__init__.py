@@ -22,26 +22,33 @@ For backward compatibility, these are also available from:
 # Re-export from components/ingestion
 
 # Protocols (Sprint 57)
-from src.domains.document_processing.protocols import (
-    DocumentParser,
-    ChunkingService,
-    ImageEnricher,
-    IngestionPipeline,
-    EmbeddingGenerator,
-    FormatRouter as FormatRouterProtocol,
+# Chunking
+from src.domains.document_processing.chunking import (
+    AdaptiveChunk,
+    SectionMetadata,
+    adaptive_section_chunking,
+    chunking_node,
+    extract_section_hierarchy,
+)
+
+# Enrichment
+from src.domains.document_processing.enrichment import (
+    ImageProcessor,
+    image_enrichment_node,
+    process_image_with_vlm,
 )
 
 # Parsing
 from src.domains.document_processing.parsing import (
+    ALL_FORMATS,
+    DOCLING_FORMATS,
+    LLAMAINDEX_EXCLUSIVE,
+    SHARED_FORMATS,
     DoclingContainerClient,
     DoclingParsedDocument,
     FormatRouter,
     ParserType,
     RoutingDecision,
-    DOCLING_FORMATS,
-    LLAMAINDEX_EXCLUSIVE,
-    SHARED_FORMATS,
-    ALL_FORMATS,
     check_docling_availability,
     initialize_format_router,
 )
@@ -49,33 +56,27 @@ from src.domains.document_processing.parsing import (
 # Pipeline
 from src.domains.document_processing.pipeline import (
     IngestionState,
-    create_initial_state,
-    calculate_progress,
+    StreamingPipelineOrchestrator,
     add_error,
-    should_retry,
-    increment_retry,
+    calculate_progress,
     create_ingestion_graph,
-    run_ingestion_pipeline,
-    run_ingestion_pipeline_streaming,
+    create_initial_state,
+    increment_retry,
     initialize_pipeline_router,
     run_batch_ingestion,
-    StreamingPipelineOrchestrator,
+    run_ingestion_pipeline,
+    run_ingestion_pipeline_streaming,
+    should_retry,
 )
-
-# Chunking
-from src.domains.document_processing.chunking import (
-    chunking_node,
-    adaptive_section_chunking,
-    SectionMetadata,
-    AdaptiveChunk,
-    extract_section_hierarchy,
+from src.domains.document_processing.protocols import (
+    ChunkingService,
+    DocumentParser,
+    EmbeddingGenerator,
+    ImageEnricher,
+    IngestionPipeline,
 )
-
-# Enrichment
-from src.domains.document_processing.enrichment import (
-    image_enrichment_node,
-    ImageProcessor,
-    process_image_with_vlm,
+from src.domains.document_processing.protocols import (
+    FormatRouter as FormatRouterProtocol,
 )
 
 __all__ = [

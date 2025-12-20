@@ -23,7 +23,8 @@ IMPORTANT: ToolExecutor Protocol is required for Sprint 59 Agentic Features:
 - Deep Research
 """
 
-from typing import Protocol, Any, AsyncIterator, runtime_checkable
+from collections.abc import AsyncIterator
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

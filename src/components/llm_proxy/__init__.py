@@ -9,24 +9,24 @@ Recommended import:
 
 # Re-export from domain location
 from src.domains.llm_integration import (
+    # Main proxy
+    AegisLLMProxy,
     # Models
     Complexity,
+    # Cost tracking
+    CostTracker,
     DataClassification,
     ExecutionLocation,
     LLMResponse,
     LLMTask,
     QualityRequirement,
     TaskType,
-    # Main proxy
-    AegisLLMProxy,
-    get_aegis_llm_proxy,
-    # Cost tracking
-    CostTracker,
-    get_cost_tracker,
     # VLM Factory
     VLMBackend,
     VLMClient,
     close_shared_vlm_client,
+    get_aegis_llm_proxy,
+    get_cost_tracker,
     get_shared_vlm_client,
     get_vlm_backend_from_config,
     get_vlm_client,

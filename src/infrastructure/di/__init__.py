@@ -21,8 +21,8 @@ For testing:
 from src.infrastructure.di.container import (
     Container,
     get_container,
-    resolve,
     register,
+    resolve,
 )
 
 __all__ = [

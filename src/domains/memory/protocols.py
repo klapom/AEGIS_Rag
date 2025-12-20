@@ -17,7 +17,7 @@ These protocols define interfaces for:
 - Memory consolidation (Graphiti)
 """
 
-from typing import Protocol, Any, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

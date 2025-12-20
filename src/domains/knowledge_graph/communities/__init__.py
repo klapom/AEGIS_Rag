@@ -11,22 +11,22 @@ Usage:
 """
 
 # Re-export from components/graph_rag
+from src.components.graph_rag.community_delta_tracker import (
+    CommunityDelta,
+    get_entity_communities_snapshot,
+    track_community_changes,
+)
 from src.components.graph_rag.community_detector import (
     CommunityDetector,
     get_community_detector,
 )
-from src.components.graph_rag.community_summarizer import (
-    CommunitySummarizer,
-    get_community_summarizer,
-)
-from src.components.graph_rag.community_delta_tracker import (
-    CommunityDelta,
-    track_community_changes,
-    get_entity_communities_snapshot,
-)
 from src.components.graph_rag.community_search import (
     CommunitySearch,
     get_community_search,
+)
+from src.components.graph_rag.community_summarizer import (
+    CommunitySummarizer,
+    get_community_summarizer,
 )
 
 __all__ = [

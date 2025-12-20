@@ -9,7 +9,7 @@ This module provides Redis-based working memory for:
 
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from redis.asyncio import Redis
@@ -17,6 +17,9 @@ from redis.exceptions import RedisError
 
 from src.core.config import settings
 from src.core.exceptions import MemoryError
+
+if TYPE_CHECKING:
+    from src.models.phase_event import PhaseEvent
 
 logger = structlog.get_logger(__name__)
 

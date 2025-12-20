@@ -63,7 +63,6 @@ See Also:
 """
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from src.models.phase_event import PhaseEvent
 

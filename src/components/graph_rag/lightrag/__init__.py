@@ -39,25 +39,6 @@ from src.components.graph_rag.lightrag.client import (
     get_lightrag_wrapper_async,
 )
 
-# Types
-from src.components.graph_rag.lightrag.types import (
-    ChunkMetadata,
-    EntityData,
-    ExtractionStats,
-    IngestionResult,
-    LightRAGConfig,
-    QueryMode,
-    RelationData,
-)
-
-# Initialization
-from src.components.graph_rag.lightrag.initialization import (
-    create_lightrag_instance,
-    get_default_config,
-    setup_neo4j_environment,
-    UnifiedEmbeddingFunc,
-)
-
 # Converters
 from src.components.graph_rag.lightrag.converters import (
     chunk_text_with_metadata,
@@ -74,6 +55,14 @@ from src.components.graph_rag.lightrag.ingestion import (
     insert_prechunked_documents,
 )
 
+# Initialization
+from src.components.graph_rag.lightrag.initialization import (
+    UnifiedEmbeddingFunc,
+    create_lightrag_instance,
+    get_default_config,
+    setup_neo4j_environment,
+)
+
 # Neo4j Storage
 from src.components.graph_rag.lightrag.neo4j_storage import (
     check_neo4j_health,
@@ -81,6 +70,17 @@ from src.components.graph_rag.lightrag.neo4j_storage import (
     get_neo4j_stats,
     store_chunks_and_provenance,
     store_relates_to_relationships,
+)
+
+# Types
+from src.components.graph_rag.lightrag.types import (
+    ChunkMetadata,
+    EntityData,
+    ExtractionStats,
+    IngestionResult,
+    LightRAGConfig,
+    QueryMode,
+    RelationData,
 )
 
 __all__ = [

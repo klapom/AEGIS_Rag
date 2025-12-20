@@ -11,6 +11,10 @@ Usage:
 """
 
 # Re-export from components/graph_rag
+from src.components.graph_rag.dual_level_search import (
+    DualLevelSearch,
+    get_dual_level_search,
+)
 from src.components.graph_rag.lightrag import (
     LightRAGClient,
     LightRAGWrapper,
@@ -18,10 +22,6 @@ from src.components.graph_rag.lightrag import (
     get_lightrag_client_async,
     get_lightrag_wrapper,
     get_lightrag_wrapper_async,
-)
-from src.components.graph_rag.dual_level_search import (
-    DualLevelSearch,
-    get_dual_level_search,
 )
 
 __all__ = [

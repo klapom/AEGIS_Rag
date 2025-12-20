@@ -21,7 +21,7 @@ These protocols define interfaces for:
 - LLM configuration
 """
 
-from typing import Protocol, Any, AsyncIterator, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable

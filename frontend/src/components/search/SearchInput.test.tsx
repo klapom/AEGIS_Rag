@@ -50,30 +50,18 @@ describe('SearchInput', () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  it('should change mode when chip is clicked', () => {
+  // Sprint 52: Mode selector removed - always uses hybrid mode
+  it('should always use hybrid mode', () => {
     const mockOnSubmit = vi.fn();
     render(<SearchInput onSubmit={mockOnSubmit} />);
-
-    // Click Vector chip
-    const vectorChip = screen.getByText('Vector');
-    fireEvent.click(vectorChip);
 
     // Submit query
     const input = screen.getByPlaceholderText(/Fragen Sie/);
     fireEvent.change(input, { target: { value: 'test' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'vector', []);
-  });
-
-  it('should render all mode chips', () => {
-    const mockOnSubmit = vi.fn();
-    render(<SearchInput onSubmit={mockOnSubmit} />);
-
-    expect(screen.getByText('Hybrid')).toBeInTheDocument();
-    expect(screen.getByText('Vector')).toBeInTheDocument();
-    expect(screen.getByText('Graph')).toBeInTheDocument();
-    expect(screen.getByText('Memory')).toBeInTheDocument();
+    // Should always submit with hybrid mode
+    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'hybrid', []);
   });
 
   it('should disable submit button when query is empty', () => {

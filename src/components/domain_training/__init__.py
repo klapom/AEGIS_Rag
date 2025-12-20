@@ -89,14 +89,18 @@ Usage:
     >>> print(f"Generated {len(generated)} samples")
 """
 
-from src.components.domain_training.domain_classifier import (
-    DomainClassifier,
-    get_domain_classifier,
-    reset_classifier,
+from src.components.domain_training.data_augmentation import (
+    TrainingDataAugmenter,
+    get_training_data_augmenter,
 )
 from src.components.domain_training.domain_analyzer import (
     DomainAnalyzer,
     get_domain_analyzer,
+)
+from src.components.domain_training.domain_classifier import (
+    DomainClassifier,
+    get_domain_classifier,
+    reset_classifier,
 )
 from src.components.domain_training.domain_discovery import (
     DomainDiscoveryService,
@@ -123,10 +127,6 @@ from src.components.domain_training.prompt_extractor import (
     extract_prompt_from_dspy_result,
     format_prompt_for_production,
     save_prompt_template,
-)
-from src.components.domain_training.data_augmentation import (
-    TrainingDataAugmenter,
-    get_training_data_augmenter,
 )
 from src.components.domain_training.training_progress import (
     ProgressEvent,

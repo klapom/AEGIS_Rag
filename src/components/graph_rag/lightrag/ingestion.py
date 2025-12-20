@@ -28,8 +28,8 @@ from src.components.graph_rag.lightrag.converters import (
     convert_relations_to_lightrag_format,
 )
 from src.components.graph_rag.lightrag.neo4j_storage import store_chunks_and_provenance
-from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
 from src.components.graph_rag.relation_deduplicator import create_relation_deduplicator_from_config
+from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
 from src.core.config import settings
 from src.monitoring.metrics import record_deduplication_detail, record_extraction_by_type
 

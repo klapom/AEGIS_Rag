@@ -155,7 +155,7 @@ class DualLevelSearch:
                 "was", "weißt", "du", "über", "wie", "ist", "sind", "der", "die", "das",
                 "ein", "eine", "und", "oder", "mit", "von", "zu", "für", "auf", "in",
                 "what", "is", "are", "the", "a", "an", "and", "or", "with", "from",
-                "to", "for", "on", "in", "who", "where", "when", "how", "why",
+                "to", "for", "on", "who", "where", "when", "how", "why",
                 "tell", "me", "about", "know", "do", "you", "can", "could", "would",
             }
             words = query.lower().split()
@@ -243,7 +243,7 @@ class DualLevelSearch:
                 "was", "weißt", "du", "über", "wie", "ist", "sind", "der", "die", "das",
                 "ein", "eine", "und", "oder", "mit", "von", "zu", "für", "auf", "in",
                 "what", "is", "are", "the", "a", "an", "and", "or", "with", "from",
-                "to", "for", "on", "in", "who", "where", "when", "how", "why",
+                "to", "for", "on", "who", "where", "when", "how", "why",
                 "tell", "me", "about", "know", "do", "you", "can", "could", "would",
             }
             words = query.lower().split()

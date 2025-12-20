@@ -21,12 +21,16 @@ Usage:
 """
 
 # Protocols (Sprint 57)
-from src.domains.llm_integration.protocols import (
-    LLMProvider,
-    LLMRouter,
-    CostTracker as CostTrackerProtocol,
-    ToolExecutor,
-    VLMProvider,
+# Configuration
+from src.domains.llm_integration.config import (
+    LLMProxyConfig,
+    get_llm_proxy_config,
+)
+
+# Cost tracking
+from src.domains.llm_integration.cost import (
+    CostTracker,
+    get_cost_tracker,
 )
 
 # Models (data structures)
@@ -39,33 +43,27 @@ from src.domains.llm_integration.models import (
     QualityRequirement,
     TaskType,
 )
-
-# Configuration
-from src.domains.llm_integration.config import (
-    LLMProxyConfig,
-    get_llm_proxy_config,
+from src.domains.llm_integration.protocols import (
+    CostTracker as CostTrackerProtocol,
+)
+from src.domains.llm_integration.protocols import (
+    LLMProvider,
+    LLMRouter,
+    ToolExecutor,
+    VLMProvider,
 )
 
 # Main proxy
-from src.domains.llm_integration.proxy import (
-    AegisLLMProxy,
-    get_aegis_llm_proxy,
-)
-
 # VLM Factory
 from src.domains.llm_integration.proxy import (
+    AegisLLMProxy,
     VLMBackend,
     VLMClient,
-    get_vlm_client,
-    get_vlm_backend_from_config,
-    get_shared_vlm_client,
     close_shared_vlm_client,
-)
-
-# Cost tracking
-from src.domains.llm_integration.cost import (
-    CostTracker,
-    get_cost_tracker,
+    get_aegis_llm_proxy,
+    get_shared_vlm_client,
+    get_vlm_backend_from_config,
+    get_vlm_client,
 )
 
 __all__ = [

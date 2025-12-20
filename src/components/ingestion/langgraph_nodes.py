@@ -25,26 +25,26 @@ See ADR-046 for details on the modularization strategy.
 # All existing imports from this file will continue to work
 
 # Data models
-from src.components.ingestion.nodes.models import (
-    AdaptiveChunk,
-    SectionMetadata,
-)
-
-# Node functions
-from src.components.ingestion.nodes.memory_management import memory_check_node
-from src.components.ingestion.nodes.document_parsers import (
-    docling_extraction_node,
-    docling_parse_node,
-    llamaindex_parse_node,
-)
-from src.components.ingestion.nodes.image_enrichment import image_enrichment_node
 from src.components.ingestion.nodes.adaptive_chunking import (
     adaptive_section_chunking,
     chunking_node,
     merge_small_chunks,
 )
-from src.components.ingestion.nodes.vector_embedding import embedding_node
+from src.components.ingestion.nodes.document_parsers import (
+    docling_extraction_node,
+    docling_parse_node,
+    llamaindex_parse_node,
+)
 from src.components.ingestion.nodes.graph_extraction import graph_extraction_node
+from src.components.ingestion.nodes.image_enrichment import image_enrichment_node
+
+# Node functions
+from src.components.ingestion.nodes.memory_management import memory_check_node
+from src.components.ingestion.nodes.models import (
+    AdaptiveChunk,
+    SectionMetadata,
+)
+from src.components.ingestion.nodes.vector_embedding import embedding_node
 
 # Export all symbols for backward compatibility
 __all__ = [

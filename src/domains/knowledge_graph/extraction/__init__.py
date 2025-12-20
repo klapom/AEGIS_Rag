@@ -11,14 +11,9 @@ Usage:
 """
 
 # Re-export from components/graph_rag
-from src.components.graph_rag.relation_extractor import (
-    RelationExtractor,
-    create_relation_extractor_from_config,
-)
-from src.components.graph_rag.parallel_extractor import (
-    ParallelExtractor,
-    get_parallel_extractor,
-    extract_parallel,
+from src.components.graph_rag.extraction_benchmark import (
+    ExtractionBenchmark,
+    run_benchmark,
 )
 from src.components.graph_rag.extraction_factory import (
     ExtractionPipelineFactory,
@@ -28,9 +23,14 @@ from src.components.graph_rag.extraction_service import (
     ExtractionService,
     get_extraction_service,
 )
-from src.components.graph_rag.extraction_benchmark import (
-    ExtractionBenchmark,
-    run_benchmark,
+from src.components.graph_rag.parallel_extractor import (
+    ParallelExtractor,
+    extract_parallel,
+    get_parallel_extractor,
+)
+from src.components.graph_rag.relation_extractor import (
+    RelationExtractor,
+    create_relation_extractor_from_config,
 )
 
 __all__ = [
