@@ -216,7 +216,9 @@ class IndexConsistencyValidator:
     async def _count_qdrant_chunks(self) -> int:
         """Count total chunks in Qdrant."""
         try:
-            collection_info = await self.qdrant_client.get_collection(settings.qdrant_collection_name)
+            collection_info = await self.qdrant_client.get_collection(
+                settings.qdrant_collection_name
+            )
             return collection_info.points_count
         except Exception as e:
             logger.warning("count_qdrant_chunks_failed", error=str(e))
@@ -251,7 +253,8 @@ class IndexConsistencyValidator:
         issues = []
 
         async with self.neo4j_driver.session() as session:
-            result = await session.run(f"""
+            result = await session.run(
+                f"""
                 MATCH (e:base)
                 WHERE NOT (e)-[:MENTIONED_IN]->(:chunk)
                 RETURN e.entity_id AS entity_id,
@@ -259,7 +262,8 @@ class IndexConsistencyValidator:
                        e.entity_type AS entity_type,
                        labels(e) AS labels
                 LIMIT {limit}
-            """)
+            """
+            )
 
             async for record in result:
                 issue = ValidationIssue(
@@ -295,7 +299,8 @@ class IndexConsistencyValidator:
         issues = []
 
         async with self.neo4j_driver.session() as session:
-            result = await session.run(f"""
+            result = await session.run(
+                f"""
                 MATCH (c:chunk)
                 WHERE NOT ()-[:MENTIONED_IN]->(c)
                 RETURN c.chunk_id AS chunk_id,
@@ -303,7 +308,8 @@ class IndexConsistencyValidator:
                        c.chunk_index AS chunk_index,
                        substring(c.text, 0, 100) AS text_preview
                 LIMIT {limit}
-            """)
+            """
+            )
 
             async for record in result:
                 issue = ValidationIssue(
@@ -336,7 +342,8 @@ class IndexConsistencyValidator:
 
         async with self.neo4j_driver.session() as session:
             # Check MENTIONED_IN relationships
-            result = await session.run(f"""
+            result = await session.run(
+                f"""
                 MATCH (e:base)-[r:MENTIONED_IN]->(c:chunk)
                 WHERE r.source_chunk_id IS NULL
                 RETURN e.entity_id AS entity_id,
@@ -344,7 +351,8 @@ class IndexConsistencyValidator:
                        c.chunk_id AS chunk_id,
                        'MENTIONED_IN' AS rel_type
                 LIMIT {limit // 2}
-            """)
+            """
+            )
 
             async for record in result:
                 issue = ValidationIssue(
@@ -359,7 +367,8 @@ class IndexConsistencyValidator:
                 issues.append(issue)
 
             # Check RELATES_TO relationships
-            result = await session.run(f"""
+            result = await session.run(
+                f"""
                 MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
                 WHERE r.source_chunk_id IS NULL
                 RETURN e1.entity_id AS entity_id,
@@ -367,7 +376,8 @@ class IndexConsistencyValidator:
                        e2.entity_name AS target_name,
                        'RELATES_TO' AS rel_type
                 LIMIT {limit // 2}
-            """)
+            """
+            )
 
             async for record in result:
                 issue = ValidationIssue(
@@ -408,9 +418,9 @@ class IndexConsistencyValidator:
             return 1.0  # Empty index is consistent
 
         weighted_issues = (
-            report.orphaned_entities_count * 1.0 +
-            report.orphaned_chunks_count * 0.3 +
-            report.missing_source_chunk_id_count * 0.5
+            report.orphaned_entities_count * 1.0
+            + report.orphaned_chunks_count * 0.3
+            + report.missing_source_chunk_id_count * 0.5
         )
 
         score = max(0.0, 1.0 - (weighted_issues / total_elements))
@@ -460,11 +470,13 @@ async def fix_orphaned_entities(dry_run: bool = True) -> dict[str, int]:
     try:
         async with neo4j_driver.session() as session:
             # Count orphaned entities
-            result = await session.run("""
+            result = await session.run(
+                """
                 MATCH (e:base)
                 WHERE NOT (e)-[:MENTIONED_IN]->(:chunk)
                 RETURN count(e) AS count
-            """)
+            """
+            )
             record = await result.single()
             orphaned_count = record["count"] if record else 0
 
@@ -474,12 +486,14 @@ async def fix_orphaned_entities(dry_run: bool = True) -> dict[str, int]:
                 return {"orphaned_count": orphaned_count, "deleted": 0}
 
             # Delete orphaned entities
-            result = await session.run("""
+            result = await session.run(
+                """
                 MATCH (e:base)
                 WHERE NOT (e)-[:MENTIONED_IN]->(:chunk)
                 DETACH DELETE e
                 RETURN count(e) AS deleted
-            """)
+            """
+            )
             record = await result.single()
             deleted = record["deleted"] if record else 0
 
@@ -508,11 +522,13 @@ async def fix_orphaned_chunks(dry_run: bool = True) -> dict[str, int]:
     try:
         async with neo4j_driver.session() as session:
             # Count orphaned chunks
-            result = await session.run("""
+            result = await session.run(
+                """
                 MATCH (c:chunk)
                 WHERE NOT ()-[:MENTIONED_IN]->(c)
                 RETURN count(c) AS count
-            """)
+            """
+            )
             record = await result.single()
             orphaned_count = record["count"] if record else 0
 
@@ -522,12 +538,14 @@ async def fix_orphaned_chunks(dry_run: bool = True) -> dict[str, int]:
                 return {"orphaned_count": orphaned_count, "deleted": 0}
 
             # Delete orphaned chunks
-            result = await session.run("""
+            result = await session.run(
+                """
                 MATCH (c:chunk)
                 WHERE NOT ()-[:MENTIONED_IN]->(c)
                 DELETE c
                 RETURN count(c) AS deleted
-            """)
+            """
+            )
             record = await result.single()
             deleted = record["deleted"] if record else 0
 

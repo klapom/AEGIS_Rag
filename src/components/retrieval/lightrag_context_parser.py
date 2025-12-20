@@ -77,13 +77,15 @@ def parse_lightrag_local_context(context: str) -> dict[str, Any]:
                         # Infer entity type from description (simple heuristic)
                         entity_type = _infer_entity_type(entity_name, description)
 
-                        result["entities"].append({
-                            "name": entity_name,
-                            "description": description,
-                            "type": entity_type,
-                            "score": 1.0,  # LightRAG doesn't provide scores
-                            "source": "lightrag_local",
-                        })
+                        result["entities"].append(
+                            {
+                                "name": entity_name,
+                                "description": description,
+                                "type": entity_type,
+                                "score": 1.0,  # LightRAG doesn't provide scores
+                                "source": "lightrag_local",
+                            }
+                        )
 
             # Parse Relationships section
             elif "relation" in section_title:
@@ -99,13 +101,15 @@ def parse_lightrag_local_context(context: str) -> dict[str, Any]:
                         target_entity = match.group(2).strip()
                         description = match.group(3).strip()
 
-                        result["relationships"].append({
-                            "source": source_entity,
-                            "target": target_entity,
-                            "description": description,
-                            "type": "RELATED_TO",
-                            "origin": "lightrag_local",  # Changed key name to avoid conflict
-                        })
+                        result["relationships"].append(
+                            {
+                                "source": source_entity,
+                                "target": target_entity,
+                                "description": description,
+                                "type": "RELATED_TO",
+                                "origin": "lightrag_local",  # Changed key name to avoid conflict
+                            }
+                        )
 
         logger.debug(
             "parse_lightrag_local_complete",
@@ -171,9 +175,7 @@ def parse_lightrag_global_context(context: str) -> dict[str, Any]:
                 # Save previous community if exists
                 if current_community_header is not None and current_community_content:
                     _parse_community_content(
-                        result,
-                        current_community_header,
-                        "\n".join(current_community_content)
+                        result, current_community_header, "\n".join(current_community_content)
                     )
 
                 # Start new community
@@ -187,9 +189,7 @@ def parse_lightrag_global_context(context: str) -> dict[str, Any]:
         # Don't forget the last community
         if current_community_header is not None and current_community_content:
             _parse_community_content(
-                result,
-                current_community_header,
-                "\n".join(current_community_content)
+                result, current_community_header, "\n".join(current_community_content)
             )
 
         logger.debug(

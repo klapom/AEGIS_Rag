@@ -563,10 +563,12 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                         if event_key not in emitted_phases:
                             emitted_phases.add(event_key)
                             reasoning_data.add_phase_event(event)
-                            yield _format_sse_message({
-                                "type": "phase_event",
-                                "data": event.model_dump(mode='json'),
-                            })
+                            yield _format_sse_message(
+                                {
+                                    "type": "phase_event",
+                                    "data": event.model_dump(mode="json"),
+                                }
+                            )
                         continue
 
                     # Handle dict events (backward compatibility)
@@ -623,10 +625,12 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
                             if "intent" in event:
                                 collected_intent = event["intent"]
                             # Wrap as answer_chunk for frontend (contains metadata)
-                            yield _format_sse_message({
-                                "type": "answer_chunk",
-                                "data": event,
-                            })
+                            yield _format_sse_message(
+                                {
+                                    "type": "answer_chunk",
+                                    "data": event,
+                                }
+                            )
                             continue
 
                         # Stream event to client

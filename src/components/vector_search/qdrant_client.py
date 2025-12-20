@@ -131,7 +131,9 @@ class QdrantClient:
             return True
         except Exception as e:
             logger.error("Qdrant health check failed", error=str(e))
-            raise DatabaseConnectionError(database="Qdrant", reason=f"Health check failed: {e}") from e
+            raise DatabaseConnectionError(
+                database="Qdrant", reason=f"Health check failed: {e}"
+            ) from e
 
     @retry(
         stop=stop_after_attempt(3),

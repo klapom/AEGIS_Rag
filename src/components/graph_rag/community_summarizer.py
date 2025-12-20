@@ -272,9 +272,7 @@ class CommunitySummarizer:
 
         return entities
 
-    async def _get_community_relationships(
-        self, community_id: int
-    ) -> list[dict[str, Any]]:
+    async def _get_community_relationships(self, community_id: int) -> list[dict[str, Any]]:
         """Get relationships within a community from Neo4j.
 
         Args:
@@ -425,9 +423,7 @@ class CommunitySummarizer:
             "community_summaries_updated",
             summaries_generated=len(summaries),
             total_time_ms=round(total_time_ms, 2),
-            avg_time_per_summary_ms=round(total_time_ms / len(summaries), 2)
-            if summaries
-            else 0,
+            avg_time_per_summary_ms=round(total_time_ms / len(summaries), 2) if summaries else 0,
         )
 
         return summaries

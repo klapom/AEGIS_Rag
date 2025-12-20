@@ -40,9 +40,7 @@ class GraphStatsResponse(BaseModel):
         default_factory=dict, description="Relationship type distribution (type -> count)"
     )
     community_count: int = Field(..., description="Number of detected communities")
-    community_sizes: list[int] = Field(
-        default_factory=list, description="Sizes of each community"
-    )
+    community_sizes: list[int] = Field(default_factory=list, description="Sizes of each community")
     orphan_nodes: int = Field(..., description="Number of nodes with no connections")
     avg_degree: float = Field(..., description="Average node degree")
     summary_status: dict[str, int] = Field(
@@ -163,9 +161,7 @@ async def get_graph_stats() -> GraphStatsResponse:
                 }
 
         # Calculate average degree
-        avg_degree = (
-            (total_relationships * 2) / total_entities if total_entities > 0 else 0.0
-        )
+        avg_degree = (total_relationships * 2) / total_entities if total_entities > 0 else 0.0
 
         # Determine graph health
         orphan_ratio = orphan_nodes / total_entities if total_entities > 0 else 0

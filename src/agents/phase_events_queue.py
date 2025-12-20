@@ -198,7 +198,9 @@ def stream_phase_event(
             "phase_type": phase_type.value,
             "status": status.value,
             "start_time": now.isoformat(),
-            "end_time": now.isoformat() if status in (PhaseStatus.COMPLETED, PhaseStatus.FAILED) else None,
+            "end_time": (
+                now.isoformat() if status in (PhaseStatus.COMPLETED, PhaseStatus.FAILED) else None
+            ),
             "duration_ms": duration_ms,
             "metadata": metadata or {},
             "error": error,

@@ -160,7 +160,9 @@ class DomainRepository:
 
         except Exception as e:
             logger.error("domain_repository_initialization_failed", error=str(e))
-            raise DatabaseConnectionError("Neo4j", f"Domain repository initialization failed: {e}") from e
+            raise DatabaseConnectionError(
+                "Neo4j", f"Domain repository initialization failed: {e}"
+            ) from e
 
     async def create_domain(
         self,

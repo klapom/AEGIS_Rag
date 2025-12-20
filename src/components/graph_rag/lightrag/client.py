@@ -183,9 +183,7 @@ class LightRAGClient:
             Batch insertion result with entities/relations extracted
         """
         await self._ensure_initialized()
-        return await insert_prechunked_documents(
-            self.rag, chunks, document_id, namespace_id
-        )
+        return await insert_prechunked_documents(self.rag, chunks, document_id, namespace_id)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -276,9 +274,7 @@ class LightRAGClient:
         Returns:
             Dictionary with entity_count and relationship_count
         """
-        return await get_neo4j_stats(
-            self.neo4j_uri, self.neo4j_user, self.neo4j_password
-        )
+        return await get_neo4j_stats(self.neo4j_uri, self.neo4j_user, self.neo4j_password)
 
     async def health_check(self) -> bool:
         """Check health of LightRAG and Neo4j connection.
@@ -286,9 +282,7 @@ class LightRAGClient:
         Returns:
             True if healthy, False otherwise
         """
-        return await check_neo4j_health(
-            self.neo4j_uri, self.neo4j_user, self.neo4j_password
-        )
+        return await check_neo4j_health(self.neo4j_uri, self.neo4j_user, self.neo4j_password)
 
     async def _store_relations_to_neo4j(
         self,
@@ -307,9 +301,7 @@ class LightRAGClient:
             Number of relationships created
         """
         await self._ensure_initialized()
-        return await store_relates_to_relationships(
-            self.rag, relations, chunk_id, namespace_id
-        )
+        return await store_relates_to_relationships(self.rag, relations, chunk_id, namespace_id)
 
     async def _clear_neo4j_database(self) -> None:
         """Clear all data from Neo4j database (for test cleanup)."""

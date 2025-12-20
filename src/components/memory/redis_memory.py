@@ -459,9 +459,7 @@ class RedisMemoryManager:
                 conversation_id=conversation_id,
                 error=str(e),
             )
-            raise MemoryError(
-                operation="Failed to save phase events", reason=str(e)
-            ) from e
+            raise MemoryError(operation="Failed to save phase events", reason=str(e)) from e
 
     async def get_phase_events(
         self,
@@ -500,9 +498,7 @@ class RedisMemoryManager:
                 conversation_id=conversation_id,
                 error=str(e),
             )
-            raise MemoryError(
-                operation="Failed to retrieve phase events", reason=str(e)
-            ) from e
+            raise MemoryError(operation="Failed to retrieve phase events", reason=str(e)) from e
 
 
 # Global instance (singleton pattern)

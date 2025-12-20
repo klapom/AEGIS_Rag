@@ -117,8 +117,12 @@ class VectorSearchAgent(BaseAgent):
                 "search_mode": "4way_hybrid",
                 "vector_results_count": search_result["search_metadata"]["vector_results_count"],
                 "bm25_results_count": search_result["search_metadata"]["bm25_results_count"],
-                "graph_local_results_count": search_result["search_metadata"]["graph_local_results_count"],
-                "graph_global_results_count": search_result["search_metadata"]["graph_global_results_count"],
+                "graph_local_results_count": search_result["search_metadata"][
+                    "graph_local_results_count"
+                ],
+                "graph_global_results_count": search_result["search_metadata"][
+                    "graph_global_results_count"
+                ],
                 "reranking_applied": search_result["search_metadata"]["reranking_applied"],
                 # Intent classification metadata
                 "intent": search_result["search_metadata"]["intent"],
@@ -137,7 +141,9 @@ class VectorSearchAgent(BaseAgent):
 
             # Store intent at top level for easy access (used by frontend)
             state["metadata"]["detected_intent"] = search_result["search_metadata"]["intent"]
-            state["metadata"]["intent_confidence"] = search_result["search_metadata"]["intent_confidence"]
+            state["metadata"]["intent_confidence"] = search_result["search_metadata"][
+                "intent_confidence"
+            ]
 
             state["metadata"]["agent_path"].append(
                 f"{self.name}: completed ({len(retrieved_contexts)} results, {latency_ms:.0f}ms)"

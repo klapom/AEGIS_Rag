@@ -270,11 +270,11 @@ class SemanticRelationDeduplicator:
             "semantic_clustering_complete",
             input_types=len(unique_types),
             unique_canonical_types=len(set(type_synonym_map.values())),
-            reduction_pct=round(
-                100 * (1 - len(set(type_synonym_map.values())) / len(unique_types)), 1
-            )
-            if unique_types
-            else 0,
+            reduction_pct=(
+                round(100 * (1 - len(set(type_synonym_map.values())) / len(unique_types)), 1)
+                if unique_types
+                else 0
+            ),
         )
 
         return type_synonym_map

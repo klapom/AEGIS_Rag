@@ -318,9 +318,7 @@ class SemanticDeduplicator:
         names = [e.get("name", e.get("entity_name", "UNKNOWN")) for e in entities]
 
         # Compute embeddings using BGE-M3 (async batch embedding)
-        embeddings = await self.embedding_service.embed_batch(
-            names, max_concurrent=self.batch_size
-        )
+        embeddings = await self.embedding_service.embed_batch(names, max_concurrent=self.batch_size)
 
         # Convert to numpy for sklearn
         embeddings_np = np.array(embeddings)
@@ -454,9 +452,7 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
             levenshtein_available=LEVENSHTEIN_AVAILABLE,
         )
 
-    def _is_duplicate_by_criteria(
-        self, name1: str, name2: str
-    ) -> tuple[bool, str]:
+    def _is_duplicate_by_criteria(self, name1: str, name2: str) -> tuple[bool, str]:
         """Check if two entity names are duplicates using multiple criteria.
 
         Criteria are checked in order (first match wins):
@@ -632,7 +628,9 @@ class MultiCriteriaDeduplicator(SemanticDeduplicator):
         return is_dup
 
 
-def create_deduplicator_from_config(config) -> SemanticDeduplicator | MultiCriteriaDeduplicator | None:
+def create_deduplicator_from_config(
+    config,
+) -> SemanticDeduplicator | MultiCriteriaDeduplicator | None:
     """Factory function to create deduplicator from app config.
 
     Sprint 43 Feature 43.1: MultiCriteriaDeduplicator support (ADR-044).

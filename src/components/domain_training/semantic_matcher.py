@@ -213,9 +213,7 @@ class SemanticMatcher:
         # Weighted average (predicate is most important)
         other_weight = (1.0 - self.predicate_weight) / 2
         weighted_sim = (
-            subj_sim * other_weight +
-            pred_sim * self.predicate_weight +
-            obj_sim * other_weight
+            subj_sim * other_weight + pred_sim * self.predicate_weight + obj_sim * other_weight
         )
 
         return weighted_sim >= self.threshold

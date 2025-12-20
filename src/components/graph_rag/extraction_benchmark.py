@@ -442,8 +442,8 @@ class ExtractionBenchmark:
         else:
             semantic_rels = []
 
-        metrics.total_input_tokens = (entity_response.tokens_input or 0)
-        metrics.total_output_tokens = (entity_response.tokens_output or 0)
+        metrics.total_input_tokens = entity_response.tokens_input or 0
+        metrics.total_output_tokens = entity_response.tokens_output or 0
 
         return ExtractionResult(
             entities=entities,
@@ -545,6 +545,7 @@ Return JSON only:
         # Remove markdown code blocks
         if "```" in cleaned:
             import re
+
             match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", cleaned)
             if match:
                 cleaned = match.group(1).strip()
@@ -557,6 +558,7 @@ Return JSON only:
 
         # Try extracting JSON object or array
         import re
+
         for pattern in [r"\{[\s\S]*\}", r"\[[\s\S]*\]"]:
             match = re.search(pattern, cleaned)
             if match:

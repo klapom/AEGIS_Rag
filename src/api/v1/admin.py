@@ -319,6 +319,7 @@ async def list_namespaces() -> NamespaceListResponse:
             detail=f"Failed to list namespaces: {str(e)}",
         ) from e
 
+
 # ============================================================================
 # Sprint 49 Feature 49.8: Manual Relation Synonym Overrides
 # ============================================================================

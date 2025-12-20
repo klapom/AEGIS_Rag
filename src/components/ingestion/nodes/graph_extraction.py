@@ -344,7 +344,11 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             current=relation_chunks_total,
             total=relation_chunks_total,
             message=f"Extracted {total_relations_created} relations total",
-            details={"total_entities": entities_extracted, "total_relations": total_relations_created, "chunks_processed": len(neo4j_chunks)},
+            details={
+                "total_entities": entities_extracted,
+                "total_relations": total_relations_created,
+                "chunks_processed": len(neo4j_chunks),
+            },
         )
 
         # Sprint 32 Feature 32.4: Create Section nodes in Neo4j (ADR-039)
@@ -510,7 +514,8 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             total_relations=stats.get("total_relations", 0),
             total_chunks=stats.get("total_chunks", 0),
             chunks_with_images=sum(
-                1 for chunk_data in chunk_data_list
+                1
+                for chunk_data in chunk_data_list
                 if isinstance(chunk_data, dict) and chunk_data.get("image_bboxes")
             ),
             section_nodes_created=state.get("section_node_stats", {}).get("sections_created", 0),

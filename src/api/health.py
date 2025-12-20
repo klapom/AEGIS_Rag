@@ -55,6 +55,7 @@ class PrometheusMetricsResponse(BaseModel):
     prometheus_available: bool = Field(default=False)
     error: str | None = Field(default=None)
 
+
 # Include memory health endpoints
 router.include_router(memory_health_router)
 
@@ -289,7 +290,9 @@ async def container_health(tail: int = 50) -> ContainersResponse:
                     logs = container.logs(tail=tail, timestamps=True).decode("utf-8")
                     log_lines = logs.strip().split("\n") if logs.strip() else []
                 except Exception as log_err:
-                    logger.warning("container_logs_failed", container=container.name, error=str(log_err))
+                    logger.warning(
+                        "container_logs_failed", container=container.name, error=str(log_err)
+                    )
                     log_lines = [f"Error fetching logs: {log_err}"]
 
                 # Get health status if available
@@ -302,7 +305,11 @@ async def container_health(tail: int = 50) -> ContainersResponse:
                         name=container.name,
                         status=container.status,
                         health=health_status,
-                        image=container.image.tags[0] if container.image.tags else str(container.image.id)[:12],
+                        image=(
+                            container.image.tags[0]
+                            if container.image.tags
+                            else str(container.image.id)[:12]
+                        ),
                         created=container.attrs.get("Created", ""),
                         logs=log_lines[-tail:] if log_lines else [],
                     )
@@ -349,12 +356,21 @@ async def prometheus_metrics() -> PrometheusMetricsResponse:
             # Define queries for important metrics
             # Metric names align with actual Prometheus exports from aegis-api and qdrant
             queries = [
-                ("rag_requests_total", 'sum(aegis_rag_requests_total{job="aegis-api"}) or vector(0)'),
-                ("rag_latency_p99_ms", 'histogram_quantile(0.99, sum(rate(aegis_rag_request_latency_seconds_bucket{job="aegis-api"}[5m])) by (le)) * 1000 or vector(0)'),
+                (
+                    "rag_requests_total",
+                    'sum(aegis_rag_requests_total{job="aegis-api"}) or vector(0)',
+                ),
+                (
+                    "rag_latency_p99_ms",
+                    'histogram_quantile(0.99, sum(rate(aegis_rag_request_latency_seconds_bucket{job="aegis-api"}[5m])) by (le)) * 1000 or vector(0)',
+                ),
                 ("cpu_seconds", 'process_cpu_seconds_total{job="aegis-api"}'),
                 ("memory_mb", 'process_resident_memory_bytes{job="aegis-api"} / 1024 / 1024'),
-                ("qdrant_requests", 'sum(qdrant_grpc_requests_total) or vector(0)'),
-                ("chunking_operations", 'sum(aegis_chunking_chunk_size_tokens_count{job="aegis-api"}) or vector(0)'),
+                ("qdrant_requests", "sum(qdrant_grpc_requests_total) or vector(0)"),
+                (
+                    "chunking_operations",
+                    'sum(aegis_chunking_chunk_size_tokens_count{job="aegis-api"}) or vector(0)',
+                ),
             ]
 
             for metric_name, query in queries:
@@ -375,7 +391,9 @@ async def prometheus_metrics() -> PrometheusMetricsResponse:
                                 PrometheusMetric(name=metric_name, value=value, labels=labels)
                             )
                 except Exception as query_err:
-                    logger.debug("prometheus_query_failed", metric=metric_name, error=str(query_err))
+                    logger.debug(
+                        "prometheus_query_failed", metric=metric_name, error=str(query_err)
+                    )
 
             return PrometheusMetricsResponse(
                 metrics=metrics,

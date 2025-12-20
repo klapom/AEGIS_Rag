@@ -290,9 +290,7 @@ class HybridSearch:
                         "id": str(result["id"]),
                         "text": payload.get("content", payload.get("text", "")),
                         "score": result["score"],
-                        "source": payload.get(
-                            "document_path", payload.get("source", "unknown")
-                        ),
+                        "source": payload.get("document_path", payload.get("source", "unknown")),
                         "document_id": payload.get("document_id", ""),
                         "rank": rank,
                         "search_type": "vector",

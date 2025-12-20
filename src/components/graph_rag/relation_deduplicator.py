@@ -37,28 +37,23 @@ RELATION_TYPE_SYNONYMS: dict[str, list[str]] = {
     "DIRECTED": ["DIRECTED_BY", "HELMED", "MADE_BY"],
     "PRODUCED": ["PRODUCED_BY", "EXECUTIVE_PRODUCED"],
     "WRITTEN_BY": ["WROTE", "AUTHORED", "PENNED", "SCRIPTED"],
-
     # Personal relationships
     "MARRIED_TO": ["SPOUSE_OF", "WED_TO", "HUSBAND_OF", "WIFE_OF", "PARTNER_OF"],
     "CHILD_OF": ["SON_OF", "DAUGHTER_OF", "OFFSPRING_OF"],
     "PARENT_OF": ["FATHER_OF", "MOTHER_OF"],
     "SIBLING_OF": ["BROTHER_OF", "SISTER_OF"],
-
     # Professional
     "WORKS_FOR": ["EMPLOYED_BY", "WORKS_AT", "EMPLOYEE_OF"],
     "MEMBER_OF": ["BELONGS_TO", "PART_OF", "AFFILIATED_WITH"],
     "FOUNDED": ["CREATED", "ESTABLISHED", "STARTED", "CO_FOUNDED"],
     "CEO_OF": ["LEADS", "HEADS", "RUNS", "MANAGES"],
-
     # Location
     "LOCATED_IN": ["BASED_IN", "SITUATED_IN", "FOUND_IN", "HEADQUARTERED_IN"],
     "BORN_IN": ["BIRTHPLACE", "NATIVE_OF", "FROM"],
     "DIED_IN": ["DEATH_PLACE", "PASSED_AWAY_IN"],
-
     # Education
     "STUDIED_AT": ["ATTENDED", "GRADUATED_FROM", "EDUCATED_AT", "ALUMNI_OF"],
     "TAUGHT_AT": ["PROFESSOR_AT", "TEACHES_AT", "LECTURER_AT"],
-
     # Generic
     "RELATES_TO": ["RELATED_TO", "ASSOCIATED_WITH", "CONNECTED_TO", "LINKED_TO"],
     "KNOWS": ["KNOWS_OF", "ACQUAINTED_WITH", "MET"],
@@ -251,7 +246,8 @@ class RelationDeduplicator:
             relations = self.normalize_entity_references(relations, entity_mapping)
             # Count remaps (approximate)
             stats["entity_remaps"] = sum(
-                1 for r in relations
+                1
+                for r in relations
                 if r.get("source", "").lower() in entity_mapping
                 or r.get("target", "").lower() in entity_mapping
             )

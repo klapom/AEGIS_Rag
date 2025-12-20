@@ -237,7 +237,7 @@ class DomainAnalyzer:
                     raise ValueError(f"Unsupported file format: {suffix}") from None
 
             # Truncate to max length
-            text = text[:self.max_sample_length]
+            text = text[: self.max_sample_length]
 
             # Validate minimum text length
             if len(text.strip()) < 10:

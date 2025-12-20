@@ -35,7 +35,9 @@ class CostTracker:
         """
         if db_path is None:
             # Default to project data directory
-            db_path = Path(__file__).parent.parent.parent.parent.parent / "data" / "cost_tracking.db"
+            db_path = (
+                Path(__file__).parent.parent.parent.parent.parent / "data" / "cost_tracking.db"
+            )
 
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)

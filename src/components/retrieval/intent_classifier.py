@@ -495,19 +495,23 @@ class IntentClassifier:
         number_count = len(re.findall(r"\b\d{4,}\b", query))
         snake_case_count = len(re.findall(r"\b[a-z]+_[a-z]+\b", query_lower))
         quoted_count = len(re.findall(r'"[^"]+"', query)) + len(re.findall(r"'[^']+'", query))
-        technical_terms = sum([
-            bool(re.search(r"\berror\b", query_lower)),
-            bool(re.search(r"\bcode\b", query_lower)),
-            bool(re.search(r"\bconfig\b", query_lower)),
-            bool(re.search(r"\bpolicy\b", query_lower)),
-            bool(re.search(r"\bviolation\b", query_lower)),
-            bool(re.search(r"\btable\b", query_lower)),
-            bool(re.search(r"\bschema\b", query_lower)),
-            bool(re.search(r"\bdatabase\b", query_lower)),
-        ])
+        technical_terms = sum(
+            [
+                bool(re.search(r"\berror\b", query_lower)),
+                bool(re.search(r"\bcode\b", query_lower)),
+                bool(re.search(r"\bconfig\b", query_lower)),
+                bool(re.search(r"\bpolicy\b", query_lower)),
+                bool(re.search(r"\bviolation\b", query_lower)),
+                bool(re.search(r"\btable\b", query_lower)),
+                bool(re.search(r"\bschema\b", query_lower)),
+                bool(re.search(r"\bdatabase\b", query_lower)),
+            ]
+        )
 
         is_short_query = len(query.split()) <= 5
-        keyword_indicators = acronym_count + year_count + snake_case_count + quoted_count + technical_terms
+        keyword_indicators = (
+            acronym_count + year_count + snake_case_count + quoted_count + technical_terms
+        )
         if keyword_indicators >= 2 or acronym_count >= 3 or (is_short_query and number_count >= 1):
             return Intent.KEYWORD
 

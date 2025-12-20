@@ -240,9 +240,7 @@ class GroupedIngestionProcessor:
         for item in items:
             groups[item.llm_model].append(item)
 
-        batches = [
-            IngestionBatch(llm_model=model, items=items) for model, items in groups.items()
-        ]
+        batches = [IngestionBatch(llm_model=model, items=items) for model, items in groups.items()]
 
         # Sort by size descending (process largest batches first)
         batches.sort(key=lambda b: len(b.items), reverse=True)

@@ -277,12 +277,14 @@ async def insert_documents_optimized(
 
             if not text:
                 logger.warning("empty_document", index=i, doc_id=doc_id)
-                results.append({
-                    "index": i,
-                    "doc_id": doc_id,
-                    "status": "skipped",
-                    "reason": "empty_text",
-                })
+                results.append(
+                    {
+                        "index": i,
+                        "doc_id": doc_id,
+                        "status": "skipped",
+                        "reason": "empty_text",
+                    }
+                )
                 continue
 
             logger.info(
@@ -362,12 +364,14 @@ async def insert_documents_optimized(
                 doc_id=doc.get("id", f"doc_{i}"),
                 error=str(e),
             )
-            results.append({
-                "index": i,
-                "doc_id": doc.get("id", f"doc_{i}"),
-                "status": "error",
-                "error": str(e),
-            })
+            results.append(
+                {
+                    "index": i,
+                    "doc_id": doc.get("id", f"doc_{i}"),
+                    "status": "error",
+                    "error": str(e),
+                }
+            )
 
     total_time = time.time() - total_start
     success_count = sum(1 for r in results if r["status"] == "success")
@@ -466,11 +470,13 @@ async def insert_prechunked_documents(
             all_entities.extend(entities)
             all_relations.extend(relations)
 
-            converted_chunks.append({
-                "content": chunk_text,
-                "source_id": chunk_id,
-                "file_path": document_id,
-            })
+            converted_chunks.append(
+                {
+                    "content": chunk_text,
+                    "source_id": chunk_id,
+                    "file_path": document_id,
+                }
+            )
 
             logger.info(
                 "chunk_extraction_complete",
@@ -496,9 +502,11 @@ async def insert_prechunked_documents(
             )
             entities_after_dedup = len(deduplicated_entities)
 
-            reduction_percent = round(
-                (1 - entities_after_dedup / entities_before_dedup) * 100, 1
-            ) if entities_before_dedup > 0 else 0
+            reduction_percent = (
+                round((1 - entities_after_dedup / entities_before_dedup) * 100, 1)
+                if entities_before_dedup > 0
+                else 0
+            )
 
             record_deduplication_detail(
                 document_id=document_id,
@@ -517,7 +525,9 @@ async def insert_prechunked_documents(
 
             all_entities = deduplicated_entities
         except Exception as e:
-            logger.warning("deduplication_failed_fallback_to_raw", document_id=document_id, error=str(e))
+            logger.warning(
+                "deduplication_failed_fallback_to_raw", document_id=document_id, error=str(e)
+            )
 
     # Apply relation deduplication
     if settings.enable_relation_dedup and all_relations:
@@ -530,9 +540,11 @@ async def insert_prechunked_documents(
                 )
                 relations_after_dedup = len(deduplicated_relations)
 
-                relation_reduction_percent = round(
-                    (1 - relations_after_dedup / relations_before_dedup) * 100, 1
-                ) if relations_before_dedup > 0 else 0
+                relation_reduction_percent = (
+                    round((1 - relations_after_dedup / relations_before_dedup) * 100, 1)
+                    if relations_before_dedup > 0
+                    else 0
+                )
 
                 logger.info(
                     "relation_deduplication_complete",
@@ -544,7 +556,11 @@ async def insert_prechunked_documents(
 
                 all_relations = deduplicated_relations
         except Exception as e:
-            logger.warning("relation_deduplication_failed_fallback_to_raw", document_id=document_id, error=str(e))
+            logger.warning(
+                "relation_deduplication_failed_fallback_to_raw",
+                document_id=document_id,
+                error=str(e),
+            )
 
     # Record entity/relation types for monitoring
     entity_type_counts: dict[str, int] = {}
@@ -598,12 +614,15 @@ async def insert_prechunked_documents(
     # Store chunks and provenance in Neo4j
     await store_chunks_and_provenance(
         rag=rag,
-        chunks=[{
-            "chunk_id": c["source_id"],
-            "text": c["content"],
-            "document_id": document_id,
-            "chunk_index": i,
-        } for i, c in enumerate(converted_chunks)],
+        chunks=[
+            {
+                "chunk_id": c["source_id"],
+                "text": c["content"],
+                "document_id": document_id,
+                "chunk_index": i,
+            }
+            for i, c in enumerate(converted_chunks)
+        ],
         entities=lightrag_entities,
         namespace_id=namespace_id,
     )

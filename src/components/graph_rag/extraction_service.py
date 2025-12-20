@@ -203,9 +203,7 @@ class ExtractionService:
             max_tokens=self.max_tokens,
         )
 
-    async def get_extraction_prompts(
-        self, domain: str | None = None
-    ) -> tuple[str, str]:
+    async def get_extraction_prompts(self, domain: str | None = None) -> tuple[str, str]:
         """Get extraction prompts for a given domain.
 
         Sprint 45 Feature 45.8: Domain-specific or generic fallback prompts.
@@ -238,7 +236,11 @@ class ExtractionService:
             domain_repo = get_domain_repository()
             domain_config = await domain_repo.get_domain(domain)
 
-            if domain_config and domain_config.get("entity_prompt") and domain_config.get("relation_prompt"):
+            if (
+                domain_config
+                and domain_config.get("entity_prompt")
+                and domain_config.get("relation_prompt")
+            ):
                 logger.info(
                     "using_domain_specific_prompts",
                     domain=domain,

@@ -68,17 +68,19 @@ def chunk_text_with_metadata(
         ).hexdigest()[:8]
         chunk_id = f"{document_id[:8]}-chunk-{chunk_idx}-{chunk_hash}"
 
-        chunks.append({
-            "chunk_id": chunk_id,
-            "text": chunk_text,
-            "content": chunk_text,  # Alias for compatibility
-            "tokens": len(chunk_tokens),
-            "token_count": len(chunk_tokens),  # Alias for compatibility
-            "document_id": document_id,
-            "chunk_index": chunk_idx,
-            "start_token": start,
-            "end_token": end,
-        })
+        chunks.append(
+            {
+                "chunk_id": chunk_id,
+                "text": chunk_text,
+                "content": chunk_text,  # Alias for compatibility
+                "tokens": len(chunk_tokens),
+                "token_count": len(chunk_tokens),  # Alias for compatibility
+                "document_id": document_id,
+                "chunk_index": chunk_idx,
+                "start_token": start,
+                "end_token": end,
+            }
+        )
 
         chunk_idx += 1
         start = end - chunk_overlap_token_size if end < len(tokens) else end

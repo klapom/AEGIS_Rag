@@ -539,7 +539,6 @@ class AnswerGenerator:
             yield {"event": "token", "data": {"content": fallback}}
             yield {"event": "complete", "data": {"done": True}}
 
-
     async def generate_with_citations_streaming(
         self,
         query: str,

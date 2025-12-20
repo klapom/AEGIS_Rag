@@ -460,9 +460,7 @@ class DSPyOptimizer:
                 },
             }
 
-            await self._call_progress_callback(
-                progress_callback, "Optimization complete", 100.0
-            )
+            await self._call_progress_callback(progress_callback, "Optimization complete", 100.0)
 
             return result
 
@@ -691,9 +689,7 @@ class DSPyOptimizer:
                 },
             }
 
-            await self._call_progress_callback(
-                progress_callback, "Optimization complete", 100.0
-            )
+            await self._call_progress_callback(progress_callback, "Optimization complete", 100.0)
 
             return result
 

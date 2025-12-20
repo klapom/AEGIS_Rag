@@ -788,7 +788,9 @@ async def add_documents_stream(
                             else:
                                 phase_progress = 0.75
 
-                            overall_progress = doc_base_progress + (phase_progress * doc_progress_range)
+                            overall_progress = doc_base_progress + (
+                                phase_progress * doc_progress_range
+                            )
                             message = f"[{event_timestamp}] {Path(doc_path).name}: {event_message}"
 
                             # Sprint 51: Include entity/relation counts for Live Metrics
@@ -971,14 +973,20 @@ async def add_documents_stream(
         # Sprint 51: Include entity/relation totals in completion message
         total_entities_count = len(all_entities)
         total_relations_count = len(all_relations)
-        entity_info = f", {total_entities_count} entities, {total_relations_count} relations" if total_entities_count > 0 else ""
+        entity_info = (
+            f", {total_entities_count} entities, {total_relations_count} relations"
+            if total_entities_count > 0
+            else ""
+        )
 
         if failed_docs == 0:
             # All succeeded
             completion_message = f"[{_ts()}] Successfully added {success_count} document(s) ({total_chunks} chunks{entity_info}) in {elapsed_time:.1f}s"
         elif success_count == 0:
             # All failed
-            completion_message = f"[{_ts()}] Failed to add {failed_docs} document(s) in {elapsed_time:.1f}s"
+            completion_message = (
+                f"[{_ts()}] Failed to add {failed_docs} document(s) in {elapsed_time:.1f}s"
+            )
         else:
             # Partial success
             completion_message = f"[{_ts()}] Partially completed: {success_count} document(s) indexed ({total_chunks} chunks{entity_info}), {failed_docs} failed in {elapsed_time:.1f}s"
@@ -1595,6 +1603,7 @@ async def stream_batch_progress(
         },
     )
 
+
 # ============================================================================
 # Sprint 30: VLM-Enhanced Re-Indexing with Image Descriptions
 # ============================================================================
@@ -1930,6 +1939,7 @@ async def reindex_with_vlm_enrichment(
             "X-Accel-Buffering": "no",
         },
     )
+
 
 # ============================================================================
 # Sprint 33: Enhanced Directory Indexing
@@ -3238,4 +3248,3 @@ async def validate_index_consistency(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to validate index consistency: {str(e)}",
         ) from e
-

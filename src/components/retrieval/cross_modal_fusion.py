@@ -152,7 +152,9 @@ async def cross_modal_fusion(
             "cross_modal_fusion_complete",
             total_chunks=len(boosted_chunks),
             chunks_boosted=boosted_count,
-            boost_percentage=round(boosted_count / len(boosted_chunks) * 100, 1) if boosted_chunks else 0,
+            boost_percentage=(
+                round(boosted_count / len(boosted_chunks) * 100, 1) if boosted_chunks else 0
+            ),
         )
 
         return boosted_chunks
@@ -303,16 +305,18 @@ async def get_chunks_for_entities(
 
         chunks = []
         for rank, record in enumerate(results, start=1):
-            chunks.append({
-                "id": record["id"],
-                "text": record["text"] or "",
-                "document_id": record.get("document_id", ""),
-                "namespace_id": record.get("namespace_id", "default"),
-                "score": record.get("score", 0),
-                "rank": rank,
-                "search_type": "entity_mention",
-                "mentioned_entities": record.get("mentioned_entities", []),
-            })
+            chunks.append(
+                {
+                    "id": record["id"],
+                    "text": record["text"] or "",
+                    "document_id": record.get("document_id", ""),
+                    "namespace_id": record.get("namespace_id", "default"),
+                    "score": record.get("score", 0),
+                    "rank": rank,
+                    "search_type": "entity_mention",
+                    "mentioned_entities": record.get("mentioned_entities", []),
+                }
+            )
 
         logger.debug(
             "get_chunks_for_entities_complete",

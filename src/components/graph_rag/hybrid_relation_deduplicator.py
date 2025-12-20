@@ -142,9 +142,8 @@ class HybridRelationDeduplicator:
             "manual_overrides_applied": sum(
                 1 for t in relation_types if t.upper() in manual_overrides
             ),
-            "automatic_normalizations": len(type_mapping) - sum(
-                1 for t in relation_types if t.upper() in manual_overrides
-            ),
+            "automatic_normalizations": len(type_mapping)
+            - sum(1 for t in relation_types if t.upper() in manual_overrides),
             "unique_canonical_types": len(set(type_mapping.values())),
         }
 
@@ -236,9 +235,7 @@ class HybridRelationDeduplicator:
             logger.error("failed_to_get_manual_overrides", error=str(e))
             return {}
 
-    async def add_manual_override(
-        self, from_type: str, to_type: str
-    ) -> None:
+    async def add_manual_override(self, from_type: str, to_type: str) -> None:
         """Add manual synonym override.
 
         Args:

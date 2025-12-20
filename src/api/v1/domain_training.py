@@ -989,9 +989,7 @@ class ValidateDomainResponse(BaseModel):
     validation_errors: list[str] = Field(
         default_factory=list, description="List of validation errors"
     )
-    recommendations: list[str] = Field(
-        default_factory=list, description="List of recommendations"
-    )
+    recommendations: list[str] = Field(default_factory=list, description="List of recommendations")
 
 
 @router.delete("/{domain_name}", response_model=DomainDeletionResponse)

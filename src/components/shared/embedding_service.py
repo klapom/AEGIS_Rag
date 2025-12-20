@@ -204,11 +204,12 @@ class UnifiedEmbeddingService:
             # Sprint 51: Sanitize text to prevent NaN errors from Ollama
             # Remove control characters and normalize unicode
             import unicodedata
+
             sanitized_text = unicodedata.normalize("NFKC", text)
             # Remove control characters except newlines/tabs
             sanitized_text = "".join(
-                c if c in "\n\t" or not unicodedata.category(c).startswith("C")
-                else " " for c in sanitized_text
+                c if c in "\n\t" or not unicodedata.category(c).startswith("C") else " "
+                for c in sanitized_text
             )
             # Truncate to 32k chars (~8k tokens for BGE-M3 context window)
             max_chars = 32000
@@ -252,6 +253,7 @@ class UnifiedEmbeddingService:
 
             # Sprint 51: Check for NaN values in embedding and replace with zeros
             import math
+
             has_nan = any(math.isnan(v) for v in embedding)
             if has_nan:
                 logger.warning(

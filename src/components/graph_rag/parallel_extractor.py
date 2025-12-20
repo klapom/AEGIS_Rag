@@ -86,6 +86,7 @@ JSON Output:"""
 # DATA CLASSES
 # =============================================================================
 
+
 @dataclass
 class ParallelExtractionMetrics:
     """Metrics from parallel extraction run."""
@@ -116,6 +117,7 @@ class ParallelExtractionResult:
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def parse_json_array(text: str) -> list | None:
     """Try to extract a JSON array from LLM response."""
     text = text.strip()
@@ -129,7 +131,7 @@ def parse_json_array(text: str) -> list | None:
         pass
 
     # Find JSON array
-    match = re.search(r'\[[\s\S]*\]', text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -139,9 +141,9 @@ def parse_json_array(text: str) -> list | None:
             pass
 
     # Remove markdown code blocks
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    match = re.search(r'\[[\s\S]*\]', text)
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text)
+    match = re.search(r"\[[\s\S]*\]", text)
     if match:
         try:
             data = json.loads(match.group())
@@ -190,9 +192,9 @@ def extract_with_single_model(
                 "options": {
                     "temperature": temperature,
                     "num_predict": max_tokens,
-                }
+                },
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
         if response.status_code != 200:
@@ -225,17 +227,14 @@ def extract_with_single_model(
                 f"{ollama_url}/api/generate",
                 json={
                     "model": model,
-                    "prompt": RELATION_PROMPT.format(
-                        text=text,
-                        entities=", ".join(entity_names)
-                    ),
+                    "prompt": RELATION_PROMPT.format(text=text, entities=", ".join(entity_names)),
                     "stream": False,
                     "options": {
                         "temperature": temperature,
                         "num_predict": max_tokens,
-                    }
+                    },
                 },
-                timeout=timeout
+                timeout=timeout,
             )
 
             if response.status_code == 200:
@@ -259,6 +258,7 @@ def extract_with_single_model(
 # =============================================================================
 # PARALLEL EXTRACTOR CLASS
 # =============================================================================
+
 
 class ParallelExtractor:
     """Parallel Multi-LLM Entity/Relation Extractor.
@@ -486,6 +486,7 @@ class ParallelExtractor:
 # =============================================================================
 # CONVENIENCE FUNCTIONS
 # =============================================================================
+
 
 def get_parallel_extractor(
     models: list[str] | None = None,

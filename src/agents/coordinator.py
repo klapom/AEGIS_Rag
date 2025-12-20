@@ -487,7 +487,7 @@ class CoordinatorAgent:
                     # Yield phase event to stream (mode='json' converts datetime to ISO strings)
                     yield {
                         "type": "phase_event",
-                        "data": event.model_dump(mode='json'),
+                        "data": event.model_dump(mode="json"),
                     }
 
                 elif isinstance(event, dict):
@@ -533,7 +533,7 @@ class CoordinatorAgent:
             )
             yield {
                 "type": "phase_event",
-                "data": error_event.model_dump(mode='json'),
+                "data": error_event.model_dump(mode="json"),
             }
 
             # Re-raise for proper error handling
@@ -693,7 +693,9 @@ class CoordinatorAgent:
                     sample_keys=list(retrieved_contexts[0].keys()) if retrieved_contexts else [],
                 )
 
-                channel_samples = _extract_channel_samples(retrieved_contexts, query, max_per_channel=3)
+                channel_samples = _extract_channel_samples(
+                    retrieved_contexts, query, max_per_channel=3
+                )
             else:
                 logger.info(
                     "channel_samples_from_metadata",

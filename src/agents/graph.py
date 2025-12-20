@@ -308,9 +308,7 @@ async def hybrid_search_node(state: dict[str, Any]) -> dict[str, Any]:
             else 0
         )
         graph_count = (
-            len(graph_result.get("retrieved_contexts", []))
-            if isinstance(graph_result, dict)
-            else 0
+            len(graph_result.get("retrieved_contexts", [])) if isinstance(graph_result, dict) else 0
         )
 
         state["metadata"]["hybrid_search"] = {

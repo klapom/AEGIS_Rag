@@ -144,10 +144,18 @@ async def maximum_hybrid_search(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Extract results (handle exceptions)
-    qdrant_result = results[0] if not isinstance(results[0], Exception) else {"results": [], "latency_ms": 0}
-    bm25_result = results[1] if not isinstance(results[1], Exception) else {"results": [], "latency_ms": 0}
-    local_result = results[2] if not isinstance(results[2], Exception) else {"context": "", "latency_ms": 0}
-    global_result = results[3] if not isinstance(results[3], Exception) else {"context": "", "latency_ms": 0}
+    qdrant_result = (
+        results[0] if not isinstance(results[0], Exception) else {"results": [], "latency_ms": 0}
+    )
+    bm25_result = (
+        results[1] if not isinstance(results[1], Exception) else {"results": [], "latency_ms": 0}
+    )
+    local_result = (
+        results[2] if not isinstance(results[2], Exception) else {"context": "", "latency_ms": 0}
+    )
+    global_result = (
+        results[3] if not isinstance(results[3], Exception) else {"context": "", "latency_ms": 0}
+    )
 
     qdrant_chunks = qdrant_result["results"]
     bm25_chunks = bm25_result["results"]
@@ -205,7 +213,9 @@ async def maximum_hybrid_search(
             allowed_namespaces=namespaces,
         )
         chunks_boosted = sum(1 for c in chunk_ranking if c.get("cross_modal_boosted", False))
-        boost_percentage = round(chunks_boosted / len(chunk_ranking) * 100, 1) if chunk_ranking else 0
+        boost_percentage = (
+            round(chunks_boosted / len(chunk_ranking) * 100, 1) if chunk_ranking else 0
+        )
     else:
         chunks_boosted = 0
         boost_percentage = 0.0
@@ -292,7 +302,8 @@ async def _qdrant_search(
         # Filter by namespace manually if needed
         if namespaces:
             results = [
-                r for r in results
+                r
+                for r in results
                 if r.get("metadata", {}).get("namespace", "default") in namespaces
             ]
 
@@ -340,7 +351,8 @@ async def _bm25_search(
         # Filter by namespace manually
         if namespaces:
             results = [
-                r for r in results
+                r
+                for r in results
                 if r.get("metadata", {}).get("namespace", "default") in namespaces
             ][:top_k]
 

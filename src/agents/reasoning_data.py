@@ -190,7 +190,7 @@ class ReasoningData:
             - Frontend uses this to display thinking process
         """
         return {
-            "phase_events": [e.model_dump(mode='json') for e in self.phase_events],
+            "phase_events": [e.model_dump(mode="json") for e in self.phase_events],
             "retrieved_docs_count": len(self.retrieved_docs),
             "graph_entities_count": len(self.graph_entities),
             "memories_count": len(self.memories),
