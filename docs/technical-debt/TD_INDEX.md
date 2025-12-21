@@ -1,14 +1,14 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-19 (Sprint 60 Planning)
-**Total Open Items:** 18
-**Total Story Points:** ~251 SP
-**Archived Items:** [10 items](archive/ARCHIVE_INDEX.md)
+**Last Updated:** 2025-12-21 (Sprint 60 Complete)
+**Total Open Items:** 14
+**Total Story Points:** ~233 SP
+**Archived Items:** [11 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
 **Sprint 59:** Agentic Features, Tool Use
-**Sprint 60:** Documentation Consolidation, Technical Investigations
+**Sprint 60:** ✅ Documentation Consolidation, Technical Investigations (COMPLETE)
 
 ---
 
@@ -20,7 +20,7 @@
 | HIGH     | 3     | ~53 SP       |
 | MEDIUM   | 8     | ~148 SP      |
 | LOW      | 4     | ~58 SP       |
-| Investigation | 6 | ~44 SP     |
+| Investigation | 2 | ~26 SP      |
 
 ---
 
@@ -42,6 +42,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-061 | Ollama GPU Docker Config | Sprint 42 |
 | TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
 | TD-063 | Relation Deduplication | Sprint 49 |
+| TD-069 | Multihop Endpoint Review | Sprint 60 |
 
 ---
 
@@ -84,11 +85,42 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
 | [TD-068](TD-068_CLOUD_LLM_SUPPORT.md) | Cloud LLM Support (AnyLLM/Dashscope) | OPEN | 13 | Sprint 61+ |
-| [TD-069](TD-069_MULTIHOP_ENDPOINT_REVIEW.md) | Multihop Endpoint Status Review | OPEN | 3 | Sprint 60 |
+| [TD-069](TD-069_MULTIHOP_ENDPOINT_REVIEW.md) | Multihop Endpoint Status Review | **RESOLVED** ✅ | 3 | Sprint 60 ✓ |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | Sprint 61+ |
-| [TD-071](TD-071_VLLM_VS_OLLAMA_INVESTIGATION.md) | vLLM vs Ollama Investigation | OPEN | 5 | Sprint 60 |
-| [TD-072](TD-072_SENTENCE_TRANSFORMERS_RERANKING.md) | Sentence-Transformers Reranking | OPEN | 5 | Sprint 60 |
-| [TD-073](TD-073_SENTENCE_TRANSFORMERS_EMBEDDINGS.md) | Sentence-Transformers Embeddings | OPEN | 5 | Sprint 60 |
+| [TD-071](TD-071_VLLM_VS_OLLAMA_INVESTIGATION.md) | vLLM vs Ollama Investigation | **RESOLVED** ✅ | 5 | Sprint 60 ✓ |
+| [TD-072](TD-072_SENTENCE_TRANSFORMERS_RERANKING.md) | Sentence-Transformers Reranking | **INVESTIGATION COMPLETE** → Sprint 61 | 5 | Sprint 60 ✓ |
+| [TD-073](TD-073_SENTENCE_TRANSFORMERS_EMBEDDINGS.md) | Sentence-Transformers Embeddings | **INVESTIGATION COMPLETE** → Sprint 61 | 5 | Sprint 60 ✓ |
+
+---
+
+## Sprint 60 (Completed - Documentation Consolidation & Technical Investigations)
+
+**Focus:** Documentation consolidation post-refactoring (Sprint 53-59) + Technical investigations
+**Story Points:** 45 SP
+**Status:** ✅ COMPLETE
+
+**Achievements:**
+- 7 consolidated documentation files created (ARCHITECTURE.md, TECH_STACK.md, CONVENTIONS.md, 4 analysis docs)
+- 17 files archived (6 from Wave 1, 11 from Wave 3)
+- 4 technical investigations completed (TD-069, TD-071, TD-072, TD-073)
+- Clear recommendations for Sprint 61+ (2 migrations recommended, 1 removal recommended, 1 keep Ollama)
+
+| Feature | SP | Status |
+|---------|-----|--------|
+| 60.1 | 13 | ✅ Core Documentation Consolidation |
+| 60.2 | 8 | ✅ GRAPHITI Temporal Queries Analysis |
+| 60.3 | 3 | ✅ Section Nodes Implementation Review |
+| 60.4 | 3 | ✅ TD-069 Multihop Endpoint Review |
+| 60.5 | 5 | ✅ TD-071 vLLM vs Ollama Investigation |
+| 60.6 | 5 | ✅ TD-072 Sentence-Transformers Reranking Investigation |
+| 60.7 | 5 | ✅ TD-073 Sentence-Transformers Embeddings Investigation |
+| 60.8 | 3 | ✅ Subdirectory Cleanup |
+
+**Investigation Results:**
+- **TD-069:** ✅ RESOLVED - Remove multihop endpoints (unused, deprecated)
+- **TD-071:** ✅ RESOLVED - Keep Ollama (vLLM not justified at current scale)
+- **TD-072:** 🔄 MIGRATE - Cross-Encoder reranking recommended (50x faster)
+- **TD-073:** 🔄 MIGRATE - Native Sentence-Transformers recommended (3-5x faster)
 
 ---
 
@@ -119,22 +151,22 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ## Recommended Sprint Allocation
 
-### Sprint 52 (ACTIVE)
-- **TD-058: Community Summary Generation (13 SP)**
-  - Phase 1: Delta-Tracking Infrastructure (5 SP)
-  - Phase 2: Summary Generation + Admin LLM Config (8 SP)
-- **TD-053: Admin Dashboard Phase 1 (10 SP)**
-  - Graph Analytics Page (5 SP)
-  - Domain Management Enhancement (5 SP)
-- **TD-043: Async Follow-up Questions (5 SP)**
-- CI/CD Pipeline Optimization (3 SP)
+### Sprint 61 (NEXT)
+**Based on Sprint 60 investigations, high ROI performance optimizations:**
+- **NEW TD: Native Sentence-Transformers Embeddings (8 SP)** - from TD-073
+  - 3-5x faster embeddings, 60% less VRAM, identical quality
+- **NEW TD: Cross-Encoder Reranking (9 SP)** - from TD-072
+  - 50x faster reranking, comparable quality
+- **Remove Multihop Endpoints (2 SP)** - from TD-069
+  - Clean up 5 deprecated graph_viz endpoints
+- **Total:** 19 SP
 
-### Sprint 53
+### Sprint 62
 - **TD-064: Temporal Community Summaries (8 SP)** - deferred from Sprint 52
 - **TD-053 Phase 2:** Admin Dashboard Monitoring (16 SP)
 - TD-044: DoclingParsedDocument Interface (8 SP)
 
-### Sprint 54+
+### Sprint 63+
 - TD-051: Memory Consolidation (21 SP)
 - TD-049: User Profiling (21 SP)
 - TD-052: User Document Upload (13 SP)
@@ -206,13 +238,15 @@ TD-063 (Relation Dedup) ✓ DONE (Sprint 49)
 ## Notes
 
 1. **Sprint 49 TDs resolved** - TD-048 (Provenance Tracking) and TD-063 (Relation Dedup) completed
-2. **10 items archived** - Resolved TDs moved to archive folder (TD-045, TD-059 added Sprint 51)
+2. **11 items archived** - Resolved TDs moved to archive folder (TD-069 added Sprint 60)
 3. **TD-046** was completed in Sprint 34 (core), visualization pending
 4. **TD-047** exceeded baseline - 111 E2E tests vs. 40 planned (Sprint 51)
 5. **TD-053** navigation framework complete, configuration features deferred
 6. **Sprint 51 achievements**: 111 E2E tests, 4 TDs reviewed, documentation reorganized
-7. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
-8. **Next priority**: Sprint 52 should focus on TD-043/044 + TD-053 Phases 1-2
+7. **Sprint 60 achievements**: 7 docs consolidated, 17 files archived, 4 technical investigations complete
+8. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
+9. **Performance optimizations ready**: Sprint 61 should implement TD-072/073 migrations (high ROI)
+10. **vLLM investigation**: Keep Ollama - vLLM not justified at current scale (<50 QPS)
 
 ---
 
