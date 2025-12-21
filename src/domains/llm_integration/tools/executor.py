@@ -152,20 +152,25 @@ class ToolExecutor:
         """
         try:
             # Import sandbox (lazy to avoid circular dependency)
-            # Sprint 59.5: Sandbox will be implemented later
-            # For now, log warning and fall back to direct execution
-            logger.warning(
-                "sandbox_not_yet_implemented",
+            from src.domains.llm_integration.sandbox import get_sandbox
+
+            sandbox = await get_sandbox()
+            logger.debug(
+                "executing_in_sandbox",
                 tool_name=tool.name,
+                sandbox_type="docker",
+            )
+            return await sandbox.run(tool.handler, parameters)
+
+        except ImportError as e:
+            # Docker not available - fall back to direct execution
+            logger.warning(
+                "sandbox_unavailable",
+                tool_name=tool.name,
+                error=str(e),
                 fallback="direct_execution",
-                note="Sprint 59.5 will implement sandboxing",
             )
             return await self._execute_direct(tool, parameters)
-
-            # Future implementation (Sprint 59.5):
-            # from src.domains.llm_integration.sandbox import get_sandbox
-            # sandbox = await get_sandbox()
-            # return await sandbox.run(tool.handler, parameters)
 
         except Exception as e:
             logger.error("sandboxed_execution_failed", tool_name=tool.name, error=str(e))
