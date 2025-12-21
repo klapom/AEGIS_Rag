@@ -151,22 +151,71 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ## Recommended Sprint Allocation
 
-### Sprint 61 (NEXT)
-**Based on Sprint 60 investigations, high ROI performance optimizations:**
-- **NEW TD: Native Sentence-Transformers Embeddings (8 SP)** - from TD-073
-  - 3-5x faster embeddings, 60% less VRAM, identical quality
-- **NEW TD: Cross-Encoder Reranking (9 SP)** - from TD-072
-  - 50x faster reranking, comparable quality
-- **Remove Multihop Endpoints (2 SP)** - from TD-069
-  - Clean up 5 deprecated graph_viz endpoints
-- **Total:** 19 SP
+### Sprint 61 (CURRENT - Performance & Ollama Optimization)
+**Duration:** 1-2 weeks | **Story Points:** 25 SP | **Status:** READY
 
-### Sprint 62
+**Focus:** Critical performance migrations from Sprint 60 investigations
+- **61.1: Native Sentence-Transformers Embeddings (8 SP)** - from TD-073
+  - 3-5x faster embeddings, 60% less VRAM, identical quality
+- **61.2: Cross-Encoder Reranking (9 SP)** - from TD-072
+  - 50x faster reranking (120ms vs 2000ms), comparable quality
+- **61.3: Remove Deprecated Multihop Endpoints (2 SP)** - from TD-069
+  - Clean up 5 deprecated graph_viz endpoints
+- **61.4: Ollama Configuration Optimization (3 SP)**
+  - OLLAMA_NUM_PARALLEL=4 for +30% throughput
+- **61.5: Ollama Request Batching (3 SP, conditional)**
+  - Only if sustained load >30 QPS
+
+**Expected Impact:**
+- Query latency: -100ms (embeddings -80ms, reranking -20ms)
+- Ingestion speed: +1500% (batch embeddings 16x faster)
+- Ollama throughput: +30-50%
+
+### Sprint 62 (Section-Aware Features)
+**Duration:** 2-3 weeks | **Story Points:** 30 SP | **Status:** PLANNED
+
+**Focus:** Activate dormant section-aware infrastructure (currently ~20% utilized)
+- **62.1: Section-Aware Graph Queries (5 SP)**
+- **62.2: Multi-Section Metadata in Vector Search (3 SP)**
+- **62.3: VLM Image Integration with Sections (5 SP)**
+- **62.4: Section-Aware Citations (3 SP)**
+- **62.5: Section-Aware Reranking Integration (2 SP)**
+- **62.6: HAS_SUBSECTION Hierarchical Links (3 SP)**
+- **62.7: Document Type Support for Sections (5 SP)** - Markdown, DOCX, TXT
+- **62.8: Section-Based Community Detection (3 SP)**
+- **62.9: Section Analytics Endpoint (2 SP, optional)**
+
+**Expected Impact:**
+- Section utilization: 20% → 95%
+- Citation precision: +40% (section-level vs document-level)
+- Document type coverage: +3 formats
+
+### Sprint 63 (Conversational Intelligence & Temporal)
+**Duration:** 2 weeks | **Story Points:** 29 SP | **Status:** PLANNED
+
+**Focus:** Multi-turn conversations + basic audit trail
+- **63.1: Multi-Turn RAG Template (13 SP)** - NEW FEATURE
+  - Memory Summarizer (5 SP)
+  - Enhanced Prompt Template (3 SP)
+  - Contradiction Detection (3 SP)
+  - Answer Generator Integration (2 SP)
+- **63.2: Basic Temporal Audit Trail (8 SP)**
+  - "Who changed what and when" for entities/relations
+  - Change log table + temporal query API
+- **63.3: Redis Prompt Caching (5 SP, conditional)**
+  - Cache frequent prompts for +20% speedup (only if >100 QPS)
+- **63.4: Section-Based Community Detection (3 SP)** - from Sprint 62 overflow
+
+**Expected Impact:**
+- Multi-turn context retention: 0% → 95%
+- Contradiction detection in sources
+- Full audit trail for all changes
+
+### Sprint 64+ (Deferred Features)
+- **Multihop Agent Use Cases (3 SP)** - Research after endpoint removal
 - **TD-064: Temporal Community Summaries (8 SP)** - deferred from Sprint 52
 - **TD-053 Phase 2:** Admin Dashboard Monitoring (16 SP)
 - TD-044: DoclingParsedDocument Interface (8 SP)
-
-### Sprint 63+
 - TD-051: Memory Consolidation (21 SP)
 - TD-049: User Profiling (21 SP)
 - TD-052: User Document Upload (13 SP)
