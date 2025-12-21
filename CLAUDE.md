@@ -6,7 +6,9 @@
 1. Lies [docs/CONTEXT_REFRESH.md](docs/CONTEXT_REFRESH.md)
 2. Checke docs/sprints/SPRINT_PLAN.md
 3. Verifiziere ADR-Awareness: docs/adr/ADR_INDEX.md
-4. Naming Conventions: docs/NAMING_CONVENTIONS.md
+4. Consolidated Architecture: docs/ARCHITECTURE.md
+5. Technology Stack: docs/TECH_STACK.md
+6. Code Conventions: docs/CONVENTIONS.md
 
 ---
 
@@ -28,27 +30,44 @@
 
 ## Technology Stack
 
+**See [docs/TECH_STACK.md](docs/TECH_STACK.md) for complete details**
+
 ```yaml
 Backend: Python 3.12.7, FastAPI, Pydantic v2
 Package Manager: Poetry (pyproject.toml)
-Orchestration: LangGraph 0.6.10
+Orchestration: LangGraph 0.6.10 + LangChain Core
 
 Databases:
-  Vector: Qdrant 1.11.0
-  Graph: Neo4j 5.24 Community
-  Memory: Redis 7.x
+  Vector: Qdrant 1.11.0 (hybrid: vector + BM25 + RRF)
+  Graph: Neo4j 5.24 Community (entity/relation extraction)
+  Memory: Redis 7.x + Graphiti (3-layer temporal memory)
 
-LLM Models: Fully configurable via AegisLLMProxy (ADR-033)
-  Current: DGX Spark (vLLM/Ollama with cu130)
+LLM & Embeddings:
+  Current Model: Ollama llama3.2:8b (DGX Spark)
+  LLM Routing: AegisLLMProxy (ADR-033) - Multi-cloud support
   Fallback: Alibaba Cloud DashScope, OpenAI
+  Embeddings: BGE-M3 (1024-dim, multilingual) - ADR-024
+  Reranking: Cross-encoder (ms-marco-MiniLM-L-6-v2)
 
-Embeddings: BGE-M3 (1024-dim, multilingual) - ADR-024
+Ingestion:
+  Parser: Docling CUDA (GPU-accelerated OCR) - ADR-027
+  Chunking: Section-aware (800-1800 tokens) - ADR-039
+  Extraction: Pure LLM pipeline - ADR-026
 
 Frontend:
   Framework: React 19, TypeScript, Vite 7.1.12
   Styling: Tailwind CSS, Lucide Icons
   Testing: Playwright (111 E2E tests)
+
+Sprint 60 Investigations (Completed):
+  TD-071: vLLM vs Ollama - COMPLETE
+  TD-072: Sentence-Transformers Reranking - COMPLETE
+  TD-073: Sentence-Transformers Embeddings - COMPLETE
 ```
+
+**Planned Sprint 61 Migrations:**
+- Embedding optimization investigation
+- Reranking performance improvements
 
 ---
 
@@ -101,22 +120,32 @@ torch.backends.cuda.enable_mem_efficient_sdp(True)
 ```
 aegis-rag/
 ├── src/
-│   ├── agents/           # LangGraph Agents (coordinator, vector, graph, memory)
-│   ├── components/       # Core Components
-│   │   ├── ingestion/    # Docling + LangGraph Pipeline
-│   │   ├── vector_search/# Qdrant + Hybrid Search
-│   │   ├── graph_rag/    # LightRAG + Neo4j
-│   │   ├── memory/       # Graphiti + Redis
-│   │   └── llm_proxy/    # AegisLLMProxy (Multi-Cloud)
-│   ├── core/             # Config, Logging, Models
-│   └── api/              # FastAPI Endpoints
-├── tests/                # Unit, Integration, E2E
-├── frontend/             # React Frontend
-├── docs/                 # Documentation
-│   ├── adr/              # Architecture Decision Records
-│   ├── sprints/          # Sprint Plans & Summaries
-|   ├── technical_dept/   # Technical depts
-└── docker/               # Dockerfiles
+│   ├── agents/                  # LangGraph Agents
+│   │   ├── coordinator/         # Query routing & orchestration
+│   │   ├── vector_agent/        # Vector search execution
+│   │   ├── graph_agent/         # Graph reasoning
+│   │   ├── memory_agent/        # Memory retrieval
+│   │   └── action_agent/        # Tool execution (MCP)
+│   ├── domains/                 # Domain-driven structure (Sprint 56+)
+│   │   ├── document_processing/ # Ingestion & chunking
+│   │   ├── knowledge_graph/     # Graph extraction & reasoning
+│   │   ├── vector_search/       # Vector retrieval
+│   │   │   ├── embedding/       # BGE-M3 embeddings (planned Sprint 61)
+│   │   │   └── reranking/       # Cross-encoder reranking (planned Sprint 61)
+│   │   ├── memory/              # Graphiti + Redis
+│   │   └── llm_integration/     # AegisLLMProxy
+│   │       └── tools/           # Tool framework (Sprint 59)
+│   ├── core/                    # Config, Logging, Models
+│   └── api/                     # FastAPI Endpoints
+├── tests/                       # Unit, Integration, E2E tests
+├── frontend/                    # React 19 Frontend + Playwright E2E
+├── docs/                        # Documentation
+│   ├── adr/                     # Architecture Decision Records
+│   ├── sprints/                 # Sprint Plans & Reports
+│   ├── technical-debt/          # Technical debt items
+│   ├── archive/                 # Archived documentation
+│   └── analysis/                # Technical investigations
+└── docker/                      # Dockerfiles & compose files
 ```
 
 ---
@@ -273,12 +302,25 @@ docker images aegis-rag-test --format "{{.CreatedAt}}"
 
 **Wichtig:** Die Datenbank-Container (Qdrant, Neo4j, Redis, Ollama) müssen NICHT neu gebaut werden - diese verwenden offizielle Images.
 
+**Sprint 60 Complete:** Documentation consolidated, technical investigations (TD-071, TD-072, TD-073) finished.
+**Sprint 61 Upcoming:** Performance optimizations planned (embeddings, reranking).
+
 ---
 
 ## Links
 
+**Core Documentation:**
+- [Architecture](docs/ARCHITECTURE.md)
+- [Technology Stack](docs/TECH_STACK.md)
+- [Code Conventions](docs/CONVENTIONS.md)
 - [Context Refresh](docs/CONTEXT_REFRESH.md)
+
+**Project Planning:**
 - [Sprint Plans](docs/sprints/)
 - [ADR Index](docs/adr/ADR_INDEX.md)
-- [LangGraph Docs](https://langchain-ai.github.io/langgraph/)
-- [Qdrant Docs](https://qdrant.tech/documentation/)
+- [Technical Debt Index](docs/technical-debt/TD_INDEX.md)
+
+**External Resources:**
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [Qdrant Documentation](https://qdrant.tech/documentation/)
+- [Neo4j Documentation](https://neo4j.com/docs/)
