@@ -1,7 +1,7 @@
 # Sprint 63: Conversational Intelligence & Temporal Tracking
 
 **Sprint Duration:** 2 weeks
-**Total Story Points:** 29 SP
+**Total Story Points:** 34 SP
 **Priority:** HIGH (User Experience + Audit Trail)
 **Dependencies:** Sprint 61-62 Complete
 
@@ -13,6 +13,7 @@ Sprint 63 delivers **advanced conversational intelligence** and **basic temporal
 
 **Conversational Intelligence:**
 - **Multi-Turn RAG Template** (13 SP) - Memory summary, conversation history, contradiction detection
+- **Structured Output Formatting** (5 SP) - Professional, consistent response templates
 - Context-aware conversations (memory + chat history + retrieved docs)
 - Intelligent conflict resolution (System > Memory > Docs > Chat)
 
@@ -27,6 +28,7 @@ Sprint 63 delivers **advanced conversational intelligence** and **basic temporal
 **Expected Impact:**
 - Multi-turn context retention: **0% → 95%** (LLM sees conversation history)
 - Citation accuracy: **+30%** (contradiction detection highlights conflicts)
+- Response consistency: **+60%** (structured templates for all output types)
 - Audit trail coverage: **100%** (all entity/relation changes logged)
 - Prompt cache hit rate: **40-60%** for common queries (conditional feature)
 
@@ -729,6 +731,351 @@ Test cache hit rate and latency reduction.
 
 ---
 
+## Feature 63.4: Structured Output Formatting (5 SP)
+
+**Priority:** P1 (High UX Impact)
+**Rationale:** Consistent, professional, well-formatted responses improve readability and user trust
+
+### Current Problem
+
+**Inconsistent Output Formats:**
+- No standardized structure for different query types
+- Citations formatted inconsistently
+- No visual hierarchy in long responses
+- Missing metadata (confidence, sources count, response time)
+- Plain text output (no Markdown, no formatting)
+
+### Target: Structured Response Templates
+
+#### 1. Response Schema by Intent (2 SP)
+
+**File:** `src/models/response_templates.py` (new)
+
+```python
+"""Structured response templates for different query intents.
+
+Sprint 63 Feature 63.4: Professional, consistent output formatting.
+"""
+
+from enum import Enum
+from pydantic import BaseModel, Field
+from typing import Any
+
+
+class ResponseIntent(str, Enum):
+    """Query intent types with different output formats."""
+
+    FACTUAL = "factual"  # Simple fact lookup
+    COMPARISON = "comparison"  # Compare two or more entities
+    EXPLANATION = "explanation"  # Explain concept/process
+    SUMMARY = "summary"  # Summarize document/topic
+    TROUBLESHOOTING = "troubleshooting"  # Problem-solving
+    HYBRID = "hybrid"  # Multi-modal reasoning
+
+
+class StructuredResponse(BaseModel):
+    """Structured response container with metadata."""
+
+    # Core content
+    answer: str = Field(..., description="Main answer text (Markdown formatted)")
+    intent: ResponseIntent = Field(..., description="Detected query intent")
+
+    # Metadata
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Answer confidence score")
+    sources_used: int = Field(..., description="Number of sources used")
+    processing_time_ms: int = Field(..., description="Total processing time")
+
+    # Citations
+    sources: list[dict[str, Any]] = Field(
+        default_factory=list, description="Source documents with citations"
+    )
+
+    # Context (optional)
+    contradictions: list[dict] | None = Field(
+        None, description="Detected contradictions between sources"
+    )
+    related_topics: list[str] | None = Field(None, description="Related topics for follow-up")
+
+
+class ResponseFormatter:
+    """Format responses based on intent and content type."""
+
+    def format_factual(self, answer: str, sources: list[dict]) -> str:
+        """Format factual query response.
+
+        Template:
+            **Answer:** {answer}
+
+            **Sources:**
+            - [1] {source_1}
+            - [2] {source_2}
+
+            **Confidence:** {confidence}
+        """
+        formatted = f"**Antwort:** {answer}\n\n"
+
+        if sources:
+            formatted += "**Quellen:**\n"
+            for i, src in enumerate(sources[:5], 1):
+                title = src.get("title", "Unknown")
+                section = src.get("primary_section", "")
+                page = src.get("page", "")
+                citation = f"[{i}] {title}"
+                if section:
+                    citation += f" - Section: '{section}'"
+                if page:
+                    citation += f" (Seite {page})"
+                formatted += f"- {citation}\n"
+
+        return formatted
+
+    def format_comparison(self, answer: str, entities: list[str]) -> str:
+        """Format comparison response with table.
+
+        Template:
+            **Vergleich:** {entity_1} vs {entity_2}
+
+            | Kriterium | {entity_1} | {entity_2} |
+            |-----------|------------|------------|
+            | ...       | ...        | ...        |
+
+            **Zusammenfassung:** {summary}
+        """
+        formatted = f"**Vergleich:** {' vs '.join(entities)}\n\n"
+        formatted += answer  # Should contain table
+        return formatted
+
+    def format_explanation(self, answer: str, steps: list[str] | None = None) -> str:
+        """Format explanation with optional step-by-step breakdown.
+
+        Template:
+            **Erklärung:**
+
+            {answer}
+
+            **Schritt-für-Schritt:**
+            1. {step_1}
+            2. {step_2}
+            ...
+        """
+        formatted = f"**Erklärung:**\n\n{answer}\n\n"
+
+        if steps:
+            formatted += "**Schritt-für-Schritt:**\n"
+            for i, step in enumerate(steps, 1):
+                formatted += f"{i}. {step}\n"
+
+        return formatted
+
+    def format_summary(self, answer: str, key_points: list[str] | None = None) -> str:
+        """Format summary with bullet points.
+
+        Template:
+            **Zusammenfassung:**
+
+            {answer}
+
+            **Kernpunkte:**
+            - {point_1}
+            - {point_2}
+            ...
+        """
+        formatted = f"**Zusammenfassung:**\n\n{answer}\n\n"
+
+        if key_points:
+            formatted += "**Kernpunkte:**\n"
+            for point in key_points:
+                formatted += f"- {point}\n"
+
+        return formatted
+
+    def format_with_contradictions(
+        self, answer: str, contradictions: list[dict]
+    ) -> str:
+        """Add contradiction warnings to response.
+
+        Template:
+            ⚠️ **Widersprüche gefunden:**
+            - {contradiction_1}
+            - {contradiction_2}
+
+            **Antwort:** {answer}
+        """
+        if not contradictions:
+            return answer
+
+        warning = "⚠️ **Widersprüche in den Quellen gefunden:**\n\n"
+        for c in contradictions[:3]:
+            source_a = c.get("source_a", "")
+            source_b = c.get("source_b", "")
+            warning += f"- {source_a}\n  vs\n  {source_b}\n\n"
+
+        return warning + answer
+
+    def add_metadata_footer(
+        self,
+        formatted: str,
+        confidence: float,
+        sources_count: int,
+        processing_time_ms: int,
+    ) -> str:
+        """Add metadata footer to response.
+
+        Template:
+            ---
+            *Konfidenz: {confidence}% | Quellen: {count} | Antwortzeit: {time}ms*
+        """
+        footer = f"\n\n---\n*Konfidenz: {confidence:.0%} | "
+        footer += f"Quellen: {sources_count} | "
+        footer += f"Antwortzeit: {processing_time_ms}ms*"
+        return formatted + footer
+```
+
+#### 2. Integration with Answer Generator (2 SP)
+
+**File:** `src/agents/answer_generator.py` (update)
+
+```python
+async def generate_answer(
+    self,
+    query: str,
+    contexts: list[dict],
+    session_id: str | None = None,
+    conversation_history: list[dict] | None = None,
+    mode: str = "multi_turn",
+    intent: ResponseIntent = ResponseIntent.FACTUAL,  # NEW
+    include_metadata: bool = True,  # NEW
+) -> StructuredResponse:  # NEW return type
+    """Generate structured, formatted answer.
+
+    Sprint 63 Feature 63.4: Return structured response with formatting.
+    """
+    # ... existing multi-turn logic ...
+
+    # Generate raw answer
+    raw_answer = await self._generate_raw_answer(prompt)
+
+    # Format based on intent
+    formatter = ResponseFormatter()
+
+    if intent == ResponseIntent.FACTUAL:
+        formatted_answer = formatter.format_factual(raw_answer, contexts)
+    elif intent == ResponseIntent.COMPARISON:
+        entities = self._extract_entities(query)
+        formatted_answer = formatter.format_comparison(raw_answer, entities)
+    elif intent == ResponseIntent.EXPLANATION:
+        formatted_answer = formatter.format_explanation(raw_answer)
+    elif intent == ResponseIntent.SUMMARY:
+        key_points = self._extract_key_points(raw_answer)
+        formatted_answer = formatter.format_summary(raw_answer, key_points)
+    else:
+        formatted_answer = raw_answer
+
+    # Add contradiction warnings if found
+    if contradictions:
+        formatted_answer = formatter.format_with_contradictions(
+            formatted_answer, contradictions
+        )
+
+    # Add metadata footer
+    if include_metadata:
+        formatted_answer = formatter.add_metadata_footer(
+            formatted_answer,
+            confidence=self._calculate_confidence(contexts),
+            sources_count=len(contexts),
+            processing_time_ms=int((time.time() - start_time) * 1000),
+        )
+
+    # Return structured response
+    return StructuredResponse(
+        answer=formatted_answer,
+        intent=intent,
+        confidence=self._calculate_confidence(contexts),
+        sources_used=len(contexts),
+        processing_time_ms=int((time.time() - start_time) * 1000),
+        sources=contexts[:5],  # Top 5 sources
+        contradictions=contradictions if contradictions else None,
+        related_topics=self._extract_related_topics(contexts),
+    )
+```
+
+#### 3. API Response Schema Update (1 SP)
+
+**File:** `src/api/v1/chat.py` (update response model)
+
+```python
+from src.models.response_templates import StructuredResponse
+
+class ChatResponse(BaseModel):
+    """Chat API response with structured output."""
+
+    session_id: str
+    response: StructuredResponse  # NEW: Structured instead of plain string
+    followup_questions: list[str] | None = None
+    phase_events: list[PhaseEvent] | None = None
+```
+
+**Frontend receives:**
+```json
+{
+  "session_id": "abc123",
+  "response": {
+    "answer": "**Antwort:** RAG ist Retrieval-Augmented Generation...\n\n**Quellen:**\n- [1] paper.pdf - Section: 'Introduction' (Page 2)\n\n---\n*Konfidenz: 92% | Quellen: 3 | Antwortzeit: 450ms*",
+    "intent": "factual",
+    "confidence": 0.92,
+    "sources_used": 3,
+    "processing_time_ms": 450,
+    "sources": [...],
+    "contradictions": null,
+    "related_topics": ["Hybrid Search", "Vector Embeddings"]
+  },
+  "followup_questions": ["Was ist Hybrid Search?", ...]
+}
+```
+
+#### 4. Frontend Markdown Rendering (Optional, 1 SP if time permits)
+
+**File:** `frontend/src/components/StructuredAnswer.tsx` (new)
+
+```tsx
+import ReactMarkdown from 'react-markdown';
+
+interface StructuredAnswerProps {
+  response: StructuredResponse;
+}
+
+export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) => {
+  return (
+    <div className="structured-answer">
+      {/* Main answer with Markdown rendering */}
+      <ReactMarkdown className="answer-content">
+        {response.answer}
+      </ReactMarkdown>
+
+      {/* Contradiction warnings */}
+      {response.contradictions && (
+        <div className="contradictions-warning">
+          <AlertTriangle className="icon" />
+          <span>Widersprüche in Quellen gefunden</span>
+        </div>
+      )}
+
+      {/* Related topics as chips */}
+      {response.related_topics && (
+        <div className="related-topics">
+          <span className="label">Verwandte Themen:</span>
+          {response.related_topics.map(topic => (
+            <button key={topic} className="topic-chip">{topic}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+---
+
 ## Success Criteria
 
 | Feature | Success Metric | Target | Verification |
@@ -739,6 +1086,9 @@ Test cache hit rate and latency reduction.
 | 63.2 | Changes logged | 100% | Audit query |
 | 63.2 | Change queries work | <100ms | API test |
 | 63.3 | Prompt cache hit rate | 40-60% | Metrics |
+| 63.4 | Structured output consistency | 100% | Response format validation |
+| 63.4 | Markdown rendering works | 100% | Frontend test |
+| 63.4 | Metadata footer present | 100% | API test |
 
 ---
 
@@ -748,8 +1098,9 @@ Test cache hit rate and latency reduction.
 |-----|-------|--------------|
 | 1-3 | Feature 63.1.1-63.1.2 | Memory summarizer + prompt template |
 | 4-6 | Feature 63.1.3-63.1.4 | Contradiction detection + integration |
-| 7-9 | Feature 63.2 | Temporal audit trail |
-| 10-12 | Feature 63.3 | Prompt caching (conditional) |
+| 7-8 | Feature 63.2 | Temporal audit trail |
+| 9-10 | Feature 63.3 | Prompt caching (conditional) |
+| 11-12 | Feature 63.4 | Structured output formatting |
 | 13-14 | Testing & integration | All tests passing |
 
 **Total Duration:** 14 days (2 weeks)
@@ -780,7 +1131,14 @@ Test cache hit rate and latency reduction.
 ## Final Note
 
 This completes the Sprint 61-63 reorganization:
-- **Sprint 61:** Performance (25 SP)
-- **Sprint 62:** Section-Aware (30 SP)
-- **Sprint 63:** Conversational + Temporal (29 SP)
-- **Total:** 84 SP across 3 focused sprints
+- **Sprint 61:** Performance & Ollama (25 SP)
+- **Sprint 62:** Section-Aware Features (30 SP)
+- **Sprint 63:** Conversational Intelligence + Temporal (34 SP)
+- **Total:** 89 SP across 3 focused sprints
+
+**Sprint 63 Feature Summary:**
+- 63.1: Multi-Turn RAG Template (13 SP) - Memory + History + Contradictions
+- 63.2: Basic Temporal Audit Trail (8 SP) - "Who changed what when"
+- 63.3: Redis Prompt Caching (5 SP, conditional) - +20% speedup
+- 63.4: Structured Output Formatting (5 SP) - Professional response templates
+- 63.5: Section-Based Community Detection (3 SP, deferred from Sprint 62)

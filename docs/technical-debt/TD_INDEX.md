@@ -191,9 +191,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - Document type coverage: +3 formats
 
 ### Sprint 63 (Conversational Intelligence & Temporal)
-**Duration:** 2 weeks | **Story Points:** 29 SP | **Status:** PLANNED
+**Duration:** 2 weeks | **Story Points:** 34 SP | **Status:** PLANNED
 
-**Focus:** Multi-turn conversations + basic audit trail
+**Focus:** Multi-turn conversations + basic audit trail + structured output
 - **63.1: Multi-Turn RAG Template (13 SP)** - NEW FEATURE
   - Memory Summarizer (5 SP)
   - Enhanced Prompt Template (3 SP)
@@ -204,10 +204,15 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
   - Change log table + temporal query API
 - **63.3: Redis Prompt Caching (5 SP, conditional)**
   - Cache frequent prompts for +20% speedup (only if >100 QPS)
-- **63.4: Section-Based Community Detection (3 SP)** - from Sprint 62 overflow
+- **63.4: Structured Output Formatting (5 SP)** - NEW FEATURE
+  - Response templates by intent (factual, comparison, explanation, summary)
+  - Markdown formatting, metadata footer, contradiction warnings
+  - Professional, consistent output for all query types
+- **63.5: Section-Based Community Detection (3 SP)** - from Sprint 62 overflow
 
 **Expected Impact:**
 - Multi-turn context retention: 0% → 95%
+- Response consistency: +60% (structured templates)
 - Contradiction detection in sources
 - Full audit trail for all changes
 
