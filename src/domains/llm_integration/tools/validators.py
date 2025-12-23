@@ -145,12 +145,11 @@ def _basic_validation(
         for key, value in parameters.items():
             if key in properties:
                 expected_type = properties[key].get("type")
-                if expected_type:
-                    if not _check_type(value, expected_type):
-                        return ValidationResult(
-                            valid=False,
-                            error=f"Field '{key}' has wrong type. Expected {expected_type}, got {type(value).__name__}",
-                        )
+                if expected_type and not _check_type(value, expected_type):
+                    return ValidationResult(
+                        valid=False,
+                        error=f"Field '{key}' has wrong type. Expected {expected_type}, got {type(value).__name__}",
+                    )
 
         return ValidationResult(valid=True, coerced_params=parameters)
 
