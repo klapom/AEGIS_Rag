@@ -8,13 +8,14 @@ sandboxed environment with security validation and resource limits.
 
 import asyncio
 from typing import Any
+
 import structlog
 
-from src.domains.llm_integration.tools.registry import ToolRegistry
 from src.domains.llm_integration.tools.builtin.bash_security import (
     is_command_safe,
     sanitize_environment,
 )
+from src.domains.llm_integration.tools.registry import ToolRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -136,7 +137,7 @@ async def bash_execute(
                 "success": exit_code == 0,
             }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Kill process on timeout
             logger.warning("bash_execute_timeout", command=command, timeout=timeout)
             try:

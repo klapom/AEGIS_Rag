@@ -9,6 +9,7 @@ patterns before execution.
 import ast
 from dataclasses import dataclass
 from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -127,12 +128,11 @@ def validate_python_code(code: str) -> ValidationResult:
         # Check function calls
         elif isinstance(node, ast.Call):
             # Check for dangerous builtins
-            if isinstance(node.func, ast.Name):
-                if node.func.id in DANGEROUS_BUILTINS:
-                    logger.warning("dangerous_builtin", function=node.func.id)
-                    return ValidationResult(
-                        False, f"Dangerous builtin function: {node.func.id}"
-                    )
+            if isinstance(node.func, ast.Name) and node.func.id in DANGEROUS_BUILTINS:
+                logger.warning("dangerous_builtin", function=node.func.id)
+                return ValidationResult(
+                    False, f"Dangerous builtin function: {node.func.id}"
+                )
 
         # Check attribute access
         elif isinstance(node, ast.Attribute):
@@ -143,10 +143,9 @@ def validate_python_code(code: str) -> ValidationResult:
                 )
 
         # Check for exec/eval as names
-        elif isinstance(node, ast.Name):
-            if node.id in ["exec", "eval", "__import__"]:
-                logger.warning("dangerous_name", name=node.id)
-                return ValidationResult(False, f"Dangerous builtin: {node.id}")
+        elif isinstance(node, ast.Name) and node.id in ["exec", "eval", "__import__"]:
+            logger.warning("dangerous_name", name=node.id)
+            return ValidationResult(False, f"Dangerous builtin: {node.id}")
 
     logger.info("code_validation_passed", code_length=len(code))
     return ValidationResult(True, None)
@@ -165,13 +164,13 @@ def create_restricted_globals() -> dict[str, Any]:
         >>> "os" in globals_dict
         False
     """
-    import math
-    import json
     import datetime
+    import json
+    import math
     import re
-    from collections import defaultdict, Counter
-    from itertools import islice, chain
+    from collections import Counter, defaultdict
     from functools import reduce
+    from itertools import chain, islice
 
     # Safe builtins
     safe_builtins = {

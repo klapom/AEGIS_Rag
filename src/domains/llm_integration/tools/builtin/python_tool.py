@@ -6,18 +6,19 @@ This tool allows LLM agents to execute Python code in a controlled environment
 with AST validation and restricted globals.
 """
 
-import sys
 import asyncio
+import sys
 from io import StringIO
 from typing import Any
+
 import structlog
 
-from src.domains.llm_integration.tools.registry import ToolRegistry
 from src.domains.llm_integration.tools.builtin.python_security import (
-    validate_python_code,
     create_restricted_globals,
     get_code_complexity,
+    validate_python_code,
 )
+from src.domains.llm_integration.tools.registry import ToolRegistry
 
 logger = structlog.get_logger(__name__)
 
@@ -113,7 +114,7 @@ async def python_execute(
         )
         return result
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("python_execute_timeout", timeout=timeout)
         return {
             "error": f"Execution timed out after {timeout} seconds",
@@ -278,7 +279,7 @@ async def _execute_with_context(
             timeout=timeout,
         )
         return result
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {
             "error": f"Execution timed out after {timeout} seconds",
             "success": False,

@@ -8,6 +8,7 @@ of dangerous bash commands.
 
 import re
 from dataclasses import dataclass
+
 import structlog
 
 logger = structlog.get_logger(__name__)
