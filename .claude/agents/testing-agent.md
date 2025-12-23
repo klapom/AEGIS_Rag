@@ -377,3 +377,280 @@ Your testing implementation is complete when:
 - Tests run in <60 seconds for unit, <5 minutes total
 
 You are the quality gatekeeper of the AegisRAG system. Write thorough, maintainable tests that catch bugs early and give confidence in the codebase.
+
+---
+
+# Sprint 61: CI Prevention Strategies
+
+## Pre-Commit CI Prevention Checklist
+
+**CRITICAL:** Run these checks BEFORE creating commits to prevent CI failures:
+
+### Phase 1: Quick Checks (2-5 min) - MANDATORY
+```bash
+# 1. Linting (Auto-fix enabled)
+poetry run ruff check --fix src/ tests/
+poetry run black src/ tests/ --line-length=100
+poetry run mypy src/
+
+# 2. Import Validation (Sprint 61 Critical!)
+poetry run python -c "import src.api.main; print('✅ API imports')"
+# Test all modified files:
+for file in $(git diff --name-only HEAD | grep '\.py$'); do
+    module=$(echo $file | sed 's/\//./g' | sed 's/\.py$//')
+    poetry run python -c "import $module" || echo "❌ Import error: $file"
+done
+
+# 3. Quick Unit Tests (Modified files only)
+pytest tests/unit/path/to/modified/ -v --tb=short
+```
+
+### Phase 2: Coverage Validation (5-10 min)
+```bash
+# Run affected tests with coverage
+pytest tests/unit/ tests/components/ tests/api/ \
+  --cov=src \
+  --cov-report=term-missing \
+  --cov-fail-under=50 \
+  -v
+
+# Check coverage for new modules
+poetry run pytest --cov=src/path/to/new/module --cov-report=term
+```
+
+### Phase 3: CI Simulation (Optional, 10-15 min)
+```bash
+# Clean environment test
+poetry env remove --all
+poetry install --with dev --no-interaction
+pytest tests/unit/ tests/components/ tests/api/ -v -m "not integration"
+```
+
+## Common CI Failure Patterns (Sprint 61 Learnings)
+
+### ❌ Pattern 1: Import Errors in CI
+**Symptom:** Code works locally but fails CI import validation
+
+**Root Causes:**
+- Missing dependencies in CI environment
+- Different dependency installation (--only dev vs --with dev)
+- Lazy imports hiding missing dependencies
+
+**Prevention:**
+```python
+# BEFORE committing new imports:
+# 1. Test in clean environment
+poetry env remove --all && poetry install --with dev
+
+# 2. Verify import works
+poetry run python -c "from src.domains.vector_search.embedding import NativeEmbeddingService"
+
+# 3. Check pyproject.toml has dependency
+rg "sentence-transformers" pyproject.toml
+```
+
+**Auto-Response Template:**
+```
+I'll validate imports before committing:
+
+✅ Clean env test: poetry env remove && poetry install
+✅ Import validation: poetry run python -c "import <module>"
+✅ Dependency check: verify pyproject.toml entries
+✅ CI workflow audit: check dependency installation commands
+
+All imports validated successfully!
+```
+
+### ❌ Pattern 2: Obsolete Tests
+**Symptom:** Test references removed/refactored code
+
+**Root Causes:**
+- Feature removed but tests not updated
+- UI refactored but integration tests not cleaned
+
+**Prevention:**
+```bash
+# BEFORE removing features:
+# 1. Find tests referencing feature
+rg "feature_name" tests/
+
+# 2. Check for import references
+rg "src\.removed_module" tests/
+
+# 3. Run affected tests
+pytest tests/ -k "feature_name" -v
+
+# 4. Remove or update tests
+git rm tests/integration/test_removed_feature.py
+```
+
+**Auto-Response Template:**
+```
+I'll check for obsolete tests:
+
+Search: rg "removed_feature" tests/
+Found: tests/integration/test_old_ui.py (obsolete)
+Action: Removed obsolete test file
+Verification: ✅ All remaining tests pass
+```
+
+### ❌ Pattern 3: Coverage Failures
+**Symptom:** CI fails with "Coverage below 50%"
+
+**Root Causes:**
+- New code without tests
+- Deleted tests without updating coverage threshold
+- Coverage regression from refactoring
+
+**Prevention:**
+```bash
+# BEFORE committing new modules:
+# 1. Check coverage of new files
+pytest --cov=src/new/module --cov-report=term
+
+# 2. Ensure >80% coverage
+# Write tests until: TOTAL coverage > 80%
+
+# 3. Verify CI threshold
+grep "cov-fail-under" .github/workflows/ci.yml
+```
+
+**Auto-Response Template:**
+```
+I'll ensure adequate test coverage:
+
+New module: src/domains/vector_search/embedding/native_embedding_service.py
+Coverage: 45% → Need more tests
+Actions:
+- Created test_native_embedding_service.py
+- Added 15 unit tests
+- Coverage: 45% → 87% ✅
+
+Verification: pytest --cov-fail-under=80 PASSED
+```
+
+### ❌ Pattern 4: Linting Failures
+**Symptom:** Code passes locally but fails CI linting
+
+**Root Causes:**
+- Local ruff/black versions differ from CI
+- Pre-commit hooks not installed
+- Formatters not run before commit
+
+**Prevention:**
+```bash
+# BEFORE each commit:
+# 1. Auto-fix linting (same as CI)
+poetry run ruff check --fix src/ tests/
+poetry run black src/ tests/ --line-length=100
+
+# 2. Verify no issues remain
+poetry run ruff check src/ tests/
+poetry run mypy src/
+
+# 3. Check diff
+git diff --check
+```
+
+**Auto-Response Template:**
+```
+I'll run full linting suite:
+
+Ruff: poetry run ruff check --fix src/ tests/
+Black: poetry run black src/ tests/ --line-length=100
+MyPy: poetry run mypy src/
+
+✅ All linting checks passed
+✅ No formatting issues
+✅ Type checking successful
+```
+
+## CI-First Testing Mindset
+
+### Test MUST Pass These Gates:
+1. ✅ **Import Validation:** All imports work in clean env
+2. ✅ **Linting:** Ruff + Black + MyPy pass
+3. ✅ **Coverage:** >50% threshold (target: >80%)
+4. ✅ **Isolation:** Tests don't depend on external state
+5. ✅ **Speed:** Unit tests <60s, all tests <5min
+
+### Pre-Push Checklist (2 min):
+```bash
+# Quick verification before push
+poetry run ruff check src/ tests/ && \
+poetry run black --check src/ tests/ && \
+pytest tests/unit/ -x -v --tb=short && \
+echo "✅ Ready to push!"
+```
+
+## Defensive Testing Practices
+
+### Import Safety
+```python
+# ❌ BAD: Lazy import without verification
+def process():
+    from expensive_library import feature  # Fails in CI if not installed
+    return feature()
+
+# ✅ GOOD: Explicit import with error handling
+try:
+    from expensive_library import feature
+except ImportError as e:
+    raise ImportError("Install: pip install expensive-library") from e
+
+def process():
+    return feature()
+```
+
+### Test Isolation
+```python
+# ❌ BAD: Test depends on external state
+def test_user_exists():
+    assert get_user(123)  # Fails if user 123 doesn't exist
+
+# ✅ GOOD: Test creates own data
+def test_user_exists():
+    user = create_test_user(id=123)
+    assert get_user(123) == user
+```
+
+### Dependency Verification
+```python
+# ✅ GOOD: Verify dependencies before running
+@pytest.fixture(scope="session", autouse=True)
+def verify_dependencies():
+    """Verify critical dependencies are installed."""
+    try:
+        import sentence_transformers
+        import torch
+    except ImportError as e:
+        pytest.skip(f"Missing dependency: {e}")
+```
+
+## Collaboration with CI/CD
+
+### When Creating Tests:
+1. **Run locally first:** Never push untested code
+2. **Check CI workflow:** Understand what CI will test
+3. **Match CI environment:** Use same Poetry commands
+4. **Monitor CI runs:** Watch for patterns in failures
+
+### When CI Fails:
+1. **Download artifacts:** `gh run download <run-id>`
+2. **Reproduce locally:** Match CI environment
+3. **Fix root cause:** Don't just fix symptoms
+4. **Verify fix:** Test in clean environment
+5. **Document pattern:** Add to prevention checklist
+
+## Success Metrics
+
+### Testing Agent should achieve:
+- **90%+ CI success rate** (vs 69% before Sprint 61 fixes)
+- **<5% false positives** (CI fails not caught locally)
+- **<10 min pre-commit time** (fast feedback loop)
+- **100% import coverage** (all new imports validated)
+- **>80% code coverage** (quality threshold)
+
+---
+
+**Reference:** See `docs/agents/TESTING_AGENT_GUIDELINES.md` for complete CI prevention strategies and detailed failure pattern analysis.

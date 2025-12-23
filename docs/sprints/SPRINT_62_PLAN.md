@@ -1,7 +1,7 @@
 # Sprint 62: Section-Aware Features
 
 **Sprint Duration:** 2-3 weeks
-**Total Story Points:** 38 SP
+**Total Story Points:** 36 SP
 **Priority:** HIGH (Activate Dormant Infrastructure)
 **Dependencies:** Sprint 61 Complete (Performance migrations)
 
@@ -638,7 +638,8 @@ Add section analytics to document details page.
 | 62.8 | Section-based communities | Detected | Community test |
 | 62.9 | Section analytics API | Returns data | API test |
 | 62.10 | Research endpoint implemented | 200 response | Integration test |
-| 62.10 | Research workflow completes | Synthesis returned | E2E test |
+| 62.10 | Research mode toggle visible | UI checkbox | Manual check |
+| 62.10 | Research workflow streams events | 4+ events | Backend test |
 
 ---
 
@@ -665,11 +666,12 @@ Add section analytics to document details page.
 
 ---
 
-## Feature 62.10: Implement Research Endpoint (8 SP)
+## Feature 62.10: Implement Research Endpoint (Backend) (6 SP)
 
 **Priority:** P1 (High - Missing Critical Feature)
 **Status:** READY (Discovered during Sprint 59 testing)
 **Dependencies:** None
+**Scope:** Backend + Minimal Frontend (Full UI deferred to Sprint 63)
 
 ### Rationale
 
@@ -681,6 +683,12 @@ During Sprint 59 Tool Framework testing, the `/api/v1/chat/research` endpoint wa
 **Documentation Reference:**
 - `docs/e2e/TOOL_FRAMEWORK_USER_JOURNEY.md` Journey 3 describes the research workflow
 - LangGraph state machine planned but never implemented
+
+**Sprint 62 Scope:**
+- ✅ Backend: Research Agent LangGraph workflow (3 SP)
+- ✅ Backend: API Endpoint + Pydantic models (2 SP)
+- ✅ Frontend: Minimal "Research Mode" toggle in Chat UI (1 SP)
+- ❌ Frontend: Full Research UI → **Deferred to Sprint 63 Feature 63.8**
 
 ### Tasks
 
@@ -966,7 +974,43 @@ class ResearchEvent(BaseModel):
     data: dict
 ```
 
-#### 4. Integration Tests (1 SP)
+#### 4. Minimal Frontend Integration (1 SP)
+
+**File:** `frontend/src/components/chat/ChatInput.tsx` (update)
+
+Add "Research Mode" toggle to existing chat interface:
+
+```tsx
+// Add toggle checkbox before send button
+<div className="flex items-center gap-2">
+  <label className="flex items-center gap-1 text-xs text-gray-600">
+    <input
+      type="checkbox"
+      checked={isResearchMode}
+      onChange={(e) => setIsResearchMode(e.target.checked)}
+      className="rounded"
+    />
+    Research Mode
+  </label>
+  <button type="submit">Send</button>
+</div>
+```
+
+**File:** `frontend/src/hooks/useChatApi.ts` (update)
+
+```tsx
+// Send to research endpoint if research mode enabled
+const endpoint = isResearchMode
+  ? "/api/v1/chat/research"
+  : "/api/v1/chat/";
+```
+
+**UI Changes:**
+- Simple checkbox "Research Mode" in chat input
+- Uses existing chat UI for streaming response
+- No dedicated research progress UI (deferred to Sprint 63)
+
+#### 5. Basic Integration Test (1 SP)
 
 **File:** `tests/integration/api/test_research_endpoint.py`
 
@@ -996,57 +1040,6 @@ def test_research_endpoint_exists():
 
     # Should return 200 (not 404)
     assert response.status_code == 200
-
-
-@pytest.mark.integration
-async def test_research_workflow_completes():
-    """Test complete research workflow."""
-    client = TestClient(app)
-
-    response = client.post(
-        "/api/v1/chat/research",
-        json={
-            "query": "What is machine learning?",
-            "max_iterations": 1  # Quick test
-        },
-        stream=True
-    )
-
-    events = []
-    for line in response.iter_lines():
-        if line.startswith(b"data:"):
-            events.append(line.decode())
-
-    # Should have plan, search, evaluate, synthesize events
-    assert len(events) >= 4
-    assert any("plan_created" in e for e in events)
-    assert any("synthesis" in e for e in events)
-```
-
-#### 5. Documentation Update (1 SP)
-
-**File:** `docs/e2e/TOOL_FRAMEWORK_USER_JOURNEY.md`
-
-Update Journey 3 to mark as **IMPLEMENTED**:
-```markdown
-## Journey 3: Deep Research with Agentic Search
-
-> **✅ STATUS**: Implemented in Sprint 62 (Feature 62.10)
-
-### Scenario
-User asks complex question requiring multi-step research.
-
-### User Steps
-
-1. **Send Research Request**
-   ```bash
-   curl -X POST http://localhost:8000/api/v1/chat/research \
-     -H "Content-Type: application/json" \
-     -d '{
-       "query": "What are the latest advances in transformer architectures?",
-       "max_iterations": 3
-     }'
-   ```
 ```
 
 ---
@@ -1062,10 +1055,24 @@ User asks complex question requiring multi-step research.
 
 ## Next Steps (Sprint 63)
 
-Sprint 63 will focus on **Conversational Intelligence & Temporal** (29 SP):
+Sprint 63 will focus on **Conversational Intelligence & Temporal + Research UI** (54 SP):
 - Multi-Turn RAG Template (13 SP)
 - Basic Temporal Audit Trail (8 SP)
 - Redis Prompt Caching (5 SP)
-- Section-based community features (3 SP)
+- Structured Output Formatting (5 SP)
+- **Full Research UI with Progress Tracking (5 SP)** ← Deferred from Sprint 62
+- **WebSearch Integration for Research Agent (8 SP)** ← NEW
+- Playwright E2E Tests (5 SP)
+- MCP Authentication Guide (2 SP)
+- Section-Based Community Detection (3 SP)
+
+**Note on Feature 62.10:**
+- Sprint 62 delivers **minimal** Research Mode (backend + toggle)
+- Sprint 63 Feature 63.8 delivers **full** Research UI with:
+  - Dedicated Research Page
+  - Multi-iteration progress tracker
+  - Plan → Search → Evaluate → Synthesize visualisierung
+  - Result accumulation display
+- Sprint 63 Feature 63.9 adds WebSearch capability for broader research
 
 See `SPRINT_63_PLAN.md` for details.

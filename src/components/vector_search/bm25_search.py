@@ -131,12 +131,19 @@ class BM25Search:
         self,
         query: str,
         top_k: int = 10,
+        section_filter: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Search documents using BM25.
+
+        Sprint 62 Feature 62.2: Added section_filter parameter.
 
         Args:
             query: Search query
             top_k: Number of top results to return (default: 10)
+            section_filter: Filter by section ID(s) (Sprint 62.2)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
+                - None: No section filtering (backward compatible)
 
         Returns:
             list of results with text, score, and metadata
@@ -154,13 +161,31 @@ class BM25Search:
             # Get BM25 scores
             scores = self._bm25.get_scores(tokenized_query)
 
-            # Get top-k indices
+            # Sprint 62.2: Apply section filter if provided
+            if section_filter is not None:
+                # Normalize to list
+                section_ids = [section_filter] if isinstance(section_filter, str) else section_filter
+
+                # Filter results by section_id
+                # Set scores to -inf for documents not matching section filter
+                for idx, metadata in enumerate(self._metadata):
+                    doc_section_id = metadata.get("section_id", "")
+                    if doc_section_id not in section_ids:
+                        scores[idx] = float("-inf")
+
+                logger.debug(
+                    "bm25_section_filter_applied",
+                    section_ids=section_ids,
+                    num_sections=len(section_ids),
+                )
+
+            # Get top-k indices (excluding -inf scores from filtered docs)
             top_indices = scores.argsort()[-top_k:][::-1]
 
-            # Build results
+            # Build results (exclude filtered docs with -inf scores)
             results: list[dict[str, Any]] = []
             for idx in top_indices:
-                if idx < len(self._corpus):
+                if idx < len(self._corpus) and scores[idx] != float("-inf"):
                     result = {
                         "text": self._corpus[idx],
                         "score": float(scores[idx]),
@@ -174,6 +199,7 @@ class BM25Search:
                 query_length=len(query),
                 results_count=len(results),
                 top_k=top_k,
+                section_filter_applied=section_filter is not None,
             )
 
             return results

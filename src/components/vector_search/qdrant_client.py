@@ -336,6 +336,9 @@ class QdrantClient:
                     "section_pages": chunk.section_pages,
                     "section_bboxes": chunk.section_bboxes,
                     "primary_section": chunk.primary_section,
+                    # Sprint 62.2: Add section_id for filtering
+                    # Extract section_id from metadata if available
+                    "section_id": chunk.metadata.get("section_id", ""),
                     # Additional metadata (source, file_type, etc.)
                     **chunk.metadata,
                 }
@@ -381,8 +384,11 @@ class QdrantClient:
         limit: int = 10,
         score_threshold: float | None = None,
         query_filter: Filter | None = None,
+        section_filter: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Search for similar vectors in collection.
+
+        Sprint 62 Feature 62.2: Added section_filter parameter for section-based filtering.
 
         Args:
             collection_name: Collection to search in
@@ -390,6 +396,10 @@ class QdrantClient:
             limit: Maximum number of results (default: 10)
             score_threshold: Minimum similarity score (default: None)
             query_filter: Optional metadata filter
+            section_filter: Filter by section ID(s) (Sprint 62.2)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
+                - None: No section filtering (backward compatible)
 
         Returns:
             list of search results with id, score, and payload
@@ -398,12 +408,55 @@ class QdrantClient:
             VectorSearchError: If search fails
         """
         try:
+            # Sprint 62.2: Build section filter if provided
+            combined_filter = query_filter
+            if section_filter is not None:
+                from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
+
+                # Normalize section_filter to list
+                section_ids = [section_filter] if isinstance(section_filter, str) else section_filter
+
+                # Build section filter condition
+                if len(section_ids) == 1:
+                    # Single section - use MatchValue
+                    section_condition = FieldCondition(
+                        key="section_id",
+                        match=MatchValue(value=section_ids[0]),
+                    )
+                else:
+                    # Multiple sections - use MatchAny
+                    section_condition = FieldCondition(
+                        key="section_id",
+                        match=MatchAny(any=section_ids),
+                    )
+
+                # Combine with existing filter if present
+                if combined_filter is not None:
+                    # Merge filters using AND logic
+                    must_conditions = combined_filter.must if combined_filter.must else []
+                    combined_filter = Filter(
+                        must=[
+                            *must_conditions,
+                            section_condition,
+                        ],
+                        should=combined_filter.should,
+                        must_not=combined_filter.must_not,
+                    )
+                else:
+                    combined_filter = Filter(must=[section_condition])
+
+                logger.debug(
+                    "section_filter_applied",
+                    section_ids=section_ids,
+                    num_sections=len(section_ids),
+                )
+
             results = await self.async_client.search(
                 collection_name=collection_name,
                 query_vector=query_vector,
                 limit=limit,
                 score_threshold=score_threshold,
-                query_filter=query_filter,
+                query_filter=combined_filter,
             )
 
             formatted_results = [
@@ -420,6 +473,7 @@ class QdrantClient:
                 collection_name=collection_name,
                 results_count=len(formatted_results),
                 limit=limit,
+                section_filter_applied=section_filter is not None,
             )
 
             return formatted_results

@@ -38,6 +38,13 @@ from src.domains.document_processing.enrichment import (
     process_image_with_vlm,
 )
 
+# VLM Service (Feature 62.3)
+from src.domains.document_processing.vlm_service import (
+    ImageWithSectionContext,
+    VLMImageResult,
+    VLMService,
+)
+
 # Parsing
 from src.domains.document_processing.parsing import (
     ALL_FORMATS,
@@ -122,4 +129,8 @@ __all__ = [
     "image_enrichment_node",
     "ImageProcessor",
     "process_image_with_vlm",
+    # VLM Service (Feature 62.3)
+    "VLMService",
+    "ImageWithSectionContext",
+    "VLMImageResult",
 ]

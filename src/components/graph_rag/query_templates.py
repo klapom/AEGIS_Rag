@@ -8,6 +8,7 @@ This module provides 15+ parameterized query templates for:
 - Graph statistics and analytics
 - Community detection
 - Entity evolution tracking
+- Section-aware queries (Sprint 62.1)
 """
 
 import structlog
@@ -522,4 +523,186 @@ class GraphQueryTemplates:
             .where("size(entities) >= $min_size", min_size=min_size)
             .return_("component", "size(entities) as component_size", "entities")
             .order_by("component_size DESC")
+        )
+
+    # ==========================================================================
+    # SECTION-AWARE QUERIES (Sprint 62.1)
+    # ==========================================================================
+
+    def entities_in_section(
+        self,
+        section_heading: str,
+        document_id: str | None = None,
+        limit: int = 100,
+    ) -> CypherQueryBuilder:
+        """Find entities defined in a specific section.
+
+        Args:
+            section_heading: Section heading to filter by
+            document_id: Optional document ID filter
+            limit: Maximum results (default: 100)
+
+        Returns:
+            CypherQueryBuilder instance
+
+        Example:
+            >>> templates.entities_in_section("Introduction", document_id="doc_123").build()
+        """
+        builder = CypherQueryBuilder()
+        builder.match("(s:Section)-[:DEFINES]->(e:base)")
+        builder.where("s.heading = $section_heading", section_heading=section_heading)
+
+        if document_id:
+            builder.match("(d:Document)-[:HAS_SECTION]->(s)")
+            builder.where("d.id = $document_id", document_id=document_id)
+
+        return (
+            builder.return_(
+                "e",
+                "e.name as name",
+                "e.type as type",
+                "s.heading as section",
+                "s.level as level",
+            )
+            .order_by("e.name")
+            .limit(limit)
+        )
+
+    def entities_in_sections(
+        self,
+        section_headings: list[str],
+        document_id: str | None = None,
+        limit: int = 100,
+    ) -> CypherQueryBuilder:
+        """Find entities in multiple sections.
+
+        Args:
+            section_headings: List of section headings
+            document_id: Optional document ID filter
+            limit: Maximum results (default: 100)
+
+        Returns:
+            CypherQueryBuilder instance
+
+        Example:
+            >>> templates.entities_in_sections(
+            ...     ["Introduction", "Methods"],
+            ...     document_id="doc_123"
+            ... ).build()
+        """
+        builder = CypherQueryBuilder()
+        builder.match("(s:Section)-[:DEFINES]->(e:base)")
+        builder.where("s.heading IN $section_headings", section_headings=section_headings)
+
+        if document_id:
+            builder.match("(d:Document)-[:HAS_SECTION]->(s)")
+            builder.where("d.id = $document_id", document_id=document_id)
+
+        return (
+            builder.return_(
+                "e",
+                "e.name as name",
+                "collect(DISTINCT s.heading) as sections",
+            )
+            .order_by("e.name")
+            .limit(limit)
+        )
+
+    def section_hierarchy(
+        self,
+        document_id: str,
+        max_level: int | None = None,
+    ) -> CypherQueryBuilder:
+        """Get section hierarchy for a document.
+
+        Args:
+            document_id: Document ID
+            max_level: Maximum heading level (default: all levels)
+
+        Returns:
+            CypherQueryBuilder instance
+
+        Example:
+            >>> templates.section_hierarchy("doc_123", max_level=3).build()
+        """
+        builder = CypherQueryBuilder()
+        builder.match("(d:Document)-[:HAS_SECTION]->(s:Section)")
+        builder.where("d.id = $document_id", document_id=document_id)
+
+        if max_level:
+            builder.where("s.level <= $max_level", max_level=max_level)
+
+        return (
+            builder.return_(
+                "s.heading as heading",
+                "s.level as level",
+                "s.page_no as page",
+                "s.order as order",
+            )
+            .order_by("s.order ASC")
+        )
+
+    def entity_sections(
+        self,
+        entity_id: str,
+    ) -> CypherQueryBuilder:
+        """Get sections where entity is defined.
+
+        Args:
+            entity_id: Entity ID or name
+
+        Returns:
+            CypherQueryBuilder instance
+
+        Example:
+            >>> templates.entity_sections("entity-123").build()
+        """
+        builder = CypherQueryBuilder()
+        builder.match("(s:Section)-[:DEFINES]->(e:base)")
+
+        # Match by ID or name
+        if entity_id.startswith("entity-") or entity_id.startswith("id-"):
+            builder.where("e.id = $entity_id", entity_id=entity_id)
+        else:
+            builder.where("e.name = $entity_id", entity_id=entity_id)
+
+        return (
+            builder.return_(
+                "s.heading as heading",
+                "s.level as level",
+                "s.page_no as page",
+                "s.order as order",
+            )
+            .order_by("s.order ASC")
+        )
+
+    def section_entities_count(
+        self,
+        document_id: str | None = None,
+    ) -> CypherQueryBuilder:
+        """Count entities per section.
+
+        Args:
+            document_id: Optional document ID filter
+
+        Returns:
+            CypherQueryBuilder instance
+
+        Example:
+            >>> templates.section_entities_count(document_id="doc_123").build()
+        """
+        builder = CypherQueryBuilder()
+        builder.match("(s:Section)-[:DEFINES]->(e:base)")
+
+        if document_id:
+            builder.match("(d:Document)-[:HAS_SECTION]->(s)")
+            builder.where("d.id = $document_id", document_id=document_id)
+
+        return (
+            builder.return_(
+                "s.heading as section",
+                "s.level as level",
+                "count(e) as entity_count",
+            )
+            .order_by("entity_count DESC")
         )

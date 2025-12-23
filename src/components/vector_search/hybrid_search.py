@@ -244,14 +244,20 @@ class HybridSearch:
         top_k: int = 20,
         score_threshold: float | None = None,
         filters: MetadataFilters | None = None,
+        section_filter: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Perform vector-based semantic search.
+
+        Sprint 62 Feature 62.2: Added section_filter parameter.
 
         Args:
             query: Search query
             top_k: Number of results (default: 20)
             score_threshold: Minimum similarity score
             filters: Metadata filters for targeted search
+            section_filter: Filter by section ID(s) (Sprint 62.2)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
 
         Returns:
             list of results with text, score, and metadata
@@ -278,6 +284,7 @@ class HybridSearch:
                 limit=top_k,
                 score_threshold=score_threshold,
                 query_filter=qdrant_filter,
+                section_filter=section_filter,
             )
 
             # Format results
@@ -294,6 +301,10 @@ class HybridSearch:
                         "document_id": payload.get("document_id", ""),
                         "rank": rank,
                         "search_type": "vector",
+                        # Sprint 62.2: Include section metadata at top level
+                        "section_id": payload.get("section_id", ""),
+                        "section_headings": payload.get("section_headings", []),
+                        "primary_section": payload.get("primary_section", ""),
                         # Sprint 51 Fix: Pass full metadata from Qdrant payload
                         "metadata": {
                             "source": payload.get("source", payload.get("document_path", "")),
@@ -304,7 +315,9 @@ class HybridSearch:
                             "page": payload.get("page"),
                             "created_at": payload.get("created_at", payload.get("creation_date")),
                             "parser": payload.get("parser", ""),
+                            "section_id": payload.get("section_id", ""),
                             "section_headings": payload.get("section_headings", []),
+                            "primary_section": payload.get("primary_section", ""),
                             "namespace": payload.get("namespace", "default"),
                         },
                     }
@@ -327,18 +340,28 @@ class HybridSearch:
         self,
         query: str,
         top_k: int = 20,
+        section_filter: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Perform BM25 keyword search.
+
+        Sprint 62 Feature 62.2: Added section_filter parameter.
 
         Args:
             query: Search query
             top_k: Number of results (default: 20)
+            section_filter: Filter by section ID(s) (Sprint 62.2)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
 
         Returns:
             list of results with text, score, and metadata
         """
         try:
-            results = self.bm25_search.search(query=query, top_k=top_k)
+            results = self.bm25_search.search(
+                query=query,
+                top_k=top_k,
+                section_filter=section_filter,
+            )
 
             # Format results
             formatted_results = []
@@ -352,6 +375,9 @@ class HybridSearch:
                         "document_id": result.get("metadata", {}).get("document_id", ""),
                         "rank": result["rank"],
                         "search_type": "bm25",
+                        # Sprint 62.2: Include section metadata
+                        "section_id": result.get("metadata", {}).get("section_id", ""),
+                        "section_headings": result.get("metadata", {}).get("section_headings", []),
                     }
                 )
 
@@ -359,6 +385,7 @@ class HybridSearch:
                 "BM25 search completed",
                 query_length=len(query),
                 results_count=len(formatted_results),
+                section_filter_applied=section_filter is not None,
             )
 
             return formatted_results
@@ -378,8 +405,11 @@ class HybridSearch:
         use_reranking: bool = False,  # TD-059: Disabled - sentence-transformers not in container
         rerank_top_k: int | None = None,
         filters: MetadataFilters | None = None,
+        section_filter: str | list[str] | None = None,
     ) -> dict[str, Any]:
         """Perform hybrid search combining vector and BM25 with RRF.
+
+        Sprint 62 Feature 62.2: Added section_filter parameter.
 
         Args:
             query: Search query
@@ -391,6 +421,9 @@ class HybridSearch:
             use_reranking: Apply cross-encoder reranking (default: from settings)
             rerank_top_k: Number of candidates to rerank (default: 2*top_k)
             filters: Metadata filters for targeted search
+            section_filter: Filter by section ID(s) (Sprint 62.2)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
 
         Returns:
             Dictionary with fused results and metadata
@@ -422,10 +455,12 @@ class HybridSearch:
                     top_k=vector_top_k,
                     score_threshold=score_threshold,
                     filters=filters,
+                    section_filter=section_filter,
                 ),
                 self.keyword_search(
                     query=query,
                     top_k=bm25_top_k,
+                    section_filter=section_filter,
                 ),
             )
 
@@ -635,6 +670,17 @@ class HybridSearch:
                             str(point.payload.get("document_id", point.payload.get("doc_id", "")))
                             if point.payload
                             else ""
+                        ),
+                        # Sprint 62.2: Include section metadata for BM25 filtering
+                        "section_id": (
+                            str(point.payload.get("section_id", ""))
+                            if point.payload
+                            else ""
+                        ),
+                        "section_headings": (
+                            point.payload.get("section_headings", [])
+                            if point.payload
+                            else []
                         ),
                     }
                     documents.append(doc)

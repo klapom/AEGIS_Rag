@@ -1,21 +1,27 @@
 # Sprint 63: Conversational Intelligence & Temporal Tracking
 
-**Sprint Duration:** 2 weeks
-**Total Story Points:** 41 SP
-**Priority:** HIGH (User Experience + Audit Trail)
+**Sprint Duration:** 2-3 weeks
+**Total Story Points:** 57 SP
+**Priority:** HIGH (User Experience + Research + Audit Trail)
 **Dependencies:** Sprint 61-62 Complete
 
 ---
 
 ## Executive Summary
 
-Sprint 63 delivers **advanced conversational intelligence** and **basic temporal tracking**:
+Sprint 63 delivers **advanced conversational intelligence**, **research capabilities**, and **basic temporal tracking**:
 
 **Conversational Intelligence:**
 - **Multi-Turn RAG Template** (13 SP) - Memory summary, conversation history, contradiction detection
 - **Structured Output Formatting** (5 SP) - Professional, consistent response templates
 - Context-aware conversations (memory + chat history + retrieved docs)
 - Intelligent conflict resolution (System > Memory > Docs > Chat)
+
+**Research Features (New):**
+- **Full Research UI** (5 SP) - Dedicated Research Page with progress tracking
+- **WebSearch Integration** (8 SP) - External web search for comprehensive research
+- Multi-iteration research workflow with real-time progress
+- Hybrid research (internal KB + web)
 
 **Temporal Tracking:**
 - **Basic Audit Trail** (8 SP) - "Who changed what and when"
@@ -25,12 +31,21 @@ Sprint 63 delivers **advanced conversational intelligence** and **basic temporal
 **Performance Optimization:**
 - **Redis Prompt Caching** (5 SP, conditional) - Cache frequent prompts for +20% speedup
 
+**Testing & Documentation:**
+- **Playwright E2E Tests** (5 SP) - Tool framework test coverage
+- **MCP Authentication Guide** (2 SP) - JWT auth documentation
+- **Tool Output Visualization** (3 SP) - Display command/code execution results in UI
+
 **Expected Impact:**
 - Multi-turn context retention: **0% → 95%** (LLM sees conversation history)
 - Citation accuracy: **+30%** (contradiction detection highlights conflicts)
 - Response consistency: **+60%** (structured templates for all output types)
+- Research quality: **+80%** (web search adds external knowledge)
+- Research UX: **Dedicated UI** vs simple toggle (deferred from Sprint 62)
 - Audit trail coverage: **100%** (all entity/relation changes logged)
 - Prompt cache hit rate: **40-60%** for common queries (conditional feature)
+- E2E test coverage: **4 tool journeys** fully tested
+- Tool debugging: **Full transparency** - users see command, stdout, stderr, exit codes
 
 ---
 
@@ -1093,6 +1108,17 @@ export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) 
 | 63.6 | Security test passing | Dangerous commands blocked | E2E test |
 | 63.7 | Auth documentation complete | Guide available | Manual review |
 | 63.7 | Token generation script works | Generates valid JWT | Script test |
+| 63.8 | Research Page accessible | Page loads | Manual check |
+| 63.8 | Progress tracker visualizes phases | 4 phases shown | UI test |
+| 63.8 | Multi-iteration progress works | Iteration count updates | E2E test |
+| 63.9 | WebSearch client works | DuckDuckGo returns results | Unit test |
+| 63.9 | Research uses web + KB | Both sources present | Integration test |
+| 63.9 | Web results show badge | "Web" badge visible | Frontend test |
+| 63.10 | Tool execution visible in UI | Command + output shown | Manual check |
+| 63.10 | Stdout displayed correctly | Syntax highlighting | Frontend test |
+| 63.10 | Stderr shown in red | Distinct error styling | Frontend test |
+| 63.10 | Exit code color-coded | Green=0, Red>0 | UI test |
+| 63.10 | Long output scrollable | max-h with scroll | UI test |
 
 ---
 
@@ -1103,11 +1129,14 @@ export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) 
 | 1-3 | Feature 63.1.1-63.1.2 | Memory summarizer + prompt template |
 | 4-6 | Feature 63.1.3-63.1.4 | Contradiction detection + integration |
 | 7-8 | Feature 63.2 | Temporal audit trail |
-| 9-10 | Feature 63.3 | Prompt caching (conditional) |
+| 9-10 | Feature 63.3 (conditional) | Prompt caching |
 | 11-12 | Feature 63.4 | Structured output formatting |
-| 13-14 | Testing & integration | All tests passing |
+| 13-15 | Features 63.8-63.9 | Research UI + WebSearch |
+| 16-17 | Features 63.6-63.7 | E2E tests + Auth docs |
+| 18-19 | Feature 63.10 | Tool output visualization |
+| 20-21 | Testing & integration | All tests passing |
 
-**Total Duration:** 14 days (2 weeks)
+**Total Duration:** 21 days (3 weeks)
 
 ---
 
@@ -1608,6 +1637,849 @@ chmod +x scripts/generate_test_token.py
 
 ---
 
+## Feature 63.8: Full Research UI with Progress Tracking (5 SP)
+
+**Priority:** P1 (High - Complete Sprint 62 Feature 62.10)
+**Status:** READY (Deferred from Sprint 62)
+**Dependencies:** Sprint 62 Feature 62.10 (Backend + minimal toggle)
+
+### Rationale
+
+Sprint 62 delivered **minimal** Research Mode (backend + simple checkbox).
+Sprint 63 delivers **full** Research UI for optimal user experience:
+- **Current (Sprint 62):** Simple "Research Mode" checkbox → uses normal chat UI
+- **Target (Sprint 63):** Dedicated Research Page with multi-step progress visualization
+
+**User Experience Gap:**
+- No visibility into research planning phase
+- No progress indication for multi-iteration search
+- No accumulated results display
+- Cannot see which iteration is running
+
+### Tasks
+
+#### 1. Create Dedicated Research Page (2 SP)
+
+**File:** `frontend/src/pages/ResearchPage.tsx` (new)
+
+```tsx
+/**
+ * Dedicated Research Page with Progress Tracking
+ * Sprint 63 Feature 63.8
+ */
+
+import { useState } from 'react';
+import { ResearchProgressTracker } from '../components/research/ProgressTracker';
+import { ResearchResults } from '../components/research/Results';
+
+export const ResearchPage: React.FC = () => {
+  const [query, setQuery] = useState('');
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchState, setResearchState] = useState<ResearchState | null>(null);
+
+  const handleStartResearch = async () => {
+    setIsResearching(true);
+
+    // Call research endpoint with streaming
+    const response = await fetch('/api/v1/chat/research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        max_iterations: 3,
+      }),
+    });
+
+    // Stream events and update UI
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader!.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const events = chunk.split('\n\n').filter(Boolean);
+
+      for (const event of events) {
+        if (event.startsWith('data: ')) {
+          const data = JSON.parse(event.slice(6));
+          setResearchState((prev) => updateResearchState(prev, data));
+        }
+      }
+    }
+
+    setIsResearching(false);
+  };
+
+  return (
+    <div className="research-page max-w-6xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Deep Research</h1>
+
+      {/* Query Input */}
+      <div className="mb-8">
+        <textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Enter your research question..."
+          className="w-full p-4 border rounded-lg"
+          rows={3}
+          disabled={isResearching}
+        />
+        <button
+          onClick={handleStartResearch}
+          disabled={!query || isResearching}
+          className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg"
+        >
+          {isResearching ? 'Researching...' : 'Start Research'}
+        </button>
+      </div>
+
+      {/* Progress Tracker */}
+      {researchState && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ResearchProgressTracker state={researchState} />
+          <ResearchResults results={researchState.results} />
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+#### 2. Multi-Iteration Progress Tracker Component (2 SP)
+
+**File:** `frontend/src/components/research/ProgressTracker.tsx` (new)
+
+```tsx
+/**
+ * Research Progress Tracker
+ * Visualizes: Plan → Search → Evaluate → Synthesize
+ * Sprint 63 Feature 63.8
+ */
+
+import { CheckCircle, Circle, Loader, Search, Brain, Target } from 'lucide-react';
+
+interface ResearchState {
+  phase: 'plan' | 'search' | 'evaluate' | 'synthesize' | 'done';
+  current_iteration: number;
+  max_iterations: number;
+  search_queries: string[];
+  results_count: number;
+  is_sufficient: boolean;
+  synthesis: string | null;
+}
+
+interface ProgressTrackerProps {
+  state: ResearchState;
+}
+
+export const ResearchProgressTracker: React.FC<ProgressTrackerProps> = ({ state }) => {
+  const phases = [
+    { key: 'plan', label: 'Planning', icon: Brain, color: 'blue' },
+    { key: 'search', label: 'Searching', icon: Search, color: 'purple' },
+    { key: 'evaluate', label: 'Evaluating', icon: Target, color: 'amber' },
+    { key: 'synthesize', label: 'Synthesizing', icon: CheckCircle, color: 'green' },
+  ];
+
+  const getPhaseStatus = (phaseKey: string) => {
+    const phaseIndex = phases.findIndex((p) => p.key === phaseKey);
+    const currentIndex = phases.findIndex((p) => p.key === state.phase);
+
+    if (phaseIndex < currentIndex) return 'completed';
+    if (phaseIndex === currentIndex) return 'active';
+    return 'pending';
+  };
+
+  return (
+    <div className="progress-tracker bg-white rounded-lg p-6 shadow">
+      <h2 className="text-xl font-bold mb-4">Research Progress</h2>
+
+      {/* Iteration Counter */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-gray-700">Iteration</span>
+          <span className="text-2xl font-bold text-blue-600">
+            {state.current_iteration} / {state.max_iterations}
+          </span>
+        </div>
+        <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${(state.current_iteration / state.max_iterations) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Phase Steps */}
+      <div className="space-y-4">
+        {phases.map((phase, index) => {
+          const status = getPhaseStatus(phase.key);
+          const Icon = phase.icon;
+
+          return (
+            <div
+              key={phase.key}
+              className={`flex items-center gap-3 p-3 rounded-lg ${
+                status === 'active'
+                  ? `bg-${phase.color}-50 border border-${phase.color}-200`
+                  : status === 'completed'
+                  ? 'bg-green-50'
+                  : 'bg-gray-50'
+              }`}
+            >
+              {/* Icon */}
+              <div className="flex-shrink-0">
+                {status === 'active' ? (
+                  <Loader className={`w-6 h-6 text-${phase.color}-600 animate-spin`} />
+                ) : status === 'completed' ? (
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                ) : (
+                  <Circle className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+
+              {/* Label */}
+              <div className="flex-1">
+                <div className="font-medium">{phase.label}</div>
+                {status === 'active' && phase.key === 'search' && state.search_queries.length > 0 && (
+                  <div className="mt-1 text-xs text-gray-600">
+                    Queries: {state.search_queries.length}
+                  </div>
+                )}
+                {status === 'active' && phase.key === 'evaluate' && (
+                  <div className="mt-1 text-xs text-gray-600">
+                    Results: {state.results_count} | Sufficient: {state.is_sufficient ? '✓' : '✗'}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+```
+
+#### 3. Accumulated Results Display (1 SP)
+
+**File:** `frontend/src/components/research/Results.tsx` (new)
+
+Display accumulated search results from multiple iterations:
+
+```tsx
+interface ResearchResultsProps {
+  results: Array<{ text: string; source: string; score: number }>;
+}
+
+export const ResearchResults: React.FC<ResearchResultsProps> = ({ results }) => {
+  return (
+    <div className="results-panel bg-white rounded-lg p-6 shadow">
+      <h2 className="text-xl font-bold mb-4">
+        Accumulated Results ({results.length})
+      </h2>
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {results.map((result, i) => (
+          <div key={i} className="p-3 bg-gray-50 rounded-lg">
+            <div className="flex justify-between items-start mb-1">
+              <span className="text-sm font-medium text-gray-700">{result.source}</span>
+              <span className="text-xs text-gray-500">{(result.score * 100).toFixed(0)}%</span>
+            </div>
+            <p className="text-sm text-gray-600">{result.text.slice(0, 150)}...</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+---
+
+## Feature 63.9: WebSearch Integration for Research Agent (8 SP)
+
+**Priority:** P1 (High - Critical for Research Quality)
+**Status:** READY (Requested by user)
+**Dependencies:** Sprint 62 Feature 62.10 (Research Agent)
+
+### Rationale
+
+Research Agent currently searches **only internal knowledge base** (Qdrant + Neo4j).
+For comprehensive research, need **external web search** capability:
+- **Current:** Research queries limited to ingested documents
+- **Target:** Hybrid research (internal KB + web search)
+- **Use cases:**
+  - Current events not in knowledge base
+  - Broader context for technical topics
+  - Fact-checking and verification
+  - Latest industry trends
+
+**Without WebSearch:** Research is limited to what's been ingested
+**With WebSearch:** Research can find latest information from web
+
+### Tasks
+
+#### 1. Integrate WebSearch Provider (3 SP)
+
+**File:** `src/components/web_search/web_search_client.py` (new)
+
+```python
+"""Web search client for Research Agent.
+
+Sprint 63 Feature 63.9: External web search integration.
+"""
+
+import structlog
+import httpx
+from typing import Any
+
+logger = structlog.get_logger(__name__)
+
+
+class WebSearchClient:
+    """Web search client supporting multiple providers.
+
+    Providers:
+    - DuckDuckGo (free, no API key required)
+    - Brave Search (free tier: 2000 queries/month)
+    - Bing Web Search (Azure, paid)
+    """
+
+    def __init__(self, provider: str = "duckduckgo"):
+        """Initialize web search client.
+
+        Args:
+            provider: "duckduckgo", "brave", or "bing"
+        """
+        self.provider = provider
+        self.client = httpx.AsyncClient(timeout=10.0)
+
+        # Provider-specific config
+        if provider == "brave":
+            import os
+            self.api_key = os.getenv("BRAVE_SEARCH_API_KEY")
+            if not self.api_key:
+                raise ValueError("BRAVE_SEARCH_API_KEY not set")
+
+    async def search(
+        self,
+        query: str,
+        max_results: int = 5,
+        region: str = "de-DE",
+    ) -> list[dict[str, Any]]:
+        """Execute web search.
+
+        Args:
+            query: Search query
+            max_results: Maximum results to return
+            region: Region code (de-DE, en-US)
+
+        Returns:
+            List of search results:
+            [
+                {
+                    "title": "Result title",
+                    "url": "https://...",
+                    "snippet": "Brief description",
+                    "published_date": "2025-12-21",
+                },
+                ...
+            ]
+        """
+        logger.info("web_search_query", provider=self.provider, query=query)
+
+        if self.provider == "duckduckgo":
+            return await self._search_duckduckgo(query, max_results)
+        elif self.provider == "brave":
+            return await self._search_brave(query, max_results, region)
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
+
+    async def _search_duckduckgo(self, query: str, max_results: int) -> list[dict]:
+        """DuckDuckGo search (free, no API key).
+
+        Uses duckduckgo-search Python library.
+        """
+        try:
+            from duckduckgo_search import DDGS
+
+            ddgs = DDGS()
+            results = ddgs.text(query, max_results=max_results)
+
+            formatted = []
+            for r in results:
+                formatted.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("link", ""),
+                    "snippet": r.get("body", ""),
+                    "published_date": None,  # DuckDuckGo doesn't provide dates
+                })
+
+            logger.info("duckduckgo_search_complete", results_count=len(formatted))
+            return formatted
+
+        except Exception as e:
+            logger.error("duckduckgo_search_failed", error=str(e))
+            return []
+
+    async def _search_brave(
+        self, query: str, max_results: int, region: str
+    ) -> list[dict]:
+        """Brave Search API (free tier: 2000 queries/month).
+
+        API docs: https://api.search.brave.com/app/documentation/web-search/get-started
+        """
+        try:
+            url = "https://api.search.brave.com/res/v1/web/search"
+            headers = {"X-Subscription-Token": self.api_key}
+            params = {
+                "q": query,
+                "count": max_results,
+                "country": region.split("-")[1] if "-" in region else "DE",
+            }
+
+            response = await self.client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+
+            data = response.json()
+            results = data.get("web", {}).get("results", [])
+
+            formatted = []
+            for r in results:
+                formatted.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("url", ""),
+                    "snippet": r.get("description", ""),
+                    "published_date": r.get("age"),
+                })
+
+            logger.info("brave_search_complete", results_count=len(formatted))
+            return formatted
+
+        except Exception as e:
+            logger.error("brave_search_failed", error=str(e))
+            return []
+```
+
+#### 2. Enhance Research Agent with WebSearch (3 SP)
+
+**File:** `src/agents/research_agent.py` (update search_node)
+
+```python
+async def search_node(state: ResearchState) -> ResearchState:
+    """Execute multi-source search (internal KB + web).
+
+    Sprint 63 Feature 63.9: Added web search capability.
+    """
+    logger.info(
+        "research_search",
+        iteration=state["current_iteration"],
+        queries_count=len(state["search_queries"]),
+    )
+
+    from src.agents.coordinator import coordinator_agent
+    from src.components.web_search import WebSearchClient
+
+    web_search = WebSearchClient(provider="duckduckgo")  # Free, no API key
+
+    # Execute searches
+    for query in state["search_queries"]:
+        # 1. Internal knowledge base search
+        kb_result = await coordinator_agent.run(query=query, intent="hybrid")
+        state["results"].extend(kb_result.get("sources", []))
+
+        # 2. Web search (NEW in Sprint 63)
+        web_results = await web_search.search(query, max_results=3)
+        for web_result in web_results:
+            # Format web results as "sources"
+            state["results"].append({
+                "text": web_result["snippet"],
+                "source": web_result["title"],
+                "url": web_result["url"],
+                "score": 0.7,  # Fixed score for web results
+                "metadata": {
+                    "search_type": "web",
+                    "published_date": web_result.get("published_date"),
+                },
+            })
+
+    # Deduplicate results by URL/document_id
+    state["results"] = deduplicate_results(state["results"])
+
+    logger.info(
+        "research_search_complete",
+        kb_results=len([r for r in state["results"] if r.get("metadata", {}).get("search_type") != "web"]),
+        web_results=len([r for r in state["results"] if r.get("metadata", {}).get("search_type") == "web"]),
+    )
+
+    return state
+```
+
+#### 3. Add WebSearch Dependencies (1 SP)
+
+**File:** `pyproject.toml` (update)
+
+```toml
+[tool.poetry.dependencies]
+# Web search
+duckduckgo-search = "^6.3.5"  # Free DuckDuckGo search
+httpx = "^0.27.0"  # HTTP client (already exists)
+
+[tool.poetry.group.dev.dependencies]
+# Optional: Brave Search (requires API key)
+# brave-search-python = "^1.0.0"
+```
+
+Install:
+```bash
+poetry add duckduckgo-search
+```
+
+#### 4. Frontend: Web Results Badge (1 SP)
+
+**File:** `frontend/src/components/chat/SourceCard.tsx` (update)
+
+Add badge for web search results:
+
+```tsx
+// In SourceCard component
+const searchType = source.metadata?.search_type as string | undefined;
+
+// Add to badge display
+{searchType === 'web' && (
+  <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-md flex items-center gap-1">
+    <Globe className="w-3 h-3" />
+    Web
+  </span>
+)}
+```
+
+---
+
+## Feature 63.10: Tool Output Visualization in Chat UI (3 SP)
+
+**Priority:** P1 (High - User-requested)
+**Status:** READY
+**Dependencies:** Sprint 59 Tool Framework
+
+### Rationale
+
+**User Request:** "Es sollten die Returns der Tools darstellbar sein. Wenn ein Tool etwas schreibt (bash oder python etc) dann sollte das zu debugging zwecken auch ausgegeben werden können."
+
+**Current Problem:**
+- ✅ Backend streams `tool_calls` with complete execution results
+- ✅ Frontend receives tool call data
+- ❌ **Frontend shows only tool names** (`tools_used: string[]`)
+- ❌ **No visualization of stdout, stderr, exit_code, command/code**
+
+**Example:**
+```
+Current UI:
+✓ Intent: Factual
+1. Qdrant Vector Search - 5 results
+2. Tools Used: bash  ← Only name, no details!
+
+Target UI:
+✓ Intent: Factual
+1. Qdrant Vector Search - 5 results
+
+Tools Executed (1)
+2. Bash Tool ✓ [50ms] [▼]
+   Command:
+   > date "+%Y-%m-%d"
+
+   Output:
+   2025-12-23
+
+   Exit Code: 0 | Server: local-mcp
+```
+
+**Impact:**
+- User can debug failed tool executions
+- Transparency into what LLM executed
+- Essential for trust and debugging
+
+### Tasks
+
+#### 1. Add TypeScript Types (1 SP)
+
+**File:** `frontend/src/types/reasoning.ts` (update)
+
+```typescript
+/**
+ * Sprint 63 Feature 63.10: Tool execution details
+ */
+export interface ToolExecutionStep {
+  /** Tool name (bash, python, etc.) */
+  tool_name: string;
+
+  /** Server that executed the tool */
+  server: string;
+
+  /** Command or code that was executed */
+  input: {
+    command?: string;  // For bash
+    code?: string;     // For python
+    arguments?: Record<string, any>;  // Other args
+  };
+
+  /** Execution result */
+  output: {
+    stdout?: string;
+    stderr?: string;
+    exit_code?: number;
+    success: boolean;
+    error?: string;
+  };
+
+  /** Execution duration in milliseconds */
+  duration_ms?: number;
+
+  /** ISO timestamp when tool was executed */
+  timestamp: string;
+}
+
+/**
+ * Update ReasoningData to include tool execution steps
+ */
+export interface ReasoningData {
+  intent: IntentInfo;
+  retrieval_steps: RetrievalStep[];
+
+  /** @deprecated Use tool_execution_steps instead */
+  tools_used: string[];
+
+  /** Sprint 63 Feature 63.10: Detailed tool execution information */
+  tool_execution_steps?: ToolExecutionStep[];
+
+  total_duration_ms?: number;
+  phase_events?: PhaseEvent[];
+  four_way_results?: FourWayResults;
+  // ...
+}
+```
+
+#### 2. Create ToolExecutionStep Component (1 SP)
+
+**File:** `frontend/src/components/chat/ToolExecutionStep.tsx` (new)
+
+Features:
+- Tool-specific icons (Terminal for Bash, Code for Python)
+- Syntax-highlighted command/code display (dark background)
+- stdout in light gray box
+- stderr in red box (if present)
+- Exit code with color coding (green for 0, red for non-zero)
+- Expandable/collapsible for long outputs
+- Scrollable with max-height for very long outputs
+
+```tsx
+/**
+ * ToolExecutionStep Component
+ * Sprint 63 Feature 63.10: Display tool execution details
+ */
+
+import { useState } from 'react';
+import { Terminal, Code, ChevronDown, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import type { ToolExecutionStep as ToolExecutionStepType } from '../../types/reasoning';
+
+interface ToolExecutionStepProps {
+  step: ToolExecutionStepType;
+  stepNumber: number;
+  isLast?: boolean;
+}
+
+function getToolIcon(toolName: string): React.ReactNode {
+  const iconClass = 'w-4 h-4';
+  switch (toolName.toLowerCase()) {
+    case 'bash':
+      return <Terminal className={iconClass} />;
+    case 'python':
+      return <Code className={iconClass} />;
+    default:
+      return <Terminal className={iconClass} />;
+  }
+}
+
+function getToolColor(toolName: string): { bg: string; text: string; border: string } {
+  switch (toolName.toLowerCase()) {
+    case 'bash':
+      return { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' };
+    case 'python':
+      return { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' };
+    default:
+      return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
+  }
+}
+
+export function ToolExecutionStep({ step, stepNumber, isLast = false }: ToolExecutionStepProps) {
+  const [isExpanded, setIsExpanded] = useState(true); // Expanded by default
+  const colors = getToolColor(step.tool_name);
+
+  const input = step.input.command || step.input.code || JSON.stringify(step.input.arguments);
+  const hasStdout = step.output.stdout && step.output.stdout.trim().length > 0;
+  const hasStderr = step.output.stderr && step.output.stderr.trim().length > 0;
+
+  return (
+    <div className="relative" data-testid={`tool-execution-step-${stepNumber}`}>
+      {/* Connection line */}
+      {!isExpanded && !isLast && (
+        <div className="absolute left-[17px] top-[36px] w-0.5 h-[calc(100%-20px)] bg-gray-200" />
+      )}
+
+      <div className="flex items-start gap-3">
+        {/* Icon */}
+        <div
+          className={`flex-shrink-0 w-9 h-9 rounded-lg ${colors.bg} ${colors.text} flex items-center justify-center border ${colors.border}`}
+        >
+          {getToolIcon(step.tool_name)}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pb-4">
+          {/* Header - clickable */}
+          <div
+            className="flex items-center justify-between gap-2 mb-1 cursor-pointer hover:bg-gray-50 p-1 -ml-1 rounded"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">{stepNumber}.</span>
+              <span className="font-medium text-gray-900 text-sm capitalize">
+                {step.tool_name} Tool
+              </span>
+              {step.output.success ? (
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              ) : (
+                <XCircle className="w-4 h-4 text-red-600" />
+              )}
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+            <span className="text-xs text-gray-500">
+              {step.duration_ms && `${step.duration_ms}ms`}
+            </span>
+          </div>
+
+          {/* Expandable details */}
+          {isExpanded && (
+            <div className="mt-2 space-y-2">
+              {/* Input */}
+              <div>
+                <div className="text-xs font-medium text-gray-500 mb-1">
+                  {step.input.command ? 'Command' : 'Code'}:
+                </div>
+                <pre className="text-xs bg-gray-900 text-gray-100 p-2 rounded overflow-x-auto font-mono">
+                  {input}
+                </pre>
+              </div>
+
+              {/* stdout */}
+              {hasStdout && (
+                <div>
+                  <div className="text-xs font-medium text-gray-500 mb-1">Output:</div>
+                  <pre className="text-xs bg-gray-50 text-gray-800 p-2 rounded border border-gray-200 overflow-x-auto font-mono max-h-48 overflow-y-auto">
+                    {step.output.stdout}
+                  </pre>
+                </div>
+              )}
+
+              {/* stderr */}
+              {hasStderr && (
+                <div>
+                  <div className="text-xs font-medium text-red-600 mb-1">Errors:</div>
+                  <pre className="text-xs bg-red-50 text-red-800 p-2 rounded border border-red-200 overflow-x-auto font-mono max-h-48 overflow-y-auto">
+                    {step.output.stderr}
+                  </pre>
+                </div>
+              )}
+
+              {/* Error message */}
+              {!step.output.success && step.output.error && (
+                <div>
+                  <div className="text-xs font-medium text-red-600 mb-1">Error:</div>
+                  <div className="text-xs bg-red-50 text-red-800 p-2 rounded border border-red-200">
+                    {step.output.error}
+                  </div>
+                </div>
+              )}
+
+              {/* Exit code */}
+              {step.output.exit_code !== undefined && (
+                <div className="flex items-center gap-4 text-xs text-gray-600">
+                  <span>
+                    Exit Code:{' '}
+                    <span
+                      className={`font-medium ${
+                        step.output.exit_code === 0 ? 'text-green-600' : 'text-red-600'
+                      }`}
+                    >
+                      {step.output.exit_code}
+                    </span>
+                  </span>
+                  <span>
+                    Server: <span className="font-medium">{step.server}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+#### 3. Integrate into ReasoningPanel (1 SP)
+
+**File:** `frontend/src/components/chat/ReasoningPanel.tsx` (update)
+
+Add tool execution steps after retrieval steps:
+
+```tsx
+import { ToolExecutionStep } from './ToolExecutionStep';
+
+// In renderReasoningSteps():
+<div className="space-y-3">
+  {/* Intent Classification */}
+  <IntentClassification intent={reasoning.intent} />
+
+  {/* Retrieval Steps */}
+  {reasoning.retrieval_steps.map((step, index) => (
+    <RetrievalStep
+      key={`retrieval-${index}`}
+      step={step}
+      isLast={
+        index === reasoning.retrieval_steps.length - 1 &&
+        !reasoning.tool_execution_steps?.length
+      }
+    />
+  ))}
+
+  {/* NEW: Tool Execution Steps (Sprint 63 Feature 63.10) */}
+  {reasoning.tool_execution_steps && reasoning.tool_execution_steps.length > 0 && (
+    <div className="mt-4 border-t border-gray-200 pt-4">
+      <h4 className="text-sm font-medium text-gray-700 mb-3">
+        Tools Executed ({reasoning.tool_execution_steps.length})
+      </h4>
+      {reasoning.tool_execution_steps.map((toolStep, index) => (
+        <ToolExecutionStep
+          key={`tool-${index}`}
+          step={toolStep}
+          stepNumber={reasoning.retrieval_steps.length + index + 1}
+          isLast={index === reasoning.tool_execution_steps.length - 1}
+        />
+      ))}
+    </div>
+  )}
+</div>
+```
+
+---
+
 ## Deferred to Sprint 64+
 
 **Feature 64.1: Multihop Agent Use Cases (3 SP)**
@@ -1622,11 +2494,11 @@ chmod +x scripts/generate_test_token.py
 
 ## Final Note
 
-This completes the Sprint 61-63 reorganization with bugfixes from Sprint 59 testing:
+This completes the Sprint 61-63 reorganization with bugfixes and user-requested features:
 - **Sprint 61:** Performance & Ollama (29 SP) - includes 2 bugfix features (61.6, 61.7)
-- **Sprint 62:** Section-Aware Features (38 SP) - includes Research Endpoint (62.10)
-- **Sprint 63:** Conversational Intelligence + Temporal (41 SP) - includes E2E tests + Auth guide (63.6, 63.7)
-- **Total:** 108 SP across 3 focused sprints
+- **Sprint 62:** Section-Aware Features (36 SP) - includes minimal Research Endpoint (62.10)
+- **Sprint 63:** Conversational Intelligence + Research + Temporal (57 SP) - includes full Research UI (63.8), WebSearch (63.9), E2E tests (63.6), Auth guide (63.7), Tool output viz (63.10)
+- **Total:** 122 SP across 3 focused sprints
 
 **Sprint 61 Bugfixes Added:**
 - 61.6: Fix Chat Endpoint Timeout (3 SP) - Production blocker from Sprint 59 testing
@@ -1647,3 +2519,6 @@ This completes the Sprint 61-63 reorganization with bugfixes from Sprint 59 test
 - 63.5: Section-Based Community Detection (3 SP, deferred from Sprint 62)
 - 63.6: Playwright E2E Tests (5 SP) - Tool framework test coverage
 - 63.7: MCP Authentication Guide (2 SP) - JWT auth documentation
+- 63.8: Full Research UI (5 SP, deferred from Sprint 62) - Progress tracking + dedicated page
+- 63.9: WebSearch Integration (8 SP, user-requested) - External web search for research
+- 63.10: Tool Output Visualization (3 SP, user-requested) - Show command/code execution results
