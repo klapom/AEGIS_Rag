@@ -317,5 +317,51 @@ git commit -m "fix: Revert Ollama optimization (Sprint 61 investigation)"
 
 ---
 
-**Document Status:** Ready for Sprint 61 Implementation
-**Last Updated:** 2025-12-21
+## ✅ Deployed Configuration (Sprint 61 Feature 61.3)
+
+**Deployed:** 2025-12-23
+**Status:** Active in docker-compose.dgx-spark.yml
+
+### Production Configuration (DGX Spark)
+
+```yaml
+ollama:
+  environment:
+    # DGX Spark optimized settings (+30% throughput)
+    - OLLAMA_NUM_PARALLEL=4          # Parallel requests (128GB RAM allows it)
+    - OLLAMA_MAX_QUEUE=512           # Request queue size
+    - OLLAMA_KEEP_ALIVE=60m          # Keep models in memory (better than 5m default)
+    - OLLAMA_MAX_LOADED_MODELS=2     # Nemotron + GPT-OSS or Qwen3-VL
+    - OLLAMA_NUM_CTX=8192            # Context window
+    - OLLAMA_NUM_THREAD=20           # CPU threads for ARM64
+    - OLLAMA_NUM_GPU=-1              # Force all layers to GPU
+```
+
+### Verification Commands
+
+```bash
+# Check Ollama configuration is active
+docker exec aegis-ollama env | grep OLLAMA_NUM_PARALLEL
+# Should output: OLLAMA_NUM_PARALLEL=4
+
+# Check queue capacity
+docker exec aegis-ollama env | grep OLLAMA_MAX_QUEUE
+# Should output: OLLAMA_MAX_QUEUE=512
+
+# Test parallel processing
+for i in {1..4}; do
+  curl -s -X POST http://localhost:11434/api/generate \
+    -d '{"model": "nemotron-no-think:latest", "prompt": "Test", "stream": false}' &
+done
+wait
+```
+
+**Expected Performance:**
+- Throughput: >2 QPS (10 parallel requests)
+- P95 latency: <2s for simple queries
+- Memory: 15-20GB for 2 loaded models
+
+---
+
+**Document Status:** ✅ Deployed (Sprint 61 Feature 61.3 Complete)
+**Last Updated:** 2025-12-23

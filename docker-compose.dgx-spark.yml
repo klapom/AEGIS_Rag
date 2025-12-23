@@ -51,6 +51,11 @@ services:
       # Allow 2 models loaded simultaneously (Qwen3 + Qwen3-VL)
       # With 128GB unified memory, both fit comfortably
       - OLLAMA_MAX_LOADED_MODELS=2
+      # Sprint 61 Feature 61.3: Parallel request handling (+30% throughput)
+      # Process up to 4 requests in parallel (DGX Spark: 128GB RAM)
+      - OLLAMA_NUM_PARALLEL=4
+      # Sprint 61 Feature 61.3: Request queue size for high-throughput scenarios
+      - OLLAMA_MAX_QUEUE=512
       # Increase context window for better extraction quality
       - OLLAMA_NUM_CTX=8192
       # Use all available CPU cores for prompt processing
