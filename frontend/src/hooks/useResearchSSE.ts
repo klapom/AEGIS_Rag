@@ -14,7 +14,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { streamResearch, type ResearchChunk } from '../api/research';
+import { streamResearch } from '../api/research';
 import type {
   ResearchState,
   UseResearchSSEReturn,
@@ -22,8 +22,6 @@ import type {
   ResearchProgress,
   ResearchQueryResponse,
   ResearchSource,
-  DEFAULT_RESEARCH_STATE,
-  RESEARCH_MODE_STORAGE_KEY,
 } from '../types/research';
 
 /**
@@ -36,24 +34,6 @@ export const RESEARCH_TIMEOUT_CONFIG = {
   WARNING_THRESHOLD_MS: 120000,
 } as const;
 
-/**
- * Default research state
- */
-const defaultState: ResearchState = {
-  isResearchMode: false,
-  isResearching: false,
-  currentPhase: null,
-  progress: [],
-  synthesis: null,
-  sources: [],
-  researchPlan: [],
-  qualityMetrics: {
-    iterations: 0,
-    totalSources: 0,
-    webSources: 0,
-  },
-  error: null,
-};
 
 /**
  * Load Research Mode preference from localStorage

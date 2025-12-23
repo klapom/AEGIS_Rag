@@ -2,6 +2,7 @@
  * ReasoningPanel Component
  * Sprint 46 Feature 46.2: Transparent Reasoning Panel
  * Sprint 51: Added phase events display to persist phases after answer
+ * Sprint 63: Added tool execution visualization
  *
  * Expandable panel showing the retrieval chain, similar to ChatGPT's
  * chain-of-thought display. Collapsed by default, shows all retrieval
@@ -11,12 +12,14 @@
  * - Processing phases (Sprint 51)
  * - Intent classification (intent type + confidence score)
  * - Retrieval Chain with steps
+ * - Tool Executions (Sprint 63)
  * - Tools Used section (if any)
  */
 
 import { useState, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Brain, Wrench, CheckCircle, XCircle, SkipForward, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Brain, Wrench, CheckCircle, XCircle, SkipForward, Loader2, Terminal } from 'lucide-react';
 import { RetrievalStep } from './RetrievalStep';
+import { ToolExecutionDisplay } from './ToolExecutionDisplay';
 import type {
   ReasoningData,
   IntentInfo,
@@ -26,6 +29,7 @@ import type {
   IntentWeights,
   ChannelSamples,
   ChannelSample,
+  ToolExecutionStep,
 } from '../../types/reasoning';
 import { PHASE_NAMES } from '../../types/reasoning';
 
@@ -283,6 +287,41 @@ function ChannelSampleItem({ sample }: { sample: ChannelSample }) {
 }
 
 /**
+ * Sprint 63: Tool Executions section showing tool execution results
+ */
+function ToolExecutionsSection({ toolSteps }: { toolSteps: ToolExecutionStep[] }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  if (!toolSteps || toolSteps.length === 0) return null;
+
+  return (
+    <div data-testid="tool-executions-section">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between text-left mb-3"
+        aria-expanded={isExpanded}
+      >
+        <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+          {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          <Terminal className="w-3.5 h-3.5" />
+          Tool-Ausfuehrungen ({toolSteps.length})
+        </h4>
+      </button>
+      {isExpanded && (
+        <div className="space-y-3">
+          {toolSteps.map((step, index) => (
+            <ToolExecutionDisplay
+              key={`${step.tool_name}-${step.timestamp}-${index}`}
+              step={step}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Sprint 52: 4-Way Hybrid Search Results section
  */
 function FourWaySection({
@@ -439,7 +478,7 @@ export function ReasoningPanel({
     return null;
   }
 
-  const { intent, retrieval_steps, tools_used, total_duration_ms, phase_events, four_way_results, intent_weights, intent_method, intent_latency_ms, channel_samples } = data;
+  const { intent, retrieval_steps, tools_used, total_duration_ms, phase_events, four_way_results, intent_weights, intent_method, intent_latency_ms, channel_samples, tool_steps } = data;
 
   return (
     <div
@@ -517,6 +556,11 @@ export function ReasoningPanel({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Sprint 63: Tool Executions */}
+          {tool_steps && tool_steps.length > 0 && (
+            <ToolExecutionsSection toolSteps={tool_steps} />
           )}
 
           {/* Tools Used */}

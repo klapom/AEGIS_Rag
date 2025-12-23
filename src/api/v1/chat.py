@@ -2065,3 +2065,166 @@ async def search_archived_conversations(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to search archived conversations: {str(e)}",
         ) from e
+
+
+# Sprint 63 Feature 63.1: Multi-Turn RAG Template
+
+
+@router.post("/multi-turn", status_code=status.HTTP_200_OK)
+async def multi_turn_chat(request: "MultiTurnRequest") -> "MultiTurnResponse":
+    """Process multi-turn conversation with context tracking and contradiction detection.
+
+    Sprint 63 Feature 63.1: Multi-Turn RAG Template (13 SP)
+
+    This endpoint:
+    1. Loads conversation history from Redis
+    2. Enhances query with conversation context
+    3. Retrieves relevant documents
+    4. Detects contradictions with previous answers
+    5. Generates context-aware answer
+    6. Updates memory summary every 5 turns
+    7. Saves updated conversation to Redis
+
+    Args:
+        request: MultiTurnRequest with query, conversation_id, and settings
+
+    Returns:
+        MultiTurnResponse with answer, sources, contradictions, and metadata
+
+    Raises:
+        HTTPException: If processing fails
+
+    Example Request:
+        POST /chat/multi-turn
+        {
+            "query": "What about the performance metrics?",
+            "conversation_id": "conv-123",
+            "namespace": "default",
+            "detect_contradictions": true,
+            "max_history_turns": 5
+        }
+
+    Example Response:
+        {
+            "answer": "Based on our previous discussion about the RAG system...",
+            "query": "What about the performance metrics?",
+            "conversation_id": "conv-123",
+            "sources": [...],
+            "contradictions": [],
+            "memory_summary": "Discussion about RAG system architecture and components.",
+            "turn_number": 3,
+            "metadata": {...}
+        }
+    """
+    from src.api.models.multi_turn import MultiTurnRequest, MultiTurnResponse
+    from src.agents.multi_turn import MultiTurnAgent
+
+    logger.info(
+        "multi_turn_request_received",
+        conversation_id=request.conversation_id,
+        query=request.query[:100],
+        namespace=request.namespace,
+    )
+
+    try:
+        # Load conversation history from Redis
+        from src.components.memory import get_redis_memory
+
+        redis_memory = get_redis_memory()
+
+        conversation_data = await redis_memory.retrieve(
+            key=request.conversation_id, namespace="multi_turn_conversation"
+        )
+
+        conversation_history = []
+        if conversation_data:
+            # Extract value from Redis wrapper
+            if isinstance(conversation_data, dict) and "value" in conversation_data:
+                conversation_data = conversation_data["value"]
+            conversation_history = conversation_data.get("turns", [])
+
+        logger.info(
+            "multi_turn_conversation_loaded",
+            conversation_id=request.conversation_id,
+            history_length=len(conversation_history),
+        )
+
+        # Initialize multi-turn agent
+        agent = MultiTurnAgent()
+
+        # Process turn
+        result = await agent.process_turn(
+            query=request.query,
+            conversation_id=request.conversation_id,
+            conversation_history=conversation_history,
+            namespace=request.namespace,
+            detect_contradictions=request.detect_contradictions,
+            max_history_turns=request.max_history_turns,
+        )
+
+        # Save updated conversation to Redis
+        # Add current turn to history
+        from src.api.models.multi_turn import ConversationTurn, Source
+
+        current_turn = ConversationTurn(
+            query=request.query,
+            answer=result["answer"],
+            sources=result["sources"],
+            timestamp=datetime.now(UTC),
+        )
+
+        # Serialize sources for storage
+        serialized_sources = [s.model_dump() for s in result["sources"]]
+
+        conversation_history.append(
+            {
+                "query": request.query,
+                "answer": result["answer"],
+                "sources": serialized_sources,
+                "timestamp": current_turn.timestamp.isoformat(),
+            }
+        )
+
+        # Prune old turns (keep last 10)
+        if len(conversation_history) > 10:
+            conversation_history = conversation_history[-10:]
+
+        # Save to Redis
+        await redis_memory.store(
+            key=request.conversation_id,
+            value={"turns": conversation_history, "updated_at": datetime.now(UTC).isoformat()},
+            namespace="multi_turn_conversation",
+            ttl_seconds=604800,  # 7 days
+        )
+
+        logger.info(
+            "multi_turn_conversation_saved",
+            conversation_id=request.conversation_id,
+            turn_number=result["turn_number"],
+        )
+
+        # Build response
+        response = MultiTurnResponse(
+            answer=result["answer"],
+            query=request.query,
+            conversation_id=request.conversation_id,
+            sources=result["sources"],
+            contradictions=result["contradictions"],
+            memory_summary=result.get("memory_summary"),
+            turn_number=result["turn_number"],
+            metadata=result["metadata"],
+        )
+
+        return response
+
+    except Exception as e:
+        logger.error(
+            "multi_turn_request_failed",
+            conversation_id=request.conversation_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process multi-turn query: {str(e)}",
+        ) from e

@@ -137,6 +137,7 @@ export interface IntentWeights {
  * Complete reasoning data for a response
  * Sprint 51: Added phaseEvents for persistent phase display after answer
  * Sprint 52: Added 4-way search metadata for expandable UI display
+ * Sprint 63: Added tool_steps for tool execution visualization
  */
 export interface ReasoningData {
   /** Intent classification for the query */
@@ -159,6 +160,8 @@ export interface ReasoningData {
   intent_latency_ms?: number;
   /** Sprint 52: Per-channel sample results for detailed display */
   channel_samples?: ChannelSamples;
+  /** Sprint 63: Tool execution steps for visualization */
+  tool_steps?: ToolExecutionStep[];
 }
 
 /**
@@ -254,4 +257,68 @@ export interface PhaseState {
   completedCount: number;
   /** Total number of phases (determined dynamically by backend) */
   totalCount: number;
+}
+
+/**
+ * Sprint 63 Feature 63.10: Tool Execution Types
+ * Types for displaying tool execution results (bash, python) in Chat UI
+ */
+
+/**
+ * Tool name types for tool execution
+ */
+export type ToolName = 'bash' | 'python' | string;
+
+/**
+ * Input data for tool execution
+ */
+export interface ToolExecutionInput {
+  /** Shell command for bash tool */
+  command?: string;
+  /** Python code for python tool */
+  code?: string;
+  /** Generic arguments for other tools */
+  arguments?: Record<string, unknown>;
+}
+
+/**
+ * Output data from tool execution
+ */
+export interface ToolExecutionOutput {
+  /** Standard output from the tool */
+  stdout?: string;
+  /** Standard error from the tool */
+  stderr?: string;
+  /** Exit code (0 = success, non-zero = error) */
+  exit_code?: number;
+  /** Whether the execution was successful */
+  success: boolean;
+  /** Error message if execution failed */
+  error?: string;
+}
+
+/**
+ * Individual tool execution step
+ */
+export interface ToolExecutionStep {
+  /** Name of the tool executed (bash, python, etc.) */
+  tool_name: ToolName;
+  /** Server/environment where the tool was executed */
+  server: string;
+  /** Input data passed to the tool */
+  input: ToolExecutionInput;
+  /** Output data from the tool execution */
+  output: ToolExecutionOutput;
+  /** Duration of execution in milliseconds */
+  duration_ms?: number;
+  /** ISO timestamp when the tool was executed */
+  timestamp: string;
+}
+
+/**
+ * Props for ToolExecutionDisplay component
+ */
+export interface ToolExecutionDisplayProps {
+  /** The tool execution step to display */
+  step: ToolExecutionStep;
 }

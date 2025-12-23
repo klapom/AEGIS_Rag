@@ -134,30 +134,36 @@ class WebSearchClient:
         results = []
 
         try:
-            # Create AsyncDDGS instance for this request
-            async with AsyncDDGS() as ddgs:
-                # Execute text search
-                raw_results = []
-                async for result in ddgs.text(
-                    keywords=request.query,
-                    region=request.region,
-                    safesearch=request.safesearch,
-                    max_results=request.max_results,
-                ):
-                    raw_results.append(result)
+            # Execute search in thread pool (DDGS is synchronous)
+            def _sync_search():
+                with DDGS() as ddgs:
+                    # Execute text search
+                    raw_results = list(
+                        ddgs.text(
+                            keywords=request.query,
+                            region=request.region,
+                            safesearch=request.safesearch,
+                            max_results=request.max_results,
+                        )
+                    )
+                    return raw_results
 
-                # Format results
-                for raw_result in raw_results:
-                    formatted = self._format_result(raw_result)
-                    if formatted:
-                        results.append(formatted)
+            # Run sync search in executor
+            loop = asyncio.get_event_loop()
+            raw_results = await loop.run_in_executor(None, _sync_search)
 
-                logger.debug(
-                    "duckduckgo_search_completed",
-                    query=request.query,
-                    raw_count=len(raw_results),
-                    formatted_count=len(results),
-                )
+            # Format results
+            for raw_result in raw_results:
+                formatted = self._format_result(raw_result)
+                if formatted:
+                    results.append(formatted)
+
+            logger.debug(
+                "duckduckgo_search_completed",
+                query=request.query,
+                raw_count=len(raw_results),
+                formatted_count=len(results),
+            )
 
         except Exception as e:
             logger.error(

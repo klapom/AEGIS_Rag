@@ -8,6 +8,7 @@
  * Sprint 47: Fixed infinite re-render loop with stable callbacks
  * Sprint 48 Feature 48.6: Phase event display integration
  * Sprint 48 Feature 48.10: Request timeout and cancel integration
+ * Sprint 63 Feature 63.8: Research Mode integration
  *
  * Features:
  * - Chat-style conversation layout with ConversationView
@@ -19,15 +20,21 @@
  * - Transparent reasoning panel for assistant messages
  * - Real-time phase progress display (Sprint 48)
  * - Timeout warning and request cancellation (Sprint 48)
+ * - Research Mode with multi-step research workflow (Sprint 63)
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { type SearchMode } from '../components/search';
 import { ConversationView, SessionSidebar, type MessageData } from '../components/chat';
+import {
+  ResearchProgressTracker,
+  ResearchResponseDisplay,
+} from '../components/research';
 import { getConversation } from '../api/chat';
 import type { Source } from '../types/chat';
 import type { ReasoningData } from '../types/reasoning';
 import { useStreamChat, buildReasoningData } from '../hooks/useStreamChat';
+import { useResearchSSE } from '../hooks/useResearchSSE';
 
 /**
  * Internal message format for conversation history
@@ -61,6 +68,9 @@ export function HomePage() {
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
   const [currentNamespaces, setCurrentNamespaces] = useState<string[]>([]);
+
+  // Sprint 63: Research Mode state
+  const research = useResearchSSE();
 
   // Sprint 47 Fix: Use ref to track activeSessionId for the callback
   // This avoids needing activeSessionId in the callback's dependencies
@@ -106,6 +116,7 @@ export function HomePage() {
 
   /**
    * Handle new message submission
+   * Sprint 63: Routes to Research Mode or standard chat based on toggle
    */
   const handleSearch = useCallback((query: string, mode: SearchMode, namespaces: string[]) => {
     // Add user message to history
@@ -122,11 +133,16 @@ export function HomePage() {
       },
     ]);
 
-    // Trigger streaming response
-    setCurrentQuery(query);
-    setCurrentMode(mode);
-    setCurrentNamespaces(namespaces);
-  }, []);
+    // Sprint 63: Route to Research Mode if enabled
+    if (research.isResearchMode) {
+      research.startResearch(query, namespaces[0] || 'default');
+    } else {
+      // Trigger standard streaming response
+      setCurrentQuery(query);
+      setCurrentMode(mode);
+      setCurrentNamespaces(namespaces);
+    }
+  }, [research]);
 
   /**
    * Handle quick prompt click
@@ -325,17 +341,53 @@ export function HomePage() {
         {/* Conversation View */}
         <ConversationView
           messages={messages}
-          isStreaming={streamingState.isStreaming}
+          isStreaming={research.isResearchMode ? research.isResearching : streamingState.isStreaming}
           onSendMessage={handleSearch}
           placeholder={showWelcome ? 'Fragen Sie alles über Ihre Dokumente...' : 'Neue Frage...'}
-          showTypingIndicator={streamingState.isStreaming && !streamingState.answer}
-          typingText="AegisRAG denkt nach..."
+          showTypingIndicator={
+            research.isResearchMode
+              ? research.isResearching && !research.synthesis
+              : streamingState.isStreaming && !streamingState.answer
+          }
+          typingText={research.isResearchMode ? 'Research Mode aktiv...' : 'AegisRAG denkt nach...'}
           emptyStateContent={welcomeContent}
           currentPhase={streamingState.currentPhase}
           phaseEvents={streamingState.phaseEvents}
           showTimeoutWarning={streamingState.showTimeoutWarning}
-          onCancel={streamingState.cancelRequest}
+          onCancel={research.isResearchMode ? research.cancelResearch : streamingState.cancelRequest}
+          isResearchMode={research.isResearchMode}
+          onResearchModeToggle={research.toggleResearchMode}
+          showResearchToggle={true}
         />
+
+        {/* Sprint 63: Research Mode Progress Panel */}
+        {research.isResearchMode && (research.isResearching || research.synthesis) && (
+          <div className="fixed right-4 top-20 w-80 z-50 space-y-4">
+            {/* Progress Tracker */}
+            {research.progress.length > 0 && (
+              <ResearchProgressTracker
+                progress={research.progress}
+                currentPhase={research.currentPhase}
+                isResearching={research.isResearching}
+                error={research.error}
+              />
+            )}
+
+            {/* Research Response Display (shown after synthesis) */}
+            {research.synthesis && (
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 max-h-96 overflow-y-auto">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Recherche-Ergebnis</h3>
+                <ResearchResponseDisplay
+                  synthesis={research.synthesis}
+                  sources={research.sources}
+                  researchPlan={research.researchPlan}
+                  qualityMetrics={research.qualityMetrics}
+                  isLoading={research.isResearching}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

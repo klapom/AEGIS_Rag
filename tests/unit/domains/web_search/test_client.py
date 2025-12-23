@@ -52,20 +52,16 @@ class TestWebSearchClient:
         """Test successful search execution."""
         client = WebSearchClient()
 
-        # Mock AsyncDDGS
-        with patch("src.domains.web_search.client.AsyncDDGS") as mock_ddgs_class:
-            # Create async context manager mock
-            mock_ddgs = AsyncMock()
-            mock_ddgs.__aenter__.return_value = mock_ddgs
-            mock_ddgs.__aexit__.return_value = None
+        # Mock DDGS
+        with patch("src.domains.web_search.client.DDGS") as mock_ddgs_class:
+            # Create context manager mock
+            mock_ddgs = MagicMock()
+            mock_ddgs.__enter__.return_value = mock_ddgs
+            mock_ddgs.__exit__.return_value = None
             mock_ddgs_class.return_value = mock_ddgs
 
-            # Mock text search with async iterator
-            async def mock_text_generator(*args, **kwargs):
-                for result in mock_ddgs_results:
-                    yield result
-
-            mock_ddgs.text = mock_text_generator
+            # Mock text search
+            mock_ddgs.text.return_value = iter(mock_ddgs_results)
 
             # Execute search
             results = await client.search(
@@ -92,16 +88,17 @@ class TestWebSearchClient:
         """Test search timeout handling."""
         client = WebSearchClient()
 
-        with patch("src.domains.web_search.client.AsyncDDGS") as mock_ddgs_class:
+        with patch("src.domains.web_search.client.DDGS") as mock_ddgs_class:
             # Mock slow search
-            async def slow_search(*args, **kwargs):
-                await asyncio.sleep(20)  # Exceeds timeout
-                yield {}
+            def slow_search(*args, **kwargs):
+                import time
+                time.sleep(20)  # Exceeds timeout
+                return []
 
-            mock_ddgs = AsyncMock()
-            mock_ddgs.__aenter__.return_value = mock_ddgs
-            mock_ddgs.__aexit__.return_value = None
-            mock_ddgs.text = slow_search
+            mock_ddgs = MagicMock()
+            mock_ddgs.__enter__.return_value = mock_ddgs
+            mock_ddgs.__exit__.return_value = None
+            mock_ddgs.text.side_effect = slow_search
             mock_ddgs_class.return_value = mock_ddgs
 
             # Execute search with short timeout
@@ -118,16 +115,15 @@ class TestWebSearchClient:
         """Test error handling during search."""
         client = WebSearchClient()
 
-        with patch("src.domains.web_search.client.AsyncDDGS") as mock_ddgs_class:
+        with patch("src.domains.web_search.client.DDGS") as mock_ddgs_class:
             # Mock search that raises exception
-            async def failing_search(*args, **kwargs):
+            def failing_search(*args, **kwargs):
                 raise Exception("Network error")
-                yield  # Make it a generator
 
-            mock_ddgs = AsyncMock()
-            mock_ddgs.__aenter__.return_value = mock_ddgs
-            mock_ddgs.__aexit__.return_value = None
-            mock_ddgs.text = failing_search
+            mock_ddgs = MagicMock()
+            mock_ddgs.__enter__.return_value = mock_ddgs
+            mock_ddgs.__exit__.return_value = None
+            mock_ddgs.text.side_effect = failing_search
             mock_ddgs_class.return_value = mock_ddgs
 
             # Execute search
@@ -206,34 +202,33 @@ class TestWebSearchClient:
         assert result.snippet == ""
 
     @pytest.mark.asyncio
-    async def test_format_result_error(self):
-        """Test result formatting error handling."""
+    async def test_format_result_minimal_fields(self):
+        """Test result formatting with minimal fields."""
         client = WebSearchClient()
 
-        # Invalid raw result (missing required fields)
+        # Minimal raw result (empty dict gets default values)
         raw_result = {}
 
         result = client._format_result(raw_result)
 
-        # Should return None on formatting error
-        assert result is None
+        # Should create result with defaults
+        assert result is not None
+        assert result.title == "No Title"
+        assert result.url == ""
+        assert result.snippet == ""
 
     @pytest.mark.asyncio
     async def test_search_with_retry_success_first_attempt(self, mock_ddgs_results):
         """Test retry logic - success on first attempt."""
         client = WebSearchClient()
 
-        with patch("src.domains.web_search.client.AsyncDDGS") as mock_ddgs_class:
-            mock_ddgs = AsyncMock()
-            mock_ddgs.__aenter__.return_value = mock_ddgs
-            mock_ddgs.__aexit__.return_value = None
+        with patch("src.domains.web_search.client.DDGS") as mock_ddgs_class:
+            mock_ddgs = MagicMock()
+            mock_ddgs.__enter__.return_value = mock_ddgs
+            mock_ddgs.__exit__.return_value = None
             mock_ddgs_class.return_value = mock_ddgs
 
-            async def mock_text_generator(*args, **kwargs):
-                for result in mock_ddgs_results:
-                    yield result
-
-            mock_ddgs.text = mock_text_generator
+            mock_ddgs.text.return_value = iter(mock_ddgs_results)
 
             # Execute with retry
             results = await client.search_with_retry(
@@ -250,18 +245,14 @@ class TestWebSearchClient:
         """Test retry logic - no results after retries."""
         client = WebSearchClient()
 
-        with patch("src.domains.web_search.client.AsyncDDGS") as mock_ddgs_class:
-            mock_ddgs = AsyncMock()
-            mock_ddgs.__aenter__.return_value = mock_ddgs
-            mock_ddgs.__aexit__.return_value = None
+        with patch("src.domains.web_search.client.DDGS") as mock_ddgs_class:
+            mock_ddgs = MagicMock()
+            mock_ddgs.__enter__.return_value = mock_ddgs
+            mock_ddgs.__exit__.return_value = None
             mock_ddgs_class.return_value = mock_ddgs
 
             # Empty results
-            async def mock_text_generator(*args, **kwargs):
-                return
-                yield  # Make it a generator
-
-            mock_ddgs.text = mock_text_generator
+            mock_ddgs.text.return_value = iter([])
 
             # Execute with retry
             results = await client.search_with_retry(

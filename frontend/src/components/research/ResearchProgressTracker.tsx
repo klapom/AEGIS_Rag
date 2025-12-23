@@ -31,10 +31,7 @@ import type {
   ResearchPhase,
   ResearchProgress,
 } from '../../types/research';
-import {
-  RESEARCH_PHASE_NAMES,
-  RESEARCH_PHASE_DESCRIPTIONS,
-} from '../../types/research';
+import { RESEARCH_PHASE_NAMES } from '../../types/research';
 
 /**
  * Phase order for progress display

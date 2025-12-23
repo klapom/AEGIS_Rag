@@ -3,6 +3,7 @@
  * Sprint 46 Feature 46.1: Chat-Style Layout
  * Sprint 48 Feature 48.6: Phase event display integration
  * Sprint 48 Feature 48.10: Request timeout and cancel integration
+ * Sprint 63 Feature 63.8: Research Mode integration
  *
  * Main container for the chat-style conversation UI.
  * Transforms the search interface into a ChatGPT/Claude-style conversation layout.
@@ -16,6 +17,7 @@
  * - Keyboard navigation support
  * - Phase events display during thinking (Sprint 48)
  * - Timeout warning and cancel functionality (Sprint 48)
+ * - Research Mode toggle in input area (Sprint 63)
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
@@ -52,6 +54,12 @@ interface ConversationViewProps {
   showTimeoutWarning?: boolean;
   /** Sprint 48: Callback to cancel the current request */
   onCancel?: () => void;
+  /** Sprint 63: Whether Research Mode is enabled */
+  isResearchMode?: boolean;
+  /** Sprint 63: Callback to toggle Research Mode */
+  onResearchModeToggle?: () => void;
+  /** Sprint 63: Whether to show Research Mode toggle */
+  showResearchToggle?: boolean;
 }
 
 /**
@@ -80,6 +88,9 @@ export function ConversationView({
   phaseEvents = [],
   showTimeoutWarning = false,
   onCancel,
+  isResearchMode = false,
+  onResearchModeToggle,
+  showResearchToggle = true,
 }: ConversationViewProps) {
   // Ref for the messages container to handle scrolling
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -267,6 +278,9 @@ export function ConversationView({
               onSubmit={onSendMessage}
               placeholder={placeholder}
               autoFocus={messages.length === 0}
+              isResearchMode={isResearchMode}
+              onResearchModeToggle={onResearchModeToggle}
+              showResearchToggle={showResearchToggle}
             />
           </div>
         </div>

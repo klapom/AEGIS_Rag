@@ -3,16 +3,19 @@
  * Sprint 15 Feature 15.3: Large search input with mode selector (ADR-021)
  * Sprint 42: Added namespace/project selection for search filtering
  * Sprint 52: ChatGPT-style floating input with auto-grow textarea
+ * Sprint 63 Feature 63.8: Added Research Mode toggle
  *
  * ChatGPT-inspired search input with:
  * - Auto-growing textarea that expands with content
  * - Inline project selector chip
  * - Fixed Hybrid mode (mode selector removed)
  * - Clean, minimal design
+ * - Research Mode toggle (Sprint 63)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { NamespaceSelector } from './NamespaceSelector';
+import { ResearchModeToggleCompact } from '../research';
 
 export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory';
 
@@ -20,12 +23,21 @@ interface SearchInputProps {
   onSubmit: (query: string, mode: SearchMode, namespaces: string[]) => void;
   placeholder?: string;
   autoFocus?: boolean;
+  /** Sprint 63: Whether Research Mode is enabled */
+  isResearchMode?: boolean;
+  /** Sprint 63: Callback to toggle Research Mode */
+  onResearchModeToggle?: () => void;
+  /** Sprint 63: Whether Research Mode toggle should be shown */
+  showResearchToggle?: boolean;
 }
 
 export function SearchInput({
   onSubmit,
   placeholder = "Fragen Sie alles über Ihre Dokumente...",
-  autoFocus = true
+  autoFocus = true,
+  isResearchMode = false,
+  onResearchModeToggle,
+  showResearchToggle = true,
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
   // Sprint 52: Fixed to hybrid mode (mode selector removed)
@@ -128,14 +140,25 @@ export function SearchInput({
         </button>
       </div>
 
-      {/* Bottom row: Project selector - overflow-visible for dropdown */}
+      {/* Bottom row: Project selector and Research toggle - overflow-visible for dropdown */}
       <div className="flex items-center justify-between overflow-visible">
-        {/* Compact Project Selector */}
-        <NamespaceSelector
-          selectedNamespaces={selectedNamespaces}
-          onSelectionChange={setSelectedNamespaces}
-          compact={true}
-        />
+        {/* Left side: Project Selector and Research Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Compact Project Selector */}
+          <NamespaceSelector
+            selectedNamespaces={selectedNamespaces}
+            onSelectionChange={setSelectedNamespaces}
+            compact={true}
+          />
+
+          {/* Sprint 63: Research Mode Toggle */}
+          {showResearchToggle && onResearchModeToggle && (
+            <ResearchModeToggleCompact
+              isEnabled={isResearchMode}
+              onToggle={onResearchModeToggle}
+            />
+          )}
+        </div>
 
         {/* Help Text - right aligned */}
         <div className="text-xs text-gray-400 hidden sm:block">
