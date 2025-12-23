@@ -4,14 +4,15 @@
 # Optimized for DGX Spark (Grace Blackwell, ARM64, 128GB Unified Memory)
 #
 # Memory Distribution (128GB total):
-#   - Qwen3 32B (LLM + Entity Extraction): ~20GB
+#   - Nemotron3 Nano (LLM Generation):     ~15GB
+#   - GPT-OSS 20B (Query + Extraction):    ~12GB
 #   - Qwen3-VL 32B (Vision):               ~21GB
 #   - Docling (OCR + Layout):               ~4GB
 #   - Qdrant (Vector DB):                   ~8GB
 #   - Neo4j (Graph DB):                     ~8GB
 #   - Redis (Cache):                        ~4GB
 #   - System + Overhead:                   ~10GB
-#   - Reserve:                             ~53GB (for concurrent model loading)
+#   - Reserve:                             ~46GB (for concurrent model loading)
 #
 # Usage:
 #   # Start all services
@@ -20,19 +21,21 @@
 #   # Start with ingestion profile (includes Docling)
 #   docker compose -f docker-compose.dgx-spark.yml --profile ingestion up -d
 #
-#   # Pull Qwen3 models (run once after Ollama starts)
-#   docker exec aegis-ollama ollama pull qwen3:32b
+#   # Pull models (run once after Ollama starts)
+#   docker exec aegis-ollama ollama pull nemotron-no-think:latest
+#   docker exec aegis-ollama ollama pull gpt-oss:20b
 #   docker exec aegis-ollama ollama pull qwen3-vl:32b
 # =============================================================================
 
 services:
   # ============================================================================
-  # Ollama - Local LLM Server with Qwen3 Models
+  # Ollama - Local LLM Server
   # ============================================================================
   # Models to pull after startup:
-  #   - qwen3:32b        (20GB) - Generation & Entity/Relation Extraction
-  #   - qwen3-vl:32b     (21GB) - Vision Language Model for images/PDFs
-  #   - nomic-embed-text (274MB) - Embeddings (optional, we use BGE-M3)
+  #   - nemotron-no-think:latest (15GB) - LLM Generation (Nemotron3 Nano 30/3a)
+  #   - gpt-oss:20b              (12GB) - Query & Entity/Relation Extraction
+  #   - qwen3-vl:32b             (21GB) - Vision Language Model for images/PDFs
+  # Note: Embeddings use native sentence-transformers (BGE-M3), not Ollama
   # ============================================================================
   ollama:
     image: ollama/ollama:latest
@@ -367,12 +370,12 @@ services:
       - API_WORKERS=4
       # LLM Configuration
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL_GENERATION=qwen3:32b
-      - OLLAMA_MODEL_QUERY=qwen3:32b
-      - OLLAMA_MODEL_EXTRACTION=qwen3:32b
-      - OLLAMA_MODEL_VLM=qwen3-vl:32b
-      - LIGHTRAG_LLM_MODEL=qwen3:32b
-      - GEMMA_MODEL=qwen3:32b
+      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - OLLAMA_MODEL_QUERY=${OLLAMA_MODEL_QUERY:-gpt-oss:20b}
+      - OLLAMA_MODEL_EXTRACTION=${OLLAMA_MODEL_EXTRACTION:-gpt-oss:20b}
+      - OLLAMA_MODEL_VLM=${OLLAMA_MODEL_VLM:-qwen3-vl:32b}
+      - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=sentence-transformers
       - ST_MODEL_NAME=BAAI/bge-m3
@@ -463,12 +466,12 @@ services:
       - LOG_LEVEL=DEBUG
       # LLM Configuration (same as api service)
       - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL_GENERATION=qwen3:32b
-      - OLLAMA_MODEL_QUERY=qwen3:32b
-      - OLLAMA_MODEL_EXTRACTION=qwen3:32b
-      - OLLAMA_MODEL_VLM=qwen3-vl:32b
-      - LIGHTRAG_LLM_MODEL=qwen3:32b
-      - GEMMA_MODEL=qwen3:32b
+      - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - OLLAMA_MODEL_QUERY=${OLLAMA_MODEL_QUERY:-gpt-oss:20b}
+      - OLLAMA_MODEL_EXTRACTION=${OLLAMA_MODEL_EXTRACTION:-gpt-oss:20b}
+      - OLLAMA_MODEL_VLM=${OLLAMA_MODEL_VLM:-qwen3-vl:32b}
+      - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
+      - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - VLM_BACKEND=ollama
       - EMBEDDING_BACKEND=sentence-transformers
       - ST_MODEL_NAME=BAAI/bge-m3
