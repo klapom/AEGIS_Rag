@@ -420,7 +420,7 @@ class UnifiedEmbeddingService:
 
                     # Store in cache and result
                     for text, embedding, idx in zip(
-                        embeddings_to_compute, native_embeddings, indices_to_compute
+                        embeddings_to_compute, native_embeddings, indices_to_compute, strict=True
                     ):
                         cache_key = self._cache_key(text)
                         self.cache.set(cache_key, embedding)

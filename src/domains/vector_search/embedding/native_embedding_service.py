@@ -10,11 +10,9 @@ Performance Benchmarks (from TD-073):
 - Quality: Identical (same BGE-M3 weights)
 """
 
+import structlog
 import torch
 from sentence_transformers import SentenceTransformer
-import structlog
-from typing import List
-import numpy as np
 
 logger = structlog.get_logger(__name__)
 
@@ -115,7 +113,7 @@ class NativeEmbeddingService:
         # Fallback estimate for BGE-M3
         return 2.0
 
-    def embed_text(self, text: str) -> List[float]:
+    def embed_text(self, text: str) -> list[float]:
         """Embed a single text string.
 
         Args:
@@ -131,7 +129,7 @@ class NativeEmbeddingService:
         )
         return embedding.tolist()
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Embed a batch of texts efficiently.
 
         This method uses automatic batching for optimal performance.
@@ -161,7 +159,7 @@ class NativeEmbeddingService:
 
         return embeddings.tolist()
 
-    def embed_query(self, query: str) -> List[float]:
+    def embed_query(self, query: str) -> list[float]:
         """Embed a search query.
 
         For BGE-M3, queries should be prefixed with "Represent this sentence for searching

@@ -9,10 +9,11 @@ Performance Benchmarks (from TD-072):
 - Quality: Comparable to LLM reranking
 """
 
+from typing import Any
+
+import structlog
 import torch
 from sentence_transformers import CrossEncoder
-import structlog
-from typing import Any
 
 logger = structlog.get_logger(__name__)
 
@@ -132,7 +133,7 @@ class CrossEncoderReranker:
         )
 
         # Add scores to documents
-        for doc, score in zip(documents, scores):
+        for doc, score in zip(documents, scores, strict=True):
             doc["rerank_score"] = float(score)
 
         # Sort by score (descending)
