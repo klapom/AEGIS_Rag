@@ -55,12 +55,15 @@ class TestCommunitySummarizerInit:
 
     def test_default_initialization(self, mock_neo4j_client):
         """Test initialization with defaults."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -72,12 +75,15 @@ class TestCommunitySummarizerInit:
 
     def test_custom_model_name(self, mock_neo4j_client):
         """Test initialization with custom model."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer(model_name="custom-model:latest")
@@ -88,12 +94,15 @@ class TestCommunitySummarizerInit:
         """Test initialization with custom prompt."""
         custom_prompt = "Custom prompt: {entities}, {relationships}"
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer(prompt_template=custom_prompt)
@@ -107,12 +116,15 @@ class TestGenerateSummary:
 
     async def test_generate_summary_success(self, mock_neo4j_client, mock_llm_proxy):
         """Test successful summary generation."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -140,12 +152,15 @@ class TestGenerateSummary:
 
     async def test_generate_summary_empty_community(self, mock_neo4j_client, mock_llm_proxy):
         """Test handling of empty community."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -157,12 +172,15 @@ class TestGenerateSummary:
 
     async def test_generate_summary_no_relationships(self, mock_neo4j_client, mock_llm_proxy):
         """Test summary generation with entities but no relationships."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -181,12 +199,15 @@ class TestGenerateSummary:
         failing_proxy = AsyncMock()
         failing_proxy.generate = AsyncMock(side_effect=Exception("LLM API error"))
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=failing_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=failing_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -215,12 +236,15 @@ class TestGetCommunityData:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -239,12 +263,15 @@ class TestGetCommunityData:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -261,12 +288,15 @@ class TestStoreSummary:
 
     async def test_store_summary(self, mock_neo4j_client):
         """Test storing summary in Neo4j."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -290,12 +320,15 @@ class TestUpdateSummariesForDelta:
 
     async def test_update_summaries_no_changes(self, mock_neo4j_client, mock_llm_proxy):
         """Test when delta has no changes."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -321,12 +354,15 @@ class TestUpdateSummariesForDelta:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -360,12 +396,15 @@ class TestUpdateSummariesForDelta:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -406,12 +445,15 @@ class TestRegenerateAllSummaries:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             summarizer = CommunitySummarizer()
 
@@ -432,12 +474,15 @@ class TestGetSummary:
             return_value=[{"summary": "Existing summary text"}]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -449,12 +494,15 @@ class TestGetSummary:
         """Test getting non-existent summary."""
         mock_neo4j_client.execute_read = AsyncMock(return_value=[])
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()
@@ -468,11 +516,10 @@ class TestSingletonPattern:
 
     def test_get_community_summarizer_singleton(self):
         """Test that get_community_summarizer returns singleton."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client"
-        ) as mock_neo4j, patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_llm:
+        with (
+            patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j,
+            patch("src.components.graph_rag.community_summarizer.get_aegis_llm_proxy") as mock_llm,
+        ):
             mock_neo4j.return_value = AsyncMock()
             mock_llm.return_value = AsyncMock()
 
@@ -488,12 +535,15 @@ class TestDynamicModelLoading:
 
     async def test_get_model_name_async_uses_explicit_model(self, mock_neo4j_client):
         """Test that explicit model name takes precedence over config."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer(model_name="explicit-model:1b")
@@ -501,15 +551,20 @@ class TestDynamicModelLoading:
 
             assert model_name == "explicit-model:1b"
 
-    @pytest.mark.skip(reason="Mock not correctly applied - needs refactoring for domains/ structure")
+    @pytest.mark.skip(
+        reason="Mock not correctly applied - needs refactoring for domains/ structure"
+    )
     async def test_get_model_name_async_loads_from_config(self, mock_neo4j_client):
         """Test that model name is loaded from admin config when not explicit."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             # Mock the admin config function
@@ -525,12 +580,15 @@ class TestDynamicModelLoading:
 
     async def test_get_model_name_async_fallback_on_config_error(self, mock_neo4j_client):
         """Test that default model is used when config loading fails."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             # Mock config loading to fail (Sprint 53-58: function moved to llm_config_provider)
@@ -547,15 +605,20 @@ class TestDynamicModelLoading:
                 # Should fall back to settings default
                 assert model_name == settings.ollama_model_generation
 
-    @pytest.mark.skip(reason="Mock not correctly applied - needs refactoring for domains/ structure")
+    @pytest.mark.skip(
+        reason="Mock not correctly applied - needs refactoring for domains/ structure"
+    )
     async def test_generate_summary_uses_dynamic_model(self, mock_neo4j_client, mock_llm_proxy):
         """Test that generate_summary uses dynamically loaded model."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
-            return_value=mock_llm_proxy,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy",
+                return_value=mock_llm_proxy,
+            ),
         ):
             # Mock the admin config function
             with patch(
@@ -578,12 +641,15 @@ class TestDynamicModelLoading:
 
     def test_model_name_property_returns_explicit(self, mock_neo4j_client):
         """Test that model_name property returns explicit model when set."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer(model_name="explicit:1b")
@@ -593,12 +659,15 @@ class TestDynamicModelLoading:
 
     def test_model_name_property_returns_default(self, mock_neo4j_client):
         """Test that model_name property returns default when no explicit set."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             from src.core.config import settings
@@ -610,12 +679,15 @@ class TestDynamicModelLoading:
 
     def test_model_name_setter(self, mock_neo4j_client):
         """Test that model_name setter updates explicit model."""
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j_client,
-        ), patch(
-            "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
-        ) as mock_get_proxy:
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j_client,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_aegis_llm_proxy"
+            ) as mock_get_proxy,
+        ):
             mock_get_proxy.return_value = AsyncMock()
 
             summarizer = CommunitySummarizer()

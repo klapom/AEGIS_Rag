@@ -323,8 +323,11 @@ class TestAnswerGeneratorStreaming:
     """
 
     @pytest.mark.asyncio
-    async def test_generate_streaming_basic(self, answer_generator, mock_llm_proxy, sample_contexts):
+    async def test_generate_streaming_basic(
+        self, answer_generator, mock_llm_proxy, sample_contexts
+    ):
         """Test basic streaming of answer tokens."""
+
         # Mock streaming response from LLM proxy
         async def mock_streaming(_task):
             """Mock streaming generator."""

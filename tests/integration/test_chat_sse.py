@@ -16,12 +16,15 @@ from src.api.main import app
 @pytest.mark.asyncio
 async def test_chat_stream_basic():
     """Test basic SSE streaming functionality."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is RAG?"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is RAG?"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
@@ -75,12 +78,15 @@ async def test_chat_stream_with_session_id():
 @pytest.mark.asyncio
 async def test_chat_stream_with_intent():
     """Test SSE streaming with specific intent."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Search docs", "intent": "vector"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Search docs", "intent": "vector"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Verify intent is respected
@@ -127,12 +133,15 @@ async def test_chat_stream_invalid_intent():
 @pytest.mark.asyncio
 async def test_chat_stream_with_sources():
     """Test SSE streaming includes source documents."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Explain RAG", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Explain RAG", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Check for source messages
@@ -146,9 +155,7 @@ async def test_chat_stream_with_sources():
                     if message.get("type") == "source":
                         # Verify source structure
                         assert "source" in message
-                        assert (
-                            "document_id" in message["source"] or "context" in message["source"]
-                        )
+                        assert "document_id" in message["source"] or "context" in message["source"]
                 except json.JSONDecodeError:
                     pass
 
@@ -173,12 +180,15 @@ async def test_chat_sessions_list():
 @pytest.mark.asyncio
 async def test_chat_stream_cors_headers():
     """Test SSE streaming includes CORS headers."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Test CORS"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Test CORS"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         # Check for CORS header
         assert "access-control-allow-origin" in response.headers
@@ -187,12 +197,15 @@ async def test_chat_stream_cors_headers():
 @pytest.mark.asyncio
 async def test_chat_stream_no_buffering():
     """Test SSE streaming disables buffering."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Test buffering"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Test buffering"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         # Check for no-buffering header
         assert response.headers.get("x-accel-buffering") == "no"
@@ -205,12 +218,15 @@ async def test_chat_stream_no_buffering():
 @pytest.mark.asyncio
 async def test_chat_stream_includes_citation_map():
     """Test SSE streaming includes citation_map in metadata."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is AEGIS RAG?", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is AEGIS RAG?", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Look for citation_map in metadata
@@ -252,12 +268,15 @@ async def test_chat_stream_includes_citation_map():
 @pytest.mark.asyncio
 async def test_chat_stream_citation_map_with_vector_intent():
     """Test citation_map is sent with vector search intent."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Explain RAG architecture", "intent": "vector", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Explain RAG architecture", "intent": "vector", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Collect all metadata messages
@@ -281,12 +300,15 @@ async def test_chat_stream_citation_map_with_vector_intent():
 @pytest.mark.asyncio
 async def test_chat_stream_citation_map_with_hybrid_intent():
     """Test citation_map is sent with hybrid intent."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is LangGraph?", "intent": "hybrid", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is LangGraph?", "intent": "hybrid", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Just verify stream completes successfully
@@ -309,12 +331,15 @@ async def test_chat_stream_citation_map_with_hybrid_intent():
 @pytest.mark.asyncio
 async def test_chat_stream_citation_numbers_are_integers():
     """Test that citation map keys are integers (1, 2, 3...)."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is AEGIS RAG?", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is AEGIS RAG?", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         async for line in response.aiter_lines():

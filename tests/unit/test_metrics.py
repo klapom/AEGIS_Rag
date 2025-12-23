@@ -124,9 +124,7 @@ class TestTrackLLMRequest:
     def test_track_request_increments_tokens(self):
         """Verify token counter increments."""
         # Get initial tokens
-        initial = llm_tokens_used.labels(
-            provider="test_local2", token_type="total"
-        )._value.get()
+        initial = llm_tokens_used.labels(provider="test_local2", token_type="total")._value.get()
 
         # Track request with tokens
         track_llm_request(
@@ -139,9 +137,7 @@ class TestTrackLLMRequest:
         )
 
         # Verify increment
-        new_tokens = llm_tokens_used.labels(
-            provider="test_local2", token_type="total"
-        )._value.get()
+        new_tokens = llm_tokens_used.labels(provider="test_local2", token_type="total")._value.get()
         assert new_tokens >= initial + 1500
 
     def test_track_request_with_input_output_tokens(self):
@@ -189,9 +185,7 @@ class TestTrackLLMError:
         )._value.get()
 
         # Track error
-        track_llm_error(
-            provider="test_openai2", task_type="generation", error_type="timeout"
-        )
+        track_llm_error(provider="test_openai2", task_type="generation", error_type="timeout")
 
         # Verify increment
         new_errors = llm_errors_total.labels(
@@ -202,12 +196,8 @@ class TestTrackLLMError:
     def test_track_different_error_types(self):
         """Verify different error types are tracked separately."""
         # Track different errors
-        track_llm_error(
-            provider="test_alibaba3", task_type="extraction", error_type="rate_limit"
-        )
-        track_llm_error(
-            provider="test_alibaba3", task_type="extraction", error_type="api_error"
-        )
+        track_llm_error(provider="test_alibaba3", task_type="extraction", error_type="rate_limit")
+        track_llm_error(provider="test_alibaba3", task_type="extraction", error_type="api_error")
         track_llm_error(
             provider="test_alibaba3", task_type="extraction", error_type="budget_exceeded"
         )
@@ -234,9 +224,7 @@ class TestUpdateBudgetMetrics:
     def test_update_spend_gauge(self):
         """Verify monthly spend gauge updates."""
         # Update budget metrics
-        update_budget_metrics(
-            provider="test_alibaba4", monthly_spending=5.25, budget_limit=10.0
-        )
+        update_budget_metrics(provider="test_alibaba4", monthly_spending=5.25, budget_limit=10.0)
 
         # Verify gauge value
         spend = monthly_spend_usd.labels(provider="test_alibaba4")._value.get()
@@ -245,40 +233,28 @@ class TestUpdateBudgetMetrics:
     def test_update_budget_remaining_with_limit(self):
         """Verify budget remaining calculation with limit."""
         # Update with budget limit
-        update_budget_metrics(
-            provider="test_openai3", monthly_spending=12.50, budget_limit=20.0
-        )
+        update_budget_metrics(provider="test_openai3", monthly_spending=12.50, budget_limit=20.0)
 
         # Verify remaining
-        remaining = monthly_budget_remaining_usd.labels(
-            provider="test_openai3"
-        )._value.get()
+        remaining = monthly_budget_remaining_usd.labels(provider="test_openai3")._value.get()
         assert remaining == 7.50  # 20.0 - 12.50
 
     def test_update_budget_remaining_unlimited(self):
         """Verify budget remaining with unlimited budget (0.0)."""
         # Update with no limit
-        update_budget_metrics(
-            provider="test_local3", monthly_spending=0.0, budget_limit=0.0
-        )
+        update_budget_metrics(provider="test_local3", monthly_spending=0.0, budget_limit=0.0)
 
         # Verify unlimited sentinel
-        remaining = monthly_budget_remaining_usd.labels(
-            provider="test_local3"
-        )._value.get()
+        remaining = monthly_budget_remaining_usd.labels(provider="test_local3")._value.get()
         assert remaining == -1.0  # Sentinel for unlimited
 
     def test_update_budget_exceeded(self):
         """Verify budget remaining when exceeded."""
         # Update with exceeded budget
-        update_budget_metrics(
-            provider="test_alibaba5", monthly_spending=15.0, budget_limit=10.0
-        )
+        update_budget_metrics(provider="test_alibaba5", monthly_spending=15.0, budget_limit=10.0)
 
         # Verify remaining (should be 0.0, not negative)
-        remaining = monthly_budget_remaining_usd.labels(
-            provider="test_alibaba5"
-        )._value.get()
+        remaining = monthly_budget_remaining_usd.labels(provider="test_alibaba5")._value.get()
         assert remaining == 0.0
 
 

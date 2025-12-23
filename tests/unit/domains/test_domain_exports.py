@@ -10,7 +10,6 @@ These tests ensure:
 """
 
 
-
 class TestLLMIntegrationDomain:
     """Test src.domains.llm_integration exports."""
 

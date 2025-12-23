@@ -133,9 +133,10 @@ class TestExtractPromptFromDspyResult:
         result = extract_prompt_from_dspy_result(relation_extraction_result)
 
         assert "prompt_template" in result
-        assert "relations" in result["prompt_template"].lower() or "relationship" in result[
-            "prompt_template"
-        ].lower()
+        assert (
+            "relations" in result["prompt_template"].lower()
+            or "relationship" in result["prompt_template"].lower()
+        )
 
     def test_extract_prompt_preserves_instructions(self, entity_extraction_result):
         """Test extracted instructions match original."""
@@ -273,9 +274,7 @@ class TestFormatRelationExample:
             "entities": ["FastAPI", "Python"],
         }
         output_data = {
-            "relations": [
-                {"subject": "FastAPI", "predicate": "built_with", "object": "Python"}
-            ]
+            "relations": [{"subject": "FastAPI", "predicate": "built_with", "object": "Python"}]
         }
 
         result = _format_relation_example(input_data, output_data, 1)
@@ -311,9 +310,7 @@ class TestFormatRelationExample:
             "source_text": long_text,
             "entities": ["A"],
         }
-        output_data = {
-            "relations": [{"subject": "A", "predicate": "is", "object": "B"}]
-        }
+        output_data = {"relations": [{"subject": "A", "predicate": "is", "object": "B"}]}
 
         result = _format_relation_example(input_data, output_data, 1)
 

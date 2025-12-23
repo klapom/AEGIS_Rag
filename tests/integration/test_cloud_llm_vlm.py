@@ -38,7 +38,9 @@ def pytest_configure(config):
 def skip_without_alibaba_key():
     """Skip tests if Alibaba Cloud API key is not configured."""
     if not os.getenv("ALIBABA_CLOUD_API_KEY") and not os.getenv("DASHSCOPE_API_KEY"):
-        pytest.skip("Alibaba Cloud API key not configured (ALIBABA_CLOUD_API_KEY or DASHSCOPE_API_KEY)")
+        pytest.skip(
+            "Alibaba Cloud API key not configured (ALIBABA_CLOUD_API_KEY or DASHSCOPE_API_KEY)"
+        )
 
 
 @pytest.fixture
@@ -52,17 +54,79 @@ def skip_without_openai_key():
 def create_minimal_test_image(tmp_path):
     """Create a minimal valid PNG image for testing."""
     # Minimal valid PNG (1x1 white pixel)
-    png_data = bytes([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # PNG signature
-        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,  # IHDR chunk
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-        0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-        0x54, 0x08, 0xD7, 0x63, 0xF8, 0xFF, 0xFF, 0x3F,
-        0x00, 0x05, 0xFE, 0x02, 0xFE, 0xDC, 0xCC, 0x59,
-        0xE7, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
-        0x44, 0xAE, 0x42, 0x60, 0x82
-    ])
+    png_data = bytes(
+        [
+            0x89,
+            0x50,
+            0x4E,
+            0x47,
+            0x0D,
+            0x0A,
+            0x1A,
+            0x0A,  # PNG signature
+            0x00,
+            0x00,
+            0x00,
+            0x0D,
+            0x49,
+            0x48,
+            0x44,
+            0x52,  # IHDR chunk
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x00,
+            0x00,
+            0x00,
+            0x01,
+            0x08,
+            0x02,
+            0x00,
+            0x00,
+            0x00,
+            0x90,
+            0x77,
+            0x53,
+            0xDE,
+            0x00,
+            0x00,
+            0x00,
+            0x0C,
+            0x49,
+            0x44,
+            0x41,
+            0x54,
+            0x08,
+            0xD7,
+            0x63,
+            0xF8,
+            0xFF,
+            0xFF,
+            0x3F,
+            0x00,
+            0x05,
+            0xFE,
+            0x02,
+            0xFE,
+            0xDC,
+            0xCC,
+            0x59,
+            0xE7,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x49,
+            0x45,
+            0x4E,
+            0x44,
+            0xAE,
+            0x42,
+            0x60,
+            0x82,
+        ]
+    )
     test_image = tmp_path / "test_minimal.png"
     test_image.write_bytes(png_data)
     return test_image
@@ -451,9 +515,7 @@ class TestCloudErrorHandling:
 
         client = OllamaVLMClient(base_url="http://nonexistent-host:11434")
         client.client = AsyncMock()
-        client.client.post = AsyncMock(
-            side_effect=httpx.ConnectError("Connection timeout")
-        )
+        client.client.post = AsyncMock(side_effect=httpx.ConnectError("Connection timeout"))
 
         with pytest.raises(httpx.ConnectError):
             await client.generate_image_description(

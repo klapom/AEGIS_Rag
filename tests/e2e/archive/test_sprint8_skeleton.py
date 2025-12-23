@@ -90,7 +90,6 @@ async def test_query_decomposition_with_filters_e2e(api_client, cleanup_database
     today = datetime.now().isoformat()
     (datetime.now() - timedelta(days=1)).isoformat()
 
-
     # Query with filter
     response = await api_client.post(
         "/api/v1/query",

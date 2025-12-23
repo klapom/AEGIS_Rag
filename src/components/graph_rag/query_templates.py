@@ -632,15 +632,12 @@ class GraphQueryTemplates:
         if max_level:
             builder.where("s.level <= $max_level", max_level=max_level)
 
-        return (
-            builder.return_(
-                "s.heading as heading",
-                "s.level as level",
-                "s.page_no as page",
-                "s.order as order",
-            )
-            .order_by("s.order ASC")
-        )
+        return builder.return_(
+            "s.heading as heading",
+            "s.level as level",
+            "s.page_no as page",
+            "s.order as order",
+        ).order_by("s.order ASC")
 
     def entity_sections(
         self,
@@ -666,15 +663,12 @@ class GraphQueryTemplates:
         else:
             builder.where("e.name = $entity_id", entity_id=entity_id)
 
-        return (
-            builder.return_(
-                "s.heading as heading",
-                "s.level as level",
-                "s.page_no as page",
-                "s.order as order",
-            )
-            .order_by("s.order ASC")
-        )
+        return builder.return_(
+            "s.heading as heading",
+            "s.level as level",
+            "s.page_no as page",
+            "s.order as order",
+        ).order_by("s.order ASC")
 
     def section_entities_count(
         self,
@@ -698,11 +692,8 @@ class GraphQueryTemplates:
             builder.match("(d:Document)-[:HAS_SECTION]->(s)")
             builder.where("d.id = $document_id", document_id=document_id)
 
-        return (
-            builder.return_(
-                "s.heading as section",
-                "s.level as level",
-                "count(e) as entity_count",
-            )
-            .order_by("entity_count DESC")
-        )
+        return builder.return_(
+            "s.heading as section",
+            "s.level as level",
+            "count(e) as entity_count",
+        ).order_by("entity_count DESC")

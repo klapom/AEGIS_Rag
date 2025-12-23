@@ -38,9 +38,9 @@ async def plan_research(query: str, max_queries: int = 5) -> list[str]:
 
     try:
         # Import LLM proxy
-        from src.domains.llm_integration.proxy.aegis_proxy import get_aegis_llm_proxy
+        from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
 
-        llm = await get_aegis_llm_proxy()
+        llm = get_aegis_llm_proxy()
 
         # Generate research plan
         planning_prompt = f"""Create a research plan to answer this question: "{query}"

@@ -136,7 +136,11 @@ class TestNormalizeEntityReferences:
     def test_both_normalized(self, dedup):
         """Both source and target should be normalized."""
         relations = [
-            {"source": "nicolas cage", "target": "leaving las vegas", "relationship_type": "ACTED_IN"},
+            {
+                "source": "nicolas cage",
+                "target": "leaving las vegas",
+                "relationship_type": "ACTED_IN",
+            },
         ]
         mapping = {
             "nicolas cage": "Nicolas Cage",
@@ -210,8 +214,16 @@ class TestTypeSynonymDeduplication:
     def test_same_relation_different_types(self, dedup):
         """Same relation with synonym types should be deduplicated."""
         relations = [
-            {"source": "Nicolas Cage", "target": "Leaving Las Vegas", "relationship_type": "STARRED_IN"},
-            {"source": "Nicolas Cage", "target": "Leaving Las Vegas", "relationship_type": "ACTED_IN"},
+            {
+                "source": "Nicolas Cage",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "STARRED_IN",
+            },
+            {
+                "source": "Nicolas Cage",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "ACTED_IN",
+            },
         ]
         result = dedup.deduplicate(relations)
 
@@ -221,7 +233,11 @@ class TestTypeSynonymDeduplication:
     def test_different_relations_same_type_synonym(self, dedup):
         """Different relations shouldn't be merged just because of type synonym."""
         relations = [
-            {"source": "Nicolas Cage", "target": "Leaving Las Vegas", "relationship_type": "STARRED_IN"},
+            {
+                "source": "Nicolas Cage",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "STARRED_IN",
+            },
             {"source": "Nicolas Cage", "target": "The Rock", "relationship_type": "ACTED_IN"},
         ]
         result = dedup.deduplicate(relations)
@@ -256,13 +272,25 @@ class TestFullDeduplication:
         """Test complex scenario with multiple dedup opportunities."""
         relations = [
             # Duplicate: same entities, synonym types
-            {"source": "Nicolas Cage", "target": "Leaving Las Vegas", "relationship_type": "STARRED_IN"},
-            {"source": "Nicolas Cage", "target": "Leaving Las Vegas", "relationship_type": "ACTED_IN"},
+            {
+                "source": "Nicolas Cage",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "STARRED_IN",
+            },
+            {
+                "source": "Nicolas Cage",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "ACTED_IN",
+            },
             # Symmetric duplicate
             {"source": "Alice", "target": "Bob", "relationship_type": "KNOWS"},
             {"source": "Bob", "target": "Alice", "relationship_type": "KNOWS"},
             # Unique relation
-            {"source": "Mike Figgis", "target": "Leaving Las Vegas", "relationship_type": "DIRECTED"},
+            {
+                "source": "Mike Figgis",
+                "target": "Leaving Las Vegas",
+                "relationship_type": "DIRECTED",
+            },
         ]
         entity_mapping = {"nicolas cage": "Nicolas Cage"}
 
@@ -279,8 +307,18 @@ class TestFullDeduplication:
     def test_description_merged(self, dedup):
         """Descriptions should be merged for duplicates."""
         relations = [
-            {"source": "A", "target": "B", "relationship_type": "KNOWS", "description": "Met in 2020"},
-            {"source": "A", "target": "B", "relationship_type": "KNOWS", "description": "Work together"},
+            {
+                "source": "A",
+                "target": "B",
+                "relationship_type": "KNOWS",
+                "description": "Met in 2020",
+            },
+            {
+                "source": "A",
+                "target": "B",
+                "relationship_type": "KNOWS",
+                "description": "Work together",
+            },
         ]
         result = dedup.deduplicate(relations)
 
@@ -376,6 +414,7 @@ class TestFactoryFunction:
 
     def test_enabled_by_default(self):
         """Factory should create deduplicator when enabled."""
+
         class MockConfig:
             enable_relation_dedup = True
             relation_preserve_original_type = False
@@ -386,6 +425,7 @@ class TestFactoryFunction:
 
     def test_disabled(self):
         """Factory should return None when disabled."""
+
         class MockConfig:
             enable_relation_dedup = False
 
@@ -394,6 +434,7 @@ class TestFactoryFunction:
 
     def test_preserve_original_type(self):
         """Factory should pass preserve_original_type option."""
+
         class MockConfig:
             enable_relation_dedup = True
             relation_preserve_original_type = True

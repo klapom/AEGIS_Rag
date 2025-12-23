@@ -128,9 +128,7 @@ def test_should_process_image__edge_case_square__returns_true():
 def test_should_process_image__minimum_size_boundary__returns_true():
     """Test boundary case: image exactly at min_size."""
     boundary_image = Image.new("RGB", (100, 100))
-    should_process, reason = should_process_image(
-        boundary_image, min_size=100, min_unique_colors=0
-    )
+    should_process, reason = should_process_image(boundary_image, min_size=100, min_unique_colors=0)
 
     assert should_process is True
     assert reason == "valid"

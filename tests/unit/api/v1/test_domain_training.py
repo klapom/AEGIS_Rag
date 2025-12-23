@@ -54,19 +54,17 @@ def mock_embedding_service():
     """Mock embedding service."""
     service = MagicMock()
     service.embed_query = AsyncMock(return_value=[0.1] * 1024)
-    service.embed_documents = AsyncMock(
-        return_value=[[0.1] * 1024, [0.2] * 1024]
-    )
+    service.embed_documents = AsyncMock(return_value=[[0.1] * 1024, [0.2] * 1024])
     return service
 
 
 class TestCreateDomainEndpoint:
     """Tests for POST /admin/domains endpoint."""
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
-    def test_create_domain_success(
-        self, test_client, sample_domain_request, monkeypatch
-    ):
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
+    def test_create_domain_success(self, test_client, sample_domain_request, monkeypatch):
         """Test successful domain creation."""
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_query = AsyncMock(
@@ -91,7 +89,9 @@ class TestCreateDomainEndpoint:
             assert data["status"] == "pending"
             assert data["llm_model"] == sample_domain_request["llm_model"]
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
     def test_create_domain_invalid_name(self, test_client, monkeypatch):
         """Test validation of domain name."""
         response = test_client.post(
@@ -105,7 +105,9 @@ class TestCreateDomainEndpoint:
 
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
     def test_create_domain_short_description(self, test_client, monkeypatch):
         """Test validation of description length."""
         response = test_client.post(
@@ -119,10 +121,10 @@ class TestCreateDomainEndpoint:
 
         assert response.status_code == 422
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
-    def test_create_domain_duplicate_name(
-        self, test_client, sample_domain_request, monkeypatch
-    ):
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
+    def test_create_domain_duplicate_name(self, test_client, sample_domain_request, monkeypatch):
         """Test error when domain name already exists."""
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_query = AsyncMock(
@@ -142,15 +144,13 @@ class TestCreateDomainEndpoint:
 
             assert response.status_code == 400
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
-    def test_create_domain_database_error(
-        self, test_client, sample_domain_request, monkeypatch
-    ):
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
+    def test_create_domain_database_error(self, test_client, sample_domain_request, monkeypatch):
         """Test error handling for database failure."""
         mock_neo4j = AsyncMock()
-        mock_neo4j.execute_query = AsyncMock(
-            side_effect=Exception("Database error")
-        )
+        mock_neo4j.execute_query = AsyncMock(side_effect=Exception("Database error"))
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -167,7 +167,9 @@ class TestCreateDomainEndpoint:
 class TestGetDomainEndpoint:
     """Tests for GET /admin/domains/{name} endpoint."""
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
     def test_get_domain_success(self, test_client, monkeypatch):
         """Test successful domain retrieval."""
         domain_data = {
@@ -194,7 +196,9 @@ class TestGetDomainEndpoint:
             assert data["name"] == "tech_docs"
             assert data["status"] == "ready"
 
-    @pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+    @pytest.mark.skip(
+        reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+    )
     def test_get_domain_not_found(self, test_client, monkeypatch):
         """Test error when domain not found."""
         mock_neo4j = AsyncMock()
@@ -209,7 +213,9 @@ class TestGetDomainEndpoint:
             assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestListDomainsEndpoint:
     """Tests for GET /admin/domains endpoint."""
 
@@ -259,7 +265,9 @@ class TestListDomainsEndpoint:
             assert len(data["domains"]) == 0
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestTrainDomainEndpoint:
     """Tests for POST /admin/domains/{name}/train endpoint."""
 
@@ -276,9 +284,7 @@ class TestTrainDomainEndpoint:
         }
 
         mock_neo4j = AsyncMock()
-        mock_neo4j.execute_query = AsyncMock(
-            return_value=[{"id": "domain-123"}]
-        )
+        mock_neo4j.execute_query = AsyncMock(return_value=[{"id": "domain-123"}])
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
@@ -293,9 +299,7 @@ class TestTrainDomainEndpoint:
             data = response.json()
             assert "training_id" in data
 
-    def test_train_domain_insufficient_samples(
-        self, test_client, monkeypatch
-    ):
+    def test_train_domain_insufficient_samples(self, test_client, monkeypatch):
         """Test validation rejects insufficient samples."""
         training_data = {
             "samples": [
@@ -342,7 +346,9 @@ class TestTrainDomainEndpoint:
             assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestGetTrainingStatusEndpoint:
     """Tests for GET /admin/domains/{name}/training-status endpoint."""
 
@@ -363,38 +369,32 @@ class TestGetTrainingStatusEndpoint:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j,
         ):
-            response = test_client.get(
-                "/api/v1/admin/domains/tech_docs/training-status"
-            )
+            response = test_client.get("/api/v1/admin/domains/tech_docs/training-status")
 
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "completed"
             assert data["progress_percent"] == 100
 
-    def test_get_training_status_not_started(
-        self, test_client, monkeypatch
-    ):
+    def test_get_training_status_not_started(self, test_client, monkeypatch):
         """Test status when training hasn't started."""
         mock_neo4j = AsyncMock()
-        mock_neo4j.execute_query = AsyncMock(
-            return_value=[{"status": "pending", "progress": 0}]
-        )
+        mock_neo4j.execute_query = AsyncMock(return_value=[{"status": "pending", "progress": 0}])
 
         with patch(
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j,
         ):
-            response = test_client.get(
-                "/api/v1/admin/domains/tech_docs/training-status"
-            )
+            response = test_client.get("/api/v1/admin/domains/tech_docs/training-status")
 
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "pending"
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestDeleteDomainEndpoint:
     """Tests for DELETE /admin/domains/{name} endpoint."""
 
@@ -432,7 +432,9 @@ class TestDeleteDomainEndpoint:
             assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestGetAvailableModelsEndpoint:
     """Tests for GET /admin/domains/available-models endpoint."""
 
@@ -450,22 +452,20 @@ class TestGetAvailableModelsEndpoint:
             "src.components.graph_rag.neo4j_client.get_neo4j_client",
             return_value=mock_neo4j,
         ):
-            response = test_client.get(
-                "/api/v1/admin/domains/available-models"
-            )
+            response = test_client.get("/api/v1/admin/domains/available-models")
 
             assert response.status_code == 200
             data = response.json()
             assert len(data["models"]) == 2
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestClassifyDocumentEndpoint:
     """Tests for POST /admin/domains/classify endpoint."""
 
-    def test_classify_document_success(
-        self, test_client, mock_embedding_service, monkeypatch
-    ):
+    def test_classify_document_success(self, test_client, mock_embedding_service, monkeypatch):
         """Test successful document classification."""
         classification_request = {
             "text": "FastAPI is a modern Python web framework for building APIs",
@@ -483,12 +483,15 @@ class TestClassifyDocumentEndpoint:
             ]
         )
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding_service,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding_service,
+            ),
         ):
             response = test_client.post(
                 "/api/v1/admin/domains/classify",
@@ -510,19 +513,20 @@ class TestClassifyDocumentEndpoint:
 
         assert response.status_code == 422
 
-    def test_classify_document_no_domains(
-        self, test_client, mock_embedding_service, monkeypatch
-    ):
+    def test_classify_document_no_domains(self, test_client, mock_embedding_service, monkeypatch):
         """Test classification when no domains exist."""
         mock_neo4j = AsyncMock()
         mock_neo4j.execute_query = AsyncMock(return_value=[])
 
-        with patch(
-            "src.components.graph_rag.neo4j_client.get_neo4j_client",
-            return_value=mock_neo4j,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding_service,
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding_service,
+            ),
         ):
             response = test_client.post(
                 "/api/v1/admin/domains/classify",
@@ -535,7 +539,9 @@ class TestClassifyDocumentEndpoint:
             assert response.status_code in [200, 404]
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestBatchIngestionEndpoint:
     """Tests for POST /admin/domains/ingest-batch endpoint."""
 
@@ -582,7 +588,9 @@ class TestBatchIngestionEndpoint:
         assert response.status_code == 422
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestAutoDiscoveryEndpoint:
     """Tests for POST /admin/domains/auto-discover endpoint."""
 
@@ -638,7 +646,9 @@ class TestAutoDiscoveryEndpoint:
         assert response.status_code == 422
 
 
-@pytest.mark.skip(reason="Sprint 58: Domain training API routes changed - needs updated endpoint path")
+@pytest.mark.skip(
+    reason="Sprint 58: Domain training API routes changed - needs updated endpoint path"
+)
 class TestDataAugmentationEndpoint:
     """Tests for POST /admin/domains/augment endpoint."""
 

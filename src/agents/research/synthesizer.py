@@ -48,9 +48,9 @@ async def synthesize_findings(
 
     try:
         # Import LLM proxy
-        from src.domains.llm_integration.proxy.aegis_proxy import get_aegis_llm_proxy
+        from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
 
-        llm = await get_aegis_llm_proxy()
+        llm = get_aegis_llm_proxy()
 
         # Format results for context
         formatted_context = format_results_for_synthesis(
@@ -70,9 +70,10 @@ Task:
 Synthesize the above research findings into a comprehensive, well-structured answer.
 - Start with a direct answer to the question
 - Provide supporting details from the research
-- Cite specific sources when relevant
+- Cite specific sources using [Source #N] notation (e.g., "According to [Source #1], ...")
 - Maintain accuracy - only state what is supported by the findings
 - If the findings don't fully answer the question, acknowledge this
+- Structure your answer with clear paragraphs
 
 Comprehensive Answer:"""
 
@@ -224,6 +225,34 @@ async def create_structured_summary(
     logger.info("structured_summary_created", query=query)
 
     return summary
+
+
+def extract_citations(synthesis: str) -> list[int]:
+    """Extract source citations from synthesis text.
+
+    Args:
+        synthesis: Synthesized text with citations
+
+    Returns:
+        List of cited source numbers
+
+    Examples:
+        >>> citations = extract_citations("According to [Source #1], AI is...")
+        >>> citations
+        [1]
+    """
+    import re
+
+    # Find all [Source #N] patterns
+    pattern = r"\[Source #(\d+)\]"
+    matches = re.findall(pattern, synthesis)
+
+    # Convert to integers and deduplicate
+    cited_sources = sorted({int(match) for match in matches})
+
+    logger.debug("citations_extracted", count=len(cited_sources), sources=cited_sources)
+
+    return cited_sources
 
 
 def extract_key_points(text: str, max_points: int = 5) -> list[str]:

@@ -173,8 +173,16 @@ class TestRetrievedDataAccumulation:
         """Test adding memories."""
         reasoning = ReasoningData()
         memories = [
-            {"memory_id": "m1", "content": "User asked about NVIDIA GPUs", "timestamp": "2025-01-01"},
-            {"memory_id": "m2", "content": "User interested in RAG systems", "timestamp": "2025-01-02"},
+            {
+                "memory_id": "m1",
+                "content": "User asked about NVIDIA GPUs",
+                "timestamp": "2025-01-01",
+            },
+            {
+                "memory_id": "m2",
+                "content": "User interested in RAG systems",
+                "timestamp": "2025-01-02",
+            },
         ]
 
         reasoning.memories.extend(memories)
@@ -450,8 +458,6 @@ class TestReasoningDataUsagePatterns:
 
         result = reasoning.to_dict()
 
-        skipped_event = [
-            e for e in result["phase_events"] if e["status"] == "skipped"
-        ]
+        skipped_event = [e for e in result["phase_events"] if e["status"] == "skipped"]
         assert len(skipped_event) == 1
         assert skipped_event[0]["metadata"]["reason"] == "vector_only_intent"

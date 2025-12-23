@@ -94,14 +94,22 @@ class CrossEncoderReranker:
         documents: list[dict[str, Any]],
         top_k: int = 10,
         text_field: str = "text",
+        section_filter: str | list[str] | None = None,
+        section_boost: float = 0.1,
     ) -> list[dict[str, Any]]:
-        """Rerank documents using cross-encoder.
+        """Rerank documents using cross-encoder with optional section boost.
+
+        Sprint 62 Feature 62.5: Section-aware reranking integration.
 
         Args:
             query: User query
             documents: List of documents with text field
             top_k: Number of top documents to return
             text_field: Field name containing document text
+            section_filter: Section ID(s) to boost (Sprint 62.5)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
+            section_boost: Boost to add for matching sections (0.0 - 0.5, default: 0.1)
 
         Returns:
             Reranked documents with 'rerank_score' field
@@ -135,6 +143,36 @@ class CrossEncoderReranker:
         # Add scores to documents
         for doc, score in zip(documents, scores, strict=True):
             doc["rerank_score"] = float(score)
+
+        # Apply section boost if section_filter provided (Sprint 62.5)
+        if section_filter is not None:
+            # Normalize section_filter to list
+            target_sections = (
+                [section_filter] if isinstance(section_filter, str) else section_filter
+            )
+
+            # Clamp boost to valid range [0.0, 0.5]
+            clamped_boost = max(0.0, min(0.5, section_boost))
+
+            for doc in documents:
+                # Get document's section_id (try multiple field locations)
+                doc_section_id = (
+                    doc.get("section_id") or doc.get("metadata", {}).get("section_id") or ""
+                )
+
+                # Apply boost if document is from target section
+                if doc_section_id and doc_section_id in target_sections:
+                    original_score = doc["rerank_score"]
+                    doc["rerank_score"] = original_score + clamped_boost
+
+                    logger.debug(
+                        "section_boost_applied",
+                        doc_id=doc.get("id"),
+                        section_id=doc_section_id,
+                        original_score=original_score,
+                        boosted_score=doc["rerank_score"],
+                        boost=clamped_boost,
+                    )
 
         # Sort by score (descending)
         reranked = sorted(

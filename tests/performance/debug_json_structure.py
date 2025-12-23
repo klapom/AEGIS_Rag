@@ -12,7 +12,9 @@ from src.components.ingestion.docling_client import DoclingContainerClient
 
 async def analyze_json_structure():
     """Analyze the full JSON structure of a parsed document."""
-    sample_dir = Path(r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents")
+    sample_dir = Path(
+        r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents"
+    )
     pptx_file = sample_dir / "99_pptx_text" / "PerformanceTuning_textonly.pptx"
 
     print(f"Parsing: {pptx_file}")
@@ -43,7 +45,9 @@ async def analyze_json_structure():
             text = group.get("text", "")[:50].replace("\n", "\\n") if group.get("text") else ""
             name = group.get("name", "")
             children_count = len(group.get("children", []))
-            print(f"  [{i}]: label='{label}', name='{name}', text='{text}', children={children_count}")
+            print(
+                f"  [{i}]: label='{label}', name='{name}', text='{text}', children={children_count}"
+            )
 
     # Check 'texts' - might have the actual text content
     if "texts" in json_content:
@@ -52,7 +56,9 @@ async def analyze_json_structure():
         print("-" * 80)
         for i, text_item in enumerate(texts[:10]):  # First 10
             label = text_item.get("label", "<no label>")
-            text = text_item.get("text", "")[:50].replace("\n", "\\n") if text_item.get("text") else ""
+            text = (
+                text_item.get("text", "")[:50].replace("\n", "\\n") if text_item.get("text") else ""
+            )
             parent = text_item.get("parent", {})
             if isinstance(parent, dict):
                 parent_ref = parent.get("$ref", str(parent))

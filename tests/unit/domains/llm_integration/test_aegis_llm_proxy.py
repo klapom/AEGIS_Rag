@@ -107,9 +107,7 @@ class TestRoutingLogic:
         assert provider == "local_ollama"
         assert reason == "vision_task_local_fallback"
 
-    def test_routing_critical_quality_high_complexity_openai(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_routing_critical_quality_high_complexity_openai(self, aegis_proxy_with_config) -> None:
         """Test critical quality + high complexity routes to OpenAI."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -138,9 +136,7 @@ class TestRoutingLogic:
 
         assert provider == "openai"
 
-    def test_routing_high_quality_high_complexity_alibaba(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_routing_high_quality_high_complexity_alibaba(self, aegis_proxy_with_config) -> None:
         """Test high quality + high complexity routes to Alibaba Cloud."""
         task = LLMTask(
             task_type=TaskType.EXTRACTION,
@@ -282,9 +278,7 @@ class TestCostCalculation:
 
         assert cost == 0.0
 
-    def test_calculate_cost_alibaba_cloud_accurate_split(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_calculate_cost_alibaba_cloud_accurate_split(self, aegis_proxy_with_config) -> None:
         """Test Alibaba Cloud cost with input/output split."""
         cost = aegis_proxy_with_config._calculate_cost(
             provider="alibaba_cloud",
@@ -306,9 +300,7 @@ class TestCostCalculation:
         # $2.50 per 1M input + $10.00 per 1M output = $12.50
         assert cost == pytest.approx(12.50, rel=1e-3)
 
-    def test_calculate_cost_fallback_legacy_pricing(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_calculate_cost_fallback_legacy_pricing(self, aegis_proxy_with_config) -> None:
         """Test fallback to legacy pricing when input/output unavailable."""
         cost = aegis_proxy_with_config._calculate_cost(
             provider="alibaba_cloud",
@@ -387,9 +379,7 @@ class TestStreamingExecution:
     """Test streaming response handling."""
 
     @pytest.mark.asyncio
-    async def test_generate_streaming_yields_content(
-        self, aegis_proxy_with_config
-    ) -> None:
+    async def test_generate_streaming_yields_content(self, aegis_proxy_with_config) -> None:
         """Test streaming execution yields content chunks."""
         task = LLMTask(
             task_type=TaskType.GENERATION,
@@ -455,9 +445,7 @@ class TestStreamingExecution:
             assert len(chunks) >= 1
 
     @pytest.mark.asyncio
-    async def test_streaming_all_providers_fail_raises_error(
-        self, aegis_proxy_with_config
-    ) -> None:
+    async def test_streaming_all_providers_fail_raises_error(self, aegis_proxy_with_config) -> None:
         """Test streaming raises error when all providers fail."""
         task = LLMTask(
             task_type=TaskType.GENERATION,
@@ -467,11 +455,14 @@ class TestStreamingExecution:
         async def mock_fail(*args, **kwargs):
             raise LLMExecutionError("All providers failed")
 
-        with patch.object(
-            aegis_proxy_with_config,
-            "_execute_streaming",
-            side_effect=mock_fail,
-        ), pytest.raises(LLMExecutionError, match="All LLM providers failed"):
+        with (
+            patch.object(
+                aegis_proxy_with_config,
+                "_execute_streaming",
+                side_effect=mock_fail,
+            ),
+            pytest.raises(LLMExecutionError, match="All LLM providers failed"),
+        ):
             async for _ in aegis_proxy_with_config.generate_streaming(task):
                 pass
 
@@ -498,9 +489,7 @@ class TestMetricsTracking:
 
         assert aegis_proxy_with_config._request_count == initial_count + 1
 
-    def test_track_metrics_persists_to_database(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_track_metrics_persists_to_database(self, aegis_proxy_with_config) -> None:
         """Test metrics tracking persists data to cost tracker."""
         from src.domains.llm_integration.models import LLMResponse
 
@@ -524,27 +513,21 @@ class TestMetricsTracking:
 class TestMetricsSummary:
     """Test metrics summary retrieval."""
 
-    def test_get_metrics_summary_contains_request_count(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_get_metrics_summary_contains_request_count(self, aegis_proxy_with_config) -> None:
         """Test metrics summary includes request count."""
         summary = aegis_proxy_with_config.get_metrics_summary()
 
         assert "request_count" in summary
         assert isinstance(summary["request_count"], int)
 
-    def test_get_metrics_summary_contains_total_cost(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_get_metrics_summary_contains_total_cost(self, aegis_proxy_with_config) -> None:
         """Test metrics summary includes total cost."""
         summary = aegis_proxy_with_config.get_metrics_summary()
 
         assert "total_cost_usd" in summary
         assert isinstance(summary["total_cost_usd"], float)
 
-    def test_get_metrics_summary_contains_providers(
-        self, aegis_proxy_with_config
-    ) -> None:
+    def test_get_metrics_summary_contains_providers(self, aegis_proxy_with_config) -> None:
         """Test metrics summary includes enabled providers."""
         summary = aegis_proxy_with_config.get_metrics_summary()
 
@@ -579,9 +562,7 @@ class TestConfigValidation:
 @pytest.fixture
 def aegis_proxy_with_config(mock_llm_config):
     """Create AegisLLMProxy instance with mock config and cost tracker."""
-    with patch(
-        "src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker"
-    ) as mock_tracker:
+    with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker") as mock_tracker:
         mock_tracker_instance = MagicMock()
         mock_tracker_instance.get_monthly_spending.return_value = {
             "alibaba_cloud": 0.0,

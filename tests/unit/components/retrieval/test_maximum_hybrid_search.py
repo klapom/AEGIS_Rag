@@ -51,21 +51,27 @@ class TestMaximumHybridSearch:
 - Entities: Amsterdam, Netherlands, Europe
 """
 
-        with patch(
-            "src.components.retrieval.maximum_hybrid_search._qdrant_search",
-            return_value=mock_qdrant_result,
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._bm25_search",
-            return_value=mock_bm25_result,
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-            return_value={"context": mock_local_context, "latency_ms": 100.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-            return_value={"context": mock_global_context, "latency_ms": 120.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
-        ) as mock_fusion:
+        with (
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._qdrant_search",
+                return_value=mock_qdrant_result,
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._bm25_search",
+                return_value=mock_bm25_result,
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
+                return_value={"context": mock_local_context, "latency_ms": 100.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
+                return_value={"context": mock_global_context, "latency_ms": 120.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
+            ) as mock_fusion,
+        ):
             # Mock cross_modal_fusion to return input unchanged
             mock_fusion.side_effect = lambda chunk_ranking, **kwargs: chunk_ranking
 
@@ -94,27 +100,38 @@ class TestMaximumHybridSearch:
         """Test that cross-modal fusion is applied when enabled."""
         mock_chunks = [{"id": "chunk1", "rrf_score": 0.8, "rank": 1}]
 
-        with patch(
-            "src.components.retrieval.maximum_hybrid_search._qdrant_search",
-            return_value={"results": mock_chunks, "latency_ms": 50.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._bm25_search",
-            return_value={"results": [], "latency_ms": 30.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-            return_value={
-                "context": "# Entities\n- Amsterdam: Capital",
-                "latency_ms": 100.0,
-            },
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-            return_value={"context": "", "latency_ms": 0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
-        ) as mock_fusion:
+        with (
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._qdrant_search",
+                return_value={"results": mock_chunks, "latency_ms": 50.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._bm25_search",
+                return_value={"results": [], "latency_ms": 30.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
+                return_value={
+                    "context": "# Entities\n- Amsterdam: Capital",
+                    "latency_ms": 100.0,
+                },
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
+                return_value={"context": "", "latency_ms": 0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
+            ) as mock_fusion,
+        ):
             # Mock fusion adds entity_boost
             mock_fusion.return_value = [
-                {**mock_chunks[0], "entity_boost": 0.1, "final_score": 0.9, "cross_modal_boosted": True}
+                {
+                    **mock_chunks[0],
+                    "entity_boost": 0.1,
+                    "final_score": 0.9,
+                    "cross_modal_boosted": True,
+                }
             ]
 
             result = await maximum_hybrid_search(
@@ -131,21 +148,27 @@ class TestMaximumHybridSearch:
     @pytest.mark.asyncio
     async def test_maximum_hybrid_search_disable_fusion(self):
         """Test maximum hybrid search with cross-modal fusion disabled."""
-        with patch(
-            "src.components.retrieval.maximum_hybrid_search._qdrant_search",
-            return_value={"results": [{"id": "chunk1", "rrf_score": 0.8}], "latency_ms": 50.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._bm25_search",
-            return_value={"results": [], "latency_ms": 30.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-            return_value={"context": "# Entities\n- Amsterdam: Capital", "latency_ms": 100.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-            return_value={"context": "", "latency_ms": 0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
-        ) as mock_fusion:
+        with (
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._qdrant_search",
+                return_value={"results": [{"id": "chunk1", "rrf_score": 0.8}], "latency_ms": 50.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._bm25_search",
+                return_value={"results": [], "latency_ms": 30.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
+                return_value={"context": "# Entities\n- Amsterdam: Capital", "latency_ms": 100.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
+                return_value={"context": "", "latency_ms": 0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"
+            ) as mock_fusion,
+        ):
             result = await maximum_hybrid_search(
                 query="What is Amsterdam?",
                 use_cross_modal_fusion=False,
@@ -159,19 +182,25 @@ class TestMaximumHybridSearch:
     async def test_maximum_hybrid_search_handles_errors(self):
         """Test graceful error handling when signals fail."""
         # Qdrant fails, others succeed
-        with patch(
-            "src.components.retrieval.maximum_hybrid_search._qdrant_search",
-            side_effect=Exception("Qdrant connection failed"),
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._bm25_search",
-            return_value={"results": [{"id": "chunk1", "score": 10.0}], "latency_ms": 30.0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
-            return_value={"context": "", "latency_ms": 0},
-        ), patch(
-            "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
-            return_value={"context": "", "latency_ms": 0},
-        ), patch("src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"):
+        with (
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._qdrant_search",
+                side_effect=Exception("Qdrant connection failed"),
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._bm25_search",
+                return_value={"results": [{"id": "chunk1", "score": 10.0}], "latency_ms": 30.0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_local_search",
+                return_value={"context": "", "latency_ms": 0},
+            ),
+            patch(
+                "src.components.retrieval.maximum_hybrid_search._lightrag_global_search",
+                return_value={"context": "", "latency_ms": 0},
+            ),
+            patch("src.components.retrieval.maximum_hybrid_search.cross_modal_fusion"),
+        ):
             result = await maximum_hybrid_search(query="test", use_cross_modal_fusion=False)
 
             # Should still return results from BM25

@@ -29,13 +29,43 @@ class TestLocalVsCloudVLMMetadata:
         """Create test image."""
         image_path = tmp_path / "test.png"
         # Minimal valid PNG
-        png_data = bytes([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-            0xDE
-        ])
+        png_data = bytes(
+            [
+                0x89,
+                0x50,
+                0x4E,
+                0x47,
+                0x0D,
+                0x0A,
+                0x1A,
+                0x0A,
+                0x00,
+                0x00,
+                0x00,
+                0x0D,
+                0x49,
+                0x48,
+                0x44,
+                0x52,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x08,
+                0x02,
+                0x00,
+                0x00,
+                0x00,
+                0x90,
+                0x77,
+                0x53,
+                0xDE,
+            ]
+        )
         image_path.write_bytes(png_data + b"\x00" * 50)
         return image_path
 
@@ -102,9 +132,7 @@ class TestLocalVsCloudVLMMetadata:
 
         try:
             _, metadata = await client.generate_image_description(
-                test_image,
-                "Describe briefly",
-                max_tokens=50
+                test_image, "Describe briefly", max_tokens=50
             )
 
             # Verify metadata structure (cloud)
@@ -143,17 +171,16 @@ class TestLocalVsCloudVLMMetadata:
             mock_http.return_value = mock_client
 
             local_client = get_vlm_client(VLMBackend.OLLAMA)
-            _, local_metadata = await local_client.generate_image_description(
-                test_image, "test"
-            )
+            _, local_metadata = await local_client.generate_image_description(test_image, "test")
 
         # Extract expected metadata fields
         expected_fields = {"model", "provider", "local", "cost_usd", "tokens_total"}
         actual_fields = set(local_metadata.keys())
 
         # Verify all expected fields are present
-        assert expected_fields.issubset(actual_fields), \
-            f"Missing fields: {expected_fields - actual_fields}"
+        assert expected_fields.issubset(
+            actual_fields
+        ), f"Missing fields: {expected_fields - actual_fields}"
 
 
 class TestLocalVsCloudCostTracking:
@@ -206,9 +233,7 @@ class TestLocalVsCloudCostTracking:
 
         try:
             _, metadata = await client.generate_image_description(
-                test_image,
-                "Describe",
-                max_tokens=50
+                test_image, "Describe", max_tokens=50
             )
 
             # Cloud API reports cost (may be very small)

@@ -158,10 +158,10 @@ These models use transformer architecture with billions of parameters.
 
         # Verify response area appears
         response_area = page.locator(
-            '[data-streaming], '
+            "[data-streaming], "
             '[data-role="assistant"], '
-            '.response, '
-            '.answer, '
+            ".response, "
+            ".answer, "
             '[data-testid="streaming-answer"]'
         )
 
@@ -197,12 +197,11 @@ These models use transformer architecture with billions of parameters.
         print("[TEST] Query submitted, watching for streaming response...")
 
         # Wait for streaming to start - look for streaming indicator or content
-        streaming_indicator = page.locator('[data-streaming="true"]').or_(
-            page.locator('.typing-indicator')
-        ).or_(
-            page.locator('[data-testid="typing-indicator"]')
-        ).or_(
-            page.get_by_text(re.compile(r"Thinking|Searching|Loading", re.I))
+        streaming_indicator = (
+            page.locator('[data-streaming="true"]')
+            .or_(page.locator(".typing-indicator"))
+            .or_(page.locator('[data-testid="typing-indicator"]'))
+            .or_(page.get_by_text(re.compile(r"Thinking|Searching|Loading", re.I)))
         )
 
         try:
@@ -230,11 +229,13 @@ These models use transformer architecture with billions of parameters.
         if phases_found:
             print(f"[TEST] Phase indicators found: {len(phases_found)}")
         else:
-            print("[TEST] No phase indicators visible (may not be implemented or already completed)")
+            print(
+                "[TEST] No phase indicators visible (may not be implemented or already completed)"
+            )
 
         # Wait for response content to appear
         # The StreamingAnswer component wraps content in a div with data-streaming attribute
-        response_container = page.locator('[data-streaming]').last
+        response_container = page.locator("[data-streaming]").last
 
         await expect(response_container).to_be_visible(timeout=60000)
 
@@ -249,7 +250,7 @@ These models use transformer architecture with billions of parameters.
             print("[TEST] Streaming may still be in progress")
 
         # Get the prose content within the response (this is where the answer is rendered)
-        prose_content = response_container.locator('.prose.prose-lg').first
+        prose_content = response_container.locator(".prose.prose-lg").first
         if await prose_content.count() > 0:
             response_text = await prose_content.inner_text()
         else:
@@ -294,8 +295,8 @@ These models use transformer architecture with billions of parameters.
 
         # Look for citations - multiple possible formats
         citation_selectors = [
-            '[data-citation]',
-            '.citation',
+            "[data-citation]",
+            ".citation",
             '[data-testid="source-card"]',
             'a[href*="chunk"]',
             '[data-testid="citation"]',
@@ -342,7 +343,7 @@ These models use transformer architecture with billions of parameters.
             if "[1]" in response_text or "[2]" in response_text:
                 print("[TEST] Inline citations found in response text")
                 # Try to find clickable inline citations
-                citations = page.locator('.citation-link, [data-citation-id]')
+                citations = page.locator(".citation-link, [data-citation-id]")
         else:
             print("[TEST] Citations element found")
 
@@ -357,8 +358,8 @@ These models use transformer architecture with billions of parameters.
                 '[role="dialog"], '
                 '[data-testid="citation-panel"], '
                 '[data-testid="source-panel"], '
-                '.source-preview, '
-                '.citation-details'
+                ".source-preview, "
+                ".citation-details"
             )
 
             try:
@@ -371,10 +372,10 @@ These models use transformer architecture with billions of parameters.
                 print(f"[TEST] Citation panel content: {panel_text[:100]}...")
 
                 # Close panel if possible
-                close_button = citation_panel.first.locator('button[aria-label="Close"]').or_(
-                    citation_panel.first.get_by_text("Close")
-                ).or_(
-                    citation_panel.first.get_by_text("x")
+                close_button = (
+                    citation_panel.first.locator('button[aria-label="Close"]')
+                    .or_(citation_panel.first.get_by_text("Close"))
+                    .or_(citation_panel.first.get_by_text("x"))
                 )
                 if await close_button.count() > 0:
                     await close_button.first.click()
@@ -413,12 +414,11 @@ These models use transformer architecture with billions of parameters.
         await asyncio.sleep(15)
 
         # Look for follow-up questions component
-        follow_up_section = page.locator('[data-testid="follow-up-questions"]').or_(
-            page.locator('.follow-up-questions')
-        ).or_(
-            page.locator('[aria-label*="follow"]')
-        ).or_(
-            page.get_by_text(re.compile(r"Related questions|Also ask|Follow-up", re.I))
+        follow_up_section = (
+            page.locator('[data-testid="follow-up-questions"]')
+            .or_(page.locator(".follow-up-questions"))
+            .or_(page.locator('[aria-label*="follow"]'))
+            .or_(page.get_by_text(re.compile(r"Related questions|Also ask|Follow-up", re.I)))
         )
 
         try:
@@ -426,7 +426,7 @@ These models use transformer architecture with billions of parameters.
             print("[TEST] Follow-up questions section visible")
 
             # Find clickable questions
-            follow_up_buttons = follow_up_section.locator('button, a')
+            follow_up_buttons = follow_up_section.locator("button, a")
             button_count = await follow_up_buttons.count()
 
             if button_count > 0:
@@ -515,9 +515,7 @@ These models use transformer architecture with billions of parameters.
 
         # Alternative: Check if previous message is still visible
         user_messages = page.locator(
-            '[data-role="user"], '
-            '.message-user, '
-            '[data-testid="user-message"]'
+            '[data-role="user"], ' ".message-user, " '[data-testid="user-message"]'
         )
 
         message_count = await user_messages.count()
@@ -562,7 +560,9 @@ These models use transformer architecture with billions of parameters.
         chat_input = page.locator('[data-testid="message-input"]')
         await expect(chat_input).to_be_visible(timeout=10000)
 
-        await chat_input.fill("What are the key concepts in machine learning and who are the pioneers?")
+        await chat_input.fill(
+            "What are the key concepts in machine learning and who are the pioneers?"
+        )
 
         submit_button = page.locator('[data-testid="send-button"]')
         await submit_button.click()
@@ -572,10 +572,10 @@ These models use transformer architecture with billions of parameters.
         # Step 3: Verify streaming starts
         streaming_started = False
         try:
-            streaming_indicator = page.locator('[data-streaming="true"]').or_(
-                page.locator('.typing-indicator')
-            ).or_(
-                page.get_by_text(re.compile(r"Thinking|Loading", re.I))
+            streaming_indicator = (
+                page.locator('[data-streaming="true"]')
+                .or_(page.locator(".typing-indicator"))
+                .or_(page.get_by_text(re.compile(r"Thinking|Loading", re.I)))
             )
             await expect(streaming_indicator.first).to_be_visible(timeout=3000)
             streaming_started = True
@@ -585,10 +585,7 @@ These models use transformer architecture with billions of parameters.
 
         # Step 4: Wait for response to appear
         response_area = page.locator(
-            '.prose, '
-            '[data-role="assistant"], '
-            '.response, '
-            '[data-streaming]'
+            ".prose, " '[data-role="assistant"], ' ".response, " "[data-streaming]"
         ).last
 
         await expect(response_area).to_be_visible(timeout=60000)
@@ -604,7 +601,7 @@ These models use transformer architecture with billions of parameters.
             pass
 
         # Get prose content (the actual answer, not the query in h1)
-        prose_content = response_area.locator('.prose.prose-lg').first
+        prose_content = response_area.locator(".prose.prose-lg").first
         if await prose_content.count() > 0:
             response_text = await prose_content.inner_text()
         else:
@@ -614,18 +611,14 @@ These models use transformer architecture with billions of parameters.
 
         # Step 6: Check for citations
         citations = page.locator(
-            '[data-testid="source-card"], '
-            '[data-citation], '
-            '.citation, '
-            '.source-card'
+            '[data-testid="source-card"], ' "[data-citation], " ".citation, " ".source-card"
         )
         citation_count = await citations.count()
         print(f"[STEP 6] Found {citation_count} citation(s)")
 
         # Step 7: Check for follow-up questions
         follow_ups = page.locator(
-            '[data-testid="follow-up-questions"] button, '
-            '.follow-up-questions button'
+            '[data-testid="follow-up-questions"] button, ' ".follow-up-questions button"
         )
         followup_count = await follow_ups.count()
         print(f"[STEP 7] Found {followup_count} follow-up question(s)")

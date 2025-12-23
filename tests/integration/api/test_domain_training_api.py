@@ -74,22 +74,22 @@ def sample_domain():
         "llm_model": "qwen3:32b",
         "entity_prompt": "Extract technical entities like classes, functions, APIs",
         "relation_prompt": "Extract relationships between technical components",
-        "entity_examples": json.dumps([
-            {"text": "FastAPI", "label": "API_Framework"},
-            {"text": "Pydantic", "label": "Validation_Library"}
-        ]),
-        "relation_examples": json.dumps([
-            {"head": "FastAPI", "relation": "BUILT_WITH", "tail": "Pydantic"}
-        ]),
+        "entity_examples": json.dumps(
+            [
+                {"text": "FastAPI", "label": "API_Framework"},
+                {"text": "Pydantic", "label": "Validation_Library"},
+            ]
+        ),
+        "relation_examples": json.dumps(
+            [{"head": "FastAPI", "relation": "BUILT_WITH", "tail": "Pydantic"}]
+        ),
         "training_samples": 50,
-        "training_metrics": json.dumps({
-            "entity_f1": 0.89,
-            "relation_f1": 0.82,
-            "extraction_accuracy": 0.91
-        }),
+        "training_metrics": json.dumps(
+            {"entity_f1": 0.89, "relation_f1": 0.82, "extraction_accuracy": 0.91}
+        ),
         "created_at": datetime.now(UTC).isoformat(),
         "trained_at": datetime.now(UTC).isoformat(),
-        "updated_at": datetime.now(UTC).isoformat()
+        "updated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -110,7 +110,7 @@ def general_domain():
         "training_metrics": "{}",
         "created_at": datetime.now(UTC).isoformat(),
         "trained_at": None,
-        "updated_at": datetime.now(UTC).isoformat()
+        "updated_at": datetime.now(UTC).isoformat(),
     }
 
 
@@ -125,24 +125,24 @@ def training_log():
         "completed_at": datetime.now(UTC).isoformat(),
         "progress_percent": 100.0,
         "current_step": "Validation complete",
-        "log_messages": json.dumps([
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "level": "INFO",
-                "message": "Training started"
-            },
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "level": "INFO",
-                "message": "Training completed with F1=0.89"
-            }
-        ]),
-        "metrics": json.dumps({
-            "entity_f1": 0.89,
-            "relation_f1": 0.82,
-            "extraction_accuracy": 0.91
-        }),
-        "error_message": None
+        "log_messages": json.dumps(
+            [
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "level": "INFO",
+                    "message": "Training started",
+                },
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "level": "INFO",
+                    "message": "Training completed with F1=0.89",
+                },
+            ]
+        ),
+        "metrics": json.dumps(
+            {"entity_f1": 0.89, "relation_f1": 0.82, "extraction_accuracy": 0.91}
+        ),
+        "error_message": None,
     }
 
 
@@ -160,8 +160,8 @@ def test_create_domain_success(client, mock_domain_repository, sample_domain):
         json={
             "name": "tech_docs",
             "description": "Technical documentation for APIs and software libraries",
-            "llm_model": "qwen3:32b"
-        }
+            "llm_model": "qwen3:32b",
+        },
     )
 
     assert response.status_code == 201
@@ -179,11 +179,7 @@ def test_create_domain_success(client, mock_domain_repository, sample_domain):
 def test_create_domain_missing_name(client, mock_domain_repository):
     """Test domain creation fails with missing name."""
     response = client.post(
-        "/admin/domains/",
-        json={
-            "description": "Technical documentation",
-            "llm_model": "qwen3:32b"
-        }
+        "/admin/domains/", json={"description": "Technical documentation", "llm_model": "qwen3:32b"}
     )
 
     assert response.status_code == 422  # Validation error
@@ -194,13 +190,7 @@ def test_create_domain_missing_name(client, mock_domain_repository):
 
 def test_create_domain_missing_description(client, mock_domain_repository):
     """Test domain creation fails with missing description."""
-    response = client.post(
-        "/admin/domains/",
-        json={
-            "name": "tech_docs",
-            "llm_model": "qwen3:32b"
-        }
-    )
+    response = client.post("/admin/domains/", json={"name": "tech_docs", "llm_model": "qwen3:32b"})
 
     assert response.status_code == 422
 
@@ -209,11 +199,7 @@ def test_create_domain_short_description(client, mock_domain_repository):
     """Test domain creation fails with too short description."""
     response = client.post(
         "/admin/domains/",
-        json={
-            "name": "tech_docs",
-            "description": "Short",
-            "llm_model": "qwen3:32b"
-        }
+        json={"name": "tech_docs", "description": "Short", "llm_model": "qwen3:32b"},
     )
 
     assert response.status_code == 422
@@ -226,8 +212,8 @@ def test_create_domain_invalid_name_format(client, mock_domain_repository):
         json={
             "name": "Tech Docs",  # Invalid: spaces and uppercase
             "description": "Technical documentation for APIs and software",
-            "llm_model": "qwen3:32b"
-        }
+            "llm_model": "qwen3:32b",
+        },
     )
 
     assert response.status_code == 422
@@ -242,8 +228,8 @@ def test_create_domain_default_llm_model(client, mock_domain_repository, sample_
         "/admin/domains/",
         json={
             "name": "tech_docs",
-            "description": "Technical documentation for APIs and software libraries"
-        }
+            "description": "Technical documentation for APIs and software libraries",
+        },
     )
 
     assert response.status_code == 201
@@ -365,10 +351,7 @@ def test_start_training_success(client, mock_domain_repository, sample_domain, t
         {"text": "Neo4j is a graph database", "entities": ["Neo4j"], "relations": []},
     ]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 200
     data = response.json()
@@ -387,13 +370,15 @@ def test_start_training_domain_not_found(client, mock_domain_repository):
     mock_domain_repository.get_domain.return_value = None
 
     samples = [
-        {"text": "Sample text with sufficient length for validation", "entities": ["Sample"], "relations": []} for _ in range(5)
+        {
+            "text": "Sample text with sufficient length for validation",
+            "entities": ["Sample"],
+            "relations": [],
+        }
+        for _ in range(5)
     ]
 
-    response = client.post(
-        "/admin/domains/nonexistent/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/nonexistent/train", json={"samples": samples})
 
     assert response.status_code == 404
     response_body = str(response.json())
@@ -406,13 +391,15 @@ def test_start_training_already_running(client, mock_domain_repository, sample_d
     mock_domain_repository.get_domain.return_value = sample_domain
 
     samples = [
-        {"text": "Sample text with sufficient length for validation", "entities": ["Sample"], "relations": []} for _ in range(5)
+        {
+            "text": "Sample text with sufficient length for validation",
+            "entities": ["Sample"],
+            "relations": [],
+        }
+        for _ in range(5)
     ]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 409
     response_body = str(response.json())
@@ -423,35 +410,37 @@ def test_start_training_insufficient_samples(client, mock_domain_repository, sam
     """Test training fails with fewer than 5 samples."""
     mock_domain_repository.get_domain.return_value = sample_domain
 
-    samples = [
-        {"text": "Only one sample", "entities": ["sample"], "relations": []}
-    ]
+    samples = [{"text": "Only one sample", "entities": ["sample"], "relations": []}]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 422
     response_body = str(response.json())
-    assert "at least" in response_body.lower() or "samples" in response_body.lower() or "minimum" in response_body.lower()
+    assert (
+        "at least" in response_body.lower()
+        or "samples" in response_body.lower()
+        or "minimum" in response_body.lower()
+    )
 
 
-def test_start_training_exactly_five_samples(client, mock_domain_repository, sample_domain, training_log):
+def test_start_training_exactly_five_samples(
+    client, mock_domain_repository, sample_domain, training_log
+):
     """Test training succeeds with exactly 5 samples (minimum)."""
     sample_domain["status"] = "ready"
     mock_domain_repository.get_domain.return_value = sample_domain
     mock_domain_repository.create_training_log.return_value = training_log
 
     samples = [
-        {"text": f"Sample {i} with sufficient text length for validation", "entities": [f"Entity{i}"], "relations": []}
+        {
+            "text": f"Sample {i} with sufficient text length for validation",
+            "entities": [f"Entity{i}"],
+            "relations": [],
+        }
         for i in range(5)
     ]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 200
     assert "training_run_id" in response.json()
@@ -464,14 +453,10 @@ def test_start_training_many_samples(client, mock_domain_repository, sample_doma
     mock_domain_repository.create_training_log.return_value = training_log
 
     samples = [
-        {"text": f"Sample {i}", "entities": [f"Entity{i}"], "relations": []}
-        for i in range(100)
+        {"text": f"Sample {i}", "entities": [f"Entity{i}"], "relations": []} for i in range(100)
     ]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 200
 
@@ -487,14 +472,16 @@ def test_get_training_status_running(client, mock_domain_repository):
         "status": "running",
         "progress_percent": 45.0,
         "current_step": "Optimizing entity extraction...",
-        "log_messages": json.dumps([
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "level": "INFO",
-                "message": "Started entity extraction optimization"
-            }
-        ]),
-        "metrics": None
+        "log_messages": json.dumps(
+            [
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "level": "INFO",
+                    "message": "Started entity extraction optimization",
+                }
+            ]
+        ),
+        "metrics": None,
     }
 
     response = client.get("/admin/domains/tech_docs/training-status")
@@ -513,7 +500,7 @@ def test_get_training_status_completed(client, mock_domain_repository, training_
         "progress_percent": 100.0,
         "current_step": "Training completed successfully",
         "log_messages": training_log["log_messages"],
-        "metrics": training_log["metrics"]
+        "metrics": training_log["metrics"],
     }
     mock_domain_repository.get_latest_training_log.return_value = training_log_data
 
@@ -544,15 +531,17 @@ def test_get_training_status_failed(client, mock_domain_repository):
         "status": "failed",
         "progress_percent": 35.0,
         "current_step": "Entity extraction optimization",
-        "log_messages": json.dumps([
-            {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "level": "ERROR",
-                "message": "CUDA out of memory"
-            }
-        ]),
+        "log_messages": json.dumps(
+            [
+                {
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "level": "ERROR",
+                    "message": "CUDA out of memory",
+                }
+            ]
+        ),
         "metrics": None,
-        "error_message": "CUDA out of memory"
+        "error_message": "CUDA out of memory",
     }
 
     response = client.get("/admin/domains/tech_docs/training-status")
@@ -585,11 +574,13 @@ def test_delete_domain_success(client, mock_domain_repository, sample_domain):
     with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
         mock_ns_instance = MagicMock()
         mock_ns_mgr.return_value = mock_ns_instance
-        mock_ns_instance.delete_namespace = AsyncMock(return_value={
-            "qdrant_points_deleted": 150,
-            "neo4j_nodes_deleted": 75,
-            "neo4j_relationships_deleted": 120,
-        })
+        mock_ns_instance.delete_namespace = AsyncMock(
+            return_value={
+                "qdrant_points_deleted": 150,
+                "neo4j_nodes_deleted": 75,
+                "neo4j_relationships_deleted": 120,
+            }
+        )
 
         # Mock BM25 cleanup
         with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
@@ -631,8 +622,10 @@ def test_delete_general_domain_fails(client, mock_domain_repository):
     response = client.delete("/admin/domains/general")
 
     assert response.status_code == 400
-    assert "cannot delete" in response.json()["detail"].lower() or \
-           "default" in response.json()["detail"].lower()
+    assert (
+        "cannot delete" in response.json()["detail"].lower()
+        or "default" in response.json()["detail"].lower()
+    )
 
     # Verify get_domain was not called (rejected before checking existence)
     mock_domain_repository.get_domain.assert_not_called()
@@ -649,8 +642,10 @@ def test_delete_domain_training_in_progress(client, mock_domain_repository, samp
     response = client.delete("/admin/domains/tech_docs")
 
     assert response.status_code == 409
-    assert "training" in response.json()["detail"].lower() or \
-           "in progress" in response.json()["detail"].lower()
+    assert (
+        "training" in response.json()["detail"].lower()
+        or "in progress" in response.json()["detail"].lower()
+    )
 
     # Verify deletion was not attempted
     mock_domain_repository.delete_domain.assert_not_called()
@@ -703,11 +698,13 @@ def test_delete_domain_empty_namespace(client, mock_domain_repository, sample_do
     with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
         mock_ns_instance = MagicMock()
         mock_ns_mgr.return_value = mock_ns_instance
-        mock_ns_instance.delete_namespace = AsyncMock(return_value={
-            "qdrant_points_deleted": 0,
-            "neo4j_nodes_deleted": 0,
-            "neo4j_relationships_deleted": 0,
-        })
+        mock_ns_instance.delete_namespace = AsyncMock(
+            return_value={
+                "qdrant_points_deleted": 0,
+                "neo4j_nodes_deleted": 0,
+                "neo4j_relationships_deleted": 0,
+            }
+        )
 
         with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
             mock_bm25_instance = MagicMock()
@@ -732,7 +729,7 @@ def test_get_available_models_success(client):
     mock_models = [
         {"name": "qwen3:32b", "size": 20000000000},
         {"name": "llama3.2:8b", "size": 5000000000},
-        {"name": "llama2:7b", "size": 4000000000}
+        {"name": "llama2:7b", "size": 4000000000},
     ]
 
     with patch("httpx.AsyncClient") as mock_http:
@@ -799,15 +796,15 @@ def test_classify_document_success(client, mock_domain_repository):
         mock_classifier.load_domains = AsyncMock()
         mock_classifier.classify_document.return_value = [
             {"domain": "tech_docs", "score": 0.89},
-            {"domain": "general", "score": 0.45}
+            {"domain": "general", "score": 0.45},
         ]
 
         response = client.post(
             "/admin/domains/classify",
             params={
                 "text": "This document describes API endpoints and FastAPI best practices",
-                "top_k": 3
-            }
+                "top_k": 3,
+            },
         )
 
         assert response.status_code == 200
@@ -819,10 +816,7 @@ def test_classify_document_success(client, mock_domain_repository):
 
 def test_classify_document_empty_text(client):
     """Test document classification fails with empty text."""
-    response = client.post(
-        "/admin/domains/classify",
-        params={"text": "", "top_k": 3}
-    )
+    response = client.post("/admin/domains/classify", params={"text": "", "top_k": 3})
 
     assert response.status_code == 422
 
@@ -834,14 +828,9 @@ def test_classify_document_very_short_text(client):
         mock_classifier_factory.return_value = mock_classifier
 
         mock_classifier.load_domains = AsyncMock()
-        mock_classifier.classify_document.return_value = [
-            {"domain": "general", "score": 0.5}
-        ]
+        mock_classifier.classify_document.return_value = [{"domain": "general", "score": 0.5}]
 
-        response = client.post(
-            "/admin/domains/classify",
-            params={"text": "API", "top_k": 1}
-        )
+        response = client.post("/admin/domains/classify", params={"text": "API", "top_k": 1})
 
         assert response.status_code == 200
         data = response.json()
@@ -859,12 +848,12 @@ def test_classify_document_custom_top_k(client):
             {"domain": "tech_docs", "score": 0.89},
             {"domain": "data_science", "score": 0.67},
             {"domain": "general", "score": 0.45},
-            {"domain": "finance", "score": 0.32}
+            {"domain": "finance", "score": 0.32},
         ]
 
         response = client.post(
             "/admin/domains/classify",
-            params={"text": "Machine learning with Python and TensorFlow", "top_k": 5}
+            params={"text": "Machine learning with Python and TensorFlow", "top_k": 5},
         )
 
         assert response.status_code == 200
@@ -874,20 +863,14 @@ def test_classify_document_custom_top_k(client):
 
 def test_classify_document_invalid_top_k(client):
     """Test document classification fails with invalid top_k."""
-    response = client.post(
-        "/admin/domains/classify",
-        params={"text": "Some document", "top_k": 0}
-    )
+    response = client.post("/admin/domains/classify", params={"text": "Some document", "top_k": 0})
 
     assert response.status_code == 422
 
 
 def test_classify_document_negative_top_k(client):
     """Test document classification fails with negative top_k."""
-    response = client.post(
-        "/admin/domains/classify",
-        params={"text": "Some document", "top_k": -1}
-    )
+    response = client.post("/admin/domains/classify", params={"text": "Some document", "top_k": -1})
 
     assert response.status_code == 422
 
@@ -899,10 +882,7 @@ def test_classify_document_negative_top_k(client):
 
 def test_api_returns_400_on_validation_error(client):
     """Test API returns proper validation error responses."""
-    response = client.post(
-        "/admin/domains/",
-        json={"name": "tech_docs"}  # Missing required fields
-    )
+    response = client.post("/admin/domains/", json={"name": "tech_docs"})  # Missing required fields
 
     assert response.status_code == 422
     data = response.json()
@@ -925,14 +905,9 @@ def test_api_returns_409_on_conflict(client, mock_domain_repository, sample_doma
     sample_domain["status"] = "training"
     mock_domain_repository.get_domain.return_value = sample_domain
 
-    samples = [
-        {"text": "Sample", "entities": ["Sample"], "relations": []} for _ in range(5)
-    ]
+    samples = [{"text": "Sample", "entities": ["Sample"], "relations": []} for _ in range(5)]
 
-    response = client.post(
-        "/admin/domains/tech_docs/train",
-        json={"samples": samples}
-    )
+    response = client.post("/admin/domains/tech_docs/train", json={"samples": samples})
 
     assert response.status_code == 409
 
@@ -961,8 +936,8 @@ def test_create_domain_returns_201_created(client, mock_domain_repository, sampl
         json={
             "name": "tech_docs",
             "description": "Technical documentation for APIs and software libraries",
-            "llm_model": "qwen3:32b"
-        }
+            "llm_model": "qwen3:32b",
+        },
     )
 
     assert response.status_code == 201
@@ -981,11 +956,13 @@ def test_delete_domain_returns_deletion_stats(client, mock_domain_repository, sa
     with patch("src.core.namespace.get_namespace_manager") as mock_ns_mgr:
         mock_ns_instance = MagicMock()
         mock_ns_mgr.return_value = mock_ns_instance
-        mock_ns_instance.delete_namespace = AsyncMock(return_value={
-            "qdrant_points_deleted": 42,
-            "neo4j_nodes_deleted": 28,
-            "neo4j_relationships_deleted": 50,
-        })
+        mock_ns_instance.delete_namespace = AsyncMock(
+            return_value={
+                "qdrant_points_deleted": 42,
+                "neo4j_nodes_deleted": 28,
+                "neo4j_relationships_deleted": 50,
+            }
+        )
 
         with patch("src.components.vector_search.bm25_retrieval.get_bm25_retrieval") as mock_bm25:
             mock_bm25_instance = MagicMock()

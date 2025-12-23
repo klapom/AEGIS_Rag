@@ -27,9 +27,7 @@ class TestCypherQueryBuilder:
     def test_match_with_where(self):
         """Test MATCH with WHERE clause."""
         builder = CypherQueryBuilder()
-        result = (
-            builder.match("(n:base)").where("n.name = $name", name="John").return_("n").build()
-        )
+        result = builder.match("(n:base)").where("n.name = $name", name="John").return_("n").build()
 
         assert "MATCH (n:base)" in result["query"]
         assert "WHERE (n.name = $name)" in result["query"]
@@ -103,9 +101,7 @@ class TestCypherQueryBuilder:
     def test_create_node(self):
         """Test CREATE clause."""
         builder = CypherQueryBuilder()
-        result = (
-            builder.create("(n:base {name: $name})").param("name", "Test").return_("n").build()
-        )
+        result = builder.create("(n:base {name: $name})").param("name", "Test").return_("n").build()
 
         assert "CREATE (n:base {name: $name})" in result["query"]
         assert result["parameters"]["name"] == "Test"
@@ -113,9 +109,7 @@ class TestCypherQueryBuilder:
     def test_merge_node(self):
         """Test MERGE clause."""
         builder = CypherQueryBuilder()
-        result = (
-            builder.merge("(n:base {name: $name})").param("name", "Test").return_("n").build()
-        )
+        result = builder.merge("(n:base {name: $name})").param("name", "Test").return_("n").build()
 
         assert "MERGE (n:base {name: $name})" in result["query"]
         assert result["parameters"]["name"] == "Test"

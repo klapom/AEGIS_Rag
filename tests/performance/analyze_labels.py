@@ -18,7 +18,7 @@ for i, t in enumerate(data["texts"][:30]):
     label = t.get("label", "?")
     text = t.get("text", "")[:60].replace("\n", " ")
     page = t.get("prov", [{}])[0].get("page_no", "?") if t.get("prov") else "?"
-    print(f"[{i:3d}] page={page} label={label:12s} text=\"{text}\"")
+    print(f'[{i:3d}] page={page} label={label:12s} text="{text}"')
 
 print("\n=== Suche nach 'Theory' ===")
 for i, t in enumerate(data["texts"]):

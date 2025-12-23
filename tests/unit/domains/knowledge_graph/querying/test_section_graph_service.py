@@ -347,6 +347,7 @@ class TestSectionGraphService:
     @pytest.mark.asyncio
     async def test_performance_target(self, section_service, mock_neo4j_client):
         """Test that section queries meet <100ms performance target."""
+
         # Simulate realistic Neo4j response time (10-50ms)
         async def mock_execute(*args, **kwargs):
             await AsyncMock(return_value=None)()
@@ -545,3 +546,319 @@ class TestQueryTemplates:
         assert "count(e)" in query
         assert "DEFINES" in query
         assert params["document_id"] == "doc_123"
+
+
+class TestSectionHierarchy:
+    """Test section hierarchy methods (Sprint 62 Feature 62.6)."""
+
+    @pytest.mark.asyncio
+    async def test_create_section_hierarchy(self, section_service, mock_neo4j_client):
+        """Test creating HAS_SUBSECTION relationships."""
+        # execute_write is async and needs AsyncMock
+        mock_neo4j_client.execute_write = AsyncMock(
+            return_value={
+                "relationships_created": 5,
+            }
+        )
+
+        stats = await section_service.create_section_hierarchy(document_id="doc_123")
+
+        assert stats["hierarchical_relationships_created"] == 5
+
+        # Verify query was called
+        mock_neo4j_client.execute_write.assert_called_once()
+        call_args = mock_neo4j_client.execute_write.call_args
+        query = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "HAS_SUBSECTION" in query
+        assert "MERGE" in query
+        assert params["document_id"] == "doc_123"
+
+    @pytest.mark.asyncio
+    async def test_get_parent_section(self, section_service, mock_neo4j_client):
+        """Test getting parent section of a child section."""
+        mock_records = [
+            {
+                "section_heading": "1.2",
+                "section_level": 2,
+                "section_page": 3,
+                "section_order": 5,
+            }
+        ]
+        mock_neo4j_client.execute_read.return_value = mock_records
+
+        parent = await section_service.get_parent_section(
+            section_heading="1.2.3",
+            document_id="doc_123",
+        )
+
+        assert parent is not None
+        assert parent.section_heading == "1.2"
+        assert parent.section_level == 2
+        assert parent.section_page == 3
+
+        # Verify query
+        call_args = mock_neo4j_client.execute_read.call_args
+        query = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "HAS_SUBSECTION" in query
+        assert params["section_heading"] == "1.2.3"
+        assert params["document_id"] == "doc_123"
+
+    @pytest.mark.asyncio
+    async def test_get_parent_section_no_parent(self, section_service, mock_neo4j_client):
+        """Test getting parent section when no parent exists (root section)."""
+        mock_neo4j_client.execute_read.return_value = []
+
+        parent = await section_service.get_parent_section(
+            section_heading="1",
+            document_id="doc_123",
+        )
+
+        assert parent is None
+
+    @pytest.mark.asyncio
+    async def test_get_child_sections(self, section_service, mock_neo4j_client):
+        """Test getting child sections (subsections) of a parent."""
+        mock_records = [
+            {
+                "section_heading": "1.1",
+                "section_level": 2,
+                "section_page": 2,
+                "section_order": 1,
+            },
+            {
+                "section_heading": "1.2",
+                "section_level": 2,
+                "section_page": 3,
+                "section_order": 2,
+            },
+            {
+                "section_heading": "1.3",
+                "section_level": 2,
+                "section_page": 4,
+                "section_order": 3,
+            },
+        ]
+        mock_neo4j_client.execute_read.return_value = mock_records
+
+        children = await section_service.get_child_sections(
+            section_heading="1",
+            document_id="doc_123",
+        )
+
+        assert len(children) == 3
+        assert all(isinstance(c, SectionMetadataResult) for c in children)
+        assert children[0].section_heading == "1.1"
+        assert children[1].section_heading == "1.2"
+        assert children[2].section_heading == "1.3"
+
+        # Verify query
+        call_args = mock_neo4j_client.execute_read.call_args
+        query = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "HAS_SUBSECTION" in query
+        assert "ORDER BY" in query
+        assert params["section_heading"] == "1"
+        assert params["document_id"] == "doc_123"
+
+    @pytest.mark.asyncio
+    async def test_get_child_sections_no_children(self, section_service, mock_neo4j_client):
+        """Test getting child sections when no children exist (leaf section)."""
+        mock_neo4j_client.execute_read.return_value = []
+
+        children = await section_service.get_child_sections(
+            section_heading="1.2.3",
+            document_id="doc_123",
+        )
+
+        assert len(children) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_section_ancestry(self, section_service, mock_neo4j_client):
+        """Test getting full ancestry path from root to leaf."""
+        mock_records = [
+            {
+                "ancestry_nodes": [
+                    {
+                        "heading": "1",
+                        "level": 1,
+                        "page_no": 1,
+                        "order": 0,
+                    },
+                    {
+                        "heading": "1.2",
+                        "level": 2,
+                        "page_no": 3,
+                        "order": 5,
+                    },
+                    {
+                        "heading": "1.2.3",
+                        "level": 3,
+                        "page_no": 5,
+                        "order": 10,
+                    },
+                ]
+            }
+        ]
+        mock_neo4j_client.execute_read.return_value = mock_records
+
+        ancestry = await section_service.get_section_ancestry(
+            section_heading="1.2.3",
+            document_id="doc_123",
+        )
+
+        assert len(ancestry) == 3
+        assert ancestry[0].section_heading == "1"
+        assert ancestry[1].section_heading == "1.2"
+        assert ancestry[2].section_heading == "1.2.3"
+
+        # Verify levels are correct
+        assert ancestry[0].section_level == 1
+        assert ancestry[1].section_level == 2
+        assert ancestry[2].section_level == 3
+
+        # Verify query
+        call_args = mock_neo4j_client.execute_read.call_args
+        query = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "HAS_SUBSECTION*0.." in query or "HAS_SUBSECTION*" in query
+        assert "nodes(path)" in query
+        assert params["section_heading"] == "1.2.3"
+        assert params["document_id"] == "doc_123"
+
+    @pytest.mark.asyncio
+    async def test_get_section_ancestry_root_section(self, section_service, mock_neo4j_client):
+        """Test getting ancestry for root section (returns only itself)."""
+        # First query returns no path (root section has no parents)
+        # Second query returns the section itself
+        mock_neo4j_client.execute_read.side_effect = [
+            [],  # No ancestry path found
+            [
+                {
+                    "section_heading": "1",
+                    "section_level": 1,
+                    "section_page": 1,
+                    "section_order": 0,
+                }
+            ],  # Section itself
+        ]
+
+        ancestry = await section_service.get_section_ancestry(
+            section_heading="1",
+            document_id="doc_123",
+        )
+
+        assert len(ancestry) == 1
+        assert ancestry[0].section_heading == "1"
+        assert ancestry[0].section_level == 1
+
+    @pytest.mark.asyncio
+    async def test_multi_level_hierarchy(self, section_service, mock_neo4j_client):
+        """Test multi-level hierarchy (3+ levels deep)."""
+        # Create hierarchy: 1 → 1.2 → 1.2.3 → 1.2.3.4
+        mock_records = [
+            {
+                "ancestry_nodes": [
+                    {"heading": "1", "level": 1, "page_no": 1, "order": 0},
+                    {"heading": "1.2", "level": 2, "page_no": 2, "order": 1},
+                    {"heading": "1.2.3", "level": 3, "page_no": 3, "order": 2},
+                    {"heading": "1.2.3.4", "level": 4, "page_no": 4, "order": 3},
+                ]
+            }
+        ]
+        mock_neo4j_client.execute_read.return_value = mock_records
+
+        ancestry = await section_service.get_section_ancestry(
+            section_heading="1.2.3.4",
+            document_id="doc_123",
+        )
+
+        assert len(ancestry) == 4
+        headings = [s.section_heading for s in ancestry]
+        assert headings == ["1", "1.2", "1.2.3", "1.2.3.4"]
+
+        # Verify levels increase sequentially
+        levels = [s.section_level for s in ancestry]
+        assert levels == [1, 2, 3, 4]
+
+    @pytest.mark.asyncio
+    async def test_hierarchy_performance(self, section_service, mock_neo4j_client):
+        """Test that hierarchy queries meet performance targets."""
+
+        async def mock_execute(*args, **kwargs):
+            await AsyncMock(return_value=None)()
+            return []
+
+        mock_neo4j_client.execute_read.side_effect = mock_execute
+
+        # Test parent query performance
+        start = time.perf_counter()
+        await section_service.get_parent_section(
+            section_heading="1.2.3",
+            document_id="doc_123",
+        )
+        duration_ms = (time.perf_counter() - start) * 1000
+        assert duration_ms < 100, f"Parent query took {duration_ms:.2f}ms, target is <100ms"
+
+        # Test children query performance
+        start = time.perf_counter()
+        await section_service.get_child_sections(
+            section_heading="1",
+            document_id="doc_123",
+        )
+        duration_ms = (time.perf_counter() - start) * 1000
+        assert duration_ms < 100, f"Children query took {duration_ms:.2f}ms, target is <100ms"
+
+    @pytest.mark.asyncio
+    async def test_orphan_section_handling(self, section_service, mock_neo4j_client):
+        """Test handling of orphan sections (sections without proper parent)."""
+        # Simulate orphan section "2.3" where parent "2" doesn't exist
+        mock_neo4j_client.execute_read.return_value = []
+
+        parent = await section_service.get_parent_section(
+            section_heading="2.3",
+            document_id="doc_123",
+        )
+
+        # Should return None (no parent found)
+        assert parent is None
+
+    @pytest.mark.asyncio
+    async def test_section_heading_edge_cases(self, section_service, mock_neo4j_client):
+        """Test edge cases in section heading patterns."""
+        # Test various heading formats
+        test_cases = [
+            ("1.2.3.4.5", "1.2.3.4"),  # Deep nesting
+            ("A.1.2", "A.1"),  # Letter prefix
+            ("Chapter 1.Section 2", None),  # Non-standard format (should return None)
+        ]
+
+        for child_heading, expected_parent in test_cases:
+            if expected_parent:
+                mock_neo4j_client.execute_read.return_value = [
+                    {
+                        "section_heading": expected_parent,
+                        "section_level": 1,
+                        "section_page": 1,
+                        "section_order": 0,
+                    }
+                ]
+            else:
+                mock_neo4j_client.execute_read.return_value = []
+
+            parent = await section_service.get_parent_section(
+                section_heading=child_heading,
+                document_id="doc_123",
+            )
+
+            if expected_parent:
+                assert parent is not None
+                # Note: The actual parent heading is determined by Neo4j query
+                # We're just verifying the query was executed
+            else:
+                assert parent is None

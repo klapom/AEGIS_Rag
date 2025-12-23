@@ -1,4 +1,5 @@
 """Debug script to test RELATES_TO extraction directly."""
+
 import asyncio
 import os
 import sys
@@ -75,6 +76,7 @@ async def test_relates_to_extraction():
     except Exception as e:
         print(f"   ERROR in RelationExtractor: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -94,6 +96,7 @@ async def test_relates_to_extraction():
     except Exception as e:
         print(f"   ERROR in _store_relations_to_neo4j: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
         return
 

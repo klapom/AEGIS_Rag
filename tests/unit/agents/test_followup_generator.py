@@ -596,9 +596,7 @@ async def test_generate_followup_questions_async_exception():
     with patch("src.agents.followup_generator.retrieve_conversation_context") as mock_retrieve:
         mock_retrieve.return_value = stored_context
 
-        with patch(
-            "src.agents.followup_generator.generate_followup_questions"
-        ) as mock_generate:
+        with patch("src.agents.followup_generator.generate_followup_questions") as mock_generate:
             mock_generate.side_effect = Exception("LLM service unavailable")
 
             questions = await generate_followup_questions_async(session_id)

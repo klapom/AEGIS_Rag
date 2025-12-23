@@ -165,7 +165,9 @@ class TestCosineSimilarity:
         """Test similarity computation falls back without embedder."""
         # Mock is_available as a property that returns False
         with patch.object(
-            type(semantic_matcher), "is_available", new_callable=lambda: property(lambda self: False)
+            type(semantic_matcher),
+            "is_available",
+            new_callable=lambda: property(lambda self: False),
         ):
             sim = semantic_matcher.cosine_similarity("hello world", "hello earth")
 
@@ -175,7 +177,9 @@ class TestCosineSimilarity:
     def test_similarity_token_overlap_fallback(self, semantic_matcher):
         """Test token overlap fallback similarity."""
         with patch.object(
-            type(semantic_matcher), "is_available", new_callable=lambda: property(lambda self: False)
+            type(semantic_matcher),
+            "is_available",
+            new_callable=lambda: property(lambda self: False),
         ):
             # Identical tokens
             sim1 = semantic_matcher.cosine_similarity("hello world", "hello world")

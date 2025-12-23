@@ -8,7 +8,12 @@ import json
 from collections import Counter
 from pathlib import Path
 
-json_path = Path(__file__).parent / "results" / "multi_format_test" / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+json_path = (
+    Path(__file__).parent
+    / "results"
+    / "multi_format_test"
+    / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+)
 
 print(f"Loading: {json_path}")
 with open(json_path, encoding="utf-8") as f:
@@ -87,11 +92,24 @@ for i, t in enumerate(texts):
     if is_bold and is_short and no_period and is_paragraph:
         potential_headings.append((i, text[:70], "bold+short"))
     # Pattern 2: Short paragraph, starts uppercase, no period, no bullet
-    elif is_paragraph and is_short and starts_upper and no_period and not text.startswith(("-", "*", "•")):
+    elif (
+        is_paragraph
+        and is_short
+        and starts_upper
+        and no_period
+        and not text.startswith(("-", "*", "•"))
+    ):
         # Only add if not already in list
         if not any(p[0] == i for p in potential_headings):
             # Additional heuristic: looks like a section name
-            if len(text) < 60 or text.isupper() or any(kw in text.lower() for kw in ["kapitel", "abschnitt", "teil", "section", "chapter"]):
+            if (
+                len(text) < 60
+                or text.isupper()
+                or any(
+                    kw in text.lower()
+                    for kw in ["kapitel", "abschnitt", "teil", "section", "chapter"]
+                )
+            ):
                 potential_headings.append((i, text[:70], "heuristic"))
 
 print(f"  Bold+Short pattern: {sum(1 for p in potential_headings if p[2] == 'bold+short')}")
@@ -106,7 +124,8 @@ for idx, text, pattern in potential_headings[:50]:
 print("\n" + "=" * 70)
 print("5. RECOMMENDATIONS")
 print("=" * 70)
-print(f"""
+print(
+    f"""
 FINDINGS:
 - DOCX texts have {sum(1 for t in texts if t.get('formatting', {}).get('bold'))} bold texts
 - {len(bold_short)} are short (<100 chars) - likely headings
@@ -119,4 +138,5 @@ DOCX HEADING DETECTION STRATEGY:
 4. Fall back to heuristics for non-bold headings
 
 This would allow extracting ~{len(potential_headings)} sections from the DOCX!
-""")
+"""
+)

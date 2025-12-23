@@ -10,10 +10,10 @@ Tests for:
 Sprint 62 Feature 62.2: Multi-Section Metadata in Vector Search
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from qdrant_client.models import Filter, FieldCondition, MatchValue, MatchAny
+import pytest
+from qdrant_client.models import FieldCondition, Filter, MatchValue
 
 # ============================================================================
 # TEST: Qdrant Section Filtering
@@ -118,7 +118,6 @@ async def test_qdrant_search_multiple_section_filter():
 async def test_qdrant_search_section_filter_with_existing_filter():
     """Test that section filter combines with existing metadata filters."""
     from src.components.vector_search.qdrant_client import QdrantClient
-    from qdrant_client.models import Filter, FieldCondition, MatchValue
 
     client = QdrantClient()
 
@@ -149,7 +148,7 @@ async def test_qdrant_search_section_filter_with_existing_filter():
     client._async_client.search = AsyncMock(return_value=mock_search_result)
 
     # Execute search with both filters
-    results = await client.search(
+    await client.search(
         collection_name="test_collection",
         query_vector=[0.1] * 1024,
         limit=10,
@@ -370,7 +369,7 @@ async def test_hybrid_search_with_section_filter():
             }
         ]
 
-        results = await hybrid.hybrid_search(
+        await hybrid.hybrid_search(
             query="load balancing",
             top_k=5,
             section_filter="1.2",
@@ -489,6 +488,7 @@ async def test_search_backward_compatible_without_section_metadata():
 async def test_ingest_adaptive_chunks_includes_section_id():
     """Test that ingestion includes section_id in payload."""
     from unittest.mock import AsyncMock, MagicMock, patch
+
     from src.components.retrieval.chunking import AdaptiveChunk
 
     # Create chunk with section_id in metadata

@@ -224,7 +224,9 @@ class TestImageProcessingWithSection:
     """Test image processing with section context."""
 
     @pytest.mark.asyncio
-    async def test_process_image_with_section_success(self, vlm_service, image_with_section_context):
+    async def test_process_image_with_section_success(
+        self, vlm_service, image_with_section_context
+    ):
         """Test successful image processing with section preservation."""
         description = "A diagram showing multiple servers"
 
@@ -240,7 +242,9 @@ class TestImageProcessingWithSection:
         assert result.document_id == "doc_001"
 
     @pytest.mark.asyncio
-    async def test_process_image_with_section_filtered(self, vlm_service, image_with_section_context):
+    async def test_process_image_with_section_filtered(
+        self, vlm_service, image_with_section_context
+    ):
         """Test image processing when image is filtered out."""
         vlm_service.processor.process_image = AsyncMock(return_value=None)
 
@@ -448,7 +452,9 @@ class TestEdgeCases:
     """Test edge cases and error conditions."""
 
     @pytest.mark.asyncio
-    async def test_process_with_minimal_section_context(self, vlm_service, pil_image_mock, tmp_path):
+    async def test_process_with_minimal_section_context(
+        self, vlm_service, pil_image_mock, tmp_path
+    ):
         """Test processing with minimal section context."""
         context = ImageWithSectionContext(
             image=pil_image_mock,

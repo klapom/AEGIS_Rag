@@ -265,7 +265,9 @@ async def test_deduplicate_types_with_manual_overrides(mock_get_redis, mock_redi
 
 @pytest.mark.asyncio
 @patch("src.components.memory.get_redis_memory")
-async def test_deduplicate_types_manual_overrides_take_precedence(mock_get_redis, mock_redis_memory):
+async def test_deduplicate_types_manual_overrides_take_precedence(
+    mock_get_redis, mock_redis_memory
+):
     """Test that manual overrides take precedence over automatic normalization."""
     redis_memory, redis_client = mock_redis_memory
     mock_get_redis.return_value = redis_memory

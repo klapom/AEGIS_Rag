@@ -1,15 +1,26 @@
 /**
  * Citation Component
  * Sprint 28 Feature 28.2: Inline citations with hover previews
+ * Sprint 62 Feature 62.4: Section-aware citations with section display
  *
  * Features:
  * - Superscript [1] styling with blue color
  * - Hover tooltip with source preview
  * - Click to scroll to source card
+ * - Section information display (62.4)
+ * - Document type badge (62.4)
  */
 
 import { useState } from 'react';
+import { FileText, File, FileCode, BookOpen, Hash } from 'lucide-react';
 import type { Source } from '../../types/chat';
+import {
+  extractSectionMetadata,
+  getDocumentType,
+  formatSectionDisplay,
+  formatSectionPath,
+  type DocumentType,
+} from '../../types/section';
 
 /**
  * Extract clean text content from source text field.
@@ -66,8 +77,78 @@ interface CitationProps {
   onClickScrollTo: (sourceId: string) => void;
 }
 
+/**
+ * Sprint 62.4: Get icon component for document type
+ */
+function getDocumentTypeIcon(docType: DocumentType): React.ReactNode {
+  const iconClass = 'w-3 h-3';
+
+  switch (docType) {
+    case 'pdf':
+      return <FileText className={iconClass} />;
+    case 'docx':
+      return <File className={iconClass} />;
+    case 'md':
+      return <BookOpen className={iconClass} />;
+    case 'txt':
+    case 'html':
+      return <FileCode className={iconClass} />;
+    default:
+      return <File className={iconClass} />;
+  }
+}
+
+/**
+ * Sprint 62.4: Get color class for document type badge
+ */
+function getDocumentTypeColor(docType: DocumentType): string {
+  switch (docType) {
+    case 'pdf':
+      return 'bg-red-100 text-red-700';
+    case 'docx':
+      return 'bg-blue-100 text-blue-700';
+    case 'md':
+      return 'bg-purple-100 text-purple-700';
+    case 'txt':
+      return 'bg-gray-100 text-gray-700';
+    case 'html':
+      return 'bg-orange-100 text-orange-700';
+    default:
+      return 'bg-gray-100 text-gray-600';
+  }
+}
+
+/**
+ * Sprint 62.4: Get display name for document type
+ */
+function getDocumentTypeName(docType: DocumentType): string {
+  switch (docType) {
+    case 'pdf':
+      return 'PDF';
+    case 'docx':
+      return 'Word';
+    case 'md':
+      return 'Markdown';
+    case 'txt':
+      return 'Text';
+    case 'html':
+      return 'HTML';
+    default:
+      return 'Document';
+  }
+}
+
 export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps) {
   const [showTooltip, setShowTooltip] = useState(false);
+
+  // Sprint 62.4: Extract section metadata and document type
+  const sectionMetadata = extractSectionMetadata(source);
+  const docType = source.document_type || getDocumentType(source);
+  const hasSection = sectionMetadata !== null && (
+    sectionMetadata.section_title ||
+    sectionMetadata.section_number ||
+    sectionMetadata.section_id
+  );
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -93,7 +174,8 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
     }
     // Check metadata.source (from SSE source events)
     if (source.metadata?.source) {
-      const filename = source.metadata.source.split(/[/\\]/).pop() || source.metadata.source;
+      const metaSource = source.metadata.source as string;
+      const filename = metaSource.split(/[/\\]/).pop() || metaSource;
       return filename.replace(/\.[^/.]+$/, '');
     }
     // Check document_id as fallback
@@ -108,6 +190,18 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
     const rawText = source.context || source.text || '';
     const text = cleanTextForDisplay(extractContextText(rawText));
     return text.length > 100 ? text.slice(0, 100) + '...' : text;
+  };
+
+  // Sprint 62.4: Get section display text
+  const getSectionDisplayText = () => {
+    if (!sectionMetadata) return null;
+    return formatSectionDisplay(sectionMetadata);
+  };
+
+  // Sprint 62.4: Get section path for tooltip
+  const getSectionPathText = () => {
+    if (!sectionMetadata) return null;
+    return formatSectionPath(sectionMetadata);
   };
 
   return (
@@ -143,8 +237,9 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
 
           {/* Content */}
           <div className="space-y-2">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-2">
+            {/* Header with document name and badges */}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center space-x-2 min-w-0 flex-1">
                 <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-bold text-blue-600">{sourceIndex}</span>
                 </div>
@@ -152,7 +247,36 @@ export function Citation({ sourceIndex, source, onClickScrollTo }: CitationProps
                   {getDocumentName()}
                 </div>
               </div>
+              {/* Sprint 62.4: Document type badge */}
+              {docType !== 'unknown' && (
+                <span
+                  className={`flex items-center gap-1 px-1.5 py-0.5 text-xs rounded flex-shrink-0 ${getDocumentTypeColor(docType)}`}
+                  data-testid="document-type-badge"
+                >
+                  {getDocumentTypeIcon(docType)}
+                  <span className="hidden sm:inline">{getDocumentTypeName(docType)}</span>
+                </span>
+              )}
             </div>
+
+            {/* Sprint 62.4: Section information */}
+            {hasSection && (
+              <div
+                className="flex items-center gap-2 px-2 py-1.5 bg-indigo-50 rounded-md border border-indigo-100"
+                data-testid="section-info"
+                title={getSectionPathText() || undefined}
+              >
+                <Hash className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
+                <span className="text-xs text-indigo-700 truncate">
+                  {getSectionDisplayText()}
+                </span>
+                {sectionMetadata?.section_level && (
+                  <span className="text-xs text-indigo-400 flex-shrink-0">
+                    (L{sectionMetadata.section_level})
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Sprint 32 Fix: Check for both null and undefined */}
             <div className="flex items-center space-x-2 text-xs">

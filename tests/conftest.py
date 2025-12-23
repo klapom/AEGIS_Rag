@@ -853,6 +853,37 @@ async def test_client_async():
 
 
 @pytest.fixture
+def mock_aegis_llm(monkeypatch):
+    """Mock AegisLLMProxy for testing.
+
+    Sprint 62 Feature 62.10: Research Endpoint Backend
+
+    Returns:
+        Mock LLM with generate method
+    """
+    from unittest.mock import AsyncMock
+
+    mock_llm = AsyncMock()
+    mock_llm.generate = AsyncMock()
+
+    # Create an async function that returns the mock
+    async def get_mock_llm():
+        return mock_llm
+
+    # Patch at the source where it's imported
+    monkeypatch.setattr(
+        "src.agents.research.planner.get_aegis_llm_proxy",
+        get_mock_llm,
+    )
+    monkeypatch.setattr(
+        "src.agents.research.synthesizer.get_aegis_llm_proxy",
+        get_mock_llm,
+    )
+
+    yield mock_llm
+
+
+@pytest.fixture
 async def lightrag_instance():
     """LightRAG instance with Neo4j cleanup.
 

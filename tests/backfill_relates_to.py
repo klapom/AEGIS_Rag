@@ -2,6 +2,7 @@
 
 Run with: poetry run python tests/backfill_relates_to.py
 """
+
 import asyncio
 import os
 import sys
@@ -53,9 +54,7 @@ async def backfill_relates_to():
         RETURN e.entity_name AS name, e.entity_type AS type
         """
         try:
-            entity_results = await neo4j_client.execute_read(
-                entity_query, {"chunk_id": chunk_id}
-            )
+            entity_results = await neo4j_client.execute_read(entity_query, {"chunk_id": chunk_id})
             entities = [
                 {"name": r["name"], "type": r.get("type", "UNKNOWN")}
                 for r in entity_results
@@ -68,7 +67,9 @@ async def backfill_relates_to():
 
         # Need at least 2 entities to find relations
         if len(entities) < 2:
-            print(f"   [{idx+1}/{len(all_chunks)}] SKIP: {chunk_id[:8]}... ({len(entities)} entities)")
+            print(
+                f"   [{idx+1}/{len(all_chunks)}] SKIP: {chunk_id[:8]}... ({len(entities)} entities)"
+            )
             chunks_skipped += 1
             continue
 
@@ -77,7 +78,9 @@ async def backfill_relates_to():
             relations = await relation_extractor.extract(chunk_text, entities)
 
             if not relations:
-                print(f"   [{idx+1}/{len(all_chunks)}] NO RELATIONS: {chunk_id[:8]}... (0 relations from {len(entities)} entities)")
+                print(
+                    f"   [{idx+1}/{len(all_chunks)}] NO RELATIONS: {chunk_id[:8]}... (0 relations from {len(entities)} entities)"
+                )
                 chunks_skipped += 1
                 continue
 
@@ -87,10 +90,14 @@ async def backfill_relates_to():
             )
             total_relations_created += relations_created
             chunks_processed += 1
-            print(f"   [{idx+1}/{len(all_chunks)}] OK: {chunk_id[:8]}... (+{relations_created} relations from {len(entities)} entities)")
+            print(
+                f"   [{idx+1}/{len(all_chunks)}] OK: {chunk_id[:8]}... (+{relations_created} relations from {len(entities)} entities)"
+            )
 
         except Exception as e:
-            print(f"   [{idx+1}/{len(all_chunks)}] ERROR: {chunk_id[:8]}... - {type(e).__name__}: {e}")
+            print(
+                f"   [{idx+1}/{len(all_chunks)}] ERROR: {chunk_id[:8]}... - {type(e).__name__}: {e}"
+            )
             chunks_with_errors += 1
             continue
 

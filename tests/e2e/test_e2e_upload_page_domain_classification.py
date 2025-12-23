@@ -104,9 +104,7 @@ class TestUploadPageDomainClassification:
             file_input = page.locator('[data-testid="file-input"]')
 
         # Upload all sample documents
-        await file_input.set_input_files(
-            [str(path) for path in sample_documents_various_domains]
-        )
+        await file_input.set_input_files([str(path) for path in sample_documents_various_domains])
         print(f"✓ Uploaded {len(sample_documents_various_domains)} documents:")
         for doc_path in sample_documents_various_domains:
             print(f"  - {doc_path.name}")
@@ -171,9 +169,7 @@ class TestUploadPageDomainClassification:
                     # Try multiple selector patterns - check all valid domains
                     domain_found = False
                     for valid_domain in expected_domain_list:
-                        domain_element = page.get_by_text(
-                            re.compile(valid_domain, re.I)
-                        ).first
+                        domain_element = page.get_by_text(re.compile(valid_domain, re.I)).first
 
                         if await domain_element.count() > 0:
                             domain_text = await domain_element.text_content()
@@ -195,9 +191,7 @@ class TestUploadPageDomainClassification:
                             print(f"  ⚠ Confidence badge not found: {e}")
 
                     else:
-                        print(
-                            f"  ⚠ Expected domain '{expected_domain}' not displayed"
-                        )
+                        print(f"  ⚠ Expected domain '{expected_domain}' not displayed")
 
                 else:
                     print(f"  ⚠ Document not found in list: {doc_name}")
@@ -228,9 +222,13 @@ class TestUploadPageDomainClassification:
                     if await domain_dropdown.count() == 0:
                         domain_dropdown = page.locator('select[id*="domain"]').first
                     if await domain_dropdown.count() == 0:
-                        domain_dropdown = page.get_by_role("button").filter(has_text="Change Domain").first
+                        domain_dropdown = (
+                            page.get_by_role("button").filter(has_text="Change Domain").first
+                        )
                     if await domain_dropdown.count() == 0:
-                        domain_dropdown = page.get_by_role("button").filter(has_text="Edit Domain").first
+                        domain_dropdown = (
+                            page.get_by_role("button").filter(has_text="Edit Domain").first
+                        )
                 except:
                     domain_dropdown = None
 
@@ -276,7 +274,9 @@ class TestUploadPageDomainClassification:
             try:
                 # Look for success indicator
                 success_indicator = page.get_by_text(
-                    re.compile(r"Upload complete|Success|Documents uploaded|Indexing complete", re.I)
+                    re.compile(
+                        r"Upload complete|Success|Documents uploaded|Indexing complete", re.I
+                    )
                 )
                 await expect(success_indicator).to_be_visible(timeout=60000)
                 print("✓ Upload and indexing completed")
@@ -333,9 +333,7 @@ class TestUploadPageDomainClassification:
                 await asyncio.sleep(3)
 
                 # Check if results appear
-                results = page.get_by_text(
-                    re.compile(r"result|citation|document|license", re.I)
-                )
+                results = page.get_by_text(re.compile(r"result|citation|document|license", re.I))
                 if await results.count() > 0:
                     print("✓ Search results displayed (documents are indexed)")
                 else:
@@ -408,11 +406,13 @@ class TestUploadPageDomainClassification:
             domain_filter = None
             domain_filter = page.locator('select[name*="domain"]').first
             if await domain_filter.count() == 0:
-                domain_filter = page.locator('input[type="checkbox"] + label').filter(has_text="legal").first
+                domain_filter = (
+                    page.locator('input[type="checkbox"] + label').filter(has_text="legal").first
+                )
             if await domain_filter.count() == 0:
                 domain_filter = page.get_by_role("button").filter(has_text="Filter").first
             if await domain_filter.count() == 0:
-                domain_filter = page.locator('select').filter(has_text="legal").first
+                domain_filter = page.locator("select").filter(has_text="legal").first
 
             if domain_filter and await domain_filter.count() > 0:
                 print("✓ Domain filter controls found")
@@ -436,9 +436,7 @@ class TestUploadPageDomainClassification:
                 await asyncio.sleep(3)
 
                 # Verify results are filtered to legal domain
-                results = page.get_by_text(
-                    re.compile(r"license|contract|agreement", re.I)
-                )
+                results = page.get_by_text(re.compile(r"license|contract|agreement", re.I))
                 if await results.count() > 0:
                     print("✓ Search results appear (filtered by domain)")
                 else:
@@ -490,21 +488,15 @@ class TestUploadPageDomainClassification:
         # Check for confidence indicators
         try:
             # Look for high confidence badge
-            confidence_badges = page.get_by_text(
-                re.compile(r"High|90%|95%|[89][0-9]%", re.I)
-            )
+            confidence_badges = page.get_by_text(re.compile(r"High|90%|95%|[89][0-9]%", re.I))
 
             if await confidence_badges.count() > 0:
                 confidence_text = await confidence_badges.first.text_content()
                 print(f"✓ Confidence score displayed: {confidence_text}")
 
                 # Verify it's marked as "High" or >80%
-                if (
-                    "high" in confidence_text.lower()
-                    or any(
-                        str(i) in confidence_text
-                        for i in range(80, 101)
-                    )
+                if "high" in confidence_text.lower() or any(
+                    str(i) in confidence_text for i in range(80, 101)
                 ):
                     print("✓ High confidence for clear legal document (correct)")
                 else:

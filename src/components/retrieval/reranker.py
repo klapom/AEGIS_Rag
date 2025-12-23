@@ -151,14 +151,22 @@ class CrossEncoderReranker:
         documents: Sequence[dict],
         top_k: int | None = None,
         score_threshold: float | None = None,
+        section_filter: str | list[str] | None = None,
+        section_boost: float = 0.1,
     ) -> list[RerankResult]:
-        """Rerank documents using cross-encoder model.
+        """Rerank documents using cross-encoder model with optional section boost.
+
+        Sprint 62 Feature 62.5: Section-aware reranking integration.
 
         Args:
             query: Search query
             documents: List of documents with 'text', 'score', 'id' keys
             top_k: Return top-k results after reranking (default: return all)
             score_threshold: Filter results below this score (default: no filter)
+            section_filter: Section ID(s) to boost (Sprint 62.5)
+                - Single section: "1.2"
+                - Multiple sections: ["1.1", "1.2", "2.1"]
+            section_boost: Boost to add for matching sections (0.0 - 0.5, default: 0.1)
 
         Returns:
             Reranked results sorted by relevance (highest first)
@@ -194,6 +202,36 @@ class CrossEncoderReranker:
         # Score all pairs (blocking operation, but fast on CPU)
         # Note: sentence-transformers CrossEncoder.predict() is synchronous
         rerank_scores = self.model.predict(pairs, batch_size=self.batch_size)
+
+        # Apply section boost if section_filter provided (Sprint 62.5)
+        if section_filter is not None:
+            # Normalize section_filter to list
+            target_sections = (
+                [section_filter] if isinstance(section_filter, str) else section_filter
+            )
+
+            # Clamp boost to valid range [0.0, 0.5]
+            clamped_boost = max(0.0, min(0.5, section_boost))
+
+            for idx, doc in enumerate(documents):
+                # Get document's section_id (try multiple field locations)
+                doc_section_id = (
+                    doc.get("section_id") or doc.get("metadata", {}).get("section_id") or ""
+                )
+
+                # Apply boost if document is from target section
+                if doc_section_id and doc_section_id in target_sections:
+                    original_score = float(rerank_scores[idx])
+                    rerank_scores[idx] = original_score + clamped_boost
+
+                    logger.debug(
+                        "section_boost_applied",
+                        doc_id=doc.get("id"),
+                        section_id=doc_section_id,
+                        original_score=original_score,
+                        boosted_score=float(rerank_scores[idx]),
+                        boost=clamped_boost,
+                    )
 
         # Normalize scores to [0, 1] using sigmoid
         # Cross-encoder scores are unbounded (-inf to +inf)

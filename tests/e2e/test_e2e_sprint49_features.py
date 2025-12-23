@@ -133,8 +133,9 @@ Christopher Nolan is acquainted with Tom Cruise.
         print(f"  - Orphaned chunks: {len(consistency_data['orphaned_chunks'])}")
 
         # Consistency score should be reasonable (>= 0.7 for healthy system)
-        assert consistency_data["consistency_score"] >= 0.7, \
-            f"Consistency score too low: {consistency_data['consistency_score']}"
+        assert (
+            consistency_data["consistency_score"] >= 0.7
+        ), f"Consistency score too low: {consistency_data['consistency_score']}"
 
         print("✓ Feature 49.6: Index Consistency Validation - PASSED")
 
@@ -199,26 +200,36 @@ Christopher Nolan is acquainted with Tom Cruise.
 
             # Check if deduplication occurred
             # We expect fewer relation types than variants in source text
-            acting_variants = [rt for rt in all_relation_types if any(
-                keyword in rt.upper() for keyword in ["ACT", "STAR", "PLAY", "PERFORM"]
-            )]
+            acting_variants = [
+                rt
+                for rt in all_relation_types
+                if any(keyword in rt.upper() for keyword in ["ACT", "STAR", "PLAY", "PERFORM"])
+            ]
 
             # If semantic deduplication worked, we should have 1-2 acting types max
             # (not 4 separate types)
-            assert len(acting_variants) <= 2, \
-                f"Expected deduplication of acting relations, but found {len(acting_variants)}: {acting_variants}"
+            assert (
+                len(acting_variants) <= 2
+            ), f"Expected deduplication of acting relations, but found {len(acting_variants)}: {acting_variants}"
 
-            print(f"✓ Feature 49.7: Semantic deduplication reduced acting relations to: {acting_variants}")
+            print(
+                f"✓ Feature 49.7: Semantic deduplication reduced acting relations to: {acting_variants}"
+            )
 
             # Similarly check "working" relations
-            working_variants = [rt for rt in all_relation_types if any(
-                keyword in rt.upper() for keyword in ["WORK", "EMPLOY", "AFFILIATED"]
-            )]
+            working_variants = [
+                rt
+                for rt in all_relation_types
+                if any(keyword in rt.upper() for keyword in ["WORK", "EMPLOY", "AFFILIATED"])
+            ]
 
-            assert len(working_variants) <= 2, \
-                f"Expected deduplication of working relations, but found {len(working_variants)}: {working_variants}"
+            assert (
+                len(working_variants) <= 2
+            ), f"Expected deduplication of working relations, but found {len(working_variants)}: {working_variants}"
 
-            print(f"✓ Feature 49.7: Semantic deduplication reduced working relations to: {working_variants}")
+            print(
+                f"✓ Feature 49.7: Semantic deduplication reduced working relations to: {working_variants}"
+            )
 
         # =====================================================================
         # Test Manual Synonym Override (Feature 49.8)
@@ -227,10 +238,7 @@ Christopher Nolan is acquainted with Tom Cruise.
         # Add a manual override via API
         override_response = await page.request.post(
             "http://localhost:8000/api/v1/admin/graph/relation-synonyms",
-            data={
-                "from_type": "ACTED_IN",
-                "to_type": "PERFORMED_IN"
-            }
+            data={"from_type": "ACTED_IN", "to_type": "PERFORMED_IN"},
         )
 
         assert override_response.ok, f"Failed to add manual override: {override_response.status}"
@@ -285,13 +293,16 @@ Christopher Nolan is acquainted with Tom Cruise.
             total_mentioned = record["total"]
             with_chunk_id = record["with_chunk_id"]
 
-            print(f"✓ MENTIONED_IN relationships: {total_mentioned} total, {with_chunk_id} with source_chunk_id")
+            print(
+                f"✓ MENTIONED_IN relationships: {total_mentioned} total, {with_chunk_id} with source_chunk_id"
+            )
 
             # Sprint 49.5: All MENTIONED_IN should have source_chunk_id
             if total_mentioned > 0:
                 coverage_percent = (with_chunk_id / total_mentioned) * 100
-                assert coverage_percent >= 95, \
-                    f"Expected >= 95% MENTIONED_IN with source_chunk_id, got {coverage_percent:.1f}%"
+                assert (
+                    coverage_percent >= 95
+                ), f"Expected >= 95% MENTIONED_IN with source_chunk_id, got {coverage_percent:.1f}%"
                 print(f"✓ Feature 49.5: {coverage_percent:.1f}% MENTIONED_IN have source_chunk_id")
 
             # Check RELATES_TO relationships (if any)
@@ -309,7 +320,9 @@ Christopher Nolan is acquainted with Tom Cruise.
 
             if total_relates > 0:
                 relates_coverage = (relates_with_chunk_id / total_relates) * 100
-                print(f"✓ RELATES_TO relationships: {total_relates} total, {relates_coverage:.1f}% with source_chunk_id")
+                print(
+                    f"✓ RELATES_TO relationships: {total_relates} total, {relates_coverage:.1f}% with source_chunk_id"
+                )
 
             # Sample a relationship to verify structure
             result = await session.run(
@@ -332,8 +345,9 @@ Christopher Nolan is acquainted with Tom Cruise.
                 print(f"  source_chunk_id: {record['source_chunk_id'][:30]}...")
 
                 # source_chunk_id should match chunk_id
-                assert record["source_chunk_id"] == record["chunk"], \
-                    "source_chunk_id should match the target chunk's chunk_id"
+                assert (
+                    record["source_chunk_id"] == record["chunk"]
+                ), "source_chunk_id should match the target chunk's chunk_id"
                 print("✓ Provenance data integrity verified")
 
         print("\n✅ Feature 49.5: Provenance Tracking - PASSED")
@@ -352,18 +366,20 @@ Christopher Nolan is acquainted with Tom Cruise.
         feature set working together in a real-world scenario.
         """
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("SPRINT 49 COMPLETE WORKFLOW TEST")
-        print("="*70)
+        print("=" * 70)
 
         # Run all Sprint 49 validations in sequence
         await self.test_sprint49_index_consistency_validation(page, qdrant_client, neo4j_driver)
-        await self.test_sprint49_relation_deduplication(page, self.deduplication_test_document, neo4j_driver)
+        await self.test_sprint49_relation_deduplication(
+            page, self.deduplication_test_document, neo4j_driver
+        )
         await self.test_sprint49_provenance_tracking(page, neo4j_driver)
 
-        print("\n" + "="*70)
+        print("\n" + "=" * 70)
         print("✅ ALL SPRINT 49 FEATURES VALIDATED SUCCESSFULLY")
-        print("="*70)
+        print("=" * 70)
         print("Features Tested:")
         print("  ✓ 49.5: Provenance Tracking (source_chunk_id)")
         print("  ✓ 49.6: Index Consistency Validation")

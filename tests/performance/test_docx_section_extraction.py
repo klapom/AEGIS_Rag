@@ -21,6 +21,7 @@ from src.components.ingestion.section_extraction import (
 @dataclass
 class SectionMetadata:
     """Section metadata for testing."""
+
     heading: str
     level: int
     page_no: int
@@ -42,7 +43,12 @@ def main():
     print("=" * 70)
 
     # Load DOCX JSON
-    json_path = Path(__file__).parent / "results" / "multi_format_test" / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+    json_path = (
+        Path(__file__).parent
+        / "results"
+        / "multi_format_test"
+        / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+    )
     print(f"\nLoading: {json_path.name}")
 
     with open(json_path, encoding="utf-8") as f:
@@ -100,7 +106,12 @@ def main():
     print("4. COMPARISON WITH PPTX (LABEL-BASED)")
     print("=" * 70)
 
-    pptx_path = Path(__file__).parent / "results" / "multi_format_test" / "pptx_PerformanceTuning_textonly_raw.json"
+    pptx_path = (
+        Path(__file__).parent
+        / "results"
+        / "multi_format_test"
+        / "pptx_PerformanceTuning_textonly_raw.json"
+    )
     if pptx_path.exists():
         with open(pptx_path, encoding="utf-8") as f:
             pptx_data = json.load(f)
@@ -125,7 +136,8 @@ def main():
     print("\n" + "=" * 70)
     print("5. SUMMARY")
     print("=" * 70)
-    print(f"""
+    print(
+        f"""
 DOCX Section Extraction Results:
 - Strategy used: {strategy}
 - Headings detected: {len(formatting_headings)}
@@ -133,7 +145,8 @@ DOCX Section Extraction Results:
 - Sections with text: {sum(1 for s in sections if s.text.strip())}
 
 STATUS: {"SUCCESS" if len(sections) > 0 else "FAILED"} - DOCX heading detection {'working' if len(sections) > 0 else 'not working'}!
-""")
+"""
+    )
 
 
 if __name__ == "__main__":

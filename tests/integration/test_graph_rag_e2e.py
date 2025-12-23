@@ -39,7 +39,7 @@ def check_neo4j_available():
         # Try to connect to Neo4j default port
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
-        result = sock.connect_ex(('localhost', 7687))
+        result = sock.connect_ex(("localhost", 7687))
         sock.close()
         if result != 0:
             pytest.skip("Neo4j not available on localhost:7687")
@@ -56,7 +56,7 @@ def check_qdrant_available():
         # Try to connect to Qdrant default port
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
-        result = sock.connect_ex(('localhost', 6333))
+        result = sock.connect_ex(("localhost", 6333))
         sock.close()
         if result != 0:
             pytest.skip("Qdrant not available on localhost:6333")
@@ -167,19 +167,21 @@ async def test_simple_retrieve_with_mocked_vector_search(neo4j_with_test_data):
     """Test simple retrieval flow with real Neo4j and mocked vector search."""
     # Mock hybrid search
     mock_hybrid_search = MagicMock()
-    mock_hybrid_search.hybrid_search = AsyncMock(return_value={
-        "query": "Who works at Acme Corp?",
-        "results": [
-            {
-                "id": "doc1",
-                "text": "Alice works at Acme Corp as a software engineer.",
-                "score": 0.95,
-                "rerank_score": 0.98,
-                "source": "test_doc.txt",
-            },
-        ],
-        "total_results": 1,
-    })
+    mock_hybrid_search.hybrid_search = AsyncMock(
+        return_value={
+            "query": "Who works at Acme Corp?",
+            "results": [
+                {
+                    "id": "doc1",
+                    "text": "Alice works at Acme Corp as a software engineer.",
+                    "score": 0.95,
+                    "rerank_score": 0.98,
+                    "source": "test_doc.txt",
+                },
+            ],
+            "total_results": 1,
+        }
+    )
 
     retriever = GraphRAGRetriever(
         neo4j_client=neo4j_with_test_data,
@@ -208,30 +210,34 @@ async def test_full_retrieve_flow_with_mocks(neo4j_with_test_data):
     """Test full retrieve flow with real Neo4j, mocked vector search and LLM."""
     # Mock query decomposer
     mock_decomposer = MagicMock()
-    mock_decomposer.decompose = AsyncMock(return_value=MagicMock(
-        classification=MagicMock(
-            query_type="SIMPLE",
-            confidence=0.95,
-        ),
-        sub_queries=[MagicMock(query="Who works at Acme Corp?", index=0, depends_on=[])],
-        execution_strategy="direct",
-    ))
+    mock_decomposer.decompose = AsyncMock(
+        return_value=MagicMock(
+            classification=MagicMock(
+                query_type="SIMPLE",
+                confidence=0.95,
+            ),
+            sub_queries=[MagicMock(query="Who works at Acme Corp?", index=0, depends_on=[])],
+            execution_strategy="direct",
+        )
+    )
 
     # Mock hybrid search
     mock_hybrid_search = MagicMock()
-    mock_hybrid_search.hybrid_search = AsyncMock(return_value={
-        "query": "Who works at Acme Corp?",
-        "results": [
-            {
-                "id": "doc1",
-                "text": "Alice and Bob work at Acme Corp.",
-                "score": 0.95,
-                "rerank_score": 0.98,
-                "source": "test_doc.txt",
-            },
-        ],
-        "total_results": 1,
-    })
+    mock_hybrid_search.hybrid_search = AsyncMock(
+        return_value={
+            "query": "Who works at Acme Corp?",
+            "results": [
+                {
+                    "id": "doc1",
+                    "text": "Alice and Bob work at Acme Corp.",
+                    "score": 0.95,
+                    "rerank_score": 0.98,
+                    "source": "test_doc.txt",
+                },
+            ],
+            "total_results": 1,
+        }
+    )
 
     retriever = GraphRAGRetriever(
         query_decomposer=mock_decomposer,
@@ -242,11 +248,13 @@ async def test_full_retrieve_flow_with_mocks(neo4j_with_test_data):
     # Mock LLM answer generation
     with patch("src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy") as mock_proxy:
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=MagicMock(
-            content="Alice and Bob work at Acme Corp.",
-            provider="local_ollama",
-            tokens_used=50,
-        ))
+        mock_llm.generate = AsyncMock(
+            return_value=MagicMock(
+                content="Alice and Bob work at Acme Corp.",
+                provider="local_ollama",
+                tokens_used=50,
+            )
+        )
         mock_proxy.return_value = mock_llm
 
         # Execute full retrieval

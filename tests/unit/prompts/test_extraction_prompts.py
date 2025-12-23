@@ -74,10 +74,7 @@ class TestRelationshipExtractionPrompt:
         """Test RELATIONSHIP_EXTRACTION_PROMPT contains {text} placeholder."""
         assert "{text}" in RELATIONSHIP_EXTRACTION_PROMPT
         # Verify it can be formatted with text parameter
-        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(
-            text="test text",
-            entities="entity list"
-        )
+        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(text="test text", entities="entity list")
         assert "test text" in formatted
         assert "{text}" not in formatted
 
@@ -86,8 +83,7 @@ class TestRelationshipExtractionPrompt:
         assert "{entities}" in RELATIONSHIP_EXTRACTION_PROMPT
         # Verify it can be formatted with entities parameter
         formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(
-            text="test text",
-            entities="- Entity1\n- Entity2"
+            text="test text", entities="- Entity1\n- Entity2"
         )
         assert "Entity1" in formatted
         assert "{entities}" not in formatted
@@ -118,10 +114,7 @@ class TestRelationshipExtractionPrompt:
         """Test formatting the prompt doesn't lose content."""
         test_text = "This is a test document"
         test_entities = "- Entity1 (PERSON)\n- Entity2 (ORG)"
-        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(
-            text=test_text,
-            entities=test_entities
-        )
+        formatted = RELATIONSHIP_EXTRACTION_PROMPT.format(text=test_text, entities=test_entities)
 
         # Verify key instructions are still present
         assert "Extract relationships" in formatted
@@ -160,28 +153,18 @@ class TestPromptsIntegration:
         entity_list = "- John Smith (PERSON)\n- Google (ORGANIZATION)\n- machine learning (CONCEPT)"
 
         # Then format relationship extraction prompt with same text and entities
-        rel_prompt = RELATIONSHIP_EXTRACTION_PROMPT.format(
-            text=test_text,
-            entities=entity_list
-        )
+        rel_prompt = RELATIONSHIP_EXTRACTION_PROMPT.format(text=test_text, entities=entity_list)
 
         assert test_text in rel_prompt
         assert "John Smith" in rel_prompt
         assert "Google" in rel_prompt
         assert "machine learning" in rel_prompt
 
-    @pytest.mark.parametrize("entity_type", [
-        "PERSON",
-        "ORGANIZATION",
-        "LOCATION",
-        "CONCEPT",
-        "TECHNOLOGY",
-        "PRODUCT",
-        "EVENT"
-    ])
-    def test_entity_extraction_prompt_supports_all_entity_types(
-        self, entity_type: str
-    ) -> None:
+    @pytest.mark.parametrize(
+        "entity_type",
+        ["PERSON", "ORGANIZATION", "LOCATION", "CONCEPT", "TECHNOLOGY", "PRODUCT", "EVENT"],
+    )
+    def test_entity_extraction_prompt_supports_all_entity_types(self, entity_type: str) -> None:
         """Test ENTITY_EXTRACTION_PROMPT mentions all supported entity types."""
         # Some types may be in examples, check if they're referenced
         prompt_upper = ENTITY_EXTRACTION_PROMPT.upper()
@@ -190,13 +173,13 @@ class TestPromptsIntegration:
     def test_prompts_are_text_strings(self) -> None:
         """Test prompts are properly defined as strings."""
         # Should be able to call string methods on them
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, 'upper')
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, 'lower')
-        assert hasattr(ENTITY_EXTRACTION_PROMPT, 'format')
+        assert hasattr(ENTITY_EXTRACTION_PROMPT, "upper")
+        assert hasattr(ENTITY_EXTRACTION_PROMPT, "lower")
+        assert hasattr(ENTITY_EXTRACTION_PROMPT, "format")
 
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, 'upper')
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, 'lower')
-        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, 'format')
+        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "upper")
+        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "lower")
+        assert hasattr(RELATIONSHIP_EXTRACTION_PROMPT, "format")
 
     def test_prompts_mention_json_format_requirements(self) -> None:
         """Test prompts specify JSON format requirements."""

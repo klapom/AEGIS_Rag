@@ -30,6 +30,7 @@ from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feat
 from src.api.v1.admin_graph import router as admin_graph_router
 from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_llm import router as admin_llm_router
+from src.api.v1.analytics import router as analytics_router  # Sprint 62 Feature 62.9
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
@@ -37,6 +38,7 @@ from src.api.v1.domain_training import router as domain_training_router  # Sprin
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP Tool Discovery
 from src.api.v1.memory import router as memory_router
+from src.api.v1.research import router as research_router  # Sprint 62 Feature 62.10
 from src.api.v1.retrieval import router as retrieval_router
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
@@ -358,6 +360,15 @@ logger.info(
     note="Sprint 53: Admin module split for maintainability",
 )
 
+# Analytics API router (Sprint 62 Feature 62.9: Section Analytics)
+app.include_router(analytics_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="analytics_router",
+    prefix="/api/v1/analytics",
+    note="Sprint 62: Section analytics endpoint",
+)
+
 # Authentication API router (Sprint 22 Feature 22.2.4: JWT Authentication)
 app.include_router(auth_router)
 logger.info(
@@ -373,6 +384,15 @@ logger.info("router_registered", router="chat_router", prefix="/api/v1")
 
 # Memory API router (Sprint 7: Feature 7.6)
 app.include_router(memory_router, prefix="/api/v1", tags=["memory"])
+
+# Research API router (Sprint 62: Feature 62.10 - Research Endpoint Backend)
+app.include_router(research_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="research_router",
+    prefix="/api/v1/research",
+    note="Sprint 62: Multi-step research workflow with LangGraph",
+)
 
 # MCP API router (Sprint 40: Feature 40.2 - Tool Discovery & Management)
 app.include_router(mcp_router)

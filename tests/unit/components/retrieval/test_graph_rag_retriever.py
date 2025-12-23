@@ -115,15 +115,19 @@ class TestGraphContext:
         context.add_relationship(Relationship(source="Alice", target="Acme Corp", type="WORKS_AT"))
 
         # Add paths
-        context.add_path(GraphPath(nodes=["Alice", "Acme Corp"], relationships=["WORKS_AT"], length=1))
+        context.add_path(
+            GraphPath(nodes=["Alice", "Acme Corp"], relationships=["WORKS_AT"], length=1)
+        )
 
         # Add documents
-        context.add_document(Document(
-            id="doc1",
-            text="Alice works at Acme Corp as a software engineer.",
-            score=0.95,
-            source="company_db.txt"
-        ))
+        context.add_document(
+            Document(
+                id="doc1",
+                text="Alice works at Acme Corp as a software engineer.",
+                score=0.95,
+                source="company_db.txt",
+            )
+        )
 
         prompt_ctx = context.to_prompt_context()
 
@@ -178,42 +182,48 @@ class TestGraphRAGRetriever:
     async def test_simple_query_routing(self, retriever, mock_query_decomposer, mock_hybrid_search):
         """Test SIMPLE query routing: vector search only."""
         # Mock decomposition
-        mock_query_decomposer.decompose = AsyncMock(return_value=DecompositionResult(
-            original_query="What is RAG?",
-            classification=QueryClassification(
-                query_type=QueryType.SIMPLE,
-                confidence=0.95,
-                reasoning="Simple question",
-            ),
-            sub_queries=[SubQuery(query="What is RAG?", index=0, depends_on=[])],
-            execution_strategy="direct",
-        ))
+        mock_query_decomposer.decompose = AsyncMock(
+            return_value=DecompositionResult(
+                original_query="What is RAG?",
+                classification=QueryClassification(
+                    query_type=QueryType.SIMPLE,
+                    confidence=0.95,
+                    reasoning="Simple question",
+                ),
+                sub_queries=[SubQuery(query="What is RAG?", index=0, depends_on=[])],
+                execution_strategy="direct",
+            )
+        )
 
         # Mock vector search
-        mock_hybrid_search.hybrid_search = AsyncMock(return_value={
-            "query": "What is RAG?",
-            "results": [
-                {
-                    "id": "doc1",
-                    "text": "RAG stands for Retrieval Augmented Generation.",
-                    "score": 0.95,
-                    "rerank_score": 0.98,
-                    "source": "rag_paper.pdf",
-                }
-            ],
-            "total_results": 1,
-        })
+        mock_hybrid_search.hybrid_search = AsyncMock(
+            return_value={
+                "query": "What is RAG?",
+                "results": [
+                    {
+                        "id": "doc1",
+                        "text": "RAG stands for Retrieval Augmented Generation.",
+                        "score": 0.95,
+                        "rerank_score": 0.98,
+                        "source": "rag_paper.pdf",
+                    }
+                ],
+                "total_results": 1,
+            }
+        )
 
         # Mock Neo4j entity extraction (no entities found)
         retriever.neo4j_client.execute_query = AsyncMock(return_value=[])
 
         # Mock LLM answer generation - patch the retriever's llm_proxy directly
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=MagicMock(
-            content="RAG stands for Retrieval Augmented Generation.",
-            provider="local_ollama",
-            tokens_used=50,
-        ))
+        mock_llm.generate = AsyncMock(
+            return_value=MagicMock(
+                content="RAG stands for Retrieval Augmented Generation.",
+                provider="local_ollama",
+                tokens_used=50,
+            )
+        )
         retriever.llm_proxy = mock_llm
 
         # Execute retrieval
@@ -228,64 +238,74 @@ class TestGraphRAGRetriever:
         assert "RAG" in result.answer
 
     @pytest.mark.asyncio
-    async def test_compound_query_routing(self, retriever, mock_query_decomposer, mock_hybrid_search):
+    async def test_compound_query_routing(
+        self, retriever, mock_query_decomposer, mock_hybrid_search
+    ):
         """Test COMPOUND query routing: parallel sub-query execution."""
         # Mock decomposition
-        mock_query_decomposer.decompose = AsyncMock(return_value=DecompositionResult(
-            original_query="What is RAG and BM25?",
-            classification=QueryClassification(
-                query_type=QueryType.COMPOUND,
-                confidence=0.90,
-                reasoning="Multiple independent questions",
-            ),
-            sub_queries=[
-                SubQuery(query="What is RAG?", index=0, depends_on=[]),
-                SubQuery(query="What is BM25?", index=1, depends_on=[]),
-            ],
-            execution_strategy="parallel",
-        ))
+        mock_query_decomposer.decompose = AsyncMock(
+            return_value=DecompositionResult(
+                original_query="What is RAG and BM25?",
+                classification=QueryClassification(
+                    query_type=QueryType.COMPOUND,
+                    confidence=0.90,
+                    reasoning="Multiple independent questions",
+                ),
+                sub_queries=[
+                    SubQuery(query="What is RAG?", index=0, depends_on=[]),
+                    SubQuery(query="What is BM25?", index=1, depends_on=[]),
+                ],
+                execution_strategy="parallel",
+            )
+        )
 
         # Mock vector search (will be called twice)
-        mock_hybrid_search.hybrid_search = AsyncMock(side_effect=[
-            {
-                "query": "What is RAG?",
-                "results": [
-                    {
-                        "id": "doc1",
-                        "text": "RAG stands for Retrieval Augmented Generation.",
-                        "score": 0.95,
-                        "rerank_score": 0.98,
-                        "source": "rag_paper.pdf",
-                    }
-                ],
-                "total_results": 1,
-            },
-            {
-                "query": "What is BM25?",
-                "results": [
-                    {
-                        "id": "doc2",
-                        "text": "BM25 is a keyword-based ranking function.",
-                        "score": 0.90,
-                        "rerank_score": 0.92,
-                        "source": "bm25_paper.pdf",
-                    }
-                ],
-                "total_results": 1,
-            },
-        ])
+        mock_hybrid_search.hybrid_search = AsyncMock(
+            side_effect=[
+                {
+                    "query": "What is RAG?",
+                    "results": [
+                        {
+                            "id": "doc1",
+                            "text": "RAG stands for Retrieval Augmented Generation.",
+                            "score": 0.95,
+                            "rerank_score": 0.98,
+                            "source": "rag_paper.pdf",
+                        }
+                    ],
+                    "total_results": 1,
+                },
+                {
+                    "query": "What is BM25?",
+                    "results": [
+                        {
+                            "id": "doc2",
+                            "text": "BM25 is a keyword-based ranking function.",
+                            "score": 0.90,
+                            "rerank_score": 0.92,
+                            "source": "bm25_paper.pdf",
+                        }
+                    ],
+                    "total_results": 1,
+                },
+            ]
+        )
 
         # Mock Neo4j entity extraction
         retriever.neo4j_client.execute_query = AsyncMock(return_value=[])
 
         # Mock LLM answer generation
-        with patch("src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy") as mock_proxy:
+        with patch(
+            "src.components.retrieval.graph_rag_retriever.get_aegis_llm_proxy"
+        ) as mock_proxy:
             mock_llm = MagicMock()
-            mock_llm.generate = AsyncMock(return_value=MagicMock(
-                content="RAG is Retrieval Augmented Generation. BM25 is a keyword-based ranking function.",
-                provider="local_ollama",
-                tokens_used=75,
-            ))
+            mock_llm.generate = AsyncMock(
+                return_value=MagicMock(
+                    content="RAG is Retrieval Augmented Generation. BM25 is a keyword-based ranking function.",
+                    provider="local_ollama",
+                    tokens_used=75,
+                )
+            )
             mock_proxy.return_value = mock_llm
 
             # Execute retrieval
@@ -298,52 +318,58 @@ class TestGraphRAGRetriever:
         assert {d.id for d in result.context.documents} == {"doc1", "doc2"}
 
     @pytest.mark.asyncio
-    async def test_multi_hop_query_routing(self, retriever, mock_query_decomposer, mock_hybrid_search):
+    async def test_multi_hop_query_routing(
+        self, retriever, mock_query_decomposer, mock_hybrid_search
+    ):
         """Test MULTI_HOP query routing: sequential reasoning with context injection."""
         # Mock decomposition
-        mock_query_decomposer.decompose = AsyncMock(return_value=DecompositionResult(
-            original_query="Who founded the company that developed RAG?",
-            classification=QueryClassification(
-                query_type=QueryType.MULTI_HOP,
-                confidence=0.85,
-                reasoning="Multi-hop reasoning required",
-            ),
-            sub_queries=[
-                SubQuery(query="Which company developed RAG?", index=0, depends_on=[]),
-                SubQuery(query="Who founded that company?", index=1, depends_on=[0]),
-            ],
-            execution_strategy="sequential",
-        ))
+        mock_query_decomposer.decompose = AsyncMock(
+            return_value=DecompositionResult(
+                original_query="Who founded the company that developed RAG?",
+                classification=QueryClassification(
+                    query_type=QueryType.MULTI_HOP,
+                    confidence=0.85,
+                    reasoning="Multi-hop reasoning required",
+                ),
+                sub_queries=[
+                    SubQuery(query="Which company developed RAG?", index=0, depends_on=[]),
+                    SubQuery(query="Who founded that company?", index=1, depends_on=[0]),
+                ],
+                execution_strategy="sequential",
+            )
+        )
 
         # Mock vector search (sequential calls)
-        mock_hybrid_search.hybrid_search = AsyncMock(side_effect=[
-            {
-                "query": "Which company developed RAG?",
-                "results": [
-                    {
-                        "id": "doc1",
-                        "text": "RAG was developed by Facebook AI Research (FAIR).",
-                        "score": 0.95,
-                        "rerank_score": 0.98,
-                        "source": "rag_history.pdf",
-                    }
-                ],
-                "total_results": 1,
-            },
-            {
-                "query": "Who founded that company?",
-                "results": [
-                    {
-                        "id": "doc2",
-                        "text": "Facebook was founded by Mark Zuckerberg in 2004.",
-                        "score": 0.92,
-                        "rerank_score": 0.95,
-                        "source": "facebook_history.pdf",
-                    }
-                ],
-                "total_results": 1,
-            },
-        ])
+        mock_hybrid_search.hybrid_search = AsyncMock(
+            side_effect=[
+                {
+                    "query": "Which company developed RAG?",
+                    "results": [
+                        {
+                            "id": "doc1",
+                            "text": "RAG was developed by Facebook AI Research (FAIR).",
+                            "score": 0.95,
+                            "rerank_score": 0.98,
+                            "source": "rag_history.pdf",
+                        }
+                    ],
+                    "total_results": 1,
+                },
+                {
+                    "query": "Who founded that company?",
+                    "results": [
+                        {
+                            "id": "doc2",
+                            "text": "Facebook was founded by Mark Zuckerberg in 2004.",
+                            "score": 0.92,
+                            "rerank_score": 0.95,
+                            "source": "facebook_history.pdf",
+                        }
+                    ],
+                    "total_results": 1,
+                },
+            ]
+        )
 
         # Mock Neo4j - entity extraction returns entity info, graph expansion returns path data
         entity_extraction_response = [
@@ -359,24 +385,30 @@ class TestGraphRAGRetriever:
             },
         ]
         # Use side_effect to return different data for different calls
-        retriever.neo4j_client.execute_query = AsyncMock(side_effect=[
-            entity_extraction_response,  # First call: entity extraction
-            graph_expansion_response,    # Second call: graph expansion
-            entity_extraction_response,  # Third call: entity extraction for second subquery
-            graph_expansion_response,    # Fourth call: graph expansion
-        ])
+        retriever.neo4j_client.execute_query = AsyncMock(
+            side_effect=[
+                entity_extraction_response,  # First call: entity extraction
+                graph_expansion_response,  # Second call: graph expansion
+                entity_extraction_response,  # Third call: entity extraction for second subquery
+                graph_expansion_response,  # Fourth call: graph expansion
+            ]
+        )
 
         # Mock LLM answer generation - patch retriever.llm_proxy directly
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=MagicMock(
-            content="Facebook (now Meta) developed RAG through FAIR. Facebook was founded by Mark Zuckerberg.",
-            provider="local_ollama",
-            tokens_used=100,
-        ))
+        mock_llm.generate = AsyncMock(
+            return_value=MagicMock(
+                content="Facebook (now Meta) developed RAG through FAIR. Facebook was founded by Mark Zuckerberg.",
+                provider="local_ollama",
+                tokens_used=100,
+            )
+        )
         retriever.llm_proxy = mock_llm
 
         # Execute retrieval
-        result = await retriever.retrieve(query="Who founded the company that developed RAG?", max_hops=2)
+        result = await retriever.retrieve(
+            query="Who founded the company that developed RAG?", max_hops=2
+        )
 
         # Assertions
         assert result.query_type == QueryType.MULTI_HOP
@@ -397,10 +429,12 @@ class TestGraphRAGRetriever:
         ]
 
         # Mock Neo4j response
-        retriever.neo4j_client.execute_query = AsyncMock(return_value=[
-            {"name": "Alice", "type": "Person", "properties": {"role": "Engineer"}},
-            {"name": "Acme Corp", "type": "Organization", "properties": {"industry": "Tech"}},
-        ])
+        retriever.neo4j_client.execute_query = AsyncMock(
+            return_value=[
+                {"name": "Alice", "type": "Person", "properties": {"role": "Engineer"}},
+                {"name": "Acme Corp", "type": "Organization", "properties": {"industry": "Tech"}},
+            ]
+        )
 
         entities = await retriever._extract_entities_from_results(documents)
 
@@ -415,22 +449,24 @@ class TestGraphRAGRetriever:
         entity_names = ["Alice"]
 
         # Mock Neo4j multi-hop query
-        retriever.neo4j_client.execute_query = AsyncMock(return_value=[
-            {
-                "name": "Acme Corp",
-                "type": "Organization",
-                "hops": 1,
-                "rel_types": ["WORKS_AT"],
-                "path_nodes": ["Alice", "Acme Corp"],
-            },
-            {
-                "name": "Bob",
-                "type": "Person",
-                "hops": 2,
-                "rel_types": ["WORKS_AT", "MANAGES"],
-                "path_nodes": ["Alice", "Acme Corp", "Bob"],
-            },
-        ])
+        retriever.neo4j_client.execute_query = AsyncMock(
+            return_value=[
+                {
+                    "name": "Acme Corp",
+                    "type": "Organization",
+                    "hops": 1,
+                    "rel_types": ["WORKS_AT"],
+                    "path_nodes": ["Alice", "Acme Corp"],
+                },
+                {
+                    "name": "Bob",
+                    "type": "Person",
+                    "hops": 2,
+                    "rel_types": ["WORKS_AT", "MANAGES"],
+                    "path_nodes": ["Alice", "Acme Corp", "Bob"],
+                },
+            ]
+        )
 
         await retriever._graph_expand(context=context, entity_names=entity_names, max_hops=2)
 
@@ -446,20 +482,24 @@ class TestGraphRAGRetriever:
         """Test answer generation from context."""
         context = GraphContext()
         context.add_entity(Entity(name="Alice", type="Person"))
-        context.add_document(Document(
-            id="doc1",
-            text="Alice is a software engineer.",
-            score=0.95,
-            source="hr_db.txt",
-        ))
+        context.add_document(
+            Document(
+                id="doc1",
+                text="Alice is a software engineer.",
+                score=0.95,
+                source="hr_db.txt",
+            )
+        )
 
         # Mock LLM answer generation - patch retriever.llm_proxy directly
         mock_llm = MagicMock()
-        mock_llm.generate = AsyncMock(return_value=MagicMock(
-            content="Alice is a software engineer.",
-            provider="local_ollama",
-            tokens_used=50,
-        ))
+        mock_llm.generate = AsyncMock(
+            return_value=MagicMock(
+                content="Alice is a software engineer.",
+                provider="local_ollama",
+                tokens_used=50,
+            )
+        )
         retriever.llm_proxy = mock_llm
 
         answer = await retriever._generate_answer(query="What is Alice's job?", context=context)

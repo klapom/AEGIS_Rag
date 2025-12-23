@@ -652,9 +652,7 @@ async def test_false_relation_reduction_with_sections(
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_section_cleanup_and_deletion(
-    neo4j_test_session, sample_powerpoint_sections
-):
+async def test_section_cleanup_and_deletion(neo4j_test_session, sample_powerpoint_sections):
     """Test cleanup of section nodes and relationships."""
     # Arrange
     sections = sample_powerpoint_sections

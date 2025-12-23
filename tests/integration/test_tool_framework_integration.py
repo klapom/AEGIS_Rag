@@ -27,10 +27,9 @@ class TestToolFrameworkIntegration:
         executor = ToolExecutor(sandbox_enabled=False)
 
         # Execute bash command
-        result = await executor.execute("bash", {
-            "command": "echo 'integration test'",
-            "timeout": 10
-        })
+        result = await executor.execute(
+            "bash", {"command": "echo 'integration test'", "timeout": 10}
+        )
 
         assert "result" in result
         result_data = result["result"]
@@ -43,10 +42,9 @@ class TestToolFrameworkIntegration:
         executor = ToolExecutor(sandbox_enabled=False)
 
         # Execute python code
-        result = await executor.execute("python", {
-            "code": "result = 10 + 20\nprint(result)",
-            "timeout": 10
-        })
+        result = await executor.execute(
+            "python", {"code": "result = 10 + 20\nprint(result)", "timeout": 10}
+        )
 
         assert "result" in result
         result_data = result["result"]
@@ -59,10 +57,13 @@ class TestToolFrameworkIntegration:
         executor = ToolExecutor()
 
         # Missing required parameter
-        result = await executor.execute("bash", {
-            # Missing "command" parameter
-            "timeout": 10
-        })
+        result = await executor.execute(
+            "bash",
+            {
+                # Missing "command" parameter
+                "timeout": 10
+            },
+        )
 
         assert "error" in result
         assert "Invalid parameters" in result["error"]
@@ -73,14 +74,8 @@ class TestToolFrameworkIntegration:
         executor = ToolExecutor(sandbox_enabled=False)
 
         tool_calls = [
-            {
-                "name": "bash",
-                "parameters": {"command": "echo 'first'"}
-            },
-            {
-                "name": "python",
-                "parameters": {"code": "print('second')"}
-            }
+            {"name": "bash", "parameters": {"command": "echo 'first'"}},
+            {"name": "python", "parameters": {"code": "print('second')"}},
         ]
 
         results = await executor.batch_execute(tool_calls)
@@ -129,9 +124,7 @@ class TestToolSecurityIntegration:
         executor = ToolExecutor(sandbox_enabled=False)
 
         # Try dangerous command
-        result = await executor.execute("bash", {
-            "command": "rm -rf /"
-        })
+        result = await executor.execute("bash", {"command": "rm -rf /"})
 
         # Should be blocked by security check
         assert "result" in result
@@ -145,9 +138,7 @@ class TestToolSecurityIntegration:
         executor = ToolExecutor(sandbox_enabled=False)
 
         # Try importing blocked module
-        result = await executor.execute("python", {
-            "code": "import os\nos.system('ls')"
-        })
+        result = await executor.execute("python", {"code": "import os\nos.system('ls')"})
 
         # Should be blocked by AST validation
         assert "result" in result

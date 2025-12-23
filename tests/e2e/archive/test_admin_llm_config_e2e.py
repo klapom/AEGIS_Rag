@@ -43,7 +43,9 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5179/admin/llm-config", wait_until="domcontentloaded")
+                await page.goto(
+                    "http://localhost:5179/admin/llm-config", wait_until="domcontentloaded"
+                )
 
                 # Wait for page to be visible
                 llm_config = page.locator('[data-testid="llm-config-page"]')
@@ -62,7 +64,9 @@ class TestAdminLLMConfigE2E:
             page = await browser.new_page()
 
             try:
-                await page.goto("http://localhost:5179/admin/llm-config", wait_until="domcontentloaded")
+                await page.goto(
+                    "http://localhost:5179/admin/llm-config", wait_until="domcontentloaded"
+                )
 
                 use_cases = [
                     "intent_classification",
@@ -74,9 +78,7 @@ class TestAdminLLMConfigE2E:
                 ]
 
                 for use_case in use_cases:
-                    selector = page.locator(
-                        f'[data-testid="usecase-selector-{use_case}"]'
-                    )
+                    selector = page.locator(f'[data-testid="usecase-selector-{use_case}"]')
                     await expect(selector).to_be_visible(timeout=5000)
 
             finally:
@@ -128,9 +130,7 @@ class TestAdminLLMConfigE2E:
                 await page.evaluate("() => localStorage.clear()")
 
                 # Select a model
-                dropdown = page.locator(
-                    '[data-testid="model-dropdown-intent_classification"]'
-                )
+                dropdown = page.locator('[data-testid="model-dropdown-intent_classification"]')
                 await dropdown.select_option(index=1)
 
                 # Click save button
@@ -191,9 +191,7 @@ class TestAdminLLMConfigE2E:
                 await page.reload(wait_until="domcontentloaded")
 
                 # Verify selection persisted
-                reloaded_dropdown = page.locator(
-                    '[data-testid="model-dropdown-entity_extraction"]'
-                )
+                reloaded_dropdown = page.locator('[data-testid="model-dropdown-entity_extraction"]')
                 selected_value = await reloaded_dropdown.input_value()
 
                 assert (
@@ -288,9 +286,7 @@ class TestAdminLLMConfigE2E:
                 ]
 
                 for use_case, model_id in use_cases_to_change:
-                    dropdown = page.locator(
-                        f'[data-testid="model-dropdown-{use_case}"]'
-                    )
+                    dropdown = page.locator(f'[data-testid="model-dropdown-{use_case}"]')
                     await dropdown.select_option(value=model_id)
 
                 # Save
@@ -305,9 +301,7 @@ class TestAdminLLMConfigE2E:
                 config = json.loads(config_json)
 
                 for use_case, expected_model in use_cases_to_change:
-                    found = next(
-                        (c for c in config if c["useCase"] == use_case), None
-                    )
+                    found = next((c for c in config if c["useCase"] == use_case), None)
                     assert found is not None, f"{use_case} not in config"
                     assert (
                         found["modelId"] == expected_model
@@ -337,7 +331,9 @@ class TestAdminLLMConfigE2E:
                     await sidebar_link.click()
 
                     # Should navigate to /admin/llm-config
-                    assert "/admin/llm-config" in page.url, f"Expected navigation to /admin/llm-config, got {page.url}"
+                    assert (
+                        "/admin/llm-config" in page.url
+                    ), f"Expected navigation to /admin/llm-config, got {page.url}"
 
                     # Page should load
                     llm_config_page = page.locator('[data-testid="llm-config-page"]')
@@ -385,9 +381,7 @@ class TestAdminLLMConfigE2E:
                 await expect(llm_config_page).to_be_visible()
 
                 # Dropdowns should still work
-                dropdown = page.locator(
-                    '[data-testid="model-dropdown-intent_classification"]'
-                )
+                dropdown = page.locator('[data-testid="model-dropdown-intent_classification"]')
                 await expect(dropdown).to_be_visible()
                 await expect(dropdown).to_be_enabled()
 
@@ -459,9 +453,7 @@ class TestVLMIntegrationE2E:
                     await page.reload(wait_until="domcontentloaded")
 
                     # Verify persistence
-                    reloaded_dropdown = page.locator(
-                        '[data-testid="model-dropdown-vision_vlm"]'
-                    )
+                    reloaded_dropdown = page.locator('[data-testid="model-dropdown-vision_vlm"]')
                     reloaded_value = await reloaded_dropdown.input_value()
 
                     assert (
@@ -491,9 +483,7 @@ class TestVLMIntegrationE2E:
                 vlm_model = "ollama/qwen3-vl:32b"
 
                 # Change text model
-                text_dropdown = page.locator(
-                    '[data-testid="model-dropdown-entity_extraction"]'
-                )
+                text_dropdown = page.locator('[data-testid="model-dropdown-entity_extraction"]')
                 await text_dropdown.select_option(value=text_model)
 
                 # Change VLM model
@@ -511,12 +501,8 @@ class TestVLMIntegrationE2E:
                 )
                 config = json.loads(config_json)
 
-                text_config = next(
-                    (c for c in config if c["useCase"] == "entity_extraction"), None
-                )
-                vlm_config = next(
-                    (c for c in config if c["useCase"] == "vision_vlm"), None
-                )
+                text_config = next((c for c in config if c["useCase"] == "entity_extraction"), None)
+                vlm_config = next((c for c in config if c["useCase"] == "vision_vlm"), None)
 
                 assert text_config["modelId"] == text_model
                 assert vlm_config["modelId"] == vlm_model
@@ -538,14 +524,12 @@ class TestVLMIntegrationE2E:
                 await page.goto("http://localhost:5179/admin/llm-config")
 
                 # Find the VLM use case selector
-                vlm_selector = page.locator(
-                    '[data-testid="usecase-selector-vision_vlm"]'
-                )
+                vlm_selector = page.locator('[data-testid="usecase-selector-vision_vlm"]')
 
                 # Look for provider badge
-                vlm_selector.locator("span").filter(
-                    has_text="Local"
-                ) or vlm_selector.locator("span").filter(has_text="Cloud")
+                vlm_selector.locator("span").filter(has_text="Local") or vlm_selector.locator(
+                    "span"
+                ).filter(has_text="Cloud")
 
                 # Badge should exist
                 badge_visible = await vlm_selector.locator("span").count() > 0

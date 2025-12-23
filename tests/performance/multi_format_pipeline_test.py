@@ -22,9 +22,15 @@ from src.components.ingestion.section_extraction import extract_section_hierarch
 
 # Test documents - one of each format
 TEST_DOCUMENTS = {
-    "pptx": Path(r"C:\Projekte\AEGISRAG\data\sample_documents\99_pptx_text\PerformanceTuning_textonly.pptx"),
-    "ppt": Path(r"C:\Projekte\AEGISRAG\data\sample_documents\3. Basic Scripting\DE-D-OTAutBasic.ppt"),
-    "docx": Path(r"C:\Projekte\AEGISRAG\data\sample_documents\2. Advanced Admin\DE-D-AdvancedAdministration_0368.docx"),
+    "pptx": Path(
+        r"C:\Projekte\AEGISRAG\data\sample_documents\99_pptx_text\PerformanceTuning_textonly.pptx"
+    ),
+    "ppt": Path(
+        r"C:\Projekte\AEGISRAG\data\sample_documents\3. Basic Scripting\DE-D-OTAutBasic.ppt"
+    ),
+    "docx": Path(
+        r"C:\Projekte\AEGISRAG\data\sample_documents\2. Advanced Admin\DE-D-AdvancedAdministration_0368.docx"
+    ),
 }
 
 # Output directory
@@ -59,11 +65,13 @@ def analyze_json_structure(json_content: dict, format_name: str) -> dict:
         # Sample first 5 texts
         analysis["sample_texts"] = []
         for t in texts[:5]:
-            analysis["sample_texts"].append({
-                "label": t.get("label", "?"),
-                "text_preview": t.get("text", "")[:80],
-                "has_prov": bool(t.get("prov")),
-            })
+            analysis["sample_texts"].append(
+                {
+                    "label": t.get("label", "?"),
+                    "text_preview": t.get("text", "")[:80],
+                    "has_prov": bool(t.get("prov")),
+                }
+            )
     else:
         analysis["texts_count"] = 0
         analysis["text_labels"] = {}
@@ -178,7 +186,9 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
                 print(f"    {label}: {count}x")
 
         if analysis.get("body_uses_refs"):
-            print(f"\n  WARNING: body.children uses $ref pointers ({analysis['body_children_refs']} refs)")
+            print(
+                f"\n  WARNING: body.children uses $ref pointers ({analysis['body_children_refs']} refs)"
+            )
             print("           Section extraction must use 'texts' array!")
 
         # Test section extraction
@@ -195,13 +205,17 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
                 print("\n  First 5 sections:")
                 for i, s in enumerate(sections[:5]):
                     text_preview = s.text[:50].replace("\n", " ") if s.text else "(empty)"
-                    print(f"    [{i+1}] L{s.level} p{s.page_no}: '{s.heading[:40]}' -> '{text_preview}...'")
+                    print(
+                        f"    [{i+1}] L{s.level} p{s.page_no}: '{s.heading[:40]}' -> '{text_preview}...'"
+                    )
             else:
                 print("  WARNING: No sections extracted!")
 
                 # Debug: Check if texts array has headings
                 if analysis["heading_count"] > 0:
-                    print(f"  ISSUE: texts array has {analysis['heading_count']} headings but extraction failed!")
+                    print(
+                        f"  ISSUE: texts array has {analysis['heading_count']} headings but extraction failed!"
+                    )
                 else:
                     print("  Note: No heading labels found in texts array")
 
@@ -238,6 +252,7 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
     except Exception as e:
         print(f"  ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         result["error"] = str(e)
         result["success"] = False
@@ -247,10 +262,10 @@ async def test_document(doc_path: Path, format_name: str, output_dir: Path) -> d
 
 async def main():
     """Run multi-format pipeline tests."""
-    print("="*70)
+    print("=" * 70)
     print("MULTI-FORMAT PIPELINE TEST")
     print(f"Timestamp: {datetime.now().isoformat()}")
-    print("="*70)
+    print("=" * 70)
 
     # Create output directory
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -263,15 +278,17 @@ async def main():
         results.append(result)
 
     # Summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SUMMARY")
-    print("="*70)
+    print("=" * 70)
 
     for r in results:
         status = "OK" if r.get("success") else "FAILED"
         sections = r.get("sections_extracted", 0)
         issues = len(r.get("issues", []))
-        print(f"  {r['format'].upper():6s}: {status:6s} | Sections: {sections:3d} | Issues: {issues}")
+        print(
+            f"  {r['format'].upper():6s}: {status:6s} | Sections: {sections:3d} | Issues: {issues}"
+        )
 
     # Save summary
     summary_path = OUTPUT_DIR / "test_summary.json"
@@ -279,9 +296,9 @@ async def main():
         json.dump(results, f, indent=2, ensure_ascii=False, default=str)
     print(f"\nSummary saved to: {summary_path}")
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST COMPLETE")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

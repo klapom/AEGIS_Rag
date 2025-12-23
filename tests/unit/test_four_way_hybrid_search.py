@@ -223,11 +223,10 @@ class TestInitialization:
 
     def test_init_with_defaults(self):
         """Test initialization with default parameters."""
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.HybridSearch"
-        ) as mock_hybrid, patch(
-            "src.components.retrieval.four_way_hybrid_search.Neo4jClient"
-        ) as mock_neo4j:
+        with (
+            patch("src.components.retrieval.four_way_hybrid_search.HybridSearch") as mock_hybrid,
+            patch("src.components.retrieval.four_way_hybrid_search.Neo4jClient") as mock_neo4j,
+        ):
             search = FourWayHybridSearch()
 
             assert search.rrf_k == 60
@@ -276,12 +275,8 @@ class TestSearchAllChannelsWorking:
     ):
         """Test search with all channels for factual intent."""
         # Setup mocks
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -335,12 +330,8 @@ class TestSearchAllChannelsWorking:
         sample_graph_global_results,
     ):
         """Test that all channels execute in parallel for EXPLORATORY intent."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -377,12 +368,8 @@ class TestSearchAllChannelsWorking:
         sample_graph_global_results,
     ):
         """Test search returns exactly top_k results."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -414,12 +401,8 @@ class TestSearchAllChannelsWorking:
         sample_graph_global_results,
     ):
         """Test search with metadata filters applied."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -438,15 +421,11 @@ class TestSearchAllChannelsWorking:
                 method="rule_based",
             )
 
-            await four_way_search_engine.search(
-                "Find X", top_k=5, filters=filters
-            )
+            await four_way_search_engine.search("Find X", top_k=5, filters=filters)
 
         # Verify filters passed to vector search
         four_way_search_engine.hybrid_search.vector_search.assert_called_once()
-        call_kwargs = (
-            four_way_search_engine.hybrid_search.vector_search.call_args[1]
-        )
+        call_kwargs = four_way_search_engine.hybrid_search.vector_search.call_args[1]
         assert call_kwargs.get("filters") is filters
 
 
@@ -469,12 +448,10 @@ class TestGracefulDegradation:
     ):
         """Test search gracefully handles vector search failure."""
         # Vector search fails
-        four_way_search_engine.hybrid_search.vector_search.side_effect = (
-            Exception("Vector search failed")
+        four_way_search_engine.hybrid_search.vector_search.side_effect = Exception(
+            "Vector search failed"
         )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -508,11 +485,9 @@ class TestGracefulDegradation:
         sample_graph_global_results,
     ):
         """Test search gracefully handles BM25 search failure."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.side_effect = (
-            Exception("BM25 search failed")
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.side_effect = Exception(
+            "BM25 search failed"
         )
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
@@ -544,12 +519,8 @@ class TestGracefulDegradation:
         sample_bm25_results,
     ):
         """Test search when both graph channels fail."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             Exception("Neo4j error"),
             Exception("Neo4j error"),
@@ -579,15 +550,9 @@ class TestGracefulDegradation:
         four_way_search_engine,
     ):
         """Test search when all channels fail returns empty results."""
-        four_way_search_engine.hybrid_search.vector_search.side_effect = (
-            Exception("Vector failed")
-        )
-        four_way_search_engine.hybrid_search.keyword_search.side_effect = (
-            Exception("BM25 failed")
-        )
-        four_way_search_engine.neo4j_client.execute_read.side_effect = Exception(
-            "Neo4j failed"
-        )
+        four_way_search_engine.hybrid_search.vector_search.side_effect = Exception("Vector failed")
+        four_way_search_engine.hybrid_search.keyword_search.side_effect = Exception("BM25 failed")
+        four_way_search_engine.neo4j_client.execute_read.side_effect = Exception("Neo4j failed")
 
         with patch(
             "src.components.retrieval.four_way_hybrid_search.classify_intent"
@@ -628,12 +593,8 @@ class TestIntentWeightedRRF:
         sample_graph_global_results,
     ):
         """Test RRF uses FACTUAL intent weights correctly."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -641,11 +602,14 @@ class TestIntentWeightedRRF:
 
         factual_weights = INTENT_WEIGHT_PROFILES[Intent.FACTUAL]
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.FACTUAL,
                 weights=factual_weights,
@@ -677,12 +641,8 @@ class TestIntentWeightedRRF:
         sample_graph_global_results,
     ):
         """Test RRF uses KEYWORD intent weights correctly."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -690,11 +650,14 @@ class TestIntentWeightedRRF:
 
         keyword_weights = INTENT_WEIGHT_PROFILES[Intent.KEYWORD]
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.KEYWORD,
                 weights=keyword_weights,
@@ -723,12 +686,8 @@ class TestIntentWeightedRRF:
         sample_graph_global_results,
     ):
         """Test RRF uses EXPLORATORY intent weights correctly."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -736,11 +695,14 @@ class TestIntentWeightedRRF:
 
         exploratory_weights = INTENT_WEIGHT_PROFILES[Intent.EXPLORATORY]
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.EXPLORATORY,
                 weights=exploratory_weights,
@@ -768,12 +730,8 @@ class TestIntentWeightedRRF:
         sample_graph_global_results,
     ):
         """Test RRF uses SUMMARY intent weights correctly."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -781,11 +739,14 @@ class TestIntentWeightedRRF:
 
         summary_weights = INTENT_WEIGHT_PROFILES[Intent.SUMMARY]
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.SUMMARY,
                 weights=summary_weights,
@@ -827,12 +788,8 @@ class TestIntentOverride:
         sample_graph_global_results,
     ):
         """Test overriding intent to FACTUAL."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -864,12 +821,8 @@ class TestIntentOverride:
         sample_graph_global_results,
     ):
         """Test overriding intent to KEYWORD."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -894,12 +847,8 @@ class TestIntentOverride:
         sample_graph_global_results,
     ):
         """Test overriding intent to EXPLORATORY."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -924,12 +873,8 @@ class TestIntentOverride:
         sample_graph_global_results,
     ):
         """Test overriding intent to SUMMARY."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -964,12 +909,8 @@ class TestReranking:
         sample_graph_global_results,
     ):
         """Test search with reranking enabled."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -980,15 +921,16 @@ class TestReranking:
             MagicMock(doc_id="chunk_1", rerank_score=0.99, final_rank=1),
             MagicMock(doc_id="chunk_2", rerank_score=0.95, final_rank=2),
         ]
-        four_way_search_engine.hybrid_search.reranker.rerank.return_value = (
-            reranked_results
-        )
+        four_way_search_engine.hybrid_search.reranker.rerank.return_value = reranked_results
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.FACTUAL,
                 weights=INTENT_WEIGHT_PROFILES[Intent.FACTUAL],
@@ -1004,9 +946,7 @@ class TestReranking:
                 {"id": "chunk_3", "text": "Result 3"},
             ]
 
-            result = await four_way_search_engine.search(
-                "What is X?", top_k=5, use_reranking=True
-            )
+            result = await four_way_search_engine.search("What is X?", top_k=5, use_reranking=True)
 
         # Verify reranker was called
         four_way_search_engine.hybrid_search.reranker.rerank.assert_called_once()
@@ -1025,22 +965,21 @@ class TestReranking:
         sample_graph_global_results,
     ):
         """Test search without reranking."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
         ]
 
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.classify_intent"
-        ) as mock_classify, patch(
-            "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
-        ) as mock_rrf:
+        with (
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.classify_intent"
+            ) as mock_classify,
+            patch(
+                "src.components.retrieval.four_way_hybrid_search.weighted_reciprocal_rank_fusion"
+            ) as mock_rrf,
+        ):
             mock_classify.return_value = IntentClassificationResult(
                 intent=Intent.FACTUAL,
                 weights=INTENT_WEIGHT_PROFILES[Intent.FACTUAL],
@@ -1053,9 +992,7 @@ class TestReranking:
                 {"id": "chunk_2", "text": "Result 2"},
             ]
 
-            await four_way_search_engine.search(
-                "What is X?", top_k=5, use_reranking=False
-            )
+            await four_way_search_engine.search("What is X?", top_k=5, use_reranking=False)
 
         # Reranker should NOT be called
         four_way_search_engine.hybrid_search.reranker.rerank.assert_not_called()
@@ -1079,12 +1016,8 @@ class TestLatencyTracking:
         sample_graph_global_results,
     ):
         """Test total latency is tracked."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -1117,12 +1050,8 @@ class TestLatencyTracking:
         sample_graph_global_results,
     ):
         """Test intent classification latency in metadata."""
-        four_way_search_engine.hybrid_search.vector_search.return_value = (
-            sample_vector_results
-        )
-        four_way_search_engine.hybrid_search.keyword_search.return_value = (
-            sample_bm25_results
-        )
+        four_way_search_engine.hybrid_search.vector_search.return_value = sample_vector_results
+        four_way_search_engine.hybrid_search.keyword_search.return_value = sample_bm25_results
         four_way_search_engine.neo4j_client.execute_read.side_effect = [
             sample_graph_local_results,
             sample_graph_global_results,
@@ -1156,18 +1085,20 @@ class TestSingletonFunctions:
 
     def test_get_four_way_hybrid_search_returns_instance(self):
         """Test get_four_way_hybrid_search returns instance."""
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.HybridSearch"
-        ), patch("src.components.retrieval.four_way_hybrid_search.Neo4jClient"):
+        with (
+            patch("src.components.retrieval.four_way_hybrid_search.HybridSearch"),
+            patch("src.components.retrieval.four_way_hybrid_search.Neo4jClient"),
+        ):
             search = get_four_way_hybrid_search()
 
             assert isinstance(search, FourWayHybridSearch)
 
     def test_get_four_way_hybrid_search_singleton(self):
         """Test get_four_way_hybrid_search returns same instance."""
-        with patch(
-            "src.components.retrieval.four_way_hybrid_search.HybridSearch"
-        ), patch("src.components.retrieval.four_way_hybrid_search.Neo4jClient"):
+        with (
+            patch("src.components.retrieval.four_way_hybrid_search.HybridSearch"),
+            patch("src.components.retrieval.four_way_hybrid_search.Neo4jClient"),
+        ):
             search1 = get_four_way_hybrid_search()
             search2 = get_four_way_hybrid_search()
 

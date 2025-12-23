@@ -268,7 +268,9 @@ class VLMService:
                 error=str(e),
                 error_type=type(e).__name__,
             )
-            raise RuntimeError(f"VLM processing failed for section {image_context.section_id}: {e}") from e
+            raise RuntimeError(
+                f"VLM processing failed for section {image_context.section_id}: {e}"
+            ) from e
 
     async def process_images_with_sections(
         self,

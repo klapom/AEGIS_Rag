@@ -51,14 +51,16 @@ def sample_domain_with_prompts(sample_domain):
         dict: Domain with custom entity and relationship extraction prompts
     """
     domain = sample_domain.copy()
-    domain.update({
-        "entity_prompt": """Extract technical entities from {text}.
+    domain.update(
+        {
+            "entity_prompt": """Extract technical entities from {text}.
 Focus on software concepts, technologies, frameworks, and platforms.
 Return JSON array with name, type, description fields.""",
-        "relationship_prompt": """Extract technical relationships from {text} given entities: {entities}.
+            "relationship_prompt": """Extract technical relationships from {text} given entities: {entities}.
 Focus on dependencies, integrations, and technical relationships.
 Return JSON array with source, target, type, description fields.""",
-    })
+        }
+    )
     return domain
 
 
@@ -114,16 +116,18 @@ def sample_training_log_completed(sample_training_log):
         dict: Training log marked as completed with final metrics
     """
     log = sample_training_log.copy()
-    log.update({
-        "status": "completed",
-        "completed_at": datetime.now().isoformat(),
-        "processed_documents": 100,
-        "success_count": 98,
-        "error_count": 2,
-        "metrics": {
-            "precision": 0.94,
-            "recall": 0.91,
-            "f1_score": 0.925,
-        },
-    })
+    log.update(
+        {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat(),
+            "processed_documents": 100,
+            "success_count": 98,
+            "error_count": 2,
+            "metrics": {
+                "precision": 0.94,
+                "recall": 0.91,
+                "f1_score": 0.925,
+            },
+        }
+    )
     return log

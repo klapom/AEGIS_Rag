@@ -88,7 +88,10 @@ class TestGetVLMBackendFromConfig:
         with patch.dict(os.environ, clean_env, clear=True):
             # Patch config loading to fail (simulate no config file)
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.config.get_llm_proxy_config", side_effect=Exception("No config")):
+            with patch(
+                "src.domains.llm_integration.config.get_llm_proxy_config",
+                side_effect=Exception("No config"),
+            ):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.OLLAMA
 
@@ -113,7 +116,9 @@ class TestGetVLMBackendFromConfig:
 
         with patch.dict(os.environ, clean_env, clear=True):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config):
+            with patch(
+                "src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config
+            ):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.DASHSCOPE
 
@@ -123,7 +128,10 @@ class TestGetVLMBackendFromConfig:
 
         with patch.dict(os.environ, clean_env, clear=True):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.config.get_llm_proxy_config", side_effect=Exception("Failed")):
+            with patch(
+                "src.domains.llm_integration.config.get_llm_proxy_config",
+                side_effect=Exception("Failed"),
+            ):
                 backend = get_vlm_backend_from_config()
                 assert backend == VLMBackend.OLLAMA
 
@@ -146,7 +154,9 @@ class TestGetVLMClient:
     def test_explicit_dashscope_backend(self):
         """Test creating DashScope client with explicit backend."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+        with patch(
+            "src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -159,7 +169,9 @@ class TestGetVLMClient:
         """Test factory uses config when backend not explicitly specified."""
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+            with patch(
+                "src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient"
+            ) as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -204,7 +216,9 @@ class TestGetVLMClient:
     def test_dashscope_lazy_import(self):
         """Test DashScopeVLMClient is lazily imported."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+        with patch(
+            "src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient"
+        ) as mock_class:
             mock_instance = MagicMock()
             mock_class.return_value = mock_instance
 
@@ -338,7 +352,9 @@ class TestVLMFactoryIntegration:
             assert backend == VLMBackend.DASHSCOPE
 
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient") as mock_class:
+            with patch(
+                "src.domains.llm_integration.proxy.dashscope_vlm.DashScopeVLMClient"
+            ) as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -350,7 +366,9 @@ class TestVLMFactoryIntegration:
         """Test shared client respects environment configuration."""
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient") as mock_class:
+            with patch(
+                "src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient"
+            ) as mock_class:
                 mock_instance = MagicMock()
                 mock_class.return_value = mock_instance
 
@@ -364,7 +382,9 @@ class TestVLMFactoryIntegration:
 
         with patch.dict(os.environ, {"VLM_BACKEND": "ollama"}, clear=False):
             # IMPORTANT: Patch at SOURCE module (lazy import)
-            with patch("src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config):
+            with patch(
+                "src.domains.llm_integration.config.get_llm_proxy_config", return_value=mock_config
+            ):
                 backend = get_vlm_backend_from_config()
                 # Env var should take priority
                 assert backend == VLMBackend.OLLAMA
@@ -383,7 +403,10 @@ class TestVLMFactoryErrorHandling:
     def test_missing_dependency_handling(self):
         """Test handling when client dependency is missing."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch("src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient", side_effect=ImportError("Missing httpx")):
+        with patch(
+            "src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient",
+            side_effect=ImportError("Missing httpx"),
+        ):
             with pytest.raises(ImportError):
                 get_vlm_client(VLMBackend.OLLAMA)
 

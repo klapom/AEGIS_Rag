@@ -131,9 +131,9 @@ class TestGraphExplorationWorkflow:
 
         # Submit upload
         await asyncio.sleep(2)
-        submit_button = page.get_by_role("button").filter(
-            has_text=re.compile(r"Upload|Submit", re.I)
-        ).first
+        submit_button = (
+            page.get_by_role("button").filter(has_text=re.compile(r"Upload|Submit", re.I)).first
+        )
         if await submit_button.count() > 0:
             await submit_button.click()
             print("✓ Submitted upload")
@@ -172,9 +172,7 @@ class TestGraphExplorationWorkflow:
         print("✓ Graph visualization page loaded")
 
         # Wait for graph container to appear
-        await page.wait_for_selector(
-            'canvas, svg, [id*="graph"], [class*="graph"]', timeout=10000
-        )
+        await page.wait_for_selector('canvas, svg, [id*="graph"], [class*="graph"]', timeout=10000)
         print("✓ Graph visualization container found")
 
         # Wait for graph to render
@@ -187,9 +185,7 @@ class TestGraphExplorationWorkflow:
         # Look for statistics display
         try:
             # Common statistics elements
-            stats_container = page.locator(
-                '.stats, .statistics, [data-testid="stats"]'
-            ).first
+            stats_container = page.locator('.stats, .statistics, [data-testid="stats"]').first
 
             if await stats_container.count() == 0:
                 # Try to find by text content
@@ -201,11 +197,15 @@ class TestGraphExplorationWorkflow:
                 print("✓ Statistics container found")
 
                 # Try to extract specific statistics
-                stats_text = await page.get_by_text(re.compile(r"[0-9]+ nodes", re.I)).text_content()
+                stats_text = await page.get_by_text(
+                    re.compile(r"[0-9]+ nodes", re.I)
+                ).text_content()
                 if stats_text:
                     print(f"  Nodes: {stats_text}")
 
-                edges_text = await page.get_by_text(re.compile(r"[0-9]+ edges", re.I)).text_content()
+                edges_text = await page.get_by_text(
+                    re.compile(r"[0-9]+ edges", re.I)
+                ).text_content()
                 if edges_text:
                     print(f"  Edges: {edges_text}")
 
@@ -228,9 +228,7 @@ class TestGraphExplorationWorkflow:
         # Test entity type filter
         try:
             # Look for filter controls
-            filter_section = page.locator(
-                'select[name*="type"], select[name*="entity"]'
-            ).first
+            filter_section = page.locator('select[name*="type"], select[name*="entity"]').first
 
             if await filter_section.count() == 0:
                 # Try to find by text content
@@ -253,9 +251,7 @@ class TestGraphExplorationWorkflow:
                     print("  Graph should now show only PERSON entities")
 
                 # Try minimum degree filter
-                degree_input = page.locator(
-                    'input[name*="degree"], input[type="number"]'
-                ).first
+                degree_input = page.locator('input[name*="degree"], input[type="number"]').first
 
                 if await degree_input.count() > 0:
                     await degree_input.fill("2")
@@ -330,8 +326,7 @@ class TestGraphExplorationWorkflow:
 
                 # Look for details panel
                 details_panel = page.locator(
-                    '.details, .node-details, [data-testid="node-details"], '
-                    '.panel, .sidebar'
+                    '.details, .node-details, [data-testid="node-details"], ' ".panel, .sidebar"
                 ).first
 
                 if await details_panel.count() > 0:
@@ -371,15 +366,15 @@ class TestGraphExplorationWorkflow:
         # Check community detection and visualization
         try:
             # Look for community controls or visualization
-            community_section = page.locator(
-                'select[name*="community"]'
-            ).first
+            community_section = page.locator('select[name*="community"]').first
 
             if await community_section.count() == 0:
                 # Try to find by button or text
-                community_section = page.get_by_role("button").filter(
-                    has_text=re.compile(r"communities", re.I)
-                ).first
+                community_section = (
+                    page.get_by_role("button")
+                    .filter(has_text=re.compile(r"communities", re.I))
+                    .first
+                )
 
             if await community_section.count() == 0:
                 # Try to find by text content
@@ -389,9 +384,7 @@ class TestGraphExplorationWorkflow:
                 print("✓ Community controls found")
 
                 # Try to select a community
-                community_select = page.locator(
-                    'select[name*="community"]'
-                ).first
+                community_select = page.locator('select[name*="community"]').first
 
                 if await community_select.count() > 0:
                     # Select first community
@@ -407,9 +400,7 @@ class TestGraphExplorationWorkflow:
 
                 if await community_list.count() == 0:
                     # Try to find by list items
-                    community_list = page.locator(
-                        'ul:has(li), [class*="community"]'
-                    ).first
+                    community_list = page.locator('ul:has(li), [class*="community"]').first
 
                 if await community_list.count() > 0:
                     print("✓ Community list displayed")
@@ -426,15 +417,19 @@ class TestGraphExplorationWorkflow:
 
         # Test graph export functionality
         try:
-            export_button = page.get_by_role("button").filter(
-                has_text=re.compile(r"Export|Download", re.I)
-            ).first
+            export_button = (
+                page.get_by_role("button")
+                .filter(has_text=re.compile(r"Export|Download", re.I))
+                .first
+            )
 
             if await export_button.count() == 0:
                 # Try link elements
-                export_button = page.get_by_role("link").filter(
-                    has_text=re.compile(r"Export|Download", re.I)
-                ).first
+                export_button = (
+                    page.get_by_role("link")
+                    .filter(has_text=re.compile(r"Export|Download", re.I))
+                    .first
+                )
 
             if await export_button.count() > 0:
                 print("✓ Export button found")
@@ -507,9 +502,7 @@ class TestGraphExplorationWorkflow:
                 actual_node_count = node_record["count"] if node_record else 0
 
                 # Get edge count
-                edge_result = await session.run(
-                    "MATCH ()-[r]->() RETURN count(r) as count"
-                )
+                edge_result = await session.run("MATCH ()-[r]->() RETURN count(r) as count")
                 edge_record = await edge_result.single()
                 actual_edge_count = edge_record["count"] if edge_record else 0
 
@@ -528,7 +521,7 @@ class TestGraphExplorationWorkflow:
 
         # Extract displayed statistics
         try:
-            nodes_text = await page.locator('text=/[0-9]+ nodes/i').text_content()
+            nodes_text = await page.locator("text=/[0-9]+ nodes/i").text_content()
             displayed_nodes = int("".join(filter(str.isdigit, nodes_text)))
             print(f"✓ Displayed node count: {displayed_nodes}")
 
@@ -541,7 +534,7 @@ class TestGraphExplorationWorkflow:
                         f"actual={actual_node_count}"
                     )
 
-            edges_text = await page.locator('text=/[0-9]+ edges/i').text_content()
+            edges_text = await page.locator("text=/[0-9]+ edges/i").text_content()
             displayed_edges = int("".join(filter(str.isdigit, edges_text)))
             print(f"✓ Displayed edge count: {displayed_edges}")
 
@@ -633,7 +626,7 @@ class TestGraphExplorationWorkflow:
                 await asyncio.sleep(1)
 
                 # Check details panel for relationships
-                details_panel = page.locator('.details, .node-details, .panel').first
+                details_panel = page.locator(".details, .node-details, .panel").first
                 if await details_panel.count() > 0:
                     panel_text = await details_panel.text_content()
 

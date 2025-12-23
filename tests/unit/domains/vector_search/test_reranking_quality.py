@@ -33,8 +33,9 @@ def test_reranking_quality():
     # Relevant docs should have higher scores than irrelevant
     relevant_scores = [reranked[0]["rerank_score"], reranked[1]["rerank_score"]]
     irrelevant_scores = [reranked[2]["rerank_score"], reranked[3]["rerank_score"]]
-    assert min(relevant_scores) > max(irrelevant_scores), \
-        "Relevant docs should score higher than irrelevant"
+    assert min(relevant_scores) > max(
+        irrelevant_scores
+    ), "Relevant docs should score higher than irrelevant"
 
 
 @pytest.mark.unit

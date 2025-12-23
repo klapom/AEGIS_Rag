@@ -414,7 +414,9 @@ class QdrantClient:
                 from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
 
                 # Normalize section_filter to list
-                section_ids = [section_filter] if isinstance(section_filter, str) else section_filter
+                section_ids = (
+                    [section_filter] if isinstance(section_filter, str) else section_filter
+                )
 
                 # Build section filter condition
                 if len(section_ids) == 1:

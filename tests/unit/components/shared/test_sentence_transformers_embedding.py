@@ -19,7 +19,9 @@ import numpy as np
 import pytest
 
 # Skip if sentence_transformers not available (optional dependency)
-pytest.importorskip("sentence_transformers", reason="sentence-transformers not installed (optional reranking group)")
+pytest.importorskip(
+    "sentence_transformers", reason="sentence-transformers not installed (optional reranking group)"
+)
 
 from src.components.shared.sentence_transformers_embedding import (
     SentenceTransformersEmbeddingService,
@@ -71,10 +73,7 @@ def test_lazy_model_loading(mock_sentence_transformer):
     # Patch at source: sentence_transformers.SentenceTransformer (lazy import in _load_model)
     mock_model_class = MagicMock(return_value=mock_sentence_transformer)
 
-    with patch(
-        "sentence_transformers.SentenceTransformer",
-        mock_model_class
-    ):
+    with patch("sentence_transformers.SentenceTransformer", mock_model_class):
         service = SentenceTransformersEmbeddingService(device="cpu")  # Use cpu to avoid CUDA check
         assert service._model is None
 
@@ -286,10 +285,7 @@ def test_device_auto_selection():
     mock_model_class = MagicMock(return_value=mock_model)
 
     # Patch at source: sentence_transformers.SentenceTransformer (lazy import in _load_model)
-    with patch(
-        "sentence_transformers.SentenceTransformer",
-        mock_model_class
-    ):
+    with patch("sentence_transformers.SentenceTransformer", mock_model_class):
         service = SentenceTransformersEmbeddingService(device="auto")
         service._load_model()
 

@@ -65,7 +65,9 @@ def mock_parsed_document():
     """Mock DoclingParsedDocument with typical structure."""
     parsed_doc = MagicMock()
     parsed_doc.document = MagicMock()
-    parsed_doc.document.export_to_markdown = MagicMock(return_value="# Test Document\n\nContent here.")
+    parsed_doc.document.export_to_markdown = MagicMock(
+        return_value="# Test Document\n\nContent here."
+    )
     parsed_doc.text = "Test Document\n\nContent here."
     parsed_doc.metadata = {"source": "test.pdf", "format": "pdf"}
     parsed_doc.tables = []
@@ -121,7 +123,9 @@ async def test_docling_extraction_node_success(
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         # Setup mock client
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(return_value=mock_parsed_document)
@@ -130,8 +134,14 @@ async def test_docling_extraction_node_success(
         mock_client_class.return_value = mock_client
 
         # Patch at docling_client module where they're imported from
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 result = await docling_extraction_node(base_state)
 
                 # Verify document was parsed
@@ -170,15 +180,23 @@ async def test_docling_parse_node_alias(
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(return_value=mock_parsed_document)
         mock_client.start_container = AsyncMock()
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 result = await docling_parse_node(base_state)
 
                 # Verify same behavior as extraction_node
@@ -231,15 +249,23 @@ async def test_docling_container_restart(
     base_state["document_path"] = str(test_file)
     base_state["requires_container_restart"] = True
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(return_value=mock_parsed_document)
         mock_client.start_container = AsyncMock()
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 result = await docling_extraction_node(base_state)
 
                 # Verify restart occurred
@@ -254,7 +280,9 @@ async def test_docling_container_restart(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_prewarmed_docling_client not exported from document_parsers - needs patch at docling_client module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_prewarmed_docling_client not exported from document_parsers - needs patch at docling_client module"
+)
 @pytest.mark.asyncio
 async def test_docling_prewarmed_container(
     base_state: IngestionState,
@@ -276,12 +304,15 @@ async def test_docling_prewarmed_container(
     prewarmed_client = AsyncMock()
     prewarmed_client.parse_document = AsyncMock(return_value=mock_parsed_document)
 
-    with patch(
-        "src.components.ingestion.nodes.document_parsers.get_prewarmed_docling_client",
-        return_value=prewarmed_client,
-    ), patch(
-        "src.components.ingestion.nodes.document_parsers.is_docling_container_prewarmed",
-        return_value=True,
+    with (
+        patch(
+            "src.components.ingestion.nodes.document_parsers.get_prewarmed_docling_client",
+            return_value=prewarmed_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.document_parsers.is_docling_container_prewarmed",
+            return_value=True,
+        ),
     ):
         result = await docling_extraction_node(base_state)
 
@@ -314,15 +345,23 @@ async def test_docling_page_dimensions(
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(return_value=mock_parsed_document)
         mock_client.start_container = AsyncMock()
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 result = await docling_extraction_node(base_state)
 
                 # Verify page dimensions
@@ -339,7 +378,9 @@ async def test_docling_page_dimensions(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_parse_success(base_state: IngestionState, tmp_path) -> None:
     """Test successful LlamaIndex parsing of supported format.
@@ -361,7 +402,9 @@ async def test_llamaindex_parse_success(base_state: IngestionState, tmp_path) ->
     mock_llama_doc.text = "# Markdown Document\n\nContent here."
     mock_llama_doc.metadata = {}
 
-    with patch("src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader") as mock_reader_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader"
+    ) as mock_reader_class:
         mock_reader = MagicMock()
         mock_reader.load_data = MagicMock(return_value=[mock_llama_doc])
         mock_reader_class.return_value = mock_reader
@@ -381,7 +424,9 @@ async def test_llamaindex_parse_success(base_state: IngestionState, tmp_path) ->
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_import_error(base_state: IngestionState, tmp_path) -> None:
     """Test LlamaIndex import error handling.
@@ -411,7 +456,9 @@ async def test_llamaindex_import_error(base_state: IngestionState, tmp_path) -> 
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_unsupported_format(base_state: IngestionState, tmp_path) -> None:
     """Test LlamaIndex with unsupported format.
@@ -460,7 +507,9 @@ async def test_llamaindex_missing_document(base_state: IngestionState) -> None:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_empty_result(base_state: IngestionState, tmp_path) -> None:
     """Test LlamaIndex handling of empty reader result.
@@ -474,7 +523,9 @@ async def test_llamaindex_empty_result(base_state: IngestionState, tmp_path) -> 
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader") as mock_reader_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader"
+    ) as mock_reader_class:
         mock_reader = MagicMock()
         mock_reader.load_data = MagicMock(return_value=[])  # Empty result
         mock_reader_class.return_value = mock_reader
@@ -490,7 +541,9 @@ async def test_llamaindex_empty_result(base_state: IngestionState, tmp_path) -> 
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_metadata_extraction(base_state: IngestionState, tmp_path) -> None:
     """Test LlamaIndex correctly extracts document metadata.
@@ -513,7 +566,9 @@ async def test_llamaindex_metadata_extraction(base_state: IngestionState, tmp_pa
     mock_doc2.text = "Chapter 2 content"
     mock_doc2.metadata = {"chapter": "2", "author": "Test Author"}
 
-    with patch("src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader") as mock_reader_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader"
+    ) as mock_reader_class:
         mock_reader = MagicMock()
         mock_reader.load_data = MagicMock(return_value=[mock_doc1, mock_doc2])
         mock_reader_class.return_value = mock_reader
@@ -559,15 +614,23 @@ async def test_docling_state_updated_correctly(
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(return_value=mock_parsed_document)
         mock_client.start_container = AsyncMock()
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 result = await docling_extraction_node(base_state)
 
                 # Verify all required fields present
@@ -616,15 +679,23 @@ async def test_docling_parse_error(
 
     base_state["document_path"] = str(test_file)
 
-    with patch("src.components.ingestion.nodes.document_parsers.DoclingContainerClient") as mock_client_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
+    ) as mock_client_class:
         mock_client = AsyncMock()
         mock_client.parse_document = AsyncMock(side_effect=RuntimeError("Parse failed"))
         mock_client.start_container = AsyncMock()
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch("src.components.ingestion.docling_client.get_prewarmed_docling_client", return_value=None):
-            with patch("src.components.ingestion.docling_client.is_docling_container_prewarmed", return_value=False):
+        with patch(
+            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+            return_value=None,
+        ):
+            with patch(
+                "src.components.ingestion.docling_client.is_docling_container_prewarmed",
+                return_value=False,
+            ):
                 with pytest.raises(RuntimeError):
                     await docling_extraction_node(base_state)
 
@@ -634,7 +705,9 @@ async def test_docling_parse_error(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import")
+@pytest.mark.skip(
+    reason="Sprint 58: SimpleDirectoryReader not exported from document_parsers - needs patch at llama_index import"
+)
 @pytest.mark.asyncio
 async def test_llamaindex_multiple_documents(base_state: IngestionState, tmp_path) -> None:
     """Test LlamaIndex combining multiple documents into single content.
@@ -655,7 +728,9 @@ async def test_llamaindex_multiple_documents(base_state: IngestionState, tmp_pat
         MagicMock(text="Document 3 text", metadata={}),
     ]
 
-    with patch("src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader") as mock_reader_class:
+    with patch(
+        "src.components.ingestion.nodes.document_parsers.SimpleDirectoryReader"
+    ) as mock_reader_class:
         mock_reader = MagicMock()
         mock_reader.load_data = MagicMock(return_value=mock_docs)
         mock_reader_class.return_value = mock_reader

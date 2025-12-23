@@ -429,10 +429,7 @@ class TestWorkerPoolIntegration:
         """Test worker status updates during processing."""
         pool = GraphExtractionWorkerPool(config=worker_pool_config, extractor=mock_extractor)
 
-        chunks = [
-            {"chunk_id": f"c{i}", "text": f"text {i}", "document_id": "d1"}
-            for i in range(4)
-        ]
+        chunks = [{"chunk_id": f"c{i}", "text": f"text {i}", "document_id": "d1"} for i in range(4)]
 
         results = []
         async for result in pool.process_chunks(chunks):
@@ -448,9 +445,7 @@ class TestWorkerPoolIntegration:
         assert sum(w.chunks_processed for w in statuses) == 4
 
     @pytest.mark.asyncio
-    async def test_error_isolation_between_chunks(
-        self, worker_pool_config, mock_extractor
-    ):
+    async def test_error_isolation_between_chunks(self, worker_pool_config, mock_extractor):
         """Test errors in one chunk don't stop other chunks."""
         pool = GraphExtractionWorkerPool(config=worker_pool_config, extractor=mock_extractor)
 
@@ -591,10 +586,7 @@ class TestWorkerPoolIntegration:
 
         mock_extractor.extract = monitored_extract
 
-        chunks = [
-            {"chunk_id": f"c{i}", "text": f"text {i}", "document_id": "d1"}
-            for i in range(6)
-        ]
+        chunks = [{"chunk_id": f"c{i}", "text": f"text {i}", "document_id": "d1"} for i in range(6)]
 
         results = []
         async for result in pool.process_chunks(chunks):

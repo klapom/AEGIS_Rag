@@ -85,21 +85,11 @@ def api_base_url() -> str:
 def pytest_configure(config):
     """Register custom markers and configure E2E testing."""
     config.addinivalue_line(
-        "markers",
-        "e2e: mark test as end-to-end test (requires running services)"
+        "markers", "e2e: mark test as end-to-end test (requires running services)"
     )
-    config.addinivalue_line(
-        "markers",
-        "slow: mark test as slow running (> 30 seconds)"
-    )
-    config.addinivalue_line(
-        "markers",
-        "sprint49: mark test as Sprint 49 feature validation"
-    )
-    config.addinivalue_line(
-        "markers",
-        "sprint50: mark test as Sprint 50 feature validation"
-    )
+    config.addinivalue_line("markers", "slow: mark test as slow running (> 30 seconds)")
+    config.addinivalue_line("markers", "sprint49: mark test as Sprint 49 feature validation")
+    config.addinivalue_line("markers", "sprint50: mark test as Sprint 50 feature validation")
 
 
 def pytest_runtest_makereport(item, call):

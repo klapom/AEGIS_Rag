@@ -12,7 +12,9 @@ from src.components.ingestion.docling_client import DoclingContainerClient
 
 async def save_json():
     """Parse document and save full JSON to file."""
-    sample_dir = Path(r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents")
+    sample_dir = Path(
+        r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents"
+    )
     pptx_file = sample_dir / "99_pptx_text" / "PerformanceTuning_textonly.pptx"
 
     print(f"Parsing: {pptx_file}")

@@ -327,10 +327,14 @@ async def test_lightrag_concurrent_insertions(lightrag_client):
 async def test_lightrag_lazy_initialization():
     """Test lazy initialization of LightRAG."""
     # Patch at the source module where LightRAG is imported from (lazy import)
-    with patch("lightrag.LightRAG") as mock_lightrag_cls, patch(
-        "lightrag.kg.shared_storage.initialize_pipeline_status",
-        new_callable=AsyncMock,
-    ), patch("src.components.llm_proxy.get_aegis_llm_proxy"):
+    with (
+        patch("lightrag.LightRAG") as mock_lightrag_cls,
+        patch(
+            "lightrag.kg.shared_storage.initialize_pipeline_status",
+            new_callable=AsyncMock,
+        ),
+        patch("src.components.llm_proxy.get_aegis_llm_proxy"),
+    ):
         mock_instance = MagicMock()
         mock_instance.initialize_storages = AsyncMock()
         mock_instance.chunk_entity_relation_graph = MagicMock()

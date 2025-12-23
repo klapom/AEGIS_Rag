@@ -347,7 +347,10 @@ def test_ingest_not_a_directory(client, tmp_path):
     # Sprint 22 Feature 22.2.2: Standardized error response format
     data = response.json()
     assert data["error"]["code"] == "BAD_REQUEST"
-    assert "not a directory" in data["error"]["message"].lower() or "directory" in data["error"]["message"].lower()
+    assert (
+        "not a directory" in data["error"]["message"].lower()
+        or "directory" in data["error"]["message"].lower()
+    )
 
 
 @pytest.mark.unit

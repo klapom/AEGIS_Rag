@@ -18,7 +18,6 @@ Run tests:
     pytest tests/unit/test_ingestion_config.py -v
 """
 
-
 import pytest
 
 from src.components.ingestion.docling_client import DoclingContainerClient

@@ -549,7 +549,12 @@ class TestTrainingEventStreamIntegration:
             (EventType.PHASE_CHANGED, 5.0, "loading_data", "Loading dataset"),
             (EventType.PROGRESS_UPDATE, 25.0, "entity_optimization", "Entity optimization started"),
             (EventType.EVALUATION_RESULT, 45.0, "entity_optimization", "Entity F1: 0.85"),
-            (EventType.PROGRESS_UPDATE, 50.0, "relation_optimization", "Relation optimization started"),
+            (
+                EventType.PROGRESS_UPDATE,
+                50.0,
+                "relation_optimization",
+                "Relation optimization started",
+            ),
             (EventType.EVALUATION_RESULT, 80.0, "relation_optimization", "Relation F1: 0.82"),
             (EventType.PROGRESS_UPDATE, 90.0, "validation", "Validating metrics"),
             (EventType.COMPLETED, 100.0, "completed", "Training completed"),

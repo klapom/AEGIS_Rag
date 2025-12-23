@@ -29,17 +29,79 @@ class TestVLMFactoryPattern:
         """Create a test image file (minimal valid PNG)."""
         image_path = tmp_path / "test_image.png"
         # Minimal valid PNG header (1x1 white pixel)
-        png_header = bytes([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-            0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-            0x54, 0x08, 0xD7, 0x63, 0xF8, 0xFF, 0xFF, 0x3F,
-            0x00, 0x05, 0xFE, 0x02, 0xFE, 0xDC, 0xCC, 0x59,
-            0xE7, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
-            0x44, 0xAE, 0x42, 0x60, 0x82
-        ])
+        png_header = bytes(
+            [
+                0x89,
+                0x50,
+                0x4E,
+                0x47,
+                0x0D,
+                0x0A,
+                0x1A,
+                0x0A,
+                0x00,
+                0x00,
+                0x00,
+                0x0D,
+                0x49,
+                0x48,
+                0x44,
+                0x52,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x08,
+                0x02,
+                0x00,
+                0x00,
+                0x00,
+                0x90,
+                0x77,
+                0x53,
+                0xDE,
+                0x00,
+                0x00,
+                0x00,
+                0x0C,
+                0x49,
+                0x44,
+                0x41,
+                0x54,
+                0x08,
+                0xD7,
+                0x63,
+                0xF8,
+                0xFF,
+                0xFF,
+                0x3F,
+                0x00,
+                0x05,
+                0xFE,
+                0x02,
+                0xFE,
+                0xDC,
+                0xCC,
+                0x59,
+                0xE7,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x49,
+                0x45,
+                0x4E,
+                0x44,
+                0xAE,
+                0x42,
+                0x60,
+                0x82,
+            ]
+        )
         image_path.write_bytes(png_header)
         return image_path
 
@@ -102,10 +164,12 @@ class TestVLMFactoryPattern:
 
         # Create temp config file
         config_file = tmp_path / "llm_config.yml"
-        config_file.write_text("""
+        config_file.write_text(
+            """
 routing:
   vlm_backend: ollama
-""")
+"""
+        )
 
         # Mock the config loader to use our temp file
         with patch("src.components.llm_proxy.vlm_factory.get_llm_proxy_config") as mock_config:
@@ -154,13 +218,43 @@ class TestOllamaVLMIntegration:
     def test_image(self, tmp_path) -> Path:
         """Create test image."""
         image_path = tmp_path / "test.png"
-        png_data = bytes([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-            0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-            0xDE
-        ])
+        png_data = bytes(
+            [
+                0x89,
+                0x50,
+                0x4E,
+                0x47,
+                0x0D,
+                0x0A,
+                0x1A,
+                0x0A,
+                0x00,
+                0x00,
+                0x00,
+                0x0D,
+                0x49,
+                0x48,
+                0x44,
+                0x52,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x08,
+                0x02,
+                0x00,
+                0x00,
+                0x00,
+                0x90,
+                0x77,
+                0x53,
+                0xDE,
+            ]
+        )
         image_path.write_bytes(png_data + b"\x00" * 50)
         return image_path
 

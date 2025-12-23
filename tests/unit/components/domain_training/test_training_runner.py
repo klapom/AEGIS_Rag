@@ -102,9 +102,7 @@ def sample_training_dataset():
         {
             "text": "FastAPI is a web framework for Python.",
             "entities": ["FastAPI", "Python"],
-            "relations": [
-                {"subject": "FastAPI", "predicate": "built_with", "object": "Python"}
-            ],
+            "relations": [{"subject": "FastAPI", "predicate": "built_with", "object": "Python"}],
         },
     ]
 
@@ -122,21 +120,26 @@ async def test_run_dspy_optimization_success(
     sample_training_dataset,
 ):
     """Test successful DSPy optimization run."""
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": f"Prompt for {x.get('instructions', 'unknown')}",
-            "instructions": x.get("instructions", ""),
-        },
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": f"Prompt for {x.get('instructions', 'unknown')}",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
     ):
         await run_dspy_optimization(
             domain_name="tech_docs",
@@ -174,21 +177,26 @@ async def test_run_dspy_optimization_full_phase_sequence(
 
     mock_training_stream.emit.side_effect = capture_emit
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt template",
-            "instructions": x.get("instructions", ""),
-        },
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt template",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
     ):
         await run_dspy_optimization(
             domain_name="tech_docs",
@@ -221,24 +229,30 @@ async def test_run_dspy_optimization_invokes_progress_callback(
     async def capture_progress(event: ProgressEvent):
         progress_events.append(event)
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt",
-            "instructions": x.get("instructions", ""),
-        },
-    ), patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+    ):
         mock_tracker = AsyncMock()
         mock_tracker.enter_phase = MagicMock()
         mock_tracker.update_progress = MagicMock()
@@ -272,15 +286,19 @@ async def test_run_dspy_optimization_domain_not_found(
     """Test handling when domain not found."""
     mock_domain_repository.get_domain = AsyncMock(return_value=None)
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+    ):
         mock_tracker = AsyncMock()
         mock_tracker.fail = MagicMock()
         mock_tracker.current_progress = 5.0
@@ -331,24 +349,30 @@ async def test_run_dspy_optimization_database_error(
         return_value={"metrics": {"f1": 0.85}}
     )
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt",
-            "instructions": x.get("instructions", ""),
-        },
-    ), patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+    ):
         mock_tracker = AsyncMock()
         mock_tracker.enter_phase = MagicMock()
         mock_tracker.update_progress = MagicMock(side_effect=Exception("Database error"))
@@ -380,20 +404,24 @@ async def test_run_dspy_optimization_unexpected_error(
         side_effect=RuntimeError("Unexpected error")
     )
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class, patch(
-        "src.components.graph_rag.neo4j_client.get_neo4j_client"
-    ) as mock_neo4j:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+        patch("src.components.graph_rag.neo4j_client.get_neo4j_client") as mock_neo4j,
+    ):
         mock_tracker = AsyncMock()
         mock_tracker.enter_phase = MagicMock()
         mock_tracker.update_progress = MagicMock()
@@ -428,23 +456,26 @@ async def test_run_dspy_optimization_task_cancellation(
     sample_training_dataset,
 ):
     """Test handling task cancellation."""
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer"
-    ) as mock_optimizer_class, patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer"
+        ) as mock_optimizer_class,
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+    ):
         mock_optimizer = AsyncMock()
         mock_optimizer.set_event_stream = MagicMock()
         # Simulate cancellation during entity optimization
-        mock_optimizer.optimize_entity_extraction = AsyncMock(
-            side_effect=asyncio.CancelledError()
-        )
+        mock_optimizer.optimize_entity_extraction = AsyncMock(side_effect=asyncio.CancelledError())
         mock_optimizer_class.return_value = mock_optimizer
 
         mock_tracker = AsyncMock()
@@ -478,21 +509,26 @@ async def test_run_dspy_optimization_emits_sse_events(
     sample_training_dataset,
 ):
     """Test SSE events are emitted during training."""
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt",
-            "instructions": x.get("instructions", ""),
-        },
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
     ):
         await run_dspy_optimization(
             domain_name="tech_docs",
@@ -501,9 +537,7 @@ async def test_run_dspy_optimization_emits_sse_events(
         )
 
         # Verify stream operations
-        mock_training_stream.start_stream.assert_called_once_with(
-            "run-123", "tech_docs", None
-        )
+        mock_training_stream.start_stream.assert_called_once_with("run-123", "tech_docs", None)
         mock_training_stream.close_stream.assert_called_once_with("run-123")
 
         # Verify emit was called with proper structure
@@ -526,21 +560,26 @@ async def test_run_dspy_optimization_with_log_path(
     sample_training_dataset,
 ):
     """Test training with JSONL log path."""
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt",
-            "instructions": x.get("instructions", ""),
-        },
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
     ):
         log_path = "/logs/training.jsonl"
 
@@ -576,21 +615,26 @@ async def test_run_dspy_optimization_collects_metrics(
 
     mock_domain_repository.update_training_log = AsyncMock(side_effect=capture_update)
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.DSPyOptimizer",
-        return_value=mock_dspy_optimizer,
-    ), patch(
-        "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
-        side_effect=lambda x: {
-            "prompt_template": "Prompt",
-            "instructions": x.get("instructions", ""),
-        },
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.DSPyOptimizer",
+            return_value=mock_dspy_optimizer,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.extract_prompt_from_dspy_result",
+            side_effect=lambda x: {
+                "prompt_template": "Prompt",
+                "instructions": x.get("instructions", ""),
+            },
+        ),
     ):
         await run_dspy_optimization(
             domain_name="tech_docs",
@@ -615,15 +659,19 @@ async def test_run_dspy_optimization_validation_error(
     """Test validation errors are properly handled."""
     mock_domain_repository.get_domain = AsyncMock(return_value=None)
 
-    with patch(
-        "src.components.domain_training.training_runner.get_domain_repository",
-        return_value=mock_domain_repository,
-    ), patch(
-        "src.components.domain_training.training_runner.get_training_stream",
-        return_value=mock_training_stream,
-    ), patch(
-        "src.components.domain_training.training_runner.TrainingProgressTracker"
-    ) as mock_tracker_class:
+    with (
+        patch(
+            "src.components.domain_training.training_runner.get_domain_repository",
+            return_value=mock_domain_repository,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.get_training_stream",
+            return_value=mock_training_stream,
+        ),
+        patch(
+            "src.components.domain_training.training_runner.TrainingProgressTracker"
+        ) as mock_tracker_class,
+    ):
         mock_tracker = AsyncMock()
         mock_tracker.enter_phase = MagicMock()
         mock_tracker.fail = MagicMock()

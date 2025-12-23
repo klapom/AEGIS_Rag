@@ -1,7 +1,10 @@
 /**
  * Chat API Types
  * Sprint 15 Feature 15.1: TypeScript types for chat API
+ * Sprint 62 Feature 62.4: Section-aware citations
  */
+
+import type { SectionMetadata, DocumentType } from './section';
 
 export type RetrievalMode = 'hybrid' | 'vector' | 'graph' | 'memory';
 
@@ -19,7 +22,7 @@ export interface Source {
   title?: string;
   source?: string;
   score?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   // AegisRAG-specific fields
   chunk_id?: string;
   confidence?: number;
@@ -29,6 +32,9 @@ export interface Source {
   retrieval_modes?: string[];
   context?: string;
   entities?: Array<{ name: string; type?: string }>;
+  // Sprint 62.4: Section metadata
+  section?: SectionMetadata;
+  document_type?: DocumentType;
 }
 
 export interface ToolCallInfo {
@@ -74,13 +80,17 @@ export type ChatChunkType =
 /**
  * Citation metadata for a single source
  * Sprint 27 Feature 27.10: Inline Source Citations
+ * Sprint 62 Feature 62.4: Section-aware citations
  */
 export interface CitationMetadata {
   text: string;
   source: string;
   title: string;
   score: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
+  // Sprint 62.4: Section metadata
+  section?: SectionMetadata;
+  document_type?: DocumentType;
 }
 
 /**

@@ -27,11 +27,11 @@ async def cleanup_qdrant_test_data(
     filter_by_tag: str | None = None,
 ) -> None:
     """Clean up test data from Qdrant collection.
-    
+
     Args:
         collection_name: Name of collection to clean
         filter_by_tag: Optional tag to filter what to delete
-    
+
     Example:
         # Clean all test data tagged with 'e2e_test'
         await cleanup_qdrant_test_data(filter_by_tag='e2e_test')
@@ -52,15 +52,8 @@ async def cleanup_qdrant_test_data(
             await client.delete(
                 collection_name=collection_name,
                 points_selector={
-                    "filter": {
-                        "must": [
-                            {
-                                "key": "test_tag",
-                                "match": {"value": filter_by_tag}
-                            }
-                        ]
-                    }
-                }
+                    "filter": {"must": [{"key": "test_tag", "match": {"value": filter_by_tag}}]}
+                },
             )
             logger.info(f"Cleaned up Qdrant test data with tag {filter_by_tag}")
         else:
@@ -75,10 +68,10 @@ async def cleanup_neo4j_test_data(
     filter_by_label: str | None = None,
 ) -> None:
     """Clean up test data from Neo4j graph database.
-    
+
     Args:
         filter_by_label: Optional label to filter what to delete
-        
+
     Example:
         # Clean all nodes with 'TestEntity' label
         await cleanup_neo4j_test_data(filter_by_label='TestEntity')
@@ -109,10 +102,10 @@ async def cleanup_redis_test_data(
     key_prefix: str = "test_",
 ) -> None:
     """Clean up test data from Redis cache.
-    
+
     Args:
         key_prefix: Prefix of keys to delete
-        
+
     Example:
         # Clean all keys starting with 'test_'
         await cleanup_redis_test_data(key_prefix='test_')
@@ -141,10 +134,10 @@ async def cleanup_redis_test_data(
 
 async def cleanup_after_test() -> None:
     """Complete cleanup after a single test.
-    
+
     This is a comprehensive cleanup that removes test data from all
     storage systems. Call this in test cleanup fixtures or teardown.
-    
+
     Example in conftest.py:
         @pytest.fixture(autouse=True)
         async def cleanup_fixture():
@@ -166,7 +159,7 @@ async def cleanup_after_test() -> None:
 
 async def cleanup_after_suite() -> None:
     """Complete cleanup after entire test suite.
-    
+
     More aggressive cleanup that may clear more data.
     Use in conftest.py with scope="session".
     """
@@ -186,9 +179,9 @@ async def cleanup_after_suite() -> None:
 
 def sync_cleanup() -> None:
     """Synchronous wrapper for cleanup operations.
-    
+
     Use when async cleanup is not available.
-    
+
     Example:
         def teardown_module():
             sync_cleanup()

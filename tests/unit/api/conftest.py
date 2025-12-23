@@ -25,10 +25,12 @@ async def async_client():
         AsyncClient: Async HTTP client connected to test app
     """
     # Patch all external dependencies BEFORE importing the app
-    with patch("src.agents.coordinator.compile_graph") as mock_compile_graph, \
-         patch("src.agents.coordinator.create_checkpointer") as mock_create_checkpointer, \
-         patch("src.agents.followup_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_followup, \
-         patch("src.api.v1.title_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_title:
+    with (
+        patch("src.agents.coordinator.compile_graph") as mock_compile_graph,
+        patch("src.agents.coordinator.create_checkpointer") as mock_create_checkpointer,
+        patch("src.agents.followup_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_followup,
+        patch("src.api.v1.title_generator.get_aegis_llm_proxy") as mock_get_llm_proxy_title,
+    ):
 
         # Configure graph mock
         mock_graph = AsyncMock()
@@ -48,11 +50,15 @@ async def async_client():
         from src.api.main import app
 
         # Patch coordinator singleton in the chat module
-        with patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator, \
-             patch("src.components.memory.get_redis_memory") as mock_get_redis_memory, \
-             patch("src.components.memory.get_unified_memory_api") as mock_get_unified_memory, \
-             patch("src.agents.followup_generator.generate_followup_questions") as mock_generate_followup, \
-             patch("src.api.v1.title_generator.generate_conversation_title") as mock_generate_title:
+        with (
+            patch("src.api.v1.chat.get_coordinator") as mock_get_coordinator,
+            patch("src.components.memory.get_redis_memory") as mock_get_redis_memory,
+            patch("src.components.memory.get_unified_memory_api") as mock_get_unified_memory,
+            patch(
+                "src.agents.followup_generator.generate_followup_questions"
+            ) as mock_generate_followup,
+            patch("src.api.v1.title_generator.generate_conversation_title") as mock_generate_title,
+        ):
 
             # Configure coordinator mock
             mock_coordinator = AsyncMock()
@@ -79,8 +85,5 @@ async def async_client():
             mock_generate_title.return_value = "Test Conversation Title"
 
             # Create async client with the app
-            async with AsyncClient(
-                app=app,
-                base_url="http://test"
-            ) as client:
+            async with AsyncClient(app=app, base_url="http://test") as client:
                 yield client

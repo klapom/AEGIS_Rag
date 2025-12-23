@@ -154,10 +154,7 @@ time series forecasting, and reinforcement learning applications.
         # Also get API token for direct API calls
         response = await page.request.post(
             "http://localhost:8000/api/v1/auth/login",
-            data={
-                "username": "admin",
-                "password": "admin123"
-            }
+            data={"username": "admin", "password": "admin123"},
         )
         if response.ok:
             data = await response.json()
@@ -175,10 +172,11 @@ time series forecasting, and reinforcement learning applications.
             headers["Authorization"] = f"Bearer {token}"
 
         import json
+
         response = await page.request.post(
             f"http://localhost:8000{endpoint}",
             data=json.dumps(data),
-            headers={**headers, "Content-Type": "application/json"}
+            headers={**headers, "Content-Type": "application/json"},
         )
         return response
 
@@ -211,7 +209,9 @@ time series forecasting, and reinforcement learning applications.
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.xfail(reason="Requires data in Qdrant collection - skipped when no documents uploaded")
+    @pytest.mark.xfail(
+        reason="Requires data in Qdrant collection - skipped when no documents uploaded"
+    )
     async def test_bm25_exact_match_quality(
         self,
         page: Page,
@@ -235,12 +235,10 @@ time series forecasting, and reinforcement learning applications.
 
         query = "Python 3.12.7 asyncio"
         response = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query,
-                "top_k": 5,
-                "search_type": "bm25"
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query, "top_k": 5, "search_type": "bm25"},
         )
 
         assert response.ok, f"BM25 search failed: {response.status}"
@@ -255,8 +253,9 @@ time series forecasting, and reinforcement learning applications.
             top_text = top_result.get("text", top_result.get("chunk_text", ""))
 
             # Verify it contains the exact technical terms
-            assert "Python" in top_text and ("3.12" in top_text or "asyncio" in top_text), \
-                f"BM25 top result should contain exact query terms, got: {top_text[:100]}"
+            assert "Python" in top_text and (
+                "3.12" in top_text or "asyncio" in top_text
+            ), f"BM25 top result should contain exact query terms, got: {top_text[:100]}"
             print("✓ BM25 correctly retrieved document with exact terms")
 
         # =====================================================================
@@ -265,12 +264,10 @@ time series forecasting, and reinforcement learning applications.
 
         query2 = "version 2.15.0"
         response2 = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query2,
-                "top_k": 3,
-                "search_type": "bm25"
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query2, "top_k": 3, "search_type": "bm25"},
         )
 
         bm25_results2 = await response2.json()
@@ -281,15 +278,18 @@ time series forecasting, and reinforcement learning applications.
         if bm25_results2:
             top_result = bm25_results2[0]
             top_text = top_result.get("text", top_result.get("chunk_text", ""))
-            assert "2.15" in top_text or "TensorFlow" in top_text, \
-                "BM25 should find document with specific version number"
+            assert (
+                "2.15" in top_text or "TensorFlow" in top_text
+            ), "BM25 should find document with specific version number"
             print("✓ BM25 excels at unique identifier queries")
 
         print("\n✅ BM25 Exact Match Quality - PASSED")
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.xfail(reason="Requires data in Qdrant collection - skipped when no documents uploaded")
+    @pytest.mark.xfail(
+        reason="Requires data in Qdrant collection - skipped when no documents uploaded"
+    )
     async def test_vector_semantic_search_quality(
         self,
         page: Page,
@@ -309,12 +309,10 @@ time series forecasting, and reinforcement learning applications.
 
         query = "How do computers learn patterns from data?"
         response = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query,
-                "top_k": 5,
-                "search_type": "vector"
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query, "top_k": 5, "search_type": "vector"},
         )
 
         assert response.ok, f"Vector search failed: {response.status}"
@@ -330,11 +328,22 @@ time series forecasting, and reinforcement learning applications.
             for result in vector_results[:3]:
                 text = result.get("text", result.get("chunk_text", "")).lower()
                 # Look for ML-related content (not exact query words)
-                if any(keyword in text for keyword in ["machine learning", "supervised", "neural", "model", "training", "algorithm"]):
+                if any(
+                    keyword in text
+                    for keyword in [
+                        "machine learning",
+                        "supervised",
+                        "neural",
+                        "model",
+                        "training",
+                        "algorithm",
+                    ]
+                ):
                     relevant_count += 1
 
-            assert relevant_count >= 2, \
-                f"Expected at least 2/3 top vector results to be semantically relevant, got {relevant_count}"
+            assert (
+                relevant_count >= 2
+            ), f"Expected at least 2/3 top vector results to be semantically relevant, got {relevant_count}"
             print(f"✓ Vector search found {relevant_count}/3 semantically relevant results")
 
         # =====================================================================
@@ -343,12 +352,10 @@ time series forecasting, and reinforcement learning applications.
 
         query2 = "artificial intelligence learning algorithms"
         response2 = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query2,
-                "top_k": 5,
-                "search_type": "vector"
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query2, "top_k": 5, "search_type": "vector"},
         )
 
         vector_results2 = await response2.json()
@@ -359,15 +366,19 @@ time series forecasting, and reinforcement learning applications.
         if vector_results2:
             top_text = vector_results2[0].get("text", vector_results2[0].get("chunk_text", ""))
             # Check for conceptual match (not exact keywords)
-            assert any(term in top_text.lower() for term in ["machine learning", "learning", "neural", "deep learning"]), \
-                "Vector search should handle semantic similarity (synonyms/paraphrases)"
+            assert any(
+                term in top_text.lower()
+                for term in ["machine learning", "learning", "neural", "deep learning"]
+            ), "Vector search should handle semantic similarity (synonyms/paraphrases)"
             print("✓ Vector search handles semantic variations correctly")
 
         print("\n✅ Vector Semantic Search Quality - PASSED")
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.xfail(reason="Requires data in Qdrant collection - skipped when no documents uploaded")
+    @pytest.mark.xfail(
+        reason="Requires data in Qdrant collection - skipped when no documents uploaded"
+    )
     async def test_hybrid_rrf_fusion_quality(
         self,
         page: Page,
@@ -389,12 +400,10 @@ time series forecasting, and reinforcement learning applications.
         start_time = time.time()
 
         response = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query,
-                "top_k": 10,
-                "search_type": "hybrid"  # RRF fusion
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query, "top_k": 10, "search_type": "hybrid"},  # RRF fusion
         )
 
         elapsed = time.time() - start_time
@@ -415,11 +424,16 @@ time series forecasting, and reinforcement learning applications.
             texts = [r.get("text", r.get("chunk_text", "")) for r in hybrid_results[:5]]
 
             # Should have both technical (Python, framework) and conceptual (ML) content
-            has_technical = any("Python" in t or "framework" in t or "performance" in t for t in texts)
-            has_conceptual = any("machine learning" in t.lower() or "learning" in t.lower() for t in texts)
+            has_technical = any(
+                "Python" in t or "framework" in t or "performance" in t for t in texts
+            )
+            has_conceptual = any(
+                "machine learning" in t.lower() or "learning" in t.lower() for t in texts
+            )
 
-            assert has_technical and has_conceptual, \
-                "Hybrid search should balance technical keywords and conceptual meaning"
+            assert (
+                has_technical and has_conceptual
+            ), "Hybrid search should balance technical keywords and conceptual meaning"
             print("✓ Hybrid search provides balanced results (technical + conceptual)")
 
             # RRF should promote relevant results from both retrieval methods
@@ -449,12 +463,10 @@ time series forecasting, and reinforcement learning applications.
 
         query = "deep learning neural networks"
         response = await self.make_api_request(
-            page, token, "/api/v1/retrieval/search",
-            data={
-                "query": query,
-                "top_k": 10,
-                "search_type": "hybrid"
-            }
+            page,
+            token,
+            "/api/v1/retrieval/search",
+            data={"query": query, "top_k": 10, "search_type": "hybrid"},
         )
 
         results = await response.json()
@@ -467,36 +479,45 @@ time series forecasting, and reinforcement learning applications.
 
             if scores and all(s > 0 for s in scores):
                 # Scores should generally decrease (allowing small variations)
-                monotonic_count = sum(1 for i in range(len(scores)-1) if scores[i] >= scores[i+1] - 0.01)
+                monotonic_count = sum(
+                    1 for i in range(len(scores) - 1) if scores[i] >= scores[i + 1] - 0.01
+                )
                 monotonic_ratio = monotonic_count / (len(scores) - 1)
 
-                assert monotonic_ratio >= 0.7, \
-                    f"Expected mostly monotonic scores, got ratio: {monotonic_ratio:.2f}"
+                assert (
+                    monotonic_ratio >= 0.7
+                ), f"Expected mostly monotonic scores, got ratio: {monotonic_ratio:.2f}"
                 print(f"✓ Score monotonicity: {monotonic_ratio*100:.1f}%")
 
             # Check diversity: top 5 results should not be all identical
             texts = [r.get("text", r.get("chunk_text", ""))[:100] for r in results[:5]]
             unique_texts = len(set(texts))
 
-            assert unique_texts >= 3, \
-                f"Expected diverse results, but only {unique_texts}/5 unique"
+            assert unique_texts >= 3, f"Expected diverse results, but only {unique_texts}/5 unique"
             print(f"✓ Result diversity: {unique_texts}/5 unique in top-5")
 
             # Check relevance: top 3 should mention query concepts
             relevant_top3 = sum(
-                1 for text in texts[:3]
-                if any(term in text.lower() for term in ["deep learning", "neural", "network", "machine learning"])
+                1
+                for text in texts[:3]
+                if any(
+                    term in text.lower()
+                    for term in ["deep learning", "neural", "network", "machine learning"]
+                )
             )
 
-            assert relevant_top3 >= 2, \
-                f"Expected at least 2/3 top results relevant, got {relevant_top3}"
+            assert (
+                relevant_top3 >= 2
+            ), f"Expected at least 2/3 top results relevant, got {relevant_top3}"
             print(f"✓ Relevance in top-3: {relevant_top3}/3")
 
         print("\n✅ Retrieval Ranking Quality - PASSED")
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    @pytest.mark.xfail(reason="Requires data in Qdrant collection - skipped when no documents uploaded")
+    @pytest.mark.xfail(
+        reason="Requires data in Qdrant collection - skipped when no documents uploaded"
+    )
     async def test_search_performance_benchmarks(
         self,
         page: Page,
@@ -515,7 +536,7 @@ time series forecasting, and reinforcement learning applications.
         queries = [
             "Python asyncio performance",
             "machine learning algorithms",
-            "TensorFlow GPU acceleration"
+            "TensorFlow GPU acceleration",
         ]
 
         results = {}
@@ -527,12 +548,10 @@ time series forecasting, and reinforcement learning applications.
                 start = time.time()
 
                 response = await self.make_api_request(
-                    page, token, "/api/v1/retrieval/search",
-                    data={
-                        "query": query,
-                        "top_k": 5,
-                        "search_type": search_type
-                    }
+                    page,
+                    token,
+                    "/api/v1/retrieval/search",
+                    data={"query": query, "top_k": 5, "search_type": search_type},
                 )
 
                 elapsed = time.time() - start
@@ -543,10 +562,7 @@ time series forecasting, and reinforcement learning applications.
             avg_time = sum(times) / len(times)
             max_time = max(times)
 
-            results[search_type] = {
-                "avg": avg_time,
-                "max": max_time
-            }
+            results[search_type] = {"avg": avg_time, "max": max_time}
 
             print(f"✓ {search_type.upper():7s} - Avg: {avg_time:6.2f}ms, Max: {max_time:6.2f}ms")
 

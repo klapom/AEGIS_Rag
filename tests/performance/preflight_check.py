@@ -18,6 +18,7 @@ async def check_docling() -> tuple[bool, str]:
     """Check if Docling container is running and healthy."""
     try:
         import httpx
+
         # Docling is mapped to port 8080 externally (container uses 5001 internally)
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get("http://localhost:8080/health")
@@ -32,6 +33,7 @@ async def check_ollama() -> tuple[bool, str]:
     """Check if Ollama is running."""
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get("http://localhost:11434/api/tags")
             if response.status_code == 200:
@@ -42,7 +44,10 @@ async def check_ollama() -> tuple[bool, str]:
                 has_nomic = any("nomic" in m.lower() for m in model_names)
                 if has_bge or has_nomic:
                     return True, f"Ollama running with {len(models)} models"
-                return True, f"Ollama running but no embedding model found (models: {model_names[:5]})"
+                return (
+                    True,
+                    f"Ollama running but no embedding model found (models: {model_names[:5]})",
+                )
             return False, f"Ollama returned status {response.status_code}"
     except Exception as e:
         return False, f"Ollama not reachable: {type(e).__name__}"
@@ -52,6 +57,7 @@ async def check_qdrant() -> tuple[bool, str]:
     """Check if Qdrant is running."""
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get("http://localhost:6333/collections")
             if response.status_code == 200:
@@ -66,6 +72,7 @@ async def check_neo4j() -> tuple[bool, str]:
     """Check if Neo4j is running."""
     try:
         import httpx
+
         async with httpx.AsyncClient(timeout=5.0) as client:
             # Neo4j HTTP API
             response = await client.get("http://localhost:7474/")
@@ -80,6 +87,7 @@ async def check_gpu_memory() -> tuple[bool, str]:
     """Check GPU memory availability using nvidia-smi."""
     try:
         import subprocess
+
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=memory.free,memory.total", "--format=csv,noheader,nounits"],
             capture_output=True,
@@ -95,7 +103,10 @@ async def check_gpu_memory() -> tuple[bool, str]:
                     total_mb = int(parts[1].strip())
                     used_mb = total_mb - free_mb
                     if free_mb > 2000:  # Need at least 2GB free
-                        return True, f"GPU: {free_mb}MB free / {total_mb}MB total ({used_mb}MB used)"
+                        return (
+                            True,
+                            f"GPU: {free_mb}MB free / {total_mb}MB total ({used_mb}MB used)",
+                        )
                     return False, f"GPU memory low: {free_mb}MB free (need >2GB)"
         return False, f"nvidia-smi failed: {result.stderr}"
     except FileNotFoundError:
@@ -158,7 +169,11 @@ async def main():
     print("=" * 60)
 
     all_ok = all(r[1] for r in results)
-    critical_ok = all(r[1] for r in results if r[0] in ["Docling Container", "Ollama (Embeddings)", "Qdrant (Vectors)"])
+    critical_ok = all(
+        r[1]
+        for r in results
+        if r[0] in ["Docling Container", "Ollama (Embeddings)", "Qdrant (Vectors)"]
+    )
 
     if all_ok:
         print("All checks passed! Ready to run benchmarks.")

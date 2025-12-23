@@ -203,9 +203,7 @@ class TestDocumentTypeDetection:
 
     def test_detect_mime_type_case_insensitive(self) -> None:
         """Test that MIME type detection is case-insensitive."""
-        doc_type = detect_document_type(
-            Path("file.bin"), mime_type="APPLICATION/PDF"
-        )
+        doc_type = detect_document_type(Path("file.bin"), mime_type="APPLICATION/PDF")
         assert doc_type == DocumentType.PDF
 
     def test_detect_extension_case_insensitive(self) -> None:
@@ -221,25 +219,17 @@ class TestDocumentTypeDetection:
 
     def test_detect_unknown_with_fallback_mime(self) -> None:
         """Test fallback when MIME type is unknown."""
-        doc_type = detect_document_type(
-            Path("file.xyz"), mime_type="application/unknown"
-        )
+        doc_type = detect_document_type(Path("file.xyz"), mime_type="application/unknown")
         assert doc_type == DocumentType.UNKNOWN
 
     def test_detect_with_paths(self) -> None:
         """Test detection with various path formats."""
         # Absolute path
-        assert (
-            detect_document_type(Path("/home/user/documents/report.pdf"))
-            == DocumentType.PDF
-        )
+        assert detect_document_type(Path("/home/user/documents/report.pdf")) == DocumentType.PDF
         # Relative path
         assert detect_document_type(Path("../docs/guide.md")) == DocumentType.MD
         # Nested path
-        assert (
-            detect_document_type(Path("folder/subfolder/file.docx"))
-            == DocumentType.DOCX
-        )
+        assert detect_document_type(Path("folder/subfolder/file.docx")) == DocumentType.DOCX
 
     def test_detect_legacy_formats(self) -> None:
         """Test detection of legacy formats (treated as modern equivalents)."""
@@ -367,16 +357,13 @@ class TestSectionMetadata:
     def test_section_metadata_content_position(self) -> None:
         """Test content position tracking."""
         start = SectionMetadata(
-            heading="Start", level=1, document_type=DocumentType.PDF,
-            content_position="start"
+            heading="Start", level=1, document_type=DocumentType.PDF, content_position="start"
         )
         middle = SectionMetadata(
-            heading="Middle", level=1, document_type=DocumentType.PDF,
-            content_position="middle"
+            heading="Middle", level=1, document_type=DocumentType.PDF, content_position="middle"
         )
         end = SectionMetadata(
-            heading="End", level=1, document_type=DocumentType.PDF,
-            content_position="end"
+            heading="End", level=1, document_type=DocumentType.PDF, content_position="end"
         )
         assert start.content_position == "start"
         assert middle.content_position == "middle"
@@ -503,9 +490,7 @@ class TestDocumentTypeIntegration:
     def test_mime_type_override(self) -> None:
         """Test that MIME type detection overrides extension."""
         # File has HTML extension but MIME says it's PDF
-        doc_type = detect_document_type(
-            Path("file.html"), mime_type="application/pdf"
-        )
+        doc_type = detect_document_type(Path("file.html"), mime_type="application/pdf")
         assert doc_type == DocumentType.PDF
 
         # Verify we can create appropriate metadata

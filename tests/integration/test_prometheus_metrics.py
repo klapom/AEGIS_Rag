@@ -323,10 +323,13 @@ class TestMetricsIntegrationWithLLMProxy:
         )
 
         # Mock acompletion to raise an error (simulating both provider failures)
-        with patch(
-            "src.components.llm_proxy.aegis_llm_proxy.acompletion",
-            side_effect=Exception("Provider error"),
-        ), pytest.raises(Exception):
+        with (
+            patch(
+                "src.components.llm_proxy.aegis_llm_proxy.acompletion",
+                side_effect=Exception("Provider error"),
+            ),
+            pytest.raises(Exception),
+        ):
             await proxy.generate(task)
 
         # Verify error was tracked (proxy should still record the error even if it raises)

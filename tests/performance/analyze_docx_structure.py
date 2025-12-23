@@ -9,7 +9,12 @@ from collections import Counter
 from pathlib import Path
 
 # Load the DOCX JSON
-json_path = Path(__file__).parent / "results" / "multi_format_test" / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+json_path = (
+    Path(__file__).parent
+    / "results"
+    / "multi_format_test"
+    / "docx_DE-D-AdvancedAdministration_0368_raw.json"
+)
 
 print(f"Loading: {json_path}")
 print(f"File size: {json_path.stat().st_size / 1024:.1f} KB")
@@ -62,7 +67,9 @@ for i, g in enumerate(groups[:20]):
 print("\n" + "=" * 70)
 print("5. GROUPS WITH HEADING/SECTION LABELS")
 print("=" * 70)
-heading_groups = [g for g in groups if any(k in g.get("label", "").lower() for k in heading_keywords)]
+heading_groups = [
+    g for g in groups if any(k in g.get("label", "").lower() for k in heading_keywords)
+]
 print(f"  Found {len(heading_groups)} groups with heading-like labels")
 for g in heading_groups[:10]:
     print(f"    label={g.get('label')} name={g.get('name')}")
@@ -90,7 +97,9 @@ for i, c in enumerate(children[:20]):
                 idx = int(ref.split("/")[-1])
                 if idx < len(groups):
                     g = groups[idx]
-                    print(f"  [{i:3d}] $ref={ref} -> label={g.get('label')} name={g.get('name', '')[:30]}")
+                    print(
+                        f"  [{i:3d}] $ref={ref} -> label={g.get('label')} name={g.get('name', '')[:30]}"
+                    )
                 else:
                     print(f"  [{i:3d}] $ref={ref} -> INDEX OUT OF RANGE")
             else:
@@ -142,7 +151,8 @@ print(f"  name: {data.get('name')}")
 print("\n" + "=" * 70)
 print("11. SUMMARY AND RECOMMENDATIONS")
 print("=" * 70)
-print(f"""
+print(
+    f"""
 FINDINGS:
 - DOCX has {len(texts)} text items but NO 'title' or 'subtitle-level-*' labels
 - Labels found: {dict(labels)}
@@ -158,4 +168,5 @@ RECOMMENDATIONS:
 2. Look for 'section_header' or similar labels in the Docling schema
 3. Consider using heuristics to detect headings (short paragraphs, formatting)
 4. Check Docling documentation for DOCX-specific label mappings
-""")
+"""
+)

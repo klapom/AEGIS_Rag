@@ -35,15 +35,15 @@ def sample_sources():
             "title": "RAG Paper",
             "source": "rag_paper.pdf",
             "score": 0.95,
-            "metadata": {"page": 1}
+            "metadata": {"page": 1},
         },
         {
             "text": "Vector search is used to find relevant documents",
             "title": "Vector Search Guide",
             "source": "vector_search.pdf",
             "score": 0.87,
-            "metadata": {"page": 3}
-        }
+            "metadata": {"page": 3},
+        },
     ]
 
 
@@ -53,7 +53,7 @@ def sample_follow_up_questions():
     return [
         "How does RAG improve answer accuracy?",
         "What are the limitations of RAG systems?",
-        "Can RAG handle multi-hop reasoning?"
+        "Can RAG handle multi-hop reasoning?",
     ]
 
 
@@ -62,10 +62,7 @@ class TestConversationStorage:
 
     @pytest.mark.asyncio
     async def test_save_conversation_with_follow_ups(
-        self,
-        redis_memory,
-        sample_sources,
-        sample_follow_up_questions
+        self, redis_memory, sample_sources, sample_follow_up_questions
     ):
         """Test that conversations with follow-up questions are saved correctly."""
         session_id = f"test_session_{int(datetime.now(UTC).timestamp())}"
@@ -77,16 +74,13 @@ class TestConversationStorage:
             assistant_message="RAG stands for Retrieval-Augmented Generation. It combines retrieval and generation.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=sample_follow_up_questions
+            follow_up_questions=sample_follow_up_questions,
         )
 
         assert success, "Failed to save conversation"
 
         # Retrieve and verify
-        conversation = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         # Extract value from Redis wrapper
         if isinstance(conversation, dict) and "value" in conversation:
@@ -103,11 +97,7 @@ class TestConversationStorage:
         await redis_memory._client.delete(f"conversation:{session_id}")
 
     @pytest.mark.asyncio
-    async def test_save_conversation_without_follow_ups(
-        self,
-        redis_memory,
-        sample_sources
-    ):
+    async def test_save_conversation_without_follow_ups(self, redis_memory, sample_sources):
         """Test that conversations can be saved without follow-up questions."""
         session_id = f"test_session_{int(datetime.now(UTC).timestamp())}"
 
@@ -118,16 +108,13 @@ class TestConversationStorage:
             assistant_message="RAG is a retrieval system.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=None
+            follow_up_questions=None,
         )
 
         assert success
 
         # Verify
-        conversation = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         if isinstance(conversation, dict) and "value" in conversation:
             conversation = conversation["value"]
@@ -140,10 +127,7 @@ class TestConversationStorage:
 
     @pytest.mark.asyncio
     async def test_multiple_turns_preserve_follow_ups(
-        self,
-        redis_memory,
-        sample_sources,
-        sample_follow_up_questions
+        self, redis_memory, sample_sources, sample_follow_up_questions
     ):
         """Test that multiple conversation turns preserve follow-up questions."""
         session_id = f"test_session_{int(datetime.now(UTC).timestamp())}"
@@ -155,7 +139,7 @@ class TestConversationStorage:
             assistant_message="RAG is retrieval-augmented generation.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=["Question 1", "Question 2"]
+            follow_up_questions=["Question 1", "Question 2"],
         )
 
         # Second turn with different follow-ups
@@ -166,14 +150,11 @@ class TestConversationStorage:
             assistant_message="It retrieves relevant context then generates answers.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=new_follow_ups
+            follow_up_questions=new_follow_ups,
         )
 
         # Verify latest follow-ups are stored
-        conversation = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         if isinstance(conversation, dict) and "value" in conversation:
             conversation = conversation["value"]
@@ -186,9 +167,7 @@ class TestConversationStorage:
 
     @pytest.mark.asyncio
     async def test_sources_serialization_with_follow_ups(
-        self,
-        redis_memory,
-        sample_follow_up_questions
+        self, redis_memory, sample_follow_up_questions
     ):
         """Test that sources are correctly serialized when saving with follow-ups."""
         session_id = f"test_session_{int(datetime.now(UTC).timestamp())}"
@@ -202,7 +181,7 @@ class TestConversationStorage:
                 title="Test Doc",
                 source="test.pdf",
                 score=0.9,
-                metadata={"page": 1}
+                metadata={"page": 1},
             )
         ]
 
@@ -212,16 +191,13 @@ class TestConversationStorage:
             assistant_message="Test answer",
             intent="factual",
             sources=pydantic_sources,
-            follow_up_questions=sample_follow_up_questions
+            follow_up_questions=sample_follow_up_questions,
         )
 
         assert success
 
         # Verify sources are serialized
-        conversation = await redis_memory.retrieve(
-            key=session_id,
-            namespace="conversation"
-        )
+        conversation = await redis_memory.retrieve(key=session_id, namespace="conversation")
 
         if isinstance(conversation, dict) and "value" in conversation:
             conversation = conversation["value"]
@@ -245,7 +221,7 @@ class TestConversationStorage:
             session_id=session_id,
             user_message="Test",
             assistant_message="Response",
-            follow_up_questions=sample_follow_up_questions
+            follow_up_questions=sample_follow_up_questions,
         )
 
         # Check TTL
@@ -265,10 +241,7 @@ class TestFollowUpQuestionsEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_followup_questions_from_storage(
-        self,
-        redis_memory,
-        sample_sources,
-        sample_follow_up_questions
+        self, redis_memory, sample_sources, sample_follow_up_questions
     ):
         """Test that follow-up endpoint returns stored questions."""
         from src.api.v1.chat import get_followup_questions
@@ -282,7 +255,7 @@ class TestFollowUpQuestionsEndpoint:
             assistant_message="RAG is retrieval-augmented generation.",
             intent="factual",
             sources=sample_sources,
-            follow_up_questions=sample_follow_up_questions
+            follow_up_questions=sample_follow_up_questions,
         )
 
         # Get follow-up questions
@@ -312,10 +285,7 @@ class TestFollowUpQuestionsEndpoint:
         assert "not found" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
-    async def test_get_followup_questions_empty_conversation(
-        self,
-        redis_memory
-    ):
+    async def test_get_followup_questions_empty_conversation(self, redis_memory):
         """Test that endpoint handles empty conversations gracefully."""
         from src.api.v1.chat import get_followup_questions
 
@@ -329,10 +299,10 @@ class TestFollowUpQuestionsEndpoint:
                 "follow_up_questions": [],
                 "created_at": datetime.now(UTC).isoformat(),
                 "updated_at": datetime.now(UTC).isoformat(),
-                "message_count": 0
+                "message_count": 0,
             },
             namespace="conversation",
-            ttl_seconds=300
+            ttl_seconds=300,
         )
 
         # Get follow-up questions
@@ -364,7 +334,7 @@ class TestRedisConnectionHandling:
                 user_message="Test",
                 assistant_message="Response",
                 sources=sample_sources,
-                follow_up_questions=["Question 1"]
+                follow_up_questions=["Question 1"],
             )
 
             assert success is False

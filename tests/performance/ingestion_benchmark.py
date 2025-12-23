@@ -149,24 +149,30 @@ async def benchmark_docling_parse(file_path: Path) -> tuple[StageMetrics, dict |
         elapsed_ms = (time.perf_counter() - start) * 1000
 
         # DoclingParsedDocument has text, pages, metadata attributes
-        return StageMetrics(
-            name="docling_parse",
-            duration_ms=elapsed_ms,
-            success=True,
-            metadata={
-                "pages": result.total_pages if hasattr(result, "total_pages") else 0,
-                "text_length": len(result.text) if hasattr(result, "text") else 0,
-                "chunks": len(result.chunks) if hasattr(result, "chunks") else 0,
-            },
-        ), result
+        return (
+            StageMetrics(
+                name="docling_parse",
+                duration_ms=elapsed_ms,
+                success=True,
+                metadata={
+                    "pages": result.total_pages if hasattr(result, "total_pages") else 0,
+                    "text_length": len(result.text) if hasattr(result, "text") else 0,
+                    "chunks": len(result.chunks) if hasattr(result, "chunks") else 0,
+                },
+            ),
+            result,
+        )
     except Exception as e:
         elapsed_ms = (time.perf_counter() - start) * 1000
-        return StageMetrics(
-            name="docling_parse",
-            duration_ms=elapsed_ms,
-            success=False,
-            error=str(e),
-        ), None
+        return (
+            StageMetrics(
+                name="docling_parse",
+                duration_ms=elapsed_ms,
+                success=False,
+                error=str(e),
+            ),
+            None,
+        )
 
 
 async def benchmark_section_extraction(docling_result: dict) -> StageMetrics:
@@ -219,7 +225,9 @@ async def benchmark_chunking(text: str, sections: list) -> StageMetrics:
             success=True,
             metadata={
                 "chunks_created": len(chunks),
-                "avg_chunk_tokens": mean([c.get("token_count", 0) for c in chunks]) if chunks else 0,
+                "avg_chunk_tokens": (
+                    mean([c.get("token_count", 0) for c in chunks]) if chunks else 0
+                ),
             },
         )
     except Exception as e:
@@ -318,7 +326,9 @@ async def run_document_benchmark(
     # Stage 1: Docling Parse
     docling_metrics, parsed_doc = await benchmark_docling_parse(file_path)
     stages.append(docling_metrics)
-    print(f"    - Docling: {docling_metrics.duration_ms:.1f}ms {'OK' if docling_metrics.success else 'FAIL'}")
+    print(
+        f"    - Docling: {docling_metrics.duration_ms:.1f}ms {'OK' if docling_metrics.success else 'FAIL'}"
+    )
 
     if not docling_metrics.success:
         return DocumentBenchmark(
@@ -479,6 +489,7 @@ def get_environment_info() -> dict[str, Any]:
 
 def save_report(report: BenchmarkReport, output_path: Path) -> None:
     """Save benchmark report to JSON file."""
+
     # Convert dataclasses to dicts
     def to_dict(obj: Any) -> Any:
         if hasattr(obj, "__dataclass_fields__"):

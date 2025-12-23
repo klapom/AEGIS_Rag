@@ -252,7 +252,7 @@ class TestDomainManagementEnhancement:
             print("Validation operation completed successfully")
         else:
             # Check for error message
-            error_message = page.locator('.text-red-700')
+            error_message = page.locator(".text-red-700")
             if await error_message.count() > 0:
                 error_text = await error_message.first.text_content()
                 print(f"Validation error: {error_text}")
@@ -305,7 +305,7 @@ class TestDomainManagementEnhancement:
             status_badge = row.locator('[data-testid^="domain-status-"]')
             if await status_badge.count() > 0:
                 status_text = await status_badge.text_content()
-                if status_text not in ['training']:
+                if status_text not in ["training"]:
                     # Click view on this domain
                     view_btn = row.locator('[data-testid^="domain-view-"]')
                     if await view_btn.count() > 0:
@@ -347,14 +347,14 @@ class TestDomainManagementEnhancement:
         await asyncio.sleep(3)
 
         # Check for success message
-        success_message = page.locator('.bg-green-50')
+        success_message = page.locator(".bg-green-50")
         if await success_message.count() > 0:
             message_text = await success_message.text_content()
             print(f"Success message: {message_text}")
             print("Re-index operation completed successfully")
         else:
             # Check for error message
-            error_message = page.locator('.bg-red-50')
+            error_message = page.locator(".bg-red-50")
             if await error_message.count() > 0:
                 error_text = await error_message.text_content()
                 print(f"Error message: {error_text}")
@@ -418,13 +418,13 @@ class TestDomainManagementEnhancement:
         health_status = page.locator('[data-testid="health-status"]')
         if await health_status.count() > 0:
             status_text = await health_status.text_content()
-            status_class = await health_status.get_attribute('class')
+            status_class = await health_status.get_attribute("class")
 
             print(f"Health status text: {status_text}")
             print(f"Health status class: {status_class}")
 
             # Verify status is one of the expected values
-            valid_statuses = ['healthy', 'degraded', 'error', 'empty', 'indexing']
+            valid_statuses = ["healthy", "degraded", "error", "empty", "indexing"]
             status_is_valid = any(s in status_text.lower() for s in valid_statuses)
 
             if status_is_valid:
@@ -434,7 +434,7 @@ class TestDomainManagementEnhancement:
 
             # Verify status has color styling
             has_color_class = any(
-                color in status_class for color in ['green', 'yellow', 'red', 'gray', 'blue']
+                color in status_class for color in ["green", "yellow", "red", "gray", "blue"]
             )
             if has_color_class:
                 print("Health status has color styling")

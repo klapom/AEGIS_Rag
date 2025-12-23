@@ -1,12 +1,14 @@
 """Community Detection and Summarization.
 
 Sprint 56.2: Communities subdomain of knowledge_graph.
+Sprint 62.8: Section-Based Community Detection.
 
 Usage:
     from src.domains.knowledge_graph.communities import (
         CommunityDetector,
         CommunitySummarizer,
         CommunitySearch,
+        SectionCommunityDetector,  # Sprint 62.8
     )
 """
 
@@ -29,6 +31,16 @@ from src.components.graph_rag.community_summarizer import (
     get_community_summarizer,
 )
 
+# Sprint 62.8: Section-Based Community Detection
+from src.domains.knowledge_graph.communities.section_community_detector import (
+    CrossSectionCommunityComparison,
+    SectionCommunityDetector,
+    SectionCommunityMetadata,
+    SectionCommunityResult,
+    get_section_community_detector,
+    reset_section_community_detector,
+)
+
 __all__ = [
     # Detection
     "CommunityDetector",
@@ -43,4 +55,11 @@ __all__ = [
     # Search
     "CommunitySearch",
     "get_community_search",
+    # Section-Based Detection (Sprint 62.8)
+    "SectionCommunityDetector",
+    "get_section_community_detector",
+    "reset_section_community_detector",
+    "SectionCommunityResult",
+    "SectionCommunityMetadata",
+    "CrossSectionCommunityComparison",
 ]

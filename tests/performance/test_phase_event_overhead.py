@@ -48,8 +48,7 @@ def test_phase_event_creation_performance():
 
     # Should be fast
     assert avg_time_ms < target_ms_per_event, (
-        f"PhaseEvent creation too slow: {avg_time_ms:.4f}ms "
-        f"(target: <{target_ms_per_event}ms)"
+        f"PhaseEvent creation too slow: {avg_time_ms:.4f}ms " f"(target: <{target_ms_per_event}ms)"
     )
 
 
@@ -158,8 +157,16 @@ def test_phase_event_json_serialization_performance():
     for _ in range(iterations):
         data = event.model_dump()
         # Convert datetime to ISO string for JSON serialization
-        data["start_time"] = data["start_time"].isoformat() if isinstance(data["start_time"], datetime) else data["start_time"]
-        data["end_time"] = data["end_time"].isoformat() if isinstance(data["end_time"], datetime) else data["end_time"]
+        data["start_time"] = (
+            data["start_time"].isoformat()
+            if isinstance(data["start_time"], datetime)
+            else data["start_time"]
+        )
+        data["end_time"] = (
+            data["end_time"].isoformat()
+            if isinstance(data["end_time"], datetime)
+            else data["end_time"]
+        )
         _ = json.dumps(data)
     end = time.perf_counter()
 
@@ -325,8 +332,7 @@ def test_reasoning_data_memory_growth():
     # Growth should be reasonable
     max_expected_bytes = empty_size + (num_events * 200)  # ~200 bytes per event
     assert full_size < max_expected_bytes, (
-        f"Memory growth too large: {full_size} bytes "
-        f"(expected <{max_expected_bytes})"
+        f"Memory growth too large: {full_size} bytes " f"(expected <{max_expected_bytes})"
     )
 
 

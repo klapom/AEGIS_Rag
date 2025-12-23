@@ -14,7 +14,9 @@ from src.components.ingestion.docling_client import DoclingContainerClient
 
 
 async def main():
-    doc_path = Path(r"C:\Projekte\AEGISRAG\data\sample_documents\OT_requirements_FNT_Command_20221219.docx")
+    doc_path = Path(
+        r"C:\Projekte\AEGISRAG\data\sample_documents\OT_requirements_FNT_Command_20221219.docx"
+    )
 
     print(f"Testing: {doc_path.name}")
     print(f"File size: {doc_path.stat().st_size / 1024:.1f} KB")
@@ -40,6 +42,7 @@ async def main():
     print(f"\nTotal texts: {len(texts)}")
 
     from collections import Counter
+
     labels = Counter(t.get("label", "NONE") for t in texts)
     print("\nLabel distribution:")
     for label, count in labels.most_common():
@@ -63,7 +66,8 @@ async def main():
 
         # Check formatting-based headings
         bold_short = [
-            t for t in texts
+            t
+            for t in texts
             if t.get("label") == "paragraph"
             and t.get("formatting", {}).get("bold")
             and len(t.get("text", "")) < 100

@@ -55,10 +55,10 @@ class TestCostMonitoringWorkflow:
         print("✓ Cost dashboard header visible")
 
         # Step 2: Verify total costs displayed
-        total_cost_element = page.locator("[data-testid='total-cost']").or_(
-            page.get_by_text(re.compile(r"total.*cost", re.I))
-        ).or_(
-            page.get_by_text(re.compile(r"total.*usd", re.I))
+        total_cost_element = (
+            page.locator("[data-testid='total-cost']")
+            .or_(page.get_by_text(re.compile(r"total.*cost", re.I)))
+            .or_(page.get_by_text(re.compile(r"total.*usd", re.I)))
         )
 
         if await total_cost_element.count() > 0:
@@ -85,12 +85,11 @@ class TestCostMonitoringWorkflow:
             print("✓ Cost breakdown section visible (data loading)")
 
         # Step 4: Verify budget alerts visible (if budget exceeded)
-        budget_alert = page.locator("[role='alert']").or_(
-            page.locator("[data-testid*='budget']")
-        ).or_(
-            page.locator("[data-testid*='alert']")
-        ).or_(
-            page.get_by_text(re.compile(r"budget|alert|warning|critical", re.I))
+        budget_alert = (
+            page.locator("[role='alert']")
+            .or_(page.locator("[data-testid*='budget']"))
+            .or_(page.locator("[data-testid*='alert']"))
+            .or_(page.get_by_text(re.compile(r"budget|alert|warning|critical", re.I)))
         )
 
         if await budget_alert.count() > 0:
@@ -159,11 +158,13 @@ class TestCostMonitoringWorkflow:
             print("✓ LLM config page structure loaded")
 
         # Step 3: Check for provider selection or configuration
-        provider_buttons = page.get_by_role("button").filter(
-            has_text=re.compile(r"ollama|alibaba|openai", re.I)
-        ).or_(
-            page.get_by_role("option").filter(
-                has_text=re.compile(r"ollama|alibaba|openai", re.I)
+        provider_buttons = (
+            page.get_by_role("button")
+            .filter(has_text=re.compile(r"ollama|alibaba|openai", re.I))
+            .or_(
+                page.get_by_role("option").filter(
+                    has_text=re.compile(r"ollama|alibaba|openai", re.I)
+                )
             )
         )
         button_count = await provider_buttons.count()
@@ -199,11 +200,7 @@ class TestCostMonitoringWorkflow:
             )
             error_status = page.get_by_text(
                 re.compile(r"error|failed|connection.*error", re.I)
-            ).or_(
-                page.locator("[role='alert']").filter(
-                    has_text=re.compile(r"error|failed", re.I)
-                )
-            )
+            ).or_(page.locator("[role='alert']").filter(has_text=re.compile(r"error|failed", re.I)))
 
             if await success_status.count() > 0:
                 status_text = await success_status.first.inner_text()
@@ -217,9 +214,7 @@ class TestCostMonitoringWorkflow:
             print("✓ LLM configuration page structure loaded")
 
         # Verify page structure has configuration elements
-        config_controls = page.locator(
-            "input, select, button, [role='combobox'], [role='listbox']"
-        )
+        config_controls = page.locator("input, select, button, [role='combobox'], [role='listbox']")
         control_count = await config_controls.count()
 
         if control_count > 0:
@@ -286,10 +281,10 @@ class TestCostMonitoringWorkflow:
             print("✓ Cost data loading via API (no static elements found)")
 
         # Verify total cost is aggregated
-        total_element = page.locator("[data-testid='total']").or_(
-            page.locator(".total-cost")
-        ).or_(
-            page.get_by_text(re.compile(r"total|overall|sum", re.I))
+        total_element = (
+            page.locator("[data-testid='total']")
+            .or_(page.locator(".total-cost"))
+            .or_(page.get_by_text(re.compile(r"total|overall|sum", re.I)))
         )
 
         if await total_element.count() > 0:
@@ -297,10 +292,10 @@ class TestCostMonitoringWorkflow:
             print(f"✓ Total cost aggregation visible: {total_text[:80]}")
 
         # Check for cost statistics
-        stats = page.locator("[data-testid*='stat']").or_(
-            page.locator(".stat-item")
-        ).or_(
-            page.get_by_text(re.compile(r"tokens|calls|average", re.I))
+        stats = (
+            page.locator("[data-testid*='stat']")
+            .or_(page.locator(".stat-item"))
+            .or_(page.get_by_text(re.compile(r"tokens|calls|average", re.I)))
         )
         stat_count = await stats.count()
 
@@ -338,10 +333,10 @@ class TestCostMonitoringWorkflow:
         print("✓ Navigated to /admin/costs")
 
         # Look for budget section
-        budget_section = page.locator("[data-testid*='budget']").or_(
-            page.locator(".budget-section")
-        ).or_(
-            page.get_by_text(re.compile(r"budget|limit|threshold|alert", re.I))
+        budget_section = (
+            page.locator("[data-testid*='budget']")
+            .or_(page.locator(".budget-section"))
+            .or_(page.get_by_text(re.compile(r"budget|limit|threshold|alert", re.I)))
         )
 
         if await budget_section.count() > 0:
@@ -366,10 +361,10 @@ class TestCostMonitoringWorkflow:
                 print(f"✓ Budget utilization shown: {util_text[:80]}")
 
             # Check for alert indicators
-            alerts = page.locator("[role='alert']").or_(
-                page.locator("[data-testid*='alert']")
-            ).or_(
-                page.get_by_text(re.compile(r"warning|critical|alert", re.I))
+            alerts = (
+                page.locator("[role='alert']")
+                .or_(page.locator("[data-testid*='alert']"))
+                .or_(page.get_by_text(re.compile(r"warning|critical|alert", re.I)))
             )
 
             if await alerts.count() > 0:

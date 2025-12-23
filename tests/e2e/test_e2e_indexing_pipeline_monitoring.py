@@ -92,9 +92,9 @@ chunking, embedding, and graph extraction.
         print(f"✓ Page header: {header_text}")
 
         # Step 3: View pipeline stages
-        stages = page.locator(
-            "[data-testid*='stage'], .stage-item, .pipeline-stage"
-        ).or_(page.get_by_text(re.compile(r"stage|step|phase|pipeline", re.I)))
+        stages = page.locator("[data-testid*='stage'], .stage-item, .pipeline-stage").or_(
+            page.get_by_text(re.compile(r"stage|step|phase|pipeline", re.I))
+        )
 
         stage_count = await stages.count()
         print(f"✓ Pipeline stages found: {stage_count}")
@@ -121,9 +121,7 @@ chunking, embedding, and graph extraction.
             print(f"✓ Pipeline status: {status_text[:80]}")
 
         # Step 5: Verify controls present
-        controls = page.locator(
-            "button, [role='button'], input[type='button']"
-        )
+        controls = page.locator("button, [role='button'], input[type='button']")
 
         control_count = await controls.count()
         print(f"✓ Control elements found: {control_count}")
@@ -180,17 +178,13 @@ chunking, embedding, and graph extraction.
         ]
 
         # Look for stage container
-        stage_container = page.locator(
-            "[data-testid*='stage'], .pipeline-stages, .stages-list"
-        )
+        stage_container = page.locator("[data-testid*='stage'], .pipeline-stages, .stages-list")
 
         if await stage_container.count() > 0:
             print("✓ Stage container found")
 
             # Get all stage items
-            stage_items = page.locator(
-                "[data-testid*='stage'], .stage, .stage-item"
-            )
+            stage_items = page.locator("[data-testid*='stage'], .stage, .stage-item")
 
             item_count = await stage_items.count()
             print(f"✓ Stage items count: {item_count}")
@@ -248,9 +242,9 @@ chunking, embedding, and graph extraction.
         print("✓ Navigated to /admin/indexing")
 
         # Look for worker pool section
-        worker_section = page.locator(
-            "[data-testid*='worker'], .worker-pool, .queue-status"
-        ).or_(page.get_by_text(re.compile(r"worker|pool|queue|job|thread", re.I)))
+        worker_section = page.locator("[data-testid*='worker'], .worker-pool, .queue-status").or_(
+            page.get_by_text(re.compile(r"worker|pool|queue|job|thread", re.I))
+        )
 
         if await worker_section.count() > 0:
             print("✓ Worker pool section found")
@@ -272,7 +266,9 @@ chunking, embedding, and graph extraction.
                 print(f"  Queue status: {queue_text[:80]}")
 
             # Check for active jobs
-            active_jobs = page.get_by_text(re.compile(r"active|running|in progress|processing", re.I))
+            active_jobs = page.get_by_text(
+                re.compile(r"active|running|in progress|processing", re.I)
+            )
 
             if await active_jobs.count() > 0:
                 jobs_text = await active_jobs.first.inner_text()
@@ -281,9 +277,7 @@ chunking, embedding, and graph extraction.
             print("✓ Worker pool info may be displayed dynamically")
 
         # Look for performance metrics
-        metrics = page.locator(
-            "[data-testid*='metric'], .metric, [data-testid*='throughput']"
-        )
+        metrics = page.locator("[data-testid*='metric'], .metric, [data-testid*='throughput']")
 
         if await metrics.count() > 0:
             print(f"✓ Performance metrics found: {await metrics.count()}")
@@ -329,8 +323,7 @@ chunking, embedding, and graph extraction.
 
             # Get log entries
             log_entries = page.locator(
-                "[role='log'] li, .log-entry, .log-line, "
-                "[data-testid='log-entry']"
+                "[role='log'] li, .log-entry, .log-line, " "[data-testid='log-entry']"
             )
 
             entry_count = await log_entries.count()
@@ -413,9 +406,7 @@ chunking, embedding, and graph extraction.
 
         # Look for stop/cancel button
         stop_button = page.locator("[data-testid='stop-indexing']").or_(
-            page.get_by_role("button").filter(
-                has_text=re.compile(r"stop|cancel|pause|abort", re.I)
-            )
+            page.get_by_role("button").filter(has_text=re.compile(r"stop|cancel|pause|abort", re.I))
         )
 
         if await stop_button.count() > 0:
@@ -460,9 +451,7 @@ chunking, embedding, and graph extraction.
         print("✓ Navigated to /admin/indexing")
 
         # Look for statistics section
-        stats_section = page.locator(
-            "[data-testid*='stat'], .stats, .statistics, .summary-stats"
-        )
+        stats_section = page.locator("[data-testid*='stat'], .stats, .statistics, .summary-stats")
 
         if await stats_section.count() > 0:
             print("✓ Statistics section found")
@@ -501,9 +490,7 @@ chunking, embedding, and graph extraction.
                 print(f"✓ Performance metrics: {metric_text[:80]}")
 
             # Check for time estimates
-            time_info = page.get_by_text(
-                re.compile(r"eta|estimate|remaining|elapsed|time", re.I)
-            )
+            time_info = page.get_by_text(re.compile(r"eta|estimate|remaining|elapsed|time", re.I))
 
             if await time_info.count() > 0:
                 time_text = await time_info.first.inner_text()

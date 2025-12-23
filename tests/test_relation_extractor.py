@@ -1,4 +1,5 @@
 """Direct test of RelationExtractor and RELATES_TO storage."""
+
 import asyncio
 import os
 import sys
@@ -54,6 +55,7 @@ async def main():
     except Exception as e:
         print(f"ERROR: RelationExtractor failed: {e}")
         import traceback
+
         traceback.print_exc()
         relations = []
 
@@ -70,6 +72,7 @@ async def main():
 
             # First, ensure entities exist in Neo4j
             from src.components.graph_rag.neo4j_client import get_neo4j_client
+
             neo4j = get_neo4j_client()
 
             # Create test entities if they don't exist
@@ -78,7 +81,9 @@ async def main():
                 MERGE (e:base {entity_name: $name})
                 SET e.entity_type = $type
                 """
-                await neo4j.execute_write(create_query, {"name": entity["name"], "type": entity["type"]})
+                await neo4j.execute_write(
+                    create_query, {"name": entity["name"], "type": entity["type"]}
+                )
             print(f"Created/merged {len(test_entities)} test entities in Neo4j")
 
             # Store relations
@@ -102,6 +107,7 @@ async def main():
         except Exception as e:
             print(f"ERROR: Neo4j storage failed: {e}")
             import traceback
+
             traceback.print_exc()
 
     # Final count
@@ -110,10 +116,9 @@ async def main():
     print("-" * 40)
 
     from src.components.graph_rag.neo4j_client import get_neo4j_client
+
     client = get_neo4j_client()
-    count_result = await client.execute_read(
-        "MATCH ()-[r:RELATES_TO]->() RETURN count(r) as count"
-    )
+    count_result = await client.execute_read("MATCH ()-[r:RELATES_TO]->() RETURN count(r) as count")
     print(f"Total RELATES_TO: {count_result[0]['count']}")
 
 

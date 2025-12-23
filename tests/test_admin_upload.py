@@ -81,7 +81,11 @@ class TestFileUploadEndpoint:
         # Create test files
         files = [
             ("document1.pdf", b"PDF content 1", "application/pdf"),
-            ("document2.docx", b"DOCX content 2", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            (
+                "document2.docx",
+                b"DOCX content 2",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
             ("notes.txt", b"Text content 3", "text/plain"),
         ]
 
@@ -188,8 +192,16 @@ class TestFileUploadEndpoint:
         """Test uploading various supported file formats."""
         supported_formats = [
             ("document.pdf", b"PDF", "application/pdf"),
-            ("document.docx", b"DOCX", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-            ("slides.pptx", b"PPTX", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+            (
+                "document.docx",
+                b"DOCX",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
+            (
+                "slides.pptx",
+                b"PPTX",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ),
             ("notes.txt", b"TXT", "text/plain"),
             ("readme.md", b"MD", "text/markdown"),
             ("page.html", b"HTML", "text/html"),

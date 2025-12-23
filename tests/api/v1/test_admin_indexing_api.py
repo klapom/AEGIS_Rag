@@ -18,9 +18,7 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_scan_directory_success(
-    test_client_async: AsyncClient, tmp_path: Path
-) -> None:
+async def test_scan_directory_success(test_client_async: AsyncClient, tmp_path: Path) -> None:
     """Test POST /api/v1/admin/indexing/scan-directory with valid directory.
 
     Verifies:
@@ -71,9 +69,7 @@ async def test_scan_directory_not_found(test_client_async: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_scan_directory_recursive(
-    test_client_async: AsyncClient, tmp_path: Path
-) -> None:
+async def test_scan_directory_recursive(test_client_async: AsyncClient, tmp_path: Path) -> None:
     """Test recursive scanning includes subdirectories.
 
     Verifies:
@@ -225,9 +221,7 @@ async def test_get_job_by_id(test_client_async: AsyncClient) -> None:
             job_id = job_data["id"]
 
             # Get the job
-            get_response = await test_client_async.get(
-                f"/api/v1/admin/ingestion/jobs/{job_id}"
-            )
+            get_response = await test_client_async.get(f"/api/v1/admin/ingestion/jobs/{job_id}")
 
             assert get_response.status_code in [200, 404]
 
@@ -240,9 +234,7 @@ async def test_get_job_not_found(test_client_async: AsyncClient) -> None:
     - Non-existent job returns 404
     - Error message is descriptive
     """
-    response = await test_client_async.get(
-        "/api/v1/admin/ingestion/jobs/nonexistent_job_id"
-    )
+    response = await test_client_async.get("/api/v1/admin/ingestion/jobs/nonexistent_job_id")
 
     assert response.status_code in [404, 400]
 
@@ -256,9 +248,7 @@ async def test_get_job_events(test_client_async: AsyncClient) -> None:
     - Events are chronological
     - Can filter by level
     """
-    response = await test_client_async.get(
-        "/api/v1/admin/ingestion/jobs/sample_job/events"
-    )
+    response = await test_client_async.get("/api/v1/admin/ingestion/jobs/sample_job/events")
 
     assert response.status_code in [200, 404]
     if response.status_code == 200:
@@ -290,9 +280,7 @@ async def test_get_job_errors(test_client_async: AsyncClient) -> None:
     - Returns only ERROR-level events
     - Is shorthand for events?level=ERROR
     """
-    response = await test_client_async.get(
-        "/api/v1/admin/ingestion/jobs/sample_job/errors"
-    )
+    response = await test_client_async.get("/api/v1/admin/ingestion/jobs/sample_job/errors")
 
     assert response.status_code in [200, 404]
     if response.status_code == 200:
@@ -315,9 +303,7 @@ async def test_cancel_job_success(test_client_async: AsyncClient) -> None:
     - Status changes to 'cancelled'
     - Returns success response
     """
-    response = await test_client_async.post(
-        "/api/v1/admin/ingestion/jobs/sample_job/cancel"
-    )
+    response = await test_client_async.post("/api/v1/admin/ingestion/jobs/sample_job/cancel")
 
     assert response.status_code in [200, 400, 404]
 
@@ -330,9 +316,7 @@ async def test_cancel_job_not_running(test_client_async: AsyncClient) -> None:
     - Can't cancel already completed job
     - Returns appropriate error
     """
-    response = await test_client_async.post(
-        "/api/v1/admin/ingestion/jobs/completed_job/cancel"
-    )
+    response = await test_client_async.post("/api/v1/admin/ingestion/jobs/completed_job/cancel")
 
     assert response.status_code in [400, 404]
 
@@ -344,9 +328,7 @@ async def test_cancel_job_not_found(test_client_async: AsyncClient) -> None:
     Verifies:
     - Non-existent job returns 404
     """
-    response = await test_client_async.post(
-        "/api/v1/admin/ingestion/jobs/nonexistent/cancel"
-    )
+    response = await test_client_async.post("/api/v1/admin/ingestion/jobs/nonexistent/cancel")
 
     assert response.status_code in [404, 400]
 
@@ -386,9 +368,7 @@ async def test_delete_job_not_found(test_client_async: AsyncClient) -> None:
     Verifies:
     - Non-existent job returns 404
     """
-    response = await test_client_async.delete(
-        "/api/v1/admin/ingestion/jobs/nonexistent_job_id"
-    )
+    response = await test_client_async.delete("/api/v1/admin/ingestion/jobs/nonexistent_job_id")
 
     assert response.status_code in [404, 400]
 
@@ -399,9 +379,7 @@ async def test_delete_job_not_found(test_client_async: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint"
-)
+@pytest.mark.skip(reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint")
 async def test_start_indexing_job_streams_progress(test_client_async: AsyncClient) -> None:
     """Test POST /api/v1/admin/indexing/start returns SSE stream.
 
@@ -411,17 +389,22 @@ async def test_start_indexing_job_streams_progress(test_client_async: AsyncClien
     - Stream terminates on completion
     """
     with patch("src.api.v1.admin_indexing.reindex_progress_stream") as mock_stream:
+
         async def mock_gen():
-            yield json.dumps({
-                "status": "in_progress",
-                "progress_percent": 0,
-                "message": "Starting indexing...",
-            })
-            yield json.dumps({
-                "status": "completed",
-                "progress_percent": 100.0,
-                "message": "Indexing complete",
-            })
+            yield json.dumps(
+                {
+                    "status": "in_progress",
+                    "progress_percent": 0,
+                    "message": "Starting indexing...",
+                }
+            )
+            yield json.dumps(
+                {
+                    "status": "completed",
+                    "progress_percent": 100.0,
+                    "message": "Indexing complete",
+                }
+            )
 
         mock_stream.return_value = mock_gen()
 
@@ -434,9 +417,7 @@ async def test_start_indexing_job_streams_progress(test_client_async: AsyncClien
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(
-    reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint"
-)
+@pytest.mark.skip(reason="Sprint 53-58: /indexing/start removed - use /reindex endpoint")
 async def test_indexing_stream_progress_format(test_client_async: AsyncClient) -> None:
     """Test SSE progress messages have correct format.
 
@@ -631,9 +612,7 @@ async def test_complete_indexing_workflow(test_client_async: AsyncClient) -> Non
             job_id = job_data["id"]
 
             # Step 3: Get job status
-            status_response = await test_client_async.get(
-                f"/api/v1/admin/ingestion/jobs/{job_id}"
-            )
+            status_response = await test_client_async.get(f"/api/v1/admin/ingestion/jobs/{job_id}")
             assert status_response.status_code in [200, 404]
 
             # Step 4: Cancel job
@@ -653,9 +632,7 @@ async def test_error_recovery_workflow(test_client_async: AsyncClient) -> None:
     - Can delete failed jobs
     """
     # Get errors for non-existent job (should be empty or error)
-    response = await test_client_async.get(
-        "/api/v1/admin/ingestion/jobs/sample_job/errors"
-    )
+    response = await test_client_async.get("/api/v1/admin/ingestion/jobs/sample_job/errors")
     assert response.status_code in [200, 404]
 
 

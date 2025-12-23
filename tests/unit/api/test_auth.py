@@ -135,9 +135,8 @@ class TestUserRegistration:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         response_data = response.json()
         # Handle error format from exception handler middleware
-        error_message = (
-            response_data.get("detail")
-            or response_data.get("error", {}).get("message", "")
+        error_message = response_data.get("detail") or response_data.get("error", {}).get(
+            "message", ""
         )
         assert "already exists" in str(error_message)
 
@@ -201,7 +200,9 @@ class TestLogin:
         assert "expires_in" in data
 
     @patch("src.api.v1.auth.UserStore")
-    def test_login_user_not_found(self, mock_user_store_class: MagicMock, client: TestClient) -> None:
+    def test_login_user_not_found(
+        self, mock_user_store_class: MagicMock, client: TestClient
+    ) -> None:
         """Test login with non-existent user."""
         # Setup mock
         mock_store = MagicMock()
@@ -221,9 +222,8 @@ class TestLogin:
         # Verify response
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         response_data = response.json()
-        error_message = (
-            response_data.get("detail")
-            or response_data.get("error", {}).get("message", "")
+        error_message = response_data.get("detail") or response_data.get("error", {}).get(
+            "message", ""
         )
         assert "Incorrect username or password" in str(error_message)
 
@@ -251,9 +251,8 @@ class TestLogin:
         # Verify response
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         response_data = response.json()
-        error_message = (
-            response_data.get("detail")
-            or response_data.get("error", {}).get("message", "")
+        error_message = response_data.get("detail") or response_data.get("error", {}).get(
+            "message", ""
         )
         assert "Incorrect username or password" in str(error_message)
 
@@ -281,9 +280,8 @@ class TestLogin:
         # Verify response
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         response_data = response.json()
-        error_message = (
-            response_data.get("detail")
-            or response_data.get("error", {}).get("message", "")
+        error_message = response_data.get("detail") or response_data.get("error", {}).get(
+            "message", ""
         )
         assert "inactive" in str(error_message).lower()
 

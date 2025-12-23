@@ -2,6 +2,7 @@
  * Citation Parsing Utilities
  * Sprint 28 Feature 28.2: Parse and render inline citations
  * Sprint 32 Fix: Pre-process markdown to handle citations before react-markdown
+ * Sprint 62 Feature 62.4: Section-aware citations with metadata extraction
  *
  * Converts [1], [2], etc. in markdown text to Citation components
  */
@@ -9,6 +10,12 @@
 import { Fragment, type ReactNode } from 'react';
 import { Citation } from '../components/chat/Citation';
 import type { Source } from '../types/chat';
+import {
+  extractSectionMetadata,
+  getDocumentType,
+  type SectionMetadata,
+  type DocumentType,
+} from '../types/section';
 
 // Special marker for citation placeholders that won't conflict with markdown
 // Using CITE_MARK_X format to avoid markdown interpretation of underscores
@@ -259,4 +266,54 @@ export function createMarkerTextRenderer(
     console.log('[TextRenderer] sources.length:', sources.length);
     return <>{replaceCitationMarkers(text, sources, onClickScrollTo)}</>;
   };
+}
+
+/**
+ * Sprint 62.4: Extract section metadata from a source
+ * Handles both direct section field and legacy metadata fields
+ */
+export function getSourceSectionMetadata(source: Source): SectionMetadata | null {
+  return extractSectionMetadata(source);
+}
+
+/**
+ * Sprint 62.4: Get document type from source
+ */
+export function getSourceDocumentType(source: Source): DocumentType {
+  // Check direct document_type field first
+  if (source.document_type) {
+    return source.document_type;
+  }
+  return getDocumentType(source);
+}
+
+/**
+ * Sprint 62.4: Check if source has section metadata
+ */
+export function hasSourceSectionMetadata(source: Source): boolean {
+  const section = getSourceSectionMetadata(source);
+  return section !== null && (
+    !!section.section_id ||
+    !!section.section_title ||
+    !!section.section_number ||
+    (section.section_level !== undefined && section.section_level > 0)
+  );
+}
+
+/**
+ * Sprint 62.4: Enrich sources with extracted section metadata
+ * This normalizes section data from various backend formats
+ */
+export function enrichSourcesWithSectionMetadata(sources: Source[]): Source[] {
+  return sources.map((source) => {
+    const section = getSourceSectionMetadata(source);
+    const documentType = getSourceDocumentType(source);
+
+    // Return enriched source with normalized section data
+    return {
+      ...source,
+      section: section || source.section,
+      document_type: documentType,
+    };
+  });
 }

@@ -85,7 +85,11 @@ async def test_get_conversation_success():
 
     conversation_data = {
         "messages": [
-            {"role": "user", "content": "Explain hybrid search", "timestamp": datetime.now(UTC).isoformat()},
+            {
+                "role": "user",
+                "content": "Explain hybrid search",
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
             {
                 "role": "assistant",
                 "content": "Hybrid search combines vector and keyword search...",
@@ -207,7 +211,9 @@ async def test_session_list_date_grouping():
     data = response.json()
 
     # Find our test sessions
-    test_sessions = [s for s in data["sessions"] if s["session_id"] in [d[0] for d in sessions_data]]
+    test_sessions = [
+        s for s in data["sessions"] if s["session_id"] in [d[0] for d in sessions_data]
+    ]
 
     if len(test_sessions) >= 2:
         # Most recent should be first

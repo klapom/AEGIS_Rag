@@ -1,4 +1,5 @@
 """Test ingestion to debug RELATES_TO extraction."""
+
 import asyncio
 import os
 import sys
@@ -43,29 +44,30 @@ async def main():
     except Exception as e:
         print(f"Ingestion failed: {e}")
         import traceback
+
         traceback.print_exc()
 
     # Count RELATES_TO after
-    after_result = await client.execute_read(
-        "MATCH ()-[r:RELATES_TO]->() RETURN count(r) as count"
-    )
+    after_result = await client.execute_read("MATCH ()-[r:RELATES_TO]->() RETURN count(r) as count")
     after_count = after_result[0]["count"]
     print(f"\nRELATES_TO count AFTER: {after_count}")
     print(f"NEW RELATES_TO created: {after_count - before_count}")
 
     # Show new RELATES_TO if any
     if after_count > before_count:
-        new_rels = await client.execute_read("""
+        new_rels = await client.execute_read(
+            """
             MATCH (e1:base)-[r:RELATES_TO]->(e2:base)
             RETURN e1.entity_name AS source, e2.entity_name AS target,
                    r.description AS desc
             ORDER BY r.created_at DESC
             LIMIT 10
-        """)
+        """
+        )
         print("\nNew RELATES_TO relationships:")
         for rel in new_rels:
             print(f"  {rel['source']} --> {rel['target']}")
-            if rel.get('desc'):
+            if rel.get("desc"):
                 print(f"    {rel['desc'][:60]}...")
 
 

@@ -18,12 +18,15 @@ from src.api.main import app
 @pytest.mark.asyncio
 async def test_chat_stream_with_phase_events():
     """Test SSE streaming includes phase_event messages."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is RAG?", "session_id": "test-phase-events-123"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is RAG?", "session_id": "test-phase-events-123"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
@@ -57,12 +60,15 @@ async def test_chat_stream_with_phase_events():
 @pytest.mark.asyncio
 async def test_chat_stream_phase_events_have_timing():
     """Test phase events include timing information."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Hello world", "session_id": "test-timing-456"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Hello world", "session_id": "test-timing-456"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         completed_events = []
@@ -94,12 +100,15 @@ async def test_chat_stream_phase_events_have_timing():
 @pytest.mark.asyncio
 async def test_chat_stream_reasoning_complete_event():
     """Test streaming emits reasoning_complete event at the end."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Test reasoning", "session_id": "test-reasoning-789"},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Test reasoning", "session_id": "test-reasoning-789"},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         reasoning_complete = None
@@ -127,12 +136,15 @@ async def test_phase_events_persistence():
     session_id = "test-persistence-001"
 
     # First, stream a chat query
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is machine learning?", "session_id": session_id},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is machine learning?", "session_id": session_id},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Consume the entire stream
@@ -167,9 +179,7 @@ async def test_phase_events_persistence():
 async def test_get_phase_events_not_found():
     """Test retrieving phase events for non-existent conversation."""
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.get(
-            "/api/v1/chat/conversations/non-existent-session/phase-events"
-        )
+        response = await client.get("/api/v1/chat/conversations/non-existent-session/phase-events")
 
         # Should return empty list for non-existent conversation
         assert response.status_code == 200
@@ -184,12 +194,15 @@ async def test_get_phase_events_structure():
     session_id = "test-structure-002"
 
     # Stream a query
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Explain neural networks", "session_id": session_id},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Explain neural networks", "session_id": session_id},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         async for line in response.aiter_lines():
             if line.startswith("data: "):
@@ -248,16 +261,19 @@ async def test_chat_stream_timeout_error():
 async def test_chat_stream_error_event_structure():
     """Test error events have correct structure."""
     # Test with an invalid request that should trigger an error
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={
-            "query": "Test error handling",
-            "session_id": "test-error-001",
-            "intent": "invalid",  # Invalid intent to potentially trigger error
-        },
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={
+                "query": "Test error handling",
+                "session_id": "test-error-001",
+                "intent": "invalid",  # Invalid intent to potentially trigger error
+            },
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         # May return 200 and handle error in stream, or return error status
         assert response.status_code in [200, 400, 422]
 
@@ -289,12 +305,15 @@ async def test_phase_events_ttl():
     session_id = "test-ttl-003"
 
     # Stream a query
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "Test TTL", "session_id": session_id},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "Test TTL", "session_id": session_id},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
         async for line in response.aiter_lines():
             if line.startswith("data: "):
@@ -357,12 +376,8 @@ async def test_multiple_conversations_phase_events_isolation():
 
     # Retrieve events for both conversations
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response_1 = await client.get(
-            f"/api/v1/chat/conversations/{session_id_1}/phase-events"
-        )
-        response_2 = await client.get(
-            f"/api/v1/chat/conversations/{session_id_2}/phase-events"
-        )
+        response_1 = await client.get(f"/api/v1/chat/conversations/{session_id_1}/phase-events")
+        response_2 = await client.get(f"/api/v1/chat/conversations/{session_id_2}/phase-events")
 
         assert response_1.status_code == 200
         assert response_2.status_code == 200

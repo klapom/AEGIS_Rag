@@ -77,7 +77,9 @@ Short
 3. Find future AI trends
 """
 
-        with patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_get_llm:
+        with patch(
+            "src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy"
+        ) as mock_get_llm:
             mock_get_llm.return_value = mock_llm
 
             plan = await plan_research("What is artificial intelligence?")
@@ -89,7 +91,9 @@ Short
     @pytest.mark.skip(reason="Requires LLM proxy module")
     async def test_plan_research_fallback_on_error(self):
         """Test fallback when LLM fails."""
-        with patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_get_llm:
+        with patch(
+            "src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy"
+        ) as mock_get_llm:
             mock_get_llm.side_effect = Exception("LLM error")
 
             plan = await plan_research("test query")
@@ -149,10 +153,7 @@ class TestResearchSearcher:
     @pytest.mark.asyncio
     async def test_evaluate_results_sufficient(self):
         """Test result evaluation for sufficient results."""
-        results = [
-            {"text": f"result {i}", "score": 0.8, "source": "vector"}
-            for i in range(10)
-        ]
+        results = [{"text": f"result {i}", "score": 0.8, "source": "vector"} for i in range(10)]
 
         metrics = await evaluate_results(results, "test query")
 
@@ -174,15 +175,13 @@ class TestResearchSearcher:
     @pytest.mark.skip(reason="Requires vector/graph search modules")
     async def test_execute_searches_with_mocks(self):
         """Test search execution with mocked components."""
-        with patch("src.components.vector_search.hybrid.search_hybrid") as mock_vector, \
-             patch("src.components.graph_rag.query.query_graph") as mock_graph:
+        with (
+            patch("src.components.vector_search.hybrid.search_hybrid") as mock_vector,
+            patch("src.components.graph_rag.query.query_graph") as mock_graph,
+        ):
 
-            mock_vector.return_value = [
-                {"text": "vector result", "score": 0.9}
-            ]
-            mock_graph.return_value = [
-                {"text": "graph result", "score": 0.8}
-            ]
+            mock_vector.return_value = [{"text": "vector result", "score": 0.9}]
+            mock_graph.return_value = [{"text": "graph result", "score": 0.8}]
 
             results = await execute_searches(["test query"], top_k=5)
 
@@ -228,7 +227,9 @@ class TestResearchSynthesizer:
         mock_llm = AsyncMock()
         mock_llm.generate.return_value = "This is a synthesized answer based on research."
 
-        with patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_get_llm:
+        with patch(
+            "src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy"
+        ) as mock_get_llm:
             mock_get_llm.return_value = mock_llm
 
             results = [
@@ -245,7 +246,9 @@ class TestResearchSynthesizer:
     @pytest.mark.skip(reason="Requires LLM proxy module")
     async def test_synthesize_findings_fallback(self):
         """Test synthesis fallback when LLM fails."""
-        with patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_get_llm:
+        with patch(
+            "src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy"
+        ) as mock_get_llm:
             mock_get_llm.side_effect = Exception("LLM error")
 
             results = [
@@ -289,18 +292,18 @@ class TestResearchGraph:
     async def test_run_research_workflow(self):
         """Test full research workflow (mocked)."""
         # Mock all external dependencies
-        with patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_llm, \
-             patch("src.components.vector_search.hybrid.search_hybrid") as mock_vector, \
-             patch("src.components.graph_rag.query.query_graph") as mock_graph:
+        with (
+            patch("src.domains.llm_integration.proxy.aegis_proxy.get_aegis_llm_proxy") as mock_llm,
+            patch("src.components.vector_search.hybrid.search_hybrid") as mock_vector,
+            patch("src.components.graph_rag.query.query_graph") as mock_graph,
+        ):
 
             # Setup mocks
             mock_llm_instance = AsyncMock()
             mock_llm_instance.generate.return_value = "1. Test query"
             mock_llm.return_value = mock_llm_instance
 
-            mock_vector.return_value = [
-                {"text": "Result", "score": 0.9}
-            ]
+            mock_vector.return_value = [{"text": "Result", "score": 0.9}]
             mock_graph.return_value = []
 
             # Run research

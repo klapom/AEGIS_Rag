@@ -40,12 +40,14 @@ class TimingLogCapture(logging.Handler):
         msg = record.getMessage()
         # Check if this is a TIMING_ log (structlog format)
         if "TIMING_" in msg:
-            self.timing_logs.append({
-                "timestamp": datetime.fromtimestamp(record.created).isoformat(),
-                "document": self.current_document,
-                "message": msg,
-                "level": record.levelname,
-            })
+            self.timing_logs.append(
+                {
+                    "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+                    "document": self.current_document,
+                    "message": msg,
+                    "level": record.levelname,
+                }
+            )
 
     def get_timings_for_document(self, doc_name: str) -> list[dict]:
         return [t for t in self.timing_logs if t["document"] == doc_name]
@@ -68,6 +70,7 @@ logging.getLogger().addHandler(timing_capture)
 # Also add to structlog if available
 try:
     import structlog
+
     # structlog logs go through standard logging, so our handler will catch them
 except ImportError:
     pass
@@ -98,12 +101,12 @@ def parse_timing_from_log(log_msg: str) -> dict[str, Any]:
     result = {}
 
     # Extract the event name (TIMING_*)
-    timing_match = re.search(r'(TIMING_\w+)', log_msg)
+    timing_match = re.search(r"(TIMING_\w+)", log_msg)
     if timing_match:
         result["event"] = timing_match.group(1)
 
     # Extract simple key=value pairs (numbers, strings without spaces)
-    simple_pattern = r'(\w+)=([\d.]+)(?:\s|$)'
+    simple_pattern = r"(\w+)=([\d.]+)(?:\s|$)"
     for match in re.finditer(simple_pattern, log_msg):
         key, value = match.groups()
         try:
@@ -297,6 +300,7 @@ async def run_full_pipeline(file_path: Path, timing_capture: TimingLogCapture) -
         total_time = time.perf_counter() - start_time
         print(f"\n[ERROR] Pipeline failed after {total_time:.2f}s: {e}")
         import traceback
+
         traceback.print_exc()
         return {
             "success": False,
@@ -343,10 +347,7 @@ def identify_bottlenecks(results: list[dict]) -> dict:
 
     # Find slowest stage overall
     if stage_totals:
-        avg_by_stage = {
-            stage: sum(times) / len(times)
-            for stage, times in stage_totals.items()
-        }
+        avg_by_stage = {stage: sum(times) / len(times) for stage, times in stage_totals.items()}
         slowest = max(avg_by_stage, key=avg_by_stage.get)
         bottlenecks["slowest_stage_overall"] = {
             "stage": slowest,
@@ -380,10 +381,7 @@ def identify_bottlenecks(results: list[dict]) -> dict:
     # Find slowest stage by category
     for category, stages in category_stage_totals.items():
         if stages:
-            avg_by_stage = {
-                stage: sum(times) / len(times)
-                for stage, times in stages.items()
-            }
+            avg_by_stage = {stage: sum(times) / len(times) for stage, times in stages.items()}
             slowest = max(avg_by_stage, key=avg_by_stage.get)
             bottlenecks["slowest_stage_by_category"][category] = {
                 "stage": slowest,
@@ -483,7 +481,9 @@ async def main():
             print(f"  - {rec}")
 
     # Save results
-    results_file = RESULTS_DIR / f"full_pipeline_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    results_file = (
+        RESULTS_DIR / f"full_pipeline_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
 
     # Convert results to JSON-serializable format
     def make_serializable(obj):
@@ -508,7 +508,9 @@ async def main():
             "total_documents": len(results),
             "successful": len(successful),
             "failed": len(failed),
-            "avg_time_s": sum(r["total_time_s"] for r in successful) / len(successful) if successful else 0,
+            "avg_time_s": (
+                sum(r["total_time_s"] for r in successful) / len(successful) if successful else 0
+            ),
         },
     }
 

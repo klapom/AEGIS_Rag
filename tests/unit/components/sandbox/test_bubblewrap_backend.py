@@ -76,18 +76,24 @@ def check_bwrap_available() -> bool:
         result = subprocess.run(
             [
                 "bwrap",
-                "--ro-bind", "/", "/",
-                "--dev", "/dev",
-                "--proc", "/proc",
+                "--ro-bind",
+                "/",
+                "/",
+                "--dev",
+                "/dev",
+                "--proc",
+                "/proc",
                 "--unshare-net",
                 "--unshare-ipc",
                 "--unshare-pid",
                 "--unshare-uts",
                 "--",
-                "sh", "-c", "echo test"
+                "sh",
+                "-c",
+                "echo test",
             ],
             capture_output=True,
-            timeout=5
+            timeout=5,
         )
 
         # If we got network permission error, bwrap is available but needs different config
@@ -321,9 +327,7 @@ class TestExecuteMocked:
         large_output = "x" * 40000  # Larger than 32KB limit
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0, stdout=large_output, stderr=""
-            )
+            mock_run.return_value = MagicMock(returncode=0, stdout=large_output, stderr="")
 
             result = backend.execute("echo test")
 
@@ -465,9 +469,7 @@ class TestAuditLogging:
                 backend.execute("sleep 100")
 
                 # Check that timeout was logged
-                assert any(
-                    "timeout" in str(call) for call in mock_logger.warning.call_args_list
-                )
+                assert any("timeout" in str(call) for call in mock_logger.warning.call_args_list)
 
     def test_execute_logs_suspicious_patterns(self, backend):
         """Test that suspicious patterns are logged."""
@@ -479,8 +481,7 @@ class TestAuditLogging:
 
                 # Check that suspicious pattern was logged
                 assert any(
-                    "suspicious" in str(call).lower()
-                    for call in mock_logger.warning.call_args_list
+                    "suspicious" in str(call).lower() for call in mock_logger.warning.call_args_list
                 )
 
 

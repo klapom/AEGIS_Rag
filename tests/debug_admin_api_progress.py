@@ -1,4 +1,5 @@
 """Debug script to test Admin API streaming progress directly."""
+
 import asyncio
 import urllib.parse
 
@@ -7,11 +8,13 @@ import httpx
 
 async def test_admin_api_stream():
     """Test the Admin API indexing/add streaming endpoint."""
-    file_paths = [r"C:\Projekte\AEGISRAG\data\sample_documents\12. BPMN-Foundation\DE-D-BPMN-Handout-A4.pdf"]
+    file_paths = [
+        r"C:\Projekte\AEGISRAG\data\sample_documents\12. BPMN-Foundation\DE-D-BPMN-Handout-A4.pdf"
+    ]
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Admin API /indexing/add streaming")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Build URL with query params
     params = "&".join([f"file_paths={urllib.parse.quote(p)}" for p in file_paths])
@@ -32,6 +35,7 @@ async def test_admin_api_stream():
                 if line.startswith("data: "):
                     data = line[6:]
                     import json
+
                     try:
                         chunk = json.loads(data)
                         phase = chunk.get("phase", "?")
@@ -40,6 +44,7 @@ async def test_admin_api_stream():
                         print(f"[{phase:15}] Progress: {progress:5.1f}% | {message}")
                     except:
                         print(f"RAW: {line[:100]}")
+
 
 if __name__ == "__main__":
     asyncio.run(test_admin_api_stream())

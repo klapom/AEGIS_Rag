@@ -70,9 +70,7 @@ class TestBenchmarkE2E:
         assert metrics.collection_size_mb > 0
 
         # Verify cross-layer compatibility
-        assert (
-            not metrics.cross_layer_similarity_possible
-        )  # 768-dim not compatible with Graphiti
+        assert not metrics.cross_layer_similarity_possible  # 768-dim not compatible with Graphiti
 
         # Verify output file created
         assert output_path.exists()

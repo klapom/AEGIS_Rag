@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 @dataclass
 class FormatTestResult:
     """Result of testing a single format."""
+
     format: str
     file_name: str
     file_size_kb: float
@@ -31,6 +32,7 @@ class FormatTestResult:
 @dataclass
 class SectionMetadata:
     """Section metadata for testing."""
+
     heading: str
     level: int
     page_no: int
@@ -78,7 +80,7 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
                 chunks_created=0,
                 tokens_total=0,
                 status="FAILED",
-                error="No JSON content returned"
+                error="No JSON content returned",
             )
 
         # Step 2: Extract sections
@@ -97,7 +99,9 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
             for i, s in enumerate(sections[:5]):
                 heading_short = s.heading[:40] if s.heading else "(no heading)"
                 source = s.metadata.get("heading_source", "?")
-                print(f"          [{i+1}] L{s.level} '{heading_short}...' ({s.token_count} tokens, {source})")
+                print(
+                    f"          [{i+1}] L{s.level} '{heading_short}...' ({s.token_count} tokens, {source})"
+                )
 
         return FormatTestResult(
             format=file_ext,
@@ -107,7 +111,7 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
             sections_extracted=len(sections),
             chunks_created=len(sections),  # 1:1 for now
             tokens_total=total_tokens,
-            status="SUCCESS"
+            status="SUCCESS",
         )
 
     except Exception as e:
@@ -120,16 +124,16 @@ async def test_single_file(file_path: Path) -> FormatTestResult:
             chunks_created=0,
             tokens_total=0,
             status="ERROR",
-            error=str(e)
+            error=str(e),
         )
 
 
 async def main():
     """Run multi-format performance test."""
-    print("="*70)
+    print("=" * 70)
     print("MULTI-FORMAT PERFORMANCE TEST")
     print("Sprint 33: Testing all Docling-supported formats")
-    print("="*70)
+    print("=" * 70)
 
     # Define test files - one per format
     base_path = Path("C:/Projekte/AEGISRAG/data/sample_documents")
@@ -173,18 +177,22 @@ async def main():
     total_time = time.perf_counter() - total_start
 
     # Print summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("SUMMARY")
-    print("="*70)
+    print("=" * 70)
 
-    print(f"\n{'Format':<8} {'File':<45} {'Size':>8} {'Time':>8} {'Sections':>10} {'Tokens':>10} {'Status':<10}")
-    print("-"*110)
+    print(
+        f"\n{'Format':<8} {'File':<45} {'Size':>8} {'Time':>8} {'Sections':>10} {'Tokens':>10} {'Status':<10}"
+    )
+    print("-" * 110)
 
     for r in results:
         file_short = r.file_name[:42] + "..." if len(r.file_name) > 45 else r.file_name
-        print(f"{r.format:<8} {file_short:<45} {r.file_size_kb:>7.1f}K {r.parse_time_s:>7.2f}s {r.sections_extracted:>10} {r.tokens_total:>10} {r.status:<10}")
+        print(
+            f"{r.format:<8} {file_short:<45} {r.file_size_kb:>7.1f}K {r.parse_time_s:>7.2f}s {r.sections_extracted:>10} {r.tokens_total:>10} {r.status:<10}"
+        )
 
-    print("-"*110)
+    print("-" * 110)
 
     # Aggregates
     success_count = sum(1 for r in results if r.status == "SUCCESS")
@@ -221,7 +229,9 @@ async def main():
             format_stats[r.format]["success"] += 1
 
     for fmt, stats in sorted(format_stats.items()):
-        print(f"  {fmt}: {stats['success']}/{stats['count']} success, {stats['time']:.2f}s, {stats['sections']} sections")
+        print(
+            f"  {fmt}: {stats['success']}/{stats['count']} success, {stats['time']:.2f}s, {stats['sections']} sections"
+        )
 
     # Errors
     errors = [r for r in results if r.error]

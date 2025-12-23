@@ -24,9 +24,7 @@ def admin_test_client():
     """
     # Mock Qdrant client
     mock_qdrant = AsyncMock()
-    mock_qdrant.get_collection_info = AsyncMock(
-        return_value=MagicMock(points_count=1523)
-    )
+    mock_qdrant.get_collection_info = AsyncMock(return_value=MagicMock(points_count=1523))
 
     # Mock embedding service
     mock_embedding = MagicMock()
@@ -56,12 +54,16 @@ def admin_test_client():
     mock_hybrid.bm25_search = mock_bm25
 
     # Apply patches BEFORE importing app
-    with patch("src.api.v1.admin.get_qdrant_client", return_value=mock_qdrant), \
-         patch("src.api.v1.admin.get_embedding_service", return_value=mock_embedding), \
-         patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j), \
-         patch("src.components.memory.get_redis_memory", return_value=mock_redis), \
-         patch("src.api.v1.retrieval.get_hybrid_search", return_value=mock_hybrid), \
-         patch("src.api.v1.admin.get_last_reindex_timestamp", new_callable=AsyncMock) as mock_reindex:
+    with (
+        patch("src.api.v1.admin.get_qdrant_client", return_value=mock_qdrant),
+        patch("src.api.v1.admin.get_embedding_service", return_value=mock_embedding),
+        patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j),
+        patch("src.components.memory.get_redis_memory", return_value=mock_redis),
+        patch("src.api.v1.retrieval.get_hybrid_search", return_value=mock_hybrid),
+        patch(
+            "src.api.v1.admin.get_last_reindex_timestamp", new_callable=AsyncMock
+        ) as mock_reindex,
+    ):
 
         mock_reindex.return_value = "2025-12-18T10:30:00"
 
@@ -102,6 +104,7 @@ def namespace_test_client():
     # Patch at source location (lazy import inside function)
     with patch("src.core.namespace.NamespaceManager", return_value=mock_manager):
         from src.api.main import app
+
         client = TestClient(app)
         client._mocks = {"manager": mock_manager, "namespace_info": mock_namespace_info}
         yield client
@@ -131,37 +134,43 @@ def graph_test_client():
     # Create result mocks for each query
     entity_result = _create_graph_result_mock(single_value={"count": 856})
     rel_result = _create_graph_result_mock(single_value={"count": 1204})
-    entity_types_result = _create_graph_result_mock(data_value=[
-        {"type": "PERSON", "count": 450},
-        {"type": "ORGANIZATION", "count": 300},
-        {"type": "LOCATION", "count": 106},
-    ])
-    rel_types_result = _create_graph_result_mock(data_value=[
-        {"type": "RELATES_TO", "count": 700},
-        {"type": "MENTIONED_IN", "count": 350},
-        {"type": "WORKS_AT", "count": 154},
-    ])
-    community_result = _create_graph_result_mock(data_value=[
-        {"community": 1, "size": 100},
-        {"community": 2, "size": 80},
-        {"community": 3, "size": 60},
-    ])
-    orphan_result = _create_graph_result_mock(single_value={"count": 5})
-    summary_result = _create_graph_result_mock(
-        single_value={"generated": 2, "pending": 1}
+    entity_types_result = _create_graph_result_mock(
+        data_value=[
+            {"type": "PERSON", "count": 450},
+            {"type": "ORGANIZATION", "count": 300},
+            {"type": "LOCATION", "count": 106},
+        ]
     )
+    rel_types_result = _create_graph_result_mock(
+        data_value=[
+            {"type": "RELATES_TO", "count": 700},
+            {"type": "MENTIONED_IN", "count": 350},
+            {"type": "WORKS_AT", "count": 154},
+        ]
+    )
+    community_result = _create_graph_result_mock(
+        data_value=[
+            {"community": 1, "size": 100},
+            {"community": 2, "size": 80},
+            {"community": 3, "size": 60},
+        ]
+    )
+    orphan_result = _create_graph_result_mock(single_value={"count": 5})
+    summary_result = _create_graph_result_mock(single_value={"generated": 2, "pending": 1})
 
     # Create mock session with run method that returns results in order
     mock_session = AsyncMock()
-    mock_session.run = AsyncMock(side_effect=[
-        entity_result,
-        rel_result,
-        entity_types_result,
-        rel_types_result,
-        community_result,
-        orphan_result,
-        summary_result,
-    ])
+    mock_session.run = AsyncMock(
+        side_effect=[
+            entity_result,
+            rel_result,
+            entity_types_result,
+            rel_types_result,
+            community_result,
+            orphan_result,
+            summary_result,
+        ]
+    )
 
     # Mock the async context manager for session
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
@@ -176,6 +185,7 @@ def graph_test_client():
 
     with patch("src.components.graph_rag.neo4j_client.get_neo4j_client", return_value=mock_neo4j):
         from src.api.main import app
+
         client = TestClient(app)
         client._mocks = {
             "neo4j": mock_neo4j,

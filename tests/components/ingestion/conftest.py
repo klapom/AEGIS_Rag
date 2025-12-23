@@ -92,6 +92,7 @@ def mock_langgraph_pipeline():
     Returns:
         Async mock function simulating document processing
     """
+
     async def process_mock(document_path: str, document_id: str) -> dict[str, Any]:
         """Mock document processing function.
 
@@ -106,15 +107,9 @@ def mock_langgraph_pipeline():
             "success": True,
             "file_path": document_path,
             "state": {
-                "chunks": [
-                    {"id": f"chunk_{i}", "text": f"Chunk {i}"} for i in range(5)
-                ],
-                "entities": [
-                    {"id": f"entity_{i}", "name": f"Entity {i}"} for i in range(3)
-                ],
-                "relations": [
-                    {"source": "entity_0", "target": "entity_1"}
-                ],
+                "chunks": [{"id": f"chunk_{i}", "text": f"Chunk {i}"} for i in range(5)],
+                "entities": [{"id": f"entity_{i}", "name": f"Entity {i}"} for i in range(3)],
+                "relations": [{"source": "entity_0", "target": "entity_1"}],
                 "vlm_metadata": [{"image_id": f"img_{i}"} for i in range(2)],
             },
             "error": None,

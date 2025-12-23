@@ -25,9 +25,7 @@ def mock_qdrant_client():
     client = AsyncMock()
     client.delete_collection = AsyncMock()
     client.create_collection = AsyncMock()
-    client.get_collection_info = AsyncMock(
-        return_value=MagicMock(points_count=1523)
-    )
+    client.get_collection_info = AsyncMock(return_value=MagicMock(points_count=1523))
     return client
 
 
@@ -52,9 +50,7 @@ def mock_lightrag_wrapper():
     """Mock LightRAG wrapper."""
     wrapper = AsyncMock()
     wrapper._clear_neo4j_database = AsyncMock()
-    wrapper.get_stats = AsyncMock(
-        return_value={"entity_count": 856, "relationship_count": 1204}
-    )
+    wrapper.get_stats = AsyncMock(return_value={"entity_count": 856, "relationship_count": 1204})
     return wrapper
 
 
@@ -62,14 +58,14 @@ class TestGetLastReindexTimestamp:
     """Tests for get_last_reindex_timestamp function."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
     async def test_get_timestamp_success(self, monkeypatch):
         """Test successful retrieval of last reindex timestamp."""
         mock_redis_memory = AsyncMock()
         mock_redis_client = AsyncMock()
-        mock_redis_client.get = AsyncMock(
-            return_value=b"2025-12-18T10:30:00"
-        )
+        mock_redis_client.get = AsyncMock(return_value=b"2025-12-18T10:30:00")
         mock_redis_memory.client = AsyncMock(return_value=mock_redis_client)
 
         with patch(
@@ -109,7 +105,9 @@ class TestSaveLastReindexTimestamp:
     """Tests for save_last_reindex_timestamp function."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
     async def test_save_timestamp_success(self, monkeypatch):
         """Test successful save of reindex timestamp."""
         mock_redis_memory = AsyncMock()
@@ -149,12 +147,15 @@ class TestReindexProgressStream:
         mock_qdrant = AsyncMock()
         mock_embedding = MagicMock(embedding_dim=1024)
 
-        with patch(
-            "src.components.vector_search.qdrant_client.get_qdrant_client",
-            return_value=mock_qdrant,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding,
+        with (
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding,
+            ),
         ):
             gen = reindex_progress_stream(tmp_path, dry_run=True)
             messages = []
@@ -176,12 +177,15 @@ class TestReindexProgressStream:
         mock_qdrant = AsyncMock()
         mock_embedding = MagicMock(embedding_dim=1024)
 
-        with patch(
-            "src.components.vector_search.qdrant_client.get_qdrant_client",
-            return_value=mock_qdrant,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding,
+        with (
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding,
+            ),
         ):
             gen = reindex_progress_stream(tmp_path, dry_run=True)
             messages = []
@@ -192,7 +196,9 @@ class TestReindexProgressStream:
             mock_qdrant.delete_collection.assert_not_called()
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy")
+    @pytest.mark.skip(
+        reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy"
+    )
     async def test_reindex_progress_stream_format(self, tmp_path, monkeypatch):
         """Test SSE message format."""
         from src.api.v1.admin_indexing import reindex_progress_stream
@@ -203,12 +209,15 @@ class TestReindexProgressStream:
         mock_qdrant = AsyncMock()
         mock_embedding = MagicMock(embedding_dim=1024)
 
-        with patch(
-            "src.components.vector_search.qdrant_client.get_qdrant_client",
-            return_value=mock_qdrant,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding,
+        with (
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding,
+            ),
         ):
             gen = reindex_progress_stream(tmp_path, dry_run=True)
             messages = []
@@ -233,7 +242,9 @@ class TestReindexEndpoints:
         assert response.status_code == 200
         assert "No documents found" in response.text
 
-    @pytest.mark.skip(reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy")
+    @pytest.mark.skip(
+        reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy"
+    )
     def test_reindex_all_documents_dry_run(self, test_client, tmp_path, monkeypatch):
         """Test reindex with dry-run flag."""
         test_doc = tmp_path / "test.pdf"
@@ -242,12 +253,15 @@ class TestReindexEndpoints:
         mock_qdrant = AsyncMock()
         mock_embedding = MagicMock(embedding_dim=1024)
 
-        with patch(
-            "src.components.vector_search.qdrant_client.get_qdrant_client",
-            return_value=mock_qdrant,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding,
+        with (
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding,
+            ),
         ):
             response = test_client.post(
                 "/api/v1/admin/reindex",
@@ -259,7 +273,9 @@ class TestReindexEndpoints:
 class TestAddDocumentsEndpoint:
     """Tests for document addition endpoint."""
 
-    @pytest.mark.skip(reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy")
+    @pytest.mark.skip(
+        reason="Sprint 58: run_batch_ingestion refactored - needs updated mock strategy"
+    )
     def test_add_documents_success(self, test_client, tmp_path, monkeypatch):
         """Test successful document addition."""
         test_doc = tmp_path / "test.pdf"
@@ -268,12 +284,15 @@ class TestAddDocumentsEndpoint:
         mock_qdrant = AsyncMock()
         mock_embedding = MagicMock(embedding_dim=1024)
 
-        with patch(
-            "src.components.vector_search.qdrant_client.get_qdrant_client",
-            return_value=mock_qdrant,
-        ), patch(
-            "src.components.shared.embedding_service.get_embedding_service",
-            return_value=mock_embedding,
+        with (
+            patch(
+                "src.components.vector_search.qdrant_client.get_qdrant_client",
+                return_value=mock_qdrant,
+            ),
+            patch(
+                "src.components.shared.embedding_service.get_embedding_service",
+                return_value=mock_embedding,
+            ),
         ):
             response = test_client.post(
                 "/api/v1/admin/add-documents",
@@ -287,14 +306,14 @@ class TestGetReindexStatusEndpoint:
     """Tests for getting last reindex status."""
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
     async def test_get_last_reindex_status(self, test_client, monkeypatch):
         """Test getting last reindex timestamp."""
         mock_redis_memory = AsyncMock()
         mock_redis_client = AsyncMock()
-        mock_redis_client.get = AsyncMock(
-            return_value=b"2025-12-18T10:30:00"
-        )
+        mock_redis_client.get = AsyncMock(return_value=b"2025-12-18T10:30:00")
         mock_redis_memory.client = AsyncMock(return_value=mock_redis_client)
 
         with patch(

@@ -120,7 +120,9 @@ class TestCommunityDetectionWorkflow:
 
                     communities = [record async for record in stats_result]
                     for comm in communities:
-                        print(f"[TEST] Community {comm['community_id']}: {comm['member_count']} members")
+                        print(
+                            f"[TEST] Community {comm['community_id']}: {comm['member_count']} members"
+                        )
 
                     assert community_count > 0, "At least one community should exist"
                     print("[TEST] Community detection verified in Neo4j")
@@ -152,7 +154,9 @@ class TestCommunityDetectionWorkflow:
         print("[TEST] Navigated to /admin/graph")
 
         # Wait for page to load
-        page_title = page.get_by_role("heading", level=1).filter(has_text=re.compile("Knowledge Graph|Graph Analytics", re.I))
+        page_title = page.get_by_role("heading", level=1).filter(
+            has_text=re.compile("Knowledge Graph|Graph Analytics", re.I)
+        )
         try:
             await expect(page_title.first).to_be_visible(timeout=10000)
             print("[TEST] Graph analytics page title visible")
@@ -162,10 +166,7 @@ class TestCommunityDetectionWorkflow:
 
         # Check for graph viewer component
         graph_viewer = page.locator(
-            '[data-testid="graph-viewer"], '
-            '.graph-viewer, '
-            'canvas, '
-            'svg[class*="graph"]'
+            '[data-testid="graph-viewer"], ' ".graph-viewer, " "canvas, " 'svg[class*="graph"]'
         )
 
         try:
@@ -176,8 +177,7 @@ class TestCommunityDetectionWorkflow:
 
         # Check for statistics section
         stats_section = page.locator(
-            '[data-testid="entity-type-stats"], '
-            '[data-testid="graph-statistics"]'
+            '[data-testid="entity-type-stats"], ' '[data-testid="graph-statistics"]'
         )
 
         try:
@@ -222,16 +222,14 @@ class TestCommunityDetectionWorkflow:
 
         # Look for community selector (dropdown or list)
         community_selector = page.locator(
-            '#community-select, '
-            '[aria-label*="community"], '
-            'select'
+            "#community-select, " '[aria-label*="community"], ' "select"
         )
 
         if await community_selector.count() > 0:
             print("[TEST] Community selector found")
 
             # Get options
-            options = community_selector.locator('option')
+            options = community_selector.locator("option")
             option_count = await options.count()
             print(f"[TEST] Community options: {option_count - 1}")  # -1 for "None" option
 
@@ -243,7 +241,7 @@ class TestCommunityDetectionWorkflow:
         # Alternative: Check for community list items
         community_items = page.locator(
             '[data-testid^="community-item-"], '
-            '.community-item, '
+            ".community-item, "
             '[data-testid="community-highlight"] option'
         )
 
@@ -272,14 +270,11 @@ class TestCommunityDetectionWorkflow:
         await asyncio.sleep(3)
 
         # Find community selector
-        community_select = page.locator(
-            '#community-select, '
-            'select[aria-label*="community"]'
-        )
+        community_select = page.locator("#community-select, " 'select[aria-label*="community"]')
 
         if await community_select.count() > 0:
             # Get options
-            options = community_select.locator('option')
+            options = community_select.locator("option")
             option_count = await options.count()
 
             if option_count > 1:  # More than just "None" option
@@ -290,10 +285,7 @@ class TestCommunityDetectionWorkflow:
                 await asyncio.sleep(1)
 
                 # Check for community info display
-                community_info = page.locator(
-                    '.bg-purple-50, '
-                    '[data-testid="community-info"]'
-                )
+                community_info = page.locator(".bg-purple-50, " '[data-testid="community-info"]')
 
                 try:
                     await expect(community_info.first).to_be_visible(timeout=5000)
@@ -303,7 +295,9 @@ class TestCommunityDetectionWorkflow:
                     print("[TEST] Community info panel not found")
 
                 # Verify "View Documents" button appears
-                view_docs_button = page.get_by_role("button").filter(has_text="View Documents").first
+                view_docs_button = (
+                    page.get_by_role("button").filter(has_text="View Documents").first
+                )
                 if await view_docs_button.count() == 0:
                     view_docs_button = page.locator('[data-testid="view-community-documents"]')
 
@@ -338,7 +332,7 @@ class TestCommunityDetectionWorkflow:
         community_select = page.locator('#community-select, select[aria-label*="community"]')
 
         if await community_select.count() > 0:
-            options = community_select.locator('option')
+            options = community_select.locator("option")
             if await options.count() > 1:
                 await community_select.select_option(index=1)
                 await asyncio.sleep(1)
@@ -354,9 +348,7 @@ class TestCommunityDetectionWorkflow:
 
                     # Wait for documents modal
                     documents_modal = page.locator(
-                        '[role="dialog"], '
-                        '[aria-modal="true"], '
-                        '.community-documents-modal'
+                        '[role="dialog"], ' '[aria-modal="true"], ' ".community-documents-modal"
                     )
 
                     try:
@@ -365,9 +357,7 @@ class TestCommunityDetectionWorkflow:
 
                         # Check for document cards
                         doc_cards = documents_modal.locator(
-                            '[role="button"], '
-                            '.document-card, '
-                            '[data-testid^="document-card-"]'
+                            '[role="button"], ' ".document-card, " '[data-testid^="document-card-"]'
                         )
 
                         doc_count = await doc_cards.count()
@@ -384,14 +374,20 @@ class TestCommunityDetectionWorkflow:
                                 print(f"[TEST] First document title: {title[:50]}...")
 
                             # Entity mentions
-                            entity_badges = first_doc.locator('.text-purple-800, [data-testid="entity-badge"]')
+                            entity_badges = first_doc.locator(
+                                '.text-purple-800, [data-testid="entity-badge"]'
+                            )
                             if await entity_badges.count() == 0:
-                                entity_badges = first_doc.locator("span").filter(has_text=re.compile("Entity|Tag|Label", re.I))
+                                entity_badges = first_doc.locator("span").filter(
+                                    has_text=re.compile("Entity|Tag|Label", re.I)
+                                )
                             entity_count = await entity_badges.count()
                             print(f"[TEST] Entity mentions found: {entity_count}")
 
                         # Close modal
-                        close_button = documents_modal.get_by_role("button").filter(has_text="Close")
+                        close_button = documents_modal.get_by_role("button").filter(
+                            has_text="Close"
+                        )
                         if await close_button.count() == 0:
                             close_button = documents_modal.locator('button[aria-label="Close"]')
                         if await close_button.count() > 0:
@@ -513,7 +509,9 @@ class TestCommunityDetectionWorkflow:
                 if density_records:
                     print("[TEST] Intra-community edge counts:")
                     for record in density_records:
-                        print(f"[TEST]   Community {record['community_id']}: {record['intra_edges']} edges")
+                        print(
+                            f"[TEST]   Community {record['community_id']}: {record['intra_edges']} edges"
+                        )
 
                     print("[TEST] Semantic coherence validated")
             else:
@@ -561,17 +559,21 @@ class TestCommunityDetectionWorkflow:
 
         # Step 3: Check for community section
         community_section = page.get_by_role("heading", level=2).filter(has_text="Communities")
-        community_section_visible = await community_section.first.is_visible() if await community_section.count() > 0 else False
+        community_section_visible = (
+            await community_section.first.is_visible()
+            if await community_section.count() > 0
+            else False
+        )
         print(f"[STEP 3] Community section visible: {community_section_visible}")
 
         # Step 4: Check community selector
-        community_select = page.locator('#community-select')
+        community_select = page.locator("#community-select")
         selector_found = await community_select.count() > 0
         print(f"[STEP 4] Community selector found: {selector_found}")
 
         ui_community_count = 0
         if selector_found:
-            options = community_select.locator('option')
+            options = community_select.locator("option")
             ui_community_count = await options.count() - 1  # Exclude "None" option
             print(f"[STEP 4] Communities in UI dropdown: {ui_community_count}")
 
@@ -587,7 +589,9 @@ class TestCommunityDetectionWorkflow:
         info_panel_visible = False
         if community_selected:
             info_panel = page.locator('.bg-purple-50, [data-testid="community-info"]')
-            info_panel_visible = await info_panel.first.is_visible() if await info_panel.count() > 0 else False
+            info_panel_visible = (
+                await info_panel.first.is_visible() if await info_panel.count() > 0 else False
+            )
             print(f"[STEP 6] Community info panel: {info_panel_visible}")
 
         # Step 7: Try viewing documents
@@ -599,7 +603,9 @@ class TestCommunityDetectionWorkflow:
                 await asyncio.sleep(1)
 
                 modal = page.locator('[role="dialog"]')
-                docs_modal_opened = await modal.first.is_visible() if await modal.count() > 0 else False
+                docs_modal_opened = (
+                    await modal.first.is_visible() if await modal.count() > 0 else False
+                )
 
                 if docs_modal_opened:
                     print("[STEP 7] Documents modal opened")
@@ -633,5 +639,6 @@ class TestCommunityDetectionWorkflow:
         print(f"  - Statistics found: {stats_found}")
 
         # At least some community features should be available
-        assert community_section_visible or selector_found or stats_found, \
-            "At least one community feature should be available"
+        assert (
+            community_section_visible or selector_found or stats_found
+        ), "At least one community feature should be available"

@@ -131,6 +131,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
 
@@ -157,6 +158,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
 
@@ -178,6 +180,7 @@ class TestGraphStatsEndpoint:
             side_effect=Exception("Neo4j connection failed"),
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
             # 503 for service unavailable is acceptable for connection errors
@@ -201,6 +204,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
             # 503 for service unavailable is acceptable for query errors
@@ -224,6 +228,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
 
@@ -249,6 +254,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
 
@@ -271,6 +277,7 @@ class TestGraphStatsEndpoint:
             return_value=mock_neo4j,
         ):
             from src.api.main import app
+
             client = TestClient(app)
             response = client.get("/api/v1/admin/graph/stats")
 

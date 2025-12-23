@@ -16,7 +16,9 @@ async def test_streaming_progress():
     from src.components.ingestion.langgraph_pipeline import run_ingestion_pipeline_streaming
 
     # Use a sample PDF file
-    test_file = r"C:\Projekte\AEGISRAG\data\sample_documents\12. BPMN-Foundation\DE-D-BPMN-Handout-A4.pdf"
+    test_file = (
+        r"C:\Projekte\AEGISRAG\data\sample_documents\12. BPMN-Foundation\DE-D-BPMN-Handout-A4.pdf"
+    )
 
     if not os.path.exists(test_file):
         print(f"ERROR: Test file not found: {test_file}")
@@ -56,7 +58,9 @@ async def test_streaming_progress():
             chunks = len(state.get("chunks", []))
             entities = len(state.get("entities", []))
 
-            print(f"[{update_count}] Node: {node:30} | Progress: {progress:6.1%} | Chunks: {chunks} | Entities: {entities}")
+            print(
+                f"[{update_count}] Node: {node:30} | Progress: {progress:6.1%} | Chunks: {chunks} | Entities: {entities}"
+            )
 
             if errors:
                 print(f"    ERRORS: {errors}")
@@ -74,6 +78,7 @@ async def test_streaming_progress():
     except Exception as e:
         print(f"ERROR: {type(e).__name__}: {e}")
         import traceback
+
         traceback.print_exc()
 
 

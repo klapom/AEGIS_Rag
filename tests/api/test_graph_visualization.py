@@ -212,7 +212,9 @@ class TestQuerySubgraphEndpoint:
         )
         mock_session.run = AsyncMock(return_value=mock_result)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -243,7 +245,9 @@ class TestQuerySubgraphEndpoint:
         mock_session = AsyncMock()
         mock_session.run = AsyncMock(side_effect=Exception("Database error"))
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -309,7 +313,9 @@ class TestGraphStatisticsEndpoint:
 
         mock_session.run = AsyncMock(side_effect=run_side_effect)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -340,7 +346,9 @@ class TestGraphStatisticsEndpoint:
 
         mock_session.run = AsyncMock(return_value=mock_result)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -442,7 +450,9 @@ class TestCommunityDocumentsEndpoint:
         mock_result.single = AsyncMock(return_value={"entity_names": ["Transformer", "Attention"]})
         mock_session.run = AsyncMock(return_value=mock_result)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -483,7 +493,9 @@ class TestCommunityDocumentsEndpoint:
         mock_result.single = AsyncMock(return_value=None)
         mock_session.run = AsyncMock(return_value=mock_result)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)
@@ -508,7 +520,9 @@ class TestCommunityDocumentsEndpoint:
         mock_result.single = AsyncMock(return_value={"entity_names": ["Entity1", "Entity2"]})
         mock_session.run = AsyncMock(return_value=mock_result)
         # Create async context manager for session
-        mock_session_ctx = MagicMock(__aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock())
+        mock_session_ctx = MagicMock(
+            __aenter__=AsyncMock(return_value=mock_session), __aexit__=AsyncMock()
+        )
         # Mock driver property (not get_driver method)
         mock_driver = MagicMock()
         mock_driver.session = MagicMock(return_value=mock_session_ctx)

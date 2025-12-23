@@ -90,10 +90,13 @@ class TestDashScopeVLMClientFileHandling:
 
         with pytest.raises(FileNotFoundError):
             import asyncio
-            asyncio.run(client.generate_image_description(
-                image_path=Path("/nonexistent/image.png"),
-                prompt="Describe this image",
-            ))
+
+            asyncio.run(
+                client.generate_image_description(
+                    image_path=Path("/nonexistent/image.png"),
+                    prompt="Describe this image",
+                )
+            )
 
 
 class TestContextManager:
@@ -192,6 +195,5 @@ class TestConfigurationValidation:
                     client = DashScopeVLMClient()
 
                     assert (
-                        client.base_url
-                        == "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+                        client.base_url == "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
                     )

@@ -125,9 +125,7 @@ class TestDomainCreationWorkflow:
 
         # Fill domain description using data-testid
         description_input = page.locator('[data-testid="domain-description-input"]')
-        await description_input.fill(
-            "Legal contracts and contract law analysis - E2E Test Domain"
-        )
+        await description_input.fill("Legal contracts and contract law analysis - E2E Test Domain")
         print("✓ Filled domain description")
 
         # Select LLM model if available
@@ -135,7 +133,7 @@ class TestDomainCreationWorkflow:
             model_select = page.locator('[data-testid="domain-model-select"]')
             if await model_select.count() > 0:
                 # Select first available model option (not default empty)
-                options = await model_select.locator('option').all()
+                options = await model_select.locator("option").all()
                 if len(options) > 1:
                     await model_select.select_option(index=1)
                     print("✓ Selected LLM model")
@@ -193,15 +191,14 @@ class TestDomainCreationWorkflow:
         # Monitor SSE logs (look for log container)
         try:
             # Check if training logs container exists
-            logs_container = page.locator('.training-logs').or_(
-                page.locator('.logs')
-            ).or_(
-                page.locator('[data-testid="training-logs"]')
-            ).or_(
-                page.locator('pre').filter(has_text="Training")
-            ).or_(
-                page.locator('div').filter(has_text="Training")
-            ).first
+            logs_container = (
+                page.locator(".training-logs")
+                .or_(page.locator(".logs"))
+                .or_(page.locator('[data-testid="training-logs"]'))
+                .or_(page.locator("pre").filter(has_text="Training"))
+                .or_(page.locator("div").filter(has_text="Training"))
+                .first
+            )
 
             if await logs_container.count() > 0:
                 print("✓ Training logs container found")
@@ -282,9 +279,7 @@ class TestDomainCreationWorkflow:
         # Check for "ready" status badge/indicator
         try:
             # Look for status near the domain name
-            ready_status = page.get_by_text(
-                re.compile(r"ready|active|trained", re.I)
-            ).first
+            ready_status = page.get_by_text(re.compile(r"ready|active|trained", re.I)).first
             if await ready_status.count() > 0:
                 status_text = await ready_status.text_content()
                 print(f"✓ Domain status: {status_text}")
@@ -380,13 +375,17 @@ class TestDomainCreationWorkflow:
 
         # Fill minimal form using data-testid selectors
         await page.locator('[data-testid="domain-name-input"]').fill("invalid_domain_test")
-        await page.locator('[data-testid="domain-description-input"]').fill("Test domain for invalid dataset")
+        await page.locator('[data-testid="domain-description-input"]').fill(
+            "Test domain for invalid dataset"
+        )
 
         # Go to step 2
         await page.locator('[data-testid="domain-config-next"]').click()
 
         # Wait for dataset upload step
-        await expect(page.locator('[data-testid="dataset-upload-step"]')).to_be_visible(timeout=5000)
+        await expect(page.locator('[data-testid="dataset-upload-step"]')).to_be_visible(
+            timeout=5000
+        )
 
         # Upload invalid dataset (hidden input but set_input_files works)
         file_input = page.locator('[data-testid="dataset-file-input"]')
@@ -408,9 +407,12 @@ class TestDomainCreationWorkflow:
                 print("⚠ No validation error message found (may be silent failure)")
 
             # Try to submit and verify training doesn't start
-            train_button = page.get_by_role("button").filter(
-                has_text=re.compile(r"Start Training|Train|Submit", re.I)
-            ).or_(page.locator('button[type="submit"]')).first
+            train_button = (
+                page.get_by_role("button")
+                .filter(has_text=re.compile(r"Start Training|Train|Submit", re.I))
+                .or_(page.locator('button[type="submit"]'))
+                .first
+            )
 
             # Check if button is disabled
             is_disabled = await train_button.is_disabled()
@@ -487,17 +489,23 @@ class TestDomainCreationWorkflow:
             await new_domain_button.click()
 
             # Wait for wizard to appear
-            await expect(page.locator('[data-testid="new-domain-wizard"]')).to_be_visible(timeout=5000)
+            await expect(page.locator('[data-testid="new-domain-wizard"]')).to_be_visible(
+                timeout=5000
+            )
 
             # Fill form using data-testid selectors
             await page.locator('[data-testid="domain-name-input"]').fill(domain_config["name"])
-            await page.locator('[data-testid="domain-description-input"]').fill(domain_config["description"])
+            await page.locator('[data-testid="domain-description-input"]').fill(
+                domain_config["description"]
+            )
 
             # Go to step 2
             await page.locator('[data-testid="domain-config-next"]').click()
 
             # Wait for dataset upload step
-            await expect(page.locator('[data-testid="dataset-upload-step"]')).to_be_visible(timeout=5000)
+            await expect(page.locator('[data-testid="dataset-upload-step"]')).to_be_visible(
+                timeout=5000
+            )
 
             # Upload dataset (hidden input but set_input_files works)
             file_input = page.locator('[data-testid="dataset-file-input"]')

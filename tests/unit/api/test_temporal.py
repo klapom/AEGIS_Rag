@@ -104,7 +104,10 @@ async def test_point_in_time_query_success(mock_user, mock_settings_temporal_ena
     mock_builder.where.return_value = mock_builder
     mock_builder.return_clause.return_value = mock_builder
     mock_builder.limit.return_value = mock_builder
-    mock_builder.build.return_value = ("MATCH (e:base) RETURN e", {"as_of_time_0": "2024-11-15T00:00:00"})
+    mock_builder.build.return_value = (
+        "MATCH (e:base) RETURN e",
+        {"as_of_time_0": "2024-11-15T00:00:00"},
+    )
 
     # Mock Neo4j response
     mock_neo4j.execute_read.return_value = [

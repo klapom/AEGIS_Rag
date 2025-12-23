@@ -675,10 +675,10 @@ async def test_create_section_nodes_success(
 
     # Set up side_effect to return different results for each call
     mock_neo4j_session.run.side_effect = [
-        mock_doc_result,       # Document MERGE
-        mock_section_result,   # Batch section creation
+        mock_doc_result,  # Document MERGE
+        mock_section_result,  # Batch section creation
         mock_contains_result,  # Batch CONTAINS_CHUNK
-        mock_defines_result,   # Batch DEFINES
+        mock_defines_result,  # Batch DEFINES
     ]
 
     client = Neo4jClient()

@@ -45,9 +45,7 @@ class TestGetSummaryModelConfig:
     def test_get_summary_model_returns_default_when_not_configured(self, client):
         """Test that default config is returned when Redis has no config."""
         # Patch at source module, not caller
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=None)
@@ -55,6 +53,7 @@ class TestGetSummaryModelConfig:
             # Make client a coroutine that returns the mock client
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
@@ -67,20 +66,18 @@ class TestGetSummaryModelConfig:
 
     def test_get_summary_model_returns_stored_config(self, client):
         """Test that stored config is returned from Redis."""
-        stored_config = json.dumps({
-            "model_id": "ollama/llama3.2:8b",
-            "updated_at": "2025-12-18T10:30:00"
-        }).encode("utf-8")
+        stored_config = json.dumps(
+            {"model_id": "ollama/llama3.2:8b", "updated_at": "2025-12-18T10:30:00"}
+        ).encode("utf-8")
 
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=stored_config)
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
@@ -93,9 +90,7 @@ class TestGetSummaryModelConfig:
 
     def test_get_summary_model_handles_redis_error_gracefully(self, client):
         """Test that Redis errors return default config."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_get_redis.side_effect = Exception("Redis connection failed")
 
             response = client.get("/api/v1/admin/llm/summary-model")
@@ -111,21 +106,19 @@ class TestUpdateSummaryModelConfig:
 
     def test_update_summary_model_saves_to_redis(self, client):
         """Test that config is saved to Redis."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.set = AsyncMock(return_value=True)
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
             response = client.put(
-                "/api/v1/admin/llm/summary-model",
-                json={"model_id": "ollama/nemotron:8b"}
+                "/api/v1/admin/llm/summary-model", json={"model_id": "ollama/nemotron:8b"}
             )
 
             assert response.status_code == 200
@@ -136,21 +129,19 @@ class TestUpdateSummaryModelConfig:
 
     def test_update_summary_model_accepts_cloud_model(self, client):
         """Test that cloud model IDs are accepted."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.set = AsyncMock(return_value=True)
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
             response = client.put(
-                "/api/v1/admin/llm/summary-model",
-                json={"model_id": "alibaba/qwen-plus"}
+                "/api/v1/admin/llm/summary-model", json={"model_id": "alibaba/qwen-plus"}
             )
 
             assert response.status_code == 200
@@ -159,21 +150,19 @@ class TestUpdateSummaryModelConfig:
 
     def test_update_summary_model_handles_redis_error(self, client):
         """Test that Redis errors return 500 status."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.set = AsyncMock(side_effect=Exception("Redis write failed"))
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
             response = client.put(
-                "/api/v1/admin/llm/summary-model",
-                json={"model_id": "ollama/test:1b"}
+                "/api/v1/admin/llm/summary-model", json={"model_id": "ollama/test:1b"}
             )
 
             # The endpoint should return 500 on Redis error
@@ -189,20 +178,18 @@ class TestGetConfiguredSummaryModel:
     @pytest.mark.asyncio
     async def test_returns_model_name_without_provider_prefix(self):
         """Test that provider prefix is stripped from model ID."""
-        stored_config = json.dumps({
-            "model_id": "ollama/llama3.2:8b",
-            "updated_at": "2025-12-18T10:30:00"
-        }).encode("utf-8")
+        stored_config = json.dumps(
+            {"model_id": "ollama/llama3.2:8b", "updated_at": "2025-12-18T10:30:00"}
+        ).encode("utf-8")
 
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=stored_config)
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
@@ -216,15 +203,14 @@ class TestGetConfiguredSummaryModel:
     @pytest.mark.asyncio
     async def test_returns_default_when_not_configured(self):
         """Test that default from settings is returned when not configured."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_redis = MagicMock()
             mock_client = AsyncMock()
             mock_client.get = AsyncMock(return_value=None)
 
             async def get_client():
                 return mock_client
+
             type(mock_redis).client = property(lambda self: get_client())
             mock_get_redis.return_value = mock_redis
 
@@ -238,9 +224,7 @@ class TestGetConfiguredSummaryModel:
     @pytest.mark.asyncio
     async def test_handles_redis_error_returns_default(self):
         """Test that Redis errors return default model from settings."""
-        with patch(
-            "src.components.memory.get_redis_memory"
-        ) as mock_get_redis:
+        with patch("src.components.memory.get_redis_memory") as mock_get_redis:
             mock_get_redis.side_effect = Exception("Redis connection failed")
 
             from src.components.graph_rag.llm_config_provider import get_configured_summary_model

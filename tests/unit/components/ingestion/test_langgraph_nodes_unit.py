@@ -28,6 +28,7 @@ import pytest
 # Check if psutil is available for memory tests
 try:
     import psutil
+
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
@@ -107,7 +108,9 @@ def sample_chunks():
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
+@pytest.mark.skipif(
+    not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev"
+)
 async def test_memory_check_node_success(sample_state):
     """Test memory_check_node with sufficient RAM and VRAM."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -132,7 +135,9 @@ async def test_memory_check_node_success(sample_state):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
+@pytest.mark.skipif(
+    not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev"
+)
 async def test_memory_check_node_vram_leak_detected(sample_state):
     """Test memory_check_node detects VRAM leak (>5.5GB)."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -157,7 +162,9 @@ async def test_memory_check_node_vram_leak_detected(sample_state):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
+@pytest.mark.skipif(
+    not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev"
+)
 async def test_memory_check_node_insufficient_ram(sample_state):
     """Test memory_check_node fails with insufficient RAM (<500MB)."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -177,7 +184,9 @@ async def test_memory_check_node_insufficient_ram(sample_state):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
+@pytest.mark.skipif(
+    not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev"
+)
 async def test_memory_check_node_no_gpu(sample_state):
     """Test memory_check_node handles missing nvidia-smi gracefully."""
     with patch("psutil.virtual_memory") as mock_memory, patch("subprocess.run") as mock_nvidia_smi:
@@ -323,7 +332,9 @@ async def test_chunking_node_success(sample_state, sample_chunks):
     sample_state["parsed_content"] = "This is a long document content. " * 500
     sample_state["parsed_metadata"] = {"pages": 10}
 
-    with patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_service:
+    with patch(
+        "src.components.ingestion.nodes.adaptive_chunking.get_chunking_service"
+    ) as mock_get_service:
         # Mock chunking service (async method requires AsyncMock)
         mock_service = Mock()
         mock_service.chunk_document = AsyncMock(return_value=sample_chunks)
@@ -336,7 +347,10 @@ async def test_chunking_node_success(sample_state, sample_chunks):
         assert updated_state["chunking_status"] == "completed"
         assert len(updated_state["chunks"]) == 3
         # Sprint 21 Feature 21.6: chunks now have structure {"chunk": Chunk, "image_bboxes": []}
-        assert all(isinstance(c, dict) and "chunk" in c and "image_bboxes" in c for c in updated_state["chunks"])
+        assert all(
+            isinstance(c, dict) and "chunk" in c and "image_bboxes" in c
+            for c in updated_state["chunks"]
+        )
         # Verify chunk objects match
         chunk_objects = [c["chunk"] for c in updated_state["chunks"]]
         assert chunk_objects == sample_chunks
@@ -365,7 +379,9 @@ async def test_chunking_node_uses_1800_token_chunks(sample_state):
     """Test chunking_node uses 1800-token chunks (Feature 21.4)."""
     sample_state["parsed_content"] = "Test content for chunking."
 
-    with patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_service:
+    with patch(
+        "src.components.ingestion.nodes.adaptive_chunking.get_chunking_service"
+    ) as mock_get_service:
         mock_service = Mock()
         mock_service.chunk_document = AsyncMock(return_value=[])
         mock_get_service.return_value = mock_service
@@ -399,7 +415,9 @@ async def test_embedding_node_success(sample_state, sample_chunks):
         patch(
             "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
+        patch(
+            "src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper"
+        ) as mock_qdrant_class,
     ):
         # Mock embedding service
         mock_embedding_service = AsyncMock()
@@ -420,7 +438,10 @@ async def test_embedding_node_success(sample_state, sample_chunks):
         assert len(updated_state["embedded_chunk_ids"]) == 3
         # Sprint 30: chunk IDs are now UUID5 generated, not from Chunk.chunk_id
         # Just verify count and UUID format, don't assert exact IDs
-        assert all(isinstance(chunk_id, str) and len(chunk_id) == 36 for chunk_id in updated_state["embedded_chunk_ids"])
+        assert all(
+            isinstance(chunk_id, str) and len(chunk_id) == 36
+            for chunk_id in updated_state["embedded_chunk_ids"]
+        )
         assert updated_state["overall_progress"] > 0.0
 
         # Verify embedding service called
@@ -455,7 +476,9 @@ async def test_embedding_node_uses_bge_m3_1024d(sample_state, sample_chunks):
         patch(
             "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
+        patch(
+            "src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper"
+        ) as mock_qdrant_class,
     ):
         mock_embedding_service = AsyncMock()
         mock_embedding_service.embed_batch = AsyncMock(return_value=mock_embeddings)
@@ -507,7 +530,9 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
         # Mock LightRAG wrapper
         mock_lightrag = AsyncMock()
         # Sprint 42: Use insert_prechunked_documents instead of insert_documents_optimized
-        mock_lightrag.insert_prechunked_documents = AsyncMock(return_value={"stats": mock_graph_stats})
+        mock_lightrag.insert_prechunked_documents = AsyncMock(
+            return_value={"stats": mock_graph_stats}
+        )
         mock_get_lightrag.return_value = mock_lightrag
 
         # Run node
@@ -520,7 +545,9 @@ async def test_graph_extraction_node_success(sample_state, sample_chunks):
         # Verify LightRAG called with correct format (Sprint 42: insert_prechunked_documents)
         mock_lightrag.insert_prechunked_documents.assert_called_once()
         # Get the 'chunks' keyword argument (use index-based access for AsyncMock compatibility)
-        call_kwargs = mock_lightrag.insert_prechunked_documents.call_args[1]  # call_args = (args, kwargs)
+        call_kwargs = mock_lightrag.insert_prechunked_documents.call_args[
+            1
+        ]  # call_args = (args, kwargs)
         lightrag_docs = call_kwargs.get("chunks", [])
         assert len(lightrag_docs) == 3
         # Sprint 42: Prechunked format has chunk_id, text, chunk_index
@@ -568,7 +595,9 @@ async def test_graph_extraction_node_lightrag_error(sample_state, sample_chunks)
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev")
+@pytest.mark.skipif(
+    not HAS_PSUTIL, reason="psutil not installed - install with: poetry install --with dev"
+)
 async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
     """Test all 5 nodes execute in sequence with state updates."""
     from src.components.ingestion.docling_client import DoclingParsedDocument
@@ -592,11 +621,15 @@ async def test_full_pipeline_node_sequence(sample_state, sample_chunks):
         patch(
             "src.components.ingestion.nodes.document_parsers.DoclingContainerClient"
         ) as mock_docling_class,
-        patch("src.components.ingestion.nodes.adaptive_chunking.get_chunking_service") as mock_get_chunking,
+        patch(
+            "src.components.ingestion.nodes.adaptive_chunking.get_chunking_service"
+        ) as mock_get_chunking,
         patch(
             "src.components.ingestion.nodes.vector_embedding.get_embedding_service"
         ) as mock_get_embedding,
-        patch("src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper") as mock_qdrant_class,
+        patch(
+            "src.components.ingestion.nodes.vector_embedding.QdrantClientWrapper"
+        ) as mock_qdrant_class,
         patch(
             "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async"
         ) as mock_get_lightrag,

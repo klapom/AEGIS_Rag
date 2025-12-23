@@ -107,9 +107,7 @@ class TestDockerSandbox:
     def test_invalid_limits_raise_error(self):
         """Test that invalid limits raise error."""
         with pytest.raises(ValueError):
-            DockerSandbox(
-                resource_limits=ResourceLimits(max_memory_mb=0)
-            )
+            DockerSandbox(resource_limits=ResourceLimits(max_memory_mb=0))
 
     @pytest.mark.asyncio
     async def test_run_bash_command(self):
@@ -158,6 +156,7 @@ class TestDockerSandbox:
         mock_container = MagicMock()
         # Simulate timeout by never completing
         import asyncio
+
         mock_container.wait.side_effect = asyncio.TimeoutError()
 
         mock_client = MagicMock()

@@ -83,9 +83,7 @@ class TestOllamaRerankerScoreDocument:
     async def test_score_document_error_handling(self, reranker):
         """Test that scoring errors are handled gracefully."""
         # Mock _score_document to raise an exception
-        with patch.object(
-            reranker, "_score_document", side_effect=Exception("API Error")
-        ):
+        with patch.object(reranker, "_score_document", side_effect=Exception("API Error")):
             ranked = await reranker.rerank("query", ["document"], top_k=1)
 
             # Should still return result with fallback score of 0.0
@@ -107,9 +105,7 @@ class TestOllamaRerankerRerank:
         ]
 
         # Mock _score_document to return different scores
-        with patch.object(
-            reranker, "_score_document", side_effect=[0.9, 0.3, 0.7]
-        ) as mock_score:
+        with patch.object(reranker, "_score_document", side_effect=[0.9, 0.3, 0.7]) as mock_score:
             ranked = await reranker.rerank(query, documents, top_k=3)
 
             # Check that all documents were scored
@@ -127,9 +123,7 @@ class TestOllamaRerankerRerank:
         query = "test query"
         documents = ["doc1", "doc2", "doc3", "doc4", "doc5"]
 
-        with patch.object(
-            reranker, "_score_document", side_effect=[0.9, 0.8, 0.7, 0.6, 0.5]
-        ):
+        with patch.object(reranker, "_score_document", side_effect=[0.9, 0.8, 0.7, 0.6, 0.5]):
             ranked = await reranker.rerank(query, documents, top_k=3)
 
             # Should only return top 3
@@ -294,9 +288,7 @@ class TestOllamaRerankerIntegration:
         ]
 
         # Mock _score_document to return specific scores
-        with patch.object(
-            reranker, "_score_document", side_effect=[0.9, 0.4, 0.7]
-        ) as mock_score:
+        with patch.object(reranker, "_score_document", side_effect=[0.9, 0.4, 0.7]) as mock_score:
             ranked = await reranker.rerank(query, documents, top_k=3)
 
             # Verify all documents were scored

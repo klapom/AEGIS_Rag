@@ -95,7 +95,9 @@ class TestCreateShareLink:
         assert call_args.kwargs["ttl_seconds"] == 24 * 3600
 
     @pytest.mark.asyncio
-    async def test_create_share_link_custom_expiry(self, test_client, mock_redis_memory, sample_conversation_data):
+    async def test_create_share_link_custom_expiry(
+        self, test_client, mock_redis_memory, sample_conversation_data
+    ):
         """Test share link creation with custom expiry hours."""
         session_id = "test-session-456"
 
@@ -142,7 +144,9 @@ class TestCreateShareLink:
         assert "not found" in response.json()["error"]["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_create_share_link_invalid_expiry(self, test_client, mock_redis_memory, sample_conversation_data):
+    async def test_create_share_link_invalid_expiry(
+        self, test_client, mock_redis_memory, sample_conversation_data
+    ):
         """Test share link creation with invalid expiry hours."""
         session_id = "test-session-789"
 
@@ -164,7 +168,9 @@ class TestCreateShareLink:
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.asyncio
-    async def test_create_share_link_redis_failure(self, test_client, mock_redis_memory, sample_conversation_data):
+    async def test_create_share_link_redis_failure(
+        self, test_client, mock_redis_memory, sample_conversation_data
+    ):
         """Test share link creation when Redis store fails."""
         session_id = "test-session-fail"
 
@@ -300,7 +306,9 @@ class TestGetSharedConversation:
         assert "no longer exists" in response.json()["error"]["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_get_shared_conversation_no_tracking(self, test_client, mock_redis_memory, sample_conversation_data):
+    async def test_get_shared_conversation_no_tracking(
+        self, test_client, mock_redis_memory, sample_conversation_data
+    ):
         """Test that shared conversation retrieval does not track access."""
         share_token = "NoTrackToken"
         session_id = "no-track-session"

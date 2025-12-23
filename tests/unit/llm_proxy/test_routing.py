@@ -514,9 +514,7 @@ def test_cost_calculation_alibaba_cloud_correct(proxy_with_all_providers):
 def test_cost_calculation_openai_correct(proxy_with_all_providers):
     """OpenAI should cost $2.50 per 1M input + $10.00 per 1M output tokens."""
     # 1000 input tokens + 1000 output tokens
-    cost = proxy_with_all_providers._calculate_cost(
-        "openai", tokens_input=1000, tokens_output=1000
-    )
+    cost = proxy_with_all_providers._calculate_cost("openai", tokens_input=1000, tokens_output=1000)
     # (1000/1M)*2.50 + (1000/1M)*10.00 = 0.0025 + 0.01 = 0.0125
     assert cost == pytest.approx(0.0125, abs=1e-6)
 

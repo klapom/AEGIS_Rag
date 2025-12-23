@@ -36,11 +36,11 @@ logger = structlog.get_logger(__name__)
 class SectionMetadataResult(BaseModel):
     """Section metadata in query results."""
 
-    section_id: str | None = Field(None, description="Section node ID from Neo4j")
     section_heading: str = Field(..., description="Section heading text")
     section_level: int = Field(default=1, ge=1, le=6, description="Heading level")
-    section_page: int | None = Field(None, description="Page number")
-    section_order: int | None = Field(None, description="Section order in document")
+    section_id: str | None = Field(default=None, description="Section node ID from Neo4j")
+    section_page: int | None = Field(default=None, description="Page number")
+    section_order: int | None = Field(default=None, description="Section order in document")
 
 
 class EntityWithSection(BaseModel):
@@ -536,6 +536,309 @@ class SectionGraphService:
         )
 
         return sections
+
+    async def create_section_hierarchy(
+        self,
+        document_id: str,
+    ) -> dict[str, int]:
+        """Create HAS_SUBSECTION relationships between parent and child sections.
+
+        Sprint 62 Feature 62.6: Hierarchical section links.
+
+        Detects parent-child relationships based on section headings:
+        - "1" → parent of "1.1", "1.2", ...
+        - "1.1" → parent of "1.1.1", "1.1.2", ...
+        - Supports multi-level hierarchy (section → subsection → subsubsection)
+
+        Args:
+            document_id: Document ID to create hierarchy for
+
+        Returns:
+            Dictionary with creation statistics:
+            - hierarchical_relationships_created: Number of HAS_SUBSECTION relationships
+
+        Example:
+            >>> service = SectionGraphService()
+            >>> stats = await service.create_section_hierarchy("doc_123")
+            >>> stats["hierarchical_relationships_created"]
+            12
+        """
+        start_time = time.perf_counter()
+
+        logger.info("creating_section_hierarchy", document_id=document_id)
+
+        # Cypher query to create HAS_SUBSECTION relationships
+        # Strategy: For each section, find its parent by matching heading patterns
+        # E.g., "1.2.3" should have parent "1.2"
+        cypher = """
+        MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(child:Section)
+        WHERE child.heading =~ '.*\\..*'  // Has at least one dot (e.g., "1.2")
+        WITH child,
+             // Extract parent heading by removing last segment
+             // "1.2.3" → "1.2", "1.2" → "1"
+             substring(child.heading, 0,
+                       size(child.heading) - size(split(child.heading, '.')[-1]) - 1
+             ) AS parent_heading
+        WHERE parent_heading <> ''
+        MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(parent:Section)
+        WHERE parent.heading = parent_heading
+        MERGE (parent)-[:HAS_SUBSECTION {created_at: datetime()}]->(child)
+        RETURN count(*) AS relationships_created
+        """
+
+        try:
+            result = await self.neo4j_client.execute_write(
+                cypher,
+                {"document_id": document_id},
+            )
+
+            relationships_created = result.get("relationships_created", 0)
+
+            query_time_ms = (time.perf_counter() - start_time) * 1000
+
+            logger.info(
+                "section_hierarchy_created",
+                document_id=document_id,
+                relationships_created=relationships_created,
+                query_time_ms=round(query_time_ms, 2),
+            )
+
+            return {
+                "hierarchical_relationships_created": relationships_created,
+            }
+
+        except Exception as e:
+            logger.error(
+                "section_hierarchy_creation_failed",
+                document_id=document_id,
+                error=str(e),
+            )
+            raise
+
+    async def get_parent_section(
+        self,
+        section_heading: str,
+        document_id: str,
+    ) -> SectionMetadataResult | None:
+        """Get parent section of a given section.
+
+        Sprint 62 Feature 62.6: Traverse HAS_SUBSECTION upwards.
+
+        Args:
+            section_heading: Child section heading
+            document_id: Document ID
+
+        Returns:
+            Parent section metadata, or None if no parent exists
+
+        Example:
+            >>> parent = await service.get_parent_section("1.2.3", "doc_123")
+            >>> parent.section_heading
+            "1.2"
+        """
+        start_time = time.perf_counter()
+
+        cypher = """
+        MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(child:Section {heading: $section_heading})
+        MATCH (parent:Section)-[:HAS_SUBSECTION]->(child)
+        RETURN parent.heading as section_heading,
+               parent.level as section_level,
+               parent.page_no as section_page,
+               parent.order as section_order
+        LIMIT 1
+        """
+
+        records = await self.neo4j_client.execute_read(
+            cypher,
+            {"document_id": document_id, "section_heading": section_heading},
+        )
+
+        query_time_ms = (time.perf_counter() - start_time) * 1000
+
+        if not records:
+            logger.debug(
+                "no_parent_section_found",
+                section_heading=section_heading,
+                document_id=document_id,
+                query_time_ms=round(query_time_ms, 2),
+            )
+            return None
+
+        record = records[0]
+        parent = SectionMetadataResult(
+            section_heading=record["section_heading"],
+            section_level=record.get("section_level", 1),
+            section_page=record.get("section_page"),
+            section_order=record.get("section_order"),
+        )
+
+        logger.info(
+            "parent_section_found",
+            child_heading=section_heading,
+            parent_heading=parent.section_heading,
+            query_time_ms=round(query_time_ms, 2),
+        )
+
+        return parent
+
+    async def get_child_sections(
+        self,
+        section_heading: str,
+        document_id: str,
+    ) -> list[SectionMetadataResult]:
+        """Get all direct child sections (subsections) of a given section.
+
+        Sprint 62 Feature 62.6: Traverse HAS_SUBSECTION downwards.
+
+        Args:
+            section_heading: Parent section heading
+            document_id: Document ID
+
+        Returns:
+            List of child section metadata (ordered by section order)
+
+        Example:
+            >>> children = await service.get_child_sections("1.2", "doc_123")
+            >>> [c.section_heading for c in children]
+            ["1.2.1", "1.2.2", "1.2.3"]
+        """
+        start_time = time.perf_counter()
+
+        cypher = """
+        MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(parent:Section {heading: $section_heading})
+        MATCH (parent)-[:HAS_SUBSECTION]->(child:Section)
+        RETURN child.heading as section_heading,
+               child.level as section_level,
+               child.page_no as section_page,
+               child.order as section_order
+        ORDER BY child.order ASC
+        """
+
+        records = await self.neo4j_client.execute_read(
+            cypher,
+            {"document_id": document_id, "section_heading": section_heading},
+        )
+
+        children = [
+            SectionMetadataResult(
+                section_heading=record["section_heading"],
+                section_level=record.get("section_level", 1),
+                section_page=record.get("section_page"),
+                section_order=record.get("section_order"),
+            )
+            for record in records
+        ]
+
+        query_time_ms = (time.perf_counter() - start_time) * 1000
+
+        logger.info(
+            "child_sections_found",
+            parent_heading=section_heading,
+            children_count=len(children),
+            query_time_ms=round(query_time_ms, 2),
+        )
+
+        return children
+
+    async def get_section_ancestry(
+        self,
+        section_heading: str,
+        document_id: str,
+    ) -> list[SectionMetadataResult]:
+        """Get full ancestry path from root to given section.
+
+        Sprint 62 Feature 62.6: Traverse HAS_SUBSECTION upwards to root.
+
+        Returns the full path from the root section to the target section,
+        ordered from root to leaf (e.g., ["1", "1.2", "1.2.3"]).
+
+        Args:
+            section_heading: Target section heading
+            document_id: Document ID
+
+        Returns:
+            List of section metadata representing the ancestry path
+            (ordered from root to leaf)
+
+        Example:
+            >>> ancestry = await service.get_section_ancestry("1.2.3", "doc_123")
+            >>> [s.section_heading for s in ancestry]
+            ["1", "1.2", "1.2.3"]
+        """
+        start_time = time.perf_counter()
+
+        # Use Cypher variable-length path matching to traverse upwards
+        # The path goes: (root)-[:HAS_SUBSECTION*]->(target)
+        cypher = """
+        MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(target:Section {heading: $section_heading})
+        MATCH path = (root:Section)-[:HAS_SUBSECTION*0..]->(target)
+        WHERE NOT EXISTS((other:Section)-[:HAS_SUBSECTION]->(root))
+        RETURN nodes(path) as ancestry_nodes
+        ORDER BY length(path) DESC
+        LIMIT 1
+        """
+
+        records = await self.neo4j_client.execute_read(
+            cypher,
+            {"document_id": document_id, "section_heading": section_heading},
+        )
+
+        if not records:
+            # No ancestry found - this is a root section
+            logger.debug(
+                "no_ancestry_found",
+                section_heading=section_heading,
+                document_id=document_id,
+            )
+            # Return just the section itself
+            cypher_self = """
+            MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(s:Section {heading: $section_heading})
+            RETURN s.heading as section_heading,
+                   s.level as section_level,
+                   s.page_no as section_page,
+                   s.order as section_order
+            """
+            self_records = await self.neo4j_client.execute_read(
+                cypher_self,
+                {"document_id": document_id, "section_heading": section_heading},
+            )
+            if self_records:
+                record = self_records[0]
+                return [
+                    SectionMetadataResult(
+                        section_heading=record["section_heading"],
+                        section_level=record.get("section_level", 1),
+                        section_page=record.get("section_page"),
+                        section_order=record.get("section_order"),
+                    )
+                ]
+            return []
+
+        # Parse ancestry nodes from path
+        ancestry_nodes = records[0]["ancestry_nodes"]
+        ancestry = []
+
+        for node in ancestry_nodes:
+            ancestry.append(
+                SectionMetadataResult(
+                    section_heading=node["heading"],
+                    section_level=node.get("level", 1),
+                    section_page=node.get("page_no"),
+                    section_order=node.get("order"),
+                )
+            )
+
+        query_time_ms = (time.perf_counter() - start_time) * 1000
+
+        logger.info(
+            "section_ancestry_retrieved",
+            section_heading=section_heading,
+            ancestry_depth=len(ancestry),
+            ancestry_path=" → ".join([s.section_heading for s in ancestry]),
+            query_time_ms=round(query_time_ms, 2),
+        )
+
+        return ancestry
 
 
 # =============================================================================

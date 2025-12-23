@@ -40,7 +40,9 @@ RESULTS_DIR.mkdir(exist_ok=True)
 # Test documents (with correct paths)
 TEST_FILES = [
     Path(r"C:\Projekte\AEGISRAG\data\sample_documents\1. Basic Admin\Web Gateway\DE-D-WebGW.pptx"),
-    Path(r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"),
+    Path(
+        r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"
+    ),
 ]
 
 
@@ -54,6 +56,7 @@ async def run_vlm_benchmark():
     # Verify cloud config
     print("\n[CONFIG] Verifying cloud routing...")
     from src.components.llm_proxy.config import LLMProxyConfig
+
     config = LLMProxyConfig.from_env()
     print(f"  prefer_cloud: {config.routing.get('prefer_cloud', False)}")
     print(f"  alibaba_cloud enabled: {config.is_provider_enabled('alibaba_cloud')}")
@@ -124,15 +127,19 @@ async def run_vlm_benchmark():
             print(f"[ERROR] {type(e).__name__}: {e}")
             traceback.print_exc()
 
-            results.append({
-                "file_name": test_file.name,
-                "success": False,
-                "error": str(e),
-                "duration_seconds": duration,
-            })
+            results.append(
+                {
+                    "file_name": test_file.name,
+                    "success": False,
+                    "error": str(e),
+                    "duration_seconds": duration,
+                }
+            )
 
     # Save results
-    results_file = RESULTS_DIR / f"sprint33_vlm_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    results_file = (
+        RESULTS_DIR / f"sprint33_vlm_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
 
@@ -142,7 +149,9 @@ async def run_vlm_benchmark():
     for r in results:
         status = "SUCCESS" if r.get("success") else "FAILED"
         vlm = r.get("vlm_images_processed", "N/A")
-        print(f"  {r['file_name']}: {status} ({r.get('duration_seconds', 0):.1f}s, VLM: {vlm} images)")
+        print(
+            f"  {r['file_name']}: {status} ({r.get('duration_seconds', 0):.1f}s, VLM: {vlm} images)"
+        )
     print(f"\n[INFO] Results saved to: {results_file}")
 
     return results

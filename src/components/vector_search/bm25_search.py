@@ -164,7 +164,9 @@ class BM25Search:
             # Sprint 62.2: Apply section filter if provided
             if section_filter is not None:
                 # Normalize to list
-                section_ids = [section_filter] if isinstance(section_filter, str) else section_filter
+                section_ids = (
+                    [section_filter] if isinstance(section_filter, str) else section_filter
+                )
 
                 # Filter results by section_id
                 # Set scores to -inf for documents not matching section filter

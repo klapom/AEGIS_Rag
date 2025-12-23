@@ -128,7 +128,10 @@ def test_chunking_service_initialization_default():
     service = ChunkingService()
 
     # ChunkingConfig uses use_enum_values=True, so strategy is a string
-    assert service.config.strategy == "adaptive" or service.config.strategy == ChunkStrategyEnum.ADAPTIVE
+    assert (
+        service.config.strategy == "adaptive"
+        or service.config.strategy == ChunkStrategyEnum.ADAPTIVE
+    )
     assert service.config.min_tokens == 800
     assert service.config.max_tokens == 1800
     assert service.config.overlap_tokens == 100
@@ -295,11 +298,13 @@ async def test_paragraph_chunking():
     service = ChunkingService(config)
 
     # Create text with multiple paragraphs
-    paragraph_text = "\n\n".join([
-        "First paragraph with some text. " * 20,
-        "Second paragraph with different content. " * 20,
-        "Third paragraph for testing. " * 20,
-    ])
+    paragraph_text = "\n\n".join(
+        [
+            "First paragraph with some text. " * 20,
+            "Second paragraph with different content. " * 20,
+            "Third paragraph for testing. " * 20,
+        ]
+    )
 
     chunks = await service.chunk_document(
         text=paragraph_text,

@@ -240,7 +240,6 @@ async def test_ingest_adaptive_chunks_creates_correct_payload():
     """Test that ingest_adaptive_chunks creates Qdrant payloads with section metadata."""
     from unittest.mock import AsyncMock, MagicMock, patch
 
-
     # Create test chunks
     chunks = [
         AdaptiveChunk(

@@ -162,9 +162,7 @@ async def test_optimize_relation_extraction_returns_dict():
         {
             "text": "FastAPI uses Pydantic.",
             "entities": ["FastAPI", "Pydantic"],
-            "relations": [
-                {"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}
-            ],
+            "relations": [{"subject": "FastAPI", "predicate": "uses", "object": "Pydantic"}],
         },
     ]
 
@@ -441,9 +439,7 @@ async def test_multiple_optimizations_sequence():
     assert "instructions" in entity_result
 
     # Run relation optimization
-    relation_result = await optimizer.optimize_relation_extraction(
-        training_data=relation_data
-    )
+    relation_result = await optimizer.optimize_relation_extraction(training_data=relation_data)
     assert "instructions" in relation_result
 
 

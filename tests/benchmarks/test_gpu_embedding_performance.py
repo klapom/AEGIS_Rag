@@ -141,7 +141,9 @@ def test_cpu_vs_gpu_speedup():
         print(f"   VRAM: {gpu_service._estimate_vram_usage():.2f} GB")
 
         # Verify embeddings are identical (CPU vs GPU should produce same results)
-        assert len(cpu_embeddings) == len(gpu_embeddings), "Should produce same number of embeddings"
+        assert len(cpu_embeddings) == len(
+            gpu_embeddings
+        ), "Should produce same number of embeddings"
 
         # Target: At least 3x speedup on GPU (conservative, TD-073 shows 8-10x)
         assert speedup >= 2.0, f"GPU speedup too low: {speedup:.1f}x (target: >=2x)"
@@ -193,9 +195,9 @@ def test_auto_device_selection():
     print(f"   Actual: {actual_device}")
     print(f"   CUDA Available: {torch.cuda.is_available()}")
 
-    assert actual_device == expected_device, (
-        f"Auto device selection failed: expected {expected_device}, got {actual_device}"
-    )
+    assert (
+        actual_device == expected_device
+    ), f"Auto device selection failed: expected {expected_device}, got {actual_device}"
 
     # Test embedding works
     embedding = service.embed_text("Test text for auto device selection")

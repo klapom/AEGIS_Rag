@@ -53,16 +53,12 @@ def sample_ollama_response():
 class TestListOllamaModelsEndpoint:
     """Tests for GET /admin/llm/models endpoint."""
 
-    def test_list_ollama_models_success(
-        self, test_client, monkeypatch, sample_ollama_response
-    ):
+    def test_list_ollama_models_success(self, test_client, monkeypatch, sample_ollama_response):
         """Test successful listing of Ollama models."""
         with patch("httpx.AsyncClient") as mock_client_cls:
             mock_client = AsyncMock()
             mock_response = MagicMock()
-            mock_response.json = MagicMock(
-                return_value=sample_ollama_response
-            )
+            mock_response.json = MagicMock(return_value=sample_ollama_response)
             mock_response.raise_for_status = MagicMock()
 
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -108,9 +104,7 @@ class TestListOllamaModelsEndpoint:
             mock_client = AsyncMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=None)
-            mock_client.get = AsyncMock(
-                side_effect=httpx.ConnectError("Connection refused")
-            )
+            mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
 
             mock_client_cls.return_value = mock_client
 
@@ -128,9 +122,7 @@ class TestListOllamaModelsEndpoint:
             mock_client = AsyncMock()
             mock_response = MagicMock()
             mock_response.raise_for_status = MagicMock(
-                side_effect=httpx.HTTPStatusError(
-                    "500", request=None, response=None
-                )
+                side_effect=httpx.HTTPStatusError("500", request=None, response=None)
             )
 
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -152,9 +144,7 @@ class TestListOllamaModelsEndpoint:
             mock_client = AsyncMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=None)
-            mock_client.get = AsyncMock(
-                side_effect=Exception("Unexpected error")
-            )
+            mock_client.get = AsyncMock(side_effect=Exception("Unexpected error"))
 
             mock_client_cls.return_value = mock_client
 
@@ -172,9 +162,7 @@ class TestListOllamaModelsEndpoint:
             mock_client = AsyncMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=None)
-            mock_client.get = AsyncMock(
-                side_effect=httpx.TimeoutException("Request timeout")
-            )
+            mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("Request timeout"))
 
             mock_client_cls.return_value = mock_client
 
@@ -188,7 +176,9 @@ class TestListOllamaModelsEndpoint:
 class TestGetSummaryModelConfigEndpoint:
     """Tests for GET /admin/llm/summary-model endpoint."""
 
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
     def test_get_summary_model_config_success(self, test_client, monkeypatch):
         """Test successful retrieval of summary model config."""
         mock_redis_memory = AsyncMock()
@@ -228,9 +218,7 @@ class TestGetSummaryModelConfigEndpoint:
             assert "model_id" in data
             assert "ollama" in data["model_id"].lower()
 
-    def test_get_summary_model_config_redis_error(
-        self, test_client, monkeypatch
-    ):
+    def test_get_summary_model_config_redis_error(self, test_client, monkeypatch):
         """Test error handling when Redis unavailable."""
         with patch(
             "src.components.memory.get_redis_memory",
@@ -244,7 +232,9 @@ class TestGetSummaryModelConfigEndpoint:
 class TestSetSummaryModelConfigEndpoint:
     """Tests for PUT /admin/llm/summary-model endpoint."""
 
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
     def test_set_summary_model_config_success(self, test_client, monkeypatch):
         """Test successful configuration of summary model."""
         mock_redis_memory = AsyncMock()
@@ -267,9 +257,7 @@ class TestSetSummaryModelConfigEndpoint:
             # Verify timestamp was set
             assert data["updated_at"] is not None
 
-    def test_set_summary_model_config_invalid_model_id(
-        self, test_client, monkeypatch
-    ):
+    def test_set_summary_model_config_invalid_model_id(self, test_client, monkeypatch):
         """Test that API accepts model_id without strict format validation.
 
         Note: The API currently does NOT validate model_id format (provider/model).
@@ -285,9 +273,7 @@ class TestSetSummaryModelConfigEndpoint:
         # Returns 500 if Redis unavailable (CI without services)
         assert response.status_code in [200, 500]
 
-    def test_set_summary_model_config_redis_error(
-        self, test_client, monkeypatch
-    ):
+    def test_set_summary_model_config_redis_error(self, test_client, monkeypatch):
         """Test error handling when Redis save fails."""
         with patch(
             "src.components.memory.get_redis_memory",
@@ -301,9 +287,7 @@ class TestSetSummaryModelConfigEndpoint:
             assert response.status_code in [500, 200]
 
     @pytest.mark.skip(reason="Sprint 58: Validation logic changed - needs update")
-    def test_set_summary_model_config_empty_string(
-        self, test_client, monkeypatch
-    ):
+    def test_set_summary_model_config_empty_string(self, test_client, monkeypatch):
         """Test validation rejects empty model_id."""
         response = test_client.put(
             "/api/v1/admin/llm/summary-model",
@@ -312,10 +296,10 @@ class TestSetSummaryModelConfigEndpoint:
         # Should validate non-empty
         assert response.status_code in [422, 400]
 
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
-    def test_set_summary_model_config_persistence(
-        self, test_client, monkeypatch
-    ):
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
+    def test_set_summary_model_config_persistence(self, test_client, monkeypatch):
         """Test that model config persists across requests."""
         mock_redis_memory = AsyncMock()
         mock_redis_client = AsyncMock()
@@ -323,9 +307,7 @@ class TestSetSummaryModelConfigEndpoint:
         # First call sets the model
         mock_redis_client.set = AsyncMock()
         # Second call retrieves it
-        mock_redis_client.get = AsyncMock(
-            return_value=b'{"model_id": "ollama/mistral:7b"}'
-        )
+        mock_redis_client.get = AsyncMock(return_value=b'{"model_id": "ollama/mistral:7b"}')
 
         mock_redis_memory.client = AsyncMock(return_value=mock_redis_client)
 
@@ -413,10 +395,10 @@ class TestLLMConfigModels:
 class TestLLMConfigIntegration:
     """Integration tests for LLM configuration."""
 
-    @pytest.mark.skip(reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59")
-    def test_full_workflow_list_and_set_model(
-        self, test_client, monkeypatch
-    ):
+    @pytest.mark.skip(
+        reason="Sprint 58: Requires patch at source location - to be fixed in Sprint 59"
+    )
+    def test_full_workflow_list_and_set_model(self, test_client, monkeypatch):
         """Test complete workflow: list models then set one."""
         # First list models
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -451,9 +433,7 @@ class TestLLMConfigIntegration:
             mock_redis_memory = AsyncMock()
             mock_redis_client = AsyncMock()
             mock_redis_client.set = AsyncMock()
-            mock_redis_memory.client = AsyncMock(
-                return_value=mock_redis_client
-            )
+            mock_redis_memory.client = AsyncMock(return_value=mock_redis_client)
 
             with patch(
                 "src.components.memory.get_redis_memory",

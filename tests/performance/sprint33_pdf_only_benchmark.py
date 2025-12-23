@@ -35,7 +35,9 @@ RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 # Test document
-PDF_PATH = Path(r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf")
+PDF_PATH = Path(
+    r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"
+)
 
 
 async def run_pdf_benchmark():
@@ -56,6 +58,7 @@ async def run_pdf_benchmark():
     # Verify cloud config
     print("\n[CONFIG] Verifying cloud routing...")
     from src.components.llm_proxy.config import LLMProxyConfig
+
     config = LLMProxyConfig.from_env()
     print(f"  prefer_cloud: {config.routing.get('prefer_cloud', False)}")
     print(f"  alibaba_cloud enabled: {config.is_provider_enabled('alibaba_cloud')}")
@@ -88,7 +91,9 @@ async def run_pdf_benchmark():
         print(f"\n[SUCCESS] Pipeline completed in {duration:.2f}s")
 
         # Save minimal results
-        results_file = RESULTS_DIR / f"sprint33_pdf_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        results_file = (
+            RESULTS_DIR / f"sprint33_pdf_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
         output = {
             "timestamp": datetime.now().isoformat(),

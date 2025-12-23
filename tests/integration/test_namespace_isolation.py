@@ -66,9 +66,7 @@ class TestNamespaceIsolationNeo4j:
     async def test_query_without_namespace_rejected(self, secure_neo4j):
         """Test that queries without namespace filter are rejected."""
         with pytest.raises(NamespaceSecurityError) as exc_info:
-            await secure_neo4j.execute_read(
-                "MATCH (e:Entity) RETURN e LIMIT 10"
-            )
+            await secure_neo4j.execute_read("MATCH (e:Entity) RETURN e LIMIT 10")
 
         assert "namespace_id filter" in str(exc_info.value.message)
 
@@ -162,7 +160,10 @@ class TestNamespaceIsolationNeo4j:
 
         # Should see entities from both namespaces
         namespaces_found = {r["namespace"] for r in result}
-        assert test_namespaces["ns_a"] in namespaces_found or test_namespaces["ns_b"] in namespaces_found
+        assert (
+            test_namespaces["ns_a"] in namespaces_found
+            or test_namespaces["ns_b"] in namespaces_found
+        )
 
 
 class TestNamespaceIsolationQdrant:
@@ -196,17 +197,26 @@ class TestNamespaceIsolationQdrant:
                 PointStruct(
                     id=1,
                     vector=[0.1, 0.2, 0.3, 0.4],
-                    payload={"text": "Document in namespace A", "namespace_id": test_namespaces["ns_a"]},
+                    payload={
+                        "text": "Document in namespace A",
+                        "namespace_id": test_namespaces["ns_a"],
+                    },
                 ),
                 PointStruct(
                     id=2,
                     vector=[0.2, 0.3, 0.4, 0.5],
-                    payload={"text": "Document in namespace B", "namespace_id": test_namespaces["ns_b"]},
+                    payload={
+                        "text": "Document in namespace B",
+                        "namespace_id": test_namespaces["ns_b"],
+                    },
                 ),
                 PointStruct(
                     id=3,
                     vector=[0.3, 0.4, 0.5, 0.6],
-                    payload={"text": "General document", "namespace_id": test_namespaces["general"]},
+                    payload={
+                        "text": "General document",
+                        "namespace_id": test_namespaces["general"],
+                    },
                 ),
             ]
 
@@ -252,15 +262,26 @@ class TestNamespaceIsolationQdrant:
 
         try:
             points = [
-                PointStruct(id=1, vector=[0.1, 0.2, 0.3, 0.4],
-                           payload={"text": "Doc A", "namespace_id": test_namespaces["ns_a"]}),
-                PointStruct(id=2, vector=[0.2, 0.3, 0.4, 0.5],
-                           payload={"text": "Doc B", "namespace_id": test_namespaces["ns_b"]}),
-                PointStruct(id=3, vector=[0.3, 0.4, 0.5, 0.6],
-                           payload={"text": "Doc General", "namespace_id": test_namespaces["general"]}),
+                PointStruct(
+                    id=1,
+                    vector=[0.1, 0.2, 0.3, 0.4],
+                    payload={"text": "Doc A", "namespace_id": test_namespaces["ns_a"]},
+                ),
+                PointStruct(
+                    id=2,
+                    vector=[0.2, 0.3, 0.4, 0.5],
+                    payload={"text": "Doc B", "namespace_id": test_namespaces["ns_b"]},
+                ),
+                PointStruct(
+                    id=3,
+                    vector=[0.3, 0.4, 0.5, 0.6],
+                    payload={"text": "Doc General", "namespace_id": test_namespaces["general"]},
+                ),
             ]
 
-            await namespace_manager.qdrant.async_client.upsert(collection_name=collection_name, points=points)
+            await namespace_manager.qdrant.async_client.upsert(
+                collection_name=collection_name, points=points
+            )
 
             # Search in both ns_a and general
             results = await namespace_manager.search_qdrant(
@@ -300,7 +321,11 @@ class TestNamespaceBM25:
         bm25_results = [
             {"text": "Doc 1", "score": 0.9, "metadata": {"namespace_id": test_namespaces["ns_a"]}},
             {"text": "Doc 2", "score": 0.8, "metadata": {"namespace_id": test_namespaces["ns_b"]}},
-            {"text": "Doc 3", "score": 0.7, "metadata": {"namespace_id": test_namespaces["general"]}},
+            {
+                "text": "Doc 3",
+                "score": 0.7,
+                "metadata": {"namespace_id": test_namespaces["general"]},
+            },
             {"text": "Doc 4", "score": 0.6, "metadata": {}},  # No namespace = default
         ]
 
@@ -318,7 +343,11 @@ class TestNamespaceBM25:
         bm25_results = [
             {"text": "Doc 1", "score": 0.9, "metadata": {"namespace_id": test_namespaces["ns_a"]}},
             {"text": "Doc 2", "score": 0.8, "metadata": {"namespace_id": test_namespaces["ns_b"]}},
-            {"text": "Doc 3", "score": 0.7, "metadata": {"namespace_id": test_namespaces["general"]}},
+            {
+                "text": "Doc 3",
+                "score": 0.7,
+                "metadata": {"namespace_id": test_namespaces["general"]},
+            },
         ]
 
         # Filter for ns_a and general
@@ -381,5 +410,3 @@ class TestNamespaceManagerIntegration:
         )
 
         assert result[0]["count"] == 0
-
-

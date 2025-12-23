@@ -15,7 +15,9 @@ from src.components.ingestion.docling_client import DoclingContainerClient
 async def analyze_body_structure():
     """Analyze the body structure of a parsed document."""
     # Use a sample document
-    sample_dir = Path(r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents")
+    sample_dir = Path(
+        r"C:\Users\Klaus Pommer\OneDrive - Pommer IT-Consulting GmbH\99_Studium_Klaus\AEGIS_Rag\data\sample_documents"
+    )
     pptx_file = sample_dir / "99_pptx_text" / "PerformanceTuning_textonly.pptx"
 
     if not pptx_file.exists():
@@ -56,7 +58,9 @@ async def analyze_body_structure():
                 text_preview = node.get("text", "")[:50] if node.get("text") else ""
                 children_count = len(node.get("children", []))
 
-                print(f"{indent}{path}: label='{label}', text='{text_preview}...', children={children_count}")
+                print(
+                    f"{indent}{path}: label='{label}', text='{text_preview}...', children={children_count}"
+                )
 
                 # Recurse into children
                 for i, child in enumerate(node.get("children", [])):
@@ -84,7 +88,9 @@ async def analyze_body_structure():
                 children_count = len(node.get("children", []))
                 has_prov = "prov" in node
 
-                print(f"{indent}{path}: label='{label}', text='{text_preview}', children={children_count}, prov={has_prov}")
+                print(
+                    f"{indent}{path}: label='{label}', text='{text_preview}', children={children_count}, prov={has_prov}"
+                )
 
                 for i, child in enumerate(node.get("children", [])):
                     limited_analyze(child, depth + 1, f"[{i}]")

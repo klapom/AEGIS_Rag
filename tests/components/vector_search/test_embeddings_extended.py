@@ -12,7 +12,10 @@ These tests are outdated. Use tests in tests/unit/components/shared/ instead.
 import pytest
 
 # Sprint 58: Skip entire module - tests deprecated API from Sprint 25
-pytest.skip("EmbeddingService deprecated in Sprint 25 - tests moved to tests/unit/components/shared/", allow_module_level=True)
+pytest.skip(
+    "EmbeddingService deprecated in Sprint 25 - tests moved to tests/unit/components/shared/",
+    allow_module_level=True,
+)
 
 from unittest.mock import AsyncMock, MagicMock, patch
 

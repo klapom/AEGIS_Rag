@@ -75,14 +75,18 @@ def mock_aegis_llm_proxy():
 @pytest.fixture
 async def graphiti_client(mock_graphiti_instance, mock_neo4j_client, mock_aegis_llm_proxy):
     """GraphitiClient with mocked dependencies."""
-    with patch(
-        "src.components.memory.graphiti_wrapper.Graphiti", return_value=mock_graphiti_instance
-    ), patch(
-        "src.components.memory.graphiti_wrapper.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.memory.graphiti_wrapper.get_aegis_llm_proxy",
-        return_value=mock_aegis_llm_proxy,
+    with (
+        patch(
+            "src.components.memory.graphiti_wrapper.Graphiti", return_value=mock_graphiti_instance
+        ),
+        patch(
+            "src.components.memory.graphiti_wrapper.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.memory.graphiti_wrapper.get_aegis_llm_proxy",
+            return_value=mock_aegis_llm_proxy,
+        ),
     ):
         client = GraphitiClient()
         return client
@@ -170,7 +174,9 @@ async def test_graphiti_search_with_score_threshold(graphiti_client):
     assert all(r["score"] >= score_threshold for r in results)
 
 
-@pytest.mark.skip(reason="SearchConfig API changed - time_filter field removed from graphiti library")
+@pytest.mark.skip(
+    reason="SearchConfig API changed - time_filter field removed from graphiti library"
+)
 @pytest.mark.asyncio
 async def test_graphiti_search_with_time_window(graphiti_client):
     """Test temporal search with time window."""

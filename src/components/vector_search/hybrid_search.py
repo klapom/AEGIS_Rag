@@ -524,9 +524,12 @@ class HybridSearch:
                     top_k=top_k,
                 )
 
-                # Rerank candidates
+                # Rerank candidates with section boost (Sprint 62.5)
                 reranked = await self.reranker.rerank(
-                    query=query, documents=candidates, top_k=top_k
+                    query=query,
+                    documents=candidates,
+                    top_k=top_k,
+                    section_filter=section_filter,
                 )
 
                 # Convert reranked results back to original format
@@ -673,14 +676,10 @@ class HybridSearch:
                         ),
                         # Sprint 62.2: Include section metadata for BM25 filtering
                         "section_id": (
-                            str(point.payload.get("section_id", ""))
-                            if point.payload
-                            else ""
+                            str(point.payload.get("section_id", "")) if point.payload else ""
                         ),
                         "section_headings": (
-                            point.payload.get("section_headings", [])
-                            if point.payload
-                            else []
+                            point.payload.get("section_headings", []) if point.payload else []
                         ),
                     }
                     documents.append(doc)

@@ -21,7 +21,9 @@ async def debug_image_extraction():
 
     # Test with a known image-containing document
     test_files = [
-        Path(r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"),
+        Path(
+            r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"
+        ),
         Path(r"C:\Projekte\AEGISRAG\data\sample_documents\1. Basic Admin\Web Gateway.pptx"),
     ]
 
@@ -46,12 +48,12 @@ async def debug_image_extraction():
             print(f"  md_content length: {len(md_content)} chars")
 
             # Look for base64 image patterns
-            base64_pattern = r'!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]{0,100})'
+            base64_pattern = r"!\[([^\]]*)\]\(data:image/([^;]+);base64,([^)]{0,100})"
             matches = list(re.finditer(base64_pattern, md_content))
             print(f"  Base64 images in MD: {len(matches)}")
 
             # Look for any image references
-            img_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+            img_pattern = r"!\[([^\]]*)\]\(([^)]+)\)"
             all_img_matches = list(re.finditer(img_pattern, md_content))
             print(f"  All image references: {len(all_img_matches)}")
 
@@ -82,7 +84,9 @@ async def debug_image_extraction():
                     print(f"    Picture {i}: {img.size} {img.mode}")
                     if pic.prov:
                         prov = pic.prov[0]
-                        print(f"      page={prov.page_no}, bbox=({prov.bbox.l:.0f},{prov.bbox.t:.0f},{prov.bbox.r:.0f},{prov.bbox.b:.0f})")
+                        print(
+                            f"      page={prov.page_no}, bbox=({prov.bbox.l:.0f},{prov.bbox.t:.0f},{prov.bbox.r:.0f},{prov.bbox.b:.0f})"
+                        )
 
             # Save a sample of md_content for inspection
             sample_file = Path(__file__).parent / "results" / f"debug_{test_file.stem}_md.txt"
@@ -107,6 +111,7 @@ async def debug_image_extraction():
         except Exception as e:
             print(f"  [ERROR] {type(e).__name__}: {e}")
             import traceback
+
             traceback.print_exc()
 
     await client.stop_container()

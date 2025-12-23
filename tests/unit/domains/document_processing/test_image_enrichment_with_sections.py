@@ -254,7 +254,9 @@ class TestImageEnrichmentNodeWithSections:
             assert state["document"] is not None
 
     @pytest.mark.asyncio
-    async def test_enrichment_with_section_metadata(self, ingestion_state_with_document, mock_chunk):
+    async def test_enrichment_with_section_metadata(
+        self, ingestion_state_with_document, mock_chunk
+    ):
         """Test enrichment preserves section metadata."""
         # Add chunk with section info
         chunk = mock_chunk("section_3.2", "Multi-Server Architecture", 2, [5])
@@ -413,9 +415,7 @@ class TestMultipleImagesWithSections:
             "src.components.ingestion.nodes.image_enrichment_with_sections.ImageProcessor"
         ) as mock_processor_class:
             mock_processor = AsyncMock()
-            mock_processor.process_image = AsyncMock(
-                side_effect=["Description 1", "Description 2"]
-            )
+            mock_processor.process_image = AsyncMock(side_effect=["Description 1", "Description 2"])
             mock_processor.cleanup = MagicMock()
             mock_processor_class.return_value = mock_processor
 

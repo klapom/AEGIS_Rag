@@ -337,21 +337,15 @@ class TestHealthMonitoring:
             return
 
         # Look for logs section
-        logs_section = page.locator(
-            "[data-testid*='log'], .logs-section, .error-log"
-        )
+        logs_section = page.locator("[data-testid*='log'], .logs-section, .error-log")
         if await logs_section.count() == 0:
-            logs_section = page.get_by_text(
-                re.compile(r"log|error log|diagnostic", re.I)
-            )
+            logs_section = page.get_by_text(re.compile(r"log|error log|diagnostic", re.I))
 
         if await logs_section.count() > 0:
             print("✓ Log section found")
 
             # Get log entries
-            log_entries = page.locator(
-                "[role='log'] li, .log-entry, [data-testid='log-entry']"
-            )
+            log_entries = page.locator("[role='log'] li, .log-entry, [data-testid='log-entry']")
 
             entry_count = await log_entries.count()
 
@@ -368,13 +362,9 @@ class TestHealthMonitoring:
             print("✓ No dedicated log section (logs may be integrated)")
 
         # Look for diagnostic/debug information
-        debug_info = page.locator(
-            "[data-testid*='version'], [data-testid*='timestamp']"
-        )
+        debug_info = page.locator("[data-testid*='version'], [data-testid*='timestamp']")
         if await debug_info.count() == 0:
-            debug_info = page.get_by_text(
-                re.compile(r"version|uptime|timestamp|request id", re.I)
-            )
+            debug_info = page.get_by_text(re.compile(r"version|uptime|timestamp|request id", re.I))
 
         if await debug_info.count() > 0:
             print(f"✓ Found {await debug_info.count()} diagnostic items")

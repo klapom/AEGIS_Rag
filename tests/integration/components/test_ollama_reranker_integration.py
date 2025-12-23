@@ -23,9 +23,12 @@ from src.core.config import settings
 async def check_ollama_available() -> bool:
     """Check if Ollama is available and responsive."""
     try:
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp,
+        ):
             return resp.status == 200
     except Exception:
         return False
@@ -34,9 +37,12 @@ async def check_ollama_available() -> bool:
 async def check_model_available(model: str = "bge-reranker-v2-m3") -> bool:
     """Check if the reranker model is available in Ollama."""
     try:
-        async with aiohttp.ClientSession() as session, session.get(
-            f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
-        ) as resp:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                f"{settings.ollama_base_url}/api/tags", timeout=aiohttp.ClientTimeout(total=5)
+            ) as resp,
+        ):
             if resp.status != 200:
                 return False
             data = await resp.json()
@@ -61,8 +67,7 @@ async def model_available():
     available = await check_model_available()
     if not available:
         pytest.skip(
-            "bge-reranker-v2-m3 model not available. "
-            "Pull with: ollama pull bge-reranker-v2-m3"
+            "bge-reranker-v2-m3 model not available. " "Pull with: ollama pull bge-reranker-v2-m3"
         )
     return available
 
@@ -134,9 +139,7 @@ class TestOllamaRerankerRealAPI:
         """Test reranking with a single document."""
         reranker = OllamaReranker(model="bge-reranker-v2-m3")
 
-        ranked = await reranker.rerank(
-            "test query", ["single document about testing"], top_k=1
-        )
+        ranked = await reranker.rerank("test query", ["single document about testing"], top_k=1)
 
         assert len(ranked) == 1
         assert ranked[0][0] == 0
@@ -198,9 +201,7 @@ class TestOllamaRerankerPerformance:
         reranker = OllamaReranker(model="bge-reranker-v2-m3", top_k=10)
 
         query = "machine learning"
-        documents = [
-            f"Document {i} about machine learning and AI" for i in range(20)
-        ]
+        documents = [f"Document {i} about machine learning and AI" for i in range(20)]
 
         start = time.perf_counter()
         ranked = await reranker.rerank(query, documents, top_k=10)
@@ -212,7 +213,5 @@ class TestOllamaRerankerPerformance:
         # Performance check (20 documents should take <4s on DGX Spark)
         assert elapsed < 10.0, f"Reranking 20 docs took {elapsed:.2f}s (expected <10s)"
 
-        print(
-            f"Reranking 20 documents (returned top 10) took {elapsed*1000:.1f}ms"
-        )
+        print(f"Reranking 20 documents (returned top 10) took {elapsed*1000:.1f}ms")
         print(f"Average per document: {elapsed*1000/20:.1f}ms")

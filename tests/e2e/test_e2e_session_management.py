@@ -59,7 +59,7 @@ class TestSessionManagement:
                 '[data-testid="sidebar-toggle"], '
                 'button[aria-label*="sidebar"], '
                 'button[aria-label*="menu"], '
-                'button:has(svg.lucide-menu)'
+                "button:has(svg.lucide-menu)"
             )
 
             if await toggle_button.count() > 0:
@@ -73,9 +73,7 @@ class TestSessionManagement:
     async def _submit_query(self, page: Page, query: str) -> None:
         """Helper to submit a chat query."""
         chat_input = page.locator(
-            'textarea, '
-            'input[placeholder*="question"], '
-            'input[placeholder*="message"]'
+            "textarea, " 'input[placeholder*="question"], ' 'input[placeholder*="message"]'
         ).first
 
         await chat_input.fill(query)
@@ -183,7 +181,7 @@ class TestSessionManagement:
             assert len(title_text) > 0, "Session should have a title"
 
         # Check for date groups (Today, Yesterday, etc.)
-        date_groups = sidebar.locator('h3')
+        date_groups = sidebar.locator("h3")
 
         group_count = await date_groups.count()
         if group_count > 0:
@@ -238,10 +236,7 @@ class TestSessionManagement:
             print("[TEST] Edit button clicked")
 
             # Wait for input field
-            title_input = page.locator(
-                '[data-testid="session-title-input"], '
-                'input[type="text"]'
-            )
+            title_input = page.locator('[data-testid="session-title-input"], ' 'input[type="text"]')
 
             await expect(title_input.first).to_be_visible(timeout=5000)
 
@@ -258,8 +253,9 @@ class TestSessionManagement:
             session_title = session_item.locator('[data-testid="session-title"]')
             if await session_title.count() > 0:
                 updated_title = await session_title.inner_text()
-                assert new_title in updated_title or "Neural" in updated_title, \
-                    f"Session title should be updated, got: {updated_title}"
+                assert (
+                    new_title in updated_title or "Neural" in updated_title
+                ), f"Session title should be updated, got: {updated_title}"
                 print("[TEST] Session rename verified")
 
         elif await editable_title.count() > 0:
@@ -306,7 +302,9 @@ class TestSessionManagement:
 
         new_chat_button = page.locator('[data-testid="new-chat-button"]')
         if await new_chat_button.count() == 0:
-            new_chat_button = page.get_by_role("button").filter(has_text=re.compile(r"New Chat", re.I))
+            new_chat_button = page.get_by_role("button").filter(
+                has_text=re.compile(r"New Chat", re.I)
+            )
         await new_chat_button.first.click()
         await asyncio.sleep(0.5)
 
@@ -380,7 +378,7 @@ class TestSessionManagement:
         share_button = session_item.locator(
             '[data-testid="share-session"], '
             'button[aria-label*="Share"], '
-            'button:has(svg.lucide-share)'
+            "button:has(svg.lucide-share)"
         )
 
         if await share_button.count() > 0:
@@ -413,9 +411,7 @@ class TestSessionManagement:
 
                 # Check for share link
                 share_link = share_modal.locator(
-                    'input[value*="/share/"], '
-                    '[data-testid="share-link"], '
-                    'input[readonly]'
+                    'input[value*="/share/"], ' '[data-testid="share-link"], ' "input[readonly]"
                 )
 
                 if await share_link.count() > 0:
@@ -486,7 +482,7 @@ class TestSessionManagement:
         delete_button = session_item.locator(
             '[data-testid="delete-session"], '
             'button[aria-label*="Delete"], '
-            'button:has(svg.lucide-trash)'
+            "button:has(svg.lucide-trash)"
         )
 
         if await delete_button.count() > 0:
@@ -562,7 +558,7 @@ class TestSessionManagement:
         archive_button = session_item.locator(
             '[data-testid="archive-session"], '
             'button[aria-label*="Archive"], '
-            'button:has(svg.lucide-archive)'
+            "button:has(svg.lucide-archive)"
         )
 
         if await archive_button.count() > 0:
@@ -669,7 +665,9 @@ class TestSessionManagement:
                 # Close modal
                 close_btn = share_modal.locator('button[aria-label="Close"]')
                 if await close_btn.count() == 0:
-                    close_btn = share_modal.get_by_role("button").filter(has_text=re.compile(r"Close", re.I))
+                    close_btn = share_modal.get_by_role("button").filter(
+                        has_text=re.compile(r"Close", re.I)
+                    )
                 if await close_btn.count() > 0:
                     await close_btn.first.click()
         else:
@@ -692,9 +690,7 @@ class TestSessionManagement:
             pass
 
         # Try to close modal with Close button
-        close_btns = page.get_by_role("button").filter(
-            has_text=re.compile(r"Close", re.I)
-        )
+        close_btns = page.get_by_role("button").filter(has_text=re.compile(r"Close", re.I))
         for i in range(await close_btns.count()):
             try:
                 if await close_btns.nth(i).is_visible():

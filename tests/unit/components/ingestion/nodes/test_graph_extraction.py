@@ -142,7 +142,9 @@ def mock_relation_extractor():
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_success(
     base_state: IngestionState,
@@ -156,20 +158,26 @@ async def test_graph_extraction_success(
     - Entities and relations stored
     - graph_status = 'completed'
     """
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -212,7 +220,9 @@ async def test_graph_extraction_no_chunks(base_state: IngestionState) -> None:
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_lightrag_insert(
     base_state: IngestionState,
@@ -226,20 +236,26 @@ async def test_graph_extraction_lightrag_insert(
     - chunk_id from embedded_chunk_ids used
     - insert_prechunked_documents called with chunks list
     """
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         await graph_extraction_node(base_state)
 
@@ -259,7 +275,9 @@ async def test_graph_extraction_lightrag_insert(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_relation_extraction(
     base_state: IngestionState,
@@ -295,21 +313,27 @@ async def test_graph_extraction_relation_extraction(
         ]
     )
 
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-        return_value=mock_relation_extractor,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+            return_value=mock_relation_extractor,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -323,7 +347,9 @@ async def test_graph_extraction_relation_extraction(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_section_nodes(
     base_state: IngestionState,
@@ -354,20 +380,26 @@ async def test_graph_extraction_section_nodes(
         MagicMock(token_count=100, section_headings=["Section 1"]),
     ]
 
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -381,7 +413,9 @@ async def test_graph_extraction_section_nodes(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_community_detection(
     base_state: IngestionState,
@@ -397,20 +431,26 @@ async def test_graph_extraction_community_detection(
     - communities_detected populated
     """
     # Ensure relations will be created (mock returns relations)
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=mock_community_detector,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=mock_community_detector,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -424,7 +464,9 @@ async def test_graph_extraction_community_detection(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_community_skipped_no_relations(
     base_state: IngestionState,
@@ -453,20 +495,26 @@ async def test_graph_extraction_community_skipped_no_relations(
         ]
     )
 
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=mock_community_detector,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=mock_community_detector,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -480,7 +528,9 @@ async def test_graph_extraction_community_skipped_no_relations(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_state_updated(
     base_state: IngestionState,
@@ -500,20 +550,26 @@ async def test_graph_extraction_state_updated(
     - community_detection_stats
     - overall_progress
     """
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 
@@ -551,10 +607,13 @@ async def test_graph_extraction_error_handling(
     - Error added to state
     - graph_status = 'failed'
     """
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        side_effect=RuntimeError("LightRAG error"),
-    ), pytest.raises(RuntimeError):
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            side_effect=RuntimeError("LightRAG error"),
+        ),
+        pytest.raises(RuntimeError),
+    ):
         await graph_extraction_node(base_state)
 
 
@@ -563,7 +622,9 @@ async def test_graph_extraction_error_handling(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_progress_events(
     base_state: IngestionState,
@@ -579,21 +640,27 @@ async def test_graph_extraction_progress_events(
     """
     mock_emit = AsyncMock()
 
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-        return_value=mock_relation_extractor,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        mock_emit,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+            return_value=mock_relation_extractor,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            mock_emit,
+        ),
     ):
         await graph_extraction_node(base_state)
 
@@ -606,7 +673,9 @@ async def test_graph_extraction_progress_events(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_enhanced_chunks_with_images(
     mock_lightrag_wrapper,
@@ -645,20 +714,26 @@ async def test_graph_extraction_enhanced_chunks_with_images(
         "adaptive_chunks": [],
     }
 
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(state)
 
@@ -671,7 +746,9 @@ async def test_graph_extraction_enhanced_chunks_with_images(
 # =============================================================================
 
 
-@pytest.mark.skip(reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module")
+@pytest.mark.skip(
+    reason="Sprint 58: get_neo4j_client not exported from graph_extraction - needs patch at source module"
+)
 @pytest.mark.asyncio
 async def test_graph_extraction_chunk_count_tracking(
     base_state: IngestionState,
@@ -684,20 +761,26 @@ async def test_graph_extraction_chunk_count_tracking(
     - LightRAG stats contain chunk count
     - State contains chunk count info
     """
-    with patch(
-        "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
-        return_value=mock_lightrag_wrapper,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
-        return_value=mock_neo4j_client,
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.get_community_detector",
-        return_value=MagicMock(),
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
-    ), patch(
-        "src.components.ingestion.nodes.graph_extraction.emit_progress",
-        new_callable=AsyncMock,
+    with (
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_lightrag_wrapper_async",
+            return_value=mock_lightrag_wrapper,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_neo4j_client",
+            return_value=mock_neo4j_client,
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.get_community_detector",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.RelationExtractor",
+        ),
+        patch(
+            "src.components.ingestion.nodes.graph_extraction.emit_progress",
+            new_callable=AsyncMock,
+        ),
     ):
         result = await graph_extraction_node(base_state)
 

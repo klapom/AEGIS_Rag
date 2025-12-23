@@ -31,6 +31,9 @@ class ResearchState(TypedDict):
     query: str
     """Original research question"""
 
+    namespace: str
+    """Namespace to search in"""
+
     research_plan: list[str]
     """List of search queries to execute"""
 
@@ -110,6 +113,7 @@ async def search_node(state: ResearchState) -> ResearchState:
         top_k=5,
         use_graph=True,
         use_vector=True,
+        namespace=state.get("namespace", "default"),
     )
 
     # Results are automatically accumulated due to Annotated[list, operator.add]
@@ -278,12 +282,14 @@ def create_research_graph() -> StateGraph:
 async def run_research(
     query: str,
     max_iterations: int = 3,
+    namespace: str = "default",
 ) -> dict:
     """Run complete research workflow.
 
     Args:
         query: Research question
         max_iterations: Maximum search iterations
+        namespace: Namespace to search in
 
     Returns:
         Final research state with synthesis
@@ -298,6 +304,7 @@ async def run_research(
     # Create initial state
     initial_state: ResearchState = {
         "query": query,
+        "namespace": namespace,
         "research_plan": [],
         "search_results": [],
         "synthesis": "",

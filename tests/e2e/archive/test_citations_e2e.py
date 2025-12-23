@@ -115,12 +115,15 @@ async def test_citations_e2e_flow_with_mocked_llm():
 
 async def _run_citation_e2e_test(expected_contexts: list[dict[str, Any]]) -> None:
     """Helper function to run citation E2E test."""
-    async with AsyncClient(app=app, base_url="http://test") as client, client.stream(
-        "POST",
-        "/api/v1/chat/stream",
-        json={"query": "What is AEGIS RAG and what does it use?", "include_sources": True},
-        headers={"Accept": "text/event-stream"},
-    ) as response:
+    async with (
+        AsyncClient(app=app, base_url="http://test") as client,
+        client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"query": "What is AEGIS RAG and what does it use?", "include_sources": True},
+            headers={"Accept": "text/event-stream"},
+        ) as response,
+    ):
         assert response.status_code == 200
 
         # Collect all messages

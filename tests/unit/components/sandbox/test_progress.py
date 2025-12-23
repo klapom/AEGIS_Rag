@@ -108,9 +108,7 @@ class TestSessionResumption:
     def test_resume_session_loads_state(self, tracker, temp_progress_file):
         """Test that resume_session loads existing state."""
         # Initialize first
-        tracker.init_session(
-            repo_path="/path/to/repo", initial_paths=["src/", "tests/"]
-        )
+        tracker.init_session(repo_path="/path/to/repo", initial_paths=["src/", "tests/"])
 
         # Create new tracker and resume
         tracker2 = ProgressTracker(str(temp_progress_file))

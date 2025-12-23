@@ -5,7 +5,6 @@ Sprint 51 - Feature 51.7: Maximum Hybrid Search Foundation
 Tests for parsing LightRAG local/global context strings into structured entities.
 """
 
-
 from src.components.retrieval.lightrag_context_parser import (
     _infer_entity_type,
     extract_entity_names,

@@ -401,9 +401,7 @@ class TestTrainingProgressTracker:
         for i in range(len(tracker._events) - 1):
             current_time = tracker._events[i].timestamp
             next_time = tracker._events[i + 1].timestamp
-            assert (
-                next_time >= current_time
-            ), "Event timestamps are not chronological"
+            assert next_time >= current_time, "Event timestamps are not chronological"
 
 
 class TestTrainingProgressTrackerIntegration:
@@ -435,15 +433,11 @@ class TestTrainingProgressTrackerIntegration:
         tracker.enter_phase(TrainingPhase.LOADING_DATA, "Processing dataset")
         tracker.update_progress(0.8, "Dataset validated")
 
-        tracker.enter_phase(
-            TrainingPhase.ENTITY_OPTIMIZATION, "Optimizing entity extraction"
-        )
+        tracker.enter_phase(TrainingPhase.ENTITY_OPTIMIZATION, "Optimizing entity extraction")
         tracker.update_progress(0.3, "Epoch 3/10")
         tracker.update_progress(0.7, "Epoch 7/10")
 
-        tracker.enter_phase(
-            TrainingPhase.RELATION_OPTIMIZATION, "Optimizing relation extraction"
-        )
+        tracker.enter_phase(TrainingPhase.RELATION_OPTIMIZATION, "Optimizing relation extraction")
         tracker.update_progress(0.5, "Epoch 5/10")
 
         tracker.enter_phase(TrainingPhase.PROMPT_EXTRACTION, "Extracting prompts")

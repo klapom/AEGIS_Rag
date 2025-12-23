@@ -31,9 +31,11 @@ def test_default_backend_is_ollama():
     """Test default backend is ollama for backward compatibility."""
     with patch("src.components.shared.embedding_factory.settings") as mock_settings:
         # Default: no embedding_backend attribute (falls back to ollama)
-        delattr(mock_settings, "embedding_backend") if hasattr(
-            mock_settings, "embedding_backend"
-        ) else None
+        (
+            delattr(mock_settings, "embedding_backend")
+            if hasattr(mock_settings, "embedding_backend")
+            else None
+        )
 
         with patch(
             "src.components.shared.embedding_service.get_embedding_service"
@@ -93,13 +95,9 @@ def test_sentence_transformers_with_default_config():
     with patch("src.components.shared.embedding_factory.settings") as mock_settings:
         mock_settings.embedding_backend = "sentence-transformers"
         # Remove config attributes to test defaults
-        delattr(mock_settings, "st_model_name") if hasattr(
-            mock_settings, "st_model_name"
-        ) else None
+        delattr(mock_settings, "st_model_name") if hasattr(mock_settings, "st_model_name") else None
         delattr(mock_settings, "st_device") if hasattr(mock_settings, "st_device") else None
-        delattr(mock_settings, "st_batch_size") if hasattr(
-            mock_settings, "st_batch_size"
-        ) else None
+        delattr(mock_settings, "st_batch_size") if hasattr(mock_settings, "st_batch_size") else None
 
         with patch(
             "src.components.shared.sentence_transformers_embedding.SentenceTransformersEmbeddingService"

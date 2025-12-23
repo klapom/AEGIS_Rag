@@ -163,9 +163,7 @@ class TestCounterIncrements:
     def test_record_extraction_entities_increments_counter(self):
         """Test record_extraction_entities increments counter by specified count."""
         # Get initial value (may not be 0 if other tests ran)
-        metrics.extraction_entities_total.labels(
-            entity_type="PERSON", pipeline_type="test"
-        )
+        metrics.extraction_entities_total.labels(entity_type="PERSON", pipeline_type="test")
 
         # Record entities
         metrics.record_extraction_entities("PERSON", "test", 5)

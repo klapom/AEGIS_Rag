@@ -496,9 +496,7 @@ class TestExtractionServiceDomainAware:
             new=AsyncMock(return_value=mock_llm_response(mock_relationships)),
         ):
             text = "TensorFlow is a machine learning framework developed by Google."
-            relationships = await extraction_service.extract_relationships(
-                text, entities, "ml_doc"
-            )
+            relationships = await extraction_service.extract_relationships(text, entities, "ml_doc")
 
             assert len(relationships) == 1
             assert relationships[0].source == "TensorFlow"

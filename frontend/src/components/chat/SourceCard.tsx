@@ -3,14 +3,23 @@
  * Sprint 15 Feature 15.4: Individual source card display
  * Sprint 19 Feature: Source click with chunk preview modal
  * Sprint 52 Feature: Replaced modal with inline expandable details
+ * Sprint 62 Feature 62.4: Section-aware citations with section badges
  *
  * Displays metadata and preview of a single source document
  * Click expands to show full chunk context and search type
  */
 
 import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, File, FileCode, BookOpen, Hash, Layers } from 'lucide-react';
 import type { Source } from '../../types/chat';
+import {
+  extractSectionMetadata,
+  getDocumentType,
+  formatSectionDisplay,
+  formatSectionPath,
+  type DocumentType,
+  type SectionMetadata,
+} from '../../types/section';
 
 /**
  * Extract clean text content from source text field.
@@ -124,11 +133,83 @@ function getSearchTypeColor(searchType: string): string {
   }
 }
 
+/**
+ * Sprint 62.4: Get icon component for document type
+ */
+function getDocumentTypeIcon(docType: DocumentType): React.ReactNode {
+  const iconClass = 'w-3.5 h-3.5';
+
+  switch (docType) {
+    case 'pdf':
+      return <FileText className={iconClass} />;
+    case 'docx':
+      return <File className={iconClass} />;
+    case 'md':
+      return <BookOpen className={iconClass} />;
+    case 'txt':
+    case 'html':
+      return <FileCode className={iconClass} />;
+    default:
+      return <File className={iconClass} />;
+  }
+}
+
+/**
+ * Sprint 62.4: Get color class for document type badge
+ */
+function getDocumentTypeBadgeColor(docType: DocumentType): string {
+  switch (docType) {
+    case 'pdf':
+      return 'bg-red-100 text-red-700 border-red-200';
+    case 'docx':
+      return 'bg-blue-100 text-blue-700 border-blue-200';
+    case 'md':
+      return 'bg-purple-100 text-purple-700 border-purple-200';
+    case 'txt':
+      return 'bg-gray-100 text-gray-700 border-gray-200';
+    case 'html':
+      return 'bg-orange-100 text-orange-700 border-orange-200';
+    default:
+      return 'bg-gray-100 text-gray-600 border-gray-200';
+  }
+}
+
+/**
+ * Sprint 62.4: Get display name for document type
+ */
+function getDocumentTypeDisplayName(docType: DocumentType): string {
+  switch (docType) {
+    case 'pdf':
+      return 'PDF';
+    case 'docx':
+      return 'Word';
+    case 'md':
+      return 'Markdown';
+    case 'txt':
+      return 'Text';
+    case 'html':
+      return 'HTML';
+    default:
+      return 'Doc';
+  }
+}
+
 export function SourceCard({ source, index }: SourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Sprint 52: Get search type from metadata
   const searchType = source.metadata?.search_type as string | undefined;
+
+  // Sprint 62.4: Extract section metadata and document type
+  const sectionMetadata = extractSectionMetadata(source);
+  const docType = source.document_type || getDocumentType(source);
+  const hasSection = sectionMetadata !== null && (
+    sectionMetadata.section_title ||
+    sectionMetadata.section_number ||
+    sectionMetadata.section_id
+  );
+  const sectionDisplay = hasSection ? formatSectionDisplay(sectionMetadata!) : null;
+  const sectionPath = hasSection ? formatSectionPath(sectionMetadata!) : null;
 
   // Sprint 19: Extract readable document name from metadata
   // Sprint 32 Fix: Check title/source from citation_map first
@@ -171,6 +252,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+        data-testid="source-card-header"
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Index Badge */}
@@ -178,11 +260,38 @@ export function SourceCard({ source, index }: SourceCardProps) {
             <span className="text-sm font-bold text-primary">{index}</span>
           </div>
 
-          {/* Document Name */}
+          {/* Document Name and Section Info */}
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-gray-900 truncate" title={getDocumentName()}>
-              {getDocumentName()}
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-semibold text-gray-900 truncate" title={getDocumentName()}>
+                {getDocumentName()}
+              </div>
+              {/* Sprint 62.4: Document Type Badge */}
+              {docType !== 'unknown' && (
+                <span
+                  className={`hidden sm:flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded border flex-shrink-0 ${getDocumentTypeBadgeColor(docType)}`}
+                  title={`Dokumenttyp: ${getDocumentTypeDisplayName(docType)}`}
+                  data-testid="document-type-badge"
+                >
+                  {getDocumentTypeIcon(docType)}
+                  <span className="hidden md:inline">{getDocumentTypeDisplayName(docType)}</span>
+                </span>
+              )}
             </div>
+            {/* Sprint 62.4: Section Badge - Shown below document name on mobile, inline on desktop */}
+            {hasSection && (
+              <div
+                className="flex items-center gap-1.5 mt-1 text-xs text-indigo-600"
+                title={sectionPath || undefined}
+                data-testid="section-badge"
+              >
+                <Hash className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+                <span className="truncate">{sectionDisplay}</span>
+                {sectionMetadata?.section_level && (
+                  <span className="text-indigo-400 flex-shrink-0">(L{sectionMetadata.section_level})</span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Search Type Badge - Sprint 52 */}
@@ -192,7 +301,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
               title={`Suchmethode: ${getSearchTypeName(searchType)}`}
             >
               <span>{getSearchTypeIcon(searchType)}</span>
-              <span>{getSearchTypeName(searchType)}</span>
+              <span className="hidden sm:inline">{getSearchTypeName(searchType)}</span>
             </span>
           )}
 
@@ -237,6 +346,30 @@ export function SourceCard({ source, index }: SourceCardProps) {
               </div>
             )}
 
+            {/* Sprint 62.4: Section Path (full hierarchy) */}
+            {hasSection && sectionPath && (
+              <div className="col-span-2" data-testid="section-path">
+                <span className="text-gray-500">Abschnitt:</span>
+                <span className="ml-2 text-indigo-600">{sectionPath}</span>
+              </div>
+            )}
+
+            {/* Sprint 62.4: Document Type */}
+            {docType !== 'unknown' && (
+              <div data-testid="document-type-info">
+                <span className="text-gray-500">Dokumenttyp:</span>
+                <span className="ml-2 text-gray-700">{getDocumentTypeDisplayName(docType)}</span>
+              </div>
+            )}
+
+            {/* Sprint 62.4: Page Number (for PDFs) */}
+            {sectionMetadata?.page_number && (
+              <div>
+                <span className="text-gray-500">Seite:</span>
+                <span className="ml-2 text-gray-700">{sectionMetadata.page_number}</span>
+              </div>
+            )}
+
             {/* Search Type */}
             {searchType && (
               <div>
@@ -249,7 +382,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
             {source.metadata?.rank != null && (
               <div>
                 <span className="text-gray-500">Rang:</span>
-                <span className="ml-2 text-gray-700">#{source.metadata.rank}</span>
+                <span className="ml-2 text-gray-700">#{source.metadata.rank as number}</span>
               </div>
             )}
 
@@ -265,7 +398,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
             {source.metadata?.namespace && (
               <div>
                 <span className="text-gray-500">Namespace:</span>
-                <span className="ml-2 text-gray-700">{source.metadata.namespace}</span>
+                <span className="ml-2 text-gray-700">{source.metadata.namespace as string}</span>
               </div>
             )}
 

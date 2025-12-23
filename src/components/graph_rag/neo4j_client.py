@@ -300,12 +300,14 @@ class Neo4jClient:
         """Create Section nodes with hierarchical relationships (Sprint 32 Feature 32.4).
 
         Sprint 33 Performance Fix: Uses batched UNWIND queries for 5-10x speedup.
+        Sprint 62 Feature 62.6: Adds HAS_SUBSECTION hierarchical relationships.
 
         Implements ADR-039 section-aware graph schema:
         - Creates Section nodes with heading, page_no, order, bbox
         - Creates Document-[:HAS_SECTION]->Section relationships
         - Creates Section-[:CONTAINS_CHUNK]->Chunk relationships
         - Creates Section-[:DEFINES]->Entity relationships (for entities in section)
+        - Creates Section-[:HAS_SUBSECTION]->Section relationships (parent-child hierarchy)
 
         Args:
             document_id: Source document ID
@@ -318,6 +320,7 @@ class Neo4jClient:
             - has_section_rels: Number of HAS_SECTION relationships
             - contains_chunk_rels: Number of CONTAINS_CHUNK relationships
             - defines_entity_rels: Number of DEFINES relationships
+            - hierarchy_rels: Number of HAS_SUBSECTION relationships (Sprint 62.6)
 
         Example:
             >>> client = get_neo4j_client()
@@ -328,6 +331,8 @@ class Neo4jClient:
             ... )
             >>> stats["sections_created"]
             5
+            >>> stats["hierarchy_rels"]
+            3
         """
         import time
 
@@ -460,12 +465,42 @@ class Neo4jClient:
                     defines_entity_rels=defines_entity_rels,
                 )
 
+                # Sprint 62 Feature 62.6: Create HAS_SUBSECTION hierarchical relationships
+                # Detect parent-child relationships based on section heading patterns
+                # E.g., "1.2.3" → parent "1.2", "1.2" → parent "1"
+                hierarchy_result = await session.run(
+                    """
+                    MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(child:Section)
+                    WHERE child.heading =~ '.*\\..*'
+                    WITH child,
+                         substring(child.heading, 0,
+                                   size(child.heading) - size(split(child.heading, '.')[-1]) - 1
+                         ) AS parent_heading
+                    WHERE parent_heading <> ''
+                    MATCH (d:Document {id: $document_id})-[:HAS_SECTION]->(parent:Section)
+                    WHERE parent.heading = parent_heading
+                    MERGE (parent)-[:HAS_SUBSECTION {created_at: datetime()}]->(child)
+                    RETURN count(*) AS hierarchy_rels_created
+                    """,
+                    document_id=document_id,
+                )
+                hierarchy_record = await hierarchy_result.single()
+                hierarchy_rels = (
+                    hierarchy_record["hierarchy_rels_created"] if hierarchy_record else 0
+                )
+
+                logger.info(
+                    "has_subsection_hierarchy_created",
+                    hierarchy_rels=hierarchy_rels,
+                )
+
                 batch_duration = time.time() - batch_start_time
                 stats = {
                     "sections_created": sections_created,
                     "has_section_rels": has_section_rels,
                     "contains_chunk_rels": contains_chunk_rels,
                     "defines_entity_rels": defines_entity_rels,
+                    "hierarchy_rels": hierarchy_rels,
                 }
 
                 logger.info(

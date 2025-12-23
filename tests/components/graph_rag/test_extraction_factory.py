@@ -351,8 +351,11 @@ def test_convenience_function_without_config():
     We patch _create_llm_extraction to avoid ExtractionService initialization.
     """
     mock_pipeline = Mock(spec=ExtractionPipeline)
-    with patch("src.core.config.get_settings") as mock_settings, patch.object(
-        ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+    with (
+        patch("src.core.config.get_settings") as mock_settings,
+        patch.object(
+            ExtractionPipelineFactory, "_create_llm_extraction", return_value=mock_pipeline
+        ),
     ):
         mock_config = Mock()
         mock_config.extraction_pipeline = "three_phase"
@@ -388,8 +391,7 @@ def test_factory_logs_pipeline_creation(mock_config_three_phase, caplog):
         # Check that creation was logged
         # Note: With the factory method patched, we still get the initial log message
         assert any(
-            "extraction_factory_creating_pipeline" in record.message
-            for record in caplog.records
+            "extraction_factory_creating_pipeline" in record.message for record in caplog.records
         )
 
 

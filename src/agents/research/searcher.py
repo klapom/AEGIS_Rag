@@ -20,6 +20,7 @@ async def execute_searches(
     top_k: int = 5,
     use_graph: bool = True,
     use_vector: bool = True,
+    namespace: str = "default",
 ) -> list[dict[str, Any]]:
     """Execute multiple search queries across all sources.
 
@@ -28,6 +29,7 @@ async def execute_searches(
         top_k: Number of results per query
         use_graph: Enable graph search
         use_vector: Enable vector search
+        namespace: Namespace to search in
 
     Returns:
         List of search results with metadata
@@ -43,6 +45,7 @@ async def execute_searches(
         top_k=top_k,
         use_graph=use_graph,
         use_vector=use_vector,
+        namespace=namespace,
     )
 
     all_results = []
@@ -53,6 +56,7 @@ async def execute_searches(
             top_k=top_k,
             use_graph=use_graph,
             use_vector=use_vector,
+            namespace=namespace,
         )
         all_results.extend(query_results)
 
@@ -73,6 +77,7 @@ async def execute_single_query(
     top_k: int = 5,
     use_graph: bool = True,
     use_vector: bool = True,
+    namespace: str = "default",
 ) -> list[dict[str, Any]]:
     """Execute a single query across all enabled sources.
 
@@ -81,6 +86,7 @@ async def execute_single_query(
         top_k: Number of results
         use_graph: Enable graph search
         use_vector: Enable vector search
+        namespace: Namespace to search in
 
     Returns:
         List of results for this query
@@ -90,12 +96,12 @@ async def execute_single_query(
     try:
         # Vector search
         if use_vector:
-            vector_results = await _execute_vector_search(query, top_k)
+            vector_results = await _execute_vector_search(query, top_k, namespace)
             results.extend(vector_results)
 
         # Graph search
         if use_graph:
-            graph_results = await _execute_graph_search(query, top_k)
+            graph_results = await _execute_graph_search(query, top_k, namespace)
             results.extend(graph_results)
 
     except Exception as e:
@@ -104,12 +110,13 @@ async def execute_single_query(
     return results
 
 
-async def _execute_vector_search(query: str, top_k: int) -> list[dict[str, Any]]:
+async def _execute_vector_search(query: str, top_k: int, namespace: str) -> list[dict[str, Any]]:
     """Execute vector search against Qdrant.
 
     Args:
         query: Search query
         top_k: Number of results
+        namespace: Namespace to search in
 
     Returns:
         List of vector search results
@@ -121,6 +128,7 @@ async def _execute_vector_search(query: str, top_k: int) -> list[dict[str, Any]]
             query=query,
             top_k=top_k,
             alpha=0.5,  # Equal weighting for vector and BM25
+            namespace=namespace,
         )
 
         # Format results
@@ -131,6 +139,7 @@ async def _execute_vector_search(query: str, top_k: int) -> list[dict[str, Any]]
                 "source": "vector",
                 "metadata": r.get("metadata", {}),
                 "query": query,
+                "namespace": namespace,
             }
             for r in results
         ]
@@ -144,12 +153,13 @@ async def _execute_vector_search(query: str, top_k: int) -> list[dict[str, Any]]
         return []
 
 
-async def _execute_graph_search(query: str, top_k: int) -> list[dict[str, Any]]:
+async def _execute_graph_search(query: str, top_k: int, namespace: str) -> list[dict[str, Any]]:
     """Execute graph search against Neo4j.
 
     Args:
         query: Search query
         top_k: Number of results
+        namespace: Namespace to search in
 
     Returns:
         List of graph search results
@@ -161,6 +171,7 @@ async def _execute_graph_search(query: str, top_k: int) -> list[dict[str, Any]]:
             query=query,
             mode="hybrid",  # Use hybrid mode for best results
             top_k=top_k,
+            namespace=namespace,
         )
 
         # Format results
@@ -173,6 +184,7 @@ async def _execute_graph_search(query: str, top_k: int) -> list[dict[str, Any]]:
                 "relationships": r.get("relationships", []),
                 "metadata": r.get("metadata", {}),
                 "query": query,
+                "namespace": namespace,
             }
             for r in results
         ]

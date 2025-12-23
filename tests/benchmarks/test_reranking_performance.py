@@ -22,8 +22,7 @@ def test_reranking_latency_20_docs():
     """
     query = "What is machine learning?"
     documents = [
-        {"text": f"Document {i} about machine learning and AI systems."}
-        for i in range(20)
+        {"text": f"Document {i} about machine learning and AI systems."} for i in range(20)
     ]
 
     reranker = CrossEncoderReranker(device="cpu")

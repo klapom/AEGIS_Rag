@@ -49,13 +49,17 @@ logger = logging.getLogger(__name__)
 # Test documents
 TEST_DOCUMENTS = [
     {
-        "path": Path(r"C:\Projekte\AEGISRAG\data\sample_documents\1. Basic Admin\Web Gateway\DE-D-WebGW.pptx"),
+        "path": Path(
+            r"C:\Projekte\AEGISRAG\data\sample_documents\1. Basic Admin\Web Gateway\DE-D-WebGW.pptx"
+        ),
         "name": "DE-D-WebGW.pptx",
         "format": "pptx",
         "description": "Web Gateway PPTX (~50+ slides)",
     },
     {
-        "path": Path(r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"),
+        "path": Path(
+            r"C:\Projekte\AEGISRAG\data\sample_documents\30. GAC\OMNITRACKER GDPR Anonymization Center GAC.pdf"
+        ),
         "name": "OMNITRACKER_GDPR_GAC.pdf",
         "format": "pdf",
         "description": "GDPR Anonymization Center PDF (~50+ pages)",
@@ -70,6 +74,7 @@ RESULTS_DIR.mkdir(exist_ok=True)
 # =============================================================================
 # Timing Capture
 # =============================================================================
+
 
 class BenchmarkResults:
     """Capture and store benchmark results."""
@@ -101,24 +106,29 @@ class BenchmarkResults:
     def add_error(self, error: str):
         self.errors.append(error)
 
-    def add_llm_call(self, provider: str, model: str, task_type: str,
-                     tokens: int, cost: float, latency_ms: float):
-        self.llm_calls.append({
-            "provider": provider,
-            "model": model,
-            "task_type": task_type,
-            "tokens": tokens,
-            "cost_usd": cost,
-            "latency_ms": latency_ms,
-        })
+    def add_llm_call(
+        self, provider: str, model: str, task_type: str, tokens: int, cost: float, latency_ms: float
+    ):
+        self.llm_calls.append(
+            {
+                "provider": provider,
+                "model": model,
+                "task_type": task_type,
+                "tokens": tokens,
+                "cost_usd": cost,
+                "latency_ms": latency_ms,
+            }
+        )
 
     def add_vlm_call(self, model: str, tokens: int, cost: float, latency_ms: float):
-        self.vlm_calls.append({
-            "model": model,
-            "tokens": tokens,
-            "cost_usd": cost,
-            "latency_ms": latency_ms,
-        })
+        self.vlm_calls.append(
+            {
+                "model": model,
+                "tokens": tokens,
+                "cost_usd": cost,
+                "latency_ms": latency_ms,
+            }
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -145,6 +155,7 @@ class BenchmarkResults:
 # =============================================================================
 # Pipeline Runner
 # =============================================================================
+
 
 async def run_pipeline_benchmark(doc_config: dict) -> dict:
     """Run full pipeline benchmark for a single document."""
@@ -207,14 +218,22 @@ async def run_pipeline_benchmark(doc_config: dict) -> dict:
             # Try to extract stage timings from result
             if isinstance(pipeline_result, dict):
                 if "chunks_created" in pipeline_result:
-                    results.add_stage("chunking", 0, {
-                        "chunks_created": pipeline_result.get("chunks_created", 0),
-                    })
+                    results.add_stage(
+                        "chunking",
+                        0,
+                        {
+                            "chunks_created": pipeline_result.get("chunks_created", 0),
+                        },
+                    )
                 if "entities_extracted" in pipeline_result:
-                    results.add_stage("graph_extraction", 0, {
-                        "entities_extracted": pipeline_result.get("entities_extracted", 0),
-                        "relations_extracted": pipeline_result.get("relations_extracted", 0),
-                    })
+                    results.add_stage(
+                        "graph_extraction",
+                        0,
+                        {
+                            "entities_extracted": pipeline_result.get("entities_extracted", 0),
+                            "relations_extracted": pipeline_result.get("relations_extracted", 0),
+                        },
+                    )
 
         return {
             "success": True,
@@ -223,12 +242,15 @@ async def run_pipeline_benchmark(doc_config: dict) -> dict:
             "file_size_kb": file_path.stat().st_size / 1024,
             "format": doc_config["format"],
             "benchmark_results": results.to_dict(),
-            "pipeline_result": pipeline_result if isinstance(pipeline_result, dict) else str(pipeline_result),
+            "pipeline_result": (
+                pipeline_result if isinstance(pipeline_result, dict) else str(pipeline_result)
+            ),
         }
 
     except Exception as e:
         results.stop()
         import traceback
+
         error_msg = f"{type(e).__name__}: {str(e)}"
         tb = traceback.format_exc()
 
@@ -262,6 +284,7 @@ async def main():
     print("\n[CONFIG] Verifying cloud routing configuration...")
     try:
         from src.components.llm_proxy.config import LLMProxyConfig
+
         config = LLMProxyConfig.from_env()
         prefer_cloud = config.routing.get("prefer_cloud", False)
         alibaba_enabled = config.is_provider_enabled("alibaba_cloud")
@@ -323,7 +346,9 @@ async def main():
             print(f"  {r['file_name']}: {r.get('error', 'Unknown error')}")
 
     # Save results
-    results_file = RESULTS_DIR / f"sprint33_cloud_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    results_file = (
+        RESULTS_DIR / f"sprint33_cloud_benchmark_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
 
     output_data = {
         "timestamp": datetime.now().isoformat(),
@@ -339,7 +364,9 @@ async def main():
             "total_documents": len(all_results),
             "successful": len(successful),
             "failed": len(failed),
-            "total_time_s": sum(r["benchmark_results"]["total_time_s"] for r in successful) if successful else 0,
+            "total_time_s": (
+                sum(r["benchmark_results"]["total_time_s"] for r in successful) if successful else 0
+            ),
         },
     }
 

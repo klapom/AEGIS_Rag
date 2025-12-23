@@ -1,4 +1,5 @@
 """Verify RELATES_TO relationships in Neo4j."""
+
 import asyncio
 import os
 import sys
@@ -25,7 +26,11 @@ async def verify():
     relations = await client.execute_read(list_query)
     print("\nRELATES_TO relationships:")
     for rel in relations:
-        desc = rel["description"][:60] + "..." if rel["description"] and len(rel["description"]) > 60 else (rel["description"] or "N/A")
+        desc = (
+            rel["description"][:60] + "..."
+            if rel["description"] and len(rel["description"]) > 60
+            else (rel["description"] or "N/A")
+        )
         print(f"  {rel['source']} --> {rel['target']}")
         print(f"    {desc}")
 

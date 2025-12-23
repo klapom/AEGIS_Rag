@@ -181,7 +181,6 @@ class TestBashExecution:
         assert "error" in result
         assert "not found" in result["error"].lower()
 
-
     @pytest.mark.asyncio
     async def test_batch_execution(self):
         """Test batch execution of multiple commands."""

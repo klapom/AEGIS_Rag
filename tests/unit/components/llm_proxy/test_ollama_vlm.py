@@ -289,7 +289,11 @@ class TestGenerateImageDescription:
         client.client = AsyncMock()
         error_response = MagicMock()
         error_response.status_code = 500
-        client.client.post = AsyncMock(side_effect=httpx.HTTPStatusError("Server error", request=MagicMock(), response=error_response))
+        client.client.post = AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "Server error", request=MagicMock(), response=error_response
+            )
+        )
 
         with pytest.raises(httpx.HTTPStatusError):
             await client.generate_image_description(test_image, "test")
@@ -357,9 +361,7 @@ class TestCheckModelAvailable:
     async def test_model_not_available(self):
         """Test model availability check returns False for missing model."""
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "models": [{"name": "llama3:8b"}]
-        }
+        mock_response.json.return_value = {"models": [{"name": "llama3:8b"}]}
         mock_response.raise_for_status = MagicMock()
 
         client = OllamaVLMClient(default_model="qwen3-vl:32b")

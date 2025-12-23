@@ -56,11 +56,14 @@ async def test_full_streaming_workflow():
             )
         )
         # Sprint 52: Yield tuples matching stream_mode format
-        yield ("values", {
-            "query": query,
-            "intent": "hybrid",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "hybrid",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Iteration 2: Vector Search
         phase_events.append(
@@ -73,15 +76,18 @@ async def test_full_streaming_workflow():
                 metadata={"docs_retrieved": 2, "collection": "documents_v1", "top_k": 10},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "hybrid",
-            "retrieved_contexts": [
-                {"text": "RAG combines retrieval with generation", "score": 0.92},
-                {"text": "Vector search finds relevant documents", "score": 0.88},
-            ],
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "hybrid",
+                "retrieved_contexts": [
+                    {"text": "RAG combines retrieval with generation", "score": 0.92},
+                    {"text": "Vector search finds relevant documents", "score": 0.88},
+                ],
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Iteration 3: Graph Query
         phase_events.append(
@@ -94,14 +100,21 @@ async def test_full_streaming_workflow():
                 metadata={"entities_found": 1, "relationships_found": 2},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "hybrid",
-            "graph_results": [
-                {"entity": "RAG", "type": "system", "properties": {"full_name": "Retrieval-Augmented Generation"}},
-            ],
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "hybrid",
+                "graph_results": [
+                    {
+                        "entity": "RAG",
+                        "type": "system",
+                        "properties": {"full_name": "Retrieval-Augmented Generation"},
+                    },
+                ],
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Iteration 4: Reranking
         phase_events.append(
@@ -114,14 +127,17 @@ async def test_full_streaming_workflow():
                 metadata={"reranked_count": 1, "model": "cross-encoder"},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "hybrid",
-            "reranked_contexts": [
-                {"text": "RAG combines retrieval with generation", "score": 0.96},
-            ],
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "hybrid",
+                "reranked_contexts": [
+                    {"text": "RAG combines retrieval with generation", "score": 0.96},
+                ],
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Iteration 5: LLM Generation
         phase_events.append(
@@ -134,13 +150,16 @@ async def test_full_streaming_workflow():
                 metadata={"tokens_generated": 35, "model": "ollama:llama3.2"},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "hybrid",
-            "answer": "RAG (Retrieval-Augmented Generation) combines retrieval mechanisms with LLM generation to provide more accurate and contextual answers.",
-            "citation_map": {"source1": 0},
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "hybrid",
+                "answer": "RAG (Retrieval-Augmented Generation) combines retrieval mechanisms with LLM generation to provide more accurate and contextual answers.",
+                "citation_map": {"source1": 0},
+                "phase_events": phase_events.copy(),
+            },
+        )
 
     # Mock the compiled graph
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream):
@@ -156,7 +175,9 @@ async def test_full_streaming_workflow():
                 reasoning_complete = event["data"]
 
     # Verify phase events
-    assert len(events_received) >= 5, f"Expected at least 5 phase events, got {len(events_received)}"
+    assert (
+        len(events_received) >= 5
+    ), f"Expected at least 5 phase events, got {len(events_received)}"
 
     # Verify all phases completed successfully
     completed = [e for e in events_received if e["status"] == "completed"]
@@ -220,11 +241,14 @@ async def test_streaming_with_error_phase():
                 duration_ms=50.0,
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Failed vector search
         phase_events.append(
@@ -237,11 +261,14 @@ async def test_streaming_with_error_phase():
                 error="Connection timeout to Qdrant",
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_with_error):
         async for event in coordinator.process_query_stream(query=query, session_id=session_id):
@@ -282,11 +309,14 @@ async def test_streaming_with_skipped_phases():
                 duration_ms=50.0,
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Vector search
         phase_events.append(
@@ -298,12 +328,15 @@ async def test_streaming_with_skipped_phases():
                 duration_ms=100.0,
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "retrieved_contexts": [{"text": "result", "score": 0.9}],
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "retrieved_contexts": [{"text": "result", "score": 0.9}],
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Graph query: skipped (vector-only intent)
         phase_events.append(
@@ -314,11 +347,14 @@ async def test_streaming_with_skipped_phases():
                 metadata={"reason": "vector_only_intent"},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # Memory retrieval: skipped
         phase_events.append(
@@ -329,11 +365,14 @@ async def test_streaming_with_skipped_phases():
                 metadata={"reason": "vector_only_intent"},
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "phase_events": phase_events.copy(),
+            },
+        )
 
         # LLM generation
         phase_events.append(
@@ -345,13 +384,16 @@ async def test_streaming_with_skipped_phases():
                 duration_ms=150.0,
             )
         )
-        yield ("values", {
-            "query": query,
-            "intent": "vector",
-            "answer": "Answer based on vector search",
-            "citation_map": {},
-            "phase_events": phase_events.copy(),
-        })
+        yield (
+            "values",
+            {
+                "query": query,
+                "intent": "vector",
+                "answer": "Answer based on vector search",
+                "citation_map": {},
+                "phase_events": phase_events.copy(),
+            },
+        )
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_with_skips):
         async for event in coordinator.process_query_stream(query=query, session_id=session_id):
@@ -453,45 +495,54 @@ async def test_streaming_early_termination():
 
     async def mock_astream_slow(initial_state, config=None, stream_mode=None):
         """Mock astream with slow, long-running phases."""
-        yield ("values", {
-            "router": {
-                "query": query,
-                "intent": "hybrid",
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.INTENT_CLASSIFICATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=50.0,
-                ),
-            }
-        })
+        yield (
+            "values",
+            {
+                "router": {
+                    "query": query,
+                    "intent": "hybrid",
+                    "phase_event": PhaseEvent(
+                        phase_type=PhaseType.INTENT_CLASSIFICATION,
+                        status=PhaseStatus.COMPLETED,
+                        start_time=datetime.utcnow(),
+                        end_time=datetime.utcnow(),
+                        duration_ms=50.0,
+                    ),
+                }
+            },
+        )
 
         # Simulate a very slow phase
-        yield ("values", {
-            "vector_agent": {
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.VECTOR_SEARCH,
-                    status=PhaseStatus.IN_PROGRESS,
-                    start_time=datetime.utcnow(),
-                    duration_ms=None,
-                ),
-            }
-        })
+        yield (
+            "values",
+            {
+                "vector_agent": {
+                    "phase_event": PhaseEvent(
+                        phase_type=PhaseType.VECTOR_SEARCH,
+                        status=PhaseStatus.IN_PROGRESS,
+                        start_time=datetime.utcnow(),
+                        duration_ms=None,
+                    ),
+                }
+            },
+        )
 
         # This would not be yielded if client disconnects
         await asyncio.sleep(10)
-        yield ("values", {
-            "vector_agent": {
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.VECTOR_SEARCH,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=10000,
-                ),
-            }
-        })
+        yield (
+            "values",
+            {
+                "vector_agent": {
+                    "phase_event": PhaseEvent(
+                        phase_type=PhaseType.VECTOR_SEARCH,
+                        status=PhaseStatus.COMPLETED,
+                        start_time=datetime.utcnow(),
+                        end_time=datetime.utcnow(),
+                        duration_ms=10000,
+                    ),
+                }
+            },
+        )
 
     with patch.object(coordinator.compiled_graph, "astream", new=mock_astream_slow):
         try:
@@ -571,19 +622,22 @@ async def test_concurrent_streaming_sessions():
 
     async def mock_astream(initial_state, config=None, stream_mode=None):
         """Mock astream yielding a simple event."""
-        yield ("values", {
-            "router": {
-                "query": initial_state.get("query", "test"),
-                "intent": "hybrid",
-                "phase_event": PhaseEvent(
-                    phase_type=PhaseType.INTENT_CLASSIFICATION,
-                    status=PhaseStatus.COMPLETED,
-                    start_time=datetime.utcnow(),
-                    end_time=datetime.utcnow(),
-                    duration_ms=50.0,
-                ),
-            }
-        })
+        yield (
+            "values",
+            {
+                "router": {
+                    "query": initial_state.get("query", "test"),
+                    "intent": "hybrid",
+                    "phase_event": PhaseEvent(
+                        phase_type=PhaseType.INTENT_CLASSIFICATION,
+                        status=PhaseStatus.COMPLETED,
+                        start_time=datetime.utcnow(),
+                        end_time=datetime.utcnow(),
+                        duration_ms=50.0,
+                    ),
+                }
+            },
+        )
 
     async def stream_query(query_text, session_id):
         """Stream a single query."""

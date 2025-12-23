@@ -187,9 +187,7 @@ class TestConnectServer:
     def test_connect_server_exception(self, test_client, mock_connection_manager):
         """Test connection with exception."""
         # Mock exception during connection
-        mock_connection_manager.connect_all = AsyncMock(
-            side_effect=Exception("Connection failed")
-        )
+        mock_connection_manager.connect_all = AsyncMock(side_effect=Exception("Connection failed"))
 
         response = test_client.post(
             "/api/v1/mcp/servers/filesystem/connect",

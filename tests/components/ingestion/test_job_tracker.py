@@ -49,7 +49,9 @@ async def test_create_job_success(job_tracker: IngestionJobTracker) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_job_with_config(job_tracker: IngestionJobTracker, sample_job_config: dict[str, Any]) -> None:
+async def test_create_job_with_config(
+    job_tracker: IngestionJobTracker, sample_job_config: dict[str, Any]
+) -> None:
     """Test job creation with optional configuration.
 
     Verifies:
@@ -391,9 +393,7 @@ async def test_update_file_status(
 
 
 @pytest.mark.asyncio
-async def test_update_file_progress(
-    job_tracker: IngestionJobTracker, sample_file: int
-) -> None:
+async def test_update_file_progress(job_tracker: IngestionJobTracker, sample_file: int) -> None:
     """Test updating file progress metrics.
 
     Verifies:
@@ -418,9 +418,7 @@ async def test_update_file_progress(
 
 
 @pytest.mark.asyncio
-async def test_update_file_on_failure(
-    job_tracker: IngestionJobTracker, sample_file: int
-) -> None:
+async def test_update_file_on_failure(job_tracker: IngestionJobTracker, sample_file: int) -> None:
     """Test updating file with error information.
 
     Verifies:
@@ -549,7 +547,9 @@ async def test_get_events_for_job(job_tracker: IngestionJobTracker, sample_job: 
 
 
 @pytest.mark.asyncio
-async def test_get_events_with_level_filter(job_tracker: IngestionJobTracker, sample_job: str) -> None:
+async def test_get_events_with_level_filter(
+    job_tracker: IngestionJobTracker, sample_job: str
+) -> None:
     """Test filtering events by level.
 
     Verifies:
@@ -713,15 +713,14 @@ async def test_concurrent_event_logging(job_tracker: IngestionJobTracker, sample
 
 
 @pytest.mark.asyncio
-async def test_concurrent_file_updates(
-    job_tracker: IngestionJobTracker, sample_job: str
-) -> None:
+async def test_concurrent_file_updates(job_tracker: IngestionJobTracker, sample_job: str) -> None:
     """Test concurrent file additions.
 
     Verifies:
     - Multiple files can be added simultaneously
     - Each gets unique ID
     """
+
     async def add_file_async(idx: int) -> int:
         return await job_tracker.add_file(
             job_id=sample_job,
@@ -769,7 +768,9 @@ async def test_job_config_serialization(job_tracker: IngestionJobTracker) -> Non
 
 
 @pytest.mark.asyncio
-async def test_event_details_serialization(job_tracker: IngestionJobTracker, sample_job: str) -> None:
+async def test_event_details_serialization(
+    job_tracker: IngestionJobTracker, sample_job: str
+) -> None:
     """Test event details JSON serialization.
 
     Verifies:
@@ -820,14 +821,16 @@ async def test_add_event_empty_message(job_tracker: IngestionJobTracker, sample_
 
 
 @pytest.mark.asyncio
-async def test_add_event_special_characters(job_tracker: IngestionJobTracker, sample_job: str) -> None:
+async def test_add_event_special_characters(
+    job_tracker: IngestionJobTracker, sample_job: str
+) -> None:
     """Test event messages with special characters.
 
     Verifies:
     - Unicode characters are handled
     - JSON escaping works
     """
-    message = 'Test "quotes" and \'apostrophes\' and special chars: @#$%^&*()'
+    message = "Test \"quotes\" and 'apostrophes' and special chars: @#$%^&*()"
     await job_tracker.add_event(sample_job, "INFO", "parsing", None, None, None, message)
 
     events = await job_tracker.get_events(sample_job)

@@ -25,7 +25,7 @@ async def test_generate_conversation_title_basic():
     """Test that title generation works with basic Q&A."""
     title = await generate_conversation_title(
         query="What is retrieval augmented generation?",
-        answer="RAG is a technique that combines retrieval with generation..."
+        answer="RAG is a technique that combines retrieval with generation...",
     )
 
     assert title is not None
@@ -40,7 +40,7 @@ async def test_generate_conversation_title_max_length():
     title = await generate_conversation_title(
         query="What is retrieval augmented generation?",
         answer="RAG is a technique...",
-        max_length=3
+        max_length=3,
     )
 
     assert title is not None
@@ -54,8 +54,7 @@ async def test_generate_conversation_title_fallback():
     """Test that fallback works when LLM fails."""
     # Simulate error by using empty strings (will trigger fallback)
     title = await generate_conversation_title(
-        query="What is RAG?",
-        answer=""  # Empty answer should still generate fallback
+        query="What is RAG?", answer=""  # Empty answer should still generate fallback
     )
 
     assert title is not None
@@ -68,10 +67,7 @@ async def test_generate_conversation_title_long_inputs():
     long_query = "A" * 500  # Exceeds 200 char truncation
     long_answer = "B" * 1000  # Exceeds 300 char truncation
 
-    title = await generate_conversation_title(
-        query=long_query,
-        answer=long_answer
-    )
+    title = await generate_conversation_title(query=long_query, answer=long_answer)
 
     assert title is not None
     assert len(title) > 0

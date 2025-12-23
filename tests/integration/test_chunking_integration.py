@@ -4,7 +4,6 @@ Sprint 16 Feature 16.1 - Unified Chunking Service
 Tests end-to-end chunking integration with Qdrant and LightRAG.
 """
 
-
 from src.core.chunk import ChunkStrategy
 from src.core.chunking_service import get_chunking_service, reset_chunking_service
 
