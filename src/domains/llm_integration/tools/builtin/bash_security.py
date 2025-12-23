@@ -101,9 +101,7 @@ def is_command_safe(command: str) -> SecurityCheckResult:
     for pattern in EXFILTRATION_PATTERNS:
         if re.search(pattern, command):
             logger.warning("exfiltration_pattern", command=command, pattern=pattern)
-            return SecurityCheckResult(
-                False, f"Potential data exfiltration pattern: {pattern}"
-            )
+            return SecurityCheckResult(False, f"Potential data exfiltration pattern: {pattern}")
 
     return SecurityCheckResult(True, None)
 

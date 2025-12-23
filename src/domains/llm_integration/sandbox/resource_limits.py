@@ -79,10 +79,7 @@ def apply_limits(limits: ResourceLimits) -> None:
     try:
         # Memory limit (virtual memory)
         memory_bytes = limits.max_memory_mb * 1024 * 1024
-        resource.setrlimit(
-            resource.RLIMIT_AS,
-            (memory_bytes, memory_bytes)
-        )
+        resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
         logger.debug("memory_limit_set", mb=limits.max_memory_mb)
 
     except (ValueError, OSError) as e:
@@ -91,10 +88,7 @@ def apply_limits(limits: ResourceLimits) -> None:
 
     try:
         # CPU time limit
-        resource.setrlimit(
-            resource.RLIMIT_CPU,
-            (limits.max_cpu_seconds, limits.max_cpu_seconds)
-        )
+        resource.setrlimit(resource.RLIMIT_CPU, (limits.max_cpu_seconds, limits.max_cpu_seconds))
         logger.debug("cpu_limit_set", seconds=limits.max_cpu_seconds)
 
     except (ValueError, OSError) as e:
@@ -103,10 +97,7 @@ def apply_limits(limits: ResourceLimits) -> None:
     try:
         # File size limit
         file_size_bytes = limits.max_file_size_mb * 1024 * 1024
-        resource.setrlimit(
-            resource.RLIMIT_FSIZE,
-            (file_size_bytes, file_size_bytes)
-        )
+        resource.setrlimit(resource.RLIMIT_FSIZE, (file_size_bytes, file_size_bytes))
         logger.debug("file_size_limit_set", mb=limits.max_file_size_mb)
 
     except (ValueError, OSError) as e:
@@ -114,10 +105,7 @@ def apply_limits(limits: ResourceLimits) -> None:
 
     try:
         # Number of open files
-        resource.setrlimit(
-            resource.RLIMIT_NOFILE,
-            (limits.max_open_files, limits.max_open_files)
-        )
+        resource.setrlimit(resource.RLIMIT_NOFILE, (limits.max_open_files, limits.max_open_files))
         logger.debug("open_files_limit_set", count=limits.max_open_files)
 
     except (ValueError, OSError) as e:
@@ -125,10 +113,7 @@ def apply_limits(limits: ResourceLimits) -> None:
 
     try:
         # Number of processes (not available on all platforms)
-        resource.setrlimit(
-            resource.RLIMIT_NPROC,
-            (limits.max_processes, limits.max_processes)
-        )
+        resource.setrlimit(resource.RLIMIT_NPROC, (limits.max_processes, limits.max_processes))
         logger.debug("process_limit_set", count=limits.max_processes)
 
     except (ValueError, OSError, AttributeError) as e:
@@ -191,10 +176,7 @@ def get_docker_resource_limits(limits: ResourceLimits) -> dict[str, Any]:
 
     # Add volume binds for allowed paths
     if limits.allowed_paths and not limits.read_only:
-        params["volumes"] = {
-            path: {"bind": path, "mode": "rw"}
-            for path in limits.allowed_paths
-        }
+        params["volumes"] = {path: {"bind": path, "mode": "rw"} for path in limits.allowed_paths}
 
     # Merge additional Docker options
     params.update(limits.docker_options)

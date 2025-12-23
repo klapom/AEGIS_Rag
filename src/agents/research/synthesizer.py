@@ -262,9 +262,8 @@ def extract_key_points(text: str, max_points: int = 5) -> list[str]:
             continue
 
         # Check for key indicators or high importance based on length and content
-        if (
-            any(indicator in sentence.lower() for indicator in key_indicators)
-            or (len(sentence) > 50 and len(sentence.split()) > 8)
+        if any(indicator in sentence.lower() for indicator in key_indicators) or (
+            len(sentence) > 50 and len(sentence.split()) > 8
         ):
             key_sentences.append(sentence)
 

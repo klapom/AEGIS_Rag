@@ -130,17 +130,13 @@ def validate_python_code(code: str) -> ValidationResult:
             # Check for dangerous builtins
             if isinstance(node.func, ast.Name) and node.func.id in DANGEROUS_BUILTINS:
                 logger.warning("dangerous_builtin", function=node.func.id)
-                return ValidationResult(
-                    False, f"Dangerous builtin function: {node.func.id}"
-                )
+                return ValidationResult(False, f"Dangerous builtin function: {node.func.id}")
 
         # Check attribute access
         elif isinstance(node, ast.Attribute):
             if node.attr in DANGEROUS_ATTRIBUTES:
                 logger.warning("dangerous_attribute", attribute=node.attr)
-                return ValidationResult(
-                    False, f"Dangerous attribute access: {node.attr}"
-                )
+                return ValidationResult(False, f"Dangerous attribute access: {node.attr}")
 
         # Check for exec/eval as names
         elif isinstance(node, ast.Name) and node.id in ["exec", "eval", "__import__"]:

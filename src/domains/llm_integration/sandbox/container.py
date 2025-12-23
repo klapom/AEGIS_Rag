@@ -79,6 +79,7 @@ class DockerSandbox:
         if self._client is None:
             try:
                 import docker
+
                 self._client = docker.from_env()
                 logger.debug("docker_client_initialized")
             except ImportError:

@@ -87,7 +87,9 @@ def add_app_context(_logger: logging.Logger, _method_name: str, event_dict: Even
     return event_dict
 
 
-def setup_logging(log_level: str = "INFO", json_logs: bool = False, include_timestamp: bool = True) -> None:
+def setup_logging(
+    log_level: str = "INFO", json_logs: bool = False, include_timestamp: bool = True
+) -> None:
     """
     Configure structured logging for the application.
 
@@ -150,10 +152,12 @@ def setup_logging(log_level: str = "INFO", json_logs: bool = False, include_time
     if include_timestamp:
         shared_processors.append(structlog.processors.TimeStamper(fmt="iso"))
 
-    shared_processors.extend([
-        structlog.processors.StackInfoRenderer(),
-        add_app_context,
-    ])
+    shared_processors.extend(
+        [
+            structlog.processors.StackInfoRenderer(),
+            add_app_context,
+        ]
+    )
 
     if json_logs:
         # Production: JSON logs for machine parsing

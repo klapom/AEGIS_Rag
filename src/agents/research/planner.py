@@ -184,9 +184,7 @@ async def evaluate_plan_quality(
     }
 
     # Overall quality score (0-1)
-    metrics["quality_score"] = (
-        metrics["coverage_score"] * 0.5 + metrics["diversity_score"] * 0.5
-    )
+    metrics["quality_score"] = metrics["coverage_score"] * 0.5 + metrics["diversity_score"] * 0.5
 
     logger.debug("plan_quality_evaluated", metrics=metrics)
 

@@ -287,9 +287,7 @@ class UnifiedEmbeddingService:
                 return embedding
 
             except Exception as e:
-                logger.error(
-                    "native_embedding_failed", text_preview=text[:50], error=str(e)
-                )
+                logger.error("native_embedding_failed", text_preview=text[:50], error=str(e))
                 raise LLMError("embed_single_native", f"Native embedding failed: {e}") from e
 
         # Ollama backend path (backward compatible, asynchronous)
@@ -428,7 +426,9 @@ class UnifiedEmbeddingService:
 
                 batch_duration_ms = (time.perf_counter() - batch_start) * 1000
                 total_chars = sum(len(t) for t in texts)
-                embeddings_per_sec = len(texts) / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
+                embeddings_per_sec = (
+                    len(texts) / (batch_duration_ms / 1000) if batch_duration_ms > 0 else 0
+                )
 
                 logger.info(
                     "TIMING_embedding_batch_native",

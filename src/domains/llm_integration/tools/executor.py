@@ -265,9 +265,7 @@ class ToolExecutor:
                 "sandbox_enabled": True
             }
         """
-        error_rate = (
-            self._error_count / self._execution_count if self._execution_count > 0 else 0.0
-        )
+        error_rate = self._error_count / self._execution_count if self._execution_count > 0 else 0.0
 
         return {
             "total_executions": self._execution_count,

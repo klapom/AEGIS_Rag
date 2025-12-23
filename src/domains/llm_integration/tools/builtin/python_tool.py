@@ -157,11 +157,7 @@ async def _execute_python_code(code: str) -> dict[str, Any]:
         stderr_output = sys.stderr.getvalue()
 
         # Get any variables created
-        user_vars = {
-            k: v
-            for k, v in restricted_locals.items()
-            if not k.startswith("_")
-        }
+        user_vars = {k: v for k, v in restricted_locals.items() if not k.startswith("_")}
 
         logger.info(
             "python_execute_success",
@@ -236,9 +232,7 @@ async def python_execute_batch(
 
         if shared_context:
             # Execute with shared globals
-            result = await _execute_with_context(
-                code, shared_context, timeout_per_snippet
-            )
+            result = await _execute_with_context(code, shared_context, timeout_per_snippet)
         else:
             # Execute independently
             result = await python_execute(code, timeout=timeout_per_snippet)
