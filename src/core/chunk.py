@@ -128,6 +128,12 @@ class Chunk(BaseModel):
         description="Bounding boxes for each section",
     )
 
+    # Document type support (Sprint 62 Feature 62.7)
+    document_type: str = Field(
+        default="unknown",
+        description="Document type (pdf, docx, html, md, txt, xlsx, pptx, unknown)",
+    )
+
     @field_validator("end_char")
     @classmethod
     def validate_end_char(cls, v: int, info: ValidationInfo) -> int:
@@ -175,6 +181,7 @@ class Chunk(BaseModel):
             "section_headings": self.section_headings,
             "section_pages": self.section_pages,
             "section_bboxes": self.section_bboxes,
+            "document_type": self.document_type,
             **self.metadata,
         }
 
@@ -190,6 +197,7 @@ class Chunk(BaseModel):
             "document_id": self.document_id,
             "chunk_index": self.chunk_index,
             "token_count": self.token_count,
+            "document_type": self.document_type,
             **self.metadata,
         }
 
@@ -207,6 +215,7 @@ class Chunk(BaseModel):
             "tokens": self.token_count,
             "start_char": self.start_char,
             "end_char": self.end_char,
+            "document_type": self.document_type,
         }
 
     model_config = {
