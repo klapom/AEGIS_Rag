@@ -117,10 +117,20 @@ jobs:
           pip install poetry
           poetry config virtualenvs.in-project true
 
-      - name: Install Dependencies (Core + Ingestion + Reranking for Import Validation)
+      # Sprint 61: Changed from --only dev to --with dev to include core dependencies
+      # Required for Sprint 61 imports (sentence-transformers, torch, etc.)
+      - name: Install Dependencies (Core + Dev for Import Validation)
         run: |
-          poetry install --without monitoring --only dev --no-root
+          poetry install --without monitoring --with dev --no-interaction --no-ansi
 
+      # Sprint 61: Verify critical dependencies are installed
+      - name: Verify Critical Dependencies
+        run: |
+          echo "🔍 Verifying Sprint 61 dependencies..."
+          poetry run python -c "import sentence_transformers; print('✅ sentence-transformers')"
+          poetry run python -c "import torch; print('✅ torch')"
+          poetry run python -c "from src.domains.vector_search.embedding import NativeEmbeddingService; print('✅ Native embeddings')"
+          echo "✅ All critical dependencies verified"
 
       - name: Validate All Python Imports
         run: |
@@ -213,6 +223,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Sprint 61: Free disk space BEFORE installing dependencies
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: false  # Keep swap for better performance
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -239,6 +260,13 @@ jobs:
         run: |
           poetry install --without monitoring --with dev --no-interaction --no-ansi
 
+      # Sprint 61: Clear Poetry cache to save disk space
+      - name: Clear Poetry Cache
+        run: |
+          echo "Clearing Poetry cache to save disk space..."
+          poetry cache clear pypi --all -n || true
+          poetry cache clear PyPI --all -n || true
+          echo "Poetry cache cleared"
 
       - name: Clear Python Bytecode Cache
         run: |
@@ -253,7 +281,6 @@ jobs:
           poetry run pytest tests/unit/ tests/components/ tests/api/ \
             --cov=src \
             --cov-report=xml \
-            --cov-report=html \
             --cov-report=term-missing \
             --cov-fail-under=50 \
             --junitxml=test-results/unit-results.xml \
@@ -270,6 +297,7 @@ jobs:
           name: codecov-unit
           fail_ci_if_error: true  # Sprint 13: Fail if coverage upload fails
 
+      # Sprint 61: Only upload XML coverage (not HTML) to save disk space
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -278,7 +306,6 @@ jobs:
           path: |
             test-results/
             coverage.xml
-            htmlcov/
 
   # ============================================================
   # JOB 6: INTEGRATION TESTS (with Docker Services)
