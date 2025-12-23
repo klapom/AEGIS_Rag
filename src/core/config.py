@@ -754,6 +754,30 @@ class Settings(BaseSettings):
         description="Batch size for sentence-transformers GPU processing",
     )
 
+    # Reranking Backend Configuration (Sprint 61 Feature 61.2)
+    reranking_backend: Literal["cross_encoder", "llm"] = Field(
+        default="cross_encoder",
+        description=(
+            "Reranking service backend selection:\n"
+            "- 'cross_encoder': MS MARCO MiniLM (default, 17x faster, Sprint 61)\n"
+            "- 'llm': LLM-based reranking (backward compatible, slower)"
+        ),
+    )
+    ce_model_name: str = Field(
+        default="BAAI/bge-reranker-v2-m3",
+        description="HuggingFace model for cross-encoder reranking (multilingual, ~560MB)",
+    )
+    ce_device: str = Field(
+        default="auto",
+        description="Device for cross-encoder ('auto', 'cuda', 'cpu')",
+    )
+    ce_max_length: int = Field(
+        default=512,
+        ge=128,
+        le=2048,
+        description="Maximum token length for query-document pairs",
+    )
+
     # Sprint 33 Performance: Parallel Ingestion Settings
     ingestion_parallel_files: int = Field(
         default=3,

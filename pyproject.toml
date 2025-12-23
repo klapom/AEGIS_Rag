@@ -326,5 +326,6 @@ markers = [
     "requires_llm: Tests requiring real LLM (Ollama) - skipped in CI",
     "cloud: Cloud API tests requiring API keys (DashScope, OpenAI) - skipped in CI",
     "gpu: Tests requiring GPU hardware - skipped in CI",
+    "benchmark: Performance benchmark tests - for manual verification",
 ]
 asyncio_mode = "auto"
