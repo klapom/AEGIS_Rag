@@ -9,9 +9,9 @@ Tests cover:
 - Response validation
 """
 
-import pytest
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -63,9 +63,7 @@ class TestSectionCommunitiesEndpoint:
             )
 
             # Make request
-            response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction"
-            )
+            response = client.get("/api/v1/graph/communities/doc_123/sections/Introduction")
 
             # Verify response
             assert response.status_code == 200
@@ -74,9 +72,7 @@ class TestSectionCommunitiesEndpoint:
             assert data["section_heading"] == "Introduction"
             assert data["total_communities"] == 1
 
-    def test_get_section_communities_with_parameters(
-        self, client: TestClient
-    ) -> None:
+    def test_get_section_communities_with_parameters(self, client: TestClient) -> None:
         """Test endpoint with query parameters."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -110,16 +106,12 @@ class TestSectionCommunitiesEndpoint:
 
             # Verify service was called with parameters
             assert response.status_code == 200
-            call_kwargs = (
-                mock_service.get_section_communities_with_visualization.call_args[1]
-            )
+            call_kwargs = mock_service.get_section_communities_with_visualization.call_args[1]
             assert call_kwargs["algorithm"] == "leiden"
             assert call_kwargs["resolution"] == 1.5
             assert call_kwargs["layout_algorithm"] == "circular"
 
-    def test_get_section_communities_invalid_algorithm(
-        self, client: TestClient
-    ) -> None:
+    def test_get_section_communities_invalid_algorithm(self, client: TestClient) -> None:
         """Test endpoint with invalid algorithm parameter."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -146,16 +138,13 @@ class TestSectionCommunitiesEndpoint:
 
             # Make request with invalid algorithm
             response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction?"
-                "algorithm=invalid"
+                "/api/v1/graph/communities/doc_123/sections/Introduction?" "algorithm=invalid"
             )
 
             # Should fail validation
             assert response.status_code == 422  # Validation error
 
-    def test_get_section_communities_invalid_resolution(
-        self, client: TestClient
-    ) -> None:
+    def test_get_section_communities_invalid_resolution(self, client: TestClient) -> None:
         """Test endpoint with invalid resolution parameter."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -182,17 +171,14 @@ class TestSectionCommunitiesEndpoint:
 
             # Make request with invalid resolution (< 0.1)
             response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction?"
-                "resolution=0.05"
+                "/api/v1/graph/communities/doc_123/sections/Introduction?" "resolution=0.05"
             )
 
             # Should fail validation
             assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_section_communities_not_found(
-        self, client: TestClient
-    ) -> None:
+    async def test_get_section_communities_not_found(self, client: TestClient) -> None:
         """Test endpoint when section is not found."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -206,17 +192,13 @@ class TestSectionCommunitiesEndpoint:
             )
 
             # Make request
-            response = client.get(
-                "/api/v1/graph/communities/doc_999/sections/NonExistent"
-            )
+            response = client.get("/api/v1/graph/communities/doc_999/sections/NonExistent")
 
             # Should return 404
             assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_section_communities_server_error(
-        self, client: TestClient
-    ) -> None:
+    async def test_get_section_communities_server_error(self, client: TestClient) -> None:
         """Test endpoint when server error occurs."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -230,9 +212,7 @@ class TestSectionCommunitiesEndpoint:
             )
 
             # Make request
-            response = client.get(
-                "/api/v1/graph/communities/doc_123/sections/Introduction"
-            )
+            response = client.get("/api/v1/graph/communities/doc_123/sections/Introduction")
 
             # Should return 500
             assert response.status_code == 500
@@ -266,9 +246,7 @@ class TestCompareCommunitiesEndpoint:
                 comparison_time_ms=450.0,
             )
 
-            mock_service.compare_section_communities = AsyncMock(
-                return_value=mock_response
-            )
+            mock_service.compare_section_communities = AsyncMock(return_value=mock_response)
 
             # Make request
             response = client.post(
@@ -288,9 +266,7 @@ class TestCompareCommunitiesEndpoint:
             assert len(data["sections"]) == 2
 
     @pytest.mark.asyncio
-    async def test_compare_communities_missing_document_id(
-        self, client: TestClient
-    ) -> None:
+    async def test_compare_communities_missing_document_id(self, client: TestClient) -> None:
         """Test comparison without document_id."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -310,9 +286,7 @@ class TestCompareCommunitiesEndpoint:
             assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_compare_communities_single_section(
-        self, client: TestClient
-    ) -> None:
+    async def test_compare_communities_single_section(self, client: TestClient) -> None:
         """Test comparison with only one section."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"
@@ -333,9 +307,7 @@ class TestCompareCommunitiesEndpoint:
             assert response.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_compare_communities_server_error(
-        self, client: TestClient
-    ) -> None:
+    async def test_compare_communities_server_error(self, client: TestClient) -> None:
         """Test comparison when server error occurs."""
         with patch(
             "src.api.v1.graph_communities.get_section_community_service"

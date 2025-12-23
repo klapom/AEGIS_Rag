@@ -24,7 +24,6 @@ from src.domains.llm_integration.tools import (
     validate_parameters,
 )
 
-
 # ============================================================================
 # Test Tool Registration
 # ============================================================================

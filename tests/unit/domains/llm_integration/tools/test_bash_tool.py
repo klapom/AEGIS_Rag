@@ -3,20 +3,19 @@
 Sprint 59 Feature 59.3: Bash execution with security validation.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-import asyncio
+from unittest.mock import patch
 
+import pytest
+
+from src.domains.llm_integration.tools.builtin.bash_security import (
+    get_allowed_commands,
+    is_command_safe,
+    sanitize_environment,
+)
 from src.domains.llm_integration.tools.builtin.bash_tool import (
     bash_execute,
     bash_execute_batch,
 )
-from src.domains.llm_integration.tools.builtin.bash_security import (
-    is_command_safe,
-    sanitize_environment,
-    get_allowed_commands,
-)
-
 
 # =============================================================================
 # Security Tests
@@ -148,7 +147,7 @@ class TestBashExecution:
         """Test that timeout is clamped to maximum."""
         # Request 1000 seconds, should be clamped to 300
         with patch("src.domains.llm_integration.tools.builtin.bash_tool.logger") as mock_logger:
-            result = await bash_execute("echo test", timeout=1000)
+            await bash_execute("echo test", timeout=1000)
 
             # Should log timeout clamping
             mock_logger.warning.assert_called()
@@ -158,8 +157,8 @@ class TestBashExecution:
     @pytest.mark.asyncio
     async def test_working_directory(self):
         """Test execution with custom working directory."""
-        import tempfile
         import os
+        import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a test file

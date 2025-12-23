@@ -197,7 +197,7 @@ class TestSemanticRelationDeduplicator:
 
         with patch.object(deduplicator, "_get_redis_client", return_value=mock_redis_client):
             types = ["ACTED_IN", "STARRED_IN"]
-            result = await deduplicator.deduplicate_types(types, use_cache=True)
+            await deduplicator.deduplicate_types(types, use_cache=True)
 
             # Cache miss: should compute fresh
             mock_redis_client.get.assert_called_once()
@@ -213,7 +213,7 @@ class TestSemanticRelationDeduplicator:
         """Test deduplication with caching disabled."""
         with patch.object(deduplicator, "_get_redis_client", return_value=mock_redis_client):
             types = ["ACTED_IN", "STARRED_IN"]
-            result = await deduplicator.deduplicate_types(types, use_cache=False)
+            await deduplicator.deduplicate_types(types, use_cache=False)
 
             # Should not touch Redis
             assert not mock_redis_client.get.called

@@ -32,7 +32,7 @@ class TestCostTrackerInitialization:
     def test_init_creates_parent_directories(self, tmp_path: Path) -> None:
         """Test CostTracker creates parent directories if needed."""
         nested_path = tmp_path / "data" / "nested" / "cost_tracking.db"
-        tracker = CostTracker(db_path=nested_path)
+        CostTracker(db_path=nested_path)
 
         assert nested_path.exists()
         assert nested_path.parent.exists()
@@ -137,7 +137,7 @@ class TestTrackRequest:
             assert row[9] == 0.035  # cost_usd
             assert row[10] == 250.5  # latency_ms
             assert row[11] == "high_quality_high_complexity"  # routing_reason
-            assert row[12] == False  # fallback_used
+            assert not row[12]  # fallback_used
             assert row[5] == "task-12345"  # task_id
 
     def test_track_request_fallback_used(self, cost_tracker: CostTracker) -> None:
@@ -710,7 +710,7 @@ class TestCostTrackerEdgeCases:
     def test_spending_precision(self, cost_tracker: CostTracker) -> None:
         """Test spending calculation maintains precision."""
         # Track several requests with fractional costs
-        for i in range(10):
+        for _i in range(10):
             cost_tracker.track_request(
                 provider="alibaba_cloud",
                 model="qwen-turbo",

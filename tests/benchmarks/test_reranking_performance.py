@@ -7,8 +7,10 @@ Performance Targets (from TD-072):
 - Reranking 5 docs: <50ms
 """
 
-import pytest
 import time
+
+import pytest
+
 from src.domains.vector_search.reranking import CrossEncoderReranker
 
 
@@ -136,11 +138,11 @@ def test_reranking_cpu_performance_comparison():
     gpu_baseline = 120  # ms from TD-072
     slowdown_factor = cpu_latency / gpu_baseline
 
-    print(f"\n📊 CPU Performance:")
+    print("\n📊 CPU Performance:")
     print(f"   Latency: {cpu_latency:.1f}ms")
     print(f"   GPU baseline: {gpu_baseline}ms")
     print(f"   Slowdown: {slowdown_factor:.1f}x")
-    print(f"   Device: CPU")
+    print("   Device: CPU")
 
     # Document current performance (informational)
     assert cpu_latency > 0, "Sanity check: latency should be positive"

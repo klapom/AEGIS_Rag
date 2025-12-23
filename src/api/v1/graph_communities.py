@@ -16,7 +16,6 @@ from fastapi import APIRouter, Body, HTTPException, Query, status
 
 from src.domains.knowledge_graph.communities import (
     CommunityComparisonOverview,
-    SectionCommunityService,
     SectionCommunityVisualizationResponse,
     get_section_community_service,
 )
@@ -204,7 +203,7 @@ async def get_section_communities_visualization(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Section '{section_id}' not found in document '{document_id}'",
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -217,7 +216,7 @@ async def get_section_communities_visualization(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate section community visualizations",
-        )
+        ) from e
 
 
 @router.post(
@@ -353,7 +352,7 @@ async def compare_section_communities(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
 
     except Exception as e:
         logger.error(
@@ -364,4 +363,4 @@ async def compare_section_communities(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to compare section communities",
-        )
+        ) from e

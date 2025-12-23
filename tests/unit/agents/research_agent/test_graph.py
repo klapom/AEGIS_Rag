@@ -263,7 +263,7 @@ class TestRunResearch:
             }
             mock_create.return_value = mock_graph
 
-            result = await run_research("Test", namespace="custom_ns")
+            await run_research("Test", namespace="custom_ns")
 
             # Verify initial state had correct namespace
             call_args = mock_graph.ainvoke.call_args

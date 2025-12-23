@@ -39,7 +39,6 @@ import structlog
 # ANY-LLM is planned for future integration (ADR-033) but not yet installed
 if TYPE_CHECKING:
     from any_llm import LLMProvider, acompletion  # type: ignore[import-not-found]
-    import redis.asyncio as redis
 
 # Runtime: Create stubs if any_llm not available
 try:

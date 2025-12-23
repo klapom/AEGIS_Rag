@@ -6,12 +6,11 @@ Tests for the main MultiTurnAgent class and workflow.
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.agents.multi_turn.agent import MultiTurnAgent
-from src.api.models.multi_turn import Source
 
 
 @pytest.fixture
@@ -90,9 +89,7 @@ class TestMultiTurnAgent:
 
     @pytest.mark.asyncio
     @patch("src.agents.multi_turn.agent.MultiTurnAgent._compile_graph")
-    async def test_process_turn_with_history(
-        self, mock_compile_graph, sample_conversation_history
-    ):
+    async def test_process_turn_with_history(self, mock_compile_graph, sample_conversation_history):
         """Test processing turn with existing conversation history."""
         # Setup mock graph
         mock_graph = AsyncMock()

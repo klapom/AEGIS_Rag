@@ -3,23 +3,23 @@
 Sprint 59 Feature 59.6: Agentic search tests.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 
-from src.agents.research.planner import plan_research, parse_plan, evaluate_plan_quality
+import pytest
+
+from src.agents.research.graph import create_research_graph, run_research
+from src.agents.research.planner import evaluate_plan_quality, parse_plan, plan_research
 from src.agents.research.searcher import (
-    execute_searches,
     deduplicate_results,
-    rank_results,
     evaluate_results,
+    execute_searches,
+    rank_results,
 )
 from src.agents.research.synthesizer import (
-    synthesize_findings,
-    format_results_for_synthesis,
     extract_key_points,
+    format_results_for_synthesis,
+    synthesize_findings,
 )
-from src.agents.research.graph import create_research_graph, run_research
-
 
 # =============================================================================
 # Planner Tests

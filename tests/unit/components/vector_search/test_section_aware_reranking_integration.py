@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ============================================================================
 # TEST: Hybrid Search Integration
 # ============================================================================
@@ -124,8 +123,6 @@ async def test_hybrid_search_section_filter_multiple_sections():
     mock_qdrant.search = AsyncMock(return_value=[])
     mock_embedding.embed_single = AsyncMock(return_value=[0.1] * 1024)
     mock_bm25.search = MagicMock(return_value=[])
-
-    from src.components.retrieval.reranker import RerankResult
 
     mock_reranker.rerank = AsyncMock(return_value=[])
 

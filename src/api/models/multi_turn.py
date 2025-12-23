@@ -41,9 +41,7 @@ class Contradiction(BaseModel):
     previous_info: str = Field(..., description="Previous information (conflicting)")
     turn_index: int = Field(..., ge=0, description="Index of previous turn with contradiction")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Contradiction confidence (0-1)")
-    explanation: str | None = Field(
-        default=None, description="Explanation of the contradiction"
-    )
+    explanation: str | None = Field(default=None, description="Explanation of the contradiction")
 
 
 class MultiTurnRequest(BaseModel):
@@ -52,9 +50,7 @@ class MultiTurnRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=5000, description="User query")
     conversation_id: str = Field(..., description="Conversation ID for tracking state")
     namespace: str = Field(default="default", description="Namespace to search in")
-    detect_contradictions: bool = Field(
-        default=True, description="Enable contradiction detection"
-    )
+    detect_contradictions: bool = Field(default=True, description="Enable contradiction detection")
     max_history_turns: int = Field(
         default=5, ge=1, le=20, description="Max conversation turns to include in context"
     )

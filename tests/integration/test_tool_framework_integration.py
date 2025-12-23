@@ -11,10 +11,8 @@ These tests verify that all components work together correctly:
 
 import pytest
 
-from src.domains.llm_integration.tools.registry import ToolRegistry
 from src.domains.llm_integration.tools.executor import ToolExecutor
-from src.domains.llm_integration.tools.builtin.bash_tool import bash_execute
-from src.domains.llm_integration.tools.builtin.python_tool import python_execute
+from src.domains.llm_integration.tools.registry import ToolRegistry
 
 
 @pytest.mark.integration

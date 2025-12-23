@@ -33,8 +33,7 @@ class WebSearchRequest(BaseModel):
     max_results: int = Field(default=5, ge=1, le=20, description="Max results to return")
     region: str = Field(default="de-DE", description="Region code (e.g., de-DE, en-US)")
     safesearch: Literal["strict", "moderate", "off"] = Field(
-        default="moderate",
-        description="SafeSearch setting"
+        default="moderate", description="SafeSearch setting"
     )
     timeout: int = Field(default=10, ge=1, le=30, description="Timeout in seconds")
 
@@ -76,6 +75,6 @@ class WebSearchResult(BaseModel):
                 "snippet": "Comprehensive overview of AI advances in 2025...",
                 "published_date": "2025-01-15T10:30:00Z",
                 "source": "duckduckgo",
-                "score": 0.85
+                "score": 0.85,
             }
         }

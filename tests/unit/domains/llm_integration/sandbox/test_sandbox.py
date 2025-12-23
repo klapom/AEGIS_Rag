@@ -3,16 +3,16 @@
 Sprint 59 Feature 59.5: Docker-based sandbox tests.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from src.domains.llm_integration.sandbox.container import DockerSandbox
 from src.domains.llm_integration.sandbox.resource_limits import (
     ResourceLimits,
-    validate_limits,
     get_docker_resource_limits,
+    validate_limits,
 )
-from src.domains.llm_integration.sandbox.container import DockerSandbox
-
 
 # =============================================================================
 # Resource Limits Tests
@@ -155,9 +155,8 @@ class TestDockerSandbox:
         """Test that sandbox enforces timeout."""
         mock_container = MagicMock()
         # Simulate timeout by never completing
-        import asyncio
 
-        mock_container.wait.side_effect = asyncio.TimeoutError()
+        mock_container.wait.side_effect = TimeoutError()
 
         mock_client = MagicMock()
         mock_client.containers.run.return_value = mock_container
@@ -229,7 +228,7 @@ class TestSandboxToolIntegration:
             mock_sandbox.run.return_value = {"result": "executed"}
             mock_get_sandbox.return_value = mock_sandbox
 
-            result = await executor.execute("test_sandboxed", {})
+            await executor.execute("test_sandboxed", {})
 
             # Should have used sandbox
             mock_get_sandbox.assert_called_once()

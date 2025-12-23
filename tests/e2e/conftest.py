@@ -110,19 +110,18 @@ async def capture_on_failure(request, page: Page = None):
 
     # Check if test failed
     if hasattr(request, "node") and hasattr(request.node, "rep_call"):
-        if request.node.rep_call.failed:
-            if page is not None:
-                try:
-                    screenshots_dir = Path("tests/e2e/screenshots")
-                    screenshots_dir.mkdir(exist_ok=True)
+        if request.node.rep_call.failed and page is not None:
+            try:
+                screenshots_dir = Path("tests/e2e/screenshots")
+                screenshots_dir.mkdir(exist_ok=True)
 
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    screenshot_path = screenshots_dir / f"{request.node.name}_{timestamp}.png"
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                screenshot_path = screenshots_dir / f"{request.node.name}_{timestamp}.png"
 
-                    await page.screenshot(path=str(screenshot_path))
-                    logger.info(f"Screenshot saved: {screenshot_path}")
-                except Exception as e:
-                    logger.warning(f"Failed to capture screenshot: {e}")
+                await page.screenshot(path=str(screenshot_path))
+                logger.info(f"Screenshot saved: {screenshot_path}")
+            except Exception as e:
+                logger.warning(f"Failed to capture screenshot: {e}")
 
 
 @pytest.fixture(autouse=True)

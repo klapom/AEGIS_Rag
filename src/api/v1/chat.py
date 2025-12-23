@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.agents.coordinator import CoordinatorAgent
 from src.agents.followup_generator import generate_followup_questions
 from src.agents.reasoning_data import ReasoningData
+from src.api.models.multi_turn import MultiTurnRequest, MultiTurnResponse
 from src.api.v1.title_generator import generate_conversation_title
 from src.components.memory import get_unified_memory_api
 from src.core.exceptions import AegisRAGException
@@ -2071,7 +2072,7 @@ async def search_archived_conversations(
 
 
 @router.post("/multi-turn", status_code=status.HTTP_200_OK)
-async def multi_turn_chat(request: "MultiTurnRequest") -> "MultiTurnResponse":
+async def multi_turn_chat(request: MultiTurnRequest) -> MultiTurnResponse:
     """Process multi-turn conversation with context tracking and contradiction detection.
 
     Sprint 63 Feature 63.1: Multi-Turn RAG Template (13 SP)
@@ -2116,8 +2117,8 @@ async def multi_turn_chat(request: "MultiTurnRequest") -> "MultiTurnResponse":
             "metadata": {...}
         }
     """
-    from src.api.models.multi_turn import MultiTurnRequest, MultiTurnResponse
     from src.agents.multi_turn import MultiTurnAgent
+    from src.api.models.multi_turn import MultiTurnResponse
 
     logger.info(
         "multi_turn_request_received",
@@ -2164,7 +2165,7 @@ async def multi_turn_chat(request: "MultiTurnRequest") -> "MultiTurnResponse":
 
         # Save updated conversation to Redis
         # Add current turn to history
-        from src.api.models.multi_turn import ConversationTurn, Source
+        from src.api.models.multi_turn import ConversationTurn
 
         current_turn = ConversationTurn(
             query=request.query,

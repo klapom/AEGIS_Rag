@@ -39,9 +39,7 @@ class StructuredSource(BaseModel):
     title: str | None = Field(default=None, description="Document/section title")
     section: SectionMetadata | None = Field(default=None, description="Section metadata")
     entities: list[str] = Field(default_factory=list, description="Extracted entities")
-    relationships: list[str] = Field(
-        default_factory=list, description="Extracted relationships"
-    )
+    relationships: list[str] = Field(default_factory=list, description="Extracted relationships")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = {

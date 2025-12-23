@@ -15,6 +15,7 @@ Test validates user journey from entering a query to viewing cited sources.
 """
 
 import asyncio
+import contextlib
 import re
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -498,7 +499,7 @@ These models use transformer architecture with billions of parameters.
 
         # Check if conversation persists
         # Look for the user message or session indicator
-        page_content = await page.content()
+        await page.content()
 
         # Check for session sidebar showing the conversation
         session_sidebar = page.locator('[data-testid="session-sidebar"], .session-sidebar')
@@ -595,10 +596,8 @@ These models use transformer architecture with billions of parameters.
         await asyncio.sleep(15)
 
         # Wait for streaming to finish
-        try:
+        with contextlib.suppress(Exception):
             await page.wait_for_selector('[data-streaming="false"]', timeout=60000)
-        except Exception:
-            pass
 
         # Get prose content (the actual answer, not the query in h1)
         prose_content = response_area.locator(".prose.prose-lg").first

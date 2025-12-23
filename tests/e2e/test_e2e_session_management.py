@@ -332,7 +332,7 @@ class TestSessionManagement:
 
         # Verify first session content is loaded
         # Check for our unique identifier in the messages
-        page_content = await page.content()
+        await page.content()
 
         # The messages should reflect the switched session
         user_messages = page.locator('[data-role="user"], .message-user')

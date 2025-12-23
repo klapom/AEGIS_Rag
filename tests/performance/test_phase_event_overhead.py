@@ -32,7 +32,7 @@ def test_phase_event_creation_performance():
 
     start = time.perf_counter()
     for _ in range(iterations):
-        event = PhaseEvent(
+        PhaseEvent(
             phase_type=PhaseType.VECTOR_SEARCH,
             status=PhaseStatus.IN_PROGRESS,
             start_time=datetime.utcnow(),
@@ -60,7 +60,7 @@ def test_phase_event_with_metadata_creation():
 
     start = time.perf_counter()
     for i in range(iterations):
-        event = PhaseEvent(
+        PhaseEvent(
             phase_type=PhaseType.VECTOR_SEARCH,
             status=PhaseStatus.COMPLETED,
             start_time=datetime.utcnow(),
@@ -398,7 +398,7 @@ def test_reasoning_data_batch_operations():
 
     start = time.perf_counter()
     # Add batch 10 times
-    for batch_num in range(10):
+    for _batch_num in range(10):
         for event in events:
             reasoning.add_phase_event(event)
     end = time.perf_counter()
@@ -443,7 +443,7 @@ def test_phase_event_vs_dict():
     # Test plain dict
     start = time.perf_counter()
     for _ in range(iterations):
-        event_dict = {
+        {
             "phase_type": "vector_search",
             "status": "completed",
             "start_time": datetime.utcnow().isoformat(),

@@ -10,8 +10,9 @@ Tests cover:
 - Neo4j queries for community data
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.domains.knowledge_graph.communities import (
     CommunityComparisonOverview,
@@ -252,9 +253,7 @@ class TestCommunityComparisonOverview:
             section_count=2,
             sections=["Introduction", "Methods"],
             total_shared_communities=1,
-            shared_entities={
-                "Introduction-Methods": ["ent_1", "ent_2", "ent_3"]
-            },
+            shared_entities={"Introduction-Methods": ["ent_1", "ent_2", "ent_3"]},
             overlap_matrix={
                 "Introduction": {"Methods": 3},
                 "Methods": {"Introduction": 3},
@@ -333,12 +332,10 @@ class TestSectionCommunityService:
             total_entities=5,
         )
 
-        mock_detector.detect_communities_in_section = AsyncMock(
-            return_value=mock_result
-        )
+        mock_detector.detect_communities_in_section = AsyncMock(return_value=mock_result)
+        mock_detector._get_community_entities = AsyncMock(return_value=["ent_1", "ent_2"])
 
         # Mock helper methods
-        service._get_community_entities = AsyncMock(return_value=["ent_1", "ent_2"])
         service._build_community_nodes = AsyncMock(
             return_value=[
                 CommunityNode(
@@ -349,9 +346,7 @@ class TestSectionCommunityService:
             ]
         )
         service._build_community_edges = AsyncMock(return_value=[])
-        service._calculate_centrality_metrics = AsyncMock(
-            return_value={"ent_1": 0.9}
-        )
+        service._calculate_centrality_metrics = AsyncMock(return_value={"ent_1": 0.9})
         service._add_layout_coordinates = AsyncMock()
 
         # Call method
@@ -391,9 +386,7 @@ class TestSectionCommunityService:
             comparison_time_ms=200.0,
         )
 
-        mock_detector.compare_communities_across_sections = AsyncMock(
-            return_value=mock_comparison
-        )
+        mock_detector.compare_communities_across_sections = AsyncMock(return_value=mock_comparison)
 
         # Mock helper method
         service._get_section_entities = AsyncMock(return_value=["ent_1", "ent_2"])

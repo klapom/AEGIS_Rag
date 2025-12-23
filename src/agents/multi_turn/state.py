@@ -29,9 +29,7 @@ class MultiTurnState(MessagesState):
         default_factory=list, description="Full conversation history"
     )
     current_query: str = Field(default="", description="Current user query")
-    enhanced_query: str = Field(
-        default="", description="Query enhanced with conversation context"
-    )
+    enhanced_query: str = Field(default="", description="Query enhanced with conversation context")
 
     # Retrieval results
     current_context: list[dict[str, Any]] = Field(

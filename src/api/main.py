@@ -35,7 +35,9 @@ from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
 from src.api.v1.domain_training import router as domain_training_router  # Sprint 45 Feature 45.3
-from src.api.v1.graph_communities import router as graph_communities_router  # Sprint 63 Feature 63.5
+from src.api.v1.graph_communities import (
+    router as graph_communities_router,  # Sprint 63 Feature 63.5
+)
 from src.api.v1.health import router as v1_health_router
 from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP Tool Discovery
 from src.api.v1.memory import router as memory_router

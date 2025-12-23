@@ -9,18 +9,18 @@ Tests for:
 Coverage target: >80%
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from src.domains.document_processing.document_types import (
+    EXTENSION_TO_TYPE,
+    MIME_TO_TYPE,
     DocumentType,
     SectionMetadata,
     detect_document_type,
     get_document_type_description,
-    EXTENSION_TO_TYPE,
-    MIME_TO_TYPE,
 )
-
 
 # =============================================================================
 # DOCUMENT TYPE ENUM TESTS

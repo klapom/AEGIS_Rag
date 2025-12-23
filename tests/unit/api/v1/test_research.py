@@ -3,7 +3,6 @@
 Sprint 62 Feature 62.10: Research Endpoint Backend
 """
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -135,9 +134,8 @@ class TestResearchQueryEndpoint:
         """Test timeout handling."""
         with patch("src.api.v1.research._stream_research_progress") as mock_research:
             # Simulate timeout
-            import asyncio
 
-            mock_research.side_effect = asyncio.TimeoutError()
+            mock_research.side_effect = TimeoutError()
 
             async with AsyncClient(app=app, base_url="http://test") as client:
                 response = await client.post(

@@ -3,14 +3,13 @@
 Sprint 63 Feature 63.2: Tests for audit logging and query methods.
 """
 
-from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.core.exceptions import GraphQueryError
 from src.domains.knowledge_graph.audit.audit_service import AuditService, reset_audit_service
-from src.domains.knowledge_graph.audit.models import AuditEvent
 
 
 @pytest.fixture

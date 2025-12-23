@@ -76,6 +76,7 @@ async def _stream_research_progress(
 
         # Track state changes to emit progress
         last_state = initial_state.copy()
+        iteration_count = 0  # Initialize iteration counter
 
         async for event in graph.astream(initial_state):
             # Parse event to detect phase changes
@@ -158,7 +159,7 @@ async def _stream_research_progress(
         # Send completion event
         yield "data: [DONE]\n\n"
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.error("research_timeout", query=query)
         error_msg = {"error": "Research timeout", "query": query}
         yield f"data: {json.dumps(error_msg)}\n\n"
@@ -323,26 +324,26 @@ async def research_query(
 
             return response
 
-        except asyncio.TimeoutError:
+        except TimeoutError as err:
             logger.error("research_timeout", query=request.query)
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
                 detail=f"Research timeout after {RESEARCH_TIMEOUT_SECONDS}s",
-            )
+            ) from err
 
     except AegisRAGException as e:
         logger.error("research_aegis_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
-        )
+        ) from e
 
     except Exception as e:
         logger.error("research_query_error", error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Research failed: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/health")

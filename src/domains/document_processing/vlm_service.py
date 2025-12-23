@@ -38,7 +38,6 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from src.components.ingestion.image_processor import ImageProcessor, ImageProcessorConfig
-from src.core.config import get_settings
 
 if TYPE_CHECKING:
     from PIL import Image

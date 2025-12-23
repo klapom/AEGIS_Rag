@@ -60,8 +60,8 @@ async def prepare_context_node(state: MultiTurnState) -> dict:
     conversation_context = "\n".join(context_parts)
 
     # Use LLM to enhance query with context
+    from src.domains.llm_integration.models import LLMTask, QualityRequirement, TaskType
     from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
-    from src.domains.llm_integration.models import LLMTask, TaskType, QualityRequirement
 
     llm_proxy = get_aegis_llm_proxy()
 
@@ -82,9 +82,9 @@ Enhanced Query (single line, no explanation):"""
 
     try:
         task = LLMTask(
-            task_type=TaskType.QUERY_UNDERSTANDING,
+            task_type=TaskType.GENERATION,
             prompt=prompt,
-            quality_requirement=QualityRequirement.STANDARD,
+            quality_requirement=QualityRequirement.MEDIUM,
             temperature=0.3,
             max_tokens=200,
         )
@@ -124,20 +124,20 @@ async def search_node(state: MultiTurnState) -> dict:
     Returns:
         State update with current_context
     """
-    logger.info(
-        "search_start",
-        conversation_id=state["conversation_id"],
-        enhanced_query=state["enhanced_query"][:100],
-        namespace=state["namespace"],
-    )
-
     query = state.get("enhanced_query") or state["current_query"]
     namespace = state.get("namespace", "default")
 
+    logger.info(
+        "search_start",
+        conversation_id=state["conversation_id"],
+        enhanced_query=query[:100],
+        namespace=namespace,
+    )
+
     try:
         # Use vector search for retrieval
-        from src.components.vector_search.qdrant_client import get_qdrant_client
         from src.components.vector_search.embeddings import get_embedding_service
+        from src.components.vector_search.qdrant_client import get_qdrant_client
 
         qdrant_client = get_qdrant_client()
         embeddings = get_embedding_service()
@@ -234,8 +234,8 @@ async def detect_contradictions_node(state: MultiTurnState) -> dict:
         previous_answers_parts.append(f"Turn {i + 1}: {turn.answer[:300]}")
     previous_answers = "\n\n".join(previous_answers_parts)
 
+    from src.domains.llm_integration.models import LLMTask, QualityRequirement, TaskType
     from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
-    from src.domains.llm_integration.models import LLMTask, TaskType, QualityRequirement
 
     llm_proxy = get_aegis_llm_proxy()
 
@@ -262,9 +262,9 @@ Response:"""
 
     try:
         task = LLMTask(
-            task_type=TaskType.ANALYSIS,
+            task_type=TaskType.GENERATION,
             prompt=prompt,
-            quality_requirement=QualityRequirement.STANDARD,
+            quality_requirement=QualityRequirement.MEDIUM,
             temperature=0.1,
             max_tokens=500,
         )
@@ -374,8 +374,8 @@ async def answer_node(state: MultiTurnState) -> dict:
     context_str = "\n\n".join(context_parts)
 
     # Build prompt
+    from src.domains.llm_integration.models import LLMTask, QualityRequirement, TaskType
     from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
-    from src.domains.llm_integration.models import LLMTask, TaskType, QualityRequirement
 
     llm_proxy = get_aegis_llm_proxy()
 
@@ -466,8 +466,8 @@ async def update_memory_node(state: MultiTurnState) -> dict:
 
     conversation_text = "\n".join(conversation_parts)
 
+    from src.domains.llm_integration.models import LLMTask, QualityRequirement, TaskType
     from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
-    from src.domains.llm_integration.models import LLMTask, TaskType, QualityRequirement
 
     llm_proxy = get_aegis_llm_proxy()
 
@@ -487,7 +487,7 @@ Summary (2-3 sentences):"""
         task = LLMTask(
             task_type=TaskType.SUMMARIZATION,
             prompt=prompt,
-            quality_requirement=QualityRequirement.STANDARD,
+            quality_requirement=QualityRequirement.MEDIUM,
             temperature=0.3,
             max_tokens=200,
         )

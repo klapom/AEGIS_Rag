@@ -16,7 +16,6 @@ from src.domains.vector_search.reranking.cross_encoder_reranker import (
     CrossEncoderReranker,
 )
 
-
 # ============================================================================
 # TEST: Section Boost Application
 # ============================================================================
@@ -241,7 +240,7 @@ def test_section_boost_preserves_score_order():
     # All scores should be valid floats
     for score in scores:
         assert isinstance(score, float)
-        assert not (score != score), "Score should not be NaN"  # NaN check
+        assert score == score, "Score should not be NaN"  # NaN check
 
 
 @pytest.mark.unit

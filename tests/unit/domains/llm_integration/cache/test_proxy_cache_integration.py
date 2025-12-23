@@ -12,14 +12,11 @@ Tests cover:
 """
 
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 
 from src.domains.llm_integration.cache.models import CacheStats
 from src.domains.llm_integration.models import (
-    Complexity,
-    DataClassification,
     LLMResponse,
     LLMTask,
     QualityRequirement,
@@ -34,13 +31,15 @@ def mock_cache_service():
     cache = AsyncMock()
     cache.get_cached_response = AsyncMock(return_value=None)
     cache.cache_response = AsyncMock()
-    cache.get_stats = AsyncMock(return_value=CacheStats(
-        hits=10,
-        misses=5,
-        hit_rate=0.667,
-        total_requests=15,
-        cached_size_bytes=5000,
-    ))
+    cache.get_stats = AsyncMock(
+        return_value=CacheStats(
+            hits=10,
+            misses=5,
+            hit_rate=0.667,
+            total_requests=15,
+            cached_size_bytes=5000,
+        )
+    )
     cache.invalidate_namespace = AsyncMock(return_value=5)
     return cache
 
@@ -62,10 +61,14 @@ def mock_config():
 @pytest.fixture
 def proxy_with_cache(mock_cache_service, mock_config):
     """Create AegisLLMProxy with mocked cache service."""
-    with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_llm_proxy_config", return_value=mock_config):
-        with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker"):
-            with patch("src.domains.llm_integration.proxy.aegis_llm_proxy.PromptCacheService", return_value=mock_cache_service):
-                proxy = AegisLLMProxy(config=mock_config)
+    with patch(
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.get_llm_proxy_config",
+        return_value=mock_config,
+    ), patch("src.domains.llm_integration.proxy.aegis_llm_proxy.CostTracker"), patch(
+        "src.domains.llm_integration.proxy.aegis_llm_proxy.PromptCacheService",
+        return_value=mock_cache_service,
+    ):
+        proxy = AegisLLMProxy(config=mock_config)
     return proxy, mock_cache_service
 
 
@@ -120,22 +123,23 @@ class TestCacheIntegrationWithProxy:
             cost_usd=0.0,
         )
 
-        with patch.object(proxy, "_execute_with_any_llm", return_value=llm_response) as mock_execute:
-            with patch.object(proxy, "_track_metrics"):
-                result = await proxy.generate(task, use_cache=True)
+        with patch.object(
+            proxy, "_execute_with_any_llm", return_value=llm_response
+        ) as mock_execute, patch.object(proxy, "_track_metrics"):
+            result = await proxy.generate(task, use_cache=True)
 
-                # Verify cache was checked
-                cache_service.get_cached_response.assert_called_once()
+            # Verify cache was checked
+            cache_service.get_cached_response.assert_called_once()
 
-                # Verify LLM was called
-                mock_execute.assert_called_once()
+            # Verify LLM was called
+            mock_execute.assert_called_once()
 
-                # Verify response was cached
-                cache_service.cache_response.assert_called_once()
+            # Verify response was cached
+            cache_service.cache_response.assert_called_once()
 
-                # Verify result from LLM
-                assert result.content == llm_response.content
-                assert result.provider == "local_ollama"
+            # Verify result from LLM
+            assert result.content == llm_response.content
+            assert result.provider == "local_ollama"
 
     @pytest.mark.asyncio
     async def test_generate_cache_disabled(self, proxy_with_cache):
@@ -157,18 +161,19 @@ class TestCacheIntegrationWithProxy:
             cost_usd=0.0,
         )
 
-        with patch.object(proxy, "_execute_with_any_llm", return_value=llm_response) as mock_execute:
-            with patch.object(proxy, "_track_metrics"):
-                result = await proxy.generate(task, use_cache=False)
+        with patch.object(
+            proxy, "_execute_with_any_llm", return_value=llm_response
+        ) as mock_execute, patch.object(proxy, "_track_metrics"):
+            result = await proxy.generate(task, use_cache=False)
 
-                # Verify cache was NOT checked
-                cache_service.get_cached_response.assert_not_called()
+            # Verify cache was NOT checked
+            cache_service.get_cached_response.assert_not_called()
 
-                # Verify LLM was called
-                mock_execute.assert_called_once()
+            # Verify LLM was called
+            mock_execute.assert_called_once()
 
-                # Verify result from LLM (not cache)
-                assert result.content == "LLM response"
+            # Verify result from LLM (not cache)
+            assert result.content == "LLM response"
 
     @pytest.mark.asyncio
     async def test_generate_streaming_skips_cache(self, proxy_with_cache):
@@ -181,6 +186,7 @@ class TestCacheIntegrationWithProxy:
         )
 
         with patch.object(proxy, "_execute_streaming") as mock_execute:
+
             async def stream_gen():
                 yield {"content": "token1"}
                 yield {"content": "token2"}
@@ -188,7 +194,7 @@ class TestCacheIntegrationWithProxy:
             mock_execute.return_value = stream_gen()
 
             # Streaming should bypass cache lookup
-            async for chunk in proxy.generate_streaming(task):
+            async for _chunk in proxy.generate_streaming(task):
                 pass
 
             # Verify cache was NOT checked for streaming
@@ -273,7 +279,7 @@ class TestNamespaceIsolation:
             prompt="Extract...",
         )
 
-        result = await proxy.generate(task, use_cache=True, namespace="tenant-1")
+        await proxy.generate(task, use_cache=True, namespace="tenant-1")
 
         # Verify namespace was passed to cache service
         cache_service.get_cached_response.assert_called_once()

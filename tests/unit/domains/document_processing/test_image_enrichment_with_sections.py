@@ -8,17 +8,15 @@ Tests cover:
 - Batch image processing with sections
 """
 
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
+
+import pytest
 
 from src.components.ingestion.nodes.image_enrichment_with_sections import (
-    image_enrichment_node_with_sections,
     _build_section_map_from_chunks,
     _identify_image_section,
+    image_enrichment_node_with_sections,
 )
-
 
 # =============================================================================
 # Fixtures

@@ -10,9 +10,11 @@ Performance Targets (from TD-073):
 - VRAM: 2GB (same as CPU RAM usage)
 """
 
-import pytest
 import time
+
+import pytest
 import torch
+
 from src.domains.vector_search.embedding import NativeEmbeddingService
 
 
@@ -52,7 +54,7 @@ def test_gpu_embedding_latency():
     embedding = service.embed_text(text)
     elapsed_ms = (time.time() - start) * 1000
 
-    print(f"\n📊 GPU Single Embedding:")
+    print("\n📊 GPU Single Embedding:")
     print(f"   Latency: {elapsed_ms:.1f}ms")
     print(f"   Embedding dim: {len(embedding)}")
     print(f"   Device: {service.device}")
@@ -85,7 +87,7 @@ def test_gpu_batch_embedding_performance():
     throughput = len(texts) / elapsed
     latency_per_embedding = (elapsed / len(texts)) * 1000
 
-    print(f"\n📊 GPU Batch Embedding:")
+    print("\n📊 GPU Batch Embedding:")
     print(f"   Batch size: {len(texts)}")
     print(f"   Total time: {elapsed * 1000:.1f}ms")
     print(f"   Throughput: {throughput:.1f} embeddings/sec")
@@ -118,7 +120,7 @@ def test_cpu_vs_gpu_speedup():
     cpu_elapsed = time.time() - cpu_start
     cpu_throughput = len(texts) / cpu_elapsed
 
-    print(f"\n📊 CPU Performance:")
+    print("\n📊 CPU Performance:")
     print(f"   Time: {cpu_elapsed * 1000:.1f}ms")
     print(f"   Throughput: {cpu_throughput:.1f} embeddings/sec")
 
@@ -134,7 +136,7 @@ def test_cpu_vs_gpu_speedup():
 
         speedup = gpu_throughput / cpu_throughput
 
-        print(f"\n📊 GPU Performance:")
+        print("\n📊 GPU Performance:")
         print(f"   Time: {gpu_elapsed * 1000:.1f}ms")
         print(f"   Throughput: {gpu_throughput:.1f} embeddings/sec")
         print(f"   Speedup: {speedup:.1f}x faster than CPU")
@@ -169,7 +171,7 @@ def test_gpu_memory_efficiency():
 
     vram_usage = service._estimate_vram_usage()
 
-    print(f"\n📊 GPU Memory Usage:")
+    print("\n📊 GPU Memory Usage:")
     print(f"   VRAM: {vram_usage:.2f} GB")
     print(f"   Model: {service.model_name}")
 
@@ -190,7 +192,7 @@ def test_auto_device_selection():
     expected_device = "cuda" if torch.cuda.is_available() else "cpu"
     actual_device = service.device
 
-    print(f"\n📊 Auto Device Selection:")
+    print("\n📊 Auto Device Selection:")
     print(f"   Expected: {expected_device}")
     print(f"   Actual: {actual_device}")
     print(f"   CUDA Available: {torch.cuda.is_available()}")

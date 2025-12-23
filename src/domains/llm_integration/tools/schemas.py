@@ -141,7 +141,7 @@ def create_string_property(
         ...     default="info"
         ... )
     """
-    schema = {
+    schema: dict[str, Any] = {
         "type": "string",
         "description": description,
     }
@@ -185,7 +185,7 @@ def create_integer_property(
         ...     default=10
         ... )
     """
-    schema = {
+    schema: dict[str, Any] = {
         "type": "integer",
         "description": description,
     }
@@ -225,7 +225,7 @@ def create_number_property(
         ...     default=0.8
         ... )
     """
-    schema = {
+    schema: dict[str, Any] = {
         "type": "number",
         "description": description,
     }
@@ -259,7 +259,7 @@ def create_boolean_property(
         ...     default=True
         ... )
     """
-    schema = {
+    schema: dict[str, Any] = {
         "type": "boolean",
         "description": description,
     }
@@ -297,7 +297,7 @@ def create_array_property(
         ...     max_items=5
         ... )
     """
-    schema = {
+    schema: dict[str, Any] = {
         "type": "array",
         "description": description,
         "items": items,

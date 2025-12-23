@@ -10,8 +10,6 @@ Tests cover:
 - Query optimization
 """
 
-from datetime import datetime
-
 import pytest
 
 from src.domains.web_search.fusion import (

@@ -9,20 +9,16 @@ Tests for:
 Coverage target: >80%
 """
 
-import pytest
-from typing import Any
-
 from src.domains.document_processing.document_types import DocumentType
 from src.domains.document_processing.section_handlers import (
-    SectionHandler,
-    PDFSectionHandler,
     DocxSectionHandler,
+    GenericSectionHandler,
     HTMLSectionHandler,
     MarkdownSectionHandler,
-    GenericSectionHandler,
+    PDFSectionHandler,
+    SectionHandler,
     get_section_handler,
 )
-
 
 # =============================================================================
 # PDF SECTION HANDLER TESTS

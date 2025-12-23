@@ -13,11 +13,10 @@ Tests cover:
 """
 
 import hashlib
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from src.domains.llm_integration.cache.models import CacheStats
 from src.domains.llm_integration.cache.prompt_cache import PromptCacheService
 
 
@@ -36,8 +35,7 @@ def mock_redis():
 @pytest.fixture
 def cache_service(mock_redis):
     """Create PromptCacheService with mocked Redis."""
-    with patch("src.domains.llm_integration.cache.prompt_cache.get_redis_client", return_value=mock_redis):
-        service = PromptCacheService()
+    service = PromptCacheService(redis_client=mock_redis)
     return service
 
 
@@ -110,11 +108,12 @@ class TestCacheKeyGeneration:
         model = "llama3.2:8b"
         prompt = "Extract entities from text..."
 
-        # Manually compute expected hash
-        expected_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        # Manually compute expected hashes
+        model_hash = hashlib.sha256(model.encode("utf-8")).hexdigest()[:16]
+        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         key = cache_service._generate_cache_key(namespace, model, prompt)
 
-        assert key == f"prompt_cache:{namespace}:{model}:{expected_hash}"
+        assert key == f"prompt_cache:{namespace}#{model_hash}#{prompt_hash}"
 
 
 class TestCacheHitMiss:
@@ -279,7 +278,13 @@ class TestNamespaceIsolation:
 
         # Mock SCAN to return keys matching pattern
         mock_redis.scan.side_effect = [
-            (0, [f"prompt_cache:{namespace}:model1:hash1", f"prompt_cache:{namespace}:model1:hash2"]),
+            (
+                0,
+                [
+                    f"prompt_cache:{namespace}:model1:hash1",
+                    f"prompt_cache:{namespace}:model1:hash2",
+                ],
+            ),
         ]
         mock_redis.delete.return_value = 2
 
@@ -433,7 +438,9 @@ class TestCacheIntegration:
 
         # Step 1: Cache miss
         mock_redis.get.return_value = None
-        result = await cache_service.get_cached_response(prompt=prompt, model=model, namespace=namespace)
+        result = await cache_service.get_cached_response(
+            prompt=prompt, model=model, namespace=namespace
+        )
         assert result is None
         assert cache_service._misses == 1
 
@@ -449,7 +456,9 @@ class TestCacheIntegration:
 
         # Step 3: Cache hit
         mock_redis.get.return_value = response.encode("utf-8")
-        result = await cache_service.get_cached_response(prompt=prompt, model=model, namespace=namespace)
+        result = await cache_service.get_cached_response(
+            prompt=prompt, model=model, namespace=namespace
+        )
         assert result == response
         assert cache_service._hits == 1
         assert cache_service._misses == 1
@@ -459,7 +468,6 @@ class TestCacheIntegration:
         """Test that different models maintain separate caches."""
         prompt = "Test prompt"
         response1 = "Response from model1"
-        response2 = "Response from model2"
 
         # Cache for model1
         mock_redis.get.return_value = None

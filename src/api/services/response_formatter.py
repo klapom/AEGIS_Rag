@@ -141,9 +141,7 @@ def format_chat_response_structured(
     graph_used = "graph" in intent.lower() or "hybrid" in intent.lower()
 
     # Determine if reranking was used (check metadata)
-    reranking_used = metadata.get("reranking_used", False) or metadata.get(
-        "reranked", False
-    )
+    reranking_used = metadata.get("reranking_used", False) or metadata.get("reranked", False)
 
     # Extract agent path
     agent_path = metadata.get("agent_path", [])

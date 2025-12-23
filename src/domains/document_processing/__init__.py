@@ -38,13 +38,6 @@ from src.domains.document_processing.enrichment import (
     process_image_with_vlm,
 )
 
-# VLM Service (Feature 62.3)
-from src.domains.document_processing.vlm_service import (
-    ImageWithSectionContext,
-    VLMImageResult,
-    VLMService,
-)
-
 # Parsing
 from src.domains.document_processing.parsing import (
     ALL_FORMATS,
@@ -84,6 +77,13 @@ from src.domains.document_processing.protocols import (
 )
 from src.domains.document_processing.protocols import (
     FormatRouter as FormatRouterProtocol,
+)
+
+# VLM Service (Feature 62.3)
+from src.domains.document_processing.vlm_service import (
+    ImageWithSectionContext,
+    VLMImageResult,
+    VLMService,
 )
 
 __all__ = [

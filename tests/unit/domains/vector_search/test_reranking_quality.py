@@ -4,6 +4,7 @@ Sprint 61 Feature 61.2: Ensure comparable quality to LLM reranking.
 """
 
 import pytest
+
 from src.domains.vector_search.reranking import CrossEncoderReranker
 
 

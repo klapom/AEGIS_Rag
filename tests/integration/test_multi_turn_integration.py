@@ -16,7 +16,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.api.models.multi_turn import MultiTurnRequest, MultiTurnResponse
 
 
 @pytest.fixture
@@ -99,7 +98,10 @@ class TestMultiTurnAPIIntegration:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["answer"] == "AEGIS RAG is an agentic RAG system with vector, graph, and memory components."
+        assert (
+            data["answer"]
+            == "AEGIS RAG is an agentic RAG system with vector, graph, and memory components."
+        )
         assert data["conversation_id"] == "test-conv-123"
         assert data["turn_number"] == 1
         assert len(data["sources"]) == 1
@@ -297,9 +299,7 @@ class TestMultiTurnAgentIntegration:
         # Setup mocks for all nodes
         mock_llm = AsyncMock()
         mock_llm.generate = AsyncMock(
-            return_value=MagicMock(
-                content="Enhanced query with context"  # For prepare_context
-            )
+            return_value=MagicMock(content="Enhanced query with context")  # For prepare_context
         )
         mock_get_llm.return_value = mock_llm
 

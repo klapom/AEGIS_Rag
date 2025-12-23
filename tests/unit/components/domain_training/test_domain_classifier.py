@@ -125,7 +125,7 @@ def test_cosine_similarity_identical_vectors():
     """Test cosine similarity calculation for identical vectors."""
     from src.components.domain_training.domain_classifier import DomainClassifier
 
-    classifier = DomainClassifier()
+    DomainClassifier()
 
     # Test cosine similarity manually
     vec1 = np.array([1.0, 0.0, 0.0])
@@ -141,7 +141,7 @@ def test_cosine_similarity_orthogonal_vectors():
     """Test cosine similarity for orthogonal vectors."""
     from src.components.domain_training.domain_classifier import DomainClassifier
 
-    classifier = DomainClassifier()
+    DomainClassifier()
 
     # Orthogonal vectors
     vec1 = np.array([1.0, 0.0, 0.0])

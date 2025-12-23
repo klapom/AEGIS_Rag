@@ -10,9 +10,8 @@ Tests cover:
 - Retry logic
 """
 
-import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -92,6 +91,7 @@ class TestWebSearchClient:
             # Mock slow search
             def slow_search(*args, **kwargs):
                 import time
+
                 time.sleep(20)  # Exceeds timeout
                 return []
 
@@ -271,6 +271,7 @@ class TestWebSearchClient:
         call_count = 0
 
         with patch.object(client, "search") as mock_search:
+
             async def mock_search_fail(*args, **kwargs):
                 nonlocal call_count
                 call_count += 1

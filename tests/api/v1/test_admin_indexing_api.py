@@ -6,7 +6,6 @@ Integrates with real FastAPI app and mocked backend services.
 
 import json
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest

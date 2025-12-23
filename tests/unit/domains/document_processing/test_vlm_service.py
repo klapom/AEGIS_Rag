@@ -10,16 +10,15 @@ Tests cover:
 - Error handling and edge cases
 """
 
-import pytest
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.domains.document_processing.vlm_service import (
     ImageWithSectionContext,
     VLMImageResult,
     VLMService,
 )
-
 
 # =============================================================================
 # Fixtures

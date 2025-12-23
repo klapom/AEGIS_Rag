@@ -23,7 +23,6 @@ Performance Target:
 """
 
 import time
-from typing import Any
 
 import networkx as nx
 import structlog
@@ -236,9 +235,7 @@ class CommunityComparisonOverview(BaseModel):
                 "section_count": 2,
                 "sections": ["Introduction", "Methods"],
                 "total_shared_communities": 1,
-                "shared_entities": {
-                    "Introduction-Methods": ["ent_1", "ent_2"]
-                },
+                "shared_entities": {"Introduction-Methods": ["ent_1", "ent_2"]},
                 "overlap_matrix": {
                     "Introduction": {"Methods": 2},
                     "Methods": {"Introduction": 2},
@@ -283,8 +280,9 @@ class SectionCommunityService:
             section_community_detector: Section community detector (uses singleton if None)
         """
         self.neo4j_client = neo4j_client or get_neo4j_client()
-        self.section_community_detector = section_community_detector or get_section_community_detector(
-            neo4j_client=self.neo4j_client
+        self.section_community_detector = (
+            section_community_detector
+            or get_section_community_detector(neo4j_client=self.neo4j_client)
         )
         logger.info("section_community_service_initialized")
 
@@ -423,7 +421,7 @@ class SectionCommunityService:
                 overlap = set(entities1) & set(entities2)
 
                 if overlap:
-                    shared_entities[pair_key] = sorted(list(overlap))
+                    shared_entities[pair_key] = sorted(overlap)
 
         comparison_time_ms = (time.perf_counter() - start_time) * 1000
 
@@ -487,9 +485,7 @@ class SectionCommunityService:
         edges = await self._build_community_edges(entity_ids)
 
         # Step 4: Calculate centrality metrics
-        centrality_scores = await self._calculate_centrality_metrics(
-            entity_ids, edges
-        )
+        centrality_scores = await self._calculate_centrality_metrics(entity_ids, edges)
 
         # Update node centrality scores
         for node in nodes:

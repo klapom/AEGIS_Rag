@@ -25,8 +25,8 @@ logger = structlog.get_logger(__name__)
 # Weight configuration for result fusion
 FUSION_WEIGHTS = {
     "vector": 0.70,  # 70% weight for vector search (internal knowledge)
-    "graph": 0.20,   # 20% weight for graph search (structured knowledge)
-    "web": 0.10,     # 10% weight for web search (external knowledge)
+    "graph": 0.20,  # 20% weight for graph search (structured knowledge)
+    "web": 0.10,  # 10% weight for web search (external knowledge)
 }
 
 
@@ -95,7 +95,9 @@ def fuse_results(
             "source": "web",
             "fusion_source": "web",
             "metadata": {
-                "published_date": result.published_date.isoformat() if result.published_date else None,
+                "published_date": (
+                    result.published_date.isoformat() if result.published_date else None
+                ),
             },
         }
         all_results.append(scored_result)
@@ -225,8 +227,7 @@ def calculate_diversity_score(results: list[dict[str, Any]]) -> float:
 
     # Sum of squared deviations from ideal
     variance = sum(
-        ((count - ideal_per_source) ** 2) / ideal_per_source
-        if ideal_per_source > 0 else 0
+        ((count - ideal_per_source) ** 2) / ideal_per_source if ideal_per_source > 0 else 0
         for count in source_counts.values()
     )
 

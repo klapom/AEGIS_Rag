@@ -88,7 +88,7 @@ class TestExecuteSearches:
         ):
             mock_vector.return_value = [{"text": "Result", "score": 0.9, "source": "vector"}]
 
-            results = await execute_searches(
+            await execute_searches(
                 queries=["Query 1"],
                 use_graph=False,
                 use_vector=True,
@@ -112,7 +112,7 @@ class TestExecuteSearches:
         ):
             mock_graph.return_value = [{"text": "Result", "score": 0.8, "source": "graph"}]
 
-            results = await execute_searches(
+            await execute_searches(
                 queries=["Query 1"],
                 use_graph=True,
                 use_vector=False,

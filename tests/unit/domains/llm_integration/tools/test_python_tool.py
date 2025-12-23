@@ -3,20 +3,20 @@
 Sprint 59 Feature 59.4: Python execution with AST validation.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+import pytest
+
+from src.domains.llm_integration.tools.builtin.python_security import (
+    create_restricted_globals,
+    get_allowed_modules,
+    get_code_complexity,
+    validate_python_code,
+)
 from src.domains.llm_integration.tools.builtin.python_tool import (
     python_execute,
     python_execute_batch,
 )
-from src.domains.llm_integration.tools.builtin.python_security import (
-    validate_python_code,
-    create_restricted_globals,
-    get_code_complexity,
-    get_allowed_modules,
-)
-
 
 # =============================================================================
 # Security Validation Tests
@@ -230,7 +230,7 @@ class TestPythonExecution:
         code = "print('test')"
 
         with patch("src.domains.llm_integration.tools.builtin.python_tool.logger") as mock_logger:
-            result = await python_execute(code, timeout=1000)
+            await python_execute(code, timeout=1000)
 
             # Should log timeout clamping
             mock_logger.warning.assert_called()

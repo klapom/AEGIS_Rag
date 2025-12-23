@@ -403,12 +403,14 @@ class TestVLMFactoryErrorHandling:
     def test_missing_dependency_handling(self):
         """Test handling when client dependency is missing."""
         # IMPORTANT: Patch at SOURCE module (lazy import)
-        with patch(
-            "src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient",
-            side_effect=ImportError("Missing httpx"),
+        with (
+            patch(
+                "src.domains.llm_integration.proxy.ollama_vlm.OllamaVLMClient",
+                side_effect=ImportError("Missing httpx"),
+            ),
+            pytest.raises(ImportError),
         ):
-            with pytest.raises(ImportError):
-                get_vlm_client(VLMBackend.OLLAMA)
+            get_vlm_client(VLMBackend.OLLAMA)
 
     @pytest.mark.asyncio
     async def test_singleton_exception_recovery(self):

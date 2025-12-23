@@ -121,6 +121,19 @@ class MultiTurnAgent:
                 )
             )
 
+        # Prune history to max_history_turns (keep most recent)
+        # Default max is 10 turns to prevent memory growth
+        max_turns_to_keep = min(max_history_turns, 10)
+        if len(conversation_turns) > max_turns_to_keep:
+            conversation_turns = conversation_turns[-max_turns_to_keep:]
+            logger.info(
+                "multi_turn_history_pruned",
+                conversation_id=conversation_id,
+                original_length=len(conversation_history),
+                pruned_length=len(conversation_turns),
+                max_history_turns=max_history_turns,
+            )
+
         # Create initial state
         initial_state = {
             "messages": [],
@@ -157,7 +170,23 @@ class MultiTurnAgent:
                     )
                 )
 
-            contradictions = result.get("contradictions", [])
+            # Convert contradictions to Contradiction objects if needed
+            from src.api.models.multi_turn import Contradiction
+
+            contradictions_raw = result.get("contradictions", [])
+            contradictions = []
+            for c in contradictions_raw:
+                if isinstance(c, Contradiction):
+                    contradictions.append(c)
+                elif isinstance(c, dict):
+                    # Convert dict to Contradiction for backwards compatibility
+                    contradictions.append(Contradiction(**c))
+                else:
+                    logger.warning(
+                        "unexpected_contradiction_type",
+                        type=type(c).__name__,
+                    )
+
             memory_summary = result.get("memory_summary")
 
             latency = time.time() - start_time

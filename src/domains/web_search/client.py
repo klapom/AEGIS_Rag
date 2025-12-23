@@ -13,7 +13,6 @@ from typing import Any
 import structlog
 from duckduckgo_search import DDGS
 
-from src.core.config import settings
 from src.domains.web_search.models import WebSearchRequest, WebSearchResult
 
 logger = structlog.get_logger(__name__)
@@ -103,7 +102,7 @@ class WebSearchClient:
 
             return results
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(
                 "web_search_timeout",
                 query=query,
@@ -269,7 +268,7 @@ class WebSearchClient:
                     return []
 
                 # Wait before retry (exponential backoff)
-                await asyncio.sleep(2 ** attempt)
+                await asyncio.sleep(2**attempt)
 
         return []
 

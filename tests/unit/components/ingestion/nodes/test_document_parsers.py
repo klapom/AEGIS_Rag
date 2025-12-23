@@ -134,28 +134,30 @@ async def test_docling_extraction_node_success(
         mock_client_class.return_value = mock_client
 
         # Patch at docling_client module where they're imported from
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                result = await docling_extraction_node(base_state)
+            ),
+        ):
+            result = await docling_extraction_node(base_state)
 
-                # Verify document was parsed
-                assert result["docling_status"] == "completed"
-                assert result["parsed_content"] == "Test Document\n\nContent here."
-                assert result["parsed_metadata"]["source"] == "test.pdf"
-                assert result["parsed_metadata"]["format"] == "pdf"
-                assert len(result["page_dimensions"]) == 2
-                assert 1 in result["page_dimensions"]
-                assert 2 in result["page_dimensions"]
+            # Verify document was parsed
+            assert result["docling_status"] == "completed"
+            assert result["parsed_content"] == "Test Document\n\nContent here."
+            assert result["parsed_metadata"]["source"] == "test.pdf"
+            assert result["parsed_metadata"]["format"] == "pdf"
+            assert len(result["page_dimensions"]) == 2
+            assert 1 in result["page_dimensions"]
+            assert 2 in result["page_dimensions"]
 
-                # Verify container lifecycle
-                mock_client.start_container.assert_called_once()
-                mock_client.stop_container.assert_called_once()
+            # Verify container lifecycle
+            mock_client.start_container.assert_called_once()
+            mock_client.stop_container.assert_called_once()
 
 
 # =============================================================================
@@ -189,19 +191,21 @@ async def test_docling_parse_node_alias(
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                result = await docling_parse_node(base_state)
+            ),
+        ):
+            result = await docling_parse_node(base_state)
 
-                # Verify same behavior as extraction_node
-                assert result["docling_status"] == "completed"
-                assert result["parsed_content"] == "Test Document\n\nContent here."
+            # Verify same behavior as extraction_node
+            assert result["docling_status"] == "completed"
+            assert result["parsed_content"] == "Test Document\n\nContent here."
 
 
 # =============================================================================
@@ -258,21 +262,23 @@ async def test_docling_container_restart(
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                result = await docling_extraction_node(base_state)
+            ),
+        ):
+            result = await docling_extraction_node(base_state)
 
-                # Verify restart occurred
-                assert result["docling_status"] == "completed"
-                # Container should be stopped first (to suppress errors), then started
-                assert mock_client.stop_container.called or not mock_client.stop_container.called
-                mock_client.start_container.assert_called_once()
+            # Verify restart occurred
+            assert result["docling_status"] == "completed"
+            # Container should be stopped first (to suppress errors), then started
+            assert mock_client.stop_container.called or not mock_client.stop_container.called
+            mock_client.start_container.assert_called_once()
 
 
 # =============================================================================
@@ -354,23 +360,25 @@ async def test_docling_page_dimensions(
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                result = await docling_extraction_node(base_state)
+            ),
+        ):
+            result = await docling_extraction_node(base_state)
 
-                # Verify page dimensions
-                assert "page_dimensions" in result
-                assert 1 in result["page_dimensions"]
-                assert result["page_dimensions"][1]["width"] == 612
-                assert result["page_dimensions"][1]["height"] == 792
-                assert result["page_dimensions"][1]["unit"] == "pt"
-                assert result["page_dimensions"][1]["dpi"] == 72
+            # Verify page dimensions
+            assert "page_dimensions" in result
+            assert 1 in result["page_dimensions"]
+            assert result["page_dimensions"][1]["width"] == 612
+            assert result["page_dimensions"][1]["height"] == 792
+            assert result["page_dimensions"][1]["unit"] == "pt"
+            assert result["page_dimensions"][1]["dpi"] == 72
 
 
 # =============================================================================
@@ -623,38 +631,40 @@ async def test_docling_state_updated_correctly(
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                result = await docling_extraction_node(base_state)
+            ),
+        ):
+            result = await docling_extraction_node(base_state)
 
-                # Verify all required fields present
-                assert "document" in result
-                assert "parsed_content" in result
-                assert "parsed_metadata" in result
-                assert "parsed_tables" in result
-                assert "parsed_images" in result
-                assert "parsed_layout" in result
-                assert "page_dimensions" in result
-                assert "docling_status" in result
-                assert "docling_start_time" in result
-                assert "docling_end_time" in result
-                assert "overall_progress" in result
+            # Verify all required fields present
+            assert "document" in result
+            assert "parsed_content" in result
+            assert "parsed_metadata" in result
+            assert "parsed_tables" in result
+            assert "parsed_images" in result
+            assert "parsed_layout" in result
+            assert "page_dimensions" in result
+            assert "docling_status" in result
+            assert "docling_start_time" in result
+            assert "docling_end_time" in result
+            assert "overall_progress" in result
 
-                # Verify types
-                assert isinstance(result["parsed_content"], str)
-                assert isinstance(result["parsed_metadata"], dict)
-                assert isinstance(result["parsed_tables"], list)
-                assert isinstance(result["parsed_images"], list)
-                assert isinstance(result["parsed_layout"], dict)
-                assert isinstance(result["page_dimensions"], dict)
-                assert isinstance(result["docling_start_time"], float)
-                assert isinstance(result["docling_end_time"], float)
+            # Verify types
+            assert isinstance(result["parsed_content"], str)
+            assert isinstance(result["parsed_metadata"], dict)
+            assert isinstance(result["parsed_tables"], list)
+            assert isinstance(result["parsed_images"], list)
+            assert isinstance(result["parsed_layout"], dict)
+            assert isinstance(result["page_dimensions"], dict)
+            assert isinstance(result["docling_start_time"], float)
+            assert isinstance(result["docling_end_time"], float)
 
 
 # =============================================================================
@@ -688,16 +698,18 @@ async def test_docling_parse_error(
         mock_client.stop_container = AsyncMock()
         mock_client_class.return_value = mock_client
 
-        with patch(
-            "src.components.ingestion.docling_client.get_prewarmed_docling_client",
-            return_value=None,
-        ):
-            with patch(
+        with (
+            patch(
+                "src.components.ingestion.docling_client.get_prewarmed_docling_client",
+                return_value=None,
+            ),
+            patch(
                 "src.components.ingestion.docling_client.is_docling_container_prewarmed",
                 return_value=False,
-            ):
-                with pytest.raises(RuntimeError):
-                    await docling_extraction_node(base_state)
+            ),
+            pytest.raises(RuntimeError),
+        ):
+            await docling_extraction_node(base_state)
 
 
 # =============================================================================

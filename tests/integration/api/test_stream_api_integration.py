@@ -12,6 +12,7 @@ These tests verify:
 """
 
 import asyncio
+import contextlib
 import json
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
@@ -142,7 +143,7 @@ async def test_stream_endpoint_phase_events_format():
     """Test that phase events are properly formatted in SSE stream."""
     from src.api.v1.chat import ChatRequest
 
-    request = ChatRequest(
+    ChatRequest(
         query="Test query",
         session_id="test-phase-format",
     )
@@ -226,7 +227,7 @@ async def test_stream_endpoint_metadata_included():
     """Test streaming includes initial metadata."""
     from src.api.v1.chat import ChatRequest
 
-    request = ChatRequest(
+    ChatRequest(
         query="Test query",
         session_id="test-metadata",
     )
@@ -289,10 +290,8 @@ async def test_stream_timeout_error_event():
             },
         }
         # Simulate very slow operation
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await asyncio.sleep(REQUEST_TIMEOUT_SECONDS + 10)
-        except asyncio.CancelledError:
-            pass
 
     # Test timeout behavior - the actual implementation would need to handle this
     # This test verifies the timeout value is set correctly
@@ -334,10 +333,8 @@ async def test_stream_cancellation_handling():
     # Cancel it
     task.cancel()
 
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await task
-    except asyncio.CancelledError:
-        pass
 
     assert task.cancelled()
 
@@ -478,7 +475,6 @@ async def test_stream_and_non_stream_consistency(test_client):
     """Test stream and non-stream endpoints return consistent data."""
 
     query = "What is AEGIS RAG?"
-    session_id = "test-consistency"
 
     async def mock_process(*args, **kwargs):
         """Mock coordinator result."""

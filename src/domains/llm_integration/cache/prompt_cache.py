@@ -36,8 +36,6 @@ Multi-Tenant Support:
 from __future__ import annotations
 
 import hashlib
-import time
-from typing import TYPE_CHECKING, Optional
 
 import redis.asyncio as redis
 import structlog
@@ -96,16 +94,18 @@ class PromptCacheService:
             custom_redis = redis.from_url("redis://localhost:6379/1")
             cache = PromptCacheService(redis_client=custom_redis)
         """
-        self._redis = redis_client or redis.from_url(
-            settings.redis_url, decode_responses=True
-        )
+        self._redis = redis_client or redis.from_url(settings.redis_url, decode_responses=True)
         self._cache_prefix = "prompt_cache"
 
         # Statistics tracking (per-instance)
         self._hits = 0
         self._misses = 0
 
-        logger.info("prompt_cache_service_initialized", prefix=self._cache_prefix, redis_url=settings.redis_url)
+        logger.info(
+            "prompt_cache_service_initialized",
+            prefix=self._cache_prefix,
+            redis_url=settings.redis_url,
+        )
 
     def _generate_cache_key(self, namespace: str, model: str, prompt: str) -> str:
         """
@@ -136,7 +136,9 @@ class PromptCacheService:
             # → "prompt_cache:default#a1b2c3d4#e5f6g7h8..."
         """
         # Hash model and prompt to fixed-length deterministic keys
-        model_hash = hashlib.sha256(model.encode("utf-8")).hexdigest()[:16]  # First 16 chars for brevity
+        model_hash = hashlib.sha256(model.encode("utf-8")).hexdigest()[
+            :16
+        ]  # First 16 chars for brevity
         prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
 
         # Construct key: prefix:namespace#model_hash#prompt_hash
@@ -147,7 +149,7 @@ class PromptCacheService:
 
     async def get_cached_response(
         self, prompt: str, model: str, namespace: str = "default"
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get cached LLM response from Redis.
 
@@ -186,7 +188,11 @@ class PromptCacheService:
                     key=cache_key,
                     hits=self._hits,
                 )
-                return cached_value.decode("utf-8") if isinstance(cached_value, bytes) else cached_value
+                return (
+                    cached_value.decode("utf-8")
+                    if isinstance(cached_value, bytes)
+                    else cached_value
+                )
 
             else:
                 # Cache miss

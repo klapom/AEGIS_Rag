@@ -855,27 +855,19 @@ class Settings(BaseSettings):
     # Web Search Configuration (Sprint 63 Feature 63.9)
     web_search_enabled: bool = Field(
         default=False,
-        description="Enable web search with DuckDuckGo (default: disabled for privacy)"
+        description="Enable web search with DuckDuckGo (default: disabled for privacy)",
     )
     web_search_max_results: int = Field(
-        default=5,
-        ge=1,
-        le=20,
-        description="Maximum web search results per query"
+        default=5, ge=1, le=20, description="Maximum web search results per query"
     )
     web_search_timeout: int = Field(
-        default=10,
-        ge=1,
-        le=30,
-        description="Web search timeout in seconds"
+        default=10, ge=1, le=30, description="Web search timeout in seconds"
     )
     web_search_region: str = Field(
-        default="de-DE",
-        description="Region code for web search (e.g., de-DE, en-US)"
+        default="de-DE", description="Region code for web search (e.g., de-DE, en-US)"
     )
     web_search_safesearch: Literal["strict", "moderate", "off"] = Field(
-        default="moderate",
-        description="SafeSearch setting for web results"
+        default="moderate", description="SafeSearch setting for web results"
     )
 
     @field_validator("log_level")

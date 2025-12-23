@@ -179,7 +179,7 @@ class TestGetEntityChunkMentions:
         mock_neo4j = MagicMock()
         mock_neo4j.execute_read = AsyncMock(return_value=[])
 
-        result = await _get_entity_chunk_mentions(
+        await _get_entity_chunk_mentions(
             entity_names=["Amsterdam"],
             neo4j_client=mock_neo4j,
             allowed_namespaces=None,

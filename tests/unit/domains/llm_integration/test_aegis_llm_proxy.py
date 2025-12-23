@@ -232,7 +232,7 @@ class TestBudgetTracking:
 
         is_exceeded = aegis_proxy_with_config._is_budget_exceeded("alibaba_cloud")
 
-        assert is_exceeded == False
+        assert not is_exceeded
 
     def test_budget_exceeded_returns_true(self, aegis_proxy_with_config) -> None:
         """Test budget check returns True when exceeded."""
@@ -240,7 +240,7 @@ class TestBudgetTracking:
 
         is_exceeded = aegis_proxy_with_config._is_budget_exceeded("alibaba_cloud")
 
-        assert is_exceeded == True
+        assert is_exceeded
 
     def test_budget_at_limit_returns_true(self, aegis_proxy_with_config) -> None:
         """Test budget check returns True when exactly at limit."""
@@ -248,13 +248,13 @@ class TestBudgetTracking:
 
         is_exceeded = aegis_proxy_with_config._is_budget_exceeded("alibaba_cloud")
 
-        assert is_exceeded == True
+        assert is_exceeded
 
     def test_local_ollama_never_budget_exceeded(self, aegis_proxy_with_config) -> None:
         """Test local ollama always has budget available."""
         is_exceeded = aegis_proxy_with_config._is_budget_exceeded("local_ollama")
 
-        assert is_exceeded == False
+        assert not is_exceeded
 
     def test_no_limit_configured_never_exceeded(self, aegis_proxy_with_config) -> None:
         """Test provider with no limit never exceeds budget."""
@@ -262,7 +262,7 @@ class TestBudgetTracking:
 
         is_exceeded = aegis_proxy_with_config._is_budget_exceeded("openai")
 
-        assert is_exceeded == False
+        assert not is_exceeded
 
 
 class TestCostCalculation:
