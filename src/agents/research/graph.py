@@ -9,14 +9,14 @@ This module implements a LangGraph-based research agent that:
 4. Synthesizes findings into comprehensive answer
 """
 
-from typing import TypedDict, Annotated, Literal
 import operator
+from typing import Annotated, Literal, TypedDict
+
 import structlog
+from langgraph.graph import END, StateGraph
 
-from langgraph.graph import StateGraph, END
-
-from src.agents.research.planner import plan_research, evaluate_plan_quality
-from src.agents.research.searcher import execute_searches, evaluate_results
+from src.agents.research.planner import evaluate_plan_quality, plan_research
+from src.agents.research.searcher import evaluate_results, execute_searches
 from src.agents.research.synthesizer import synthesize_findings
 
 logger = structlog.get_logger(__name__)

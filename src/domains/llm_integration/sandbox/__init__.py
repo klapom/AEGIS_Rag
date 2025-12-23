@@ -53,11 +53,8 @@ async def get_sandbox(
     global _sandbox_instance
 
     if _sandbox_instance is None:
-        if use_docker:
-            _sandbox_instance = DockerSandbox(**kwargs)
-        else:
-            # For now, always use Docker
-            # Process-level sandbox can be added later
-            _sandbox_instance = DockerSandbox(**kwargs)
+        # For now, always use Docker (use_docker parameter reserved for future)
+        # Process-level sandbox can be added later
+        _sandbox_instance = DockerSandbox(**kwargs)
 
     return _sandbox_instance

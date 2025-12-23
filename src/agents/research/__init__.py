@@ -18,7 +18,7 @@ Usage:
     })
 """
 
-from src.agents.research.graph import create_research_graph, ResearchState
+from src.agents.research.graph import ResearchState, create_research_graph
 
 __all__ = [
     "create_research_graph",

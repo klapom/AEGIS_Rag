@@ -9,6 +9,7 @@ This module handles search execution across:
 """
 
 from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -266,7 +267,7 @@ async def evaluate_results(
 
     # Calculate metrics
     num_results = len(results)
-    sources = set(r.get("source", "unknown") for r in results)
+    sources = {r.get("source", "unknown") for r in results}
     avg_score = sum(r.get("score", 0.0) for r in results) / num_results
 
     metrics = {

@@ -7,12 +7,13 @@ network isolation, and read-only filesystem options.
 """
 
 import asyncio
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
+
 import structlog
 
 from src.domains.llm_integration.sandbox.resource_limits import (
     ResourceLimits,
-    get_docker_resource_limits,
     validate_limits,
 )
 
@@ -84,10 +85,10 @@ class DockerSandbox:
                 logger.error("docker_not_installed")
                 raise ImportError(
                     "Docker SDK not installed. Install with: pip install docker"
-                )
+                ) from None
             except Exception as e:
                 logger.error("docker_client_init_failed", error=str(e))
-                raise RuntimeError(f"Failed to initialize Docker client: {e}")
+                raise RuntimeError(f"Failed to initialize Docker client: {e}") from e
 
         return self._client
 
@@ -165,7 +166,7 @@ class DockerSandbox:
                     "success": exit_code == 0,
                 }
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("bash_execution_timeout", timeout=timeout)
                 container.kill()
                 return {
@@ -260,7 +261,7 @@ class DockerSandbox:
 
             return {"result": result}
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("handler_timeout", handler=handler.__name__, timeout=timeout)
             return {
                 "error": f"Handler timed out after {timeout} seconds",

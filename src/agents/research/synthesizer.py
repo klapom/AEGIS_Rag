@@ -7,6 +7,7 @@ well-structured answer to the user's question.
 """
 
 from typing import Any
+
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -188,7 +189,7 @@ async def create_structured_summary(
         True
     """
     # Extract key information
-    sources = list(set(r.get("source", "unknown") for r in results))
+    sources = list({r.get("source", "unknown") for r in results})
     top_results = sorted(
         results,
         key=lambda r: r.get("score", 0.0),
@@ -260,12 +261,11 @@ def extract_key_points(text: str, max_points: int = 5) -> list[str]:
         if not sentence:
             continue
 
-        # Check for key indicators
-        if any(indicator in sentence.lower() for indicator in key_indicators):
-            key_sentences.append(sentence)
-
-        # Or high importance based on length and content
-        elif len(sentence) > 50 and len(sentence.split()) > 8:
+        # Check for key indicators or high importance based on length and content
+        if (
+            any(indicator in sentence.lower() for indicator in key_indicators)
+            or (len(sentence) > 50 and len(sentence.split()) > 8)
+        ):
             key_sentences.append(sentence)
 
     # Return top N by position (earlier is more important)
