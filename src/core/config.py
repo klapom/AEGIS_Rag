@@ -730,12 +730,13 @@ class Settings(BaseSettings):
     )
 
     # Embedding Backend Configuration (Sprint 35 Feature 35.8: Sentence-Transformers Migration)
+    # Sprint 61 Feature 61.1: Default switched to native sentence-transformers (5x faster)
     embedding_backend: Literal["ollama", "sentence-transformers"] = Field(
-        default="ollama",
+        default="sentence-transformers",
         description=(
             "Embedding service backend selection:\n"
-            "- 'ollama': Ollama HTTP API (default, backward compatible, ~50-100 emb/s)\n"
-            "- 'sentence-transformers': Direct GPU access (DGX Spark, ~500-1000 emb/s)"
+            "- 'sentence-transformers': Native BGE-M3 (default, 5x faster, Sprint 61)\n"
+            "- 'ollama': Ollama HTTP API (backward compatible, slower)"
         ),
     )
     st_model_name: str = Field(

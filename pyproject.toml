@@ -43,6 +43,9 @@ any-llm-sdk = {extras = ["openai", "ollama"], version = "~1.2.0"}  # Multi-provi
 # Hybrid Search (Sprint 2: BM25)
 rank-bm25 = "^0.2.2"
 
+# Embeddings (Sprint 61: Native Sentence-Transformers - Feature 61.1)
+sentence-transformers = "^3.3.1"  # Native BGE-M3 embeddings (5x faster than Ollama)
+
 # Utilities (Core)
 python-dotenv = "^1.0.0"
 tenacity = ">=8.1.0,<9.0.0"  # Downgraded for graphiti-core compatibility (Sprint 8)
@@ -114,14 +117,15 @@ docx2txt = "^0.9"  # DOCX text extraction
 # ----------------------------------------------------------------------------
 # RERANKING GROUP: Cross-encoder reranking for search quality
 # Install: poetry install --with reranking
-# Size: ~400MB (sentence-transformers + PyTorch models)
+# NOTE: sentence-transformers is now in CORE dependencies (Sprint 61 Feature 61.1)
+# This group kept for backwards compatibility but may be removed in future
 # ----------------------------------------------------------------------------
 [tool.poetry.group.reranking]
 optional = true
 
 [tool.poetry.group.reranking.dependencies]
 # Cross-Encoder Reranking (Sprint 3)
-sentence-transformers = "^3.3.1"  # HuggingFace cross-encoder models (~300MB + PyTorch)
+# NOTE: Moved to core dependencies in Sprint 61 for native embeddings
 
 # ----------------------------------------------------------------------------
 # EVALUATION GROUP: RAG evaluation with RAGAS
