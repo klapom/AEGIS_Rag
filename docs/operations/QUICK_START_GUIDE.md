@@ -221,7 +221,7 @@ poetry run python scripts/load_sample_data.py
 
 # Expected output:
 # Loading sample data...
-# ✓ Created Qdrant collection: aegis_documents
+# ✓ Created Qdrant collection: documents_v1
 # ✓ Loaded 50 document chunks
 # ✓ Created Neo4j entities: 25 nodes, 40 relationships
 # ✓ Sample data loaded successfully
@@ -271,7 +271,7 @@ curl http://localhost:6333/collections
 {
   "result": {
     "collections": [
-      {"name": "aegis_documents"}
+      {"name": "documents_v1"}
     ]
   }
 }

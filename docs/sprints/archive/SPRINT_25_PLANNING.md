@@ -339,7 +339,7 @@ async def test_end_to_end_pipeline(sample_pdf, ingestion_pipeline):
     # Validate data in Qdrant
     qdrant = get_qdrant_client()
     points = await qdrant.scroll(
-        collection_name="aegis_documents",
+        collection_name="documents_v1",
         limit=10
     )
     assert len(points[0]) > 0

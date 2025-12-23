@@ -212,7 +212,7 @@ def mock_qdrant_collections():
     return CollectionsResponse(
         collections=[
             CollectionDescription(name="test_collection"),
-            CollectionDescription(name="aegis_documents"),
+            CollectionDescription(name="documents_v1"),
         ]
     )
 

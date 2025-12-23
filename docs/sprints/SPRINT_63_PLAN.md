@@ -1,7 +1,7 @@
 # Sprint 63: Conversational Intelligence & Temporal Tracking
 
 **Sprint Duration:** 2 weeks
-**Total Story Points:** 34 SP
+**Total Story Points:** 41 SP
 **Priority:** HIGH (User Experience + Audit Trail)
 **Dependencies:** Sprint 61-62 Complete
 
@@ -1089,6 +1089,10 @@ export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) 
 | 63.4 | Structured output consistency | 100% | Response format validation |
 | 63.4 | Markdown rendering works | 100% | Frontend test |
 | 63.4 | Metadata footer present | 100% | API test |
+| 63.6 | E2E tests passing | 4/4 journeys | Playwright test |
+| 63.6 | Security test passing | Dangerous commands blocked | E2E test |
+| 63.7 | Auth documentation complete | Guide available | Manual review |
+| 63.7 | Token generation script works | Generates valid JWT | Script test |
 
 ---
 
@@ -1116,6 +1120,494 @@ export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) 
 
 ---
 
+## Feature 63.6: Playwright E2E Tests for Tool Framework (5 SP)
+
+**Priority:** P1 (High - Test Coverage Gap)
+**Status:** READY (Gap identified in Sprint 59 testing)
+**Dependencies:** None
+
+### Rationale
+
+During Sprint 59 Tool Framework testing, **E2E tests were documented but never implemented**:
+- **Current status:** 0 E2E tests for tool framework journeys
+- **Unit tests:** 55/55 PASSED ✅
+- **Integration tests:** 8/9 PASSED ✅
+- **E2E tests:** 0/4 (missing file `tests/e2e/test_tool_framework_journeys.py`)
+
+**Impact:**
+- No browser-based validation of tool execution UI
+- Cannot verify end-to-end user journeys
+- Regression risk when updating tool UI
+
+### Tasks
+
+#### 1. Create Playwright Test Infrastructure (1 SP)
+
+**File:** `tests/e2e/test_tool_framework_journeys.py` (new)
+
+Set up Playwright test infrastructure:
+```python
+"""E2E tests for Tool Framework user journeys.
+
+Sprint 63 Feature 63.6: Playwright tests for all 4 documented journeys.
+Based on docs/e2e/TOOL_FRAMEWORK_USER_JOURNEY.md
+"""
+
+import pytest
+from playwright.async_api import async_playwright, Page, expect
+
+
+@pytest.fixture(scope="session")
+async def browser():
+    """Launch browser for E2E tests."""
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        yield browser
+        await browser.close()
+
+
+@pytest.fixture
+async def page(browser):
+    """Create new page for each test."""
+    page = await browser.new_page()
+    yield page
+    await page.close()
+```
+
+#### 2. Journey 1: Bash Execution E2E Test (1 SP)
+
+```python
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_journey_1_bash_execution(page: Page):
+    """Test complete bash execution journey via UI.
+
+    User story: Data analyst wants to run bash command to check system status.
+    """
+    # Navigate to tool execution page
+    await page.goto("http://localhost:5179/tools")
+
+    # Select Bash tool
+    await page.click("text=Bash Command")
+
+    # Wait for command input to be visible
+    await page.wait_for_selector("textarea[name='command']")
+
+    # Enter safe command
+    await page.fill("textarea[name='command']", "echo 'Hello from E2E test'")
+
+    # Click execute button
+    await page.click("button:has-text('Execute')")
+
+    # Wait for result to appear
+    result = page.locator(".result-output")
+    await expect(result).to_be_visible(timeout=5000)
+
+    # Verify output contains expected text
+    result_text = await result.text_content()
+    assert "Hello from E2E test" in result_text
+
+    # Verify success indicator
+    success_badge = page.locator(".badge-success, .status-success")
+    await expect(success_badge).to_be_visible()
+```
+
+#### 3. Journey 2: Python Execution E2E Test (1 SP)
+
+```python
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_journey_2_python_execution(page: Page):
+    """Test complete Python execution journey via UI.
+
+    User story: Developer wants to run Python code for data analysis.
+    """
+    await page.goto("http://localhost:5179/tools")
+
+    # Select Python tool
+    await page.click("text=Python Code")
+
+    # Wait for code editor
+    code_input = page.locator("textarea[name='code'], .code-editor")
+    await expect(code_input).to_be_visible()
+
+    # Enter safe Python code
+    python_code = """
+import math
+result = math.sqrt(16)
+print(f"Result: {result}")
+"""
+    await code_input.fill(python_code)
+
+    # Execute
+    await page.click("button:has-text('Execute')")
+
+    # Wait for output
+    output = page.locator(".python-output, .result-output")
+    await expect(output).to_be_visible(timeout=5000)
+
+    # Verify output
+    output_text = await output.text_content()
+    assert "Result: 4.0" in output_text or "4.0" in output_text
+```
+
+#### 4. Journey 4: Chat with Tools E2E Test (1 SP)
+
+```python
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_journey_4_chat_with_tools(page: Page):
+    """Test chat conversation where LLM autonomously uses tools.
+
+    User story: User asks question, LLM decides to use bash tool.
+    """
+    await page.goto("http://localhost:5179/chat")
+
+    # Enter message that requires tool use
+    chat_input = page.locator("textarea[name='message'], input[name='message']")
+    await chat_input.fill("What is the current date and time?")
+
+    # Send message
+    await page.click("button:has-text('Send')")
+
+    # Wait for LLM response
+    await page.wait_for_selector(".message.assistant", timeout=10000)
+
+    # Verify tool was used (look for tool usage indicator)
+    tool_indicator = page.locator(".tool-used, .tool-call")
+    # Tool usage indicator might be present or not depending on implementation
+
+    # Verify response contains date/time information
+    response = page.locator(".message.assistant").last
+    response_text = await response.text_content()
+    # Response should contain some date/time related info
+    assert len(response_text) > 0
+```
+
+#### 5. Security Test: Dangerous Command Blocked (1 SP)
+
+```python
+@pytest.mark.e2e
+@pytest.mark.asyncio
+async def test_dangerous_command_blocked(page: Page):
+    """Verify dangerous bash commands are blocked.
+
+    Security requirement: System must reject dangerous patterns.
+    """
+    await page.goto("http://localhost:5179/tools")
+    await page.click("text=Bash Command")
+
+    # Try to execute dangerous command
+    await page.fill("textarea[name='command']", "rm -rf /")
+    await page.click("button:has-text('Execute')")
+
+    # Wait for error message
+    error = page.locator(".error-message, .alert-danger")
+    await expect(error).to_be_visible(timeout=3000)
+
+    # Verify error indicates command was blocked
+    error_text = await error.text_content()
+    assert "blocked" in error_text.lower() or "dangerous" in error_text.lower()
+```
+
+---
+
+## Feature 63.7: MCP Authentication Documentation (2 SP)
+
+**Priority:** P2 (Medium - Developer Experience)
+**Status:** READY (Gap identified in Sprint 59 testing)
+**Dependencies:** None
+
+### Rationale
+
+During Sprint 59 Tool Framework testing, **MCP tools require JWT authentication but no documentation exists**:
+- **Impact:** Developers cannot test MCP tools without understanding auth flow
+- **Current state:** Auth requirement mentioned in TOOL_FRAMEWORK_USER_JOURNEY.md but no implementation guide
+- **Need:** Step-by-step authentication guide
+
+### Tasks
+
+#### 1. Create Authentication Guide (1 SP)
+
+**File:** `docs/api/AUTHENTICATION.md` (new)
+
+```markdown
+# API Authentication Guide
+
+**Sprint 63 Feature 63.7**
+
+---
+
+## Overview
+
+AEGIS RAG uses **JWT (JSON Web Token)** authentication for MCP tool endpoints.
+
+**Endpoints requiring authentication:**
+- `/api/v1/mcp/tools/{tool_name}/execute` - All MCP tool executions
+
+**Endpoints without authentication (development mode):**
+- `/api/v1/chat/` - Standard chat endpoint
+- `/api/v1/health` - Health check endpoint
+
+---
+
+## Quick Start
+
+### 1. Obtain JWT Token
+
+#### Development Mode (Local Testing)
+
+For local development, generate a test token:
+
+\`\`\`python
+# scripts/generate_test_token.py
+import jwt
+import datetime
+
+SECRET_KEY = "dev-secret-key-change-in-production"
+
+payload = {
+    "sub": "test-user",
+    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
+    "iat": datetime.datetime.utcnow(),
+}
+
+token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+print(f"Token: {token}")
+\`\`\`
+
+#### Production Mode
+
+In production, obtain tokens from your authentication provider:
+1. User logs in via OAuth/SAML
+2. Backend generates JWT with user claims
+3. Frontend stores token in secure storage
+4. Include token in all MCP requests
+
+### 2. Make Authenticated Request
+
+\`\`\`bash
+# Using curl
+curl -X POST http://localhost:8000/api/v1/mcp/tools/bash/execute \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "parameters": {
+      "command": "echo test"
+    }
+  }'
+\`\`\`
+
+### 3. Handle Token Expiration
+
+Tokens expire after configured timeout (default: 1 hour).
+
+**Error response:**
+\`\`\`json
+{
+  "detail": "Token expired",
+  "status_code": 401
+}
+\`\`\`
+
+**Solution:** Refresh token or re-authenticate.
+
+---
+
+## JWT Token Structure
+
+\`\`\`json
+{
+  "sub": "user_id",
+  "exp": 1735689600,
+  "iat": 1735686000,
+  "roles": ["user", "admin"]
+}
+\`\`\`
+
+**Required claims:**
+- `sub`: User ID
+- `exp`: Expiration timestamp
+- `iat`: Issued at timestamp
+
+**Optional claims:**
+- `roles`: User roles for authorization
+
+---
+
+## Environment Configuration
+
+\`\`\`bash
+# .env
+JWT_SECRET_KEY=your-secret-key-256-bits
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_HOURS=1
+\`\`\`
+
+---
+
+## Testing with Playwright
+
+\`\`\`python
+import pytest
+from playwright.async_api import Page
+
+@pytest.fixture
+def auth_token():
+    """Generate test JWT token."""
+    import jwt
+    import datetime
+
+    payload = {
+        "sub": "test-user",
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1),
+    }
+    return jwt.encode(payload, "dev-secret-key", algorithm="HS256")
+
+@pytest.mark.e2e
+async def test_authenticated_tool_call(page: Page, auth_token):
+    """Test tool execution with authentication."""
+    await page.goto("http://localhost:5179/tools")
+
+    # Set token in local storage
+    await page.evaluate(f"localStorage.setItem('auth_token', '{auth_token}')")
+
+    # Execute tool (frontend automatically includes token)
+    await page.click("text=Bash Command")
+    await page.fill("textarea[name='command']", "echo test")
+    await page.click("button:has-text('Execute')")
+
+    # Verify success
+    result = await page.locator(".result-output").text_content()
+    assert "test" in result
+\`\`\`
+
+---
+
+## Troubleshooting
+
+### "Invalid token" Error
+
+**Cause:** Token signature verification failed
+
+**Solutions:**
+1. Verify `JWT_SECRET_KEY` matches between services
+2. Check token was not modified
+3. Ensure algorithm matches (`HS256`)
+
+### "Token expired" Error
+
+**Cause:** Token `exp` claim is in the past
+
+**Solutions:**
+1. Generate new token
+2. Implement token refresh mechanism
+3. Increase `JWT_EXPIRATION_HOURS` if needed
+
+### "Missing Authorization header" Error
+
+**Cause:** Request did not include `Authorization: Bearer <token>`
+
+**Solutions:**
+1. Add header to request
+2. Check frontend is including token
+3. Verify token is stored in localStorage/sessionStorage
+
+---
+
+## Security Best Practices
+
+1. **Never commit tokens to Git** - Use environment variables
+2. **Use HTTPS in production** - Prevent token interception
+3. **Rotate secret keys regularly** - Use key rotation strategy
+4. **Implement refresh tokens** - Shorter-lived access tokens
+5. **Validate all claims** - Check `exp`, `iat`, and custom claims
+6. **Use secure storage** - httpOnly cookies or secure localStorage
+7. **Implement rate limiting** - Prevent token brute-force attacks
+
+---
+
+**Document Version:** 1.0
+**Last Updated:** 2025-12-21
+**Sprint:** 63 Feature 63.7
+\`\`\`
+```
+
+#### 2. Add Script: Generate Test Token (1 SP)
+
+**File:** `scripts/generate_test_token.py` (new)
+
+```python
+#!/usr/bin/env python3
+"""Generate test JWT token for local development.
+
+Sprint 63 Feature 63.7: Authentication helper script.
+
+Usage:
+    python scripts/generate_test_token.py
+    python scripts/generate_test_token.py --user admin --hours 24
+"""
+
+import argparse
+import datetime
+import jwt
+
+
+def generate_token(user_id: str = "test-user", hours: int = 1) -> str:
+    """Generate JWT token for testing.
+
+    Args:
+        user_id: User ID for 'sub' claim
+        hours: Token validity in hours
+
+    Returns:
+        JWT token string
+    """
+    secret_key = "dev-secret-key-change-in-production"
+
+    payload = {
+        "sub": user_id,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=hours),
+        "iat": datetime.datetime.utcnow(),
+        "roles": ["user"],
+    }
+
+    token = jwt.encode(payload, secret_key, algorithm="HS256")
+    return token
+
+
+def main():
+    """CLI for token generation."""
+    parser = argparse.ArgumentParser(description="Generate test JWT token")
+    parser.add_argument("--user", default="test-user", help="User ID")
+    parser.add_argument("--hours", type=int, default=1, help="Token validity (hours)")
+
+    args = parser.parse_args()
+
+    token = generate_token(args.user, args.hours)
+
+    print(f"\n{'='*60}")
+    print(f"Generated JWT Token for User: {args.user}")
+    print(f"Valid for: {args.hours} hour(s)")
+    print(f"{'='*60}\n")
+    print(token)
+    print(f"\n{'='*60}")
+    print("\nUse in curl:")
+    print(f"curl -H 'Authorization: Bearer {token}' ...")
+    print(f"{'='*60}\n")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Make executable:
+```bash
+chmod +x scripts/generate_test_token.py
+```
+
+---
+
 ## Deferred to Sprint 64+
 
 **Feature 64.1: Multihop Agent Use Cases (3 SP)**
@@ -1130,11 +1622,22 @@ export const StructuredAnswer: React.FC<StructuredAnswerProps> = ({ response }) 
 
 ## Final Note
 
-This completes the Sprint 61-63 reorganization:
-- **Sprint 61:** Performance & Ollama (25 SP)
-- **Sprint 62:** Section-Aware Features (30 SP)
-- **Sprint 63:** Conversational Intelligence + Temporal (34 SP)
-- **Total:** 89 SP across 3 focused sprints
+This completes the Sprint 61-63 reorganization with bugfixes from Sprint 59 testing:
+- **Sprint 61:** Performance & Ollama (29 SP) - includes 2 bugfix features (61.6, 61.7)
+- **Sprint 62:** Section-Aware Features (38 SP) - includes Research Endpoint (62.10)
+- **Sprint 63:** Conversational Intelligence + Temporal (41 SP) - includes E2E tests + Auth guide (63.6, 63.7)
+- **Total:** 108 SP across 3 focused sprints
+
+**Sprint 61 Bugfixes Added:**
+- 61.6: Fix Chat Endpoint Timeout (3 SP) - Production blocker from Sprint 59 testing
+- 61.7: Update Tool Framework Documentation (1 SP) - Fix outdated API endpoints ✅ COMPLETE
+
+**Sprint 62 Bugfixes Added:**
+- 62.10: Implement Research Endpoint (8 SP) - Missing /chat/research endpoint
+
+**Sprint 63 Bugfixes Added:**
+- 63.6: Playwright E2E Tests (5 SP) - Missing E2E test coverage for tool framework
+- 63.7: MCP Authentication Guide (2 SP) - Missing JWT auth documentation
 
 **Sprint 63 Feature Summary:**
 - 63.1: Multi-Turn RAG Template (13 SP) - Memory + History + Contradictions
@@ -1142,3 +1645,5 @@ This completes the Sprint 61-63 reorganization:
 - 63.3: Redis Prompt Caching (5 SP, conditional) - +20% speedup
 - 63.4: Structured Output Formatting (5 SP) - Professional response templates
 - 63.5: Section-Based Community Detection (3 SP, deferred from Sprint 62)
+- 63.6: Playwright E2E Tests (5 SP) - Tool framework test coverage
+- 63.7: MCP Authentication Guide (2 SP) - JWT auth documentation

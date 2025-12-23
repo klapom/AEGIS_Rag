@@ -25,16 +25,18 @@ Data analyst wants to run a bash command to check system status.
 
 1. **Send API Request**
    ```bash
-   curl -X POST http://localhost:8000/api/v1/tools/execute \
+   curl -X POST http://localhost:8000/api/v1/mcp/tools/bash/execute \
      -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
      -d '{
-       "tool_name": "bash",
        "parameters": {
          "command": "df -h",
          "timeout": 30
        }
      }'
    ```
+
+   > **Note**: MCP tools require JWT authentication. See [Authentication Guide](#authentication-requirements) below.
 
 2. **Receive Response**
    ```json
@@ -53,7 +55,7 @@ Data analyst wants to run a bash command to check system status.
 ```
 User Request
     ↓
-API Endpoint (/api/v1/tools/execute)
+API Endpoint (/api/v1/mcp/tools/bash/execute)
     ↓
 ToolExecutor.execute("bash", params)
     ↓
@@ -98,16 +100,18 @@ Developer wants to run Python code for data analysis.
 
 1. **Send API Request**
    ```bash
-   curl -X POST http://localhost:8000/api/v1/tools/execute \
+   curl -X POST http://localhost:8000/api/v1/mcp/tools/python/execute \
      -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
      -d '{
-       "tool_name": "python",
        "parameters": {
          "code": "import math\nresult = math.sqrt(16)\nprint(result)",
          "timeout": 30
        }
      }'
    ```
+
+   > **Note**: MCP tools require JWT authentication. See [Authentication Guide](#authentication-requirements) below.
 
 2. **Receive Response**
    ```json
@@ -171,18 +175,34 @@ Response to User
 
 ## Journey 3: Deep Research with Agentic Search
 
+> **⚠️ STATUS**: Research endpoint not yet implemented. Planned for Sprint 62 (Feature 62.10).
+>
+> **Workaround**: Use standard `/api/v1/chat/` endpoint with `use_tools=true` for agentic behavior.
+
 ### Scenario
 User asks complex question requiring multi-step research.
 
 ### User Steps
 
-1. **Send Research Request**
+1. **Send Research Request** *(Planned Endpoint)*
    ```bash
+   # PLANNED FOR SPRINT 62 - NOT YET AVAILABLE
    curl -X POST http://localhost:8000/api/v1/chat/research \
      -H "Content-Type: application/json" \
      -d '{
        "query": "What are the latest advances in transformer architectures?",
        "max_iterations": 3
+     }'
+   ```
+
+   **Current Workaround** (use standard chat endpoint):
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/chat/ \
+     -H "Content-Type: application/json" \
+     -d '{
+       "query": "What are the latest advances in transformer architectures?",
+       "session_id": "research-session-1",
+       "use_tools": true
      }'
    ```
 
@@ -327,8 +347,11 @@ Return to user
 
 ### E2E Tests with Playwright
 
-Located in: `tests/e2e/test_tool_framework_journeys.py`
+> **⚠️ STATUS**: E2E tests not yet implemented. Planned for Sprint 63 (Feature 63.6).
 
+**Planned location**: `tests/e2e/test_tool_framework_journeys.py`
+
+**Planned test structure** (Sprint 63):
 ```python
 @pytest.mark.e2e
 async def test_journey_1_bash_execution(page):
@@ -349,6 +372,11 @@ async def test_journey_1_bash_execution(page):
     result = await page.locator(".result-output").text_content()
     assert "test" in result
 ```
+
+**Current Testing Coverage**:
+- ✅ Unit tests: 55/55 PASSED (bash: 26, python: 29)
+- ✅ Integration tests: 8/9 PASSED
+- ❌ E2E tests: Not implemented (Sprint 63)
 
 ### Performance Expectations
 
@@ -439,6 +467,35 @@ SANDBOX_ENABLED=false
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-12-21
-**Next Review**: Sprint 60
+## Authentication Requirements
+
+### MCP Tool Authentication
+
+All MCP tool endpoints require JWT authentication:
+
+**Endpoint Pattern**: `/api/v1/mcp/tools/{tool_name}/execute`
+
+**Required Headers**:
+```http
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
+```
+
+**Authentication Flow**:
+1. Obtain JWT token from auth endpoint (implementation varies by deployment)
+2. Include token in `Authorization` header
+3. Token expires after configured timeout (default: 1 hour)
+
+> **Note**: Detailed authentication guide planned for Sprint 63 (Feature 63.7).
+>
+> **See**: `docs/api/AUTHENTICATION.md` (coming in Sprint 63)
+
+### Chat Endpoint (No Auth Required)
+
+The standard chat endpoint (`/api/v1/chat/`) does not require authentication in development mode.
+
+---
+
+**Document Version**: 1.1
+**Last Updated**: 2025-12-21 (Post-Sprint 59 Testing)
+**Next Review**: Sprint 61

@@ -37,7 +37,7 @@ async def create_qdrant_collection():
     from src.components.vector_search.qdrant_client import get_qdrant_client
 
     client = get_qdrant_client()
-    collection_name = "aegis_documents"
+    collection_name = "documents_v1"
 
     # Check if collection exists
     collections = await client.async_client.get_collections()

@@ -43,11 +43,11 @@ Databases:
   Memory: Redis 7.x + Graphiti (3-layer temporal memory)
 
 LLM & Embeddings:
-  Current Model: Ollama llama3.2:8b (DGX Spark)
+  Current Model: Nemotron3 Nano 30/3a (DGX Spark)
   LLM Routing: AegisLLMProxy (ADR-033) - Multi-cloud support
   Fallback: Alibaba Cloud DashScope, OpenAI
   Embeddings: BGE-M3 (1024-dim, multilingual) - ADR-024
-  Reranking: Cross-encoder (ms-marco-MiniLM-L-6-v2)
+  Reranking: 
 
 Ingestion:
   Parser: Docling CUDA (GPU-accelerated OCR) - ADR-027
@@ -58,16 +58,6 @@ Frontend:
   Framework: React 19, TypeScript, Vite 7.1.12
   Styling: Tailwind CSS, Lucide Icons
   Testing: Playwright (111 E2E tests)
-
-Sprint 60 Investigations (Completed):
-  TD-071: vLLM vs Ollama - COMPLETE
-  TD-072: Sentence-Transformers Reranking - COMPLETE
-  TD-073: Sentence-Transformers Embeddings - COMPLETE
-```
-
-**Planned Sprint 61 Migrations:**
-- Embedding optimization investigation
-- Reranking performance improvements
 
 ---
 
@@ -97,8 +87,8 @@ Ollama:    http://localhost:11434 # LLM (llama3.2:8b)
 | NGC Container | Works | `nvcr.io/nvidia/pytorch:25.09-py3` |
 | llama.cpp | Works | Native CUDA compilation |
 | PyTorch cu128 | Fails | `nvrtc: invalid value for --gpu-architecture` |
-| TensorFlow | Unsupported | Not supported on DGX Spark |
-| TensorRT | Fails | No sm_121 support |
+| TensorFlow | Unsupported | Not yet supported on DGX Spark |
+| TensorRT | Fails | Not yet  sm_121 support |
 
 ### Required Environment
 ```bash

@@ -135,7 +135,7 @@ RETURN c.chunk_id, c.text, community AS community_id
 
 ## Known Limitations
 
-1. **Vector Channel**: Requires `aegis_documents` collection in Qdrant (created on new ingestion)
+1. **Vector Channel**: Requires `documents_v1` collection in Qdrant (created on new ingestion)
 2. **Graph Global**: Requires Community Detection run (community_id on entities)
 3. **Community Summaries**: Not implemented (see TD-058 for future enhancement)
 

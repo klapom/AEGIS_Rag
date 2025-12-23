@@ -339,7 +339,7 @@ curl http://localhost:8000/api/v1/auth/login -X POST \
 docker exec -it aegis-neo4j cypher-shell -u neo4j -p <password> "MATCH (n) DETACH DELETE n"
 
 # Reset Qdrant
-curl -X DELETE http://localhost:6333/collections/aegis_documents
+curl -X DELETE http://localhost:6333/collections/documents_v1
 ```
 
 ---

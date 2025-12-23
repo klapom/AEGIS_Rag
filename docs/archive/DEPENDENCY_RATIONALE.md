@@ -123,7 +123,8 @@
 - ✅ Active community (21K+ GitHub stars)
 
 **Configuration:**
-- Collection: `aegis_documents` (768-dim nomic-embed-text)
+- Collection: `documents_v1` (configurable, see `src/core/config.py`)
+- Embedding model/dimensions: Configurable (default: BGE-M3, 1024-dim)
 - Quantization: Asymmetric (24x compression)
 - HNSW Index: M=16, ef_construct=100 (balanced speed/accuracy)
 

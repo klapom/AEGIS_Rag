@@ -12,7 +12,7 @@ async def main():
 
     try:
         # Get collection info
-        collection_info = await client.get_collection("aegis_documents")
+        collection_info = await client.get_collection("documents_v1")
         print(f"Total chunks in Qdrant: {collection_info.points_count}\n")
 
         if collection_info.points_count == 0:
@@ -21,7 +21,7 @@ async def main():
 
         # Scroll through all points
         scroll_result = await client.scroll(
-            collection_name="aegis_documents",
+            collection_name="documents_v1",
             limit=1000,
             with_payload=True,
         )

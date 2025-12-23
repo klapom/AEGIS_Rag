@@ -89,7 +89,7 @@ class NamespaceManager:
         self,
         qdrant_client: Any = None,
         neo4j_client: SecureNeo4jClient | None = None,
-        collection_name: str = "aegis_documents",
+        collection_name: str = "documents_v1",
     ) -> None:
         """Initialize NamespaceManager.
 

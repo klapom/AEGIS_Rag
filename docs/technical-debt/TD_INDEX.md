@@ -151,10 +151,10 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ## Recommended Sprint Allocation
 
-### Sprint 61 (CURRENT - Performance & Ollama Optimization)
-**Duration:** 1-2 weeks | **Story Points:** 25 SP | **Status:** READY
+### Sprint 61 (CURRENT - Performance & Ollama Optimization + Bugfixes)
+**Duration:** 1-2 weeks | **Story Points:** 29 SP | **Status:** READY
 
-**Focus:** Critical performance migrations from Sprint 60 investigations
+**Focus:** Critical performance migrations from Sprint 60 investigations + Sprint 59 bugfixes
 - **61.1: Native Sentence-Transformers Embeddings (8 SP)** - from TD-073
   - 3-5x faster embeddings, 60% less VRAM, identical quality
 - **61.2: Cross-Encoder Reranking (9 SP)** - from TD-072
@@ -165,16 +165,21 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
   - OLLAMA_NUM_PARALLEL=4 for +30% throughput
 - **61.5: Ollama Request Batching (3 SP, conditional)**
   - Only if sustained load >30 QPS
+- **61.6: Fix Chat Endpoint Timeout (3 SP)** - P0 Critical
+  - /api/v1/chat/ hangs >49s, production blocker
+- **61.7: Update Tool Framework Documentation (1 SP)** - ✅ COMPLETE
+  - Fix outdated API endpoints in TOOL_FRAMEWORK_USER_JOURNEY.md
 
 **Expected Impact:**
 - Query latency: -100ms (embeddings -80ms, reranking -20ms)
 - Ingestion speed: +1500% (batch embeddings 16x faster)
 - Ollama throughput: +30-50%
+- Chat endpoint reliability: Fixed (no hanging requests)
 
-### Sprint 62 (Section-Aware Features)
-**Duration:** 2-3 weeks | **Story Points:** 30 SP | **Status:** PLANNED
+### Sprint 62 (Section-Aware Features + Research Endpoint)
+**Duration:** 2-3 weeks | **Story Points:** 38 SP | **Status:** PLANNED
 
-**Focus:** Activate dormant section-aware infrastructure (currently ~20% utilized)
+**Focus:** Activate dormant section-aware infrastructure (currently ~20% utilized) + Missing features
 - **62.1: Section-Aware Graph Queries (5 SP)**
 - **62.2: Multi-Section Metadata in Vector Search (3 SP)**
 - **62.3: VLM Image Integration with Sections (5 SP)**
@@ -184,16 +189,19 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - **62.7: Document Type Support for Sections (5 SP)** - Markdown, DOCX, TXT
 - **62.8: Section-Based Community Detection (3 SP)**
 - **62.9: Section Analytics Endpoint (2 SP, optional)**
+- **62.10: Implement Research Endpoint (8 SP)** - P1 High
+  - /api/v1/chat/research documented but not implemented
 
 **Expected Impact:**
 - Section utilization: 20% → 95%
 - Citation precision: +40% (section-level vs document-level)
 - Document type coverage: +3 formats
+- Agentic research workflows: Available (LangGraph multi-step search)
 
-### Sprint 63 (Conversational Intelligence & Temporal)
-**Duration:** 2 weeks | **Story Points:** 34 SP | **Status:** PLANNED
+### Sprint 63 (Conversational Intelligence & Temporal + Testing)
+**Duration:** 2 weeks | **Story Points:** 41 SP | **Status:** PLANNED
 
-**Focus:** Multi-turn conversations + basic audit trail + structured output
+**Focus:** Multi-turn conversations + basic audit trail + structured output + Test coverage
 - **63.1: Multi-Turn RAG Template (13 SP)** - NEW FEATURE
   - Memory Summarizer (5 SP)
   - Enhanced Prompt Template (3 SP)
@@ -209,12 +217,20 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
   - Markdown formatting, metadata footer, contradiction warnings
   - Professional, consistent output for all query types
 - **63.5: Section-Based Community Detection (3 SP)** - from Sprint 62 overflow
+- **63.6: Playwright E2E Tests (5 SP)** - P1 High
+  - Missing E2E test coverage for tool framework (0/4 journeys)
+  - tests/e2e/test_tool_framework_journeys.py (new file)
+- **63.7: MCP Authentication Guide (2 SP)** - P2 Medium
+  - JWT auth documentation for MCP tools
+  - docs/api/AUTHENTICATION.md + scripts/generate_test_token.py
 
 **Expected Impact:**
 - Multi-turn context retention: 0% → 95%
 - Response consistency: +60% (structured templates)
 - Contradiction detection in sources
 - Full audit trail for all changes
+- E2E test coverage: 0% → 100% (4/4 journeys)
+- Developer experience: JWT auth documented
 
 ### Sprint 64+ (Deferred Features)
 - **Multihop Agent Use Cases (3 SP)** - Research after endpoint removal
@@ -227,6 +243,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - TD-055: MCP Client (21 SP)
 - TD-056: Project Collaboration (34 SP)
 - TD-067: Dataset Annotation Tool (21 SP)
+- TD-074: The BM25 index cache shows a significant discrepancy between the number of documents loaded from disk cache versus the number of documents actually indexed in Qdrant.
 
 ---
 

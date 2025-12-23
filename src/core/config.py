@@ -92,7 +92,7 @@ class Settings(BaseSettings):
         qdrant_host (str): Qdrant server host (default: localhost)
         qdrant_port (int): Qdrant HTTP port (default: 6333)
         qdrant_grpc_port (int): Qdrant gRPC port (default: 6334)
-        qdrant_collection (str): Qdrant collection name (default: aegis_documents)
+        qdrant_collection (str): Qdrant collection name (default: documents_v1)
 
         neo4j_uri (str): Neo4j connection URI (default: bolt://localhost:7687)
         neo4j_user (str): Neo4j username (default: neo4j)
@@ -304,7 +304,7 @@ class Settings(BaseSettings):
     qdrant_port: int = Field(default=6333, description="Qdrant HTTP port")
     qdrant_grpc_port: int = Field(default=6334, description="Qdrant gRPC port")
     qdrant_api_key: SecretStr | None = Field(default=None, description="Qdrant API key")
-    qdrant_collection: str = Field(default="aegis_documents", description="Qdrant collection name")
+    qdrant_collection: str = Field(default="documents_v1", description="Qdrant collection name")
     qdrant_use_grpc: bool = Field(default=False, description="Use gRPC for Qdrant")
 
     # Document Ingestion Security

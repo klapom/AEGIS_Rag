@@ -86,7 +86,7 @@ poetry run pytest tests/integration/test_namespace_isolation.py -v
 
 ```
 Neo4j: 341 nodes deleted
-Qdrant: 2 collections deleted (aegis_documents, archived_conversations)
+Qdrant: 2 collections deleted (documents_v1, archived_conversations)
 BM25: Cache file deleted
 ```
 
@@ -104,7 +104,7 @@ BM25: Cache file deleted
    - Fix: Update pytest-asyncio configuration or use sync tests for Neo4j
 
 2. **Qdrant Collection Creation** - Collection must exist before namespace filtering works
-   - The `aegis_documents` collection is created during document ingestion
+   - The `documents_v1` collection is created during document ingestion
    - Empty collection returns empty results (expected behavior)
 
 ## Enterprise Use Case Support

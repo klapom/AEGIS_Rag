@@ -1,7 +1,7 @@
 # Sprint 62: Section-Aware Features
 
 **Sprint Duration:** 2-3 weeks
-**Total Story Points:** 30 SP
+**Total Story Points:** 38 SP
 **Priority:** HIGH (Activate Dormant Infrastructure)
 **Dependencies:** Sprint 61 Complete (Performance migrations)
 
@@ -637,6 +637,8 @@ Add section analytics to document details page.
 | 62.7 | Markdown/DOCX/TXT sections | Extracted | Parser tests |
 | 62.8 | Section-based communities | Detected | Community test |
 | 62.9 | Section analytics API | Returns data | API test |
+| 62.10 | Research endpoint implemented | 200 response | Integration test |
+| 62.10 | Research workflow completes | Synthesis returned | E2E test |
 
 ---
 
@@ -660,6 +662,392 @@ Add section analytics to document details page.
 | 13-14 | Testing & integration | All tests passing |
 
 **Total Duration:** 14 days (2 weeks)
+
+---
+
+## Feature 62.10: Implement Research Endpoint (8 SP)
+
+**Priority:** P1 (High - Missing Critical Feature)
+**Status:** READY (Discovered during Sprint 59 testing)
+**Dependencies:** None
+
+### Rationale
+
+During Sprint 59 Tool Framework testing, the `/api/v1/chat/research` endpoint was **documented but not implemented**:
+- **Impact:** Users cannot perform dedicated agentic research workflows
+- **Current workaround:** Use `/api/v1/chat/` with `use_tools=true` (not optimized for research)
+- **Expected benefit:** Dedicated research workflow with better planning, iteration, and synthesis
+
+**Documentation Reference:**
+- `docs/e2e/TOOL_FRAMEWORK_USER_JOURNEY.md` Journey 3 describes the research workflow
+- LangGraph state machine planned but never implemented
+
+### Tasks
+
+#### 1. Implement ResearchAgent LangGraph Workflow (3 SP)
+
+**File:** `src/agents/research_agent.py` (new)
+
+```python
+"""Research agent for multi-step agentic search.
+
+Sprint 62 Feature 62.10: Implement /chat/research endpoint.
+Based on Journey 3 from TOOL_FRAMEWORK_USER_JOURNEY.md.
+"""
+
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+
+class ResearchState(TypedDict):
+    """State for research agent workflow."""
+    query: str
+    max_iterations: int
+    current_iteration: int
+    search_queries: list[str]
+    results: list[dict]
+    synthesis: str | None
+    is_sufficient: bool
+
+
+async def plan_node(state: ResearchState) -> ResearchState:
+    """Generate research plan with 3-5 search queries.
+
+    Uses LLM to analyze query and generate targeted search queries.
+    """
+    logger.info("research_planning", query=state["query"])
+
+    # Use LLM to generate search plan
+    from src.components.llm_proxy import AegisLLMProxy
+    proxy = AegisLLMProxy()
+
+    prompt = f"""Analyze this research question and generate 3-5 targeted search queries:
+
+Question: {state['query']}
+
+Generate diverse queries that cover different aspects. Return JSON:
+{{"queries": ["query1", "query2", "query3"]}}"""
+
+    response = await proxy.generate(prompt=prompt, temperature=0.7)
+    # Parse response and extract queries
+    state["search_queries"] = parse_queries(response)
+
+    return state
+
+
+async def search_node(state: ResearchState) -> ResearchState:
+    """Execute multi-source search (vector + graph).
+
+    Performs hybrid search and accumulates results.
+    """
+    logger.info(
+        "research_search",
+        iteration=state["current_iteration"],
+        queries_count=len(state["search_queries"])
+    )
+
+    from src.agents.coordinator import coordinator_agent
+
+    # Execute searches
+    for query in state["search_queries"]:
+        result = await coordinator_agent.run(query=query, intent="hybrid")
+        state["results"].extend(result.get("sources", []))
+
+    # Deduplicate results by document_id
+    state["results"] = deduplicate_results(state["results"])
+
+    return state
+
+
+async def evaluate_node(state: ResearchState) -> ResearchState:
+    """Evaluate if results are sufficient.
+
+    Quality metrics:
+    - Coverage: min(num_results / 10.0, 1.0)
+    - Diversity: num_sources / 2.0
+    - Quality: avg_score > 0.5
+    - Sufficient: num_results >= 5 AND avg_score > 0.5
+    """
+    logger.info("research_evaluation", results_count=len(state["results"]))
+
+    num_results = len(state["results"])
+    avg_score = sum(r.get("score", 0) for r in state["results"]) / max(num_results, 1)
+
+    state["is_sufficient"] = (num_results >= 5 and avg_score > 0.5)
+    state["current_iteration"] += 1
+
+    logger.info(
+        "research_evaluation_result",
+        sufficient=state["is_sufficient"],
+        num_results=num_results,
+        avg_score=avg_score,
+    )
+
+    return state
+
+
+async def synthesize_node(state: ResearchState) -> ResearchState:
+    """Synthesize final research summary.
+
+    Generates comprehensive answer from accumulated results.
+    """
+    logger.info("research_synthesis", results_count=len(state["results"]))
+
+    from src.components.llm_proxy import AegisLLMProxy
+    proxy = AegisLLMProxy()
+
+    # Format results for context
+    context = "\n\n".join([
+        f"[{i+1}] {r.get('text', '')[:500]}..."
+        for i, r in enumerate(state["results"][:10])
+    ])
+
+    prompt = f"""Based on the research results below, provide a comprehensive answer to the question.
+
+Question: {state['query']}
+
+Research Results:
+{context}
+
+Provide a well-structured, comprehensive answer with key insights."""
+
+    synthesis = await proxy.generate(prompt=prompt, temperature=0.3)
+    state["synthesis"] = synthesis
+
+    return state
+
+
+def should_continue(state: ResearchState) -> str:
+    """Decide whether to continue research or synthesize."""
+    if state["is_sufficient"] or state["current_iteration"] >= state["max_iterations"]:
+        return "synthesize"
+    else:
+        return "search"
+
+
+# Build graph
+def create_research_agent() -> StateGraph:
+    """Create research agent workflow graph."""
+    workflow = StateGraph(ResearchState)
+
+    # Add nodes
+    workflow.add_node("plan", plan_node)
+    workflow.add_node("search", search_node)
+    workflow.add_node("evaluate", evaluate_node)
+    workflow.add_node("synthesize", synthesize_node)
+
+    # Add edges
+    workflow.set_entry_point("plan")
+    workflow.add_edge("plan", "search")
+    workflow.add_edge("search", "evaluate")
+    workflow.add_conditional_edges(
+        "evaluate",
+        should_continue,
+        {
+            "search": "search",
+            "synthesize": "synthesize"
+        }
+    )
+    workflow.add_edge("synthesize", END)
+
+    return workflow.compile()
+
+
+# Helper functions
+def parse_queries(response: str) -> list[str]:
+    """Parse queries from LLM response."""
+    import json
+    try:
+        data = json.loads(response)
+        return data.get("queries", [])
+    except:
+        # Fallback: split by newlines
+        return [q.strip("- ") for q in response.split("\n") if q.strip()]
+
+
+def deduplicate_results(results: list[dict]) -> list[dict]:
+    """Deduplicate results by document_id."""
+    seen = set()
+    deduplicated = []
+    for r in results:
+        doc_id = r.get("metadata", {}).get("document_id")
+        if doc_id not in seen:
+            seen.add(doc_id)
+            deduplicated.append(r)
+    return deduplicated
+```
+
+#### 2. Implement Research API Endpoint (2 SP)
+
+**File:** `src/api/v1/chat.py` (update)
+
+Add research endpoint:
+```python
+@router.post("/research")
+async def research_endpoint(
+    query: str = Body(...),
+    max_iterations: int = Body(default=3, ge=1, le=5),
+    session_id: str = Body(default_factory=lambda: str(uuid.uuid4())),
+) -> StreamingResponse:
+    """Agentic research endpoint with multi-step search.
+
+    Sprint 62 Feature 62.10: Dedicated research workflow.
+
+    Args:
+        query: Research question
+        max_iterations: Max search iterations (1-5)
+        session_id: Session ID for tracking
+
+    Returns:
+        Streaming response with research progress and synthesis
+    """
+    from src.agents.research_agent import create_research_agent
+
+    logger.info("research_endpoint_called", query=query, session_id=session_id)
+
+    async def generate():
+        # Initialize research state
+        state = ResearchState(
+            query=query,
+            max_iterations=max_iterations,
+            current_iteration=0,
+            search_queries=[],
+            results=[],
+            synthesis=None,
+            is_sufficient=False,
+        )
+
+        # Create and run research agent
+        research_agent = create_research_agent()
+
+        # Stream events
+        async for event in research_agent.astream(state):
+            if "plan" in event:
+                yield f"data: {json.dumps({'event': 'plan_created', 'queries': event['plan']['search_queries']})}\n\n"
+            elif "search" in event:
+                yield f"data: {json.dumps({'event': 'search_completed', 'results': len(event['search']['results'])})}\n\n"
+            elif "evaluate" in event:
+                yield f"data: {json.dumps({'event': 'evaluation', 'sufficient': event['evaluate']['is_sufficient']})}\n\n"
+            elif "synthesize" in event:
+                yield f"data: {json.dumps({'event': 'synthesis', 'text': event['synthesize']['synthesis']})}\n\n"
+
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+```
+
+#### 3. Add Pydantic Models (1 SP)
+
+**File:** `src/core/models/research.py` (new)
+
+```python
+"""Research endpoint models.
+
+Sprint 62 Feature 62.10.
+"""
+
+from pydantic import BaseModel, Field
+
+
+class ResearchRequest(BaseModel):
+    """Request model for research endpoint."""
+    query: str = Field(..., min_length=10, max_length=500)
+    max_iterations: int = Field(default=3, ge=1, le=5)
+    session_id: str | None = None
+
+
+class ResearchEvent(BaseModel):
+    """Streaming event from research agent."""
+    event: str  # plan_created, search_started, search_completed, evaluation, synthesis
+    data: dict
+```
+
+#### 4. Integration Tests (1 SP)
+
+**File:** `tests/integration/api/test_research_endpoint.py`
+
+```python
+"""Test research endpoint implementation.
+
+Sprint 62 Feature 62.10.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from src.api.main import app
+
+
+@pytest.mark.integration
+def test_research_endpoint_exists():
+    """Test that research endpoint is implemented."""
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/chat/research",
+        json={
+            "query": "What are the latest advances in RAG systems?",
+            "max_iterations": 2
+        }
+    )
+
+    # Should return 200 (not 404)
+    assert response.status_code == 200
+
+
+@pytest.mark.integration
+async def test_research_workflow_completes():
+    """Test complete research workflow."""
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/v1/chat/research",
+        json={
+            "query": "What is machine learning?",
+            "max_iterations": 1  # Quick test
+        },
+        stream=True
+    )
+
+    events = []
+    for line in response.iter_lines():
+        if line.startswith(b"data:"):
+            events.append(line.decode())
+
+    # Should have plan, search, evaluate, synthesize events
+    assert len(events) >= 4
+    assert any("plan_created" in e for e in events)
+    assert any("synthesis" in e for e in events)
+```
+
+#### 5. Documentation Update (1 SP)
+
+**File:** `docs/e2e/TOOL_FRAMEWORK_USER_JOURNEY.md`
+
+Update Journey 3 to mark as **IMPLEMENTED**:
+```markdown
+## Journey 3: Deep Research with Agentic Search
+
+> **✅ STATUS**: Implemented in Sprint 62 (Feature 62.10)
+
+### Scenario
+User asks complex question requiring multi-step research.
+
+### User Steps
+
+1. **Send Research Request**
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/chat/research \
+     -H "Content-Type: application/json" \
+     -d '{
+       "query": "What are the latest advances in transformer architectures?",
+       "max_iterations": 3
+     }'
+   ```
+```
 
 ---
 

@@ -82,7 +82,7 @@ async def get_system_stats() -> SystemStats:
     ```json
     {
       "qdrant_total_chunks": 1523,
-      "qdrant_collection_name": "aegis_documents",
+      "qdrant_collection_name": "documents_v1",
       "qdrant_vector_dimension": 1024,
       "bm25_corpus_size": 342,
       "neo4j_total_entities": 856,
