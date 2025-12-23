@@ -1,16 +1,21 @@
 """Multi-Source Search Component.
 
 Sprint 59 Feature 59.6: Executes searches across multiple sources.
+Sprint 63 Feature 63.9: Added WebSearch integration for external knowledge.
 
 This module handles search execution across:
 - Vector search (Qdrant)
 - Graph search (Neo4j)
+- Web search (DuckDuckGo)
 - Hybrid search (RRF fusion)
 """
 
 from typing import Any
 
 import structlog
+
+from src.domains.web_search.client import get_web_search_client
+from src.domains.web_search.fusion import fuse_results, optimize_web_query
 
 logger = structlog.get_logger(__name__)
 
@@ -20,6 +25,7 @@ async def execute_searches(
     top_k: int = 5,
     use_graph: bool = True,
     use_vector: bool = True,
+    use_web: bool = False,
     namespace: str = "default",
 ) -> list[dict[str, Any]]:
     """Execute multiple search queries across all sources.
@@ -29,6 +35,7 @@ async def execute_searches(
         top_k: Number of results per query
         use_graph: Enable graph search
         use_vector: Enable vector search
+        use_web: Enable web search (default: False)
         namespace: Namespace to search in
 
     Returns:
@@ -45,6 +52,7 @@ async def execute_searches(
         top_k=top_k,
         use_graph=use_graph,
         use_vector=use_vector,
+        use_web=use_web,
         namespace=namespace,
     )
 
@@ -56,6 +64,7 @@ async def execute_searches(
             top_k=top_k,
             use_graph=use_graph,
             use_vector=use_vector,
+            use_web=use_web,
             namespace=namespace,
         )
         all_results.extend(query_results)
@@ -77,6 +86,7 @@ async def execute_single_query(
     top_k: int = 5,
     use_graph: bool = True,
     use_vector: bool = True,
+    use_web: bool = False,
     namespace: str = "default",
 ) -> list[dict[str, Any]]:
     """Execute a single query across all enabled sources.
@@ -86,28 +96,45 @@ async def execute_single_query(
         top_k: Number of results
         use_graph: Enable graph search
         use_vector: Enable vector search
+        use_web: Enable web search
         namespace: Namespace to search in
 
     Returns:
         List of results for this query
     """
-    results = []
+    vector_results = []
+    graph_results = []
+    web_results = []
 
     try:
         # Vector search
         if use_vector:
             vector_results = await _execute_vector_search(query, top_k, namespace)
-            results.extend(vector_results)
 
         # Graph search
         if use_graph:
             graph_results = await _execute_graph_search(query, top_k, namespace)
-            results.extend(graph_results)
+
+        # Web search
+        if use_web:
+            web_results = await _execute_web_search(query, max_results=top_k)
+
+        # Fuse results if web search is enabled
+        if use_web and web_results:
+            fused_results = fuse_results(
+                vector_results=vector_results,
+                graph_results=graph_results,
+                web_results=web_results,
+                top_k=top_k * 4,  # Allow more results for fusion
+            )
+            return fused_results
+        else:
+            # Return combined vector + graph results
+            return vector_results + graph_results
 
     except Exception as e:
         logger.error("query_execution_failed", query=query, error=str(e))
-
-    return results
+        return []
 
 
 async def _execute_vector_search(query: str, top_k: int, namespace: str) -> list[dict[str, Any]]:
@@ -195,6 +222,45 @@ async def _execute_graph_search(query: str, top_k: int, namespace: str) -> list[
 
     except Exception as e:
         logger.error("graph_search_failed", query=query, error=str(e))
+        return []
+
+
+async def _execute_web_search(query: str, max_results: int = 5) -> list:
+    """Execute web search using DuckDuckGo.
+
+    Args:
+        query: Search query
+        max_results: Maximum number of results
+
+    Returns:
+        List of WebSearchResult objects
+    """
+    try:
+        # Get web search client
+        client = get_web_search_client()
+
+        # Optimize query for web search
+        optimized_query = optimize_web_query(query)
+
+        # Execute search
+        results = await client.search(
+            query=optimized_query,
+            max_results=max_results,
+            region="de-DE",  # Default to German region
+            timeout=10,
+        )
+
+        logger.debug(
+            "web_search_completed",
+            query=query,
+            optimized_query=optimized_query,
+            count=len(results),
+        )
+
+        return results
+
+    except Exception as e:
+        logger.error("web_search_failed", query=query, error=str(e))
         return []
 
 

@@ -95,6 +95,7 @@ langgraph-checkpoint-redis = "^0.1.2"  # LangGraph Redis checkpointing
 # Size: ~300MB (llama-index)
 # NOTE: SpaCy REMOVED (Sprint 36) - Entity extraction now uses Pure LLM (ADR-026, ADR-037)
 # ----------------------------------------------------------------------------
+duckduckgo-search = "^8.1.1"
 [tool.poetry.group.ingestion]
 optional = true
 

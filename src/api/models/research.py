@@ -44,6 +44,11 @@ class ResearchQueryRequest(BaseModel):
         default=3, ge=1, le=5, description="Maximum search iterations (1-5)"
     )
     stream: bool = Field(default=True, description="Enable SSE streaming")
+    response_format: str = Field(
+        default="natural",
+        description='Response format: "natural" (markdown) or "structured" (JSON)',
+        pattern="^(natural|structured)$",
+    )
 
     model_config = {"frozen": True}
 

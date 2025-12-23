@@ -213,6 +213,11 @@ class ChatRequest(BaseModel):
         default=None,
         description='Namespaces to search in. Defaults to ["default", "general"] if not specified.',
     )
+    response_format: str = Field(
+        default="natural",
+        description='Response format: "natural" (markdown with citations) or "structured" (JSON)',
+        pattern="^(natural|structured)$",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -222,6 +227,7 @@ class ChatRequest(BaseModel):
                 "include_sources": True,
                 "include_tool_calls": False,
                 "namespaces": ["default", "general"],
+                "response_format": "natural",
             }
         }
     )
@@ -337,22 +343,24 @@ class SessionListResponse(BaseModel):
 # API Endpoints
 
 
-@router.post("/", response_model=ChatResponse, status_code=status.HTTP_200_OK)
-async def chat(request: ChatRequest) -> ChatResponse:
+@router.post("/", status_code=status.HTTP_200_OK)
+async def chat(request: ChatRequest) -> ChatResponse | dict[str, Any]:
     """Process a chat query through the RAG system.
+
+    Sprint 63 Feature 63.4: Structured Output Formatting
 
     This endpoint:
     1. Validates the query
     2. Generates/validates session_id
     3. Processes query through CoordinatorAgent
     4. Extracts answer and sources
-    5. Returns structured response
+    5. Returns response in requested format (natural or structured)
 
     Args:
         request: ChatRequest with query and optional session_id
 
     Returns:
-        ChatResponse with answer, sources, and metadata
+        ChatResponse (natural format) or StructuredChatResponse (structured format)
 
     Raises:
         HTTPException: If query processing fails
@@ -365,9 +373,15 @@ async def chat(request: ChatRequest) -> ChatResponse:
         query=request.query[:100],  # Log first 100 chars
         session_id=session_id,
         intent_override=request.intent,
+        response_format=request.response_format,
     )
 
     try:
+        # Track start time for latency calculation
+        import time
+
+        start_time = time.time()
+
         # Get coordinator
         coordinator = get_coordinator()
 
@@ -394,17 +408,6 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
         # Extract metadata
         metadata = result.get("metadata", {})
-
-        # Build response
-        response = ChatResponse(
-            answer=answer,
-            query=request.query,
-            session_id=session_id,
-            intent=result.get("intent"),
-            sources=sources,
-            tool_calls=tool_calls,
-            metadata=metadata,
-        )
 
         logger.info(
             "chat_request_completed",
@@ -457,6 +460,32 @@ async def chat(request: ChatRequest) -> ChatResponse:
                 session_id=session_id,
                 message="save_conversation_turn returned False",
             )
+
+        # Sprint 63 Feature 63.4: Return structured format if requested
+        if request.response_format == "structured":
+            from src.api.services.response_formatter import format_chat_response_structured
+
+            structured_response = format_chat_response_structured(
+                query=request.query,
+                answer=answer,
+                sources=sources,
+                metadata=metadata,
+                session_id=session_id,
+                followup_questions=follow_up_questions,
+                start_time=start_time,
+            )
+            return structured_response.model_dump()
+
+        # Build natural format response (default)
+        response = ChatResponse(
+            answer=answer,
+            query=request.query,
+            session_id=session_id,
+            intent=result.get("intent"),
+            sources=sources,
+            tool_calls=tool_calls,
+            metadata=metadata,
+        )
 
         return response
 

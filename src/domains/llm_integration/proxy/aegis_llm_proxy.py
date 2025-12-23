@@ -39,6 +39,7 @@ import structlog
 # ANY-LLM is planned for future integration (ADR-033) but not yet installed
 if TYPE_CHECKING:
     from any_llm import LLMProvider, acompletion  # type: ignore[import-not-found]
+    import redis.asyncio as redis
 
 # Runtime: Create stubs if any_llm not available
 try:
@@ -74,6 +75,7 @@ except ImportError:
 
 
 from src.core.exceptions import LLMExecutionError
+from src.domains.llm_integration.cache import PromptCacheService
 from src.domains.llm_integration.config import LLMProxyConfig, get_llm_proxy_config
 from src.domains.llm_integration.cost import CostTracker
 from src.domains.llm_integration.models import (
@@ -145,6 +147,10 @@ class AegisLLMProxy:
         # Initialize persistent cost tracker (SQLite)
         self.cost_tracker = CostTracker()
 
+        # Sprint 63 Feature 63.3: Initialize prompt cache service
+        self.cache_service = PromptCacheService()
+        self._cache_enabled = True  # Can be disabled per-request if needed
+
         # Track budgets (simplified - no ANY-LLM BudgetManager needed)
         # Load current month spending from DB
         self._monthly_spending = self.cost_tracker.get_monthly_spending()
@@ -162,6 +168,7 @@ class AegisLLMProxy:
             providers=list(self.config.providers.keys()),
             budgets=self.config.budgets.get("monthly_limits", {}),
             current_spending=self._monthly_spending,
+            cache_enabled=self._cache_enabled,
         )
 
     def _is_budget_exceeded(self, provider: str) -> bool:
@@ -183,6 +190,38 @@ class AegisLLMProxy:
 
         spent = self._monthly_spending.get(provider, 0.0)
         return spent >= limit
+
+    def _get_cache_ttl(self, task: LLMTask) -> int:
+        """
+        Get cache TTL (time-to-live) in seconds for task type.
+
+        Sprint 63 Feature 63.3: Cache TTL Strategy
+
+        TTL Guidelines by task type:
+            - RESEARCH: 1800s (30 min) - results may become stale quickly
+            - EXTRACTION: 86400s (24 hours) - stable results, worth caching
+            - CHAT: 3600s (1 hour) - balanced freshness and cache hit rate
+            - DEFAULT: 3600s (1 hour)
+
+        Args:
+            task: LLM task
+
+        Returns:
+            TTL in seconds
+
+        Example:
+            ttl = self._get_cache_ttl(task)
+            # → 1800 for RESEARCH, 86400 for EXTRACTION, 3600 for others
+        """
+        ttl_map = {
+            TaskType.RESEARCH: 1800,  # 30 min - stale quickly
+            TaskType.EXTRACTION: 86400,  # 24 hours - stable
+            TaskType.ANSWER_GENERATION: 3600,  # 1 hour
+            TaskType.SUMMARIZATION: 3600,  # 1 hour
+            TaskType.GENERATION: 3600,  # 1 hour
+        }
+
+        return ttl_map.get(task.task_type, 3600)  # Default: 1 hour
 
     async def generate_streaming(self, task: LLMTask):
         """
@@ -258,16 +297,22 @@ class AegisLLMProxy:
         self,
         task: LLMTask,
         stream: bool = False,
+        use_cache: bool = True,
+        namespace: str = "default",
     ) -> LLMResponse:
         """
-        Generate LLM response with intelligent routing.
+        Generate LLM response with intelligent routing and caching.
 
         This is the main entry point for all LLM generation requests.
-        It handles routing, execution, fallback, and metrics tracking.
+        It handles cache lookup, routing, execution, fallback, and metrics tracking.
+
+        Sprint 63 Feature 63.3: Prompt caching for cost reduction
 
         Args:
             task: LLM task with prompt, quality requirements, data classification
             stream: Enable streaming response (token-by-token) - DEPRECATED, use generate_streaming()
+            use_cache: Enable prompt caching (default: True)
+            namespace: Tenant namespace for cache isolation (default: "default")
 
         Returns:
             LLMResponse with content, provider used, cost, latency
@@ -284,6 +329,40 @@ class AegisLLMProxy:
             response = await proxy.generate(task)
         """
         start_time = time.time()
+
+        # Step 0: CACHE LOOKUP (Sprint 63 Feature 63.3)
+        # Skip cache for streaming responses (not cacheable)
+        model_hint = task.model_local or task.model_cloud or task.model_openai or "unknown"
+        if self._cache_enabled and use_cache and not stream:
+            cached_response = await self.cache_service.get_cached_response(
+                prompt=task.prompt,
+                model=model_hint,
+                namespace=namespace,
+            )
+
+            if cached_response:
+                # Cache hit - return cached response with zero cost
+                latency_ms = (time.time() - start_time) * 1000
+                logger.info(
+                    "cache_hit_returned",
+                    task_id=str(task.id),
+                    namespace=namespace,
+                    model=model_hint,
+                    latency_ms=latency_ms,
+                )
+
+                return LLMResponse(
+                    content=cached_response,
+                    provider="cache",
+                    model=model_hint,
+                    tokens_used=0,
+                    tokens_input=0,
+                    tokens_output=0,
+                    cost_usd=0.0,
+                    latency_ms=latency_ms,
+                    routing_reason="prompt_cache_hit",
+                    fallback_used=False,
+                )
 
         # Step 1: AEGIS ROUTING LOGIC (custom)
         provider, reason = self._route_task(task)
@@ -311,6 +390,17 @@ class AegisLLMProxy:
             result.latency_ms = latency_ms
             result.routing_reason = reason
 
+            # Sprint 63 Feature 63.3: Cache successful response
+            if self._cache_enabled and use_cache and not stream:
+                ttl = self._get_cache_ttl(task)
+                await self.cache_service.cache_response(
+                    prompt=task.prompt,
+                    model=model_hint,
+                    namespace=namespace,
+                    response=result.content,
+                    ttl=ttl,
+                )
+
             # Step 3: AEGIS METRICS (custom)
             self._track_metrics(provider, task, result)
 
@@ -336,6 +426,18 @@ class AegisLLMProxy:
                 result.routing_reason = f"provider_error_{provider}"
                 latency_ms = (time.time() - start_time) * 1000
                 result.latency_ms = latency_ms
+
+                # Sprint 63 Feature 63.3: Cache fallback response
+                if self._cache_enabled and use_cache and not stream:
+                    ttl = self._get_cache_ttl(task)
+                    await self.cache_service.cache_response(
+                        prompt=task.prompt,
+                        model=model_hint,
+                        namespace=namespace,
+                        response=result.content,
+                        ttl=ttl,
+                    )
+
                 return result
 
             except Exception as local_error:
@@ -960,6 +1062,47 @@ class AegisLLMProxy:
             logger.warning("Prometheus metrics not available (metrics module not found)")
         except Exception as e:
             logger.warning("Failed to track Prometheus metrics", error=str(e))
+
+    async def get_cache_stats(self) -> dict:
+        """
+        Get cache statistics from PromptCacheService.
+
+        Sprint 63 Feature 63.3: Cache monitoring
+
+        Returns:
+            Dict with cache hit rate, size, etc.
+
+        Example:
+            stats = await proxy.get_cache_stats()
+            print(f"Cache hit rate: {stats['hit_rate']:.1%}")
+            print(f"Cached size: {stats['cached_size_bytes']} bytes")
+        """
+        cache_stats = await self.cache_service.get_stats()
+        return {
+            "hits": cache_stats.hits,
+            "misses": cache_stats.misses,
+            "hit_rate": cache_stats.hit_rate,
+            "total_requests": cache_stats.total_requests,
+            "cached_size_bytes": cache_stats.cached_size_bytes,
+        }
+
+    async def invalidate_cache_namespace(self, namespace: str) -> int:
+        """
+        Invalidate all cached prompts for a namespace.
+
+        Sprint 63 Feature 63.3: Cache invalidation
+
+        Args:
+            namespace: Namespace to invalidate
+
+        Returns:
+            Number of invalidated entries
+
+        Example:
+            removed = await proxy.invalidate_cache_namespace("default")
+            print(f"Invalidated {removed} cache entries")
+        """
+        return await self.cache_service.invalidate_namespace(namespace)
 
     def get_metrics_summary(self) -> dict:
         """

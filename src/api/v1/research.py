@@ -266,6 +266,11 @@ async def research_query(
 
         # Non-streaming response
         try:
+            # Track start time for latency
+            import time
+
+            start_time = time.time()
+
             # Execute research workflow
             from src.agents.research.graph import run_research
 
@@ -281,7 +286,32 @@ async def research_query(
             # Extract sources
             sources = _extract_sources(final_state.get("search_results", []))
 
-            # Create response
+            logger.info(
+                "research_query_complete",
+                query=request.query,
+                iterations=final_state.get("iteration", 0),
+                num_sources=len(sources),
+                response_format=request.response_format,
+            )
+
+            # Sprint 63 Feature 63.4: Return structured format if requested
+            if request.response_format == "structured":
+                from src.api.services.response_formatter import (
+                    format_research_response_structured,
+                )
+
+                structured_response = format_research_response_structured(
+                    query=request.query,
+                    synthesis=final_state.get("synthesis", ""),
+                    sources=sources,
+                    research_plan=final_state.get("research_plan", []),
+                    iterations=final_state.get("iteration", 0),
+                    quality_metrics=final_state.get("quality_metrics", {}),
+                    start_time=start_time,
+                )
+                return structured_response.model_dump()
+
+            # Create natural format response (default)
             response = ResearchQueryResponse(
                 query=request.query,
                 synthesis=final_state.get("synthesis", ""),
@@ -289,13 +319,6 @@ async def research_query(
                 iterations=final_state.get("iteration", 0),
                 quality_metrics=final_state.get("quality_metrics", {}),
                 research_plan=final_state.get("research_plan", []),
-            )
-
-            logger.info(
-                "research_query_complete",
-                query=request.query,
-                iterations=response.iterations,
-                num_sources=len(response.sources),
             )
 
             return response
