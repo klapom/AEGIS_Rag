@@ -73,7 +73,7 @@ class TestPrepareContextNode:
         assert result["enhanced_query"] == minimal_state["current_query"]
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_prepare_context_with_history(
         self, mock_get_llm, minimal_state, sample_conversation_turn, mock_llm_response
     ):
@@ -94,7 +94,7 @@ class TestPrepareContextNode:
         mock_llm.generate.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_prepare_context_llm_failure(
         self, mock_get_llm, minimal_state, sample_conversation_turn
     ):
@@ -117,8 +117,8 @@ class TestSearchNode:
     """Tests for search_node."""
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_qdrant_client")
-    @patch("src.agents.multi_turn.nodes.get_embeddings")
+    @patch("src.components.vector_search.qdrant_client.get_qdrant_client")
+    @patch("src.components.vector_search.embeddings.get_embedding_service")
     async def test_search_node_success(self, mock_get_embeddings, mock_get_qdrant, minimal_state):
         """Test successful document search."""
         # Setup
@@ -153,8 +153,8 @@ class TestSearchNode:
         assert result["current_context"][0]["score"] == 0.95
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_qdrant_client")
-    @patch("src.agents.multi_turn.nodes.get_embeddings")
+    @patch("src.components.vector_search.qdrant_client.get_qdrant_client")
+    @patch("src.components.vector_search.embeddings.get_embedding_service")
     async def test_search_node_failure(self, mock_get_embeddings, mock_get_qdrant, minimal_state):
         """Test search node failure handling."""
         # Setup
@@ -194,7 +194,7 @@ class TestDetectContradictionsNode:
         assert result["contradictions"] == []
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_detect_contradictions_none_found(
         self, mock_get_llm, minimal_state, sample_conversation_turn
     ):
@@ -223,7 +223,7 @@ class TestDetectContradictionsNode:
         assert result["contradictions"] == []
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_detect_contradictions_found(
         self, mock_get_llm, minimal_state, sample_conversation_turn
     ):
@@ -259,7 +259,7 @@ class TestAnswerNode:
     """Tests for answer_node."""
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_answer_node_success(self, mock_get_llm, minimal_state):
         """Test successful answer generation."""
         # Setup
@@ -283,7 +283,7 @@ class TestAnswerNode:
         assert "performance metrics are excellent" in result["answer"]
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_answer_node_with_contradictions(self, mock_get_llm, minimal_state):
         """Test answer generation with contradictions."""
         # Setup
@@ -328,8 +328,8 @@ class TestUpdateMemoryNode:
         assert result == {}
 
     @pytest.mark.asyncio
-    @patch("src.agents.multi_turn.nodes.get_redis_memory")
-    @patch("src.agents.multi_turn.nodes.get_aegis_llm_proxy")
+    @patch("src.components.memory.get_redis_memory")
+    @patch("src.domains.llm_integration.proxy.aegis_llm_proxy.get_aegis_llm_proxy")
     async def test_update_memory_at_threshold(
         self, mock_get_llm, mock_get_redis, minimal_state, sample_conversation_turn
     ):

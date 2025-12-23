@@ -106,12 +106,20 @@ function OutputSection({
       className={`rounded-md border ${borderColor} overflow-hidden mt-2`}
       data-testid={`output-section-${isError ? 'stderr' : 'stdout'}`}
     >
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
+      <div
         className={`w-full flex items-center justify-between px-3 py-1.5 ${headerBg} text-xs font-medium ${textColor}`}
+        role="button"
+        tabIndex={0}
         aria-expanded={isExpanded}
+        onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
       >
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 cursor-pointer">
           {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
           {title}
         </span>
@@ -127,7 +135,7 @@ function OutputSection({
         >
           {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
         </button>
-      </button>
+      </div>
       {isExpanded && (
         <div className={`${bgColor} max-h-[200px] overflow-y-auto`}>
           <pre className={`p-3 text-xs font-mono ${textColor} whitespace-pre-wrap break-all`}>
@@ -220,11 +228,19 @@ export function ToolExecutionDisplay({ step }: ToolExecutionDisplayProps) {
 
       {/* Command/Code Section */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setIsCommandExpanded(!isCommandExpanded)}
-          className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+        <div
+          className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+          role="button"
+          tabIndex={0}
           aria-expanded={isCommandExpanded}
           data-testid="command-toggle"
+          onClick={() => setIsCommandExpanded(!isCommandExpanded)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsCommandExpanded(!isCommandExpanded);
+            }
+          }}
         >
           <span className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
             {isCommandExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -242,7 +258,7 @@ export function ToolExecutionDisplay({ step }: ToolExecutionDisplayProps) {
           >
             {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3 text-gray-500" />}
           </button>
-        </button>
+        </div>
         {isCommandExpanded && inputCode && (
           <div className="max-h-[150px] overflow-y-auto" data-testid="command-content">
             <SyntaxHighlighter

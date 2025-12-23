@@ -137,10 +137,10 @@ async def search_node(state: MultiTurnState) -> dict:
     try:
         # Use vector search for retrieval
         from src.components.vector_search.qdrant_client import get_qdrant_client
-        from src.components.vector_search.embeddings import get_embeddings
+        from src.components.vector_search.embeddings import get_embedding_service
 
         qdrant_client = get_qdrant_client()
-        embeddings = get_embeddings()
+        embeddings = get_embedding_service()
 
         # Generate query embedding
         query_vector = await embeddings.embed_query(query)
