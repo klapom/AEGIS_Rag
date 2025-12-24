@@ -90,6 +90,8 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow running (> 30 seconds)")
     config.addinivalue_line("markers", "sprint49: mark test as Sprint 49 feature validation")
     config.addinivalue_line("markers", "sprint50: mark test as Sprint 50 feature validation")
+    config.addinivalue_line("markers", "sprint64: mark test as Sprint 64 feature validation")
+    config.addinivalue_line("markers", "integration: mark test as integration test with real databases")
 
 
 def pytest_runtest_makereport(item, call):
