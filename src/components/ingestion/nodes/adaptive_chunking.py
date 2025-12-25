@@ -13,6 +13,7 @@ Functions: adaptive_section_chunking, merge_small_chunks
 """
 
 import time
+from typing import Any
 
 import structlog
 
@@ -26,6 +27,177 @@ from src.core.chunking_service import get_chunking_service
 from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
+
+
+def calculate_bbox_iou(bbox1: dict[str, Any], bbox2: dict[str, Any]) -> float:
+    """Calculate Intersection over Union for two BBoxes.
+
+    Args:
+        bbox1: VLM bbox with "bbox_normalized" key (left, top, right, bottom as 0-1 floats)
+        bbox2: Section bbox with direct keys (l, t, r, b as 0-1 floats)
+
+    Returns:
+        IoU score (0-1), higher = better overlap
+
+    Example:
+        >>> vlm_bbox = {"bbox_normalized": {"left": 0.1, "top": 0.2, "right": 0.5, "bottom": 0.6}}
+        >>> section_bbox = {"l": 0.15, "t": 0.25, "r": 0.55, "b": 0.65}
+        >>> iou = calculate_bbox_iou(vlm_bbox, section_bbox)
+        >>> iou > 0.5  # High overlap
+        True
+    """
+    # Extract normalized coordinates
+    x1_min = bbox1["bbox_normalized"]["left"]
+    y1_min = bbox1["bbox_normalized"]["top"]
+    x1_max = bbox1["bbox_normalized"]["right"]
+    y1_max = bbox1["bbox_normalized"]["bottom"]
+
+    x2_min = bbox2["l"]
+    y2_min = bbox2["t"]
+    x2_max = bbox2["r"]
+    y2_max = bbox2["b"]
+
+    # Calculate intersection
+    xi_min = max(x1_min, x2_min)
+    yi_min = max(y1_min, y2_min)
+    xi_max = min(x1_max, x2_max)
+    yi_max = min(y1_max, y2_max)
+
+    if xi_max < xi_min or yi_max < yi_min:
+        return 0.0  # No overlap
+
+    intersection = (xi_max - xi_min) * (yi_max - yi_min)
+
+    # Calculate union
+    area1 = (x1_max - x1_min) * (y1_max - y1_min)
+    area2 = (x2_max - x2_min) * (y2_max - y2_min)
+    union = area1 + area2 - intersection
+
+    return intersection / union if union > 0 else 0.0
+
+
+def _integrate_vlm_descriptions(
+    sections: list[SectionMetadata],
+    vlm_metadata: list[dict[str, Any]],
+    page_dimensions: dict[str, Any] | None = None,
+) -> list[SectionMetadata]:
+    """Integrate VLM descriptions into sections via BBox matching.
+
+    Algorithm:
+    1. For each VLM description with BBox:
+       - Calculate IoU with each section's BBox
+       - If IoU > 0.5, append description to section text
+       - Store image annotation in section metadata
+    2. For descriptions without BBox:
+       - Append to first section on same page (fallback)
+
+    Args:
+        sections: List of Section objects from section extraction
+        vlm_metadata: List of VLM metadata dicts from image_enrichment_node
+        page_dimensions: Page dimensions from DoclingDocument (unused, for compatibility)
+
+    Returns:
+        Updated sections with VLM descriptions integrated
+
+    Example:
+        >>> sections = [SectionMetadata(...)]
+        >>> vlm_metadata = [{"description": "Chart", "bbox_full": {...}, ...}]
+        >>> sections = _integrate_vlm_descriptions(sections, vlm_metadata)
+        >>> "[Image Description]:" in sections[0].text
+        True
+    """
+    logger.info(
+        "integrating_vlm_descriptions",
+        sections_count=len(sections),
+        vlm_items_count=len(vlm_metadata),
+    )
+
+    integrated_count = 0
+
+    for vlm_item in vlm_metadata:
+        bbox = vlm_item.get("bbox_full")
+        description = vlm_item["description"]
+        picture_ref = vlm_item["picture_ref"]
+
+        if bbox and "bbox_normalized" in bbox:
+            # Find best matching section by BBox IoU
+            best_section = None
+            best_iou = 0.0
+            page_no = bbox.get("page_context", {}).get("page_no", 0)
+
+            for section in sections:
+                # Only match sections on same page
+                if section.page_no != page_no:
+                    continue
+
+                if section.bbox:
+                    iou = calculate_bbox_iou(bbox, section.bbox)
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_section = section
+
+            if best_section and best_iou > 0.5:
+                # High confidence match
+                best_section.text += f"\n\n[Image Description]: {description}"
+                if not hasattr(best_section, "image_annotations"):
+                    best_section.image_annotations = []
+                best_section.image_annotations.append(
+                    {
+                        "picture_ref": picture_ref,
+                        "bbox": bbox,
+                        "iou_score": best_iou,
+                    }
+                )
+                integrated_count += 1
+                logger.debug(
+                    "vlm_description_matched",
+                    picture_ref=picture_ref,
+                    section_page=best_section.page_no,
+                    iou=round(best_iou, 3),
+                )
+            else:
+                # Low confidence: fallback to first section on page
+                page_sections = [s for s in sections if s.page_no == page_no]
+                if page_sections:
+                    page_sections[0].text += f"\n\n[Image Description]: {description}"
+                    if not hasattr(page_sections[0], "image_annotations"):
+                        page_sections[0].image_annotations = []
+                    page_sections[0].image_annotations.append(
+                        {
+                            "picture_ref": picture_ref,
+                            "bbox": bbox,
+                            "iou_score": 0.0,  # Fallback
+                        }
+                    )
+                    integrated_count += 1
+                    logger.debug(
+                        "vlm_description_fallback",
+                        picture_ref=picture_ref,
+                        page_no=page_no,
+                        reason="low_iou" if best_iou > 0 else "no_matching_section",
+                    )
+        else:
+            # No BBox: append to first section
+            if sections:
+                sections[0].text += f"\n\n[Image Description]: {description}"
+                if not hasattr(sections[0], "image_annotations"):
+                    sections[0].image_annotations = []
+                sections[0].image_annotations.append(
+                    {
+                        "picture_ref": picture_ref,
+                        "bbox": None,
+                    }
+                )
+                integrated_count += 1
+                logger.debug("vlm_description_no_bbox", picture_ref=picture_ref)
+
+    logger.info(
+        "vlm_integration_complete",
+        integrated_count=integrated_count,
+        total_vlm_items=len(vlm_metadata),
+    )
+
+    return sections
 
 
 def adaptive_section_chunking(
@@ -132,7 +304,13 @@ def _merge_sections(sections: list[SectionMetadata]) -> AdaptiveChunk:
     if not sections:
         raise ValueError("Cannot merge empty sections list")
 
-    return AdaptiveChunk(
+    # Collect image annotations from all sections (Sprint 64)
+    image_annotations = []
+    for section in sections:
+        if hasattr(section, "image_annotations"):
+            image_annotations.extend(section.image_annotations)
+
+    chunk = AdaptiveChunk(
         text="\n\n".join(s.text for s in sections),
         token_count=sum(s.token_count for s in sections),
         section_headings=[s.heading for s in sections],
@@ -145,6 +323,11 @@ def _merge_sections(sections: list[SectionMetadata]) -> AdaptiveChunk:
             "num_sections": len(sections),
         },
     )
+    # Attach image_annotations to chunk (Sprint 64)
+    if image_annotations:
+        chunk.image_annotations = image_annotations
+
+    return chunk
 
 
 def _create_chunk(section: SectionMetadata) -> AdaptiveChunk:
@@ -164,7 +347,7 @@ def _create_chunk(section: SectionMetadata) -> AdaptiveChunk:
         >>> chunk.token_count
         1500
     """
-    return AdaptiveChunk(
+    chunk = AdaptiveChunk(
         text=section.text,
         token_count=section.token_count,
         section_headings=[section.heading],
@@ -177,6 +360,11 @@ def _create_chunk(section: SectionMetadata) -> AdaptiveChunk:
             "num_sections": 1,
         },
     )
+    # Copy image_annotations from section (Sprint 64)
+    if hasattr(section, "image_annotations"):
+        chunk.image_annotations = section.image_annotations
+
+    return chunk
 
 
 def merge_small_chunks(
@@ -458,6 +646,11 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 ),
             )
 
+        # Sprint 64: Integrate VLM descriptions into sections BEFORE chunking (TD-075)
+        vlm_metadata = state.get("vlm_metadata", [])
+        if vlm_metadata:
+            sections = _integrate_vlm_descriptions(sections, vlm_metadata)
+
         # Apply adaptive chunking (800-1800 tokens, section-aware)
         adaptive_chunking_start = time.perf_counter()
         adaptive_chunks = adaptive_section_chunking(
@@ -477,11 +670,6 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 round(len(sections) / len(adaptive_chunks), 2) if adaptive_chunks else 0
             ),
         )
-
-        # Convert AdaptiveChunk to enhanced_chunks format (backward compatible)
-        # Map VLM metadata to chunks (currently unused as section-aware chunking doesn't have picture refs)
-        # vlm_metadata = state.get("vlm_metadata", [])
-        # Note: VLM metadata mapping can be added here when needed
 
         merged_chunks = []
         for adaptive_chunk in adaptive_chunks:
@@ -505,10 +693,18 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 },
             )()
 
-            # VLM metadata mapping (if available)
-            # Note: Section-aware chunking may not have picture refs
-            # This is OK - VLM metadata is optional
+            # Collect image_bboxes from chunk's image_annotations (Sprint 64)
             chunk_bboxes = []
+            if hasattr(adaptive_chunk, "image_annotations"):
+                # Convert image_annotations to image_bboxes format for backward compatibility
+                for annotation in adaptive_chunk.image_annotations:
+                    chunk_bboxes.append(
+                        {
+                            "picture_ref": annotation["picture_ref"],
+                            "bbox": annotation.get("bbox"),
+                            "iou_score": annotation.get("iou_score", 0.0),
+                        }
+                    )
 
             enhanced_chunk = {"chunk": chunk_obj, "image_bboxes": chunk_bboxes}
             merged_chunks.append(enhanced_chunk)

@@ -1,12 +1,14 @@
 /**
  * DomainTrainingPage Component
  * Sprint 45 Feature 45.4: Domain Training Admin UI
+ * Sprint 64 Feature 64.2: Frontend validation improvements
  *
  * Admin page for managing domain training with DSPy integration
  */
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Info } from 'lucide-react';
 import { useDomains } from '../../hooks/useDomainTraining';
 import { DomainList } from '../../components/admin/DomainList';
 import { NewDomainWizard } from '../../components/admin/NewDomainWizard';
@@ -33,6 +35,23 @@ export function DomainTrainingPage() {
         </svg>
         Back to Admin
       </Link>
+
+      {/* Under Development Banner (Feature 64.2) */}
+      <div
+        className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3 mb-6"
+        data-testid="development-banner"
+        role="status"
+      >
+        <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <h4 className="text-sm font-semibold text-blue-800">Feature Status</h4>
+          <p className="text-sm text-blue-700 mt-1">
+            DSPy domain training is currently in active development.
+            Core functionality is operational but metrics may be simulated during optimization.
+            Full production-ready implementation expected in next release.
+          </p>
+        </div>
+      </div>
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">

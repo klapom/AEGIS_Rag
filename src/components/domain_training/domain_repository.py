@@ -53,10 +53,12 @@ Example:
 
 import json
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
 
 import structlog
+from neo4j import AsyncTransaction
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -97,6 +99,32 @@ class DomainRepository:
             neo4j_uri=settings.neo4j_uri,
             neo4j_database=settings.neo4j_database,
         )
+
+    @asynccontextmanager
+    async def transaction(self):
+        """Create a Neo4j transaction context for atomic operations.
+
+        Use this context manager to ensure multiple domain operations are
+        executed atomically. If any operation fails, all changes are rolled back.
+
+        Yields:
+            AsyncTransaction: Neo4j transaction object
+
+        Example:
+            >>> async with repo.transaction() as tx:
+            ...     await repo.create_domain(..., tx=tx)
+            ...     await repo.save_training_results(..., tx=tx)
+            ...     # Commits automatically on success
+            ...     # Rolls back on exception
+        """
+        async with self.neo4j_client.driver.session() as session:
+            async with session.begin_transaction() as tx:
+                try:
+                    yield tx
+                    # Commit handled by context manager
+                except Exception:
+                    await tx.rollback()
+                    raise
 
     @retry(
         stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
@@ -170,6 +198,8 @@ class DomainRepository:
         description: str,
         llm_model: str,
         description_embedding: list[float],
+        status: str = "pending",
+        tx: AsyncTransaction | None = None,
     ) -> dict[str, Any]:
         """Create a new domain configuration.
 
@@ -178,6 +208,8 @@ class DomainRepository:
             description: Human-readable domain description
             llm_model: LLM model to use for extraction (e.g., "qwen3:32b")
             description_embedding: BGE-M3 embedding of description (1024-dim)
+            status: Initial domain status (default: "pending")
+            tx: Optional transaction for rollback support
 
         Returns:
             Dictionary with created domain properties
@@ -191,6 +223,8 @@ class DomainRepository:
             name=name,
             llm_model=llm_model,
             embedding_dim=len(description_embedding),
+            status=status,
+            transactional=tx is not None,
         )
 
         # Validate name format (lowercase, underscores only)
@@ -204,45 +238,54 @@ class DomainRepository:
         domain_id = str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
 
+        query = """
+        CREATE (d:Domain {
+            id: $id,
+            name: $name,
+            description: $description,
+            description_embedding: $embedding,
+            entity_prompt: null,
+            relation_prompt: null,
+            entity_examples: '[]',
+            relation_examples: '[]',
+            llm_model: $llm_model,
+            training_samples: 0,
+            training_metrics: '{}',
+            status: $status,
+            created_at: datetime($created_at),
+            updated_at: datetime($updated_at),
+            trained_at: null
+        })
+        RETURN d.id as id, d.name as name, d.status as status
+        """
+
+        params = {
+            "id": domain_id,
+            "name": name,
+            "description": description,
+            "embedding": description_embedding,
+            "llm_model": llm_model,
+            "status": status,
+            "created_at": now,
+            "updated_at": now,
+        }
+
         try:
-            # Create domain node
-            await self.neo4j_client.execute_write(
-                """
-                CREATE (d:Domain {
-                    id: $id,
-                    name: $name,
-                    description: $description,
-                    description_embedding: $embedding,
-                    entity_prompt: null,
-                    relation_prompt: null,
-                    entity_examples: '[]',
-                    relation_examples: '[]',
-                    llm_model: $llm_model,
-                    training_samples: 0,
-                    training_metrics: '{}',
-                    status: 'pending',
-                    created_at: datetime($created_at),
-                    updated_at: datetime($updated_at),
-                    trained_at: null
-                })
-                RETURN d.id as id, d.name as name, d.status as status
-                """,
-                {
-                    "id": domain_id,
-                    "name": name,
-                    "description": description,
-                    "embedding": description_embedding,
-                    "llm_model": llm_model,
-                    "created_at": now,
-                    "updated_at": now,
-                },
-            )
+            if tx:
+                # Use provided transaction
+                result = await tx.run(query, params)
+                record = await result.single()
+            else:
+                # Create own session
+                await self.neo4j_client.execute_write(query, params)
+                record = None
 
             logger.info(
                 "domain_created",
                 domain_id=domain_id,
                 name=name,
-                status="pending",
+                status=status,
+                transactional=tx is not None,
             )
 
             return {
@@ -250,7 +293,7 @@ class DomainRepository:
                 "name": name,
                 "description": description,
                 "llm_model": llm_model,
-                "status": "pending",
+                "status": status,
                 "created_at": now,
             }
 
@@ -332,6 +375,126 @@ class DomainRepository:
         except Exception as e:
             logger.error("list_domains_failed", error=str(e))
             raise DatabaseConnectionError("Neo4j", f"List domains failed: {e}") from e
+
+    async def update_domain_status(
+        self,
+        domain_name: str,
+        status: str,
+        tx: AsyncTransaction | None = None,
+    ) -> None:
+        """Update domain status.
+
+        Args:
+            domain_name: Domain name
+            status: New status (pending/training/ready/failed)
+            tx: Optional transaction for rollback support
+
+        Raises:
+            DatabaseConnectionError: If update fails
+        """
+        logger.info("updating_domain_status", domain=domain_name, status=status)
+
+        query = """
+        MATCH (d:Domain {name: $name})
+        SET d.status = $status, d.updated_at = datetime($updated_at)
+        RETURN d.name as name
+        """
+
+        params = {
+            "name": domain_name,
+            "status": status,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+
+        try:
+            if tx:
+                await tx.run(query, params)
+            else:
+                await self.neo4j_client.execute_write(query, params)
+
+            logger.info("domain_status_updated", domain=domain_name, status=status)
+
+        except Exception as e:
+            logger.error("update_domain_status_failed", domain=domain_name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Update domain status failed: {e}") from e
+
+    async def save_training_results(
+        self,
+        domain_name: str,
+        entity_prompt: str,
+        relation_prompt: str,
+        entity_examples: list[dict[str, Any]],
+        relation_examples: list[dict[str, Any]],
+        metrics: dict[str, Any],
+        status: str = "ready",
+        tx: AsyncTransaction | None = None,
+    ) -> None:
+        """Save training results to domain with transaction support.
+
+        Args:
+            domain_name: Domain name
+            entity_prompt: Optimized entity extraction prompt
+            relation_prompt: Optimized relation extraction prompt
+            entity_examples: Entity extraction examples
+            relation_examples: Relation extraction examples
+            metrics: Training metrics
+            status: Domain status after training (default: "ready")
+            tx: Optional transaction for rollback support
+
+        Raises:
+            DatabaseConnectionError: If save fails
+        """
+        logger.info(
+            "saving_training_results",
+            domain=domain_name,
+            entity_examples_count=len(entity_examples),
+            relation_examples_count=len(relation_examples),
+            status=status,
+        )
+
+        now = datetime.utcnow().isoformat()
+        entity_examples_json = json.dumps(entity_examples)
+        relation_examples_json = json.dumps(relation_examples)
+        metrics_json = json.dumps(metrics)
+
+        query = """
+        MATCH (d:Domain {name: $name})
+        SET d.entity_prompt = $entity_prompt,
+            d.relation_prompt = $relation_prompt,
+            d.entity_examples = $entity_examples,
+            d.relation_examples = $relation_examples,
+            d.training_samples = $training_samples,
+            d.training_metrics = $metrics,
+            d.status = $status,
+            d.updated_at = datetime($updated_at),
+            d.trained_at = datetime($trained_at)
+        RETURN d.name as name
+        """
+
+        params = {
+            "name": domain_name,
+            "entity_prompt": entity_prompt,
+            "relation_prompt": relation_prompt,
+            "entity_examples": entity_examples_json,
+            "relation_examples": relation_examples_json,
+            "training_samples": len(entity_examples) + len(relation_examples),
+            "metrics": metrics_json,
+            "status": status,
+            "updated_at": now,
+            "trained_at": now,
+        }
+
+        try:
+            if tx:
+                await tx.run(query, params)
+            else:
+                await self.neo4j_client.execute_write(query, params)
+
+            logger.info("training_results_saved", domain=domain_name, status=status)
+
+        except Exception as e:
+            logger.error("save_training_results_failed", domain=domain_name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Save training results failed: {e}") from e
 
     async def update_domain_prompts(
         self,

@@ -1,14 +1,17 @@
 """DSPy-based Prompt Optimization for Knowledge Graph Extraction.
 
 Sprint 45 - Feature 45.2: DSPy Integration Service
+Sprint 64 - Feature 64.3: Real DSPy Domain Training with MIPROv2 (13 SP)
 
 This module provides DSPy-based optimization for entity and relation extraction prompts.
-It uses BootstrapFewShot to automatically generate optimized prompts with examples
-from training data.
+It uses MIPROv2 optimizer to automatically generate optimized prompts with examples
+from training data using Bayesian optimization and candidate selection.
 
 Key Features:
 - Entity extraction optimization with automatic prompt tuning
 - Relation extraction optimization with entity-aware prompts
+- MIPROv2 optimizer for better performance than BootstrapFewShot
+- Semantic matching for entity/relation evaluation (Feature 45.17)
 - Progress tracking via callbacks
 - Evaluation metrics (precision, recall, F1)
 - Ollama LLM backend (local, cost-free)
@@ -17,7 +20,10 @@ Architecture:
     DSPyOptimizer → Ollama LLM (qwen3:32b)
     ├── EntityExtractionSignature (Chain-of-Thought)
     ├── RelationExtractionSignature (Entity-aware)
-    └── BootstrapFewShot optimizer with validation metrics
+    └── MIPROv2 optimizer with:
+        ├── Candidate generation (7 prompts)
+        ├── Bayesian hyperparameter optimization
+        └── Validation-based selection
 
 Usage:
     >>> optimizer = DSPyOptimizer(llm_model="qwen3:32b")
@@ -27,6 +33,7 @@ Usage:
     ... ]
     >>> result = await optimizer.optimize_entity_extraction(training_data)
     >>> print(result["instructions"])
+    >>> print(f"Entity F1: {result['metrics']['val_f1']:.3f}")
 """
 
 import asyncio
@@ -97,16 +104,23 @@ class RelationExtractionSignature:
 
 
 class DSPyOptimizer:
-    """Optimizes extraction prompts using DSPy.
+    """Optimizes extraction prompts using DSPy with MIPROv2.
 
     This class provides methods for optimizing entity and relation extraction
-    prompts using DSPy's BootstrapFewShot optimizer. It supports progress tracking
-    and evaluation metrics.
+    prompts using DSPy's MIPROv2 optimizer. MIPROv2 uses Bayesian optimization
+    and candidate generation to find optimal prompts more efficiently than
+    BootstrapFewShot.
+
+    Sprint 64 Feature 64.3: Upgraded from BootstrapFewShot to MIPROv2 for:
+    - Better prompt optimization with candidate generation
+    - Bayesian hyperparameter tuning
+    - Validation-based prompt selection
+    - Faster convergence with fewer LLM calls
 
     WARNING: DSPy integration requires dspy-ai package to be installed.
     This is NOT included in core dependencies to keep base installation lightweight.
 
-    Install with: poetry add dspy-ai
+    Install with: poetry install --with domain-training
 
     Attributes:
         llm_model: Ollama model name (default: qwen3:32b)
@@ -281,6 +295,13 @@ class DSPyOptimizer:
         if not training_data:
             raise ValueError("Training data cannot be empty")
 
+        # MIPROv2 requires at least 2 samples for training
+        if len(training_data) < 2:
+            raise ValueError(
+                f"MIPROv2 requires at least 2 training samples, got {len(training_data)}. "
+                "Please provide more training data or use data augmentation."
+            )
+
         if not self._dspy_available:
             logger.warning("dspy_not_available", fallback="mock_results")
             return self._mock_entity_optimization_result(training_data)
@@ -309,10 +330,21 @@ class DSPyOptimizer:
         if not dspy_examples:
             raise ValueError("No valid training examples found")
 
-        # Split train/validation (80/20)
-        split_idx = int(len(dspy_examples) * 0.8)
-        trainset = dspy_examples[:split_idx]
-        valset = dspy_examples[split_idx:]
+        # MIPROv2 requires at least 2 samples (1 train, 1 val)
+        # For very small datasets (<2), use all data for training (no validation)
+        if len(dspy_examples) < 2:
+            trainset = dspy_examples
+            valset = []
+            logger.warning(
+                "small_dataset_no_validation",
+                size=len(dspy_examples),
+                message="Dataset too small for train/val split, using all for training",
+            )
+        else:
+            # Split train/validation (80/20), but ensure at least 1 sample in trainset
+            split_idx = max(1, int(len(dspy_examples) * 0.8))
+            trainset = dspy_examples[:split_idx]
+            valset = dspy_examples[split_idx:]
 
         logger.info(
             "training_data_prepared",
@@ -408,18 +440,16 @@ class DSPyOptimizer:
             return f1
 
         await self._call_progress_callback(
-            progress_callback, "Running BootstrapFewShot optimization", 50.0
+            progress_callback, "Running MIPROv2 optimization", 50.0
         )
 
-        # Optimize with BootstrapFewShot using async-safe context
+        # Optimize with MIPROv2 using async-safe context (Feature 64.3)
+        # MIPROv2 provides better optimization than BootstrapFewShot with:
+        # - Automatic prompt tuning with candidate generation
+        # - Bayesian optimization for hyperparameters
+        # - Better generalization with validation-based selection
         try:
             with self._get_dspy_context():
-                optimizer = dspy_module.BootstrapFewShot(
-                    metric=entity_extraction_metric,
-                    max_bootstrapped_demos=5,
-                    max_labeled_demos=3,
-                )
-
                 # Create proper DSPy Signature class
                 class EntityExtractionSig(dspy_module.Signature):
                     """Extract a THOROUGH list of key entities from the source text."""
@@ -429,9 +459,24 @@ class DSPyOptimizer:
                         desc="THOROUGH list of key entities"
                     )
 
+                # Use MIPROv2 optimizer with auto mode for balanced optimization
+                # MIPROv2 auto mode automatically determines optimal num_candidates and num_trials
+                optimizer = dspy_module.MIPROv2(
+                    metric=entity_extraction_metric,
+                    auto="light",  # Light mode for faster training (auto determines candidates)
+                    verbose=True,  # Enable progress logging
+                )
+
+                # Compile student with MIPROv2
+                # num_trials is auto-determined by "light" mode
                 optimized_module = optimizer.compile(
-                    EntityExtractor(EntityExtractionSig),
+                    student=EntityExtractor(EntityExtractionSig),
                     trainset=trainset,
+                    valset=valset if len(valset) > 0 else None,
+                    max_bootstrapped_demos=3,  # Limit demos for faster training
+                    max_labeled_demos=2,
+                    minibatch=True,  # Use minibatch optimization
+                    minibatch_size=10,  # Smaller batches for faster iteration
                 )
 
                 await self._call_progress_callback(
@@ -499,6 +544,13 @@ class DSPyOptimizer:
         if not training_data:
             raise ValueError("Training data cannot be empty")
 
+        # MIPROv2 requires at least 2 samples for training
+        if len(training_data) < 2:
+            raise ValueError(
+                f"MIPROv2 requires at least 2 training samples, got {len(training_data)}. "
+                "Please provide more training data or use data augmentation."
+            )
+
         if not self._dspy_available:
             logger.warning("dspy_not_available", fallback="mock_results")
             return self._mock_relation_optimization_result(training_data)
@@ -528,10 +580,21 @@ class DSPyOptimizer:
         if not dspy_examples:
             raise ValueError("No valid training examples found")
 
-        # Split train/validation (80/20)
-        split_idx = int(len(dspy_examples) * 0.8)
-        trainset = dspy_examples[:split_idx]
-        valset = dspy_examples[split_idx:]
+        # MIPROv2 requires at least 2 samples (1 train, 1 val)
+        # For very small datasets (<2), use all data for training (no validation)
+        if len(dspy_examples) < 2:
+            trainset = dspy_examples
+            valset = []
+            logger.warning(
+                "small_dataset_no_validation",
+                size=len(dspy_examples),
+                message="Dataset too small for train/val split, using all for training",
+            )
+        else:
+            # Split train/validation (80/20), but ensure at least 1 sample in trainset
+            split_idx = max(1, int(len(dspy_examples) * 0.8))
+            trainset = dspy_examples[:split_idx]
+            valset = dspy_examples[split_idx:]
 
         logger.info(
             "training_data_prepared",
@@ -636,18 +699,13 @@ class DSPyOptimizer:
             return f1
 
         await self._call_progress_callback(
-            progress_callback, "Running BootstrapFewShot optimization", 50.0
+            progress_callback, "Running MIPROv2 optimization", 50.0
         )
 
-        # Optimize with BootstrapFewShot using async-safe context
+        # Optimize with MIPROv2 using async-safe context (Feature 64.3)
+        # MIPROv2 provides better optimization than BootstrapFewShot
         try:
             with self._get_dspy_context():
-                optimizer = dspy_module.BootstrapFewShot(
-                    metric=relation_extraction_metric,
-                    max_bootstrapped_demos=5,
-                    max_labeled_demos=3,
-                )
-
                 # Create proper DSPy Signature class
                 class RelationExtractionSig(dspy_module.Signature):
                     """Extract subject-predicate-object triples from the source text."""
@@ -658,9 +716,22 @@ class DSPyOptimizer:
                         desc="List of {subject, predicate, object} tuples"
                     )
 
+                # Use MIPROv2 optimizer with auto mode for balanced optimization
+                optimizer = dspy_module.MIPROv2(
+                    metric=relation_extraction_metric,
+                    auto="light",  # Light mode for faster training
+                    verbose=True,  # Enable progress logging
+                )
+
+                # Compile student with MIPROv2
                 optimized_module = optimizer.compile(
-                    RelationExtractor(RelationExtractionSig),
+                    student=RelationExtractor(RelationExtractionSig),
                     trainset=trainset,
+                    valset=valset if len(valset) > 0 else None,
+                    max_bootstrapped_demos=3,  # Limit demos for faster training
+                    max_labeled_demos=2,
+                    minibatch=True,  # Use minibatch optimization
+                    minibatch_size=10,  # Smaller batches for faster iteration
                 )
 
                 await self._call_progress_callback(

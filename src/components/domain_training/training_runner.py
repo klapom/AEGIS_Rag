@@ -84,8 +84,11 @@ async def run_dspy_optimization(
     training_run_id: str,
     dataset: list[dict[str, Any]],
     log_path: str | None = None,
+    create_domain_if_not_exists: bool = False,
 ) -> None:
     """Run DSPy optimization with comprehensive progress tracking and SSE streaming.
+
+    Feature 64.2 Part 2: Transactional Domain Creation
 
     This function executes the full DSPy training pipeline with structured
     progress tracking using TrainingProgressTracker (Feature 45.5) and
@@ -98,6 +101,12 @@ async def run_dspy_optimization(
     6. Validate final metrics (VALIDATION phase)
     7. Save optimized prompts to domain in Neo4j (SAVING phase)
     8. Mark training as completed (COMPLETED phase)
+
+    **Transactional Behavior (Feature 64.2 Part 2):**
+    If `create_domain_if_not_exists=True`, the domain will be created transactionally
+    as part of the training process. If training fails at any point (validation,
+    database errors, optimization failures), the entire transaction is rolled back
+    and no domain will persist in Neo4j.
 
     Progress is tracked through phases and logged to Neo4j TrainingLog node
     for real-time monitoring via the on_progress callback.
@@ -113,6 +122,7 @@ async def run_dspy_optimization(
         training_run_id: UUID of training log
         dataset: List of training samples with text, entities, relations
         log_path: Optional path to save training events as JSONL
+        create_domain_if_not_exists: If True, create domain transactionally with rollback support
 
     Raises:
         Exception: Any error during training is logged and status updated to 'failed'
@@ -181,17 +191,51 @@ async def run_dspy_optimization(
         on_progress=persist_progress,
     )
 
+    # Track if we need to create domain after successful training (deferred commit)
+    is_new_domain = False
+    domain_config = None
+
     try:
         # --- Phase 1: Initialization (0-5%) ---
         tracker.enter_phase(TrainingPhase.INITIALIZING, "Loading domain configuration...")
         emit_sse(EventType.STARTED, 0.0, "initializing", "Training started")
 
-        # Get domain configuration
+        # Get domain configuration or prepare to create it after training
         domain = await repo.get_domain(domain_name)
-        if not domain:
-            raise ValueError(f"Domain '{domain_name}' not found")
 
-        llm_model = domain["llm_model"]
+        if not domain and create_domain_if_not_exists:
+            logger.info(
+                "new_domain_deferred_creation",
+                domain=domain_name,
+                training_run_id=training_run_id,
+                note="Domain will be created ONLY after successful training",
+            )
+            # Use deferred commit pattern: Create domain AFTER training succeeds
+            # This ensures rollback-like behavior without long-running transactions
+            is_new_domain = True
+
+            # Use default LLM model from settings for new domains
+            from src.core.config import get_settings
+
+            settings = get_settings()
+            llm_model = settings.lightrag_llm_model
+
+            # Store config for later domain creation (after training succeeds)
+            domain_config = {
+                "name": domain_name,
+                "llm_model": llm_model,
+                "description": f"Domain {domain_name}",  # Basic description
+            }
+
+            logger.info(
+                "using_default_llm_model_for_new_domain",
+                domain=domain_name,
+                llm_model=llm_model,
+            )
+        elif not domain:
+            raise ValueError(f"Domain '{domain_name}' not found")
+        else:
+            llm_model = domain["llm_model"]
 
         tracker.update_progress(
             0.8,
@@ -423,15 +467,74 @@ async def run_dspy_optimization(
             "Saving optimized prompts and metrics to Neo4j...",
         )
 
-        # Update domain with optimized prompts
-        await repo.update_domain_prompts(
-            name=domain_name,
-            entity_prompt=entity_prompt,
-            relation_prompt=relation_prompt,
-            entity_examples=entity_examples,
-            relation_examples=relation_examples,
-            metrics=training_metrics,
-        )
+        # Feature 64.2 Part 2: Transactional domain creation
+        # If this is a new domain, create it atomically with training results
+        # using a transaction. If save fails, domain won't be created.
+        if is_new_domain and domain_config:
+            logger.info(
+                "creating_domain_with_training_results_transactionally",
+                domain=domain_name,
+            )
+
+            # Use transaction to create domain + save training results atomically
+            async with repo.transaction() as tx:
+                # Step 1: Create domain with training status
+                # We need to generate description embedding first
+                from src.components.vector_search import EmbeddingService
+
+                embedding_service = EmbeddingService()
+                description_embedding = await embedding_service.embed_single(
+                    domain_config["description"]
+                )
+
+                await repo.create_domain(
+                    name=domain_config["name"],
+                    description=domain_config["description"],
+                    llm_model=domain_config["llm_model"],
+                    description_embedding=description_embedding,
+                    status="training",
+                    tx=tx,
+                )
+
+                logger.info(
+                    "new_domain_created_in_transaction",
+                    domain=domain_name,
+                )
+
+                # Step 2: Save training results within same transaction
+                await repo.save_training_results(
+                    domain_name=domain_name,
+                    entity_prompt=entity_prompt,
+                    relation_prompt=relation_prompt,
+                    entity_examples=entity_examples,
+                    relation_examples=relation_examples,
+                    metrics=training_metrics,
+                    status="ready",
+                    tx=tx,
+                )
+
+                # Transaction commits automatically on success
+                logger.info(
+                    "domain_and_training_results_committed_atomically",
+                    domain=domain_name,
+                    metrics=training_metrics,
+                )
+        else:
+            # Existing domain: Just update prompts (non-transactional)
+            await repo.update_domain_prompts(
+                name=domain_name,
+                entity_prompt=entity_prompt,
+                relation_prompt=relation_prompt,
+                entity_examples=entity_examples,
+                relation_examples=relation_examples,
+                metrics=training_metrics,
+            )
+
+            logger.info(
+                "domain_prompts_updated",
+                domain=domain_name,
+                metrics=training_metrics,
+            )
 
         tracker.update_progress(0.8, "Domain prompts persisted successfully")
 
@@ -439,6 +542,7 @@ async def run_dspy_optimization(
             "domain_prompts_saved",
             domain=domain_name,
             metrics=training_metrics,
+            is_new_domain=is_new_domain,
         )
 
         # --- Phase 8: Completion (100%) ---
@@ -467,7 +571,7 @@ async def run_dspy_optimization(
         tracker.fail("Training cancelled by user")
         emit_sse(
             EventType.FAILED,
-            tracker.current_progress,
+            tracker.progress_percent,
             "cancelled",
             "Training cancelled by user",
         )
@@ -483,7 +587,7 @@ async def run_dspy_optimization(
         tracker.fail(f"Validation error: {str(e)}")
         emit_sse(
             EventType.FAILED,
-            tracker.current_progress,
+            tracker.progress_percent,
             "failed",
             f"Validation error: {str(e)}",
             {"error_type": "validation", "error_message": str(e)},
@@ -500,7 +604,7 @@ async def run_dspy_optimization(
         tracker.fail(f"Database error: {str(e)}")
         emit_sse(
             EventType.FAILED,
-            tracker.current_progress,
+            tracker.progress_percent,
             "failed",
             f"Database error: {str(e)}",
             {"error_type": "database", "error_message": str(e)},
@@ -517,7 +621,7 @@ async def run_dspy_optimization(
         tracker.fail(str(e))
         emit_sse(
             EventType.FAILED,
-            tracker.current_progress,
+            tracker.progress_percent,
             "failed",
             f"Unexpected error: {str(e)}",
             {"error_type": "unexpected", "error_message": str(e)},

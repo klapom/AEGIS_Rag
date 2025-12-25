@@ -9,7 +9,7 @@ This module implements a multi-turn conversational RAG system with:
 - Memory summarization
 """
 
-from src.agents.multi_turn.agent import MultiTurnAgent
+from src.agents.multi_turn.agent import MultiTurnAgent, create_multi_turn_graph
 from src.agents.multi_turn.state import MultiTurnState
 
-__all__ = ["MultiTurnAgent", "MultiTurnState"]
+__all__ = ["MultiTurnAgent", "MultiTurnState", "create_multi_turn_graph"]

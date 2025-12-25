@@ -607,28 +607,38 @@ async def start_training(
     dataset: TrainingDataset,
     background_tasks: BackgroundTasks,
 ) -> dict[str, Any]:
-    """Start DSPy optimization for a domain.
+    """Start DSPy optimization for a domain with transactional rollback support.
+
+    Feature 64.2 Part 2: Transactional Domain Creation
 
     Launches background training that optimizes entity and relation extraction
     prompts using DSPy's BootstrapFewShot optimizer. Training progress can be
     monitored via GET /domains/{name}/training-status.
 
+    **Important:** If the domain does not exist, it will be created transactionally
+    as part of the training process. If training fails (validation, database errors,
+    or optimization failures), the domain creation will be rolled back and no
+    domain will persist in Neo4j.
+
     Training process:
-    1. Optimize entity extraction prompts
-    2. Optimize relation extraction prompts
-    3. Extract static prompts for production use
-    4. Save prompts and metrics to domain
+    1. Validate request (minimum 5 samples required)
+    2. Create domain transactionally (if not exists)
+    3. Optimize entity extraction prompts
+    4. Optimize relation extraction prompts
+    5. Extract static prompts for production use
+    6. Save prompts and metrics to domain
+    7. Commit transaction on success / Rollback on failure
 
     Args:
         domain_name: Domain to train
-        dataset: Training samples (minimum 5 recommended)
+        dataset: Training samples (minimum 5 required for validation)
         background_tasks: FastAPI background task handler
 
     Returns:
         Training job information with status URL
 
     Raises:
-        HTTPException 404: If domain not found
+        HTTPException 422: If validation fails (e.g., less than 5 samples)
         HTTPException 409: If training already in progress
         HTTPException 500: If training job creation fails
     """
@@ -638,59 +648,102 @@ async def start_training(
         sample_count=len(dataset.samples),
     )
 
+    # CRITICAL: Validate samples BEFORE any domain creation
+    # This prevents creating domains that will fail training
+    if len(dataset.samples) < 5:
+        logger.warning(
+            "training_validation_failed",
+            domain=domain_name,
+            sample_count=len(dataset.samples),
+            required_minimum=5,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": f"Minimum 5 samples required, got {len(dataset.samples)}",
+                    "details": {
+                        "validation_errors": [
+                            {
+                                "loc": ["body", "samples"],
+                                "msg": f"List should have at least 5 items after validation, not {len(dataset.samples)}",
+                                "type": "too_short",
+                            }
+                        ]
+                    },
+                }
+            },
+        )
+
     try:
+        import uuid
         from src.components.domain_training import get_domain_repository
+        from src.components.domain_training.training_runner import run_dspy_optimization
 
         repo = get_domain_repository()
         domain = await repo.get_domain(domain_name)
 
-        if not domain:
-            logger.warning("training_domain_not_found", domain=domain_name)
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Domain '{domain_name}' not found",
+        # Check if domain exists and handle re-training
+        if domain:
+            if domain.get("status") == "completed" or domain.get("status") == "ready":
+                logger.info(
+                    "retraining_existing_domain",
+                    domain=domain_name,
+                    previous_status=domain.get("status"),
+                )
+                # Allow re-training of completed domains
+            elif domain.get("status") == "training":
+                logger.warning("training_already_in_progress", domain=domain_name)
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Training already in progress for this domain",
+                )
+
+        # Create training log (will be associated with domain during training)
+        # NOTE: If domain doesn't exist, it will be created transactionally
+        # by the training runner with rollback support
+        if domain:
+            training_log = await repo.create_training_log(domain_name)
+            logger.info(
+                "training_log_created",
+                domain=domain_name,
+                training_run_id=training_log["id"],
+            )
+        else:
+            # Generate training_run_id for new domain (log will be created during training)
+            training_run_id = str(uuid.uuid4())
+            logger.info(
+                "training_new_domain",
+                domain=domain_name,
+                training_run_id=training_run_id,
             )
 
-        if domain.get("status") == "training":
-            logger.warning("training_already_in_progress", domain=domain_name)
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Training already in progress for this domain",
-            )
-
-        # Create training log
-        training_log = await repo.create_training_log(domain_name)
-
-        logger.info(
-            "training_job_created",
-            domain=domain_name,
-            training_run_id=training_log["id"],
-        )
-
-        # Import here to avoid circular dependency
-        from src.components.domain_training.training_runner import run_dspy_optimization
-
-        # Start background training with optional JSONL logging
+        # Start background training with transactional rollback support
+        # If domain doesn't exist, run_dspy_optimization will create it transactionally
         background_tasks.add_task(
             run_dspy_optimization,
             domain_name=domain_name,
-            training_run_id=training_log["id"],
+            training_run_id=training_log["id"] if domain else training_run_id,
             dataset=[s.model_dump() for s in dataset.samples],
             log_path=dataset.log_path,  # SSE event log for later DSPy evaluation
+            create_domain_if_not_exists=domain is None,  # Signal to create domain transactionally
         )
 
         logger.info(
             "training_started_background",
             domain=domain_name,
-            training_run_id=training_log["id"],
+            training_run_id=training_log["id"] if domain else training_run_id,
+            is_new_domain=domain is None,
         )
 
         return {
             "message": "Training started in background",
-            "training_run_id": training_log["id"],
+            "training_run_id": training_log["id"] if domain else training_run_id,
             "status_url": f"/admin/domains/{domain_name}/training-status",
             "domain": domain_name,
             "sample_count": len(dataset.samples),
+            "is_new_domain": domain is None,
         }
 
     except HTTPException:

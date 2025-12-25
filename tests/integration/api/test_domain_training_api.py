@@ -985,3 +985,195 @@ def test_training_status_returns_200_ok(client, mock_domain_repository):
     response = client.get("/admin/domains/tech_docs/training-status")
 
     assert response.status_code == 200
+
+
+# ============================================================================
+# Test: Feature 64.2 Part 2 - Transactional Domain Creation
+# ============================================================================
+
+
+def test_train_domain_validation_fails_before_creation(client, mock_domain_repository):
+    """Test validation failure prevents domain creation.
+
+    Feature 64.2 Part 2: Ensure domain is NOT created when validation fails.
+    """
+    # Domain doesn't exist yet
+    mock_domain_repository.get_domain.return_value = None
+
+    # Submit training request with TOO FEW samples (< 5)
+    # Use valid text samples (10+ chars) to avoid Pydantic validation errors
+    response = client.post(
+        "/admin/domains/new_domain/train",
+        json={
+            "samples": [
+                {"text": "Sample text one with sufficient length", "entities": ["Entity1"]},
+                {"text": "Sample text two with sufficient length", "entities": ["Entity2"]},
+                # Only 2 samples - should fail validation (need 5 minimum)
+            ]
+        },
+    )
+
+    # Should return 422 Unprocessable Entity (Pydantic validation)
+    assert response.status_code == 422
+    data = response.json()
+    # Check that it's a validation error
+    assert "error" in data
+    error = data["error"]
+    assert error["code"] in ["UNPROCESSABLE_ENTITY", "VALIDATION_FAILED"]
+    # Pydantic validates min_items=5 automatically
+    assert "validation_errors" in error["details"]
+    validation_errors = error["details"]["validation_errors"]
+    assert any("samples" in str(err["loc"]) for err in validation_errors)
+    assert any("5 items" in err["msg"] for err in validation_errors)
+
+    # Verify domain was NOT created (most important assertion)
+    mock_domain_repository.create_domain.assert_not_called()
+    mock_domain_repository.update_domain_status.assert_not_called()
+    mock_domain_repository.save_training_results.assert_not_called()
+
+
+def test_train_new_domain_creates_transactionally(
+    client, mock_domain_repository, sample_training_dataset
+):
+    """Test new domain is created transactionally during training.
+
+    Feature 64.2 Part 2: Domain created ONLY after successful training.
+    """
+    # Domain doesn't exist yet
+    mock_domain_repository.get_domain.return_value = None
+
+    response = client.post(
+        "/admin/domains/new_domain/train",
+        json={"samples": sample_training_dataset},
+    )
+
+    # Should accept request and return 200
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_new_domain"] is True
+    assert data["domain"] == "new_domain"
+    assert "training_run_id" in data
+
+    # Domain should NOT be created immediately (deferred until training succeeds)
+    # Training happens in background - domain creation is deferred
+    mock_domain_repository.create_domain.assert_not_called()
+
+
+def test_train_existing_domain_with_insufficient_samples(
+    client, mock_domain_repository, sample_domain
+):
+    """Test validation failure with existing domain doesn't affect it.
+
+    Feature 64.2 Part 2: Existing domains remain unchanged on validation failure.
+    """
+    # Domain already exists
+    mock_domain_repository.get_domain.return_value = sample_domain
+
+    # Submit training with insufficient samples
+    response = client.post(
+        "/admin/domains/tech_docs/train",
+        json={
+            "samples": [
+                {"text": "Sample 1", "entities": ["Entity1"]},
+                {"text": "Sample 2", "entities": ["Entity2"]},
+                {"text": "Sample 3", "entities": ["Entity3"]},
+                # Only 3 samples - should fail
+            ]
+        },
+    )
+
+    # Should return 422
+    assert response.status_code == 422
+
+    # Existing domain should NOT be modified
+    mock_domain_repository.update_domain_status.assert_not_called()
+    mock_domain_repository.update_domain_prompts.assert_not_called()
+
+
+def test_train_domain_allows_retraining_completed(client, mock_domain_repository, sample_domain):
+    """Test re-training of completed domains is allowed.
+
+    Feature 64.2 Part 2: Domains with status='ready' can be re-trained.
+    """
+    sample_domain["status"] = "ready"
+    mock_domain_repository.get_domain.return_value = sample_domain
+    mock_domain_repository.create_training_log.return_value = {
+        "id": str(uuid4()),
+        "status": "pending",
+    }
+
+    # Valid training dataset (5+ samples)
+    response = client.post(
+        "/admin/domains/tech_docs/train",
+        json={
+            "samples": [
+                {"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)
+            ]
+        },
+    )
+
+    # Should accept re-training
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_new_domain"] is False
+    assert data["domain"] == "tech_docs"
+
+
+def test_train_domain_prevents_concurrent_training(client, mock_domain_repository, sample_domain):
+    """Test training is rejected if already in progress.
+
+    Feature 64.2 Part 2: Prevent concurrent training runs.
+    """
+    sample_domain["status"] = "training"
+    mock_domain_repository.get_domain.return_value = sample_domain
+
+    response = client.post(
+        "/admin/domains/tech_docs/train",
+        json={
+            "samples": [
+                {"text": f"Sample {i}", "entities": [f"Entity{i}"]} for i in range(1, 6)
+            ]
+        },
+    )
+
+    # Should return 409 Conflict
+    assert response.status_code == 409
+    assert "already in progress" in response.json()["detail"]
+
+
+@pytest.fixture
+def sample_training_dataset():
+    """Sample training dataset with minimum required samples."""
+    return [
+        {
+            "text": "FastAPI is a modern web framework for building APIs with Python 3.6+",
+            "entities": ["FastAPI", "web framework", "Python 3.6+"],
+            "relations": [
+                {"subject": "FastAPI", "predicate": "is_a", "object": "web framework"}
+            ],
+        },
+        {
+            "text": "Pydantic provides data validation using Python type annotations",
+            "entities": ["Pydantic", "data validation", "Python type annotations"],
+            "relations": [
+                {"subject": "Pydantic", "predicate": "provides", "object": "data validation"}
+            ],
+        },
+        {
+            "text": "Docker containers enable consistent deployment across environments",
+            "entities": ["Docker", "containers", "deployment", "environments"],
+            "relations": [
+                {"subject": "Docker", "predicate": "enables", "object": "consistent deployment"}
+            ],
+        },
+        {
+            "text": "Redis is an in-memory data structure store used as cache and message broker",
+            "entities": ["Redis", "in-memory", "cache", "message broker"],
+            "relations": [{"subject": "Redis", "predicate": "used_as", "object": "cache"}],
+        },
+        {
+            "text": "Neo4j is a graph database that stores nodes and relationships efficiently",
+            "entities": ["Neo4j", "graph database", "nodes", "relationships"],
+            "relations": [{"subject": "Neo4j", "predicate": "is_a", "object": "graph database"}],
+        },
+    ]

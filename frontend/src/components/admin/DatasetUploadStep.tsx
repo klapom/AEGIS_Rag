@@ -1,13 +1,18 @@
 /**
  * DatasetUploadStep Component
  * Sprint 45 Feature 45.4, 45.13: Domain Training Admin UI with JSONL Log Export
+ * Sprint 64 Feature 64.2: Frontend validation for minimum sample count
  *
  * Step 2 of domain wizard: Upload JSONL dataset with preview
  * Includes optional log path for saving training events to JSONL
  */
 
 import { useState, useRef } from 'react';
+import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import type { TrainingSample } from '../../hooks/useDomainTraining';
+
+/** Minimum number of training samples required for DSPy optimization */
+const MIN_TRAINING_SAMPLES = 5;
 
 interface DatasetUploadStepProps {
   dataset: TrainingSample[];
@@ -20,6 +25,8 @@ interface DatasetUploadStepProps {
 
 export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading = false, error: submitError }: DatasetUploadStepProps) {
   const [parseError, setParseError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [logPath, setLogPath] = useState<string>('');
   const [showLogPathInput, setShowLogPathInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +35,10 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Clear all previous messages on new upload (Bug fix: errors from previous upload stay visible)
     setParseError(null);
+    setValidationError(null);
+    setSuccessMessage(null);
 
     try {
       const text = await file.text();
@@ -63,6 +73,17 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
       }
 
       onUpload(samples);
+
+      // Show appropriate validation message based on sample count
+      if (samples.length >= MIN_TRAINING_SAMPLES) {
+        setSuccessMessage(`${samples.length} samples loaded (minimum requirement of ${MIN_TRAINING_SAMPLES} met)`);
+      } else {
+        const samplesNeeded = MIN_TRAINING_SAMPLES - samples.length;
+        setValidationError(
+          `Minimum ${MIN_TRAINING_SAMPLES} samples required for training. ` +
+          `Currently: ${samples.length} sample${samples.length !== 1 ? 's' : ''} (${samplesNeeded} more needed)`
+        );
+      }
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Failed to parse JSONL file');
       onUpload([]);
@@ -71,12 +92,15 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
 
   const handleClearDataset = () => {
     onUpload([]);
+    setValidationError(null);
+    setSuccessMessage(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const isValid = dataset.length > 0;
+  // Training requires minimum sample count (Bug fix: no warning when user uploads < 5 samples)
+  const canStartTraining = dataset.length >= MIN_TRAINING_SAMPLES;
 
   return (
     <div className="space-y-6" data-testid="dataset-upload-step">
@@ -127,6 +151,36 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
           data-testid="dataset-upload-error"
         >
           <p className="text-sm text-red-800">{parseError || submitError}</p>
+        </div>
+      )}
+
+      {/* Validation Warning Alert (Feature 64.2) */}
+      {validationError && (
+        <div
+          className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3"
+          data-testid="validation-warning"
+          role="alert"
+        >
+          <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <h4 className="text-sm font-semibold text-yellow-800">Validation Warning</h4>
+            <p className="text-sm text-yellow-700 mt-1">{validationError}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success Alert (Feature 64.2) */}
+      {successMessage && (
+        <div
+          className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3"
+          data-testid="validation-success"
+          role="status"
+        >
+          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <h4 className="text-sm font-semibold text-green-800">Ready to Train</h4>
+            <p className="text-sm text-green-700 mt-1">{successMessage}</p>
+          </div>
         </div>
       )}
 
@@ -244,20 +298,18 @@ export function DatasetUploadStep({ dataset, onUpload, onBack, onNext, isLoading
           )}
           <button
             onClick={() => onNext(logPath || undefined)}
-            disabled={!isValid || isLoading}
+            disabled={!canStartTraining || isLoading}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
             data-testid="dataset-upload-next"
+            title={!canStartTraining ? `Minimum ${MIN_TRAINING_SAMPLES} samples required` : undefined}
           >
             {isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
                 Starting Training...
               </>
             ) : (
-              'Start Training'
+              <>Start Training ({dataset.length} sample{dataset.length !== 1 ? 's' : ''})</>
             )}
           </button>
         </div>
