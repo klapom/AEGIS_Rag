@@ -1,0 +1,48 @@
+# =============================================================================
+# Systemd Service Unit for AEGIS RAG
+# =============================================================================
+# Installation:
+#   sudo cp aegis-rag.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable aegis-rag
+#   sudo systemctl start aegis-rag
+#
+# Management:
+#   sudo systemctl status aegis-rag
+#   sudo systemctl stop aegis-rag
+#   sudo systemctl restart aegis-rag
+#   sudo journalctl -u aegis-rag -f
+# =============================================================================
+
+[Unit]
+Description=AEGIS RAG - Agentic Enterprise Graph Intelligence System
+Documentation=https://github.com/your-org/aegis-rag
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/admin/projects/aegisrag/AEGIS_Rag
+User=admin
+Group=admin
+
+# Environment
+EnvironmentFile=/home/admin/projects/aegisrag/AEGIS_Rag/.env.production
+
+# Start command
+ExecStart=/usr/bin/docker compose -f /home/admin/projects/aegisrag/AEGIS_Rag/docker-compose.production.yml up -d
+
+# Stop command
+ExecStop=/usr/bin/docker compose -f /home/admin/projects/aegisrag/AEGIS_Rag/docker-compose.production.yml down
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Timeouts (allow time for model loading)
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
