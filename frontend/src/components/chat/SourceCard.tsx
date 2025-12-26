@@ -9,8 +9,8 @@
  * Click expands to show full chunk context and search type
  */
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, File, FileCode, BookOpen, Hash, Layers } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, FileText, File, FileCode, BookOpen, Hash } from 'lucide-react';
 import type { Source } from '../../types/chat';
 import {
   extractSectionMetadata,
@@ -18,7 +18,6 @@ import {
   formatSectionDisplay,
   formatSectionPath,
   type DocumentType,
-  type SectionMetadata,
 } from '../../types/section';
 
 /**
@@ -210,6 +209,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
   );
   const sectionDisplay = hasSection ? formatSectionDisplay(sectionMetadata!) : null;
   const sectionPath = hasSection ? formatSectionPath(sectionMetadata!) : null;
+  const pageNumber = sectionMetadata?.page_number;
 
   // Sprint 19: Extract readable document name from metadata
   // Sprint 32 Fix: Check title/source from citation_map first
@@ -230,7 +230,8 @@ export function SourceCard({ source, index }: SourceCardProps) {
     }
     // Check metadata.source (from SSE source events)
     if (source.metadata?.source) {
-      const filename = source.metadata.source.split(/[/\\]/).pop() || source.metadata.source;
+      const metadataSource = source.metadata.source as string;
+      const filename = metadataSource.split(/[/\\]/).pop() || metadataSource;
       return filename.replace(/\.[^/.]+$/, '');
     }
     // Check document_id as fallback
@@ -244,7 +245,7 @@ export function SourceCard({ source, index }: SourceCardProps) {
   const fullText = cleanTextForDisplay(extractContextText(source.context || source.text)) || 'Kein Kontext verfügbar';
 
   // Get source file path
-  const sourcePath = source.source || source.metadata?.source || source.title;
+  const sourcePath = source.source || (source.metadata?.source as string | undefined) || source.title;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden transition-all duration-200 hover:border-primary/50">
@@ -363,10 +364,10 @@ export function SourceCard({ source, index }: SourceCardProps) {
             )}
 
             {/* Sprint 62.4: Page Number (for PDFs) */}
-            {sectionMetadata?.page_number && (
+            {pageNumber && (
               <div>
                 <span className="text-gray-500">Seite:</span>
-                <span className="ml-2 text-gray-700">{sectionMetadata.page_number}</span>
+                <span className="ml-2 text-gray-700">{pageNumber}</span>
               </div>
             )}
 

@@ -13,7 +13,7 @@
  * - Loading state
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -102,6 +102,9 @@ interface SourceItemProps {
 }
 
 function SourceItem({ source, index }: SourceItemProps) {
+  const hasEntitiesOrRelationships =
+    (source.entities?.length || 0) > 0 || (source.relationships?.length || 0) > 0;
+
   return (
     <div
       className="p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
@@ -127,9 +130,9 @@ function SourceItem({ source, index }: SourceItemProps) {
       </p>
 
       {/* Entities and relationships */}
-      {(source.entities.length > 0 || source.relationships.length > 0) && (
+      {hasEntitiesOrRelationships && (
         <div className="flex flex-wrap gap-1">
-          {source.entities.slice(0, 5).map((entity, idx) => (
+          {source.entities?.slice(0, 5).map((entity, idx) => (
             <span
               key={`entity-${idx}`}
               className="px-2 py-0.5 text-xs bg-green-50 text-green-700 rounded"
@@ -137,9 +140,9 @@ function SourceItem({ source, index }: SourceItemProps) {
               {entity}
             </span>
           ))}
-          {source.entities.length > 5 && (
+          {(source.entities?.length || 0) > 5 && (
             <span className="px-2 py-0.5 text-xs text-gray-400">
-              +{source.entities.length - 5} more
+              +{(source.entities?.length || 0) - 5} more
             </span>
           )}
         </div>

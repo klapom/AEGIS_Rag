@@ -418,10 +418,12 @@ export function AdminLLMConfigPage() {
     setIsSaving(true);
     try {
       // Sprint 64 Feature 64.6: Save to backend API (replaces localStorage)
-      const backendConfig: Record<string, { model: string; enabled: boolean }> = {};
+      // Sprint 65 Fix: Use correct backend schema (model_id + use_case, not just model)
+      const backendConfig: Record<string, { use_case: string; model_id: string; enabled: boolean }> = {};
       config.forEach((uc) => {
         backendConfig[uc.useCase] = {
-          model: frontendToBackend(uc.modelId),
+          use_case: uc.useCase,  // Sprint 65 Fix: Add use_case field
+          model_id: uc.modelId,  // Sprint 65 Fix: Send frontend format (ollama/qwen3:32b)
           enabled: uc.enabled,
         };
       });
