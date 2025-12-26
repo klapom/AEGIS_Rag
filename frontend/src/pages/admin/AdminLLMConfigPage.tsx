@@ -3,12 +3,14 @@
  * Sprint 36 Feature 36.3: Model Selection per Use Case (8 SP)
  * Sprint 51: Dynamic Ollama model loading
  * Sprint 52 Feature 52.1: Community Summary Model Selection
+ * Sprint 64 Feature 64.6: Backend API Integration (2 SP)
  *
  * Features:
  * - Configure LLM models for each use case
  * - Support for Ollama (local), Alibaba Cloud, and OpenAI providers
  * - Dynamic loading of locally available Ollama models
- * - localStorage persistence (Phase 1)
+ * - Backend API persistence with Redis (Sprint 64)
+ * - One-time migration from localStorage to backend
  * - Backend-persisted community summary model config (Sprint 52)
  * - Responsive design with dark mode support
  */
@@ -181,6 +183,43 @@ const defaultConfig: UseCaseConfig[] = [
 ];
 
 const LLM_CONFIG_KEY = 'aegis-rag-llm-config';
+const MIGRATION_FLAG_KEY = 'aegis-rag-llm-config-migrated';
+
+// ============================================================================
+// Model ID Transformation Helpers (Sprint 64 Feature 64.6)
+// ============================================================================
+
+/**
+ * Convert frontend model ID format to backend format
+ * Frontend: "ollama/qwen3:32b", "alibaba/qwen-plus", "openai/gpt-4o"
+ * Backend: "qwen3:32b", "alibaba_cloud:qwen-plus", "openai:gpt-4o"
+ */
+function frontendToBackend(modelId: string): string {
+  if (modelId.startsWith('ollama/')) {
+    return modelId.replace('ollama/', ''); // "ollama/qwen3:32b" → "qwen3:32b"
+  }
+  if (modelId.startsWith('alibaba/')) {
+    return modelId.replace('alibaba/', 'alibaba_cloud:'); // "alibaba/qwen-plus" → "alibaba_cloud:qwen-plus"
+  }
+  // OpenAI: "openai/gpt-4o" → "openai:gpt-4o"
+  return modelId.replace('/', ':');
+}
+
+/**
+ * Convert backend model format to frontend model ID format
+ * Backend: "qwen3:32b", "alibaba_cloud:qwen-plus", "openai:gpt-4o"
+ * Frontend: "ollama/qwen3:32b", "alibaba/qwen-plus", "openai/gpt-4o"
+ */
+function backendToFrontend(model: string): string {
+  if (model.startsWith('alibaba_cloud:')) {
+    return model.replace('alibaba_cloud:', 'alibaba/'); // "alibaba_cloud:qwen-plus" → "alibaba/qwen-plus"
+  }
+  if (model.startsWith('openai:')) {
+    return model.replace(':', '/'); // "openai:gpt-4o" → "openai/gpt-4o"
+  }
+  // Ollama (no prefix): "qwen3:32b" → "ollama/qwen3:32b"
+  return `ollama/${model}`;
+}
 
 // ============================================================================
 // Main Component
@@ -203,22 +242,87 @@ export function AdminLLMConfigPage() {
   const [isSavingSummaryModel, setIsSavingSummaryModel] = useState(false);
   const [summaryModelSaveStatus, setSummaryModelSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Fetch Ollama models and summary model config on mount
-  useEffect(() => {
-    fetchOllamaModels();
-    fetchSummaryModelConfig();
-  }, []);
+  // Sprint 64 Feature 64.6: Fetch LLM config from backend
+  const fetchLLMConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/config`);
+      if (response.ok) {
+        const data = await response.json();
 
-  // Load config from localStorage on mount
-  useEffect(() => {
+        // Convert backend format to frontend format
+        const frontendConfig: UseCaseConfig[] = Object.entries(data.use_cases).map(
+          ([useCase, config]: [string, any]) => ({
+            useCase: useCase as UseCaseType,
+            modelId: backendToFrontend(config.model),
+            enabled: config.enabled,
+          })
+        );
+
+        setConfig(frontendConfig);
+        console.log('LLM config loaded from backend:', frontendConfig);
+      } else {
+        console.error('Failed to fetch LLM config from backend');
+      }
+    } catch (e) {
+      console.error('Failed to fetch LLM config:', e);
+    }
+  };
+
+  // Sprint 64 Feature 64.6: One-time migration from localStorage to backend
+  const migrateFromLocalStorage = async () => {
+    const migrated = localStorage.getItem(MIGRATION_FLAG_KEY);
+    if (migrated === 'true') {
+      return; // Already migrated
+    }
+
     const stored = localStorage.getItem(LLM_CONFIG_KEY);
     if (stored) {
       try {
-        setConfig(JSON.parse(stored));
+        const localConfig: UseCaseConfig[] = JSON.parse(stored);
+        console.log('Migrating localStorage config to backend:', localConfig);
+
+        // Convert to backend format
+        const backendConfig: Record<string, { model: string; enabled: boolean }> = {};
+        localConfig.forEach((uc) => {
+          backendConfig[uc.useCase] = {
+            model: frontendToBackend(uc.modelId),
+            enabled: uc.enabled,
+          };
+        });
+
+        // Save to backend
+        const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ use_cases: backendConfig }),
+        });
+
+        if (response.ok) {
+          console.log('localStorage config migrated to backend successfully');
+          localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+          localStorage.removeItem(LLM_CONFIG_KEY); // Clean up
+        } else {
+          console.error('Failed to migrate config to backend');
+        }
       } catch (e) {
-        console.error('Failed to parse stored LLM config:', e);
+        console.error('Failed to migrate localStorage config:', e);
       }
+    } else {
+      // No localStorage config to migrate, mark as migrated
+      localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
     }
+  };
+
+  // Fetch Ollama models, summary model config, and LLM config on mount
+  useEffect(() => {
+    const initializeConfig = async () => {
+      await migrateFromLocalStorage(); // Migrate first
+      await fetchLLMConfig(); // Then load from backend
+    };
+
+    fetchOllamaModels();
+    fetchSummaryModelConfig();
+    initializeConfig();
   }, []);
 
   const fetchOllamaModels = async () => {
@@ -313,17 +417,31 @@ export function AdminLLMConfigPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Save to localStorage
-      localStorage.setItem(LLM_CONFIG_KEY, JSON.stringify(config));
+      // Sprint 64 Feature 64.6: Save to backend API (replaces localStorage)
+      const backendConfig: Record<string, { model: string; enabled: boolean }> = {};
+      config.forEach((uc) => {
+        backendConfig[uc.useCase] = {
+          model: frontendToBackend(uc.modelId),
+          enabled: uc.enabled,
+        };
+      });
 
-      // TODO: Also save to backend API
-      // await fetch('/api/v1/admin/llm/config', {
-      //   method: 'PUT',
-      //   body: JSON.stringify({ useCases: config }),
-      // });
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/llm/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ use_cases: backendConfig }),
+      });
 
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      if (response.ok) {
+        console.log('LLM config saved to backend:', backendConfig);
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        console.error('Failed to save LLM config to backend');
+        setSaveStatus('error');
+      }
     } catch (e) {
       console.error('Failed to save config:', e);
       setSaveStatus('error');

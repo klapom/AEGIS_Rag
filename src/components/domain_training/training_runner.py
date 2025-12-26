@@ -214,11 +214,15 @@ async def run_dspy_optimization(
             # This ensures rollback-like behavior without long-running transactions
             is_new_domain = True
 
-            # Use default LLM model from settings for new domains
-            from src.core.config import get_settings
+            # Sprint 64 Feature 64.6: Use Admin UI configured model for entity extraction
+            # CRITICAL BUG FIX: Previously used hardcoded settings.lightrag_llm_model
+            # Now respects Admin UI configuration
+            from src.components.llm_config import LLMUseCase, get_llm_config_service
 
-            settings = get_settings()
-            llm_model = settings.lightrag_llm_model
+            config_service = get_llm_config_service()
+            llm_model = await config_service.get_model_for_use_case(
+                LLMUseCase.ENTITY_EXTRACTION
+            )
 
             # Store config for later domain creation (after training succeeds)
             domain_config = {

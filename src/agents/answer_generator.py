@@ -42,13 +42,14 @@ class AnswerGenerator:
     def __init__(self, model_name: str | None = None, temperature: float = 0.0) -> None:
         """Initialize answer generator.
 
+        Sprint 64 Feature 64.6: LLM model now respects Admin UI configuration
+
         Args:
-            model_name: Preferred local model name (default from ollama_model_generation)
+            model_name: Explicit LLM model name (overrides Admin UI config)
             temperature: LLM temperature for answer generation (0.0 = deterministic)
         """
-        # Sprint 51 Fix: Use ollama_model_generation (not ollama_model_query) for answer generation
-        # ollama_model_generation is configured for RAG answer synthesis (e.g., nemotron-no-think)
-        self.model_name = model_name or settings.ollama_model_generation
+        # Store explicit model or None (fetch from Admin UI config on first use)
+        self._explicit_model_name = model_name
         self.temperature = temperature
 
         # Sprint 23: Use AegisLLMProxy for multi-cloud routing
@@ -56,10 +57,43 @@ class AnswerGenerator:
 
         logger.info(
             "answer_generator_initialized",
-            model=self.model_name,
+            explicit_model=self._explicit_model_name,
             temperature=self.temperature,
             proxy="AegisLLMProxy",
         )
+
+    async def _get_llm_model(self) -> str:
+        """Get LLM model from explicit config or Admin UI configuration.
+
+        Sprint 64 Feature 64.6: Lazy fetch from Admin UI config
+
+        Returns the explicitly provided model if set, otherwise fetches from
+        the centralized LLM config service (respecting Admin UI settings).
+
+        Returns:
+            Model name (without provider prefix, e.g., "qwen3:32b")
+
+        Example:
+            >>> generator = AnswerGenerator()  # No explicit model
+            >>> model = await generator._get_llm_model()
+            >>> # Returns "qwen3:32b" from Admin UI config, not hardcoded "llama3.2:8b"
+        """
+        if self._explicit_model_name:
+            return self._explicit_model_name
+
+        # Fetch from Admin UI config
+        from src.components.llm_config import LLMUseCase, get_llm_config_service
+
+        config_service = get_llm_config_service()
+        model = await config_service.get_model_for_use_case(LLMUseCase.ANSWER_GENERATION)
+
+        logger.debug(
+            "using_admin_ui_configured_model",
+            model=model,
+            use_case="answer_generation",
+        )
+
+        return model
 
     async def generate_answer(
         self,
@@ -95,6 +129,9 @@ class AnswerGenerator:
         logger.debug("generating_answer", query=query[:100], contexts_count=len(contexts))
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            model_name = await self._get_llm_model()
+
             # Sprint 23: Use AegisLLMProxy for generation
             task = LLMTask(
                 task_type=TaskType.GENERATION,
@@ -102,7 +139,7 @@ class AnswerGenerator:
                 quality_requirement=QualityRequirement.MEDIUM,
                 complexity=complexity,
                 temperature=self.temperature,
-                model_local=self.model_name,
+                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             response = await self.proxy.generate(task)
@@ -222,6 +259,9 @@ class AnswerGenerator:
         )
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            model_name = await self._get_llm_model()
+
             # Use AegisLLMProxy for generation
             task = LLMTask(
                 task_type=TaskType.GENERATION,
@@ -229,7 +269,7 @@ class AnswerGenerator:
                 quality_requirement=QualityRequirement.MEDIUM,
                 complexity=Complexity.MEDIUM,
                 temperature=self.temperature,
-                model_local=self.model_name,
+                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             response = await self.proxy.generate(task)
@@ -463,6 +503,9 @@ class AnswerGenerator:
         )
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            model_name = await self._get_llm_model()
+
             # Track TTFT (Time-To-First-Token)
             start_time = time.perf_counter()
             first_token_received = False
@@ -476,7 +519,7 @@ class AnswerGenerator:
                 quality_requirement=QualityRequirement.MEDIUM,
                 complexity=complexity,
                 temperature=self.temperature,
-                model_local=self.model_name,
+                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             # Sprint 51: Use AegisLLMProxy streaming
@@ -592,6 +635,9 @@ class AnswerGenerator:
         )
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            model_name = await self._get_llm_model()
+
             # Track TTFT
             start_time = time.perf_counter()
             first_token_received = False
@@ -605,7 +651,7 @@ class AnswerGenerator:
                 quality_requirement=QualityRequirement.MEDIUM,
                 complexity=Complexity.MEDIUM,
                 temperature=self.temperature,
-                model_local=self.model_name,
+                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             # Stream tokens from AegisLLMProxy

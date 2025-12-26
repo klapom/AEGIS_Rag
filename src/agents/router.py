@@ -59,15 +59,18 @@ class IntentClassifier:
     ) -> None:
         """Initialize intent classifier.
 
+        Sprint 64 Feature 64.6: LLM model now respects Admin UI configuration
+
         Args:
-            model_name: LLM model name (default: from settings)
+            model_name: Explicit LLM model name (overrides Admin UI config)
             base_url: DEPRECATED - kept for backward compatibility
             temperature: LLM temperature (default: from settings)
             max_tokens: Max tokens for response (default: from settings)
             max_retries: Max retry attempts (default: from settings)
             default_intent: Default intent on failure (default: from settings)
         """
-        self.model_name = model_name or settings.ollama_model_router
+        # Store explicit model or None (fetch from Admin UI config on first use)
+        self._explicit_model_name = model_name
         self.temperature = temperature if temperature is not None else settings.router_temperature
         self.max_tokens = max_tokens or settings.router_max_tokens
         self.max_retries = max_retries or settings.router_max_retries
@@ -78,7 +81,7 @@ class IntentClassifier:
 
         logger.info(
             "intent_classifier_initialized",
-            model=self.model_name,
+            explicit_model=self._explicit_model_name,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
@@ -126,6 +129,39 @@ class IntentClassifier:
         )
         return QueryIntent(self.default_intent)
 
+    async def _get_llm_model(self) -> str:
+        """Get LLM model from explicit config or Admin UI configuration.
+
+        Sprint 64 Feature 64.6: Lazy fetch from Admin UI config
+
+        Returns the explicitly provided model if set, otherwise fetches from
+        the centralized LLM config service (respecting Admin UI settings).
+
+        Returns:
+            Model name (without provider prefix, e.g., "qwen3:32b")
+
+        Example:
+            >>> classifier = IntentClassifier()  # No explicit model
+            >>> model = await classifier._get_llm_model()
+            >>> # Returns "qwen3:32b" from Admin UI config, not hardcoded "llama3.2:8b"
+        """
+        if self._explicit_model_name:
+            return self._explicit_model_name
+
+        # Fetch from Admin UI config
+        from src.components.llm_config import LLMUseCase, get_llm_config_service
+
+        config_service = get_llm_config_service()
+        model = await config_service.get_model_for_use_case(LLMUseCase.INTENT_CLASSIFICATION)
+
+        logger.debug(
+            "using_admin_ui_configured_model",
+            model=model,
+            use_case="intent_classification",
+        )
+
+        return model
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
@@ -148,13 +184,16 @@ class IntentClassifier:
             LLMError: If classification fails after all retries
         """
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            model_name = await self._get_llm_model()
+
             # Format prompt with query
             prompt = CLASSIFICATION_PROMPT.format(query=query)
 
             logger.debug(
                 "classifying_intent",
                 query=query[:100],
-                model=self.model_name,
+                model=model_name,
             )
 
             # Create LLM task for intent classification
@@ -165,7 +204,7 @@ class IntentClassifier:
                 complexity=Complexity.LOW,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                model_local=self.model_name,  # Prefer local model for fast classification
+                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             # Call AegisLLMProxy

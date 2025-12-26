@@ -181,13 +181,16 @@ class ExtractionService:
     ) -> None:
         """Initialize extraction service.
 
+        Sprint 64 Feature 64.6: LLM model now respects Admin UI configuration
+
         Args:
-            llm_model: LLM model name (default: llama3.2:8b)
+            llm_model: Explicit LLM model name (overrides Admin UI config)
             ollama_base_url: DEPRECATED - kept for backward compatibility
             temperature: LLM temperature for extraction (default: 0.1 for consistency)
             max_tokens: Max tokens for LLM response
         """
-        self.llm_model = llm_model or settings.lightrag_llm_model
+        # Store explicit model or None (fetch from Admin UI config on first use)
+        self._explicit_llm_model = llm_model
         self.temperature = (
             temperature if temperature is not None else settings.lightrag_llm_temperature
         )
@@ -198,7 +201,7 @@ class ExtractionService:
 
         logger.info(
             "extraction_service_initialized",
-            llm_model=self.llm_model,
+            explicit_model=self._explicit_llm_model,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
@@ -266,6 +269,39 @@ class ExtractionService:
                 error=str(e),
             )
             return (GENERIC_ENTITY_EXTRACTION_PROMPT, GENERIC_RELATION_EXTRACTION_PROMPT)
+
+    async def _get_llm_model(self) -> str:
+        """Get LLM model from explicit config or Admin UI configuration.
+
+        Sprint 64 Feature 64.6: Lazy fetch from Admin UI config
+
+        Returns the explicitly provided model if set, otherwise fetches from
+        the centralized LLM config service (respecting Admin UI settings).
+
+        Returns:
+            Model name (without provider prefix, e.g., "qwen3:32b")
+
+        Example:
+            >>> service = ExtractionService()  # No explicit model
+            >>> model = await service._get_llm_model()
+            >>> # Returns "qwen3:32b" from Admin UI config, not hardcoded "nemotron-3-nano"
+        """
+        if self._explicit_llm_model:
+            return self._explicit_llm_model
+
+        # Fetch from Admin UI config
+        from src.components.llm_config import LLMUseCase, get_llm_config_service
+
+        config_service = get_llm_config_service()
+        model = await config_service.get_model_for_use_case(LLMUseCase.ENTITY_EXTRACTION)
+
+        logger.debug(
+            "using_admin_ui_configured_model",
+            model=model,
+            use_case="entity_extraction",
+        )
+
+        return model
 
     def _parse_json_response(
         self, response: str, data_type: str = "entity"
@@ -475,6 +511,9 @@ class ExtractionService:
         prompt = ENTITY_EXTRACTION_PROMPT.format(text=text)
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            llm_model = await self._get_llm_model()
+
             # Create LLM task for entity extraction
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
@@ -483,7 +522,7 @@ class ExtractionService:
                 complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                model_local=self.llm_model,
+                model_local=llm_model,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             # Call AegisLLMProxy
@@ -598,6 +637,9 @@ class ExtractionService:
         )
 
         try:
+            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
+            llm_model = await self._get_llm_model()
+
             # Create LLM task for relationship extraction
             task = LLMTask(
                 task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
@@ -606,7 +648,7 @@ class ExtractionService:
                 complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
-                model_local=self.llm_model,
+                model_local=llm_model,  # Uses Admin UI config (not hardcoded settings.*)
             )
 
             # Call AegisLLMProxy

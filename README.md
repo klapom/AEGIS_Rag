@@ -1,7 +1,7 @@
 # AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-**Status:** Sprint 60 Complete (2025-12-21)
-**Version:** 2.0.0 (Production-Ready, Post-Refactoring)
+**Status:** Sprint 64 Complete (2025-12-25)
+**Version:** 2.1.0 (Production-Ready, Multi-Turn + Domain Training)
 
 Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, GPU-accelerated ingestion, and comprehensive technical investigations completed.
 
@@ -24,36 +24,33 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 
 ## Current Sprint Status
 
-### Sprint 60: Documentation Consolidation & Technical Investigations (COMPLETE)
-**Duration:** 2025-12-15 to 2025-12-21
+### Sprint 64: Domain Training Optimization & Critical Bug Fixes (COMPLETE)
+**Duration:** 2025-12-22 to 2025-12-25
+**Total Story Points:** 35 SP (Delivered via Parallel Agent Execution)
 
 **Key Achievements:**
-- Documentation consolidated: 7 files → 4 consolidated docs
-  - ARCHITECTURE.md (merged: Evolution + Component Map + Structure)
-  - TECH_STACK.md (merged: Dependencies + DGX Spark config)
-  - CONVENTIONS.md (renamed from Naming Conventions)
-  - DECISION_LOG.md (preserved for history)
-- 4 Technical Investigations completed:
-  - TD-069: Multihop Endpoint Review
-  - TD-071: vLLM vs Ollama Investigation
-  - TD-072: Sentence-Transformers Reranking Analysis
-  - TD-073: Sentence-Transformers Embeddings Analysis
-- Subdirectory cleanup: 17 documents archived
-- Tool Framework implementation verified (Sprint 59)
-- Research Agent implementation verified (Sprint 59)
+- **VLM Image Search (5 SP):** VLM-based chunking with community detection, image search endpoint
+- **Domain Training (10 SP):** Transactional domain creation, validation fixes, LLM config integration
+- **Multi-Turn Research (5 SP):** Conversational research agents with follow-up, query decomposition
+- **Section-Aware RAG (8 SP):** Section citations, hierarchical queries, community detection visualization
+- **LLM Config Backend (13 SP):** Admin UI config persisted to Redis, 60s cache, 6 agents integrated
+- **Production Deployment:** Complete Docker Compose setup with Nginx reverse proxy (http://192.168.178.10)
+- **E2E Testing:** 337/594 Playwright tests passed (57% - core user journeys working)
 
-**Documentation Improvements:**
-- All Sprint 53-59 refactoring reflected
-- Domain-driven structure documented
-- DGX Spark configuration centralized
-- Technical debt tracking organized
+**Critical Bug Fixes:**
+- Domain training now respects Admin UI LLM configuration (was using hardcoded models)
+- Transactional domain creation prevents "zombie domains" on training failures
+- Frontend LLM config migrated from localStorage to backend Redis persistence
 
-### Sprint 61: Performance Optimizations (PLANNED)
-**Candidates:**
-- Embedding optimization (investigate BGE-M3 vs Sentence-Transformers)
-- Reranking performance improvements
-- Query latency optimization
-- Memory efficiency enhancements
+**Documentation:**
+- Sprint 62+63 plan consolidated (93 SP across 7 features)
+- Sprint 64 plan created (35 SP across 6 features)
+- Production deployment guide with systemd integration
+
+### Sprint 61-63: Multi-Turn & Section-Aware Features (COMPLETE)
+**Sprint 61:** Performance investigations (embeddings, reranking)
+**Sprint 62:** Multi-turn research agents, follow-up generation
+**Sprint 63:** Section-aware citations, community detection, Playwright E2E tests
 
 ---
 
@@ -154,21 +151,22 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 ## Project Status
 
 ### Sprint Completion
-- **Sprints 1-59:** COMPLETE (Comprehensive feature development, refactoring, tool framework)
-- **Sprint 60:** COMPLETE (Documentation consolidation, technical investigations)
-- **Sprint 61:** PLANNED (Performance optimizations)
+- **Sprints 1-60:** COMPLETE (Core features, refactoring, documentation consolidation)
+- **Sprints 61-63:** COMPLETE (Multi-turn research, section-aware citations)
+- **Sprint 64:** COMPLETE (Domain training, LLM config backend, production deployment)
 
 ### Test Coverage
 - **Unit Tests:** 500+ tests
-- **Integration Tests:** 120+ tests
-- **E2E Tests:** 111 Playwright tests
+- **Integration Tests:** 130+ tests (domain training, LLM config)
+- **E2E Tests:** 111 Playwright tests (Sprint 63+64)
 - **Total Coverage:** >80%
 
 ### Documentation
 - **ADRs:** 46+ Architecture Decision Records
-- **Sprint Reports:** 60 sprint completion reports
-- **Technical Debt:** 73+ items tracked (TD-001 to TD-073)
-- **Total Docs:** 180+ markdown files
+- **Sprint Reports:** 64 sprint completion reports
+- **Technical Debt:** 76+ items tracked (TD-001 to TD-076)
+- **Features:** 24+ documented features (Sprint 62-64)
+- **Total Docs:** 200+ markdown files
 
 ---
 
@@ -231,6 +229,6 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 
 ---
 
-**Last Updated:** 2025-12-21 (Sprint 60 Complete)
-**Current Sprint:** Sprint 61 (Performance Optimizations - Planning)
+**Last Updated:** 2025-12-25 (Sprint 64 Complete)
+**Next Sprint:** Sprint 65 (Advanced Features - Planning)
 **Maintainer:** AEGIS RAG Team

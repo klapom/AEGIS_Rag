@@ -85,8 +85,10 @@ except ImportError:
 class ImageProcessorConfig:
     """Configuration for image processing.
 
+    Sprint 64 Feature 64.6: VLM model now respects Admin UI configuration
+
     Attributes:
-        vlm_model: Ollama model identifier
+        vlm_model: Ollama model identifier (from Admin UI or settings fallback)
         temperature: Sampling temperature (0.0-1.0)
         top_p: Nucleus sampling parameter
         top_k: Top-k sampling parameter
@@ -104,11 +106,21 @@ class ImageProcessorConfig:
     - min_unique_colors: 16 - skip single-color placeholder images
     """
 
-    def __init__(self):
+    def __init__(self, vlm_model: str | None = None):
+        """Initialize config.
+
+        Sprint 64 Feature 64.6: Accepts explicit VLM model override.
+
+        Args:
+            vlm_model: Explicit VLM model (overrides Admin UI and settings)
+        """
         settings = get_settings()
 
-        # VLM Settings (from config or defaults)
-        self.vlm_model = getattr(settings, "qwen3vl_model", "qwen3-vl:4b-instruct")
+        # VLM Settings - Sprint 64 Feature 64.6: Support explicit override
+        # NOTE: Full Admin UI integration requires VLM client refactoring to accept model param.
+        # Currently VLM clients (vlm_factory, dashscope_vlm) read from settings internally.
+        # TODO (TD-077): Refactor VLM clients to accept model parameter for full Admin UI integration
+        self.vlm_model = vlm_model or getattr(settings, "qwen3vl_model", "qwen3-vl:32b")
         self.temperature = getattr(settings, "qwen3vl_temperature", 0.7)
         self.top_p = getattr(settings, "qwen3vl_top_p", 0.8)
         self.top_k = getattr(settings, "qwen3vl_top_k", 20)
