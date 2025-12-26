@@ -421,11 +421,10 @@ async def chat(request: ChatRequest) -> ChatResponse | dict[str, Any]:
         # Sprint 17 Feature 17.2: Save conversation to Redis
         # Sprint 35 Feature 35.3: Generate and store follow-up questions
         # Sprint 35 Feature 35.4: Generate title for first Q&A exchange
-        follow_up_questions = await generate_followup_questions(
-            query=request.query,
-            answer=answer,
-            sources=sources,
-        )
+        # Sprint 65 Feature 65.1: Follow-up questions are generated asynchronously
+        # Coordinator already triggered background task via _generate_followup_async()
+        # Frontend polls GET /sessions/{session_id}/followup-questions after answer
+        follow_up_questions = []  # Empty - async generation in background
 
         # Sprint 35 Feature 35.4: Check if this is first message and generate title
         from src.components.memory import get_redis_memory
@@ -749,12 +748,10 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
             # Sprint 17 Feature 17.2: Save conversation after streaming completes
             full_answer = "".join(collected_answer)
             if full_answer:
-                # Generate follow-up questions before saving
-                follow_up_questions = await generate_followup_questions(
-                    query=request.query,
-                    answer=full_answer,
-                    sources=collected_sources,
-                )
+                # Sprint 65 Feature 65.1: Follow-up questions generated asynchronously
+                # Coordinator already triggered background task via _generate_followup_async()
+                # Frontend polls GET /sessions/{session_id}/followup-questions after answer
+                follow_up_questions = []  # Empty - async generation in background
 
                 # Sprint 35 Feature 35.4: Check if this is first message and generate title
                 from src.components.memory import get_redis_memory
@@ -807,19 +804,30 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
 
 @router.get("/sessions", response_model=SessionListResponse)
-async def list_sessions() -> SessionListResponse:
-    """list all active conversation sessions.
+async def list_sessions(
+    limit: int = 50, offset: int = 0
+) -> SessionListResponse:
+    """list active conversation sessions with pagination.
 
     Sprint 15 Feature 15.5: Session Management for History Sidebar
     Sprint 17 Feature 17.2: Implement proper session listing from Redis
+    Sprint 65 Feature 65.3: Added pagination to avoid timeout with >100 conversations
+
+    Args:
+        limit: Maximum number of sessions to return (default: 50, max: 100)
+        offset: Number of sessions to skip (default: 0)
 
     Returns:
-        SessionListResponse with list of session information
+        SessionListResponse with list of session information (paginated)
 
     Raises:
         HTTPException: If listing fails
     """
-    logger.info("session_list_requested")
+    # Sprint 65: Validate pagination parameters
+    limit = min(max(1, limit), 100)  # Clamp between 1 and 100
+    offset = max(0, offset)
+
+    logger.info("session_list_requested", limit=limit, offset=offset)
 
     try:
         from src.components.memory import get_redis_memory
@@ -870,9 +878,19 @@ async def list_sessions() -> SessionListResponse:
         # Sort by last activity (most recent first)
         sessions.sort(key=lambda s: s.last_activity or "", reverse=True)
 
-        logger.info("session_list_retrieved", count=len(sessions))
+        # Sprint 65 Feature 65.3: Apply pagination
+        total_count = len(sessions)
+        paginated_sessions = sessions[offset : offset + limit]
 
-        return SessionListResponse(sessions=sessions, total_count=len(sessions))
+        logger.info(
+            "session_list_retrieved",
+            total_count=total_count,
+            returned_count=len(paginated_sessions),
+            offset=offset,
+            limit=limit,
+        )
+
+        return SessionListResponse(sessions=paginated_sessions, total_count=total_count)
 
     except Exception as e:
         logger.error("session_list_failed", error=str(e))

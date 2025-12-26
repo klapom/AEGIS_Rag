@@ -124,6 +124,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Can be initialized via /api/v1/retrieval/prepare-bm25",
         )
 
+    # Sprint 65 Feature 65.1: Pre-warm LLM for faster first follow-up question request
+    try:
+        logger.info("Pre-warming LLM for follow-up question generation...")
+        from src.agents.followup_generator import generate_followup_questions
+
+        # Trigger a warmup request to load model into memory
+        await generate_followup_questions(
+            query="System warmup",
+            answer="System warmup",
+            sources=[],
+            max_questions=1,
+        )
+        logger.info("llm_prewarming_completed", status="success")
+    except Exception as e:
+        # Non-fatal: Follow-up questions will still work, just slower on first request
+        logger.warning(
+            "llm_prewarming_failed",
+            error=str(e),
+            note="Follow-up questions will work but may be slower on first request",
+        )
+
     # Sprint 31: Initialize FormatRouter with Docling health check
     docling_available = False
     try:

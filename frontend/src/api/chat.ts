@@ -132,17 +132,31 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
 }
 
 /**
- * List all conversation sessions
+ * List conversation sessions with pagination
+ * Sprint 65 Feature 65.3: Added pagination to avoid timeout with >100 conversations
  *
- * @returns List of sessions with metadata
+ * @param limit Maximum number of sessions to return (default: 50, max: 100)
+ * @param offset Number of sessions to skip (default: 0)
+ * @returns List of sessions with metadata (paginated)
  */
-export async function listSessions(): Promise<SessionListResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/chat/sessions`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+export async function listSessions(
+  limit: number = 50,
+  offset: number = 0
+): Promise<SessionListResponse> {
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString(),
   });
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/chat/sessions?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();

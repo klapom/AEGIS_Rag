@@ -2,6 +2,7 @@
  * FollowUpQuestions Component
  * Sprint 28 Feature 28.1: Display follow-up questions below answers
  * Sprint 52 Feature 52.3: Async Follow-up Questions (TD-043)
+ * Sprint 65 Feature 65.1: Increased poll timeout for async generation
  *
  * Features:
  * - Fetch follow-up questions from backend API (async after answer completes)
@@ -29,7 +30,8 @@ export function FollowUpQuestions({ sessionId, onQuestionClick, answerComplete =
   const [error, setError] = useState<string | null>(null);
   const pollIntervalRef = useRef<number | null>(null);
   const pollCountRef = useRef(0);
-  const maxPollAttempts = 10; // Poll for up to 10 seconds (10 * 1s)
+  // Sprint 65 Feature 65.1: Increased timeout to 15s for LLM generation
+  const maxPollAttempts = 15; // Poll for up to 15 seconds (15 * 1s)
 
   useEffect(() => {
     // Sprint 52.3: Only start fetching when answer completes

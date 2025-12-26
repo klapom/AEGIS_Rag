@@ -2,16 +2,24 @@
  * DomainTrainingPage Component
  * Sprint 45 Feature 45.4: Domain Training Admin UI
  * Sprint 64 Feature 64.2: Frontend validation improvements
+ * Sprint 65 Feature 65.2: Lazy loading for performance optimization
  *
  * Admin page for managing domain training with DSPy integration
  */
 
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { Info } from 'lucide-react';
 import { useDomains } from '../../hooks/useDomainTraining';
 import { DomainList } from '../../components/admin/DomainList';
-import { NewDomainWizard } from '../../components/admin/NewDomainWizard';
+
+// Sprint 65 Feature 65.2.1: Lazy load NewDomainWizard to reduce initial bundle size
+// This component is only loaded when user clicks "New Domain" button
+const NewDomainWizard = lazy(() =>
+  import('../../components/admin/NewDomainWizard').then((module) => ({
+    default: module.NewDomainWizard,
+  }))
+);
 
 export function DomainTrainingPage() {
   const { data: domains, isLoading, refetch } = useDomains();
@@ -74,7 +82,24 @@ export function DomainTrainingPage() {
       <DomainList domains={domains} isLoading={isLoading} onRefresh={refetch} />
 
       {/* New Domain Wizard Dialog */}
-      {showNewDomain && <NewDomainWizard onClose={handleCloseWizard} />}
+      {/* Sprint 65 Feature 65.2.1: Lazy loaded with Suspense for faster page load */}
+      {showNewDomain && (
+        <Suspense
+          fallback={
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center"
+              data-testid="wizard-loading"
+            >
+              <div className="bg-white rounded-lg p-6 shadow-xl">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
+                <p className="text-sm text-gray-600 mt-4">Loading wizard...</p>
+              </div>
+            </div>
+          }
+        >
+          <NewDomainWizard onClose={handleCloseWizard} />
+        </Suspense>
+      )}
     </div>
   );
 }

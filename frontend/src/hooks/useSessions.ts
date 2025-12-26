@@ -1,6 +1,7 @@
 /**
  * useSessions Hook
  * Sprint 35 Feature 35.5: Session History Sidebar
+ * Sprint 65 Feature 65.3: Added pagination to avoid timeout with >100 conversations
  *
  * Fetches and manages conversation sessions with date-based grouping
  */
@@ -25,7 +26,9 @@ export function useSessions() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await listSessions();
+      // Sprint 65 Feature 65.3: Request only 50 most recent sessions to avoid timeout
+      // TODO Sprint 66: Implement infinite scroll for loading more sessions
+      const data = await listSessions(50, 0);
       // Convert SessionInfo to SessionSummary format
       const summaries: SessionSummary[] = data.sessions.map(s => ({
         session_id: s.session_id,

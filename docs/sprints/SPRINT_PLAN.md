@@ -1566,6 +1566,206 @@ mem0:
 
 ---
 
+## Sprint 60: Documentation Consolidation & Technical Investigations ✅
+**Ziel:** Dokumentation konsolidieren, technische Voruntersuchungen
+
+**Breakdown:**
+| Feature | SP |
+|---------|-----|
+| 60.1 Core Documentation Consolidation | 13 |
+| 60.2 GRAPHITI Temporal Queries Analysis | 8 |
+| 60.3 Section Nodes Implementation Review | 3 |
+| 60.4 TD-069: Multihop Endpoint Review | 3 |
+| 60.5 TD-071: vLLM Investigation | 5 |
+| 60.6 TD-072: Sentence-Transformers Reranking | 5 |
+| 60.7 TD-073: Sentence-Transformers Embeddings | 5 |
+| 60.8 Subdirectory Cleanup | 3 |
+
+### Deliverables
+- Konsolidierte Core-Dokumentation (7 Hauptdateien)
+- GRAPHITI Temporal Queries Analyse
+- vLLM Performance-Untersuchung
+- Sentence-Transformers Evaluationen (Embeddings + Reranking)
+
+### Success Criteria
+- [ ] Dokumentation auf aktuellem Stand
+- [ ] Technische Investigations abgeschlossen
+- [ ] Entscheidungsgrundlage für Sprint 61 Performance-Optimierungen
+
+### References
+- [SPRINT_60_PLAN.md](SPRINT_60_PLAN.md)
+
+---
+
+## Sprint 61: Performance & Ollama Optimization ✅
+**Ziel:** Native Sentence-Transformers, Cross-Encoder Reranking, Ollama Tuning
+
+**Breakdown:**
+| Feature | SP |
+|---------|-----|
+| 61.1 Native Sentence-Transformers Embeddings | 8 |
+| 61.2 Cross-Encoder Reranking | 8 |
+| 61.3 Ollama Configuration Tuning | 5 |
+| 61.4 Deprecated Endpoint Cleanup | 3 |
+| 61.5 Performance Testing & Documentation | 5 |
+
+### Deliverables
+- Native BGE-M3 Embeddings (3-5x faster, -60% VRAM)
+- Cross-Encoder Reranking (50x faster: 120ms vs 2000ms)
+- Optimierte Ollama-Konfiguration (+30% throughput)
+- Entfernung von 5 deprecated multihop endpoints
+
+### Success Criteria
+- [ ] Query latency: -100ms (embeddings: -80ms, reranking: -20ms)
+- [ ] Ingestion speed: +1500% (batch embeddings 16x faster)
+- [ ] Ollama throughput: +30-50% (OLLAMA_NUM_PARALLEL=4)
+- [ ] Code cleanup: Deprecated endpoints entfernt
+
+### References
+- [SPRINT_61_PLAN.md](SPRINT_61_PLAN.md)
+- [ADR-024: BGE-M3 Embeddings](../adr/ADR_INDEX.md)
+
+---
+
+## Sprint 62 & 63: Section-Aware RAG & Multi-Turn Research ✅
+**Ziel:** Section-Aware Citations, VLM Integration, Multi-Turn Research, Temporal Audit
+
+**Duration:** 4-5 Wochen (2+3 Wochen)
+**Total Story Points:** 93 SP (36 Sprint 62 + 57 Sprint 63)
+
+**Sprint 62 Features (36 SP):**
+| Feature | SP |
+|---------|-----|
+| 62.1 Section Graph Queries | 5 |
+| 62.2 Multi-Section Vector Metadata | 3 |
+| 62.3 VLM Image Integration | 5 |
+| 62.4 Section-Aware Citations | 3 |
+| 62.5 Hierarchical Section Queries | 2 |
+| 62.6 Query Decomposition Engine | 3 |
+| 62.7 Document Type Support Extension | 5 |
+| 62.8 Community Detection Optimization | 3 |
+| 62.9 Section Analytics API | 2 |
+| 62.10 Research Backend | 6 |
+
+**Sprint 63 Features (57 SP):**
+| Feature | SP |
+|---------|-----|
+| 63.1 Multi-Turn Conversation Backend | 8 |
+| 63.2 Temporal Audit Logging | 5 |
+| 63.3 Redis Cache Layer | 3 |
+| 63.4 Structured Output Support | 5 |
+| 63.5 Community Detection UI | 3 |
+| 63.6 E2E Test Coverage | 13 |
+| 63.7 MCP Authentication & Security | 5 |
+| 63.8 Research Mode UI | 8 |
+| 63.9 Web Search Integration | 5 |
+| 63.10 Tool Output Visualization | 2 |
+
+### Deliverables
+- Section-Aware Citation System (hierarchical references)
+- VLM-based Image Processing (Docling CUDA + qwen3-vl:32b)
+- Multi-Turn Conversation Memory (Redis-backed)
+- Research Mode (multi-phase LLM orchestration)
+- Web Search Integration (Tavily API)
+- Comprehensive E2E Test Suite (111 Playwright tests)
+
+### Success Criteria
+- [ ] Section citations with hierarchy display (e.g., "Chapter 2 > Section 2.1")
+- [ ] VLM image descriptions embedded in chunks
+- [ ] Multi-turn context maintained across conversations
+- [ ] Research mode with progress streaming
+- [ ] Web search integrated into research workflow
+- [ ] E2E test coverage >80% critical paths
+
+### References
+- [SPRINT_62_63_EXECUTION_PLAN.md](SPRINT_62_63_EXECUTION_PLAN.md)
+- [SPRINT_62_PLAN.md](SPRINT_62_PLAN.md)
+- [SPRINT_63_PLAN.md](SPRINT_63_PLAN.md)
+
+---
+
+## Sprint 64: Domain Training Optimization & Critical Bug Fixes ✅ (COMPLETE 2025-12-25)
+**Ziel:** LLM Config Backend, Domain Training Fixes, Production Deployment
+
+**Breakdown:**
+| Feature | SP |
+|---------|-----|
+| 64.1 VLM-Chunking Integration | 3 |
+| 64.2 Real DSPy MIPRO Implementation | 8 |
+| 64.3 Domain Creation Validation | 3 |
+| 64.4 Transactional Domain Operations | 3 |
+| 64.5 Domain Training Validation Review | 2 |
+| 64.6 Admin LLM Config Backend Integration | 13 |
+| 64.7 E2E Testing Suite | 5 |
+
+### Deliverables
+- **Critical Bug Fixes:**
+  - Admin UI LLM Config → Backend Integration (Redis persistence, 60s cache)
+  - Domain Creation Validation (prevents invalid names, duplicates)
+  - Transactional Domain Operations (all-or-nothing atomicity)
+- **Domain Training Optimization:**
+  - VLM-Chunking Integration (adaptive chunking uses VLM descriptions)
+  - Real DSPy MIPRO (production-ready prompt optimization)
+- **Production Deployment:**
+  - Complete Docker Compose setup (Nginx + API + DBs)
+  - Deployed to http://192.168.178.10 (DGX Spark)
+  - E2E Testing (337/594 tests passed - 57% success)
+
+### Success Criteria
+- [x] Backend respects Admin UI model selection (was broken)
+- [x] Invalid domain creation prevented (100% validation)
+- [x] Domain creation atomic (no partial failures)
+- [x] Image descriptions incorporated into chunks
+- [x] DSPy MIPRO implemented (mock → real)
+- [x] Production deployment functional
+- [ ] **E2E test success rate >90%** (currently 57% - Sprint 65 target)
+
+### References
+- [SPRINT_64_PLAN.md](SPRINT_64_PLAN.md)
+- [PRODUCTION_DEPLOYMENT_TEST_RESULTS.md](../../PRODUCTION_DEPLOYMENT_TEST_RESULTS.md)
+
+---
+
+## Sprint 65: E2E Test Fixes & Performance Optimization 📋 (PLANNED 2025-12-26)
+**Ziel:** Critical E2E Test Failures beheben, Produktionsreife erreichen
+
+**Breakdown:**
+| Feature | SP | Priority |
+|---------|-----|----------|
+| 65.1 Follow-up Questions Fix | 8 | 🔴 CRITICAL |
+| 65.2 Domain Training UI Fixes | 10 | 🔴 CRITICAL |
+| 65.3 History/Conversation Loading Optimization | 8 | 🔴 CRITICAL |
+| 65.4 Graph Filter State Management | 5 | 🟡 MEDIUM |
+| 65.5 Research Mode Performance | 5 | 🟡 MEDIUM |
+| 65.6 Test Infrastructure Improvements | 4 | 🟢 LOW |
+
+### Deliverables
+- **Critical Fixes:**
+  - Follow-up Questions: Async generation, caching, pre-warming (11% → 100% E2E success)
+  - Domain Training: Page load optimization, API validation, test fixtures (40% → 100%)
+  - History Management: Pagination, Redis caching, lazy loading (50% → 100%)
+- **Quality Improvements:**
+  - Graph Filters: State management refactor, debouncing (45% → 90%+)
+  - Research Mode: Streaming progress, parallel orchestration (50% → 90%+)
+- **Test Infrastructure:**
+  - Configurable timeouts (30s/60s/90s by category)
+  - Smoke test suite (<5 min runtime)
+  - Test fixture documentation
+
+### Success Criteria
+- [ ] **E2E test success rate >90%** (up from 57%)
+- [ ] Follow-up questions: <5s generation (async, cached)
+- [ ] Domain training page: <5s load (lazy loading)
+- [ ] Conversation list: <2s load (paginated, cached)
+- [ ] Graph filters: <500ms update (debounced)
+- [ ] Research mode: <60s completion (streaming)
+
+### References
+- [SPRINT_65_PLAN.md](SPRINT_65_PLAN.md)
+- [PRODUCTION_DEPLOYMENT_TEST_RESULTS.md](../../PRODUCTION_DEPLOYMENT_TEST_RESULTS.md)
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
