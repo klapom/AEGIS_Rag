@@ -843,6 +843,23 @@ class CoordinatorAgent:
                             session_id=session_id,
                             count=len(questions),
                         )
+
+                        # Sprint 65 Fix: STORE the generated questions in Redis
+                        # So frontend can retrieve them without regenerating
+                        from src.components.memory import get_redis_memory
+                        redis_memory = get_redis_memory()
+                        cache_key = f"{session_id}:followup"
+                        await redis_memory.store(
+                            key=cache_key,
+                            value={"questions": questions},
+                            namespace="cache",
+                            ttl_seconds=300,  # 5 minutes (same as endpoint)
+                        )
+                        logger.info(
+                            "followup_questions_cached",
+                            session_id=session_id,
+                            count=len(questions),
+                        )
                     else:
                         logger.warning(
                             "followup_questions_empty_async",

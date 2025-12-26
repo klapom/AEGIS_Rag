@@ -124,6 +124,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Can be initialized via /api/v1/retrieval/prepare-bm25",
         )
 
+    # Sprint 65 Feature 65.1: Pre-load BGE-M3 embedding model (81s on CPU, hidden during startup)
+    try:
+        logger.info("Pre-loading BGE-M3 embedding model...")
+        from src.domains.vector_search.embedding import get_native_embedding_service
+
+        # Load model into memory (singleton pattern - only happens once)
+        # On CPU this takes 81s, but it's hidden during startup instead of first user request
+        embedding_service = get_native_embedding_service()
+        logger.info(
+            "bge_m3_preloaded",
+            status="success",
+            device=embedding_service.device,
+            embedding_dim=embedding_service.embedding_dim,
+        )
+    except Exception as e:
+        # Non-fatal: Model will load on first request (slower but functional)
+        logger.warning(
+            "bge_m3_preload_failed",
+            error=str(e),
+            note="BGE-M3 will load on first request (may take 60-90s)",
+        )
+
     # Sprint 65 Feature 65.1: Pre-warm LLM for faster first follow-up question request
     try:
         logger.info("Pre-warming LLM for follow-up question generation...")
