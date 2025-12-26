@@ -192,3 +192,59 @@ class NativeEmbeddingService:
             f"device={self.device}, "
             f"dim={self.embedding_dim})"
         )
+
+
+# Sprint 65 Feature 65.1: Singleton pattern to prevent multiple model loads
+# CRITICAL: Model loading takes 5-6s per instance, singleton reduces 95s → <1s
+_embedding_service_instance: NativeEmbeddingService | None = None
+
+
+def get_native_embedding_service(
+    model_name: str = "BAAI/bge-m3",
+    device: str = "auto",
+    batch_size: int = 64,
+    normalize_embeddings: bool = True,
+) -> NativeEmbeddingService:
+    """Get singleton instance of NativeEmbeddingService.
+
+    Sprint 65 Feature 65.1: Prevent multiple BGE-M3 model loads (95s → <1s)
+
+    This function ensures only ONE instance of the embedding service is created
+    per process, avoiding expensive model re-loading.
+
+    Args:
+        model_name: HuggingFace model ID (default: BAAI/bge-m3)
+        device: Device to run on ('cuda', 'cpu', or 'auto')
+        batch_size: Batch size for encoding (default: 64)
+        normalize_embeddings: Whether to L2-normalize embeddings
+
+    Returns:
+        Singleton NativeEmbeddingService instance
+
+    Example:
+        >>> # All calls return the same instance (model loaded once)
+        >>> service1 = get_native_embedding_service()
+        >>> service2 = get_native_embedding_service()
+        >>> assert service1 is service2  # Same object!
+    """
+    global _embedding_service_instance
+
+    if _embedding_service_instance is None:
+        logger.info(
+            "creating_singleton_embedding_service",
+            model=model_name,
+            device=device,
+        )
+        _embedding_service_instance = NativeEmbeddingService(
+            model_name=model_name,
+            device=device,
+            batch_size=batch_size,
+            normalize_embeddings=normalize_embeddings,
+        )
+    else:
+        logger.debug(
+            "reusing_singleton_embedding_service",
+            model=model_name,
+        )
+
+    return _embedding_service_instance

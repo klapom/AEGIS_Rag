@@ -200,10 +200,10 @@ class UnifiedEmbeddingService:
         Returns:
             Embedding vector (1024-dim)
         """
-        from src.domains.vector_search.embedding import NativeEmbeddingService
+        from src.domains.vector_search.embedding import get_native_embedding_service
 
-        # Lazy instantiation (no stored state = pickle-compatible)
-        native_service = NativeEmbeddingService(
+        # Sprint 65 Feature 65.1: Use singleton to prevent model reloading (95s → <1s)
+        native_service = get_native_embedding_service(
             model_name=self.model_name,
             device=self._st_device,
             batch_size=self._st_batch_size,
@@ -222,10 +222,10 @@ class UnifiedEmbeddingService:
         Returns:
             List of embedding vectors
         """
-        from src.domains.vector_search.embedding import NativeEmbeddingService
+        from src.domains.vector_search.embedding import get_native_embedding_service
 
-        # Lazy instantiation
-        native_service = NativeEmbeddingService(
+        # Sprint 65 Feature 65.1: Use singleton to prevent model reloading (95s → <1s)
+        native_service = get_native_embedding_service(
             model_name=self.model_name,
             device=self._st_device,
             batch_size=self._st_batch_size,

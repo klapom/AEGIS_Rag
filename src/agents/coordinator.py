@@ -814,7 +814,10 @@ class CoordinatorAgent:
             sources: Retrieved source documents
         """
         try:
-            from src.agents.followup_generator import store_conversation_context
+            from src.agents.followup_generator import (
+                generate_followup_questions_async,
+                store_conversation_context,
+            )
 
             # Store context in Redis for follow-up generation
             success = await store_conversation_context(
@@ -829,6 +832,28 @@ class CoordinatorAgent:
                     "followup_context_stored_for_async",
                     session_id=session_id,
                 )
+
+                # Sprint 65 Fix: Actually generate the follow-up questions!
+                # Original Sprint 52 implementation only stored context but never generated questions
+                try:
+                    questions = await generate_followup_questions_async(session_id)
+                    if questions:
+                        logger.info(
+                            "followup_questions_generated_async",
+                            session_id=session_id,
+                            count=len(questions),
+                        )
+                    else:
+                        logger.warning(
+                            "followup_questions_empty_async",
+                            session_id=session_id,
+                        )
+                except Exception as gen_error:
+                    logger.error(
+                        "followup_questions_generation_failed_async",
+                        session_id=session_id,
+                        error=str(gen_error),
+                    )
             else:
                 logger.warning(
                     "followup_context_storage_failed_async",
