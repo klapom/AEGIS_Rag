@@ -357,8 +357,11 @@ services:
   api:
     build:
       context: .
-      dockerfile: docker/Dockerfile.api
-    image: aegis-rag-api:latest
+      # Sprint 65 Feature 65.2: CUDA-enabled API for BGE-M3 GPU acceleration
+      # Use Dockerfile.api-cuda for 10x faster embeddings (280ms saved per query)
+      # Use Dockerfile.api for CPU-only deployment (no GPU required)
+      dockerfile: docker/Dockerfile.api-cuda
+    image: aegis-rag-api-cuda:latest
     container_name: aegis-api
     ports:
       - "8000:8000"
@@ -434,10 +437,16 @@ services:
     restart: unless-stopped
     networks:
       - aegis-network
+    # Sprint 65 Feature 65.2: GPU support for BGE-M3 embeddings
     deploy:
       resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1  # Use 1 GPU for embeddings
+              capabilities: [gpu]
         limits:
-          memory: 8G
+          memory: 16G  # Increased from 8G for CUDA runtime + model
 
   # ============================================================================
   # AEGIS RAG Test Runner - For running pytest in container
