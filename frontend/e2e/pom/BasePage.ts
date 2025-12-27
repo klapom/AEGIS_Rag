@@ -97,9 +97,11 @@ export class BasePage {
 
   /**
    * Check if page is navigated to expected path
+   * Sprint 65 Fix: Use dynamic port extraction instead of hardcoded 5173
    */
   async expectPath(path: string) {
-    const currentPath = this.page.url().split('localhost:5173')[1];
+    const url = new URL(this.page.url());
+    const currentPath = url.pathname;
     if (currentPath !== path) {
       throw new Error(`Expected path ${path}, but got ${currentPath}`);
     }

@@ -87,7 +87,7 @@ export default defineConfig({
    *
    * 2. Terminal 2: Start Frontend Dev Server
    *    npm run dev
-   *    - Waits for: http://localhost:5173
+   *    - Waits for: http://localhost:5179
    *    - Vite with HMR enabled
    *
    * 3. Terminal 3: Run Tests

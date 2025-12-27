@@ -34,9 +34,12 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies with PyTorch CUDA 13.0
-# Note: NGC container already includes PyTorch with CUDA
-RUN /opt/poetry/bin/poetry install --no-root --only main,domain-training,reranking --no-interaction --no-ansi
+# Install dependencies WITHOUT PyTorch (use NGC container's CUDA PyTorch instead)
+# NGC container already includes PyTorch 2.9.0a0 with CUDA 13.0 support
+# Poetry would install CPU-only PyTorch 2.9.1, so we skip it
+RUN /opt/poetry/bin/poetry install --no-root --only main,domain-training,reranking --no-interaction --no-ansi && \
+    # Remove CPU-only PyTorch installed by Poetry (if present)
+    /opt/poetry/bin/poetry run pip uninstall -y torch || true
 
 # ============================================================
 # Stage 2: Runtime with CUDA
@@ -51,26 +54,31 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtual environment from builder
-COPY --from=builder /build/.venv /app/.venv
+# Create non-root user for security BEFORE copying files
+# NGC container may already have UID 1000, so use 1001 instead
+RUN useradd -m -u 1001 aegis
 
-# Copy application code
-COPY src/ /app/src/
-COPY scripts/ /app/scripts/
-COPY data/ /app/data/
+# Copy virtual environment from builder with correct ownership
+COPY --from=builder --chown=aegis:aegis /build/.venv /app/.venv
+
+# Copy application code with correct ownership
+COPY --chown=aegis:aegis src/ /app/src/
+COPY --chown=aegis:aegis scripts/ /app/scripts/
+COPY --chown=aegis:aegis data/ /app/data/
+
+# Fix permissions - ensure all files are readable by owner
+RUN chmod -R u+r /app/src /app/scripts /app/data && \
+    find /app/src /app/scripts -type f -name "*.py" -exec chmod u+x {} \;
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app:$PYTHONPATH"
+# CRITICAL: Prepend system site-packages to use NGC's CUDA PyTorch instead of Poetry's CPU version
+ENV PYTHONPATH="/app:/usr/local/lib/python3.12/dist-packages:$PYTHONPATH"
 ENV PYTHONUNBUFFERED=1
 
 # DGX Spark: Force all PyTorch operations to GPU
 ENV CUDA_VISIBLE_DEVICES=0
 ENV TORCH_CUDA_ARCH_LIST="12.1a"
-
-# Create non-root user for security
-RUN useradd -m -u 1000 aegis && \
-    chown -R aegis:aegis /app
 
 USER aegis
 
