@@ -3,6 +3,7 @@ import { test, expect } from '../fixtures';
 /**
  * E2E Tests for Follow-up Questions
  * Sprint 31 Feature 31.4: Follow-up question generation and interaction
+ * Sprint 65 Update: Changed test queries to OMNITRACKER domain
  *
  * Tests verify:
  * - 3-5 follow-up questions are generated after each response
@@ -14,14 +15,17 @@ import { test, expect } from '../fixtures';
  *
  * Backend: Uses REAL LLM backend
  * Cost: FREE (local Gemma-3 4B for follow-up generation)
+ *
+ * NOTE: Test queries use OMNITRACKER domain (SMC, load balancing, etc.)
+ *       to ensure knowledge base has relevant documents for retrieval.
  */
 
 test.describe('Follow-up Questions', () => {
   test('should generate 3-5 follow-up questions', async ({ chatPage }) => {
     await chatPage.goto();
 
-    // Send initial message
-    await chatPage.sendMessage('What are transformers in machine learning?');
+    // Send initial message - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER SMC and how does it work?');
     await chatPage.waitForResponse();
 
     // Wait for follow-up questions to appear
@@ -39,7 +43,8 @@ test.describe('Follow-up Questions', () => {
   test('should display follow-up questions as clickable chips', async ({ chatPage }) => {
     await chatPage.goto();
 
-    await chatPage.sendMessage('Explain attention mechanism');
+    // Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('How do I configure load balancing in OMNITRACKER?');
     await chatPage.waitForResponse();
 
     // Wait for follow-ups
@@ -57,8 +62,8 @@ test.describe('Follow-up Questions', () => {
   test('should send follow-up question on click', async ({ chatPage }) => {
     await chatPage.goto();
 
-    // Send initial message
-    await chatPage.sendMessage('What is BERT?');
+    // Send initial message - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What are the main components of OMNITRACKER?');
     await chatPage.waitForResponse();
 
     // Get initial message count
@@ -88,7 +93,8 @@ test.describe('Follow-up Questions', () => {
   test('should generate contextual follow-ups', async ({ chatPage }) => {
     await chatPage.goto();
 
-    await chatPage.sendMessage('What are transformers?');
+    // Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('How does OMNITRACKER handle database connections?');
     await chatPage.waitForResponse();
 
     // Wait for follow-ups
@@ -100,7 +106,7 @@ test.describe('Follow-up Questions', () => {
     const followups = await chatPage.getFollowupQuestions();
     expect(followups.length).toBeGreaterThan(0);
 
-    // Verify contextual: should relate to transformers/ML/NLP concepts
+    // Verify contextual: should relate to OMNITRACKER/database/configuration
     const followupTexts = followups.join(' ').toLowerCase();
 
     // Follow-ups should be questions (contain ?)
@@ -112,8 +118,8 @@ test.describe('Follow-up Questions', () => {
   test('should show loading state while generating follow-ups', async ({ chatPage }) => {
     await chatPage.goto();
 
-    // Send message
-    await chatPage.sendMessage('Explain neural networks');
+    // Send message - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER Web Client architecture?');
     await chatPage.waitForResponse();
 
     // Wait for follow-ups to appear
@@ -130,8 +136,8 @@ test.describe('Follow-up Questions', () => {
   test('should persist follow-ups across page reloads', async ({ chatPage }) => {
     await chatPage.goto();
 
-    // Send message
-    await chatPage.sendMessage('What is machine learning?');
+    // Send message - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('How do I set up OMNITRACKER servers?');
     await chatPage.waitForResponse();
 
     // Wait for follow-ups
@@ -167,8 +173,8 @@ test.describe('Follow-up Questions', () => {
   test('should handle multiple consecutive follow-ups', async ({ chatPage }) => {
     await chatPage.goto();
 
-    // Send initial message
-    await chatPage.sendMessage('What is machine learning?');
+    // Send initial message - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER Application Server?');
     await chatPage.waitForResponse();
 
     // Wait for first follow-ups
@@ -219,7 +225,8 @@ test.describe('Follow-up Questions', () => {
   test('should prevent sending empty follow-up questions', async ({ chatPage }) => {
     await chatPage.goto();
 
-    await chatPage.sendMessage('What is AI?');
+    // Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER workflow engine?');
     await chatPage.waitForResponse();
 
     // Wait for follow-ups

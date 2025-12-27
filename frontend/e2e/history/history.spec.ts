@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures';
 
 /**
  * E2E Tests for Conversation History - Feature 31.5
+ * Sprint 65 Update: Changed test queries to OMNITRACKER domain
  *
  * Tests:
  * 1. Auto-generated conversation titles (3-5 words)
@@ -13,6 +14,8 @@ import { test, expect } from '../fixtures';
  *
  * Backend: Gemma-3 4B via Ollama (FREE - no cloud LLM costs)
  * Required: Backend running on http://localhost:8000
+ *
+ * NOTE: Test queries use OMNITRACKER domain to ensure knowledge base has relevant documents.
  */
 
 test.describe('Conversation History - Feature 31.5', () => {
@@ -20,9 +23,9 @@ test.describe('Conversation History - Feature 31.5', () => {
     chatPage,
     page,
   }) => {
-    // Send first message to create a conversation
+    // Send first message to create a conversation - Sprint 65: Using OMNITRACKER query
     await chatPage.sendMessage(
-      'What are transformers in machine learning?'
+      'What is the OMNITRACKER SMC and how does it work?'
     );
     await chatPage.waitForResponse();
 
@@ -54,16 +57,16 @@ test.describe('Conversation History - Feature 31.5', () => {
     historyPage,
     chatPage,
   }) => {
-    // Send first message to create initial conversation
-    await chatPage.sendMessage('First test conversation about ML models');
+    // Send first message to create initial conversation - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER SMC component?');
     await chatPage.waitForResponse();
 
     // Wait a bit before creating second conversation
     await chatPage.page.waitForTimeout(1000);
 
-    // Go back to chat and send another message in new conversation
+    // Go back to chat and send another message in new conversation - Sprint 65: Using OMNITRACKER query
     await chatPage.page.goto('/');
-    await chatPage.sendMessage('Second test conversation about neural networks');
+    await chatPage.sendMessage('How does OMNITRACKER handle load balancing?');
     await chatPage.waitForResponse();
 
     // Navigate to history
@@ -83,8 +86,8 @@ test.describe('Conversation History - Feature 31.5', () => {
     historyPage,
     chatPage,
   }) => {
-    // Create a conversation with a specific query
-    await chatPage.sendMessage('What is the capital of France?');
+    // Create a conversation with a specific query - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is the OMNITRACKER Application Server?');
     await chatPage.waitForResponse();
 
     // Navigate to history
@@ -199,12 +202,12 @@ test.describe('Conversation History - Feature 31.5', () => {
     historyPage,
     chatPage,
   }) => {
-    // Create a conversation
-    await chatPage.sendMessage('What is machine learning?');
+    // Create a conversation - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('What is OMNITRACKER?');
     await chatPage.waitForResponse();
 
-    // Send a follow-up message to increase message count
-    await chatPage.sendMessage('Explain neural networks');
+    // Send a follow-up message to increase message count - Sprint 65: Using OMNITRACKER query
+    await chatPage.sendMessage('Explain the OMNITRACKER SMC component');
     await chatPage.waitForResponse();
 
     // Navigate to history
