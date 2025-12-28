@@ -40,6 +40,8 @@ const TEST_TOKEN = {
  *
  * IMPORTANT: Token storage key is 'aegis_auth_token' (from src/lib/api.ts)
  * Token is stored as JSON with access_token, refresh_token, and expires_at fields
+ *
+ * Sprint 66 Fix: Navigate to valid origin BEFORE setting localStorage to avoid SecurityError
  */
 async function setupAuthMocking(page: Page): Promise<void> {
   // Mock /auth/me endpoint for auth check
@@ -60,10 +62,14 @@ async function setupAuthMocking(page: Page): Promise<void> {
     });
   });
 
-  // Set auth token in localStorage before navigation
+  // Sprint 66 Fix: Navigate to valid origin FIRST to avoid localStorage SecurityError
+  // Must navigate before accessing localStorage (can't access on about:blank)
+  await page.goto('/');
+
+  // Set auth token in localStorage AFTER navigation
   // Key: 'aegis_auth_token' (see src/lib/api.ts TOKEN_STORAGE_KEY)
   // Format: JSON with access_token, refresh_token, expires_at
-  await page.addInitScript(() => {
+  await page.evaluate(() => {
     const tokenData = {
       access_token: 'test-jwt-token-for-e2e-tests',
       refresh_token: 'test-refresh-token-for-e2e-tests',

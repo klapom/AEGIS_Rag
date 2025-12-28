@@ -106,6 +106,9 @@ test.describe('Admin LLM Config - Backend Integration (Sprint 64.6)', () => {
     adminLLMConfigPage,
     page,
   }) => {
+    // Sprint 66 Fix: Navigate FIRST before setting localStorage to avoid SecurityError
+    await page.goto('/');
+
     // Step 1: Manually set OLD localStorage config (simulate pre-Sprint 64 state)
     await adminLLMConfigPage.page.evaluate(() => {
       const oldConfig = [

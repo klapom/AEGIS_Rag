@@ -19,6 +19,8 @@ const __dirname = dirname(__filename);
 /**
  * Auth Helper: Mock authentication for protected routes
  * Based on e2e/tests/auth/login.spec.ts pattern
+ *
+ * Sprint 66 Fix: Navigate BEFORE setting localStorage to avoid SecurityError
  */
 async function setupAuth(page: any) {
   // Mock /me endpoint for auth check
@@ -34,7 +36,10 @@ async function setupAuth(page: any) {
     });
   });
 
-  // Set valid token in localStorage
+  // Sprint 66 Fix: Navigate to valid origin FIRST to avoid localStorage SecurityError
+  await page.goto('/');
+
+  // Set valid token in localStorage AFTER navigation
   await page.evaluate(() => {
     localStorage.setItem(
       'aegis_auth_token',
