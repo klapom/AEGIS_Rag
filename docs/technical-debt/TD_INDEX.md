@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-21 (Sprint 60 Complete)
-**Total Open Items:** 14
-**Total Story Points:** ~233 SP
+**Last Updated:** 2025-12-29 (Sprint 66 - TD-078 Created)
+**Total Open Items:** 15
+**Total Story Points:** ~251 SP
 **Archived Items:** [11 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -17,7 +17,7 @@
 | Priority | Count | Story Points |
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
-| HIGH     | 3     | ~53 SP       |
+| HIGH     | 4     | ~71 SP       |
 | MEDIUM   | 8     | ~148 SP      |
 | LOW      | 4     | ~58 SP       |
 | Investigation | 2 | ~26 SP      |
@@ -56,6 +56,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 53 |
 | [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | **RESOLVED** ✅ | 5 | Sprint 34 ✓ |
 | [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | **RESOLVED** ✅ | 40 | Sprint 51 ✓ |
+| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | OPEN | 18 | Sprint 67-68 |
 
 ### MEDIUM Priority
 
@@ -253,6 +254,10 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service
 - [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline
 
+### Performance
+- [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md): Ingestion Performance Tuning
+- [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md): Section Extraction Performance
+
 ### Testing
 - [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md): Critical Path E2E Tests
 
@@ -318,6 +323,7 @@ TD-063 (Relation Dedup) ✓ DONE (Sprint 49)
 8. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
 9. **Performance optimizations ready**: Sprint 61 should implement TD-072/073 migrations (high ROI)
 10. **vLLM investigation**: Keep Ollama - vLLM not justified at current scale (<50 QPS)
+11. **TD-078 created Sprint 66**: Section extraction critical bottleneck identified (9 min for 550 texts)
 
 ---
 
