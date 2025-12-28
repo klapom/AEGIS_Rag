@@ -1726,43 +1726,111 @@ mem0:
 
 ---
 
-## Sprint 65: E2E Test Fixes & Performance Optimization 📋 (PLANNED 2025-12-26)
-**Ziel:** Critical E2E Test Failures beheben, Produktionsreife erreichen
+## Sprint 65: CUDA GPU Acceleration + E2E Test Improvements ✅ (COMPLETED 2025-12-28)
+**Ziel:** GPU-Beschleunigung, LLM Config Bug Fix, E2E Test Stabilisierung
+**Status:** ✅ **ERFOLG** - Alle Hauptziele erreicht, 61% E2E Pass-Rate (0% → 61%)
 
 **Breakdown:**
-| Feature | SP | Priority |
-|---------|-----|----------|
-| 65.1 Follow-up Questions Fix | 8 | 🔴 CRITICAL |
-| 65.2 Domain Training UI Fixes | 10 | 🔴 CRITICAL |
-| 65.3 History/Conversation Loading Optimization | 8 | 🔴 CRITICAL |
-| 65.4 Graph Filter State Management | 5 | 🟡 MEDIUM |
-| 65.5 Research Mode Performance | 5 | 🟡 MEDIUM |
-| 65.6 Test Infrastructure Improvements | 4 | 🟢 LOW |
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 65.1 LLM Config Save Bug Fix | 3 | 🔴 CRITICAL | ✅ DONE |
+| 65.2 CUDA Support für API Container | 8 | 🔴 CRITICAL | ✅ DONE |
+| 65.3 E2E Tests OMNITRACKER Queries | 5 | 🟡 MEDIUM | ✅ DONE |
+| 65.4 E2E Test Infrastructure Fix | 2 | 🔴 CRITICAL | ✅ DONE |
 
 ### Deliverables
-- **Critical Fixes:**
-  - Follow-up Questions: Async generation, caching, pre-warming (11% → 100% E2E success)
-  - Domain Training: Page load optimization, API validation, test fixtures (40% → 100%)
-  - History Management: Pagination, Redis caching, lazy loading (50% → 100%)
-- **Quality Improvements:**
-  - Graph Filters: State management refactor, debouncing (45% → 90%+)
-  - Research Mode: Streaming progress, parallel orchestration (50% → 90%+)
-- **Test Infrastructure:**
-  - Configurable timeouts (30s/60s/90s by category)
-  - Smoke test suite (<5 min runtime)
-  - Test fixture documentation
+- **CUDA GPU Acceleration:**
+  - Created `docker/Dockerfile.api-cuda` mit NGC PyTorch 25.09 (CUDA 13.0, sm_121)
+  - BGE-M3 embeddings on NVIDIA GB10 GPU: **10-80x speedup** (500-2000ms → 50-200ms)
+  - VRAM usage: 2.12GB, device detection verified
+- **LLM Config Bug Fixed:**
+  - Admin UI can now save model configurations (was broken)
+  - Frontend/backend schema mismatch resolved (`use_case` + `model_id`)
+- **E2E Tests Improved:**
+  - **Pass rate: 0% → 61%** (35/57 core tests passing)
+  - Root cause: Stale Vite dev server (restarted → fixed)
+  - Updated 42 test queries to OMNITRACKER domain
+- **Technical Debt:**
+  - TD-074: TypeScript strict mode temporarily disabled (re-enable in Sprint 66)
+
+### Critical Findings
+**22 E2E Tests Still Failing (39%):**
+1. **Follow-up Questions (8 tests):** Backend not generating follow-ups → P0 Sprint 66
+2. **Conversation History (5 tests):** Conversations not persisting → P0 Sprint 66
+3. **OMNITRACKER Knowledge Base (9 tests):** Only 44 documents in Qdrant (19 PDFs not indexed) → P0 Sprint 66
 
 ### Success Criteria
-- [ ] **E2E test success rate >90%** (up from 57%)
-- [ ] Follow-up questions: <5s generation (async, cached)
-- [ ] Domain training page: <5s load (lazy loading)
-- [ ] Conversation list: <2s load (paginated, cached)
-- [ ] Graph filters: <500ms update (debounced)
-- [ ] Research mode: <60s completion (streaming)
+- [x] CUDA GPU acceleration working (BGE-M3 on GPU, 2.12GB VRAM)
+- [x] LLM config save functionality fixed
+- [x] E2E test pass rate improved (0% → 61%)
+- [x] OMNITRACKER test queries updated (42 queries)
+- [ ] **E2E test pass rate >90%** → Sprint 66 objective
 
 ### References
-- [SPRINT_65_PLAN.md](SPRINT_65_PLAN.md)
-- [PRODUCTION_DEPLOYMENT_TEST_RESULTS.md](../../PRODUCTION_DEPLOYMENT_TEST_RESULTS.md)
+- [SPRINT_65_REPORT.md](SPRINT_65_REPORT.md) - Comprehensive Sprint 65 documentation
+- Commit: `4894b03` - docs(sprint65): Add comprehensive Sprint 65 report
+
+---
+
+## Sprint 66: E2E Test Stabilization & Critical Backend Fixes 🔄 (IN PROGRESS 2025-12-28)
+**Ziel:** 100% E2E Test Pass Rate durch Backend Bug Fixes & Knowledge Base Completion
+**Status:** 🔄 **IN PROGRESS** - Day 1: OMNITRACKER Document Indexing
+
+**Breakdown:**
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 66.1 Fix Follow-up Questions Backend | 8 | 🔴 CRITICAL | 📋 PLANNED |
+| 66.2 Fix Conversation History Persistence | 10 | 🔴 CRITICAL | 📋 PLANNED |
+| 66.3 Index OMNITRACKER Documents | 3 | 🔴 CRITICAL | 🔄 IN PROGRESS |
+| 66.4 Single Document Upload User Journey | 5 | 🟡 MEDIUM | 📋 PLANNED |
+| 66.5 Re-enable TypeScript Strict Mode (TD-074) | 3 | 🟡 MEDIUM | 📋 PLANNED |
+
+### Deliverables
+- **Backend Fixes (Features 66.1 & 66.2):**
+  - Follow-up question generation with LLM + Redis caching
+  - Conversation history persistence (Redis/PostgreSQL)
+  - API endpoints: `/api/v1/history`, `/api/v1/history/{session_id}`
+  - Auto-generated conversation titles from first message
+  - Search functionality (by title and content)
+- **Knowledge Base (Feature 66.3):**
+  - Index all 19 OMNITRACKER PDFs (66MB) into Qdrant
+  - Target: 500-2000 chunks (currently only 44 documents)
+  - Namespace: `omnitracker`
+- **Admin UI (Feature 66.4):**
+  - Single document upload with progress streaming
+  - SSE progress events: Upload → Parse → Chunk → Embed → Index
+  - E2E test for complete upload-to-search user journey
+- **Code Quality (Feature 66.5):**
+  - Re-enable TypeScript strict mode
+  - Fix conditional JSX type errors
+  - Upgrade @types/react to latest
+
+### Success Criteria
+- [ ] **E2E test pass rate = 100%** (57/57 core tests passing)
+  - [ ] Fix 8 follow-up question tests (Feature 66.1)
+  - [ ] Fix 5 conversation history tests (Feature 66.2)
+  - [ ] Fix 9 OMNITRACKER retrieval tests (Feature 66.3)
+- [ ] All 19 OMNITRACKER PDFs indexed (500+ chunks in Qdrant)
+- [ ] Single document upload working (<3 minutes per PDF)
+- [ ] TypeScript strict mode enabled (no type errors)
+- [ ] All features have E2E tests
+
+### Timeline
+**Week 1 (Days 1-3):**
+- Day 1: Feature 66.3 - Index OMNITRACKER documents
+- Day 2-3: Feature 66.1 - Fix follow-up questions backend
+
+**Week 2 (Days 4-7):**
+- Day 4-6: Feature 66.2 - Fix conversation history persistence
+- Day 7: Feature 66.4 - Single document upload user journey
+
+**Week 3 (Day 8-9):**
+- Day 8: Feature 66.5 - Re-enable TypeScript strict mode
+- Day 9: Sprint review, full E2E test suite (594 tests), Sprint 66 report
+
+### References
+- [SPRINT_66_PLAN.md](SPRINT_66_PLAN.md) - Detailed Sprint 66 planning
+- Previous Sprint: [SPRINT_65_REPORT.md](SPRINT_65_REPORT.md)
 
 ---
 
