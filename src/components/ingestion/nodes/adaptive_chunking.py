@@ -146,6 +146,8 @@ def _integrate_vlm_descriptions(
                         "picture_ref": picture_ref,
                         "bbox": bbox,
                         "iou_score": best_iou,
+                        "description": description,  # Preserve for embedding node
+                        "vlm_model": vlm_item.get("vlm_model", "unknown"),  # Preserve VLM model
                     }
                 )
                 integrated_count += 1
@@ -167,6 +169,8 @@ def _integrate_vlm_descriptions(
                             "picture_ref": picture_ref,
                             "bbox": bbox,
                             "iou_score": 0.0,  # Fallback
+                            "description": description,  # Preserve for embedding node
+                            "vlm_model": vlm_item.get("vlm_model", "unknown"),  # Preserve VLM model
                         }
                     )
                     integrated_count += 1
@@ -186,6 +190,8 @@ def _integrate_vlm_descriptions(
                     {
                         "picture_ref": picture_ref,
                         "bbox": None,
+                        "description": description,  # Preserve for embedding node
+                        "vlm_model": vlm_item.get("vlm_model", "unknown"),  # Preserve VLM model
                     }
                 )
                 integrated_count += 1
@@ -696,13 +702,15 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             # Collect image_bboxes from chunk's image_annotations (Sprint 64)
             chunk_bboxes = []
             if hasattr(adaptive_chunk, "image_annotations"):
-                # Convert image_annotations to image_bboxes format for backward compatibility
+                # Convert image_annotations to image_bboxes format for embedding node
                 for annotation in adaptive_chunk.image_annotations:
                     chunk_bboxes.append(
                         {
                             "picture_ref": annotation["picture_ref"],
-                            "bbox": annotation.get("bbox"),
+                            "bbox_full": annotation.get("bbox"),  # Rename to bbox_full for embedding node
                             "iou_score": annotation.get("iou_score", 0.0),
+                            "description": annotation.get("description", ""),  # Preserve VLM description
+                            "vlm_model": annotation.get("vlm_model", "unknown"),  # Preserve VLM model
                         }
                     )
 

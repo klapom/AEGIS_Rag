@@ -135,14 +135,17 @@ def get_vlm_backend_from_config() -> VLMBackend:
     return VLMBackend.OLLAMA
 
 
-def get_vlm_client(backend: VLMBackend | None = None) -> VLMClient:
+def get_vlm_client(backend: VLMBackend | None = None, model: str | None = None) -> VLMClient:
     """Factory function for VLM clients.
 
     Creates VLM client based on backend selection. Uses lazy imports
     to avoid loading unnecessary dependencies.
 
+    Sprint 66 Fix (TD-077): Now accepts model parameter for Admin UI integration.
+
     Args:
         backend: Explicit backend selection. If None, uses config/env.
+        model: Model ID to use (e.g., "ollama/qwen3-vl:4b-instruct"). If None, uses backend default.
 
     Returns:
         VLMClient instance (OllamaVLMClient or DashScopeVLMClient)
@@ -158,6 +161,9 @@ def get_vlm_client(backend: VLMBackend | None = None) -> VLMClient:
         >>> # Force specific backend
         >>> client = get_vlm_client(VLMBackend.DASHSCOPE)
 
+        >>> # Specify model from Admin UI config
+        >>> client = get_vlm_client(VLMBackend.OLLAMA, model="ollama/qwen3-vl:4b-instruct")
+
     Notes:
         - Does NOT use singleton pattern (caller manages instance)
         - Use get_shared_vlm_client() for singleton behavior
@@ -166,13 +172,22 @@ def get_vlm_client(backend: VLMBackend | None = None) -> VLMClient:
     if backend is None:
         backend = get_vlm_backend_from_config()
 
-    logger.info("creating_vlm_client", backend=backend.value)
+    # Sprint 66: Extract model name from full model_id (e.g., "ollama/qwen3-vl:4b" → "qwen3-vl:4b")
+    default_model = None
+    if model:
+        # Handle both "ollama/qwen3-vl:4b-instruct" and "qwen3-vl:4b-instruct"
+        if "/" in model:
+            default_model = model.split("/", 1)[1]  # Extract model name after provider prefix
+        else:
+            default_model = model
+
+    logger.info("creating_vlm_client", backend=backend.value, model=default_model or "default")
 
     if backend == VLMBackend.OLLAMA:
         # Lazy import to avoid loading when not needed
         from src.domains.llm_integration.proxy.ollama_vlm import OllamaVLMClient
 
-        return OllamaVLMClient()
+        return OllamaVLMClient(default_model=default_model)
 
     elif backend == VLMBackend.DASHSCOPE:
         # Lazy import to avoid loading when not needed

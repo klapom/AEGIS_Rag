@@ -10,6 +10,41 @@
 
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Auth Helper: Mock authentication for protected routes
+ * Based on e2e/tests/auth/login.spec.ts pattern
+ */
+async function setupAuth(page: any) {
+  // Mock /me endpoint for auth check
+  await page.route('**/api/v1/auth/me', (route: any) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        username: 'testuser',
+        email: 'test@example.com',
+        created_at: '2024-01-01T00:00:00Z',
+      }),
+    });
+  });
+
+  // Set valid token in localStorage
+  await page.evaluate(() => {
+    localStorage.setItem(
+      'aegis_auth_token',
+      JSON.stringify({
+        token: 'test-jwt-token',
+        expiresAt: Date.now() + 3600000, // 1 hour from now
+      })
+    );
+  });
+}
 
 test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () => {
   // Test document configuration
@@ -107,16 +142,23 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
 
   test('should upload document via admin UI and verify ingestion', async ({ page }) => {
     // ============================================
-    // STEP 1: Navigate to Admin Ingestion Page
+    // STEP 0: Setup Authentication
     // ============================================
-    await page.goto('/admin/ingestion');
-    await expect(page).toHaveURL(/\/admin\/ingestion/);
+    // Must navigate to app first to enable localStorage
+    await page.goto('/');
+    await setupAuth(page);
+
+    // ============================================
+    // STEP 1: Navigate to Admin Indexing Page
+    // ============================================
+    await page.goto('/admin/indexing');
+    await expect(page).toHaveURL(/\/admin\/indexing/);
 
     // ============================================
     // STEP 2: Select Test Document
     // ============================================
     const filePath = path.join(__dirname, TEST_DOCUMENT.relativePath);
-    const fileInput = page.locator('input[type="file"]');
+    const fileInput = page.locator('[data-testid="file-upload-input"]');
     await fileInput.setInputFiles(filePath);
 
     // Verify file selected

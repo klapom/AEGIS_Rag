@@ -31,6 +31,9 @@ if TYPE_CHECKING:
 
 from src.core.config import get_settings
 
+# Sprint 64 Feature 64.6: LLM Config Service integration
+from src.components.llm_config import LLMUseCase, get_llm_config_service
+
 logger = structlog.get_logger(__name__)
 
 # Runtime conditional import for PIL (Pillow)
@@ -328,6 +331,7 @@ async def generate_vlm_description_with_factory(
     prompt_template: str | None = None,
     temperature: float = 0.7,
     prefer_local: bool = True,
+    model: str | None = None,
 ) -> str:
     """Generate image description using VLM Factory (Sprint 36 - Local-First).
 
@@ -335,11 +339,14 @@ async def generate_vlm_description_with_factory(
     - Local-first: Try Ollama qwen3-vl:32b first, fallback to DashScope
     - Cloud-first: Use DashScope directly (when prefer_local=False)
 
+    Sprint 66 Fix (TD-077): Now accepts model parameter from Admin UI config.
+
     Args:
         image_path: Path to image file
         prompt_template: Custom prompt (optional)
         temperature: Sampling temperature (0.0-1.0)
         prefer_local: If True, try local Ollama first (default: True)
+        model: Model ID from Admin UI (e.g., "ollama/qwen3-vl:4b-instruct")
 
     Returns:
         VLM-generated description text
@@ -355,6 +362,9 @@ async def generate_vlm_description_with_factory(
         >>> desc = await generate_vlm_description_with_factory(
         ...     Path("/tmp/image.png"), prefer_local=False
         ... )  # Cloud-only
+        >>> desc = await generate_vlm_description_with_factory(
+        ...     Path("/tmp/image.png"), model="ollama/qwen3-vl:4b-instruct"
+        ... )  # Admin UI model
     """
     if not VLM_FACTORY_AVAILABLE:
         raise RuntimeError("VLM Factory not available, cannot use VLM routing")
@@ -380,9 +390,10 @@ async def generate_vlm_description_with_factory(
                 image_path=str(image_path),
                 backend="ollama",
                 temperature=temperature,
+                model=model or "default",
             )
 
-            client = get_vlm_client(VLMBackend.OLLAMA)
+            client = get_vlm_client(VLMBackend.OLLAMA, model=model)
             description, metadata = await client.generate_image_description(
                 image_path=image_path,
                 prompt=prompt,
@@ -631,17 +642,20 @@ class ImageProcessor:
 
             # Generate VLM description
             # Sprint 36 Feature 36.2: Use VLM Factory for local-first routing
+            # Sprint 66 Fix (TD-077): Pass model from Admin UI config
             if VLM_FACTORY_AVAILABLE:
                 logger.info(
                     "Using VLM Factory for description (local-first)",
                     picture_index=picture_index,
                     routing="vlm_factory_local_first",
+                    model=self.config.vlm_model,
                 )
                 # VLM Factory: Local Ollama → Cloud DashScope fallback
                 description = await generate_vlm_description_with_factory(
                     image_path=temp_path,
                     temperature=self.config.temperature,
                     prefer_local=True,
+                    model=self.config.vlm_model,  # Pass model from Admin UI config
                 )
             elif use_proxy and DASHSCOPE_VLM_AVAILABLE:
                 logger.info(

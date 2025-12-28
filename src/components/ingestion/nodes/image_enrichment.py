@@ -79,8 +79,15 @@ async def image_enrichment_node(state: IngestionState) -> IngestionState:
         page_dimensions = state.get("page_dimensions", {})
         vlm_metadata = []
 
-        # 2. Initialize ImageProcessor
-        processor = ImageProcessor()
+        # 2. Initialize ImageProcessor with VLM model from Redis (Sprint 64 Feature 64.6)
+        from src.components.llm_config import LLMUseCase, get_llm_config_service
+        from src.components.ingestion.image_processor import ImageProcessorConfig
+
+        llm_config_service = get_llm_config_service()
+        vlm_model = await llm_config_service.get_model_for_use_case(LLMUseCase.VISION_VLM)
+
+        config = ImageProcessorConfig(vlm_model=vlm_model)
+        processor = ImageProcessor(config=config)
 
         try:
             # 3. Process each picture - Sprint 33 Performance: Parallel VLM Processing
