@@ -148,7 +148,7 @@ class ExtractionPipelineFactory:
 
                 logger.info(
                     "llm_extraction_pipeline_initialized",
-                    llm_model=self.service.llm_model,
+                    llm_model=self.service._explicit_llm_model,
                     temperature=self.service.temperature,
                 )
 
