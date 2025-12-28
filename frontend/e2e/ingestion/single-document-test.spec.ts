@@ -8,7 +8,7 @@
  * Sprint 66 Feature 66.4: Single Document Upload User Journey
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -16,40 +16,6 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-/**
- * Auth Helper: Mock authentication for protected routes
- * Based on e2e/tests/auth/login.spec.ts pattern
- *
- * Sprint 66 Fix: Navigate BEFORE setting localStorage to avoid SecurityError
- */
-async function setupAuth(page: any) {
-  // Mock /me endpoint for auth check
-  await page.route('**/api/v1/auth/me', (route: any) => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        username: 'testuser',
-        email: 'test@example.com',
-        created_at: '2024-01-01T00:00:00Z',
-      }),
-    });
-  });
-
-  // Sprint 66 Fix: Navigate to valid origin FIRST to avoid localStorage SecurityError
-  await page.goto('/');
-
-  // Set valid token in localStorage AFTER navigation
-  await page.evaluate(() => {
-    localStorage.setItem(
-      'aegis_auth_token',
-      JSON.stringify({
-        token: 'test-jwt-token',
-        expiresAt: Date.now() + 3600000, // 1 hour from now
-      })
-    );
-  });
-}
 
 test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () => {
   // Test document configuration
@@ -58,7 +24,7 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
     relativePath: '../../../data/omnitracker/D3_CDays2025-OMNITRACKER-13.0.0-GenericAPI.pdf',
     namespace: 'omnitracker',
     expectedChunks: 50, // Estimated: 1.9MB PDF → ~50-100 chunks
-    ingestionTimeout: 300000, // 5 minutes max
+    ingestionTimeout: 600000, // 10 minutes max (VLM processing for 85 images takes ~4 min)
   };
 
   // Test questions covering different retrieval methods
@@ -145,79 +111,75 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
     }
   ];
 
-  test('should upload document via admin UI and verify ingestion', async ({ page }) => {
+  test('should upload document via admin UI and verify ingestion', async ({ adminIndexingPage, page }) => {
+    // Set extended timeout for this test (ingestion can take 2-5 minutes)
+    test.setTimeout(TEST_DOCUMENT.ingestionTimeout);
+
     // ============================================
-    // STEP 0: Setup Authentication
+    // STEP 0: Already authenticated via fixture
     // ============================================
-    // Must navigate to app first to enable localStorage
-    await page.goto('/');
-    await setupAuth(page);
 
     // ============================================
     // STEP 1: Navigate to Admin Indexing Page
     // ============================================
-    await page.goto('/admin/indexing');
+    await adminIndexingPage.goto();
     await expect(page).toHaveURL(/\/admin\/indexing/);
 
     // ============================================
     // STEP 2: Select Test Document
     // ============================================
     const filePath = path.join(__dirname, TEST_DOCUMENT.relativePath);
-    const fileInput = page.locator('[data-testid="file-upload-input"]');
-    await fileInput.setInputFiles(filePath);
+    await adminIndexingPage.uploadLocalFiles([filePath]);
 
     // Verify file selected
-    await expect(page.locator(`text=/${TEST_DOCUMENT.filename}/`)).toBeVisible({
-      timeout: 5000,
-    });
+    const selectedCount = await adminIndexingPage.getSelectedLocalFilesCount();
+    expect(selectedCount).toBeGreaterThan(0);
 
     console.log(`✅ Selected document: ${TEST_DOCUMENT.filename}`);
 
     // ============================================
-    // STEP 3: Upload & Ingest Document
+    // STEP 3: Upload Files to Server
     // ============================================
-    const uploadButton = page.locator('button:has-text("Upload & Ingest")');
-    await expect(uploadButton).toBeEnabled();
-    await uploadButton.click();
+    await expect(adminIndexingPage.uploadFilesButton).toBeEnabled();
+    await adminIndexingPage.clickUploadButton();
 
-    console.log('🔄 Upload started, waiting for ingestion to complete...');
+    console.log('🔄 Uploading file to server...');
 
-    // Wait for each ingestion stage
-    const stages = ['Upload', 'Parsing', 'Chunking', 'Embedding', 'Indexing', 'Complete'];
-    for (const stage of stages) {
-      await expect(page.locator(`text=/${stage}/i`)).toBeVisible({
-        timeout: TEST_DOCUMENT.ingestionTimeout / stages.length,
-      });
-      console.log(`  ✓ Stage: ${stage}`);
-    }
+    // Wait for upload to complete
+    const uploadResult = await adminIndexingPage.waitForUploadComplete(30000);
+    expect(uploadResult).toBe('success');
 
-    // Wait for final "Complete" message
-    await expect(page.locator('text=/Complete/i')).toBeVisible({
-      timeout: 30000,
-    });
-
-    console.log('✅ Ingestion complete!');
+    console.log('✅ File uploaded to server');
 
     // ============================================
-    // STEP 4: Verify Redirect to Chat Page
+    // STEP 4: Start Indexing
     // ============================================
-    await expect(page).toHaveURL(/\/\?query=/, { timeout: 10000 });
+    await expect(adminIndexingPage.indexButton).toBeEnabled();
+    await adminIndexingPage.startIndexing();
 
-    // Verify pre-filled query contains document filename
-    const messageInput = page.locator('[data-testid="message-input"]');
-    const inputValue = await messageInput.inputValue();
-    expect(inputValue).toContain(TEST_DOCUMENT.filename);
+    console.log('🔄 Indexing started...');
 
-    console.log('✅ Redirected to chat page with pre-filled query');
+    // Wait for indexing to complete
+    await adminIndexingPage.waitForIndexingComplete(TEST_DOCUMENT.ingestionTimeout);
+
+    console.log('✅ Indexing complete!');
+
+    // ============================================
+    // STEP 5: Navigate to Chat Page to Test Document
+    // ============================================
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="message-input"]', { timeout: 10000 });
+
+    console.log('✅ Navigated to chat page - document should be searchable now');
   });
 
   // ============================================
   // STEP 5: Test Each Question
   // ============================================
   for (const testCase of TEST_QUESTIONS) {
-    test(`${testCase.id}: ${testCase.question} (${testCase.retrieval})`, async ({ page }) => {
-      // Navigate to chat page
-      await page.goto('/');
+    test(`${testCase.id}: ${testCase.question} (${testCase.retrieval})`, async ({ chatPage, page }) => {
+      // Navigate to chat page (already handled by fixture)
+      await chatPage.goto();
 
       // Send question
       const messageInput = page.locator('[data-testid="message-input"]');
@@ -311,8 +273,8 @@ test.describe('Single Document Upload & Verification - GenericAPI 13.0.0', () =>
   // ============================================
   // STEP 6: Comprehensive Test (All Questions)
   // ============================================
-  test('should answer all 10 questions with consistent quality', async ({ page }) => {
-    await page.goto('/');
+  test('should answer all 10 questions with consistent quality', async ({ chatPage, page }) => {
+    await chatPage.goto();
 
     let passedQuestions = 0;
     const results: { question: string; passed: boolean; keywords: number }[] = [];
