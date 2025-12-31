@@ -1834,6 +1834,174 @@ mem0:
 
 ---
 
+## Sprint 67: Secure Shell Sandbox + Agents Adaptation + LLM Intent Classifier 📋 (PLANNED 2025-12-31)
+**Ziel:** Deepagents integration, Tool-level adaptation framework, C-LARA intent classification
+**Duration:** 12 days | **Story Points:** 75 SP | **Status:** ⏳ PLANNED
+
+**Breakdown:**
+| Feature | SP | Priority | Description |
+|---------|-----|----------|-------------|
+| 67.1 BubblewrapSandboxBackend | 3 | 🔴 HIGH | Linux sandbox implementation |
+| 67.2 Deepagents Integration | 5 | 🔴 HIGH | LangChain-native agent harness |
+| 67.3 Multi-Language CodeAct | 5 | 🟡 MEDIUM | Bash + Python execution |
+| 67.4 Sandbox Testing & Docs | 2 | 🟡 MEDIUM | E2E tests + documentation |
+| 67.5 Unified Trace & Telemetry | 8 | 🔴 HIGH | RAG pipeline logging |
+| 67.6 Eval Harness | 10 | 🔴 HIGH | Automated quality gates |
+| 67.7 Dataset Builder | 8 | 🟡 MEDIUM | Training data generation |
+| 67.8 Adaptive Reranker v1 | 13 | 🔴 HIGH | T1 adaptation |
+| 67.9 Query Rewriter v1 | 6 | 🟡 MEDIUM | T2 adaptation |
+| 67.10 C-LARA Data Generation | 3 | 🔴 HIGH | 1000 examples with Qwen2.5:7b |
+| 67.11 SetFit Model Training | 3 | 🔴 HIGH | Fine-tune classification model |
+| 67.12 Intent Classifier Integration | 5 | 🔴 HIGH | Replace Semantic Router |
+| 67.13 A/B Testing | 2 | 🟡 MEDIUM | Compare vs baseline |
+| 67.14 Section Extraction Quick Wins | 7 | 🔴 HIGH | TD-078 Phase 1 (profiling, batch tokenization, regex) |
+
+### Epic 1: Secure Shell Sandbox (deepagents) - 15 SP
+- BubblewrapSandboxBackend with security isolation
+- Multi-language support (Bash + Python)
+- SandboxBackendProtocol compliance
+- Integration with LangGraph agents
+
+### Epic 2: Agents Adaptation (Paper 2512.16301) - 45 SP
+**Tool-Level Adaptation (T1/T2):**
+- Unified Trace & Telemetry for RAG pipeline monitoring
+- Eval Harness with automated quality gates
+- Dataset Builder for training data generation
+- Adaptive Reranker v1 (intent-aware reranking weights)
+- Query Rewriter v1 (query expansion and refinement)
+
+**Note:** Agent-Level Adaptation (A1/A2) deferred to Sprint 68
+
+### Epic 3: LLM Intent Classifier (C-LARA) - 13 SP (TD-079)
+**Problem:** Semantic Router achieves only 60% accuracy (A/B tested)
+**Solution:** C-LARA approach (LLM offline data generation + SetFit fine-tuning)
+- Phase 1: Generate 1000 examples with Qwen2.5:7b (87-95% accuracy on benchmarks)
+- Phase 2: Train SetFit classification model
+- Phase 3: Integration and A/B testing vs Semantic Router
+- **Target:** 85-92% accuracy improvement
+
+### Epic 4: Section Extraction Performance (TD-078 Phase 1) - 7 SP
+**Problem:** 9-15 minutes for medium PDFs (critical bottleneck)
+**Quick Wins (2-3x speedup):**
+- Profiling instrumentation
+- Batch tokenization (30-50% faster)
+- Regex pattern compilation (10-20% faster)
+- Early exit conditions (5-10% faster)
+
+### Deliverables
+- Secure code execution in Bubblewrap sandbox
+- Tool-level adaptation framework (reranker, query-rewriter)
+- Intent classification accuracy: 60% → 85-92%
+- Section extraction: 2-3x faster (112s → 40-50s for 146 texts)
+
+### Success Criteria
+- [ ] Bubblewrap sandbox passes security tests (no escapes)
+- [ ] Multi-language CodeAct executes Bash + Python
+- [ ] Eval Harness validates grounding, citations, format
+- [ ] Adaptive Reranker improves precision by +5-10%
+- [ ] Intent classifier achieves >85% accuracy (A/B test)
+- [ ] Section extraction <50s for 146 texts
+
+### References
+- [SPRINT_67_PLAN.md](SPRINT_67_PLAN.md) - Detailed Sprint 67 planning
+- [SPRINT_SECURE_SHELL_SANDBOX_v3.md](SPRINT_SECURE_SHELL_SANDBOX_v3.md)
+- [SPRINT_AGENTS_ADAPTATION.md](SPRINT_AGENTS_ADAPTATION.md)
+- [TD-079_LLM_INTENT_CLASSIFIER_CLARA.md](../technical-debt/TD-079_LLM_INTENT_CLASSIFIER_CLARA.md)
+- [TD-078_SECTION_EXTRACTION_PERFORMANCE.md](../technical-debt/TD-078_SECTION_EXTRACTION_PERFORMANCE.md)
+
+---
+
+## Sprint 68: Production Hardening + Performance Optimization + Section Features 📋 (PLANNED 2025-01-15)
+**Ziel:** E2E test completion, performance optimization, section community detection
+**Duration:** 10 days | **Story Points:** 62 SP | **Status:** ⏳ PLANNED
+
+**Breakdown:**
+| Feature | SP | Priority | Description |
+|---------|-----|----------|-------------|
+| 68.1 E2E Test Fixes | 8 | 🔴 CRITICAL | Fix 594 tests to 100% pass rate |
+| 68.2 Performance Test Infrastructure | 3 | 🔴 HIGH | Automated regression testing |
+| 68.3 E2E Documentation | 2 | 🟡 MEDIUM | Test coverage documentation |
+| 68.4 Section Extraction Parallelization | 11 | 🔴 HIGH | TD-078 Phase 2 (ThreadPoolExecutor, caching) |
+| 68.5 BM25 Cache Auto-Refresh | 5 | 🔴 HIGH | TD-074 (cache validation, auto-refresh) |
+| 68.6 Ingestion Performance Tuning | 5 | 🟡 MEDIUM | TD-070 (batch optimization, GPU management) |
+| 68.7 Performance Monitoring | 2 | 🟡 MEDIUM | Prometheus metrics, alerts |
+| 68.8 Section Community Detection | 10 | 🟡 MEDIUM | Louvain/Leiden algorithms |
+| 68.9 Memory-Write Policy | 10 | 🟡 MEDIUM | T3 adaptation (selective memory storage) |
+| 68.10 Tool-Execution Reward Loop | 8 | 🟡 MEDIUM | A1 adaptation (execution feedback) |
+
+### Epic 1: E2E Test Completion - 13 SP
+**Problem:** 57% E2E pass rate (337/594 tests passing)
+**Solution:**
+- Fix follow-up question tests (currently broken)
+- Fix conversation history persistence
+- Fix domain training timeouts
+- Add performance regression tests
+- Comprehensive documentation
+
+**Target:** 100% E2E pass rate (594/594 tests)
+
+### Epic 2: Performance Optimization - 21 SP
+**Section Extraction (TD-078 Phase 2):** 5-10x total speedup
+- Parallel processing with ThreadPoolExecutor
+- LRU caching for heading patterns
+- Target: 146 texts in 12-15s (vs 112s current)
+
+**BM25 Cache (TD-074):** Fix cache discrepancy
+- Cache validation on startup
+- Auto-refresh if discrepancy >10%
+- Namespace-aware caching
+
+**Ingestion (TD-070):** Batch optimization
+- Optimal batch sizes for embeddings
+- GPU memory management
+- Neo4j bulk writes
+
+**Performance Targets:**
+- Query latency P95: 500ms → 350ms (-30%)
+- Section extraction: 8x speedup
+- Memory usage: -30%
+- Throughput: 40 QPS → 50 QPS (+25%)
+
+### Epic 3: Section Community Detection - 10 SP
+- Louvain/Leiden algorithms for section-based communities
+- Integration with Maximum Hybrid Search
+- Section-level context for graph reasoning
+- Cypher query templates (15 production queries)
+
+### Epic 4: Advanced Adaptation Features - 18 SP
+**Memory-Write Policy (T3):**
+- Selective memory storage (relevance-based filtering)
+- Reduce memory bloat by 50-70%
+
+**Tool-Execution Reward Loop (A1):**
+- Execution feedback signals
+- Adaptive tool selection
+- Performance-based routing
+
+### Deliverables
+- 100% E2E test pass rate (594/594)
+- Query latency: 500ms → 350ms P95
+- Section extraction: 8x speedup (15min → 2min for large PDFs)
+- BM25 cache consistency (10 → 43 documents)
+- Section-based community detection integrated
+
+### Success Criteria
+- [ ] All 594 E2E tests passing (100%)
+- [ ] Performance regression tests automated
+- [ ] Section extraction <15s for 146 texts
+- [ ] BM25 cache matches Qdrant count
+- [ ] Query latency P95 <350ms
+- [ ] Section communities detected and searchable
+
+### References
+- [SPRINT_68_PLAN.md](SPRINT_68_PLAN.md) - Detailed Sprint 68 planning
+- [section_community_detection_queries.md](../technical/section_community_detection_queries.md)
+- [TD-078_SECTION_EXTRACTION_PERFORMANCE.md](../technical-debt/TD-078_SECTION_EXTRACTION_PERFORMANCE.md)
+- [TD-074_BM25_CACHE_DISCREPANCY.md](../technical-debt/TD-074_BM25_CACHE_DISCREPANCY.md)
+- [TD-070_INGESTION_PERFORMANCE_TUNING.md](../technical-debt/TD-070_INGESTION_PERFORMANCE_TUNING.md)
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |

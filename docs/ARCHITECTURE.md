@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-21 (Sprint 60 - Documentation Consolidation)
+**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
 
 ---
 
@@ -394,8 +394,8 @@ async def bash_execute(command: str, timeout: int = 30):
 - [ ] Tool usage analytics
 
 ### Medium-term (Sprint 66-75)
-- [ ] Temporal queries (GRAPHITI analysis - Sprint 60)
-- [ ] Advanced community detection
+- [x] Temporal queries (GRAPHITI analysis - Sprint 60)
+- [ ] Advanced community detection **← IN PROGRESS (Sprint 68)**
 - [ ] Multi-modal document understanding
 - [ ] Enhanced caching strategies
 
@@ -407,6 +407,89 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 67-68 Architecture Enhancements
+
+### Secure Shell Sandbox Architecture (Sprint 67)
+
+```python
+┌───────────────────────────────────────────────────────────┐
+│             Action Agent (LangGraph)                      │
+├───────────────────────────────────────────────────────────┤
+│                                                           │
+│   ┌─────────────────────────────────────────┐            │
+│   │   deepagents Framework                  │            │
+│   │   ┌──────────────────────────────┐     │            │
+│   │   │ SandboxBackendProtocol       │     │            │
+│   │   │ - execute(command)           │     │            │
+│   │   │ - write_file(path, content)  │     │            │
+│   │   │ - read_file(path)            │     │            │
+│   │   └──────────┬───────────────────┘     │            │
+│   └──────────────┼──────────────────────────┘            │
+│                  ▼                                         │
+│   ┌──────────────────────────────────────────┐           │
+│   │  BubblewrapSandboxBackend                │           │
+│   │  - Syscall filtering (seccomp)           │           │
+│   │  - Filesystem isolation (/tmp only)      │           │
+│   │  - Network restrictions                  │           │
+│   │  - Multi-language (Bash + Python)        │           │
+│   └──────────────────────────────────────────┘           │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Tool-Level Adaptation Framework (Sprint 67)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│         Adaptation Framework (Paper 2512.16301)          │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌────────────────────────────────────────────┐         │
+│  │  Unified Trace & Telemetry                │         │
+│  │  - Pipeline event logging                  │         │
+│  │  - Performance metrics collection          │         │
+│  │  - Quality signal tracking                 │         │
+│  └────────────┬───────────────────────────────┘         │
+│               │                                          │
+│               ▼                                          │
+│  ┌────────────────────────────────────────────┐         │
+│  │  Eval Harness                              │         │
+│  │  - Grounding validation                    │         │
+│  │  - Citation coverage check                 │         │
+│  │  - Format compliance                       │         │
+│  └────────────┬───────────────────────────────┘         │
+│               │                                          │
+│               ▼                                          │
+│  ┌────────────────────────────────────────────┐         │
+│  │  Tool-Level Adaptation (T1/T2)             │         │
+│  │  ┌───────────────┐  ┌───────────────┐     │         │
+│  │  │ Adaptive      │  │ Query         │     │         │
+│  │  │ Reranker v1   │  │ Rewriter v1   │     │         │
+│  │  │ (Intent-aware)│  │ (Expansion)   │     │         │
+│  │  └───────────────┘  └───────────────┘     │         │
+│  └────────────────────────────────────────────┘         │
+└──────────────────────────────────────────────────────────┘
+```
+
+### Performance Enhancements (Sprint 68)
+
+**Section Extraction Optimization:**
+- **Phase 1 (Sprint 67):** Batch tokenization, regex compilation → 2-3x speedup
+- **Phase 2 (Sprint 68):** ThreadPoolExecutor parallelization → 5-10x total speedup
+- **Target:** 15min → 2min for large PDFs
+
+**BM25 Cache Consistency:**
+- Auto-refresh on startup if discrepancy >10%
+- Namespace-aware caching
+- Cache validation logging
+
+**Section Community Detection:**
+- Louvain/Leiden algorithms for section-based communities
+- 15 production Cypher queries
+- Integration with Maximum Hybrid Search
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
-**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md
+**Sprint 67-68 Updates:** 2025-12-31
+**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md
 **Maintainer:** Claude Code with Human Review

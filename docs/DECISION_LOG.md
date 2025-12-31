@@ -512,7 +512,63 @@
 
 ---
 
-**Last Updated:** 2025-12-16 (Sprint 49 Complete)
-**Total Decisions Documented:** 76
-**Current Sprint:** Sprint 49 (Complete)
-**Next Sprint:** Sprint 50 (Planned - Real-Time Thinking Phase Events)
+## SPRINT 60: DOCUMENTATION CONSOLIDATION & TECHNICAL INVESTIGATIONS
+
+### 2025-12-21 | Documentation Consolidation Post-Refactoring (Sprint 60.1-60.3)
+**Decision:** Create 7 consolidated documentation files (ARCHITECTURE.md, TECH_STACK.md, CONVENTIONS.md, 4 analysis docs) from fragmented sources.
+**Rationale:** Sprint 53-59 refactoring left documentation scattered across 40+ files. Consolidated docs provide single source of truth for architecture, tech stack, conventions. Archived 17 obsolete files. Critical for onboarding new developers and maintaining system knowledge.
+
+### 2025-12-21 | vLLM vs Ollama Investigation - Keep Ollama (Sprint 60.4, TD-071)
+**Decision:** Do NOT migrate from Ollama to vLLM for LLM inference.
+**Rationale:** Investigation revealed vLLM not justified at current scale (<50 QPS). Ollama provides sufficient throughput with simpler architecture. vLLM benefits (batching, speculative decoding) only relevant at >100 QPS sustained load. Migration cost (deployment complexity, GPU memory tuning) outweighs benefits. Re-evaluate if load exceeds 100 QPS.
+
+### 2025-12-21 | Sentence-Transformers Reranking Investigation (Sprint 60.4, TD-072)
+**Decision:** Migrate from Ollama reranking to native sentence-transformers Cross-Encoder for 50x speedup.
+**Rationale:** Investigation showed cross-encoder/ms-marco-MiniLM-L-6-v2 achieves 120ms vs 2000ms latency (50x faster) with comparable quality. Lower VRAM usage (90MB model vs 4GB Ollama). Recommended for Sprint 61 implementation. Trade-off: Additional dependency, but massive performance gain justifies it.
+
+### 2025-12-21 | Sentence-Transformers Embeddings Investigation (Sprint 60.4, TD-073)
+**Decision:** Migrate from Ollama embeddings to native sentence-transformers BGE-M3 for 3-5x speedup.
+**Rationale:** Native BGE-M3 provides 3-5x faster embeddings (50-80ms vs 200-500ms), 60% less VRAM, identical quality. Batch processing enables 16x speedup for ingestion pipeline. Recommended for Sprint 61. Trade-off: Direct model loading vs Ollama API, but performance gain critical for production scale.
+
+### 2025-12-21 | Multihop Endpoint Removal (Sprint 60.4, TD-069)
+**Decision:** Remove deprecated multihop endpoints (POST /api/v1/graph/viz/multi-hop, /shortest-path) in Sprint 61.
+**Rationale:** Zero frontend usage after 12+ months, zero backend usage (agents use LightRAG directly). Marked DEPRECATED 2025-12-07. Endpoints functional but unutilized. Reduces API surface area, simplifies maintenance. Can re-implement from archived code if needed.
+
+---
+
+## SPRINT 67-68: SECURE SANDBOX + ADAPTATION + PERFORMANCE
+
+### 2025-12-31 | deepagents Integration with Bubblewrap Sandbox (Sprint 67.1-67.4, ADR-TBD)
+**Decision:** Integrate deepagents framework with BubblewrapSandboxBackend for secure code execution.
+**Rationale:** LangChain-native agent harness with standardized SandboxBackendProtocol. Bubblewrap provides Linux container isolation without Docker overhead. Multi-language support (Bash + Python) with shared workspace. Security features: syscall filtering, filesystem isolation, network restrictions. Alternative considered: Docker-based sandbox (rejected: too heavyweight, slower startup).
+
+### 2025-12-31 | Tool-Level Adaptation Framework (Sprint 67.5-67.9, Paper 2512.16301)
+**Decision:** Implement tool-level adaptation (T1/T2) instead of LLM fine-tuning for RAG optimization.
+**Rationale:** Research paper (2512.16301) shows adapting retriever/reranker/query-rewriter achieves comparable gains to LLM fine-tuning at 1/10th cost. Unified Trace & Telemetry enables pipeline monitoring. Eval Harness provides automated quality gates (grounding, citation coverage, format compliance). Dataset Builder generates training data from production queries. Deferred agent-level adaptation (A1/A2) to Sprint 68.
+
+### 2025-12-31 | C-LARA Intent Classifier (Sprint 67.10-67.13, TD-079)
+**Decision:** Replace Semantic Router with C-LARA approach (LLM offline data generation + SetFit fine-tuning).
+**Rationale:** Semantic Router achieves only 60% accuracy (A/B tested). C-LARA approach: Generate 1000 labeled examples with Qwen2.5:7b (87-95% benchmark accuracy), fine-tune SetFit classification model. Target: 85-92% accuracy improvement. SetFit provides efficient sentence-level classification without full LLM inference. Offline data generation avoids runtime LLM overhead.
+
+### 2025-12-31 | Section Extraction Performance Optimization (Sprint 67.14 + 68.4, TD-078)
+**Decision:** Two-phase optimization: Quick wins (Sprint 67, 2-3x speedup) + Parallelization (Sprint 68, 5-10x total speedup).
+**Rationale:** Section extraction identified as critical bottleneck (9-15 minutes for medium PDFs). Phase 1 (Sprint 67): Batch tokenization, regex compilation, profiling instrumentation. Phase 2 (Sprint 68): ThreadPoolExecutor parallelization, LRU caching. Target: 15min → 2min for large PDFs. Enables real-time ingestion for production.
+
+### 2025-12-31 | Technical Debt Archival - 7 Items (Sprint 67 Planning)
+**Decision:** Archive 7 resolved TDs (043, 047, 058, 069, 071, 072, 073) after verification.
+**Rationale:** Systematic review confirmed implementation status: TD-047 exceeded baseline (608 Playwright tests vs 40 planned), Sprint 60 investigations complete (TD-071, 072, 073), community summaries implemented (TD-058). Reduced active TD count 16 → 9 (-44%), story points 264 SP → 139 SP (-47%). Sprint 67-68 addresses 98% of remaining backlog (137 SP planned vs 139 SP total).
+
+### 2025-12-31 | BM25 Cache Auto-Refresh (Sprint 68.5, TD-074)
+**Decision:** Implement cache validation on startup with auto-refresh on discrepancy >10%.
+**Rationale:** Cache discrepancy identified (10 cached vs 43 indexed documents). Auto-refresh ensures consistency without manual intervention. Namespace-aware caching prevents cross-contamination. Alternative considered: Manual refresh (rejected: requires ops intervention, error-prone).
+
+### 2025-12-31 | Section Community Detection (Sprint 68.8)
+**Decision:** Implement Louvain/Leiden algorithms for section-based community detection.
+**Rationale:** Activate section-aware infrastructure (currently ~20% utilized). Section-level communities provide finer-grained context for hybrid search. Integration with Maximum Hybrid Search via 15 production Cypher queries. Alternative: Document-level communities (rejected: loses section granularity, less precise context).
+
+---
+
+**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
+**Total Decisions Documented:** 84 (+8 from Sprint 60, 67-68)
+**Current Sprint:** Sprint 67 (Planned)
+**Next Sprint:** Sprint 68 (Planned - Production Hardening)

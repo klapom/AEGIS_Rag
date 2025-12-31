@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-21 (Sprint 60 - Documentation Consolidation)
+**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
 
 ---
 
@@ -749,6 +749,56 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 67-68 Additions
+
+### New Dependencies (Sprint 67)
+
+**Secure Shell Sandbox:**
+- `deepagents >=0.2.0` - LangChain-native agent harness with SandboxBackendProtocol
+- `bubblewrap` (system package) - Linux container isolation for code execution
+
+**Adaptation Framework:**
+- `setfit >=1.0.0` - Sentence Transformers fine-tuning for intent classification
+- (Reuses existing: LangGraph, Qwen2.5:7b via Ollama)
+
+**Performance Monitoring:**
+- (Enhanced Prometheus metrics - no new dependencies)
+
+### Performance Targets (Sprint 68)
+
+| Metric | Current | Target | Improvement |
+|--------|---------|--------|-------------|
+| **Query Latency P95** | 500ms | 350ms | -30% |
+| **Section Extraction** | 9-15min | 2min | 8x faster |
+| **E2E Test Pass Rate** | 57% (337/594) | 100% (594/594) | +43% |
+| **Memory Usage** | 8.6GB | 6.0GB | -30% |
+| **Throughput** | 40 QPS | 50 QPS | +25% |
+
+### Architecture Enhancements (Sprint 67-68)
+
+**Secure Code Execution:**
+- BubblewrapSandboxBackend with syscall filtering
+- Multi-language support (Bash + Python)
+- Workspace isolation and network restrictions
+
+**Tool-Level Adaptation:**
+- Unified Trace & Telemetry (RAG pipeline monitoring)
+- Eval Harness (automated quality gates)
+- Adaptive Reranker v1 (intent-aware reranking)
+- Query Rewriter v1 (query expansion)
+
+**Intent Classification:**
+- C-LARA approach: LLM data generation (Qwen2.5:7b) + SetFit fine-tuning
+- Target accuracy: 60% → 85-92%
+
+**Section Features:**
+- Section Community Detection (Louvain/Leiden algorithms)
+- 15 production Cypher queries for section-based retrieval
+- Parallelized section extraction (ThreadPoolExecutor)
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
-**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md
+**Sprint 67-68 Updates:** 2025-12-31
+**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md
 **Maintainer:** Claude Code with Human Review

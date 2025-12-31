@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-29 (Sprint 66 - TD-078 Created)
-**Total Open Items:** 15
-**Total Story Points:** ~251 SP
-**Archived Items:** [11 items](archive/ARCHIVE_INDEX.md)
+**Last Updated:** 2025-12-31 (Sprint 67 Planning)
+**Total Open Items:** 9
+**Total Story Points:** ~139 SP
+**Archived Items:** [18 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -17,10 +17,9 @@
 | Priority | Count | Story Points |
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
-| HIGH     | 4     | ~71 SP       |
-| MEDIUM   | 8     | ~148 SP      |
-| LOW      | 4     | ~58 SP       |
-| Investigation | 2 | ~26 SP      |
+| HIGH     | 2     | ~31 SP       |
+| MEDIUM   | 5     | ~87 SP       |
+| LOW      | 2     | ~21 SP       |
 
 ---
 
@@ -33,6 +32,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-043 | Async Follow-up Questions | Sprint 52 |
 | TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
 | TD-045 | entity_id Property Migration | Sprint 34 |
+| TD-047 | Critical Path E2E Tests | Sprint 51 |
 | TD-048 | Graph Extraction with Unified Chunks | Sprint 49 |
 | TD-050 | Duplicate Answer Streaming | Sprint 47 |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
@@ -43,6 +43,9 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
 | TD-063 | Relation Deduplication | Sprint 49 |
 | TD-069 | Multihop Endpoint Review | Sprint 60 |
+| TD-071 | vLLM vs Ollama Investigation | Sprint 60 |
+| TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 |
+| TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 |
 
 ---
 
@@ -52,45 +55,25 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md) | Follow-up Questions Redis Storage | **RESOLVED** ✅ | 5 | Sprint 52 ✓ |
-| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 53 |
-| [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md) | entity_id Property Migration (Neo4j) | **RESOLVED** ✅ | 5 | Sprint 34 ✓ |
-| [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md) | Critical Path E2E Tests | **RESOLVED** ✅ | 40 | Sprint 51 ✓ |
-| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | OPEN | 18 | Sprint 67-68 |
+| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | OPEN | 13 | **Sprint 67** |
+| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | OPEN | 18 | **Sprint 67-68** |
 
 ### MEDIUM Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md) | RELATES_TO Relationship Extraction | **PARTIAL** (Core Done) | 13 | Sprint 34 ✓ |
-| [TD-049](TD-049_IMPLICIT_USER_PROFILING.md) | Implicit User Profiling | OPEN | 21 | Sprint 52+ |
-| [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md) | Memory Consolidation Pipeline | OPEN | 21 | Sprint 52+ |
-| [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md) | User Document Upload Interface | OPEN | 13 | Sprint 52+ |
-| [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | **IN PROGRESS** | 34 | Sprint 52+ |
-| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 50+ |
-| [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md) | Community Summary Generation | **RESOLVED** ✅ | 13 | Sprint 52 ✓ |
-| [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md) | Reranking via Ollama | **RESOLVED** ✅ | 8 | Sprint 48 ✓ |
-| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | Sprint 53+ |
+| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
+| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | **Sprint 68** |
+| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 68** |
+| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 69+ |
+| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 69+ |
 
 ### LOW Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md) | Admin Dashboard Full Implementation | OPEN | 34 | Sprint 52+ |
-| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 52+ |
-| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 52+ |
-| [TD-067](TD-067_DATASET_ANNOTATION_TOOL.md) | Dataset Annotation Tool | BACKLOG | 21 | Future |
-
-### Investigation / Review
-
-| TD# | Title | Status | SP | Target Sprint |
-|-----|-------|--------|-----|---------------|
-| [TD-068](TD-068_CLOUD_LLM_SUPPORT.md) | Cloud LLM Support (AnyLLM/Dashscope) | OPEN | 13 | Sprint 61+ |
-| [TD-069](TD-069_MULTIHOP_ENDPOINT_REVIEW.md) | Multihop Endpoint Status Review | **RESOLVED** ✅ | 3 | Sprint 60 ✓ |
-| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | Sprint 61+ |
-| [TD-071](TD-071_VLLM_VS_OLLAMA_INVESTIGATION.md) | vLLM vs Ollama Investigation | **RESOLVED** ✅ | 5 | Sprint 60 ✓ |
-| [TD-072](TD-072_SENTENCE_TRANSFORMERS_RERANKING.md) | Sentence-Transformers Reranking | **INVESTIGATION COMPLETE** → Sprint 61 | 5 | Sprint 60 ✓ |
-| [TD-073](TD-073_SENTENCE_TRANSFORMERS_EMBEDDINGS.md) | Sentence-Transformers Embeddings | **INVESTIGATION COMPLETE** → Sprint 61 | 5 | Sprint 60 ✓ |
+| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 69+ |
+| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 69+ |
 
 ---
 
@@ -106,16 +89,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - 4 technical investigations completed (TD-069, TD-071, TD-072, TD-073)
 - Clear recommendations for Sprint 61+ (2 migrations recommended, 1 removal recommended, 1 keep Ollama)
 
-| Feature | SP | Status |
-|---------|-----|--------|
-| 60.1 | 13 | ✅ Core Documentation Consolidation |
-| 60.2 | 8 | ✅ GRAPHITI Temporal Queries Analysis |
-| 60.3 | 3 | ✅ Section Nodes Implementation Review |
-| 60.4 | 3 | ✅ TD-069 Multihop Endpoint Review |
-| 60.5 | 5 | ✅ TD-071 vLLM vs Ollama Investigation |
-| 60.6 | 5 | ✅ TD-072 Sentence-Transformers Reranking Investigation |
-| 60.7 | 5 | ✅ TD-073 Sentence-Transformers Embeddings Investigation |
-| 60.8 | 3 | ✅ Subdirectory Cleanup |
+
 
 **Investigation Results:**
 - **TD-069:** ✅ RESOLVED - Remove multihop endpoints (unused, deprecated)
@@ -233,18 +207,63 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - E2E test coverage: 0% → 100% (4/4 journeys)
 - Developer experience: JWT auth documented
 
-### Sprint 64+ (Deferred Features)
-- **Multihop Agent Use Cases (3 SP)** - Research after endpoint removal
-- **TD-064: Temporal Community Summaries (8 SP)** - deferred from Sprint 52
-- **TD-053 Phase 2:** Admin Dashboard Monitoring (16 SP)
+### Sprint 67 (Secure Shell Sandbox + Agents Adaptation + LLM Intent Classifier)
+**Duration:** 12 days | **Story Points:** 75 SP | **Status:** PLANNED
+
+**Focus:** Deepagents sandbox integration, Tool-level adaptation framework, C-LARA intent classification
+- **67.1-67.4: Secure Shell Sandbox (deepagents)** - 15 SP
+  - BubblewrapSandboxBackend implementation
+  - Multi-language CodeAct (Bash + Python)
+  - Integration & testing
+- **67.5-67.9: Agents Adaptation Framework** - 45 SP
+  - Unified Trace & Telemetry (8 SP)
+  - Eval Harness (10 SP)
+  - Dataset Builder (8 SP)
+  - Adaptive Reranker v1 (13 SP)
+  - Query Rewriter v1 (6 SP)
+- **67.10-67.13: LLM Intent Classifier (C-LARA)** - 13 SP (TD-079)
+  - Data generation with Qwen2.5:7b
+  - SetFit model training
+  - A/B testing vs Semantic Router
+- **67.14: Section Extraction Quick Wins** - 7 SP (TD-078 Phase 1)
+  - Profiling + batch tokenization + regex optimization
+
+**Expected Impact:**
+- Secure code execution in isolated sandbox
+- Tool-level adaptation (retriever, reranker, query-rewriter)
+- Intent classification accuracy: 60% → 85-92%
+- Section extraction: 2-3x faster
+
+### Sprint 68 (Production Hardening + Performance + Section Features)
+**Duration:** 10 days | **Story Points:** 62 SP | **Status:** PLANNED
+
+**Focus:** E2E test completion, performance optimization, section community detection
+- **68.1-68.3: E2E Test Completion** - 13 SP
+  - Fix critical E2E failures (594 tests → 100%)
+  - Performance test infrastructure
+- **68.4-68.7: Performance Optimization** - 21 SP
+  - Section extraction parallelization (TD-078 Phase 2, 11 SP)
+  - BM25 cache auto-refresh (TD-074, 5 SP)
+  - Ingestion performance tuning (TD-070, 5 SP)
+- **68.8: Section Community Detection** - 10 SP
+  - Louvain/Leiden algorithms for section-based communities
+  - Integration with hybrid search
+- **68.9-68.10: Advanced Adaptation** - 18 SP
+  - Memory-Write Policy (10 SP)
+  - Tool-Execution Reward Loop (8 SP)
+- **Deferred (Optional):** TD-064 Temporal Community Summaries (13 SP)
+
+**Expected Impact:**
+- E2E test pass rate: 57% → 100%
+- Query latency P95: 500ms → 350ms (-30%)
+- Section extraction: 5-10x total speedup
+- Memory usage: -30%, Throughput: +25%
+
+### Sprint 69+ (Deferred Features)
 - TD-044: DoclingParsedDocument Interface (8 SP)
-- TD-051: Memory Consolidation (21 SP)
-- TD-049: User Profiling (21 SP)
-- TD-052: User Document Upload (13 SP)
+- TD-054: Unified Chunking Service (6 SP)
 - TD-055: MCP Client (21 SP)
 - TD-056: Project Collaboration (34 SP)
-- TD-067: Dataset Annotation Tool (21 SP)
-- TD-074: The BM25 index cache shows a significant discrepancy between the number of documents loaded from disk cache versus the number of documents actually indexed in Qdrant.
 
 ---
 
@@ -254,28 +273,22 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service
 - [TD-051](TD-051_MEMORY_CONSOLIDATION_PIPELINE.md): Memory Consolidation Pipeline
 
-### Performance
-- [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md): Ingestion Performance Tuning
-- [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md): Section Extraction Performance
+### Performance (Sprint 67-68)
+- [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md): Section Extraction Performance (Sprint 67-68, 18 SP)
+- [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md): Ingestion Performance Tuning (Sprint 68, 13 SP)
+- [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md): BM25 Cache Discrepancy (Sprint 68, 5 SP)
 
-### Testing
-- [TD-047](TD-047_CRITICAL_PATH_E2E_TESTS.md): Critical Path E2E Tests
+### Adaptation & Intelligence (Sprint 67)
+- [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md): LLM Intent Classifier (Sprint 67, 13 SP)
 
-### Data Model
-- [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md): DoclingParsedDocument Interface
-- [TD-045](TD-045_ENTITY_ID_PROPERTY_MIGRATION.md): entity_id Property Migration
-- [TD-046](TD-046_RELATES_TO_RELATIONSHIP_EXTRACTION.md): RELATES_TO Extraction
-- [TD-058](TD-058_COMMUNITY_SUMMARY_GENERATION.md): Community Summary Generation
+### Data Model & Architecture
+- [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md): DoclingParsedDocument Interface (Sprint 69+, 8 SP)
+- [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md): Unified Chunking Service (Sprint 69+, 6 SP)
+- [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md): Temporal Community Summaries (Sprint 68 optional, 13 SP)
 
-### Features
-- [TD-043](TD-043_FOLLOWUP_QUESTIONS_REDIS.md): Follow-up Questions
-- [TD-049](TD-049_IMPLICIT_USER_PROFILING.md): User Profiling
-- [TD-052](TD-052_USER_DOCUMENT_UPLOAD.md): User Document Upload
-- [TD-053](TD-053_ADMIN_DASHBOARD_FULL.md): Admin Dashboard
-- [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client
-- [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md): Project Collaboration
-- [TD-059](TD-059_RERANKING_DISABLED_CONTAINER.md): Reranking via Ollama
-- [TD-067](TD-067_DATASET_ANNOTATION_TOOL.md): Dataset Annotation Tool
+### Features (Future)
+- [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md): MCP Client (Sprint 69+, 21 SP)
+- [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md): Project Collaboration (Sprint 69+, 34 SP)
 
 ---
 
@@ -301,29 +314,30 @@ TD-063 (Relation Dedup) ✓ DONE (Sprint 49)
 ## Metrics
 
 ### Velocity Required (to clear backlog)
-- Total remaining: ~212 SP
-- At 15 SP/sprint: 14 sprints
-- At 30 SP/sprint (parallel): 7 sprints
+- Total remaining: ~139 SP
+- Sprint 67-68 planned: 75 + 62 = 137 SP
+- After Sprint 68: ~55 SP remaining (deferred features)
 
-### Aging
-- Oldest item: TD-047 (Sprint 8) - 40+ sprints old
-- Average age: ~20 sprints
+### Sprint 67-68 Allocation
+- Sprint 67: 75 SP (Sandbox, Adaptation, Intent Classifier, Section Quick Wins)
+- Sprint 68: 62 SP (E2E Tests, Performance, Section Features, Advanced Adaptation)
+- Total: 137 SP across 22 days
 
 ---
 
 ## Notes
 
-1. **Sprint 49 TDs resolved** - TD-048 (Provenance Tracking) and TD-063 (Relation Dedup) completed
-2. **11 items archived** - Resolved TDs moved to archive folder (TD-069 added Sprint 60)
-3. **TD-046** was completed in Sprint 34 (core), visualization pending
-4. **TD-047** exceeded baseline - 111 E2E tests vs. 40 planned (Sprint 51)
-5. **TD-053** navigation framework complete, configuration features deferred
-6. **Sprint 51 achievements**: 111 E2E tests, 4 TDs reviewed, documentation reorganized
-7. **Sprint 60 achievements**: 7 docs consolidated, 17 files archived, 4 technical investigations complete
-8. **Embedding consolidation**: All embedding tasks now use BGE-M3 (sentence-transformers removed)
-9. **Performance optimizations ready**: Sprint 61 should implement TD-072/073 migrations (high ROI)
-10. **vLLM investigation**: Keep Ollama - vLLM not justified at current scale (<50 QPS)
-11. **TD-078 created Sprint 66**: Section extraction critical bottleneck identified (9 min for 550 texts)
+1. **Sprint 67 Planning Complete** - 75 SP sprint with 3 epics (Sandbox, Adaptation, Intent Classifier)
+2. **Sprint 68 Planning Complete** - 62 SP production hardening sprint (E2E tests, performance, sections)
+3. **18 items archived** - 7 additional TDs archived (043, 047, 058, 069, 071, 072, 073)
+4. **TD-047 exceeded baseline** - 608 Playwright tests vs. 40 planned (Sprint 51) - ARCHIVED
+5. **Sprint 60 investigations complete** - TD-071 (vLLM), TD-072 (Reranking), TD-073 (Embeddings) - ARCHIVED
+6. **TD-078 & TD-079 prioritized** - Section extraction (18 SP) + Intent classifier (13 SP) for Sprint 67-68
+7. **Active TD count reduced** - 16 → 9 items (-44% cleanup)
+8. **Story points reduced** - 264 SP → 139 SP (-47% backlog reduction)
+9. **Sprint 67-68 addresses 98% of backlog** - 137 SP planned vs. 139 SP total
+10. **Thematic alignment** - Performance TDs (078, 070, 074) grouped in Sprint 68
+11. **TD-064 optional** - Temporal Community Summaries deferred unless capacity available
 
 ---
 
