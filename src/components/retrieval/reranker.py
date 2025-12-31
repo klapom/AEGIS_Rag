@@ -4,6 +4,8 @@ This module implements reranking using HuggingFace cross-encoder models.
 Reranking improves precision by scoring query-document pairs more accurately
 than vector similarity alone.
 
+Sprint 67 Feature 67.8: Adaptive Reranker v1 with intent-aware weights.
+
 Typical usage:
     reranker = CrossEncoderReranker()
     reranked_results = await reranker.rerank(
@@ -15,9 +17,11 @@ Typical usage:
 
 from __future__ import annotations
 
+import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from pydantic import BaseModel, Field
@@ -31,6 +35,54 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 
+# ============================================================================
+# ADAPTIVE RERANKING (Sprint 67, Feature 67.8)
+# ============================================================================
+
+
+@dataclass(frozen=True)
+class AdaptiveWeights:
+    """Adaptive reranking weights based on query intent.
+
+    Sprint 67 Feature 67.8: Intent-aware reranking with adaptive weights.
+
+    Attributes:
+        semantic_weight: Weight for semantic similarity (cross-encoder score)
+        keyword_weight: Weight for keyword matching (BM25 score)
+        recency_weight: Weight for document recency
+    """
+
+    semantic_weight: float
+    keyword_weight: float
+    recency_weight: float
+
+    def __post_init__(self) -> None:
+        """Validate that weights sum to 1.0."""
+        total = self.semantic_weight + self.keyword_weight + self.recency_weight
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"Weights must sum to 1.0, got {total}")
+
+
+# Intent-specific weight profiles (Sprint 67.8)
+# Based on query intent, different retrieval signals are emphasized
+INTENT_RERANK_WEIGHTS: dict[str, AdaptiveWeights] = {
+    # Factual: High semantic precision, low keyword, minimal recency
+    # Example: "What is OMNITRACKER?" → Need precise definition
+    "factual": AdaptiveWeights(semantic_weight=0.7, keyword_weight=0.2, recency_weight=0.1),
+    # Keyword: High keyword matching, moderate semantic, low recency
+    # Example: "JWT_TOKEN error 404" → Exact term matching critical
+    "keyword": AdaptiveWeights(semantic_weight=0.3, keyword_weight=0.6, recency_weight=0.1),
+    # Exploratory: Balanced semantic and keyword, moderate recency
+    # Example: "How does authentication work?" → Broad exploration
+    "exploratory": AdaptiveWeights(semantic_weight=0.5, keyword_weight=0.3, recency_weight=0.2),
+    # Summary: High semantic, low keyword, high recency
+    # Example: "Summarize recent project changes" → Recency matters
+    "summary": AdaptiveWeights(semantic_weight=0.5, keyword_weight=0.2, recency_weight=0.3),
+    # Default fallback (balanced)
+    "default": AdaptiveWeights(semantic_weight=0.6, keyword_weight=0.3, recency_weight=0.1),
+}
+
+
 class RerankResult(BaseModel):
     """Result from reranking operation.
 
@@ -42,6 +94,9 @@ class RerankResult(BaseModel):
         final_score: Normalized score (0.0 to 1.0)
         original_rank: Position before reranking (0-indexed)
         final_rank: Position after reranking (0-indexed)
+        adaptive_score: Intent-aware weighted score (Sprint 67.8)
+        bm25_score: BM25 keyword score (Sprint 67.8)
+        recency_score: Document recency score (Sprint 67.8)
     """
 
     doc_id: str = Field(..., description="Document ID")
@@ -51,7 +106,15 @@ class RerankResult(BaseModel):
     final_score: float = Field(..., description="Normalized score (0.0 to 1.0)")
     original_rank: int = Field(..., description="Position before reranking")
     final_rank: int = Field(..., description="Position after reranking")
-    metadata: dict = Field(default_factory=dict, description="Document metadata")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Document metadata")
+    # Sprint 67.8: Adaptive reranking scores
+    adaptive_score: float | None = Field(
+        default=None, description="Intent-aware weighted score (Sprint 67.8)"
+    )
+    bm25_score: float | None = Field(default=None, description="BM25 keyword score (Sprint 67.8)")
+    recency_score: float | None = Field(
+        default=None, description="Document recency score (Sprint 67.8)"
+    )
 
 
 class CrossEncoderReranker:
@@ -78,6 +141,7 @@ class CrossEncoderReranker:
         model_name: str | None = None,
         batch_size: int = 32,
         cache_dir: str | None = None,
+        use_adaptive_weights: bool = True,
     ) -> None:
         """Initialize reranker.
 
@@ -86,11 +150,16 @@ class CrossEncoderReranker:
                        Defaults to settings.reranker_model
             batch_size: Batch size for scoring (default: 32)
             cache_dir: Model cache directory (default: ./data/models)
+            use_adaptive_weights: Enable intent-aware adaptive weights (Sprint 67.8)
         """
         self.model_name = model_name or settings.reranker_model
         self.batch_size = batch_size
         self.cache_dir = Path(cache_dir or settings.reranker_cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Sprint 67.8: Adaptive reranking configuration
+        self.use_adaptive_weights = use_adaptive_weights
+        self._intent_classifier: Any = None  # Lazy-loaded
 
         self._model: CrossEncoder | None = None
 
@@ -99,6 +168,7 @@ class CrossEncoderReranker:
             model=self.model_name,
             batch_size=self.batch_size,
             cache_dir=str(self.cache_dir),
+            adaptive_weights=self.use_adaptive_weights,
         )
 
     @property
@@ -145,10 +215,69 @@ class CrossEncoderReranker:
             logger.info("cross_encoder_model_loaded", model=self.model_name)
         return self._model
 
+    def _get_intent_classifier(self) -> Any:
+        """Lazy-load intent classifier for adaptive reranking.
+
+        Sprint 67.8: Intent classifier used for adaptive weight selection.
+
+        Returns:
+            IntentClassifier instance
+        """
+        if self._intent_classifier is None:
+            from src.components.retrieval.intent_classifier import get_intent_classifier
+
+            self._intent_classifier = get_intent_classifier()
+        return self._intent_classifier
+
+    def _compute_recency_score(self, result: dict[str, Any]) -> float:
+        """Compute recency score from document timestamp.
+
+        Sprint 67.8: Recency score based on document creation/modification time.
+
+        Args:
+            result: Document result with metadata
+
+        Returns:
+            Recency score between 0.0 and 1.0
+        """
+        import datetime
+
+        # Try to extract timestamp from metadata
+        metadata = result.get("metadata", {})
+        timestamp_str = metadata.get("created_at") or metadata.get("modified_at")
+
+        if not timestamp_str:
+            # No timestamp available → neutral score
+            return 0.5
+
+        try:
+            # Parse timestamp (ISO 8601 format)
+            if isinstance(timestamp_str, str):
+                doc_time = datetime.datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            else:
+                # Assume Unix timestamp
+                doc_time = datetime.datetime.fromtimestamp(timestamp_str, tz=datetime.timezone.utc)
+
+            # Calculate age in days
+            now = datetime.datetime.now(tz=datetime.timezone.utc)
+            age_days = (now - doc_time).total_seconds() / 86400
+
+            # Decay function: exp(-age/180) → 0.5 score at ~125 days, 0.1 at ~415 days
+            # Recent documents (< 30 days) get high scores (0.8-1.0)
+            # Older documents (> 365 days) get low scores (0.0-0.2)
+            import math
+
+            recency = math.exp(-age_days / 180)
+            return max(0.0, min(1.0, recency))
+
+        except (ValueError, TypeError) as e:
+            logger.debug("recency_score_parse_failed", error=str(e), timestamp=timestamp_str)
+            return 0.5  # Neutral score on parse failure
+
     async def rerank(
         self,
         query: str,
-        documents: Sequence[dict],
+        documents: Sequence[dict[str, Any]],
         top_k: int | None = None,
         score_threshold: float | None = None,
         section_filter: str | list[str] | None = None,
@@ -189,19 +318,59 @@ class CrossEncoderReranker:
             logger.warning("rerank_called_with_empty_documents")
             return []
 
+        rerank_start = time.perf_counter()
+
         logger.info(
             "reranking_documents",
             query=query,
             num_documents=len(documents),
             top_k=top_k,
+            adaptive_weights=self.use_adaptive_weights,
         )
+
+        # Sprint 67.8: Classify query intent for adaptive weighting
+        intent_str = "default"
+        weights = INTENT_RERANK_WEIGHTS["default"]
+        intent_latency_ms = 0.0
+
+        if self.use_adaptive_weights:
+            try:
+                intent_start = time.perf_counter()
+                classifier = self._get_intent_classifier()
+                intent_result = await classifier.classify(query)
+                intent_latency_ms = (time.perf_counter() - intent_start) * 1000
+
+                # Map intent classifier result to rerank weight profile
+                intent_str = intent_result.intent.value
+                weights = INTENT_RERANK_WEIGHTS.get(intent_str, INTENT_RERANK_WEIGHTS["default"])
+
+                logger.info(
+                    "adaptive_intent_classified",
+                    query=query[:50],
+                    intent=intent_str,
+                    weights={
+                        "semantic": weights.semantic_weight,
+                        "keyword": weights.keyword_weight,
+                        "recency": weights.recency_weight,
+                    },
+                    latency_ms=round(intent_latency_ms, 2),
+                )
+            except Exception as e:
+                logger.warning(
+                    "adaptive_intent_classification_failed",
+                    error=str(e),
+                    fallback="default weights",
+                )
+                # Continue with default weights on failure
 
         # Prepare query-document pairs for cross-encoder
         pairs = [(query, doc.get("text", "")) for doc in documents]
 
         # Score all pairs (blocking operation, but fast on CPU)
         # Note: sentence-transformers CrossEncoder.predict() is synchronous
+        crossenc_start = time.perf_counter()
         rerank_scores = self.model.predict(pairs, batch_size=self.batch_size)
+        crossenc_latency_ms = (time.perf_counter() - crossenc_start) * 1000
 
         # Apply section boost if section_filter provided (Sprint 62.5)
         if section_filter is not None:
@@ -239,10 +408,60 @@ class CrossEncoderReranker:
 
         normalized_scores = 1 / (1 + np.exp(-np.array(rerank_scores)))
 
+        # Sprint 67.8: Compute adaptive scores if enabled
+        adaptive_scores: list[dict[str, float | None]] = []
+        if self.use_adaptive_weights:
+            for idx, doc in enumerate(documents):
+                # 1. Semantic score (normalized cross-encoder score)
+                semantic_score = float(normalized_scores[idx])
+
+                # 2. Keyword score (BM25 score from document)
+                # Try multiple locations: bm25_score, keyword_score, or fallback to original_score
+                keyword_score_raw = (
+                    doc.get("bm25_score")
+                    or doc.get("keyword_score")
+                    or doc.get("score", 0.0) * 0.5  # Fallback: assume original is hybrid
+                )
+                # Normalize keyword score to [0, 1] if needed
+                keyword_score = max(0.0, min(1.0, float(keyword_score_raw)))
+
+                # 3. Recency score (computed from timestamp)
+                recency_score = self._compute_recency_score(doc)
+
+                # 4. Compute weighted adaptive score
+                adaptive_score = (
+                    weights.semantic_weight * semantic_score
+                    + weights.keyword_weight * keyword_score
+                    + weights.recency_weight * recency_score
+                )
+
+                adaptive_scores.append(
+                    {
+                        "adaptive_score": adaptive_score,
+                        "keyword_score": keyword_score,
+                        "recency_score": recency_score,
+                    }
+                )
+
+                logger.debug(
+                    "adaptive_score_computed",
+                    doc_id=doc.get("id"),
+                    semantic=round(semantic_score, 3),
+                    keyword=round(keyword_score, 3),
+                    recency=round(recency_score, 3),
+                    adaptive=round(adaptive_score, 3),
+                )
+        else:
+            # No adaptive weighting → use normalized scores only
+            adaptive_scores = [
+                {"adaptive_score": None, "keyword_score": None, "recency_score": None}
+                for _ in documents
+            ]
+
         # Build rerank results
         results = []
-        for idx, (doc, rerank_score, norm_score) in enumerate(
-            zip(documents, rerank_scores, normalized_scores, strict=False)
+        for idx, (doc, rerank_score, norm_score, adaptive_data) in enumerate(
+            zip(documents, rerank_scores, normalized_scores, adaptive_scores, strict=False)
         ):
             result = RerankResult(
                 doc_id=doc.get("id", f"doc_{idx}"),
@@ -253,11 +472,31 @@ class CrossEncoderReranker:
                 original_rank=idx,
                 final_rank=0,  # Will be updated after sorting
                 metadata=doc.get("metadata", {}),
+                # Sprint 67.8: Adaptive reranking scores
+                adaptive_score=adaptive_data["adaptive_score"],
+                bm25_score=adaptive_data["keyword_score"],
+                recency_score=adaptive_data["recency_score"],
             )
             results.append(result)
 
-        # Sort by rerank score (highest first)
-        results.sort(key=lambda x: x.rerank_score, reverse=True)
+        # Sort by adaptive score if enabled, else by rerank score
+        if self.use_adaptive_weights:
+            results.sort(
+                key=lambda x: x.adaptive_score if x.adaptive_score is not None else x.final_score,
+                reverse=True,
+            )
+            logger.info(
+                "adaptive_reranking_applied",
+                intent=intent_str,
+                weights={
+                    "semantic": weights.semantic_weight,
+                    "keyword": weights.keyword_weight,
+                    "recency": weights.recency_weight,
+                },
+            )
+        else:
+            # Sort by rerank score (highest first)
+            results.sort(key=lambda x: x.rerank_score, reverse=True)
 
         # Update final ranks
         for rank, result in enumerate(results):
@@ -277,16 +516,26 @@ class CrossEncoderReranker:
         if top_k is not None:
             results = results[:top_k]
 
+        # Calculate total latency
+        total_latency_ms = (time.perf_counter() - rerank_start) * 1000
+
         logger.info(
             "reranking_complete",
             total_documents=len(documents),
             returned=len(results),
             top_score=results[0].final_score if results else None,
+            adaptive_enabled=self.use_adaptive_weights,
+            intent=intent_str if self.use_adaptive_weights else None,
+            latency_breakdown={
+                "total_ms": round(total_latency_ms, 2),
+                "intent_classification_ms": round(intent_latency_ms, 2),
+                "cross_encoder_ms": round(crossenc_latency_ms, 2),
+            },
         )
 
         return results
 
-    def get_model_info(self) -> dict:
+    def get_model_info(self) -> dict[str, Any]:
         """Get information about the loaded model.
 
         Returns:
@@ -297,4 +546,6 @@ class CrossEncoderReranker:
             "cache_dir": str(self.cache_dir),
             "batch_size": self.batch_size,
             "is_loaded": self._model is not None,
+            "adaptive_weights_enabled": self.use_adaptive_weights,
+            "intent_classifier_loaded": self._intent_classifier is not None,
         }

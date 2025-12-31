@@ -76,6 +76,14 @@ langgraph = "^0.6.10"
 langchain-core = "^1.1.2"  # Upgraded for langchain-openai 1.1.1 (RAGAS dependency)
 langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
 
+# NOTE: deepagents (Sprint 67 Feature 67.1-67.4) temporarily disabled due to langgraph version conflict
+# Will be re-enabled after resolving dependency constraints
+# deepagents = "^0.3.1"  # Agent Harness with Sandbox Backends
+
+# SetFit (Sprint 67: Intent Classifier Training - Feature 67.11)
+setfit = ">=1.0.0"  # Few-shot text classification with contrastive learning
+datasets = "^4.0.0"  # HuggingFace datasets for SetFit training (aligned with evaluation group)
+
 # LightRAG & Graph (Sprint 5: Graph RAG) - Core only, graspologic moved to optional
 lightrag-hku = "^1.4.9"  # LightRAG for knowledge graph construction
 networkx = "^3.2"  # Graph algorithms (CORE - needed by LightRAG)

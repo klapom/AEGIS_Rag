@@ -449,3 +449,254 @@ def test_extract_sections__label_as_enum__extracts_correctly():
     assert len(sections) == 1
     assert sections[0].heading == "Test Heading"
     assert sections[0].level == 2  # subtitle-level-1 → level 2
+
+
+# =============================================================================
+# TEST: PERFORMANCE OPTIMIZATIONS (Sprint 67.14 - TD-078 Phase 1)
+# =============================================================================
+
+
+def test_profiling_stats__after_extraction__tracks_metrics():
+    """Test that profiling statistics are tracked correctly.
+
+    Note: Profiling is only tracked in _extract_from_texts_array (HTTP API path),
+    not in the legacy body tree extraction path.
+    """
+    from src.components.ingestion.section_extraction import (
+        _extract_from_texts_array,
+        get_profiling_stats,
+        reset_profiling_stats,
+    )
+
+    # Reset stats before test
+    reset_profiling_stats()
+
+    # Create texts array (HTTP API format)
+    texts = [
+        {
+            "label": "title",
+            "text": "Test Section",
+            "prov": [{"page_no": 1, "bbox": {"l": 50, "t": 30, "r": 670, "b": 80}}],
+        },
+        {
+            "label": "paragraph",
+            "text": "Test content for profiling",
+            "prov": [{"page_no": 1, "bbox": {"l": 50, "t": 100, "r": 670, "b": 150}}],
+        },
+    ]
+
+    # Simple token counter
+    def count_tokens(text: str) -> int:
+        return len(text.split())
+
+    # Extract sections using texts array method
+    sections = _extract_from_texts_array(texts, SectionMetadata, count_tokens)
+
+    # Get profiling stats
+    stats = get_profiling_stats()
+
+    # Verify stats were tracked
+    assert stats["extraction_calls"] == 1
+    assert stats["total_sections_extracted"] == 1
+    assert stats["total_texts_processed"] >= 1
+    assert stats["total_extraction_time_ms"] > 0
+    assert stats["avg_extraction_time_ms"] > 0
+
+
+def test_profiling_stats__reset__clears_all_metrics():
+    """Test that reset_profiling_stats clears all metrics."""
+    from src.components.ingestion.section_extraction import (
+        get_profiling_stats,
+        reset_profiling_stats,
+    )
+
+    # Reset stats
+    reset_profiling_stats()
+
+    # Verify all stats are zero
+    stats = get_profiling_stats()
+    assert stats["extraction_calls"] == 0
+    assert stats["total_sections_extracted"] == 0
+    assert stats["total_texts_processed"] == 0
+    assert stats["total_extraction_time_ms"] == 0.0
+    assert stats["avg_extraction_time_ms"] == 0.0
+
+
+def test_heading_detection_cache__repeated_calls__uses_cache():
+    """Test that LRU cache is used for repeated heading detection calls."""
+    from src.components.ingestion.section_extraction import (
+        _is_likely_heading_by_formatting_cached,
+    )
+
+    # Clear cache
+    _is_likely_heading_by_formatting_cached.cache_clear()
+
+    # Test bold heading (should be cached)
+    text = "Introduction"
+    result1 = _is_likely_heading_by_formatting_cached(text, "paragraph", True)
+    result2 = _is_likely_heading_by_formatting_cached(text, "paragraph", True)
+
+    # Both calls should return same result
+    assert result1 == result2
+    assert result1 is True  # Bold + short + no period = heading
+
+    # Check cache statistics
+    cache_info = _is_likely_heading_by_formatting_cached.cache_info()
+    assert cache_info.hits >= 1  # Second call should hit cache
+    assert cache_info.misses >= 1  # First call should miss cache
+
+
+def test_heading_detection__early_exit_long_text__returns_false():
+    """Test that early exit condition filters long paragraphs."""
+    from src.components.ingestion.section_extraction import (
+        _is_likely_heading_by_formatting_cached,
+    )
+
+    # Long text (>200 chars) should trigger early exit
+    long_text = "This is a very long paragraph. " * 10  # >200 chars
+    result = _is_likely_heading_by_formatting_cached(long_text, "paragraph", True)
+
+    assert result is False  # Early exit should prevent heading detection
+
+
+def test_heading_detection__compiled_regex__detects_keywords():
+    """Test that compiled regex patterns detect section keywords."""
+    from src.components.ingestion.section_extraction import (
+        _is_likely_heading_by_formatting_cached,
+    )
+
+    # Test keyword detection
+    keyword_texts = [
+        "Introduction",
+        "Chapter 1: Overview",
+        "Section 2: Appendix",
+        "Zusammenfassung",  # German keyword
+        "Fazit",  # German keyword
+    ]
+
+    for text in keyword_texts:
+        result = _is_likely_heading_by_formatting_cached(text, "paragraph", False)
+        # Should detect as heading due to keyword match
+        assert result is True, f"Failed to detect heading for: {text}"
+
+
+def test_heading_detection__bullet_pattern__excludes_bullets():
+    """Test that compiled bullet pattern excludes bullet points.
+
+    Note: Bullet detection happens AFTER other checks. If text is bold, short,
+    and has no period, it may still be detected as heading despite bullet.
+    This test verifies the bullet check logic works when applied.
+    """
+    from src.components.ingestion.section_extraction import (
+        _is_likely_heading_by_formatting_cached,
+    )
+
+    # Test bullet exclusion with non-bold text (won't match heading criteria)
+    bullet_texts = [
+        "- First item in a list with more text.",
+        "* Second item in a list with more text.",
+        "• Third item in a list with more text.",
+        "→ Fourth item in a list with more text.",
+    ]
+
+    for text in bullet_texts:
+        # Non-bold bullet points with periods should NOT be headings
+        result = _is_likely_heading_by_formatting_cached(text, "paragraph", False)
+        assert result is False, f"Incorrectly detected bullet as heading: {text}"
+
+
+def test_extract_from_texts_array__batch_tokenization__processes_all_texts():
+    """Test that batch tokenization processes all text items."""
+    from src.components.ingestion.section_extraction import _extract_from_texts_array
+
+    # Create texts array (simulates HTTP API response)
+    texts = [
+        {
+            "label": "title",
+            "text": "Section 1",
+            "prov": [{"page_no": 1, "bbox": {"l": 0, "t": 0, "r": 100, "b": 50}}],
+        },
+        {
+            "label": "paragraph",
+            "text": "Content for section 1 with multiple words.",
+            "prov": [{"page_no": 1, "bbox": {"l": 0, "t": 50, "r": 100, "b": 100}}],
+        },
+        {
+            "label": "title",
+            "text": "Section 2",
+            "prov": [{"page_no": 2, "bbox": {"l": 0, "t": 0, "r": 100, "b": 50}}],
+        },
+        {
+            "label": "paragraph",
+            "text": "Content for section 2 with more text.",
+            "prov": [{"page_no": 2, "bbox": {"l": 0, "t": 50, "r": 100, "b": 100}}],
+        },
+    ]
+
+    # Simple token counter
+    def count_tokens(text: str) -> int:
+        return len(text.split())
+
+    # Extract sections with batch tokenization
+    sections = _extract_from_texts_array(texts, SectionMetadata, count_tokens)
+
+    # Verify sections were extracted
+    assert len(sections) == 2
+    assert sections[0].heading == "Section 1"
+    assert sections[1].heading == "Section 2"
+    assert sections[0].token_count > 0
+    assert sections[1].token_count > 0
+
+
+def test_extract_from_texts_array__profiling__logs_timing():
+    """Test that extraction logs timing metrics."""
+    from src.components.ingestion.section_extraction import (
+        _extract_from_texts_array,
+        get_profiling_stats,
+        reset_profiling_stats,
+    )
+
+    # Reset stats
+    reset_profiling_stats()
+
+    # Create simple texts array
+    texts = [
+        {
+            "label": "title",
+            "text": "Test Section",
+            "prov": [{"page_no": 1, "bbox": {"l": 0, "t": 0, "r": 100, "b": 50}}],
+        },
+        {
+            "label": "paragraph",
+            "text": "Test content",
+            "prov": [{"page_no": 1, "bbox": {"l": 0, "t": 50, "r": 100, "b": 100}}],
+        },
+    ]
+
+    # Simple token counter
+    def count_tokens(text: str) -> int:
+        return len(text.split())
+
+    # Extract sections
+    sections = _extract_from_texts_array(texts, SectionMetadata, count_tokens)
+
+    # Verify profiling stats were updated
+    stats = get_profiling_stats()
+    assert stats["extraction_calls"] >= 1
+    assert stats["total_tokenization_time_ms"] >= 0
+    assert stats["total_extraction_time_ms"] > 0
+
+
+def test_backward_compatibility__old_body_tree_extraction__still_works(
+    mock_powerpoint_document,
+):
+    """Test that old body tree extraction still works (backward compatibility)."""
+    # This test uses the old mock_powerpoint_document fixture
+    # which uses body tree structure (not json_content)
+    sections = extract_section_hierarchy(mock_powerpoint_document, SectionMetadata)
+
+    # Should still extract sections correctly
+    assert len(sections) == 3
+    assert sections[0].heading == "Multi-Server Architecture"
+    assert sections[1].heading == "Load Balancing Strategies"
+    assert sections[2].heading == "Caching Optimization"

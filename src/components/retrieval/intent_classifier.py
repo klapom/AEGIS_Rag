@@ -2,6 +2,7 @@
 
 Sprint 42 - Feature: Intent-Weighted RRF (TD-057)
 Sprint 52 - Feature: Zero-Shot Embedding Classification (Performance Optimization)
+Sprint 67 - Feature 67.12: C-LARA SetFit Integration (TD-075 Phase 3)
 
 This module classifies user queries into one of four intent types:
 - factual: Specific fact lookups (e.g., "What is the capital of France?")
@@ -9,10 +10,11 @@ This module classifies user queries into one of four intent types:
 - exploratory: Broad exploration (e.g., "How does authentication work?")
 - summary: High-level overviews (e.g., "Summarize the project architecture")
 
-Classification Methods (Sprint 52):
-1. embedding: Zero-Shot Embedding Classification using BGE-M3 (~20-50ms, high accuracy)
-2. rule_based: Fast regex pattern matching (~0ms, medium accuracy)
-3. llm: LLM-based classification (~2-10s, highest accuracy but slow)
+Classification Methods (Sprint 67):
+1. setfit: C-LARA trained SetFit model (~20-50ms, 85-92% accuracy) - NEW
+2. embedding: Zero-Shot Embedding Classification using BGE-M3 (~20-50ms, 60% accuracy)
+3. rule_based: Fast regex pattern matching (~0ms, medium accuracy)
+4. llm: LLM-based classification (~2-10s, highest accuracy but slow)
 
 Each intent type has different RRF weight profiles for the 4 retrieval channels:
 - Vector (Qdrant): Semantic similarity
@@ -23,6 +25,7 @@ Each intent type has different RRF weight profiles for the 4 retrieval channels:
 Academic References:
 - Adaptive-RAG (Jeong et al., NAACL 2024) - arXiv:2403.14403
 - GraphRAG (Edge et al., 2024) - arXiv:2404.16130
+- C-LARA Framework (Amazon Science) - Intent Detection in the Age of LLMs
 """
 
 import math
@@ -31,9 +34,14 @@ import re
 import time
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 import structlog
+
+if TYPE_CHECKING:
+    from setfit import SetFitModel
 
 logger = structlog.get_logger(__name__)
 
@@ -89,8 +97,9 @@ INTENT_WEIGHT_PROFILES: dict[Intent, IntentWeights] = {
 INTENT_DESCRIPTIONS: dict[Intent, str] = {
     Intent.FACTUAL: (
         "Specific fact lookup question asking who, what, when, where "
-        "with a concrete specific answer. Definition or meaning of a term. "
-        "Was ist, Wer ist, Wann wurde, Wo befindet sich, Definition von"
+        "with a concrete specific answer. Definition or meaning of a single term. "
+        "Exact values, dates, names, locations, specific settings, single entity facts. "
+        "Was ist X, Wer ist Y, Wann wurde Z, Wo befindet sich, Definition von, Wert von"
     ),
     Intent.KEYWORD: (
         "Technical keyword search with codes, identifiers, error messages, "
@@ -99,8 +108,10 @@ INTENT_DESCRIPTIONS: dict[Intent, str] = {
     ),
     Intent.EXPLORATORY: (
         "Exploration question asking how something works, why something happens, "
-        "explain concepts, understand relationships, compare options. "
-        "Wie funktioniert, Warum, Erkläre, Unterschied zwischen, Zusammenhang"
+        "explain concepts, understand relationships, compare options, trends, "
+        "new features, innovations, developments, what exists, which are available. "
+        "Wie funktioniert, Warum, Erkläre, Unterschied zwischen, Zusammenhang, "
+        "Trends, Entwicklungen, Innovationen, neue Features, was gibt es, welche"
     ),
     Intent.SUMMARY: (
         "High-level overview request asking to summarize, give overview, "
@@ -147,28 +158,30 @@ def cosine_similarity(vec_a: list[float], vec_b: list[float]) -> float:
 
 
 class IntentClassifier:
-    """Intent Classifier with Zero-Shot Embedding Classification.
+    """Intent Classifier with C-LARA SetFit and Zero-Shot Embedding Classification.
 
-    Sprint 52: Replaces slow LLM-based classification with fast embedding-based
-    zero-shot classification using BGE-M3 embeddings.
+    Sprint 52: Embedding-based zero-shot classification using BGE-M3 embeddings
+    Sprint 67: C-LARA SetFit model integration for 85-92% accuracy (TD-075)
 
     Classification Methods:
-    1. embedding (default): Zero-Shot using BGE-M3 embeddings (~20-50ms)
-    2. rule_based: Fast regex patterns (~0ms, fallback)
-    3. llm: LLM-based classification (~2-10s, optional)
+    1. setfit (Sprint 67): C-LARA trained SetFit model (~20-50ms, 85-92% accuracy)
+    2. embedding: Zero-Shot using BGE-M3 embeddings (~20-50ms, 60% accuracy)
+    3. rule_based: Fast regex patterns (~0ms, fallback)
+    4. llm: LLM-based classification (~2-10s, optional)
 
     Features:
-    - Embedding-based zero-shot classification (primary)
-    - Rule-based fallback for edge cases
+    - SetFit model with fallback to embedding/rule-based
     - Response caching for performance
+    - Feature flag for A/B testing
     - Pre-computed intent embeddings (cached)
 
     Example:
-        classifier = IntentClassifier(method="embedding")
+        classifier = IntentClassifier(method="setfit")
         result = await classifier.classify("What is OMNITRACKER?")
         # result.intent == Intent.FACTUAL
-        # result.method == "embedding"
-        # result.latency_ms ~= 25.0
+        # result.method == "setfit"
+        # result.latency_ms ~= 30.0
+        # result.confidence ~= 0.92
     """
 
     def __init__(
@@ -176,7 +189,8 @@ class IntentClassifier:
         base_url: str | None = None,
         model: str | None = None,
         timeout: float = 10.0,
-        method: str = "embedding",
+        method: str = "setfit",
+        setfit_model_path: str | None = None,
     ):
         """Initialize Intent Classifier.
 
@@ -184,13 +198,22 @@ class IntentClassifier:
             base_url: Ollama API URL (for LLM fallback)
             model: LLM model to use (for LLM fallback)
             timeout: Request timeout in seconds (for LLM fallback)
-            method: Classification method: "embedding" (default), "rule_based", or "llm"
+            method: Classification method: "setfit" (default), "embedding", "rule_based", or "llm"
+            setfit_model_path: Path to SetFit model directory (default: models/intent_classifier)
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.model = model or os.getenv("OLLAMA_MODEL_INTENT", "nemotron-3-nano")
         self.timeout = timeout
         self.method = method
         self.client = httpx.AsyncClient(timeout=timeout)
+
+        # Sprint 67: SetFit model configuration
+        self.setfit_model_path = setfit_model_path or os.getenv(
+            "INTENT_CLASSIFIER_MODEL_PATH", "models/intent_classifier"
+        )
+        self.use_setfit = os.getenv("USE_SETFIT_CLASSIFIER", "true").lower() == "true"
+        self.setfit_model: SetFitModel | None = None
+        self.setfit_initialized = False
 
         # Cache for query classifications (LRU)
         self._cache: dict[str, tuple[Intent, float]] = {}
@@ -203,8 +226,59 @@ class IntentClassifier:
         logger.info(
             "IntentClassifier initialized",
             method=method,
+            use_setfit=self.use_setfit,
+            setfit_model_path=self.setfit_model_path,
             base_url=self.base_url if method == "llm" else "N/A",
         )
+
+    def _ensure_setfit_model(self) -> None:
+        """Initialize SetFit model (lazy loading).
+
+        Sprint 67: Loads the C-LARA trained SetFit model for intent classification.
+        Model is loaded once and cached for subsequent use.
+        """
+        if self.setfit_initialized:
+            return
+
+        if not self.use_setfit:
+            logger.info("setfit_model_disabled", reason="USE_SETFIT_CLASSIFIER=false")
+            self.setfit_initialized = True
+            return
+
+        model_path = Path(self.setfit_model_path)
+        if not model_path.exists():
+            logger.warning(
+                "setfit_model_not_found",
+                path=str(model_path),
+                fallback="embedding or rule_based",
+            )
+            self.setfit_initialized = True
+            return
+
+        try:
+            from setfit import SetFitModel
+
+            init_start = time.perf_counter()
+            self.setfit_model = SetFitModel.from_pretrained(str(model_path))
+            init_time_ms = (time.perf_counter() - init_start) * 1000
+
+            logger.info(
+                "setfit_model_loaded",
+                path=str(model_path),
+                init_time_ms=round(init_time_ms, 2),
+            )
+            self.setfit_initialized = True
+
+        except ImportError:
+            logger.warning(
+                "setfit_not_installed",
+                fallback="embedding or rule_based",
+                hint="pip install setfit",
+            )
+            self.setfit_initialized = True
+        except Exception as e:
+            logger.error("setfit_model_load_failed", error=str(e), path=str(model_path))
+            self.setfit_initialized = True
 
     async def _ensure_intent_embeddings(self) -> None:
         """Initialize intent description embeddings (lazy loading).
@@ -240,6 +314,73 @@ class IntentClassifier:
             # Don't set initialized - will retry on next call
             raise
 
+    def _classify_with_setfit(self, query: str) -> tuple[Intent, float]:
+        """Classify using C-LARA trained SetFit model.
+
+        Sprint 67: Uses fine-tuned SetFit model for 85-92% accuracy.
+
+        Args:
+            query: User query
+
+        Returns:
+            Tuple of (Intent, confidence)
+
+        Raises:
+            ValueError: If SetFit model is not loaded
+        """
+        if self.setfit_model is None:
+            raise ValueError("SetFit model not loaded")
+
+        # Run prediction
+        predict_start = time.perf_counter()
+        predictions = self.setfit_model.predict([query])
+        predict_time_ms = (time.perf_counter() - predict_start) * 1000
+
+        # Get predicted label (0-3 for factual, keyword, exploratory, summary)
+        predicted_label = int(predictions[0])
+
+        # Map label to Intent
+        label_to_intent = {
+            0: Intent.FACTUAL,
+            1: Intent.KEYWORD,
+            2: Intent.EXPLORATORY,
+            3: Intent.SUMMARY,
+        }
+
+        intent = label_to_intent.get(predicted_label, Intent.EXPLORATORY)
+
+        # Get prediction probabilities for confidence
+        try:
+            probs = self.setfit_model.predict_proba([query])[0]
+            confidence = float(max(probs))
+
+            # Calculate margin (difference between top 2 predictions)
+            sorted_probs = sorted(probs, reverse=True)
+            margin = sorted_probs[0] - sorted_probs[1] if len(sorted_probs) > 1 else 0.0
+
+            logger.debug(
+                "setfit_classification_complete",
+                query=query[:50],
+                intent=intent.value,
+                confidence=round(confidence, 4),
+                margin=round(margin, 4),
+                predict_time_ms=round(predict_time_ms, 2),
+            )
+
+        except AttributeError:
+            # Model doesn't support predict_proba, use default confidence
+            confidence = 0.85  # Default for SetFit models
+            logger.debug(
+                "setfit_classification_complete",
+                query=query[:50],
+                intent=intent.value,
+                confidence=confidence,
+                predict_time_ms=round(predict_time_ms, 2),
+                note="predict_proba not available, using default confidence",
+            )
+
+        return intent, confidence
+
     async def classify(self, query: str) -> "IntentClassificationResult":
         """Classify query intent and return weights.
 
@@ -271,7 +412,27 @@ class IntentClassifier:
         confidence = 0.0
         method = self.method
 
-        if self.method == "embedding":
+        # Sprint 67: Try SetFit first if enabled
+        if self.method == "setfit":
+            try:
+                self._ensure_setfit_model()
+                if self.setfit_model is not None:
+                    intent, confidence = self._classify_with_setfit(query)
+                    method = "setfit"
+                else:
+                    # SetFit not available, fall through to embedding
+                    intent = None
+            except Exception as e:
+                logger.warning(
+                    "setfit_classification_failed",
+                    query=query[:50],
+                    error=str(e),
+                    fallback="embedding or rule_based",
+                )
+                intent = None
+
+        # Fallback to embedding if setfit failed or method is embedding
+        if intent is None and self.method in ["setfit", "embedding"]:
             try:
                 intent, confidence = await self._classify_with_embeddings(query)
                 method = "embedding"
@@ -284,7 +445,8 @@ class IntentClassifier:
                 )
                 intent = None
 
-        elif self.method == "llm":
+        # LLM method
+        elif intent is None and self.method == "llm":
             try:
                 intent, confidence = await self._classify_with_llm(query)
                 method = "llm"
@@ -297,7 +459,7 @@ class IntentClassifier:
                 )
                 intent = None
 
-        # Fallback to rule-based if primary method failed or is rule_based
+        # Fallback to rule-based if all methods failed or is rule_based
         if intent is None:
             intent = self._classify_rule_based(query)
             confidence = 0.7
@@ -573,15 +735,16 @@ _intent_classifier: IntentClassifier | None = None
 def get_intent_classifier() -> IntentClassifier:
     """Get global IntentClassifier instance (singleton).
 
-    Sprint 52: Default method is now "embedding" for fast zero-shot classification.
+    Sprint 67: Default method is now "setfit" for C-LARA trained model (85-92% accuracy).
+    Falls back to "embedding" if SetFit model not available.
 
     Returns:
         IntentClassifier instance
     """
     global _intent_classifier
     if _intent_classifier is None:
-        # Sprint 52: Use embedding-based classification by default
-        method = os.getenv("INTENT_CLASSIFIER_METHOD", "embedding")
+        # Sprint 67: Use SetFit-based classification by default
+        method = os.getenv("INTENT_CLASSIFIER_METHOD", "setfit")
         _intent_classifier = IntentClassifier(method=method)
     return _intent_classifier
 
@@ -598,8 +761,9 @@ async def classify_intent(query: str) -> IntentClassificationResult:
     Example:
         result = await classify_intent("What is the project architecture?")
         print(f"Intent: {result.intent.value}")
-        print(f"Method: {result.method}")  # "embedding"
-        print(f"Latency: {result.latency_ms}ms")  # ~25ms
+        print(f"Method: {result.method}")  # "setfit" (or "embedding" fallback)
+        print(f"Latency: {result.latency_ms}ms")  # ~30ms
+        print(f"Confidence: {result.confidence}")  # ~0.92
     """
     classifier = get_intent_classifier()
     return await classifier.classify(query)

@@ -342,6 +342,24 @@ class Settings(BaseSettings):
         description="Number of documents to return after reranking",
     )
 
+    # Sprint 67 Feature 67.8: Adaptive Reranking with Intent-Aware Weights
+    adaptive_reranking_enabled: bool = Field(
+        default=True,
+        description="Enable intent-aware adaptive reranking with weighted scores (Sprint 67.8)",
+    )
+    adaptive_reranking_semantic_weight_factual: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Semantic weight for factual queries (high precision)",
+    )
+    adaptive_reranking_keyword_weight_factual: float = Field(
+        default=0.2, ge=0.0, le=1.0, description="Keyword weight for factual queries"
+    )
+    adaptive_reranking_recency_weight_factual: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Recency weight for factual queries"
+    )
+
     # Semantic Entity Deduplication (Sprint 13: ADR-017)
     enable_semantic_dedup: bool = Field(
         default=True, description="Enable semantic entity deduplication using sentence-transformers"

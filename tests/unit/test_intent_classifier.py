@@ -1,15 +1,18 @@
 """Unit tests for Intent Classifier.
 
 Sprint 42 - Feature: Intent-Weighted RRF (TD-057)
+Sprint 67 - Feature 67.12: C-LARA SetFit Integration (TD-075)
 
 This module tests the IntentClassifier component that classifies user queries
 into one of four intent types (factual, keyword, exploratory, summary) and
 provides appropriate RRF weights for the 4-Way Hybrid Retrieval system.
 
 Test Coverage:
+- SetFit-based classification (Sprint 67)
 - Rule-based classification for all 4 intents
+- Embedding-based classification
 - LLM-based classification with mocked Ollama API
-- Fallback from LLM to rule-based on error
+- Fallback from SetFit → Embedding → Rule-based on error
 - Caching mechanism and cache eviction
 - IntentWeights validation (sum = 1.0)
 - Edge cases (empty queries, special characters, etc.)
@@ -299,6 +302,150 @@ class TestParseIntent:
         """Test fallback to exploratory for unparseable responses."""
         intent = classifier._parse_intent("unknown intent type")
         assert intent == Intent.EXPLORATORY
+
+
+# ============================================================================
+# Test SetFit-Based Classification (Sprint 67)
+# ============================================================================
+
+
+class TestSetFitClassification:
+    """Test SetFit-based intent classification."""
+
+    @pytest.fixture
+    def mock_setfit_model(self):
+        """Create a mock SetFit model."""
+        mock_model = MagicMock()
+        # Mock predict method to return label (0-3)
+        mock_model.predict = MagicMock(return_value=[0])  # FACTUAL
+        # Mock predict_proba to return probabilities
+        mock_model.predict_proba = MagicMock(
+            return_value=[[0.92, 0.03, 0.03, 0.02]]  # High confidence for FACTUAL
+        )
+        return mock_model
+
+    @pytest.fixture
+    def classifier_setfit(self, mock_setfit_model):
+        """Create IntentClassifier with mocked SetFit model."""
+        classifier = IntentClassifier(method="setfit")
+        classifier.setfit_model = mock_setfit_model
+        classifier.setfit_initialized = True
+        return classifier
+
+    def test_setfit_classification_factual(self, classifier_setfit, mock_setfit_model):
+        """Test SetFit classification for factual query."""
+        mock_setfit_model.predict.return_value = [0]  # FACTUAL
+        mock_setfit_model.predict_proba.return_value = [[0.92, 0.03, 0.03, 0.02]]
+
+        query = "What is the capital of France?"
+        intent, confidence = classifier_setfit._classify_with_setfit(query)
+
+        assert intent == Intent.FACTUAL
+        assert confidence == 0.92
+        mock_setfit_model.predict.assert_called_once_with([query])
+
+    def test_setfit_classification_keyword(self, classifier_setfit, mock_setfit_model):
+        """Test SetFit classification for keyword query."""
+        mock_setfit_model.predict.return_value = [1]  # KEYWORD
+        mock_setfit_model.predict_proba.return_value = [[0.05, 0.88, 0.04, 0.03]]
+
+        query = "JWT_SECRET config"
+        intent, confidence = classifier_setfit._classify_with_setfit(query)
+
+        assert intent == Intent.KEYWORD
+        assert confidence == 0.88
+
+    def test_setfit_classification_exploratory(self, classifier_setfit, mock_setfit_model):
+        """Test SetFit classification for exploratory query."""
+        mock_setfit_model.predict.return_value = [2]  # EXPLORATORY
+        mock_setfit_model.predict_proba.return_value = [[0.03, 0.05, 0.90, 0.02]]
+
+        query = "How does authentication work?"
+        intent, confidence = classifier_setfit._classify_with_setfit(query)
+
+        assert intent == Intent.EXPLORATORY
+        assert confidence == 0.90
+
+    def test_setfit_classification_summary(self, classifier_setfit, mock_setfit_model):
+        """Test SetFit classification for summary query."""
+        mock_setfit_model.predict.return_value = [3]  # SUMMARY
+        mock_setfit_model.predict_proba.return_value = [[0.02, 0.03, 0.05, 0.90]]
+
+        query = "Summarize the project"
+        intent, confidence = classifier_setfit._classify_with_setfit(query)
+
+        assert intent == Intent.SUMMARY
+        assert confidence == 0.90
+
+    def test_setfit_no_predict_proba(self, classifier_setfit, mock_setfit_model):
+        """Test SetFit classification when predict_proba not available."""
+        mock_setfit_model.predict.return_value = [0]  # FACTUAL
+        # Simulate AttributeError when accessing predict_proba
+        mock_setfit_model.predict_proba.side_effect = AttributeError("predict_proba not available")
+
+        query = "What is X?"
+        intent, confidence = classifier_setfit._classify_with_setfit(query)
+
+        assert intent == Intent.FACTUAL
+        assert confidence == 0.85  # Default confidence
+
+    def test_setfit_model_not_loaded(self):
+        """Test SetFit classification raises error when model not loaded."""
+        classifier = IntentClassifier(method="setfit")
+        classifier.setfit_model = None
+
+        with pytest.raises(ValueError, match="SetFit model not loaded"):
+            classifier._classify_with_setfit("test query")
+
+    @pytest.mark.asyncio
+    async def test_classify_with_setfit_method(self, classifier_setfit, mock_setfit_model):
+        """Test full classify() flow with SetFit method."""
+        mock_setfit_model.predict.return_value = [0]  # FACTUAL
+        mock_setfit_model.predict_proba.return_value = [[0.92, 0.03, 0.03, 0.02]]
+
+        result = await classifier_setfit.classify("What is the answer?")
+
+        assert result.intent == Intent.FACTUAL
+        assert result.method == "setfit"
+        assert result.confidence == 0.92
+        assert result.latency_ms > 0
+
+    @pytest.mark.asyncio
+    async def test_setfit_fallback_to_embedding(self):
+        """Test fallback from SetFit to embedding on error."""
+        classifier = IntentClassifier(method="setfit")
+        classifier.setfit_model = None  # No SetFit model
+        classifier.setfit_initialized = True
+
+        with patch(
+            "src.components.retrieval.intent_classifier.IntentClassifier._classify_with_embeddings"
+        ) as mock_embeddings:
+            mock_embeddings.return_value = (Intent.FACTUAL, 0.75)
+
+            result = await classifier.classify("What is X?")
+
+            # Should fall back to embedding
+            assert result.method == "embedding"
+            assert result.intent == Intent.FACTUAL
+            mock_embeddings.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_setfit_fallback_to_rule_based(self):
+        """Test fallback from SetFit to rule-based when both SetFit and embedding fail."""
+        classifier = IntentClassifier(method="setfit")
+        classifier.setfit_model = None
+        classifier.setfit_initialized = True
+
+        with patch(
+            "src.components.retrieval.intent_classifier.IntentClassifier._classify_with_embeddings"
+        ) as mock_embeddings:
+            mock_embeddings.side_effect = Exception("Embedding service unavailable")
+
+            result = await classifier.classify("What is the answer?")
+
+            # Should fall back to rule-based
+            assert result.method == "rule_based"
+            assert result.intent == Intent.FACTUAL  # "What is" pattern
 
 
 # ============================================================================

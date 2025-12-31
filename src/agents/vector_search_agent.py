@@ -269,8 +269,23 @@ class VectorSearchAgent(BaseAgent):
             # Extract reranking score if available, otherwise use RRF or original score
             score = result.get(
                 "normalized_rerank_score",
-                result.get("rerank_score", result.get("rrf_score", result.get("score", 0.0))),
+                result.get(
+                    "rerank_score",
+                    result.get(
+                        "weighted_rrf_score",
+                        result.get("rrf_score", result.get("score", 0.0)),
+                    ),
+                ),
             )
+
+            # Defensive clipping to [0.0, 1.0] for Pydantic validation
+            if score > 1.0 or score < 0.0:
+                self.logger.warning(
+                    "Score out of bounds, clipping to [0.0, 1.0]",
+                    original_score=score,
+                    result_id=result.get("id", "unknown"),
+                )
+                score = max(0.0, min(1.0, score))
 
             # Extract rank (final rank from reranking or original rank)
             rank = result.get("final_rank", result.get("rrf_rank", result.get("rank", 0)))
@@ -302,17 +317,31 @@ class VectorSearchAgent(BaseAgent):
                 metadata["rrf_score"] = result["rrf_score"]
                 metadata["rrf_rank"] = result.get("rrf_rank", 0)
 
-            context = RetrievedContext(
-                id=result.get("id", ""),
-                text=result.get("text", ""),
-                score=float(score),
-                source=result.get("source", "unknown"),
-                document_id=result.get("document_id", ""),
-                rank=int(rank),
-                search_type=result.get("search_type", "hybrid"),
-                metadata=metadata,
-            )
-            contexts.append(context)
+            # Try to create RetrievedContext with detailed error logging
+            try:
+                context = RetrievedContext(
+                    id=result.get("id", ""),
+                    text=result.get("text", ""),
+                    score=float(score),
+                    source=result.get("source", "unknown"),
+                    document_id=result.get("document_id", ""),
+                    rank=int(rank),
+                    search_type=result.get("search_type", "hybrid"),
+                    metadata=metadata,
+                )
+                contexts.append(context)
+            except Exception as e:
+                self.logger.error(
+                    "Failed to create RetrievedContext, skipping result",
+                    error=str(e),
+                    result_id=result.get("id", "unknown"),
+                    search_type=result.get("search_type", "unknown"),
+                    score=score,
+                    rank=rank,
+                    text_preview=result.get("text", "")[:100],
+                )
+                # Continue with next result instead of failing completely
+                continue
 
         return contexts
 

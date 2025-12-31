@@ -55,7 +55,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | OPEN | 13 | **Sprint 67** |
+| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | IN PROGRESS | 13 | **Sprint 67** (67.10 ✅) |
 | [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | OPEN | 18 | **Sprint 67-68** |
 
 ### MEDIUM Priority
@@ -208,7 +208,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - Developer experience: JWT auth documented
 
 ### Sprint 67 (Secure Shell Sandbox + Agents Adaptation + LLM Intent Classifier)
-**Duration:** 12 days | **Story Points:** 75 SP | **Status:** PLANNED
+**Duration:** 12 days | **Story Points:** 75 SP | **Status:** IN PROGRESS
 
 **Focus:** Deepagents sandbox integration, Tool-level adaptation framework, C-LARA intent classification
 - **67.1-67.4: Secure Shell Sandbox (deepagents)** - 15 SP
@@ -222,9 +222,10 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
   - Adaptive Reranker v1 (13 SP)
   - Query Rewriter v1 (6 SP)
 - **67.10-67.13: LLM Intent Classifier (C-LARA)** - 13 SP (TD-079)
-  - Data generation with Qwen2.5:7b
-  - SetFit model training
-  - A/B testing vs Semantic Router
+  - ✅ 67.10: Data generation with Qwen2.5:7b (COMPLETE)
+  - 67.11: SetFit model training (PENDING)
+  - 67.12: Integration (PENDING)
+  - 67.13: A/B testing vs Semantic Router (PENDING)
 - **67.14: Section Extraction Quick Wins** - 7 SP (TD-078 Phase 1)
   - Profiling + batch tokenization + regex optimization
 
@@ -233,6 +234,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 - Tool-level adaptation (retriever, reranker, query-rewriter)
 - Intent classification accuracy: 60% → 85-92%
 - Section extraction: 2-3x faster
+
+**Progress:** 3 SP complete (67.10), 72 SP remaining
 
 ### Sprint 68 (Production Hardening + Performance + Section Features)
 **Duration:** 10 days | **Story Points:** 62 SP | **Status:** PLANNED

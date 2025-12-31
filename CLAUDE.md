@@ -57,7 +57,7 @@ Ingestion:
 Frontend:
   Framework: React 19, TypeScript, Vite 7.1.12
   Styling: Tailwind CSS, Lucide Icons
-  Testing: Playwright (111 E2E tests)
+  Testing: Playwright
 
 ---
 
@@ -183,7 +183,7 @@ Scopes: vector, graph, memory, agent, api, infra
 ```bash
 # Ollama (Primary)
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL_GENERATION=llama3.2:8b
+OLLAMA_MODEL_GENERATION=Nemotron3
 
 # Alibaba Cloud DashScope
 ALIBABA_CLOUD_API_KEY=sk-...
