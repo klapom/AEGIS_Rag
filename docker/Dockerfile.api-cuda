@@ -70,6 +70,12 @@ COPY --chown=aegis:aegis data/ /app/data/
 RUN chmod -R u+r /app/src /app/scripts /app/data && \
     find /app/src /app/scripts -type f -name "*.py" -exec chmod u+x {} \;
 
+# Ensure LightRAG data directory exists with correct permissions
+# Fixes Sprint 68.8 Permission Issue with LightRAG graph extraction
+RUN mkdir -p /app/data/lightrag && \
+    chown -R aegis:aegis /app/data && \
+    chmod -R 755 /app/data
+
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 # CRITICAL: Prepend system site-packages to use NGC's CUDA PyTorch instead of Poetry's CPU version

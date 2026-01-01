@@ -376,8 +376,15 @@ class TestCLARADataGenerator:
 
 
 @pytest.mark.integration
+@pytest.mark.slow
+@pytest.mark.timeout(600)
 class TestCLARADataGeneratorIntegration:
-    """Integration tests requiring Ollama."""
+    """Integration tests requiring Ollama.
+
+    These tests make real LLM calls and are slow (5+ minutes).
+    Run with: pytest -m integration tests/unit/adaptation/test_intent_data_generator.py
+    Skip with: pytest -m "not integration" tests/unit/adaptation/test_intent_data_generator.py
+    """
 
     @pytest.mark.asyncio
     async def test_full_generation_workflow(self):
@@ -385,6 +392,8 @@ class TestCLARADataGeneratorIntegration:
 
         This test is marked as integration and will be skipped unless
         Ollama is running with qwen2.5:7b model.
+
+        Expected time: 5-10 minutes (100+ LLM calls at ~4s each)
         """
         generator = CLARADataGenerator(
             model="qwen2.5:7b",

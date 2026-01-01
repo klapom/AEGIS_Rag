@@ -110,14 +110,26 @@ class BubblewrapSandboxBackend:
         timeout: int = 30,
         seccomp_profile: str | None = None,
         output_limit: int = 32768,  # 32KB
+        enable_network_isolation: bool = True,
     ):
-        """Initialize BubblewrapSandboxBackend."""
+        """Initialize BubblewrapSandboxBackend.
+
+        Args:
+            repo_path: Path to repository (mounted read-only)
+            workspace_path: Path to workspace (mounted read-write)
+            timeout: Command timeout in seconds
+            seccomp_profile: Optional path to seccomp profile
+            output_limit: Maximum output size in bytes
+            enable_network_isolation: Whether to use --unshare-net (requires CAP_NET_ADMIN)
+                If False, network isolation is disabled for unprivileged environments.
+        """
         self.repo_path = Path(repo_path).resolve()
         self.workspace = Path(workspace_path)
         self.workspace.mkdir(parents=True, exist_ok=True)
         self.timeout = timeout
         self.seccomp_profile = seccomp_profile
         self.output_limit = output_limit
+        self.enable_network_isolation = enable_network_isolation
 
         # Verify repo path exists
         if not self.repo_path.exists():
@@ -126,6 +138,14 @@ class BubblewrapSandboxBackend:
                 repo_path=str(self.repo_path),
                 message="Repository path does not exist",
             )
+
+        # Log network isolation status
+        isolation_status = "enabled" if enable_network_isolation else "disabled (unprivileged mode)"
+        logger.info(
+            "sandbox_network_isolation",
+            status=isolation_status,
+            message="Network isolation is " + isolation_status,
+        )
 
     def _build_bwrap_command(self, command: str) -> list[str]:
         """
@@ -141,7 +161,7 @@ class BubblewrapSandboxBackend:
             - tmpfs: /tmp for temporary files
             - proc: /proc for process info
             - dev: /dev for device access (minimal)
-            - Network: Unshared (no network access)
+            - Network: Unshared if enable_network_isolation=True (requires CAP_NET_ADMIN)
             - Capabilities: ALL dropped
             - Seccomp: Optional profile for syscall filtering
 
@@ -166,8 +186,7 @@ class BubblewrapSandboxBackend:
             "/proc",
             "--dev",
             "/dev",
-            # Network isolation (--unshare-net without --die-with-parent to avoid needing CAP_NET_ADMIN)
-            "--unshare-net",
+            # Process isolation (always enabled)
             "--unshare-ipc",
             "--unshare-pid",
             "--unshare-uts",
@@ -175,6 +194,10 @@ class BubblewrapSandboxBackend:
             "--chdir",
             "/workspace",
         ]
+
+        # Network isolation (optional, requires CAP_NET_ADMIN)
+        if self.enable_network_isolation:
+            bwrap_args.insert(len(bwrap_args) - 2, "--unshare-net")
 
         # Add seccomp profile if configured
         if self.seccomp_profile:
@@ -273,9 +296,10 @@ class BubblewrapSandboxBackend:
         with strict security restrictions. All executions are logged for audit.
 
         Security guarantees:
-            - No network access (--unshare-net)
+            - Network access: Optional (--unshare-net if enable_network_isolation=True)
             - Read-only repository filesystem
             - Writable workspace only
+            - Process/IPC/UTS namespace isolation
             - ALL capabilities dropped
             - Timeout enforcement (SIGKILL after timeout)
             - Output truncation at 32KB

@@ -62,6 +62,12 @@ ENV PYTHONUNBUFFERED=1
 RUN useradd -m -u 1000 aegis && \
     chown -R aegis:aegis /app
 
+# Ensure LightRAG data directory exists with correct permissions
+# Fixes: https://github.com/AegisRAG/AEGIS_Rag/issues/... (Sprint 68.8)
+RUN mkdir -p /app/data/lightrag && \
+    chown -R aegis:aegis /app/data && \
+    chmod -R 755 /app/data
+
 USER aegis
 
 # Health check

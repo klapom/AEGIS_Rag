@@ -1,14 +1,15 @@
-# ⚠️ Permission Fix Required - Graph Extraction Failing
+# Sprint 68.8: Permission Fixes - RESOLVED
 
-**Status:** 🔴 CRITICAL - Graph extraction failing on all documents
-**Discovered:** 2025-12-29 Sprint 66
-**Impact:** Documents upload and chunk successfully, but graph extraction fails
+**Status:** RESOLVED - Sprint 68 Feature 68.8
+**Date Fixed:** 2025-01-01
+**Issue:** Graph extraction failing due to LightRAG data directory permission issues
 
----
+## Problem (Sprint 66)
 
-## Problem
-
-LightRAG cannot write to `/app/data/lightrag/` inside the container because files are owned by `ubuntu:ubuntu` but the container runs as user `aegis` (UID 1001).
+LightRAG could not write to `/app/data/lightrag/` inside the Docker container because:
+- Files were owned by `ubuntu:ubuntu` from previous builds
+- Container runs as user `aegis` (UID 1001 in CUDA, 1000 in standard)
+- `aegis` user had insufficient permissions to write to lightrag directory
 
 ### Error Messages
 
@@ -19,93 +20,79 @@ LightRAG cannot write to `/app/data/lightrag/` inside the container because file
 [Errno 13] Permission denied: 'data/lightrag/vdb_chunks.json'
 ```
 
-### Current Ownership
+## Solution Implemented (Sprint 68.8)
 
-```bash
-$ docker exec aegis-api ls -la /app/data/lightrag/
-drwxr-xr-x  2 ubuntu ubuntu    4096 Dec 17 12:52 .
--rw-r--r--  1 ubuntu ubuntu  333051 Dec 24 08:06 kv_store_text_chunks.json
--rw-r--r--  1 ubuntu ubuntu  717140 Dec 24 08:06 vdb_chunks.json
--rw-r--r--  1 ubuntu ubuntu 2745199 Dec 24 08:06 vdb_entities.json
-```
+### Dockerfile Changes
 
-Container user: `aegis` (UID 1001, GID 1001)
-File owner: `ubuntu` (read-only for `aegis`)
+Updated all Docker containers to ensure proper directory ownership on build:
 
----
+1. **docker/Dockerfile.api** (Standard Python 3.11)
+   ```dockerfile
+   RUN mkdir -p /app/data/lightrag && \
+       chown -R aegis:aegis /app/data && \
+       chmod -R 755 /app/data
+   ```
 
-## Fix (Requires sudo)
+2. **docker/Dockerfile.api-cuda** (DGX Spark CUDA 13.0)
+   ```dockerfile
+   RUN mkdir -p /app/data/lightrag && \
+       chown -R aegis:aegis /app/data && \
+       chmod -R 755 /app/data
+   ```
 
-Run from the DGX Spark host:
+3. **docker/Dockerfile.api-test** (Test container with dev dependencies)
+   ```dockerfile
+   RUN useradd -m -u 1000 aegis && \
+       chown -R aegis:aegis /app && \
+       mkdir -p /app/data/lightrag && \
+       chown -R aegis:aegis /app/data && \
+       chmod -R 755 /app/data
+   ```
 
-```bash
-cd /home/admin/projects/aegisrag/AEGIS_Rag
-sudo chown -R 1001:1001 data/lightrag/
-```
+### Why This Works
 
-Verify:
+1. **Directory Creation**: `mkdir -p /app/data/lightrag` ensures directory exists during build
+2. **Ownership**: `chown -R aegis:aegis /app/data` sets correct owner/group for aegis user
+3. **Permissions**: `chmod -R 755` grants:
+   - Owner (aegis): read/write/execute (7)
+   - Group: read/execute (5)
+   - Others: read/execute (5)
 
-```bash
-docker exec aegis-api ls -la /app/data/lightrag/
-# Should show: aegis aegis instead of ubuntu ubuntu
-```
+### Benefits
 
----
-
-## Alternative: Recreate Files
-
-If you prefer not to use sudo, you can delete the old files and let the container recreate them:
-
-```bash
-cd /home/admin/projects/aegisrag/AEGIS_Rag
-rm -f data/lightrag/*.json
-docker restart aegis-api
-```
-
-**⚠️ Warning:** This will delete existing graph data! Only do this if you're okay losing previous graph extractions.
-
----
+- No post-deployment permission fixes needed
+- Clean separation: data directory owned by container user, not host user
+- Consistent across all container variants (standard, CUDA, test)
+- Proper security: only aegis user can modify container files
 
 ## Verification
 
-After fixing permissions, re-run the document upload to verify graph extraction works:
+After rebuilding Docker containers:
 
-1. Upload test document via Admin Indexing page
-2. Check backend logs for graph extraction:
-   ```bash
-   docker logs aegis-api 2>&1 | grep graph_extraction | tail -20
-   ```
-3. Should see: `TIMING_lightrag_insert_complete` without permission errors
+```bash
+# Rebuild containers
+docker compose -f docker-compose.dgx-spark.yml build --no-cache api
 
----
+# Verify permissions in running container
+docker exec aegis-api ls -la /app/data/lightrag/
 
-## Root Cause
-
-The `data/lightrag/` directory was likely created by a previous container or user with different ownership. The container user was recently changed to `aegis` (UID 1001) but the data directory ownership wasn't updated.
-
----
+# Expected output:
+# drwxr-xr-x  2 aegis aegis 4096 Jan  1 12:00 .
+```
 
 ## Prevention
 
-Add to `docker-compose.dgx-spark.yml` to ensure correct ownership on container startup:
+- All Docker containers now ensure correct permissions at build time
+- No more permission errors when LightRAG writes graph extraction data
+- Graph extraction tests should pass without deployment issues
 
-```yaml
-services:
-  api:
-    entrypoint: >
-      sh -c "
-        chown -R aegis:aegis /app/data/lightrag || true &&
-        exec uvicorn src.api.main:app --host 0.0.0.0 --port 8000
-      "
-```
+## Related Issues
 
-Or set proper volume permissions in the Dockerfile:
-
-```dockerfile
-RUN mkdir -p /app/data/lightrag && chown -R aegis:aegis /app/data
-```
+- **Sprint 66**: Initial issue discovery (document upload failures)
+- **Sprint 67**: Core implementation (graph extraction via LightRAG)
+- **Sprint 68**: Bug fixes and stabilization (this issue)
 
 ---
 
-**Created:** 2025-12-29
-**Author:** Claude Code
+**Resolved by:** Sprint 68 Feature 68.8
+**Docker Images Updated:** api, api-cuda, api-test

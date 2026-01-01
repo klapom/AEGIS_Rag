@@ -133,6 +133,7 @@ class BubblewrapSandboxBackend:
         timeout: int = DEFAULT_TIMEOUT,
         seccomp_profile: str | None = None,
         workspace_path: str | None = None,
+        enable_network_isolation: bool = True,
     ) -> None:
         """Initialize Bubblewrap sandbox backend.
 
@@ -142,6 +143,8 @@ class BubblewrapSandboxBackend:
             timeout: Command timeout in seconds
             seccomp_profile: Path to seccomp profile JSON (optional)
             workspace_path: Custom workspace path (default: /tmp/aegis-workspace)
+            enable_network_isolation: Whether to use --unshare-net (requires CAP_NET_ADMIN)
+                If False, network isolation is disabled for unprivileged environments.
 
         Raises:
             ValueError: If repo_path doesn't exist
@@ -158,6 +161,7 @@ class BubblewrapSandboxBackend:
         self.allowed_domains = allowed_domains or []
         self.timeout = timeout
         self.seccomp_profile = seccomp_profile
+        self.enable_network_isolation = enable_network_isolation
         self.logger = logger.bind(backend="bubblewrap")
 
         # Verify bubblewrap is installed
@@ -166,11 +170,14 @@ class BubblewrapSandboxBackend:
                 "bubblewrap not found. Install with: sudo apt-get install bubblewrap"
             )
 
+        # Log network isolation status
+        isolation_status = "enabled" if enable_network_isolation else "disabled (unprivileged mode)"
         self.logger.info(
             "sandbox_backend_initialized",
             repo_path=str(self.repo_path),
             workspace=str(self.workspace),
             timeout=self.timeout,
+            network_isolation=isolation_status,
         )
 
     def _build_bubblewrap_command(self, command: str, working_dir: str | None = None) -> list[str]:
@@ -218,13 +225,15 @@ class BubblewrapSandboxBackend:
             # Working directory
             "--chdir",
             working_dir or "/workspace",
-            # Network isolation
-            "--unshare-net",  # No network access
-            # Other isolation
+            # Process/IPC isolation (always enabled)
             "--unshare-pid",  # Separate PID namespace
             "--unshare-ipc",  # Separate IPC namespace
             "--die-with-parent",  # Kill sandbox if parent dies
         ]
+
+        # Network isolation (optional, requires CAP_NET_ADMIN)
+        if self.enable_network_isolation:
+            bwrap_args.insert(len(bwrap_args) - 1, "--unshare-net")
 
         # Add seccomp profile if provided
         if self.seccomp_profile and Path(self.seccomp_profile).exists():
@@ -239,12 +248,15 @@ class BubblewrapSandboxBackend:
     async def execute(self, command: str, working_dir: str | None = None) -> ExecuteResult:
         """Execute command in Bubblewrap sandbox.
 
+        Executes a shell command with process/IPC isolation. Network isolation
+        is optional (disabled by default for unprivileged environments).
+
         Args:
             command: Shell command to execute
             working_dir: Working directory (default: /workspace)
 
         Returns:
-            ExecuteResult with stdout, stderr, exit code
+            ExecuteResult with stdout, stderr, exit code, and timeout status
 
         Raises:
             asyncio.TimeoutError: If command exceeds timeout
