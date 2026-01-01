@@ -238,7 +238,7 @@ groups:
           component: cost
         annotations:
           summary: "Monthly LLM budget exceeded"
-          description: "Budget exceeded by ${{ $value | abs }}"
+          description: "Budget exceeded by ${{ $value }}"
           impact: "Budget limit reached - API calls may be blocked"
           runbook: "Review usage, consider increasing budget or switching to local models"
 
