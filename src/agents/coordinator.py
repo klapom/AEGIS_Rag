@@ -199,6 +199,8 @@ class CoordinatorAgent:
     ) -> None:
         """Initialize Coordinator Agent.
 
+        **Sprint 70 Feature 70.7: Lazy graph compilation with tools config**
+
         Args:
             use_persistence: Enable conversation persistence (default: True)
             recursion_limit: Max recursion depth for LangGraph (default from settings)
@@ -212,14 +214,64 @@ class CoordinatorAgent:
         if self.use_persistence:
             self.checkpointer = create_checkpointer()
 
-        # Compile graph once (reused for all queries)
-        self.compiled_graph = compile_graph(checkpointer=self.checkpointer)
+        # Sprint 70 Feature 70.7: Lazy graph compilation
+        # Graph is compiled on first request with tools config from Redis
+        self.compiled_graph: Any | None = None
+        self._graph_cache_expires_at: datetime | None = None
+        self._graph_cache_ttl_seconds = 60  # Re-check config every 60s
 
         logger.info(
             "coordinator_initialized",
             use_persistence=self.use_persistence,
             recursion_limit=self.recursion_limit,
+            lazy_compilation=True,
         )
+
+    async def _get_or_compile_graph(self) -> Any:
+        """Get compiled graph, compiling if necessary.
+
+        **Sprint 70 Feature 70.7: Lazy compilation with config hot-reload**
+
+        Compiles graph on first call and caches for 60 seconds.
+        After cache expires, re-compiles with fresh tools config from Redis.
+
+        Returns:
+            Compiled LangGraph instance
+
+        Example:
+            >>> coordinator = CoordinatorAgent()
+            >>> graph = await coordinator._get_or_compile_graph()
+            >>> # Graph compiled with current tools config
+        """
+        from datetime import datetime
+
+        # Check if cache is still valid
+        now = datetime.now()
+        if (
+            self.compiled_graph is not None
+            and self._graph_cache_expires_at is not None
+            and now < self._graph_cache_expires_at
+        ):
+            logger.debug("using_cached_compiled_graph")
+            return self.compiled_graph
+
+        # Cache expired or first compilation - load config and compile
+        from datetime import timedelta
+
+        from src.agents.graph import compile_graph_with_tools_config
+
+        logger.info("compiling_graph_with_fresh_config", cache_ttl_seconds=self._graph_cache_ttl_seconds)
+
+        self.compiled_graph = await compile_graph_with_tools_config(
+            checkpointer=self.checkpointer
+        )
+
+        # Set cache expiration
+        self._graph_cache_expires_at = now + timedelta(seconds=self._graph_cache_ttl_seconds)
+
+        logger.info("graph_compiled_and_cached", expires_in_seconds=self._graph_cache_ttl_seconds)
+
+        return self.compiled_graph
 
     @retry_on_failure(max_attempts=2, backoff_factor=1.5)
     async def process_query(
@@ -288,8 +340,9 @@ class CoordinatorAgent:
                 config = create_thread_config(session_id)
                 config["recursion_limit"] = self.recursion_limit
 
-            # Invoke graph
-            final_state = await self.compiled_graph.ainvoke(
+            # Invoke graph (Sprint 70: lazy compilation with tools config)
+            graph = await self._get_or_compile_graph()
+            final_state = await graph.ainvoke(
                 initial_state,
                 config=config,
             )
@@ -595,7 +648,9 @@ class CoordinatorAgent:
         # - "values": Full accumulated state AFTER each node completes
         final_state = None
         try:
-            async for chunk in self.compiled_graph.astream(
+            # Sprint 70: Get graph with tools config
+            graph = await self._get_or_compile_graph()
+            async for chunk in graph.astream(
                 initial_state, config=config, stream_mode=["custom", "values"]
             ):
                 # With combined stream_mode, chunk is tuple: (stream_type, data)

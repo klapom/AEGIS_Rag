@@ -22,6 +22,7 @@ from src.agents.research.research_graph import (
     ResearchSupervisorState,
     create_initial_research_state,
     get_research_graph,
+    get_research_graph_with_config,  # Sprint 70 Feature 70.7
 )
 from src.api.models.research import (
     ResearchProgress,
@@ -65,8 +66,8 @@ async def _stream_research_progress(
             namespace=namespace,
         )
 
-        # Create graph (Sprint 70: New Supervisor Pattern graph)
-        graph = get_research_graph()
+        # Create graph (Sprint 70 Feature 70.7: Load tools config from Redis)
+        graph = await get_research_graph_with_config()
 
         # Send initial progress
         progress = ResearchProgress(
@@ -280,8 +281,8 @@ async def research_query(
 
             start_time = time.time()
 
-            # Execute research workflow (Sprint 70: New Supervisor Pattern graph)
-            graph = get_research_graph()
+            # Execute research workflow (Sprint 70 Feature 70.7: Load tools config)
+            graph = await get_research_graph_with_config()
             initial_state = create_initial_research_state(
                 query=request.query,
                 max_iterations=request.max_iterations,

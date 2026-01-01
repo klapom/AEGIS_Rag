@@ -30,6 +30,7 @@ from src.api.v1.admin_discovery import domain_discovery_router  # Sprint 46 Feat
 from src.api.v1.admin_graph import router as admin_graph_router
 from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_llm import router as admin_llm_router
+from src.api.v1.admin_tools import router as admin_tools_router  # Sprint 70 Feature 70.7
 from src.api.v1.analytics import router as analytics_router  # Sprint 62 Feature 62.9
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
@@ -398,6 +399,7 @@ logger.info(
 # Sprint 53: Admin module split - Cost, LLM, Graph, Indexing endpoints
 app.include_router(admin_costs_router, prefix="/api/v1")
 app.include_router(admin_llm_router, prefix="/api/v1")
+app.include_router(admin_tools_router, prefix="/api/v1")  # Sprint 70 Feature 70.7
 app.include_router(admin_graph_router, prefix="/api/v1")
 app.include_router(admin_indexing_router, prefix="/api/v1")
 logger.info(

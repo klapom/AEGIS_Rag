@@ -514,13 +514,66 @@ def create_base_graph(enable_tools: bool = False) -> StateGraph:
     return graph
 
 
-def compile_graph(checkpointer: MemorySaver | None = None) -> Any:
+async def compile_graph_with_tools_config(checkpointer: MemorySaver | None = None) -> Any:
+    """Compile the graph with tool configuration from Redis.
+
+    **Sprint 70 Feature 70.7: Dynamic Tool Configuration**
+
+    Loads tool configuration from Redis and compiles graph accordingly.
+    This allows hot-reloading of tool settings without service restart.
+
+    Args:
+        checkpointer: Optional checkpointer for state persistence
+
+    Returns:
+        Compiled graph with tool configuration applied
+
+    Example:
+        >>> checkpointer = create_checkpointer()
+        >>> compiled = await compile_graph_with_tools_config(checkpointer=checkpointer)
+        >>> # Tools enabled/disabled based on admin config
+    """
+    from src.components.tools_config import get_tools_config_service
+
+    # Load tool configuration
+    config_service = get_tools_config_service()
+    tools_config = await config_service.get_config()
+
+    enable_tools = tools_config.enable_chat_tools
+
+    logger.info(
+        "compiling_graph_with_config",
+        enable_tools=enable_tools,
+        with_checkpointer=checkpointer is not None,
+    )
+
+    graph = create_base_graph(enable_tools=enable_tools)
+
+    # Compile with optional checkpointer
+    if checkpointer:
+        compiled = graph.compile(checkpointer=checkpointer)
+        logger.info("graph_compiled_with_persistence", enable_tools=enable_tools)
+    else:
+        compiled = graph.compile()
+        logger.info("graph_compiled_stateless", enable_tools=enable_tools)
+
+    return compiled
+
+
+def compile_graph(
+    checkpointer: MemorySaver | None = None,
+    enable_tools: bool = False,
+) -> Any:
     """Compile the base graph for execution.
+
+    **Sprint 70 Feature 70.7: Optional Tool Support**
 
     Args:
         checkpointer: Optional checkpointer for state persistence.
                      If provided, enables conversation history across invocations.
                      Use create_checkpointer() from checkpointer module.
+        enable_tools: Enable MCP tool use (default: False)
+                     For admin-configured tools, use compile_graph_with_tools_config()
 
     Returns:
         Compiled graph ready for invocation
@@ -530,21 +583,25 @@ def compile_graph(checkpointer: MemorySaver | None = None) -> Any:
         >>> checkpointer = create_checkpointer()
         >>> compiled = compile_graph(checkpointer=checkpointer)
         >>> # State persists across invocations with same thread_id
+
+        >>> # With tools enabled
+        >>> compiled = compile_graph(checkpointer=checkpointer, enable_tools=True)
     """
     logger.info(
         "compiling_graph",
         with_checkpointer=checkpointer is not None,
+        enable_tools=enable_tools,
     )
 
-    graph = create_base_graph()
+    graph = create_base_graph(enable_tools=enable_tools)
 
     # Compile with optional checkpointer
     if checkpointer:
         compiled = graph.compile(checkpointer=checkpointer)
-        logger.info("graph_compiled_with_persistence")
+        logger.info("graph_compiled_with_persistence", enable_tools=enable_tools)
     else:
         compiled = graph.compile()
-        logger.info("graph_compiled_stateless")
+        logger.info("graph_compiled_stateless", enable_tools=enable_tools)
 
     return compiled
 

@@ -342,6 +342,10 @@ def create_initial_research_state(
 
 # Singleton pattern for graph instances (one per enable_tools value)
 _research_graphs: dict[bool, StateGraph] = {}
+# Sprint 70 Feature 70.7: Cache for tools config
+_research_graph_config_cache: bool | None = None
+_research_graph_cache_expires_at: float | None = None
+_RESEARCH_GRAPH_CACHE_TTL_SECONDS = 60
 
 
 def get_research_graph(enable_tools: bool = False) -> StateGraph:
@@ -359,10 +363,61 @@ def get_research_graph(enable_tools: bool = False) -> StateGraph:
     return _research_graphs[enable_tools]
 
 
+async def get_research_graph_with_config() -> StateGraph:
+    """Get compiled research graph with tools config from Redis.
+
+    **Sprint 70 Feature 70.7: Dynamic Tool Configuration for Research**
+
+    Loads tool configuration from Redis and returns the appropriate
+    compiled research graph. Caches config for 60 seconds.
+
+    Returns:
+        Compiled research StateGraph instance with tools config applied
+
+    Example:
+        >>> graph = await get_research_graph_with_config()
+        >>> # Graph has tools enabled/disabled based on admin config
+    """
+    import time
+
+    global _research_graph_config_cache, _research_graph_cache_expires_at
+
+    # Check if cache is still valid
+    now = time.time()
+    if (
+        _research_graph_config_cache is not None
+        and _research_graph_cache_expires_at is not None
+        and now < _research_graph_cache_expires_at
+    ):
+        logger.debug("using_cached_research_graph_config", enable_tools=_research_graph_config_cache)
+        return get_research_graph(enable_tools=_research_graph_config_cache)
+
+    # Load fresh config from Redis
+    from src.components.tools_config import get_tools_config_service
+
+    config_service = get_tools_config_service()
+    tools_config = await config_service.get_config()
+
+    enable_tools = tools_config.enable_research_tools
+
+    logger.info(
+        "loaded_research_graph_config",
+        enable_tools=enable_tools,
+        cache_ttl_seconds=_RESEARCH_GRAPH_CACHE_TTL_SECONDS,
+    )
+
+    # Update cache
+    _research_graph_config_cache = enable_tools
+    _research_graph_cache_expires_at = now + _RESEARCH_GRAPH_CACHE_TTL_SECONDS
+
+    return get_research_graph(enable_tools=enable_tools)
+
+
 # Public API
 __all__ = [
     "create_research_graph",
     "get_research_graph",
+    "get_research_graph_with_config",  # Sprint 70 Feature 70.7
     "create_initial_research_state",
     "ResearchSupervisorState",
 ]

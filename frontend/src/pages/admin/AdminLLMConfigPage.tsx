@@ -4,6 +4,7 @@
  * Sprint 51: Dynamic Ollama model loading
  * Sprint 52 Feature 52.1: Community Summary Model Selection
  * Sprint 64 Feature 64.6: Backend API Integration (2 SP)
+ * Sprint 70 Feature 70.7: Tool Use Configuration (3 SP)
  *
  * Features:
  * - Configure LLM models for each use case
@@ -12,11 +13,12 @@
  * - Backend API persistence with Redis (Sprint 64)
  * - One-time migration from localStorage to backend
  * - Backend-persisted community summary model config (Sprint 52)
+ * - Tool use enable/disable toggles (Sprint 70)
  * - Responsive design with dark mode support
  */
 
 import { useState, useEffect } from 'react';
-import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft, FileText } from 'lucide-react';
+import { Settings, RefreshCw, CheckCircle, AlertCircle, Cpu, ArrowLeft, FileText, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -64,6 +66,14 @@ interface OllamaModelsResponse {
 interface SummaryModelConfig {
   model_id: string;
   updated_at: string | null;
+}
+
+// Sprint 70 Feature 70.7: Tool Use Configuration
+interface ToolsConfig {
+  enable_chat_tools: boolean;
+  enable_research_tools: boolean;
+  updated_at: string | null;
+  version: number;
 }
 
 // ============================================================================
@@ -242,6 +252,16 @@ export function AdminLLMConfigPage() {
   const [isSavingSummaryModel, setIsSavingSummaryModel] = useState(false);
   const [summaryModelSaveStatus, setSummaryModelSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Sprint 70 Feature 70.7: Tool Use Configuration State
+  const [toolsConfig, setToolsConfig] = useState<ToolsConfig>({
+    enable_chat_tools: false,
+    enable_research_tools: false,
+    updated_at: null,
+    version: 1,
+  });
+  const [isSavingToolsConfig, setIsSavingToolsConfig] = useState(false);
+  const [toolsConfigSaveStatus, setToolsConfigSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   // Sprint 64 Feature 64.6: Fetch LLM config from backend
   const fetchLLMConfig = async () => {
     try {
@@ -313,7 +333,7 @@ export function AdminLLMConfigPage() {
     }
   };
 
-  // Fetch Ollama models, summary model config, and LLM config on mount
+  // Fetch Ollama models, summary model config, LLM config, and tools config on mount
   useEffect(() => {
     const initializeConfig = async () => {
       await migrateFromLocalStorage(); // Migrate first
@@ -322,6 +342,7 @@ export function AdminLLMConfigPage() {
 
     fetchOllamaModels();
     fetchSummaryModelConfig();
+    fetchToolsConfig();  // Sprint 70 Feature 70.7
     initializeConfig();
   }, []);
 
@@ -405,6 +426,54 @@ export function AdminLLMConfigPage() {
   const handleSummaryModelChange = (modelId: string) => {
     setSummaryModelConfig((prev) => ({ ...prev, model_id: modelId }));
     setSummaryModelSaveStatus('idle');
+  };
+
+  // Sprint 70 Feature 70.7: Fetch tools config from backend
+  const fetchToolsConfig = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/tools/config`);
+      if (response.ok) {
+        const data: ToolsConfig = await response.json();
+        setToolsConfig(data);
+        console.log('Tools config loaded from backend:', data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch tools config:', e);
+    }
+  };
+
+  // Sprint 70 Feature 70.7: Save tools config to backend
+  const handleSaveToolsConfig = async () => {
+    setIsSavingToolsConfig(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/tools/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(toolsConfig),
+      });
+
+      if (response.ok) {
+        const data: ToolsConfig = await response.json();
+        setToolsConfig(data);
+        setToolsConfigSaveStatus('success');
+        console.log('Tools config saved to backend:', data);
+        setTimeout(() => setToolsConfigSaveStatus('idle'), 3000);
+      } else {
+        setToolsConfigSaveStatus('error');
+      }
+    } catch (e) {
+      console.error('Failed to save tools config:', e);
+      setToolsConfigSaveStatus('error');
+    } finally {
+      setIsSavingToolsConfig(false);
+    }
+  };
+
+  const handleToolsConfigChange = (field: 'enable_chat_tools' | 'enable_research_tools', value: boolean) => {
+    setToolsConfig((prev) => ({ ...prev, [field]: value }));
+    setToolsConfigSaveStatus('idle');
   };
 
   const handleModelChange = (useCase: UseCaseType, modelId: string) => {
@@ -673,6 +742,106 @@ export function AdminLLMConfigPage() {
                   : 'Save Summary Model'}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Sprint 70 Feature 70.7: Tool Use Configuration */}
+        <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm p-4 mb-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <Wrench className="w-4 h-4" />
+            Tool Use Configuration
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Enable or disable MCP tool use in different modes. Changes take effect within 60 seconds
+            without service restart.
+          </p>
+
+          <div className="space-y-3">
+            {/* Chat Tools Toggle */}
+            <div
+              className="border dark:border-gray-700 rounded-md p-3"
+              data-testid="chat-tools-toggle"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Enable Tools in Normal Chat
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Allow MCP tool use (web search, file access) in chat conversations
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={toolsConfig.enable_chat_tools}
+                    onChange={(e) =>
+                      handleToolsConfigChange('enable_chat_tools', e.target.checked)
+                    }
+                    className="sr-only peer"
+                    data-testid="chat-tools-checkbox"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Research Tools Toggle */}
+            <div
+              className="border dark:border-gray-700 rounded-md p-3"
+              data-testid="research-tools-toggle"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Enable Tools in Deep Research
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Allow MCP tool use in deep research supervisor graph
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={toolsConfig.enable_research_tools}
+                    onChange={(e) =>
+                      handleToolsConfigChange('enable_research_tools', e.target.checked)
+                    }
+                    className="sr-only peer"
+                    data-testid="research-tools-checkbox"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {toolsConfig.updated_at && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
+              Last updated: {new Date(toolsConfig.updated_at).toLocaleString()}
+            </p>
+          )}
+
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={handleSaveToolsConfig}
+              disabled={isSavingToolsConfig}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              data-testid="save-tools-config-button"
+            >
+              {isSavingToolsConfig ? (
+                <RefreshCw className="w-3 h-3 animate-spin" />
+              ) : toolsConfigSaveStatus === 'success' ? (
+                <CheckCircle className="w-3 h-3" />
+              ) : toolsConfigSaveStatus === 'error' ? (
+                <AlertCircle className="w-3 h-3" />
+              ) : null}
+              {toolsConfigSaveStatus === 'success'
+                ? 'Saved!'
+                : toolsConfigSaveStatus === 'error'
+                ? 'Error'
+                : 'Save Tools Configuration'}
+            </button>
           </div>
         </div>
 
