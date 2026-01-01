@@ -8,9 +8,9 @@ three complexity tiers (fast, balanced, advanced), each corresponding to a
 different LLM model with different latency/quality tradeoffs.
 
 Model Tiers:
-    - FAST: llama3.2:3b (~150ms, simple factual queries)
-    - BALANCED: llama3.2:8b (~320ms, standard queries)
-    - ADVANCED: qwen2.5:14b (~800ms, complex multi-hop reasoning)
+    - FAST: nemotron-3-nano:latest (~150ms, simple factual queries)
+    - BALANCED: nemotron-3-nano:latest (~320ms, standard queries)
+    - ADVANCED: qwen3:8b (~800ms, complex multi-hop reasoning)
 
 Scoring Factors:
     1. Query Length (0-0.3): Longer queries tend to be more complex
@@ -47,9 +47,9 @@ class ComplexityTier(str, Enum):
     """Complexity tier for model selection.
 
     Each tier maps to a specific model with different latency/quality tradeoffs:
-        - FAST: llama3.2:3b (~150ms, 70% quality)
-        - BALANCED: llama3.2:8b (~320ms, 85% quality)
-        - ADVANCED: qwen2.5:14b (~800ms, 95% quality)
+        - FAST: nemotron-3-nano:latest (~150ms, 70% quality)
+        - BALANCED: nemotron-3-nano:latest (~320ms, 85% quality)
+        - ADVANCED: qwen3:8b (~800ms, 95% quality)
     """
 
     FAST = "fast"

@@ -7,19 +7,19 @@ It routes queries to one of three model tiers (fast, balanced, advanced) to
 optimize the latency/quality tradeoff.
 
 Model Configurations:
-    FAST (llama3.2:3b):
+    FAST (nemotron-3-nano:latest):
         - Latency: ~150ms p95
         - Use Cases: Simple factual queries, keyword searches
         - Quality: Medium (70%)
         - Max Tokens: 300
 
-    BALANCED (llama3.2:8b):
+    BALANCED (nemotron-3-nano:latest):
         - Latency: ~320ms p95
         - Use Cases: Standard queries, exploratory questions
         - Quality: High (85%)
         - Max Tokens: 500
 
-    ADVANCED (qwen2.5:14b):
+    ADVANCED (qwen3:8b):
         - Latency: ~800ms p95
         - Use Cases: Complex multi-hop reasoning, graph queries
         - Quality: Very High (95%)
@@ -37,7 +37,7 @@ Example:
         query="What is the capital of France?",
         intent="factual"
     )
-    # config == {"model": "llama3.2:3b", "max_tokens": 300, "temperature": 0.3}
+    # config == {"model": "nemotron-3-nano:latest", "max_tokens": 300, "temperature": 0.3}
 """
 
 import os
@@ -78,9 +78,11 @@ class ModelConfig:
 
 # Model configurations for each complexity tier
 # These can be overridden via environment variables
+# Sprint 69 Bug Fix: Updated defaults to use available Ollama models
+# (llama3.2:3b/8b don't exist, using nemotron-3-nano and qwen variants)
 DEFAULT_MODEL_CONFIGS: dict[ComplexityTier, ModelConfig] = {
     ComplexityTier.FAST: ModelConfig(
-        model=os.getenv("MODEL_FAST", "llama3.2:3b"),
+        model=os.getenv("MODEL_FAST", "nemotron-3-nano:latest"),
         max_tokens=int(os.getenv("MODEL_FAST_MAX_TOKENS", "300")),
         temperature=float(os.getenv("MODEL_FAST_TEMPERATURE", "0.3")),
         tier=ComplexityTier.FAST,
@@ -88,7 +90,7 @@ DEFAULT_MODEL_CONFIGS: dict[ComplexityTier, ModelConfig] = {
         quality_level=0.70,
     ),
     ComplexityTier.BALANCED: ModelConfig(
-        model=os.getenv("MODEL_BALANCED", "llama3.2:8b"),
+        model=os.getenv("MODEL_BALANCED", "nemotron-3-nano:latest"),
         max_tokens=int(os.getenv("MODEL_BALANCED_MAX_TOKENS", "500")),
         temperature=float(os.getenv("MODEL_BALANCED_TEMPERATURE", "0.5")),
         tier=ComplexityTier.BALANCED,
@@ -96,7 +98,7 @@ DEFAULT_MODEL_CONFIGS: dict[ComplexityTier, ModelConfig] = {
         quality_level=0.85,
     ),
     ComplexityTier.ADVANCED: ModelConfig(
-        model=os.getenv("MODEL_ADVANCED", "qwen2.5:14b"),
+        model=os.getenv("MODEL_ADVANCED", "qwen3:8b"),
         max_tokens=int(os.getenv("MODEL_ADVANCED_MAX_TOKENS", "800")),
         temperature=float(os.getenv("MODEL_ADVANCED_TEMPERATURE", "0.7")),
         tier=ComplexityTier.ADVANCED,
