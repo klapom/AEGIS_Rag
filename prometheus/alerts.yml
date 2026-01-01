@@ -1,0 +1,359 @@
+# =============================================================================
+# AegisRAG Prometheus Alert Rules
+# Sprint 69 - Feature 69.7: Production Monitoring & Observability
+# =============================================================================
+#
+# This file defines alerting rules for production monitoring of AegisRAG.
+# Alerts are evaluated by Prometheus and sent to Alertmanager for routing.
+#
+# Alert Severity Levels:
+#   - critical: Immediate action required (paging)
+#   - warning: Investigation needed (email/slack)
+#   - info: Informational (logging only)
+#
+# Author: Infrastructure Agent
+# Date: 2026-01-01
+# =============================================================================
+
+groups:
+  # ===========================================================================
+  # Query Performance Alerts
+  # ===========================================================================
+  - name: query_performance
+    interval: 30s
+    rules:
+      # High P95 Latency Alert
+      - alert: HighQueryLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(aegis_query_latency_seconds_bucket{stage="total"}[5m])) by (le)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: query_processing
+        annotations:
+          summary: "High query latency detected"
+          description: "P95 query latency is {{ $value | humanizeDuration }} (threshold: 1s)"
+          impact: "Users experiencing slow response times"
+          runbook: "Check LLM performance, database connections, and resource usage"
+
+      # Critical P95 Latency Alert
+      - alert: CriticalQueryLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(aegis_query_latency_seconds_bucket{stage="total"}[5m])) by (le)
+          ) > 5.0
+        for: 2m
+        labels:
+          severity: critical
+          component: query_processing
+        annotations:
+          summary: "Critical query latency detected"
+          description: "P95 query latency is {{ $value | humanizeDuration }} (threshold: 5s)"
+          impact: "Severe degradation of user experience"
+          runbook: "Immediate investigation required - check all system components"
+
+      # Retrieval Stage Latency
+      - alert: HighRetrievalLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(aegis_query_latency_seconds_bucket{stage="retrieval"}[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: retrieval
+        annotations:
+          summary: "High retrieval latency detected"
+          description: "P95 retrieval latency is {{ $value | humanizeDuration }} (threshold: 500ms)"
+          impact: "Vector/graph retrieval is slow"
+          runbook: "Check Qdrant and Neo4j performance, verify index health"
+
+      # Generation Stage Latency
+      - alert: HighGenerationLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(aegis_query_latency_seconds_bucket{stage="generation"}[5m])) by (le)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: llm
+        annotations:
+          summary: "High LLM generation latency detected"
+          description: "P95 generation latency is {{ $value | humanizeDuration }} (threshold: 2s)"
+          impact: "LLM response generation is slow"
+          runbook: "Check Ollama service, model loading status, GPU utilization"
+
+  # ===========================================================================
+  # Error Rate Alerts
+  # ===========================================================================
+  - name: error_rates
+    interval: 30s
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(aegis_errors_total[5m]))
+          /
+          sum(rate(aegis_queries_total[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          impact: "Increased failure rate affecting user queries"
+          runbook: "Check error logs, verify service health, review recent deployments"
+
+      # Critical Error Rate
+      - alert: CriticalErrorRate
+        expr: |
+          sum(rate(aegis_errors_total[5m]))
+          /
+          sum(rate(aegis_queries_total[5m])) > 0.20
+        for: 1m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+          impact: "Major service degradation - most queries failing"
+          runbook: "Immediate investigation - consider rollback if recent deployment"
+
+      # LLM Error Rate
+      - alert: HighLLMErrorRate
+        expr: |
+          sum(rate(aegis_errors_total{error_type="llm_error"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          component: llm
+        annotations:
+          summary: "High LLM error rate detected"
+          description: "LLM errors occurring at {{ $value }} per second"
+          impact: "LLM service experiencing errors"
+          runbook: "Check Ollama logs, verify model availability, check resource limits"
+
+      # Database Error Rate
+      - alert: HighDatabaseErrorRate
+        expr: |
+          sum(rate(aegis_errors_total{error_type="database_error"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database error rate detected"
+          description: "Database errors occurring at {{ $value }} per second"
+          impact: "Database connectivity or query issues"
+          runbook: "Check Qdrant/Neo4j/Redis logs and connectivity"
+
+  # ===========================================================================
+  # Memory Budget Alerts
+  # ===========================================================================
+  - name: memory_budget
+    interval: 60s
+    rules:
+      # Memory Budget Warning
+      - alert: MemoryBudgetHigh
+        expr: |
+          aegis_memory_facts_count > 100000
+        for: 5m
+        labels:
+          severity: warning
+          component: memory
+        annotations:
+          summary: "Memory fact count exceeding recommended limit"
+          description: "Memory contains {{ $value }} facts (threshold: 100k)"
+          impact: "Increased memory retrieval latency and storage costs"
+          runbook: "Review memory cleanup policies, consider archiving old facts"
+
+      # Memory Budget Critical
+      - alert: MemoryBudgetCritical
+        expr: |
+          aegis_memory_facts_count > 500000
+        for: 2m
+        labels:
+          severity: critical
+          component: memory
+        annotations:
+          summary: "Memory fact count critically high"
+          description: "Memory contains {{ $value }} facts (threshold: 500k)"
+          impact: "Severe performance degradation, potential OOM"
+          runbook: "Immediate memory cleanup required - archive or delete old facts"
+
+  # ===========================================================================
+  # Cache Performance Alerts
+  # ===========================================================================
+  - name: cache_performance
+    interval: 60s
+    rules:
+      # Low Cache Hit Rate
+      - alert: LowCacheHitRate
+        expr: |
+          sum(rate(aegis_cache_hits_total[5m]))
+          /
+          (sum(rate(aegis_cache_hits_total[5m])) + sum(rate(aegis_cache_misses_total[5m]))) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate detected"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 50%)"
+          impact: "Increased latency due to cache inefficiency"
+          runbook: "Review cache configuration, check Redis memory, verify TTL settings"
+
+  # ===========================================================================
+  # LLM Cost Alerts
+  # ===========================================================================
+  - name: llm_cost
+    interval: 300s
+    rules:
+      # Monthly Budget Warning (80%)
+      - alert: MonthlyBudgetWarning
+        expr: |
+          (monthly_spend_usd / monthly_budget_remaining_usd) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cost
+        annotations:
+          summary: "Monthly LLM budget at 80%"
+          description: "Spent ${{ $value }} of monthly budget"
+          impact: "Approaching budget limit - may need to throttle requests"
+          runbook: "Review spending patterns, optimize LLM usage, consider local models"
+
+      # Monthly Budget Exceeded
+      - alert: MonthlyBudgetExceeded
+        expr: |
+          monthly_budget_remaining_usd < 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cost
+        annotations:
+          summary: "Monthly LLM budget exceeded"
+          description: "Budget exceeded by ${{ $value | abs }}"
+          impact: "Budget limit reached - API calls may be blocked"
+          runbook: "Review usage, consider increasing budget or switching to local models"
+
+  # ===========================================================================
+  # Database Health Alerts
+  # ===========================================================================
+  - name: database_health
+    interval: 60s
+    rules:
+      # Qdrant Collection Size
+      - alert: QdrantCollectionLarge
+        expr: |
+          qdrant_points_count{collection="documents"} > 1000000
+        for: 10m
+        labels:
+          severity: warning
+          component: qdrant
+        annotations:
+          summary: "Qdrant collection size is large"
+          description: "Collection 'documents' has {{ $value }} points (threshold: 1M)"
+          impact: "Search performance may degrade with collection size"
+          runbook: "Consider collection partitioning or archiving old documents"
+
+      # Neo4j Graph Size
+      - alert: Neo4jGraphLarge
+        expr: |
+          neo4j_entities_count > 100000
+        for: 10m
+        labels:
+          severity: warning
+          component: neo4j
+        annotations:
+          summary: "Neo4j graph size is large"
+          description: "Graph has {{ $value }} entities (threshold: 100k)"
+          impact: "Complex graph queries may be slow"
+          runbook: "Review graph structure, optimize queries, consider subgraph extraction"
+
+  # ===========================================================================
+  # Service Availability Alerts
+  # ===========================================================================
+  - name: service_availability
+    interval: 30s
+    rules:
+      # Service Down
+      - alert: ServiceDown
+        expr: |
+          up{job="aegis-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "AegisRAG API service is down"
+          description: "API service has been unreachable for 1 minute"
+          impact: "Complete service outage - no queries can be processed"
+          runbook: "Check API container logs, verify health endpoint, restart if needed"
+
+      # Database Down
+      - alert: DatabaseDown
+        expr: |
+          up{job=~"qdrant|neo4j|redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database service is down"
+          description: "{{ $labels.job }} has been unreachable for 1 minute"
+          impact: "Service degradation - queries depending on {{ $labels.job }} will fail"
+          runbook: "Check {{ $labels.job }} container, verify network connectivity, check logs"
+
+      # LLM Service Down
+      - alert: LLMServiceDown
+        expr: |
+          up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: llm
+        annotations:
+          summary: "Ollama LLM service is down"
+          description: "Ollama has been unreachable for 2 minutes"
+          impact: "No LLM generation possible - queries will fail"
+          runbook: "Check Ollama container, verify GPU availability, check model loading"
+
+  # ===========================================================================
+  # Query Rate Alerts
+  # ===========================================================================
+  - name: query_rate
+    interval: 60s
+    rules:
+      # High Query Rate
+      - alert: HighQueryRate
+        expr: |
+          sum(rate(aegis_queries_total[5m])) > 50
+        for: 5m
+        labels:
+          severity: info
+          component: load
+        annotations:
+          summary: "High query rate detected"
+          description: "Query rate is {{ $value }} QPS (threshold: 50 QPS)"
+          impact: "High load - monitor for performance degradation"
+          runbook: "Monitor resource usage, consider scaling if sustained"
+
+      # Very Low Query Rate
+      - alert: VeryLowQueryRate
+        expr: |
+          sum(rate(aegis_queries_total[30m])) < 0.01
+        for: 30m
+        labels:
+          severity: warning
+          component: usage
+        annotations:
+          summary: "Very low query rate detected"
+          description: "Query rate is {{ $value }} QPS (expected: >0.01 QPS)"
+          impact: "Possible service issue or lack of usage"
+          runbook: "Verify service is accessible, check for client-side issues"

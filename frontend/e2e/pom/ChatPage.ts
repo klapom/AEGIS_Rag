@@ -221,4 +221,80 @@ export class ChatPage extends BasePage {
     const messages = await this.getAllMessages();
     return messages.join('\n\n');
   }
+
+  /**
+   * Sprint 69 Feature 69.1: Get conversation context
+   * Returns the last N messages for context verification
+   */
+  async getConversationContext(messageCount: number = 3): Promise<string[]> {
+    const allMessages = await this.getAllMessages();
+    return allMessages.slice(-messageCount);
+  }
+
+  /**
+   * Sprint 69 Feature 69.1: Verify follow-up maintains context
+   * Checks if response contains references to previous conversation
+   */
+  async verifyContextMaintained(contextKeywords: string[]): Promise<boolean> {
+    const lastResponse = await this.getLastMessage();
+    const lowerResponse = lastResponse.toLowerCase();
+
+    // Check if response contains any context keywords
+    return contextKeywords.some((keyword) => lowerResponse.includes(keyword.toLowerCase()));
+  }
+
+  /**
+   * Sprint 69 Feature 69.1: Get message by index
+   * Returns specific message from conversation history
+   */
+  async getMessageByIndex(index: number): Promise<string> {
+    const message = this.messages.nth(index);
+    await message.waitFor({ state: 'visible' });
+    return (await message.textContent()) || '';
+  }
+
+  /**
+   * Sprint 69 Feature 69.1: Wait for specific message count
+   * Waits until conversation has expected number of messages
+   */
+  async waitForMessageCount(expectedCount: number, timeout: number = 10000): Promise<void> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const count = await this.messages.count();
+      if (count >= expectedCount) return;
+      await this.page.waitForTimeout(500);
+    }
+    throw new Error(`Message count did not reach ${expectedCount} within ${timeout}ms`);
+  }
+
+  /**
+   * Sprint 69 Feature 69.1: Click follow-up and verify context preserved
+   * Enhanced follow-up click with context verification
+   */
+  async clickFollowupAndVerifyContext(
+    index: number,
+    expectedContextKeywords: string[]
+  ): Promise<void> {
+    // Get initial message count
+    const initialCount = await this.messages.count();
+
+    // Click follow-up
+    const question = this.followupQuestions.nth(index);
+    await question.click();
+
+    // Wait for response
+    await this.waitForResponse();
+
+    // Verify new messages added
+    await this.waitForMessageCount(initialCount + 2); // User message + assistant response
+
+    // Verify context maintained
+    const contextMaintained = await this.verifyContextMaintained(expectedContextKeywords);
+    if (!contextMaintained) {
+      const lastResponse = await this.getLastMessage();
+      throw new Error(
+        `Context not maintained. Expected keywords: ${expectedContextKeywords.join(', ')}. Got: ${lastResponse.substring(0, 200)}...`
+      );
+    }
+  }
 }

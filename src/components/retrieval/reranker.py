@@ -63,9 +63,10 @@ class AdaptiveWeights:
             raise ValueError(f"Weights must sum to 1.0, got {total}")
 
 
-# Intent-specific weight profiles (Sprint 67.8)
+# Intent-specific weight profiles (Sprint 67.8, updated Sprint 69.4)
 # Based on query intent, different retrieval signals are emphasized
-INTENT_RERANK_WEIGHTS: dict[str, AdaptiveWeights] = {
+# These are default weights - can be overridden by learned weights from file
+DEFAULT_INTENT_RERANK_WEIGHTS: dict[str, AdaptiveWeights] = {
     # Factual: High semantic precision, low keyword, minimal recency
     # Example: "What is OMNITRACKER?" → Need precise definition
     "factual": AdaptiveWeights(semantic_weight=0.7, keyword_weight=0.2, recency_weight=0.1),
@@ -81,6 +82,97 @@ INTENT_RERANK_WEIGHTS: dict[str, AdaptiveWeights] = {
     # Default fallback (balanced)
     "default": AdaptiveWeights(semantic_weight=0.6, keyword_weight=0.3, recency_weight=0.1),
 }
+
+# Sprint 69.4: Learned weights (loaded at startup if available)
+INTENT_RERANK_WEIGHTS: dict[str, AdaptiveWeights] = {}
+
+
+def _load_learned_weights(weights_path: str = "data/learned_rerank_weights.json") -> None:
+    """Load learned reranking weights from JSON file.
+
+    Sprint 69 Feature 69.4: Learned Adaptive Reranker Weights
+
+    This function loads optimized weights trained on trace data. If the file
+    exists, learned weights override default weights. Otherwise, defaults are used.
+
+    Args:
+        weights_path: Path to learned weights JSON file
+
+    Side Effects:
+        Updates global INTENT_RERANK_WEIGHTS dictionary
+
+    Example:
+        >>> _load_learned_weights()
+        # Loads weights from data/learned_rerank_weights.json
+    """
+    global INTENT_RERANK_WEIGHTS
+
+    weights_file = Path(weights_path)
+
+    if not weights_file.exists():
+        logger.info(
+            "learned_weights_not_found_using_defaults",
+            weights_path=weights_path,
+        )
+        # Use default weights
+        INTENT_RERANK_WEIGHTS = DEFAULT_INTENT_RERANK_WEIGHTS.copy()
+        return
+
+    try:
+        import json
+
+        with open(weights_file, encoding="utf-8") as f:
+            learned_weights_dict = json.load(f)
+
+        # Convert JSON to AdaptiveWeights objects
+        loaded_weights: dict[str, AdaptiveWeights] = {}
+        for intent, weight_config in learned_weights_dict.items():
+            try:
+                weights = AdaptiveWeights(
+                    semantic_weight=weight_config["semantic_weight"],
+                    keyword_weight=weight_config["keyword_weight"],
+                    recency_weight=weight_config["recency_weight"],
+                )
+                loaded_weights[intent] = weights
+                logger.info(
+                    "loaded_learned_weights_for_intent",
+                    intent=intent,
+                    semantic=weights.semantic_weight,
+                    keyword=weights.keyword_weight,
+                    recency=weights.recency_weight,
+                    ndcg_at_5=weight_config.get("ndcg_at_5"),
+                )
+            except (KeyError, ValueError) as e:
+                logger.warning(
+                    "skipping_invalid_learned_weights",
+                    intent=intent,
+                    error=str(e),
+                )
+                continue
+
+        # Merge learned weights with defaults (learned takes precedence)
+        INTENT_RERANK_WEIGHTS = DEFAULT_INTENT_RERANK_WEIGHTS.copy()
+        INTENT_RERANK_WEIGHTS.update(loaded_weights)
+
+        logger.info(
+            "learned_weights_loaded",
+            weights_path=weights_path,
+            num_learned_intents=len(loaded_weights),
+            total_intents=len(INTENT_RERANK_WEIGHTS),
+        )
+
+    except (json.JSONDecodeError, OSError) as e:
+        logger.error(
+            "failed_to_load_learned_weights_using_defaults",
+            weights_path=weights_path,
+            error=str(e),
+        )
+        # Fallback to defaults
+        INTENT_RERANK_WEIGHTS = DEFAULT_INTENT_RERANK_WEIGHTS.copy()
+
+
+# Sprint 69.4: Load learned weights at module import time
+_load_learned_weights()
 
 
 class RerankResult(BaseModel):

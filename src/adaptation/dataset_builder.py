@@ -120,6 +120,52 @@ class RewriteExample:
 
 
 @dataclass
+class QAExample:
+    """Question-answering training example.
+
+    Attributes:
+        question: User query/question
+        context: Retrieved context (concatenated chunks)
+        answer: Generated answer
+        quality_score: Quality score from eval harness (0.0-1.0)
+        citations: List of source chunk IDs cited
+        metadata: Additional trace metadata
+    """
+
+    question: str
+    context: str
+    answer: str
+    quality_score: float
+    citations: list[str]
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass
+class GraphExample:
+    """Graph RAG training example.
+
+    Attributes:
+        query: User query
+        cypher: Generated Cypher query (if any)
+        entities: Extracted entities from query
+        relations: Extracted relations from query
+        graph_results: Graph traversal results
+        answer: Generated answer incorporating graph data
+        quality_score: Quality score from eval harness (0.0-1.0)
+        metadata: Additional trace metadata
+    """
+
+    query: str
+    cypher: str | None
+    entities: list[str]
+    relations: list[str]
+    graph_results: list[dict[str, Any]]
+    answer: str
+    quality_score: float
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass
 class DatasetStats:
     """Dataset statistics for reporting.
 
@@ -160,16 +206,23 @@ class DatasetBuilder:
         ... )
     """
 
-    def __init__(self, trace_path: str = "data/traces/traces.jsonl") -> None:
+    def __init__(
+        self,
+        trace_path: str = "data/traces/traces.jsonl",
+        eval_harness: Any | None = None,
+    ) -> None:
         """Initialize dataset builder.
 
         Args:
             trace_path: Path to UnifiedTracer JSONL file or directory.
                        If directory, loads all .jsonl files.
+            eval_harness: Optional EvalHarness instance for quality scoring.
+                         If None, quality scores are read from traces.
         """
         self.logger = structlog.get_logger(__name__)
         self.trace_path = Path(trace_path)
         self._trace_cache: list[dict[str, Any]] = []
+        self._eval_harness = eval_harness
 
     async def build_intent_dataset(
         self,
@@ -381,6 +434,302 @@ class DatasetBuilder:
             self.logger.error("rerank_dataset_build_failed", error=str(e), exc_info=True)
             raise DatasetBuilderError(
                 operation="build_rerank_dataset", reason=str(e)
+            ) from e
+
+    async def build_qa_dataset(
+        self,
+        min_quality: float = 0.8,
+        output_path: str = "data/datasets/v1/qa_dataset.jsonl",
+        max_examples: int = 10000,
+    ) -> list[QAExample]:
+        """Build question-answering dataset from traces.
+
+        Extracts (question, context, answer) triples from high-quality traces.
+        Useful for fine-tuning generative models or RAG systems.
+
+        Args:
+            min_quality: Minimum quality score (0.0-1.0) to include trace
+            output_path: Output file path for JSONL dataset
+            max_examples: Maximum number of examples to include
+
+        Returns:
+            List of QAExample objects
+
+        Raises:
+            DatasetBuilderError: If dataset building fails
+
+        Example:
+            >>> examples = await builder.build_qa_dataset(
+            ...     min_quality=0.85,
+            ...     output_path="data/qa_v1.jsonl",
+            ...     max_examples=5000
+            ... )
+            >>> print(f"Generated {len(examples)} QA examples")
+        """
+        try:
+            # 1. Load traces
+            self.logger.info(
+                "loading_traces_for_qa",
+                trace_path=str(self.trace_path),
+                min_quality=min_quality,
+            )
+            traces = await self._load_traces()
+
+            if not traces:
+                self.logger.warning("no_traces_found", trace_path=str(self.trace_path))
+                return []
+
+            # 2. Filter by quality threshold and score with EvalHarness if available
+            high_quality = []
+            for trace in traces:
+                quality_score = trace.get("metrics", {}).get("quality_score", 0.0)
+
+                # Use EvalHarness if available and no quality score in trace
+                if quality_score == 0.0 and self._eval_harness:
+                    try:
+                        query = trace.get("query", {}).get("original", "")
+                        answer = trace.get("answer", {}).get("text", "")
+                        sources = trace.get("evidence", {}).get("citations", [])
+
+                        results = await self._eval_harness.evaluate_response(
+                            query=query, answer=answer, sources=sources
+                        )
+                        quality_score = sum(r.score for r in results) / len(results)
+                        trace["metrics"]["quality_score"] = quality_score
+                    except Exception as e:
+                        self.logger.warning(
+                            "eval_harness_failed",
+                            trace_id=trace.get("request_id"),
+                            error=str(e),
+                        )
+
+                if quality_score >= min_quality:
+                    high_quality.append(trace)
+
+            self.logger.info(
+                "traces_filtered_for_qa",
+                total_traces=len(traces),
+                high_quality_traces=len(high_quality),
+                threshold=min_quality,
+            )
+
+            # 3. Extract QA examples
+            examples = []
+            for trace in high_quality[:max_examples]:
+                try:
+                    # Get question
+                    question = trace.get("query", {}).get("original", "")
+
+                    # Get context from selected chunks
+                    chunks = trace.get("evidence", {}).get("selected_chunks", [])
+                    context = "\n\n".join(
+                        chunk.get("text", chunk.get("content", "")) for chunk in chunks
+                    )
+
+                    # Get answer
+                    answer = trace.get("answer", {}).get("text", "")
+
+                    # Get citations
+                    citations = trace.get("evidence", {}).get("citations", [])
+                    # Handle both string IDs and dict citations
+                    citation_ids = [
+                        c if isinstance(c, str) else c.get("chunk_id", "")
+                        for c in citations
+                    ]
+
+                    example = QAExample(
+                        question=question,
+                        context=context,
+                        answer=answer,
+                        quality_score=trace.get("metrics", {}).get("quality_score", 0.0),
+                        citations=citation_ids,
+                        metadata={
+                            "request_id": trace.get("request_id"),
+                            "timestamp": trace.get("timestamp"),
+                            "model": trace.get("answer", {}).get("model"),
+                            "latency_ms": trace.get("metrics", {}).get("total_latency_ms"),
+                        },
+                    )
+                    examples.append(example)
+                except (KeyError, ValueError) as e:
+                    self.logger.warning(
+                        "qa_trace_parsing_failed",
+                        trace_id=trace.get("request_id", "unknown"),
+                        error=str(e),
+                    )
+                    continue
+
+            # 4. Save dataset
+            await self._save_qa_dataset(examples, output_path)
+
+            self.logger.info(
+                "qa_dataset_built",
+                total_examples=len(examples),
+                avg_quality_score=(
+                    sum(e.quality_score for e in examples) / len(examples) if examples else 0.0
+                ),
+                output_path=output_path,
+            )
+
+            return examples
+
+        except Exception as e:
+            self.logger.error("qa_dataset_build_failed", error=str(e), exc_info=True)
+            raise DatasetBuilderError(operation="build_qa_dataset", reason=str(e)) from e
+
+    async def build_graph_dataset(
+        self,
+        min_quality: float = 0.8,
+        output_path: str = "data/datasets/v1/graph_dataset.jsonl",
+        max_examples: int = 10000,
+    ) -> list[GraphExample]:
+        """Build graph RAG dataset from traces with graph queries.
+
+        Extracts (query, cypher, entities, graph_results, answer) examples.
+        Useful for training graph query generation and entity extraction.
+
+        Args:
+            min_quality: Minimum quality score (0.0-1.0) to include trace
+            output_path: Output file path for JSONL dataset
+            max_examples: Maximum number of examples to include
+
+        Returns:
+            List of GraphExample objects
+
+        Raises:
+            DatasetBuilderError: If dataset building fails
+
+        Example:
+            >>> examples = await builder.build_graph_dataset(
+            ...     min_quality=0.85,
+            ...     output_path="data/graph_v1.jsonl"
+            ... )
+            >>> print(f"Generated {len(examples)} graph examples")
+        """
+        try:
+            # 1. Load traces
+            self.logger.info(
+                "loading_traces_for_graph",
+                trace_path=str(self.trace_path),
+                min_quality=min_quality,
+            )
+            traces = await self._load_traces()
+
+            if not traces:
+                self.logger.warning("no_traces_found", trace_path=str(self.trace_path))
+                return []
+
+            # 2. Filter by quality and graph query presence
+            high_quality_graph = []
+            for trace in traces:
+                # Skip traces without graph queries
+                if "graph_query" not in trace or not trace.get("retrieval", {}).get(
+                    "graph_local"
+                ):
+                    continue
+
+                quality_score = trace.get("metrics", {}).get("quality_score", 0.0)
+
+                # Use EvalHarness if available and no quality score
+                if quality_score == 0.0 and self._eval_harness:
+                    try:
+                        query = trace.get("query", {}).get("original", "")
+                        answer = trace.get("answer", {}).get("text", "")
+                        sources = trace.get("evidence", {}).get("citations", [])
+
+                        results = await self._eval_harness.evaluate_response(
+                            query=query, answer=answer, sources=sources
+                        )
+                        quality_score = sum(r.score for r in results) / len(results)
+                        trace["metrics"]["quality_score"] = quality_score
+                    except Exception as e:
+                        self.logger.warning(
+                            "eval_harness_failed",
+                            trace_id=trace.get("request_id"),
+                            error=str(e),
+                        )
+
+                if quality_score >= min_quality:
+                    high_quality_graph.append(trace)
+
+            self.logger.info(
+                "traces_filtered_for_graph",
+                total_traces=len(traces),
+                graph_traces=len([t for t in traces if "graph_query" in t]),
+                high_quality_graph_traces=len(high_quality_graph),
+                threshold=min_quality,
+            )
+
+            # 3. Extract graph examples
+            examples = []
+            for trace in high_quality_graph[:max_examples]:
+                try:
+                    query = trace.get("query", {}).get("original", "")
+                    graph_query_data = trace.get("graph_query", {})
+
+                    # Get Cypher query if available
+                    cypher = graph_query_data.get("cypher")
+
+                    # Get entities and relations
+                    entities = graph_query_data.get("entities", [])
+                    relations = graph_query_data.get("relations", [])
+
+                    # Get graph results
+                    graph_local = trace.get("retrieval", {}).get("graph_local", {})
+                    graph_global = trace.get("retrieval", {}).get("graph_global", {})
+
+                    graph_results = []
+                    if graph_local.get("results"):
+                        graph_results.extend(graph_local["results"])
+                    if graph_global.get("results"):
+                        graph_results.extend(graph_global["results"])
+
+                    # Get answer
+                    answer = trace.get("answer", {}).get("text", "")
+
+                    example = GraphExample(
+                        query=query,
+                        cypher=cypher,
+                        entities=entities,
+                        relations=relations,
+                        graph_results=graph_results,
+                        answer=answer,
+                        quality_score=trace.get("metrics", {}).get("quality_score", 0.0),
+                        metadata={
+                            "request_id": trace.get("request_id"),
+                            "timestamp": trace.get("timestamp"),
+                            "graph_local_count": len(graph_local.get("results", [])),
+                            "graph_global_count": len(graph_global.get("results", [])),
+                            "model": trace.get("answer", {}).get("model"),
+                        },
+                    )
+                    examples.append(example)
+                except (KeyError, ValueError) as e:
+                    self.logger.warning(
+                        "graph_trace_parsing_failed",
+                        trace_id=trace.get("request_id", "unknown"),
+                        error=str(e),
+                    )
+                    continue
+
+            # 4. Save dataset
+            await self._save_graph_dataset(examples, output_path)
+
+            self.logger.info(
+                "graph_dataset_built",
+                total_examples=len(examples),
+                avg_quality_score=(
+                    sum(e.quality_score for e in examples) / len(examples) if examples else 0.0
+                ),
+                output_path=output_path,
+            )
+
+            return examples
+
+        except Exception as e:
+            self.logger.error("graph_dataset_build_failed", error=str(e), exc_info=True)
+            raise DatasetBuilderError(
+                operation="build_graph_dataset", reason=str(e)
             ) from e
 
     async def _load_traces(self) -> list[dict[str, Any]]:
@@ -671,6 +1020,40 @@ class DatasetBuilder:
 
         self.logger.info("rerank_dataset_saved", output_path=output_path, count=len(examples))
 
+    async def _save_qa_dataset(self, examples: list[QAExample], output_path: str) -> None:
+        """Save QA dataset to JSONL format.
+
+        Args:
+            examples: List of QA examples
+            output_path: Output file path
+        """
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output, "w") as f:
+            for ex in examples:
+                f.write(json.dumps(asdict(ex)) + "\n")
+
+        self.logger.info("qa_dataset_saved", output_path=output_path, count=len(examples))
+
+    async def _save_graph_dataset(
+        self, examples: list[GraphExample], output_path: str
+    ) -> None:
+        """Save graph dataset to JSONL format.
+
+        Args:
+            examples: List of graph examples
+            output_path: Output file path
+        """
+        output = Path(output_path)
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output, "w") as f:
+            for ex in examples:
+                f.write(json.dumps(asdict(ex)) + "\n")
+
+        self.logger.info("graph_dataset_saved", output_path=output_path, count=len(examples))
+
     def _compute_intent_stats(
         self, examples: list[TrainingExample], total_traces: int
     ) -> DatasetStats:
@@ -699,3 +1082,82 @@ class DatasetBuilder:
             avg_quality_score=avg_quality,
             query_duplicates_removed=0,  # Updated in build_intent_dataset
         )
+
+    async def export_to_parquet(
+        self,
+        examples: list[Any],
+        dataset_type: str,
+        output_dir: str = "data/datasets",
+        version: str = "v1",
+    ) -> str:
+        """Export dataset to Parquet format with versioning.
+
+        Args:
+            examples: List of dataset examples (any dataclass type)
+            dataset_type: Dataset type (intent, rerank, qa, graph)
+            output_dir: Base output directory
+            version: Dataset version (e.g., v1, v2)
+
+        Returns:
+            Path to exported dataset directory
+
+        Example:
+            >>> builder = DatasetBuilder()
+            >>> examples = await builder.build_qa_dataset(min_quality=0.8)
+            >>> path = await builder.export_to_parquet(examples, "qa", version="v1")
+            >>> print(f"Dataset exported to {path}")
+        """
+        try:
+            import pandas as pd
+        except ImportError:
+            raise DatasetBuilderError(
+                operation="export_to_parquet",
+                reason="pandas is required for Parquet export. Install with: pip install pandas pyarrow",
+            )
+
+        if not examples:
+            self.logger.warning("no_examples_to_export", dataset_type=dataset_type)
+            return ""
+
+        # Create versioned directory
+        export_path = Path(output_dir) / dataset_type / version
+        export_path.mkdir(parents=True, exist_ok=True)
+
+        # Convert examples to DataFrame
+        data = [asdict(ex) for ex in examples]
+        df = pd.DataFrame(data)
+
+        # Save as Parquet
+        parquet_file = export_path / "data.parquet"
+        df.to_parquet(parquet_file, index=False, engine="pyarrow")
+
+        # Compute statistics
+        avg_quality = 0.0
+        if "quality_score" in df.columns:
+            avg_quality = df["quality_score"].mean()
+
+        # Save metadata
+        metadata = {
+            "name": dataset_type,
+            "version": version,
+            "created_at": datetime.now().isoformat(),
+            "num_examples": len(examples),
+            "columns": list(df.columns),
+            "avg_quality_score": float(avg_quality),
+            "source_traces": str(self.trace_path),
+        }
+
+        metadata_file = export_path / "metadata.json"
+        with open(metadata_file, "w") as f:
+            json.dump(metadata, f, indent=2)
+
+        self.logger.info(
+            "dataset_exported_to_parquet",
+            dataset_type=dataset_type,
+            version=version,
+            path=str(export_path),
+            num_examples=len(examples),
+            avg_quality=avg_quality,
+        )
+
+        return str(export_path)

@@ -62,24 +62,65 @@ class AnswerGenerator:
             proxy="AegisLLMProxy",
         )
 
-    async def _get_llm_model(self) -> str:
-        """Get LLM model from explicit config or Admin UI configuration.
+    async def _get_llm_model(
+        self,
+        query: str | None = None,
+        intent: str | None = None,
+    ) -> str:
+        """Get LLM model from explicit config, model router, or Admin UI configuration.
 
-        Sprint 64 Feature 64.6: Lazy fetch from Admin UI config
+        Sprint 64 Feature 64.6: LLM model respects Admin UI configuration
+        Sprint 69 Feature 69.3: Model selection based on query complexity
 
-        Returns the explicitly provided model if set, otherwise fetches from
-        the centralized LLM config service (respecting Admin UI settings).
+        Returns the explicitly provided model if set, otherwise uses the model router
+        to select an appropriate model based on query complexity, falling back to
+        the centralized LLM config service if model selection is disabled.
+
+        Args:
+            query: User query (for complexity-based model selection)
+            intent: Query intent (for complexity-based model selection)
 
         Returns:
-            Model name (without provider prefix, e.g., "qwen3:32b")
+            Model name (without provider prefix, e.g., "qwen3:32b" or "llama3.2:3b")
 
         Example:
             >>> generator = AnswerGenerator()  # No explicit model
-            >>> model = await generator._get_llm_model()
-            >>> # Returns "qwen3:32b" from Admin UI config, not hardcoded "llama3.2:8b"
+            >>> # Simple query → fast model
+            >>> model = await generator._get_llm_model("What is RAG?", "factual")
+            >>> # Returns "llama3.2:3b" (fast tier)
+            >>> # Complex query → advanced model
+            >>> model = await generator._get_llm_model("Explain graph reasoning", "exploratory")
+            >>> # Returns "qwen2.5:14b" (advanced tier)
         """
         if self._explicit_model_name:
             return self._explicit_model_name
+
+        # Sprint 69 Feature 69.3: Use model router for complexity-based selection
+        # Only if query and intent are provided
+        if query and intent:
+            try:
+                from src.domains.llm_integration.model_router import get_model_router
+
+                router = get_model_router()
+                model_config = router.select_model(query, intent)
+
+                logger.debug(
+                    "using_model_router_selection",
+                    model=model_config["model"],
+                    tier=model_config["tier"],
+                    complexity_score=model_config["complexity_score"],
+                    expected_latency_ms=model_config["expected_latency_ms"],
+                )
+
+                return model_config["model"]
+
+            except Exception as e:
+                logger.warning(
+                    "model_router_selection_failed",
+                    error=str(e),
+                    fallback="admin_ui_config",
+                )
+                # Fall through to Admin UI config
 
         # Fetch from Admin UI config
         from src.components.llm_config import LLMUseCase, get_llm_config_service
@@ -100,13 +141,17 @@ class AnswerGenerator:
         query: str,
         contexts: list[dict[str, Any]],
         mode: str = "simple",
+        intent: str | None = None,
     ) -> str:
         """Generate answer from query and retrieved contexts.
+
+        Sprint 69 Feature 69.3: Added intent parameter for model selection
 
         Args:
             query: User question
             contexts: Retrieved document contexts (list of dicts with 'text' and 'source' keys)
             mode: "simple" or "multi_hop" reasoning mode
+            intent: Query intent for complexity-based model selection (optional)
 
         Returns:
             Generated answer string
@@ -129,8 +174,9 @@ class AnswerGenerator:
         logger.debug("generating_answer", query=query[:100], contexts_count=len(contexts))
 
         try:
-            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
-            model_name = await self._get_llm_model()
+            # Sprint 69 Feature 69.3: Get model with complexity-based selection
+            # Pass query and intent for model router
+            model_name = await self._get_llm_model(query=query, intent=intent)
 
             # Sprint 23: Use AegisLLMProxy for generation
             task = LLMTask(
@@ -139,7 +185,7 @@ class AnswerGenerator:
                 quality_requirement=QualityRequirement.MEDIUM,
                 complexity=complexity,
                 temperature=self.temperature,
-                model_local=model_name,  # Uses Admin UI config (not hardcoded settings.*)
+                model_local=model_name,  # Uses model router or Admin UI config
             )
 
             response = await self.proxy.generate(task)
@@ -153,6 +199,7 @@ class AnswerGenerator:
                 provider=response.provider,
                 cost_usd=response.cost_usd,
                 latency_ms=response.latency_ms,
+                model=model_name,
             )
 
             return answer

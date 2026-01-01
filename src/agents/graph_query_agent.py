@@ -5,6 +5,7 @@ and executes graph-based knowledge retrieval using dual-level search.
 
 Sprint 5: Feature 5.5 - Graph Query Agent
 Sprint 48 Feature 48.3: Agent Node Instrumentation (13 SP) - Graph Query
+Sprint 69 Feature 69.5: Query Rewriter v2 - Graph-Intent Extraction (8 SP)
 Integrates with Sprint 4 Router and Sprint 5 DualLevelSearch.
 """
 
@@ -18,6 +19,10 @@ from src.agents.retry import retry_on_failure
 from src.components.graph_rag.section_communities import (
     SectionCommunityService,
     get_section_community_service,
+)
+from src.components.retrieval.query_rewriter_v2 import (
+    QueryRewriterV2,
+    get_query_rewriter_v2,
 )
 from src.core.config import settings
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
@@ -202,23 +207,28 @@ class GraphQueryAgent(BaseAgent):
         name: str = "graph_query_agent",
         dual_level_search: DualLevelSearch | None = None,
         community_service: SectionCommunityService | None = None,
+        query_rewriter_v2: QueryRewriterV2 | None = None,
     ) -> None:
         """Initialize Graph Query Agent.
 
         Sprint 68 Feature 68.5: Added section community service.
+        Sprint 69 Feature 69.5: Added query rewriter v2 for graph intent extraction.
 
         Args:
             name: Agent name (default: "graph_query_agent")
             dual_level_search: DualLevelSearch instance (optional, uses singleton if None)
             community_service: SectionCommunityService instance (optional, uses singleton if None)
+            query_rewriter_v2: QueryRewriterV2 instance (optional, uses singleton if None)
         """
         super().__init__(name=name)
         self.dual_level_search = dual_level_search or get_dual_level_search()
         self.community_service = community_service or get_section_community_service()
+        self.query_rewriter_v2 = query_rewriter_v2 or get_query_rewriter_v2()
 
         self.logger.info(
             "graph_query_agent_initialized",
             agent=name,
+            has_query_rewriter_v2=query_rewriter_v2 is not None,
         )
 
     @retry_on_failure(max_attempts=3, min_wait=1.0, max_wait=10.0)
@@ -259,6 +269,27 @@ class GraphQueryAgent(BaseAgent):
         self._add_trace(state, "processing graph query")
 
         try:
+            # Sprint 69 Feature 69.5: Extract graph intents for targeted traversal
+            graph_intent_result = None
+            try:
+                graph_intent_result = await self.query_rewriter_v2.extract_graph_intents(query)
+                self.logger.info(
+                    "graph_intents_extracted",
+                    query=query[:50],
+                    intents=graph_intent_result.graph_intents,
+                    entities=graph_intent_result.entities_mentioned,
+                    cypher_hints_count=len(graph_intent_result.cypher_hints),
+                    confidence=graph_intent_result.confidence,
+                    latency_ms=round(graph_intent_result.latency_ms, 2),
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "graph_intent_extraction_failed",
+                    query=query[:50],
+                    error=str(e),
+                    fallback="standard_graph_search",
+                )
+
             # Sprint 68 Feature 68.5: Check if community search should be used
             use_community_search = should_use_community_search(query)
 
@@ -398,6 +429,22 @@ class GraphQueryAgent(BaseAgent):
                 "metadata": {
                     **graph_result.metadata,
                     "latency_ms": latency_ms,
+                    # Sprint 69 Feature 69.5: Add graph intent metadata
+                    "graph_intents": (
+                        graph_intent_result.graph_intents if graph_intent_result else []
+                    ),
+                    "entities_mentioned": (
+                        graph_intent_result.entities_mentioned if graph_intent_result else []
+                    ),
+                    "cypher_hints": (
+                        graph_intent_result.cypher_hints if graph_intent_result else []
+                    ),
+                    "intent_confidence": (
+                        graph_intent_result.confidence if graph_intent_result else 0.0
+                    ),
+                    "intent_extraction_latency_ms": (
+                        round(graph_intent_result.latency_ms, 2) if graph_intent_result else 0.0
+                    ),
                 },
             }
 

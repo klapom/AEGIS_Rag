@@ -272,3 +272,136 @@ def update_neo4j_metrics(entities_count: int, relations_count: int) -> None:
     """
     neo4j_entities_count.set(entities_count)
     neo4j_relations_count.set(relations_count)
+
+
+# ============================================================================
+# SPRINT 69 - FEATURE 69.7: PRODUCTION MONITORING & OBSERVABILITY
+# ============================================================================
+
+# Query metrics
+query_total = Counter(
+    "aegis_queries_total",
+    "Total number of queries processed",
+    ["intent", "model"],
+)
+
+query_latency_seconds = Histogram(
+    "aegis_query_latency_seconds",
+    "Query processing latency in seconds",
+    ["stage"],  # stage: intent_classification, retrieval, generation, total
+    buckets=(0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, float("inf")),
+)
+
+# Cache metrics
+cache_hits_total = Counter(
+    "aegis_cache_hits_total",
+    "Total cache hits",
+    ["cache_type"],  # cache_type: redis, embedding, llm_config
+)
+
+cache_misses_total = Counter(
+    "aegis_cache_misses_total",
+    "Total cache misses",
+    ["cache_type"],
+)
+
+# Memory metrics (Graphiti temporal memory)
+memory_facts_count = Gauge(
+    "aegis_memory_facts_count",
+    "Number of facts in temporal memory",
+    ["fact_type"],  # fact_type: episodic, semantic, entity
+)
+
+# Error metrics
+error_total = Counter(
+    "aegis_errors_total",
+    "Total errors by type",
+    ["error_type"],  # error_type: llm_error, database_error, timeout, validation_error
+)
+
+
+def track_query(
+    intent: str,
+    model: str,
+    stage_latencies: dict[str, float],
+) -> None:
+    """Track a complete query with latencies by stage.
+
+    Args:
+        intent: Query intent (vector_search, graph_reasoning, hybrid, memory_retrieval)
+        model: LLM model used for generation
+        stage_latencies: Dict mapping stage name to latency in seconds
+            Example: {
+                "intent_classification": 0.05,
+                "retrieval": 0.3,
+                "generation": 0.8,
+                "total": 1.15
+            }
+
+    Example:
+        track_query(
+            intent="hybrid",
+            model="nemotron-no-think:latest",
+            stage_latencies={
+                "intent_classification": 0.05,
+                "retrieval": 0.3,
+                "generation": 0.8,
+                "total": 1.15
+            }
+        )
+    """
+    # Increment query counter
+    query_total.labels(intent=intent, model=model).inc()
+
+    # Record latencies for each stage
+    for stage, latency in stage_latencies.items():
+        query_latency_seconds.labels(stage=stage).observe(latency)
+
+
+def track_cache_hit(cache_type: str) -> None:
+    """Track a cache hit.
+
+    Args:
+        cache_type: Type of cache (redis, embedding, llm_config)
+
+    Example:
+        track_cache_hit("redis")
+    """
+    cache_hits_total.labels(cache_type=cache_type).inc()
+
+
+def track_cache_miss(cache_type: str) -> None:
+    """Track a cache miss.
+
+    Args:
+        cache_type: Type of cache (redis, embedding, llm_config)
+
+    Example:
+        track_cache_miss("embedding")
+    """
+    cache_misses_total.labels(cache_type=cache_type).inc()
+
+
+def update_memory_facts(fact_type: str, count: int) -> None:
+    """Update memory facts count.
+
+    Args:
+        fact_type: Type of fact (episodic, semantic, entity)
+        count: Number of facts
+
+    Example:
+        update_memory_facts("episodic", 1234)
+    """
+    memory_facts_count.labels(fact_type=fact_type).set(count)
+
+
+def track_error(error_type: str) -> None:
+    """Track an error occurrence.
+
+    Args:
+        error_type: Type of error (llm_error, database_error, timeout, validation_error)
+
+    Example:
+        track_error("timeout")
+    """
+    error_total.labels(error_type=error_type).inc()
