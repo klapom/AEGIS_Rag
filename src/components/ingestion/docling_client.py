@@ -71,6 +71,7 @@ import io
 import re
 import subprocess
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -957,6 +958,11 @@ class DoclingClient:
                 results.append(parsed)
                 logger.debug("docling_batch_parse_progress", current=idx + 1, total=len(file_paths))
 
+                # Sprint 68 Feature 68.3: Explicit memory cleanup between documents
+                import gc
+
+                gc.collect()  # Free memory from previous document
+
             except Exception as e:
                 logger.error(
                     "docling_batch_parse_file_error",
@@ -977,6 +983,140 @@ class DoclingClient:
         )
 
         return results
+
+    async def parse_document_streaming(
+        self, file_path: Path, chunk_size_pages: int = 10
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Parse document in streaming mode (page-by-page) to reduce memory footprint.
+
+        Sprint 68 Feature 68.3: Streaming parser for large PDFs (>50MB).
+
+        This method processes large documents in chunks to avoid memory spikes.
+        Each chunk contains N pages and is yielded as soon as it's processed.
+
+        Args:
+            file_path: Path to document file
+            chunk_size_pages: Number of pages per chunk (default: 10)
+
+        Yields:
+            Dictionary with chunk data:
+            - page_start: First page number in chunk
+            - page_end: Last page number in chunk
+            - text: Extracted text for this chunk
+            - tables: Tables in this chunk
+            - images: Images in this chunk
+            - is_final: True if this is the last chunk
+
+        Raises:
+            IngestionError: If parsing fails
+
+        Example:
+            >>> async for chunk in client.parse_document_streaming(Path("large.pdf")):
+            ...     print(f"Pages {chunk['page_start']}-{chunk['page_end']}: {len(chunk['text'])} chars")
+            ...     # Process chunk immediately, then release memory
+            ...     del chunk
+            ...     gc.collect()
+
+        Note:
+            Currently, Docling HTTP API does not support true streaming.
+            This method parses the full document but yields results in chunks
+            to enable incremental processing. Future versions may support
+            true page-by-page streaming if Docling API adds this capability.
+        """
+        logger.info(
+            "docling_streaming_parse_start",
+            file_path=str(file_path),
+            chunk_size_pages=chunk_size_pages,
+        )
+
+        # Parse full document (Docling API limitation - no true streaming yet)
+        parsed = await self.parse_document(file_path)
+
+        # Extract page count from json_content
+        pages_data = parsed.json_content.get("pages", {}) if parsed.json_content else {}
+        total_pages = len(pages_data)
+
+        if total_pages == 0:
+            # No page data - yield entire document as single chunk
+            logger.warning(
+                "docling_streaming_no_pages",
+                file_path=str(file_path),
+                note="Yielding entire document as single chunk",
+            )
+            yield {
+                "page_start": 1,
+                "page_end": 1,
+                "text": parsed.text,
+                "tables": parsed.tables,
+                "images": parsed.images,
+                "is_final": True,
+            }
+            return
+
+        # Split text by pages and yield in chunks
+        # Note: This is a best-effort approach since Docling doesn't provide
+        # per-page text boundaries. We approximate by splitting on page breaks.
+        import re
+
+        # Try to split text on page break markers (if available)
+        # Docling markdown format may include <!-- PAGE_BREAK --> markers
+        page_texts = re.split(r"<!-- PAGE_BREAK -->|\\f", parsed.text)
+
+        # If no page breaks found, split evenly by total_pages
+        if len(page_texts) == 1 and total_pages > 1:
+            # Fallback: Split text into equal chunks
+            chars_per_page = len(parsed.text) // total_pages
+            page_texts = [
+                parsed.text[i * chars_per_page : (i + 1) * chars_per_page]
+                for i in range(total_pages)
+            ]
+
+        # Yield chunks
+        for chunk_idx in range(0, total_pages, chunk_size_pages):
+            page_start = chunk_idx + 1
+            page_end = min(chunk_idx + chunk_size_pages, total_pages)
+            is_final = page_end == total_pages
+
+            # Combine text for this chunk
+            chunk_text = "\n\n".join(page_texts[chunk_idx:page_end])
+
+            # Filter tables/images for this page range
+            chunk_tables = [
+                t
+                for t in parsed.tables
+                if t.get("page_no") and page_start <= t["page_no"] <= page_end
+            ]
+            chunk_images = [
+                i
+                for i in parsed.images
+                if i.get("page_no") and page_start <= i["page_no"] <= page_end
+            ]
+
+            logger.debug(
+                "docling_streaming_chunk_yield",
+                page_start=page_start,
+                page_end=page_end,
+                text_length=len(chunk_text),
+                tables_count=len(chunk_tables),
+                images_count=len(chunk_images),
+                is_final=is_final,
+            )
+
+            yield {
+                "page_start": page_start,
+                "page_end": page_end,
+                "text": chunk_text,
+                "tables": chunk_tables,
+                "images": chunk_images,
+                "is_final": is_final,
+            }
+
+        logger.info(
+            "docling_streaming_parse_complete",
+            file_path=str(file_path),
+            total_pages=total_pages,
+            total_chunks=(total_pages + chunk_size_pages - 1) // chunk_size_pages,
+        )
 
     async def __aenter__(self) -> None:
         """Async context manager entry: start container."""

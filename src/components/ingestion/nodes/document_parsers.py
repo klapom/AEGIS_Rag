@@ -122,6 +122,12 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
             # All formats use unified code path
             state["document"] = parsed.document  # Works for all formats
 
+            # Sprint 68 Feature 68.3: Explicit memory cleanup after parsing
+            # Release intermediate parsing data structures to reduce memory footprint
+            import gc
+
+            gc.collect()  # Trigger garbage collection to free parsing buffers
+
             # Extract page dimensions from json_content if available
             # Sprint 33 Fix (TD-044): Docling API pages is ALWAYS a dict {"1": PageItem, "2": PageItem}
             # Schema: additionalProperties with $ref to PageItem (page_no: int, size: {width, height})

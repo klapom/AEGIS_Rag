@@ -282,17 +282,21 @@ class GraphitiClient:
         source: str = "user_conversation",
         metadata: dict[str, Any] | None = None,
         timestamp: datetime | None = None,
+        use_write_policy: bool = False,
     ) -> dict[str, Any]:
         """Add an episode to episodic memory.
 
         Extracts entities and relationships from content and stores them
         in the temporal graph with timestamps.
 
+        Sprint 68 Feature 68.6: Added write_policy integration for importance filtering.
+
         Args:
             content: Episode content (conversation turn, event description)
             source: Source of the episode (default: "user_conversation")
             metadata: Additional metadata (default: None)
             timestamp: Episode timestamp (default: now)
+            use_write_policy: Apply importance-based write policy (default: False)
 
         Returns:
             Dictionary with episode_id, entities, and relationships
@@ -304,7 +308,36 @@ class GraphitiClient:
             timestamp = timestamp or datetime.now(UTC)
             metadata = metadata or {}
 
-            # Add episode to Graphiti
+            # Sprint 68 Feature 68.6: Optional write policy filtering
+            if use_write_policy:
+                from src.components.memory.write_policy import get_write_policy
+
+                write_policy = get_write_policy()
+                fact = {
+                    "content": content,
+                    "source": source,
+                    "metadata": metadata,
+                    "created_at": timestamp,
+                }
+                result = await write_policy.write_fact(fact)
+
+                if not result["written"]:
+                    logger.info(
+                        "Episode rejected by write policy",
+                        reason=result["reason"],
+                        importance_score=result["importance_score"],
+                    )
+                    return {
+                        "episode_id": None,
+                        "written": False,
+                        "reason": result["reason"],
+                        "importance_score": result["importance_score"],
+                    }
+
+                # Write policy already added episode
+                return result
+
+            # Add episode to Graphiti (standard path without write policy)
             episode = await self.graphiti.add_episode(
                 content=content,
                 timestamp=timestamp,

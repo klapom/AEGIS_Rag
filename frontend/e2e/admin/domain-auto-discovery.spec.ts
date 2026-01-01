@@ -31,26 +31,30 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     // Navigate to domain auto discovery page
     await page.goto('/admin/domain-discovery');
 
-    // Verify main upload area is visible
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
-    await expect(uploadArea).toBeVisible({ timeout: 10000 });
+    // Verify main component is visible
+    const component = page.locator('[data-testid="domain-auto-discovery"]');
+    await expect(component).toBeVisible({ timeout: 10000 });
+
+    // Verify drop zone is visible
+    const dropZone = page.locator('[data-testid="drop-zone"]');
+    await expect(dropZone).toBeVisible({ timeout: 10000 });
 
     // Verify it has drag-drop instructions
     const dragDropText = page.getByText(/drag.*drop|drop.*files|drop.*documents/i);
     const dragDropVisible = await dragDropText.isVisible().catch(() => false);
 
-    // Upload area should be present
-    await expect(uploadArea).toBeTruthy();
+    // Drop zone should be present
+    await expect(dropZone).toBeTruthy();
 
     // Verify upload input exists
-    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    const fileInput = page.locator('[data-testid="file-input"]');
     await expect(fileInput).toHaveAttribute('type', 'file');
   });
 
   test('TC-46.5.2: should accept TXT, MD, DOCX, HTML file types', async ({ page }) => {
     await page.goto('/admin/domain-discovery');
 
-    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
+    const fileInput = page.locator('[data-testid="file-input"]');
 
     // Verify accept attribute includes supported formats
     const acceptAttr = await fileInput.getAttribute('accept');
@@ -94,9 +98,9 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     });
 
     // Try to upload unsupported file
-    const uploadArea = page.locator('[data-testid="domain-discovery-upload-area"]');
+    const fileInput = page.locator('[data-testid="file-input"]');
 
-    await uploadArea.setInputFiles({
+    await fileInput.setInputFiles({
       name: 'image.png',
       mimeType: 'image/png',
       buffer: Buffer.from('PNG_DATA'),

@@ -1,19 +1,29 @@
 """Secure Action Agent with deepagents Integration.
 
 Sprint 67 Feature 67.2: deepagents Integration with BubblewrapSandboxBackend
-LangChain-native integration for secure code execution in sandboxed environment.
+Sprint 68 Feature 68.7: Tool-Execution Reward Loop (FEAT-007)
+
+LangChain-native integration for secure code execution in sandboxed environment
+with reinforcement learning-based tool selection optimization.
 
 Architecture:
 - Uses BubblewrapSandboxBackend for filesystem and network isolation
 - Integrates with deepagents framework for agent orchestration
 - Provides timeout enforcement and resource cleanup
 - Supports retry logic for transient failures
+- RL-based tool selection with reward feedback (Sprint 68)
 
 Security features:
 - Sandbox isolation via Bubblewrap
 - Timeout enforcement (30s default)
 - Output truncation (32KB max)
 - Resource cleanup on shutdown
+
+Reward Loop (Sprint 68):
+- Multi-component reward calculation
+- ε-greedy tool selection policy
+- Q-learning value updates
+- Redis persistence for learned policies
 """
 
 import asyncio
@@ -24,6 +34,8 @@ from typing import Any
 import structlog
 
 from src.agents.action.bubblewrap_backend import BubblewrapSandboxBackend
+from src.agents.action.reward_calculator import ToolRewardCalculator
+from src.agents.action.tool_policy import ToolSelectionPolicy
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -39,6 +51,10 @@ class ActionConfig:
         workspace_path: Path to workspace directory for temporary files
         retry_delay: Delay between retries in seconds
         repo_path: Path to repository (mounted read-only in sandbox)
+        enable_reward_loop: Enable RL-based tool selection (Sprint 68)
+        epsilon: Exploration rate for ε-greedy policy (Sprint 68)
+        alpha: Learning rate for Q-learning updates (Sprint 68)
+        expected_duration_ms: Expected command duration for efficiency reward (Sprint 68)
 
     """
 
@@ -47,6 +63,10 @@ class ActionConfig:
     workspace_path: str = "/tmp/aegis-workspace"
     retry_delay: float = 1.0
     repo_path: str = "/home/admin/projects/aegisrag/AEGIS_Rag"
+    enable_reward_loop: bool = True
+    epsilon: float = 0.1
+    alpha: float = 0.1
+    expected_duration_ms: float = 5000.0
 
 
 class SecureActionAgent:
@@ -74,12 +94,16 @@ class SecureActionAgent:
         self,
         config: ActionConfig | None = None,
         sandbox_backend: BubblewrapSandboxBackend | None = None,
+        policy: ToolSelectionPolicy | None = None,
+        reward_calculator: ToolRewardCalculator | None = None,
     ) -> None:
         """Initialize secure action agent.
 
         Args:
             config: Agent configuration (defaults to ActionConfig())
             sandbox_backend: Custom sandbox backend (optional)
+            policy: Tool selection policy (optional, created if None)
+            reward_calculator: Reward calculator (optional, created if None)
 
         Raises:
             ValueError: If repo_path doesn't exist
@@ -98,11 +122,26 @@ class SecureActionAgent:
 
         self.sandbox = sandbox_backend
 
+        # Initialize reward loop components (Sprint 68)
+        self.enable_reward_loop = self.config.enable_reward_loop
+        if self.enable_reward_loop:
+            self.policy = policy or ToolSelectionPolicy(
+                epsilon=self.config.epsilon, alpha=self.config.alpha
+            )
+            self.reward_calculator = reward_calculator or ToolRewardCalculator()
+        else:
+            self.policy = None
+            self.reward_calculator = None
+
+        # Track available tools for policy-based selection
+        self.available_tools: list[str] = []
+
         self.logger.info(
             "secure_action_agent_initialized",
             workspace=self.config.workspace_path,
             timeout=self.config.sandbox_timeout,
             max_retries=self.config.max_retries,
+            reward_loop_enabled=self.enable_reward_loop,
         )
 
     async def execute_action(
@@ -296,6 +335,147 @@ class SecureActionAgent:
                 "file_read_exception", path=path, error=str(e), error_type=type(e).__name__
             )
             return {"success": False, "error": str(e)}
+
+    async def execute_with_learning(
+        self,
+        task: str,
+        tool_name: str | None = None,
+        context: str | None = None,
+        user_feedback: int | None = None,
+    ) -> dict[str, Any]:
+        """Execute action with reward loop learning (Sprint 68 Feature 68.7).
+
+        Integrates tool selection policy, execution, and Q-value updates.
+
+        Args:
+            task: Task description (e.g., "list files in /repo")
+            tool_name: Tool name to execute (if None, policy selects best tool)
+            context: Task context for policy (e.g., "file_ops", "search")
+            user_feedback: Optional user feedback (-1, 0, +1)
+
+        Returns:
+            Dictionary with execution results and reward information:
+            - success: Whether execution succeeded
+            - output: Tool output
+            - execution_time_ms: Execution time
+            - tool_name: Selected tool name
+            - reward: Calculated reward (if reward loop enabled)
+            - q_value: Updated Q-value (if reward loop enabled)
+
+        Example:
+            >>> result = await agent.execute_with_learning("list files", context="file_ops")
+            >>> print(f"Reward: {result['reward']}, Q-value: {result['q_value']}")
+        """
+        if not self.enable_reward_loop:
+            # Fallback to regular execution
+            self.logger.warning("reward_loop_disabled", task=task)
+            result = await self.execute_action(task)
+            result["tool_name"] = tool_name or "default"
+            return result
+
+        # Select tool using policy
+        if tool_name is None:
+            if not self.available_tools:
+                # Default tool is the command itself
+                tool_name = "shell_command"
+            else:
+                tool_name = self.policy.select_tool(task, self.available_tools, context)
+
+        self.logger.info("executing_with_learning", task=task, tool=tool_name, context=context)
+
+        # Execute action
+        result = await self.execute_action(task)
+
+        # Calculate reward
+        reward_components = self.reward_calculator.calculate_reward(
+            tool_name=tool_name,
+            execution_result=result,
+            expected_duration_ms=self.config.expected_duration_ms,
+            user_feedback=user_feedback,
+        )
+
+        # Update Q-value
+        execution_context = context or self.policy._extract_context(task)
+        self.policy.update_q_value(tool_name, execution_context, reward_components.total_reward)
+
+        # Get updated Q-value
+        q_value = self.policy.get_q_value(tool_name, execution_context)
+
+        # Add reward info to result
+        result["tool_name"] = tool_name
+        result["reward"] = reward_components.total_reward
+        result["reward_components"] = reward_components.to_dict()
+        result["q_value"] = q_value
+        result["context"] = execution_context
+
+        self.logger.info(
+            "execution_with_learning_complete",
+            tool=tool_name,
+            context=execution_context,
+            reward=reward_components.total_reward,
+            q_value=q_value,
+            success=result["success"],
+        )
+
+        return result
+
+    def register_tools(self, tool_names: list[str]) -> None:
+        """Register available tools for policy-based selection.
+
+        Args:
+            tool_names: List of tool names to register
+
+        Example:
+            >>> agent.register_tools(["search", "grep", "find", "ls"])
+        """
+        self.available_tools = tool_names
+        self.logger.info("tools_registered", count=len(tool_names), tools=tool_names)
+
+    def get_policy_statistics(self, tool_name: str | None = None) -> dict[str, Any]:
+        """Get statistics from tool selection policy.
+
+        Args:
+            tool_name: Optional tool name (if None, returns stats for all tools)
+
+        Returns:
+            Dictionary with policy statistics
+
+        Raises:
+            RuntimeError: If reward loop is disabled
+        """
+        if not self.enable_reward_loop or self.policy is None:
+            raise RuntimeError("Reward loop is disabled")
+
+        return self.policy.get_tool_statistics(tool_name)
+
+    def export_policy(self) -> dict[str, Any]:
+        """Export policy state for persistence.
+
+        Returns:
+            Dictionary with policy state
+
+        Raises:
+            RuntimeError: If reward loop is disabled
+        """
+        if not self.enable_reward_loop or self.policy is None:
+            raise RuntimeError("Reward loop is disabled")
+
+        return self.policy.to_dict()
+
+    def load_policy(self, policy_state: dict[str, Any]) -> None:
+        """Load policy state from dictionary.
+
+        Args:
+            policy_state: Dictionary with policy state
+
+        Raises:
+            RuntimeError: If reward loop is disabled
+        """
+        if not self.enable_reward_loop:
+            raise RuntimeError("Reward loop is disabled")
+
+        self.policy = ToolSelectionPolicy.from_dict(policy_state)
+        self.logger.info("policy_loaded", total_updates=self.policy.total_updates)
 
     async def cleanup(self) -> None:
         """Cleanup sandbox resources.

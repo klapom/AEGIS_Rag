@@ -183,9 +183,22 @@ class UnifiedEmbeddingService:
             device=self._st_device if self.backend == "sentence-transformers" else "n/a",
         )
 
-    def _cache_key(self, text: str) -> str:
-        """Generate cache key for text."""
-        return hashlib.sha256(text.encode()).hexdigest()
+    def _cache_key(self, text: str, document_id: str | None = None) -> str:
+        """Generate cache key for text with optional document context.
+
+        Sprint 68 Feature 68.3: Added document_id to enable cache invalidation
+        when documents are updated/reprocessed.
+
+        Args:
+            text: Text content to embed
+            document_id: Optional document ID for cache invalidation
+
+        Returns:
+            SHA256 hash of text + document_id (if provided)
+        """
+        # Use ternary operator for cache content
+        cache_content = f"{text}::{document_id}" if document_id else text
+        return hashlib.sha256(cache_content.encode()).hexdigest()
 
     def _embed_native(self, text: str) -> list[float]:
         """Embed text using native sentence-transformers.

@@ -15,6 +15,11 @@ import structlog
 
 from src.agents.base_agent import BaseAgent
 from src.agents.retry import retry_on_failure
+from src.components.graph_rag.section_communities import (
+    SectionCommunityService,
+    get_section_community_service,
+)
+from src.core.config import settings
 from src.models.phase_event import PhaseEvent, PhaseStatus, PhaseType
 
 try:
@@ -33,7 +38,6 @@ except ImportError:
         SearchMode,
         get_dual_level_search,
     )
-from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -48,6 +52,8 @@ def classify_search_mode(query: str) -> SearchMode:
     - Local: Specific entity questions ("who", "what is", "which")
     - Global: Broad overview questions ("summarize", "overview", "themes")
     - Hybrid: Default for complex or ambiguous queries
+
+    Sprint 68 Feature 68.5: Added community-based search detection.
 
     Args:
         query: User query string
@@ -126,6 +132,54 @@ def classify_search_mode(query: str) -> SearchMode:
     return SearchMode.HYBRID
 
 
+def should_use_community_search(query: str) -> bool:
+    """Determine if query should use community-based section retrieval.
+
+    Sprint 68 Feature 68.5: Section Community Detection
+
+    Community-based search is useful for:
+    - Cross-document section queries ("show all sections about X")
+    - Thematic clustering ("related sections on topic Y")
+    - Navigation queries ("find similar sections")
+
+    Args:
+        query: User query string
+
+    Returns:
+        bool: True if community search is appropriate
+
+    Examples:
+        >>> should_use_community_search("Show all sections about authentication")
+        True
+        >>> should_use_community_search("What is RAG?")
+        False
+    """
+    query_lower = query.lower().strip()
+
+    # Community search keywords
+    community_keywords = [
+        "show all sections",
+        "find sections",
+        "related sections",
+        "similar sections",
+        "sections about",
+        "all documentation on",
+        "across documents",
+        "cross-document",
+    ]
+
+    for keyword in community_keywords:
+        if keyword in query_lower:
+            logger.debug(
+                "community_search_selected",
+                keyword=keyword,
+                query=query[:50],
+            )
+            return True
+
+    return False
+
+
 class GraphQueryAgent(BaseAgent):
     """Agent for graph-based knowledge retrieval.
 
@@ -147,15 +201,20 @@ class GraphQueryAgent(BaseAgent):
         self,
         name: str = "graph_query_agent",
         dual_level_search: DualLevelSearch | None = None,
+        community_service: SectionCommunityService | None = None,
     ) -> None:
         """Initialize Graph Query Agent.
+
+        Sprint 68 Feature 68.5: Added section community service.
 
         Args:
             name: Agent name (default: "graph_query_agent")
             dual_level_search: DualLevelSearch instance (optional, uses singleton if None)
+            community_service: SectionCommunityService instance (optional, uses singleton if None)
         """
         super().__init__(name=name)
         self.dual_level_search = dual_level_search or get_dual_level_search()
+        self.community_service = community_service or get_section_community_service()
 
         self.logger.info(
             "graph_query_agent_initialized",
@@ -200,52 +259,97 @@ class GraphQueryAgent(BaseAgent):
         self._add_trace(state, "processing graph query")
 
         try:
-            # Classify search mode based on query
-            search_mode = classify_search_mode(query)
+            # Sprint 68 Feature 68.5: Check if community search should be used
+            use_community_search = should_use_community_search(query)
 
-            self.logger.info(
-                "graph_query_mode_selected",
-                query=query[:50],
-                mode=search_mode.value,
-            )
+            if use_community_search:
+                # Community-based section retrieval
+                top_k = getattr(settings, "graph_search_top_k", 10)
+                community_result = await self.community_service.retrieve_by_community(
+                    query=query,
+                    top_k=top_k,
+                )
 
-            # Execute graph search based on mode
-            top_k = getattr(settings, "graph_search_top_k", 10)
+                # Calculate latency
+                latency_ms = self._calculate_latency_ms(timing)
 
-            if search_mode == SearchMode.LOCAL:
-                # Entity-level search
-                entities = await self.dual_level_search.local_search(query=query, top_k=top_k)
+                # Build graph result from community retrieval
                 graph_result = GraphSearchResult(
                     query=query,
-                    answer=f"Found {len(entities)} entities related to the query.",
-                    entities=entities,
-                    relationships=[],
-                    topics=[],
-                    context="",
-                    mode="local",
-                    metadata={"entities_found": len(entities)},
-                )
-            elif search_mode == SearchMode.GLOBAL:
-                # Topic-level search
-                topics = await self.dual_level_search.global_search(
-                    query=query, top_k=min(top_k, 5)
-                )
-                graph_result = GraphSearchResult(
-                    query=query,
-                    answer=f"Found {len(topics)} topics related to the query.",
+                    answer=f"Found {community_result.total_sections} sections in {len(community_result.communities)} communities.",
                     entities=[],
                     relationships=[],
-                    topics=topics,
-                    context="",
-                    mode="global",
-                    metadata={"topics_found": len(topics)},
+                    topics=[],
+                    context="\n\n".join(
+                        [
+                            f"**{s.get('heading', 'Unknown')}** (Page {s.get('page_no', 0)})\n{s.get('content', '')[:200]}..."
+                            for s in community_result.sections[:5]
+                        ]
+                    ),
+                    mode="community",
+                    metadata={
+                        "communities_found": len(community_result.communities),
+                        "sections_found": community_result.total_sections,
+                        "retrieval_time_ms": community_result.retrieval_time_ms,
+                        "search_type": "community",
+                    },
                 )
-            else:  # HYBRID
-                # Combined search with LLM answer
-                graph_result = await self.dual_level_search.hybrid_search(query=query, top_k=top_k)
 
-            # Calculate latency
-            latency_ms = self._calculate_latency_ms(timing)
+                self._log_success(
+                    "community_search",
+                    query=query[:50],
+                    communities_found=len(community_result.communities),
+                    sections_found=community_result.total_sections,
+                    latency_ms=latency_ms,
+                )
+            else:
+                # Standard graph search (existing logic)
+                # Classify search mode based on query
+                search_mode = classify_search_mode(query)
+
+                self.logger.info(
+                    "graph_query_mode_selected",
+                    query=query[:50],
+                    mode=search_mode.value,
+                )
+
+                # Execute graph search based on mode
+                top_k = getattr(settings, "graph_search_top_k", 10)
+
+                if search_mode == SearchMode.LOCAL:
+                    # Entity-level search
+                    entities = await self.dual_level_search.local_search(query=query, top_k=top_k)
+                    graph_result = GraphSearchResult(
+                        query=query,
+                        answer=f"Found {len(entities)} entities related to the query.",
+                        entities=entities,
+                        relationships=[],
+                        topics=[],
+                        context="",
+                        mode="local",
+                        metadata={"entities_found": len(entities)},
+                    )
+                elif search_mode == SearchMode.GLOBAL:
+                    # Topic-level search
+                    topics = await self.dual_level_search.global_search(
+                        query=query, top_k=min(top_k, 5)
+                    )
+                    graph_result = GraphSearchResult(
+                        query=query,
+                        answer=f"Found {len(topics)} topics related to the query.",
+                        entities=[],
+                        relationships=[],
+                        topics=topics,
+                        context="",
+                        mode="global",
+                        metadata={"topics_found": len(topics)},
+                    )
+                else:  # HYBRID
+                    # Combined search with LLM answer
+                    graph_result = await self.dual_level_search.hybrid_search(query=query, top_k=top_k)
+
+                # Calculate latency
+                latency_ms = self._calculate_latency_ms(timing)
 
             # Convert Pydantic models to dicts if needed
             entities_list = []
@@ -454,5 +558,6 @@ __all__ = [
     "GraphQueryAgent",
     "graph_query_node",
     "classify_search_mode",
+    "should_use_community_search",
     "SearchMode",
 ]

@@ -58,6 +58,7 @@ numpy = "^1.26.0"  # For vector operations in consolidation
 scikit-learn = "^1.3.0"  # For cosine similarity in semantic deduplication (Sprint 13, ADR-017)
 python-Levenshtein = "^0.26.0"  # Edit distance for entity deduplication (ADR-044)
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
+cachetools = "^5.5.0"  # TTL-based caching for query optimization (Sprint 68, Feature 68.4)
 
 # Monitoring (Sprint 2: Metrics)
 prometheus-client = "^0.21.0"

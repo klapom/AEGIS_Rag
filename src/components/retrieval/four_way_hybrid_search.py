@@ -124,8 +124,11 @@ class FourWayHybridSearch:
         use_reranking: bool = False,
         intent_override: Intent | None = None,
         allowed_namespaces: list[str] | None = None,
+        use_cache: bool = True,
     ) -> dict[str, Any]:
         """Execute 4-Way Hybrid Search with Intent-Weighted RRF.
+
+        Sprint 68 Feature 68.4: Added query caching for latency optimization.
 
         Args:
             query: User query string
@@ -134,6 +137,7 @@ class FourWayHybridSearch:
             use_reranking: Whether to apply cross-encoder reranking
             intent_override: Force specific intent (bypass classifier)
             allowed_namespaces: List of namespaces to search in. If None, defaults to ["default", "general"]
+            use_cache: Whether to use query cache (default: True)
 
         Returns:
             Dictionary with results and metadata:
@@ -150,6 +154,37 @@ class FourWayHybridSearch:
         # Step 0: Resolve namespaces (default to ["default", "general"] if not provided)
         if allowed_namespaces is None:
             allowed_namespaces = [DEFAULT_NAMESPACE, "general"]
+
+        # Sprint 68 Feature 68.4: Check query cache first
+        if use_cache:
+            from src.components.retrieval.query_cache import get_query_cache
+
+            cache = get_query_cache()
+            cached_result = await cache.get(query, namespaces=allowed_namespaces)
+
+            if cached_result:
+                cache_latency_ms = (time.perf_counter() - start_time) * 1000
+
+                logger.info(
+                    "four_way_search_cache_hit",
+                    query=query[:50],
+                    cache_type=cached_result["cache_hit"],
+                    latency_ms=round(cache_latency_ms, 2),
+                )
+
+                # Return cached results with updated metadata
+                metadata = cached_result["metadata"]
+                if hasattr(metadata, "total_latency_ms"):
+                    # Update to include cache lookup time
+                    metadata.total_latency_ms = cache_latency_ms
+
+                return {
+                    "query": query,
+                    "results": cached_result["results"],
+                    "intent": metadata.intent if hasattr(metadata, "intent") else "cached",
+                    "weights": metadata.weights if hasattr(metadata, "weights") else {},
+                    "metadata": metadata,
+                }
 
         logger.debug(
             "four_way_search_namespaces",
@@ -364,6 +399,18 @@ class FourWayHybridSearch:
             local_count=metadata.graph_local_results_count,
             global_count=metadata.graph_global_results_count,
         )
+
+        # Sprint 68 Feature 68.4: Store results in cache
+        if use_cache:
+            from src.components.retrieval.query_cache import get_query_cache
+
+            cache = get_query_cache()
+            await cache.set(
+                query=query,
+                results=final_results,
+                metadata=metadata,
+                namespaces=allowed_namespaces,
+            )
 
         return {
             "query": query,

@@ -267,13 +267,15 @@ services:
       redis-server
       --appendonly yes
       --appendfsync everysec
-      --maxmemory 4gb
+      --maxmemory 8gb
       --maxmemory-policy allkeys-lru
       --save 60 1000
+      --maxmemory-samples 10
+      --lazyfree-lazy-eviction yes
     deploy:
       resources:
         limits:
-          memory: 4G  # Increased from 2G
+          memory: 8G  # Increased from 4G for Sprint 68 Feature 68.3
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
