@@ -409,7 +409,7 @@ def route_query(
     return "vector_search"
 
 
-def create_base_graph() -> StateGraph:
+def create_base_graph(enable_tools: bool = False) -> StateGraph:
     """Create the base LangGraph structure.
 
     This creates the foundational graph with:
@@ -420,12 +420,16 @@ def create_base_graph() -> StateGraph:
     - Graph query node (Sprint 5 Feature 5.5)
     - Memory node (Sprint 7 Feature 7.4)
     - Conditional edges for routing
+    - Tool use support (Sprint 70 Feature 70.5)
     - END node
+
+    Args:
+        enable_tools: Enable tool use with ReAct pattern (default: False)
 
     Returns:
         Compiled StateGraph ready for execution
     """
-    logger.info("creating_base_graph")
+    logger.info("creating_base_graph", enable_tools=enable_tools)
 
     # Initialize graph with AgentState schema
     graph = StateGraph(AgentState)
@@ -447,6 +451,12 @@ def create_base_graph() -> StateGraph:
 
     # Sprint 11: Add LLM-based answer generator node (replaces simple_answer_node)
     graph.add_node("answer", llm_answer_node)
+
+    # Sprint 70 Feature 70.5: Add tool use support (ReAct pattern)
+    if enable_tools:
+        from src.agents.tools import should_use_tools, tools_node
+
+        graph.add_node("tools", tools_node)
 
     # Add edge from START to router
     graph.add_edge(START, "router")
@@ -476,13 +486,30 @@ def create_base_graph() -> StateGraph:
     # Sprint 7: Connect memory to END
     graph.add_edge("memory", END)
 
-    # Sprint 10: Connect answer to END
-    graph.add_edge("answer", END)
+    # Sprint 70 Feature 70.5: Add tool use edges (ReAct pattern)
+    if enable_tools:
+        from src.agents.tools import should_use_tools
 
-    logger.info(
-        "base_graph_created",
-        nodes=["router", "hybrid_search", "vector_search", "graph_query", "memory", "answer"],
-    )
+        # Conditional edge: answer → [tools | END]
+        graph.add_conditional_edges(
+            "answer",
+            should_use_tools,
+            {
+                "tools": "tools",  # Use tools
+                "end": END,  # No tools needed
+            },
+        )
+        # Cycle: tools → answer (for multi-turn tool conversations)
+        graph.add_edge("tools", "answer")
+    else:
+        # Sprint 10: Connect answer to END (original behavior)
+        graph.add_edge("answer", END)
+
+    nodes = ["router", "hybrid_search", "vector_search", "graph_query", "memory", "answer"]
+    if enable_tools:
+        nodes.append("tools")
+
+    logger.info("base_graph_created", nodes=nodes, enable_tools=enable_tools)
 
     return graph
 

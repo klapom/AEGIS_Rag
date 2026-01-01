@@ -242,13 +242,16 @@ def should_continue_research(state: ResearchSupervisorState) -> str:
     return "synthesize"
 
 
-def create_research_graph() -> StateGraph:
+def create_research_graph(enable_tools: bool = False) -> StateGraph:
     """Create the research supervisor graph.
+
+    Args:
+        enable_tools: Enable tool use with ReAct pattern (default: False)
 
     Returns:
         Compiled StateGraph ready for execution
     """
-    logger.info("creating_research_graph")
+    logger.info("creating_research_graph", enable_tools=enable_tools)
 
     # Initialize graph with ResearchSupervisorState schema
     graph = StateGraph(ResearchSupervisorState)
@@ -258,6 +261,12 @@ def create_research_graph() -> StateGraph:
     graph.add_node("searcher", searcher_node)
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("synthesizer", synthesizer_node)
+
+    # Sprint 70 Feature 70.6: Add tool use support (ReAct pattern)
+    if enable_tools:
+        from src.agents.tools import tools_node
+
+        graph.add_node("research_tools", tools_node)
 
     # Build workflow
     # START → planner → searcher → supervisor
@@ -275,13 +284,30 @@ def create_research_graph() -> StateGraph:
         },
     )
 
-    # Synthesizer → END
-    graph.add_edge("synthesizer", END)
+    # Sprint 70 Feature 70.6: Add tool use edges (ReAct pattern)
+    if enable_tools:
+        from src.agents.tools import should_use_tools
 
-    logger.info(
-        "research_graph_created",
-        nodes=["planner", "searcher", "supervisor", "synthesizer"],
-    )
+        # Conditional edge: synthesizer → [tools | END]
+        graph.add_conditional_edges(
+            "synthesizer",
+            lambda state: should_use_tools({"answer": state.get("synthesis", "")}),
+            {
+                "tools": "research_tools",  # Use tools
+                "end": END,  # No tools needed
+            },
+        )
+        # Cycle: tools → synthesizer (for multi-turn tool conversations)
+        graph.add_edge("research_tools", "synthesizer")
+    else:
+        # Synthesizer → END (original behavior)
+        graph.add_edge("synthesizer", END)
+
+    nodes = ["planner", "searcher", "supervisor", "synthesizer"]
+    if enable_tools:
+        nodes.append("research_tools")
+
+    logger.info("research_graph_created", nodes=nodes, enable_tools=enable_tools)
 
     return graph.compile()
 
@@ -314,20 +340,23 @@ def create_initial_research_state(
     }
 
 
-# Singleton pattern for graph instance
-_research_graph = None
+# Singleton pattern for graph instances (one per enable_tools value)
+_research_graphs: dict[bool, StateGraph] = {}
 
 
-def get_research_graph() -> StateGraph:
+def get_research_graph(enable_tools: bool = False) -> StateGraph:
     """Get compiled research graph (singleton).
+
+    Args:
+        enable_tools: Enable tool use with ReAct pattern (default: False)
 
     Returns:
         Compiled StateGraph instance
     """
-    global _research_graph
-    if _research_graph is None:
-        _research_graph = create_research_graph()
-    return _research_graph
+    global _research_graphs
+    if enable_tools not in _research_graphs:
+        _research_graphs[enable_tools] = create_research_graph(enable_tools=enable_tools)
+    return _research_graphs[enable_tools]
 
 
 # Public API

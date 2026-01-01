@@ -110,6 +110,11 @@ class AgentState(MessagesState):
         default_factory=list,
         description="List of all phase events for streaming (Sprint 51 Feature 51.1)",
     )
+    tool_execution_count: int = Field(
+        default=0,
+        ge=0,
+        description="Number of tool executions in this conversation (Sprint 70 Feature 70.5)",
+    )
 
 
 class QueryMetadata(BaseModel):
