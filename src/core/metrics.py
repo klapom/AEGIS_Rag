@@ -405,3 +405,94 @@ def track_error(error_type: str) -> None:
         track_error("timeout")
     """
     error_total.labels(error_type=error_type).inc()
+
+
+# ============================================================================
+# SPRINT 70 - FEATURE 70.10: TOOL USE ANALYTICS & MONITORING
+# ============================================================================
+
+# Tool execution counter
+# Labels: tool_name (name of MCP tool), status (success, failed)
+tool_executions_total = Counter(
+    "aegis_tool_executions_total",
+    "Total number of tool executions",
+    ["tool_name", "status"],
+)
+
+# Tool execution latency histogram
+# Labels: tool_name
+# Buckets: 0.1s, 0.5s, 1s, 2s, 5s, 10s, 30s, 60s, +Inf
+tool_execution_duration_seconds = Histogram(
+    "aegis_tool_execution_duration_seconds",
+    "Tool execution latency in seconds",
+    ["tool_name"],
+    buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, float("inf")),
+)
+
+# Active tool executions gauge
+# No labels - tracks concurrent tool executions
+active_tool_executions = Gauge(
+    "aegis_active_tool_executions",
+    "Number of currently executing tools",
+)
+
+
+def track_tool_execution(
+    tool_name: str,
+    status: str,
+    duration_seconds: float,
+) -> None:
+    """Track a tool execution with metrics.
+
+    **Sprint 70 Feature 70.10: Tool Analytics**
+
+    Records tool execution count, status (success/failed), and latency.
+
+    Args:
+        tool_name: Name of the MCP tool executed
+        status: Execution status ("success" or "failed")
+        duration_seconds: Tool execution time in seconds
+
+    Example:
+        >>> track_tool_execution(
+        ...     tool_name="web_search",
+        ...     status="success",
+        ...     duration_seconds=0.45
+        ... )
+        >>> track_tool_execution(
+        ...     tool_name="file_read",
+        ...     status="failed",
+        ...     duration_seconds=0.12
+        ... )
+    """
+    # Increment execution counter
+    tool_executions_total.labels(tool_name=tool_name, status=status).inc()
+
+    # Record latency
+    tool_execution_duration_seconds.labels(tool_name=tool_name).observe(duration_seconds)
+
+
+def increment_active_tools() -> None:
+    """Increment active tool executions counter.
+
+    **Sprint 70 Feature 70.10: Tool Analytics**
+
+    Call this when a tool execution starts.
+
+    Example:
+        >>> increment_active_tools()
+    """
+    active_tool_executions.inc()
+
+
+def decrement_active_tools() -> None:
+    """Decrement active tool executions counter.
+
+    **Sprint 70 Feature 70.10: Tool Analytics**
+
+    Call this when a tool execution completes (success or failure).
+
+    Example:
+        >>> decrement_active_tools()
+    """
+    active_tool_executions.dec()

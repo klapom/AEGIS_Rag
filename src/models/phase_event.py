@@ -56,6 +56,7 @@ class PhaseType(str, Enum):
     - RERANKING: Cross-encoder reranking of results
     - GRAPH_QUERY: GraphQueryAgent retrieves from Neo4j
     - MEMORY_RETRIEVAL: MemoryAgent fetches from Redis/Graphiti
+    - TOOL_EXECUTION: ActionAgent executes MCP tools (Sprint 70 Feature 70.9)
     - LLM_GENERATION: Final answer generation
     - FOLLOW_UP_QUESTIONS: FollowUpGenerator creates suggested questions
 
@@ -73,6 +74,7 @@ class PhaseType(str, Enum):
     RERANKING = "reranking"
     GRAPH_QUERY = "graph_query"
     MEMORY_RETRIEVAL = "memory_retrieval"
+    TOOL_EXECUTION = "tool_execution"  # Sprint 70 Feature 70.9
     LLM_GENERATION = "llm_generation"
     FOLLOW_UP_QUESTIONS = "follow_up_questions"
 
