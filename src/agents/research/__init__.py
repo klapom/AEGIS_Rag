@@ -1,6 +1,7 @@
 """Deep Research Agent.
 
 Sprint 59 Feature 59.6: Multi-step research workflow with LangGraph.
+Sprint 70 Feature 70.4: Updated to Supervisor Pattern with component reuse.
 
 This agent provides iterative research capabilities:
 1. Query analysis and research planning
@@ -9,18 +10,27 @@ This agent provides iterative research capabilities:
 4. Comprehensive synthesis
 
 Usage:
-    from src.agents.research import create_research_graph
+    from src.agents.research import get_research_graph, create_initial_research_state
 
-    graph = create_research_graph()
-    result = await graph.ainvoke({
-        "query": "What is the latest in machine learning?",
-        "max_iterations": 3
-    })
+    graph = get_research_graph()
+    initial_state = create_initial_research_state(
+        query="What is the latest in machine learning?",
+        max_iterations=3
+    )
+    result = await graph.ainvoke(initial_state)
 """
 
-from src.agents.research.graph import ResearchState, create_research_graph
+# Sprint 70: Import from new research_graph.py
+from src.agents.research.research_graph import (
+    ResearchSupervisorState,
+    create_initial_research_state,
+    create_research_graph,
+    get_research_graph,
+)
 
 __all__ = [
     "create_research_graph",
-    "ResearchState",
+    "get_research_graph",
+    "create_initial_research_state",
+    "ResearchSupervisorState",
 ]

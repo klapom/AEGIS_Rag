@@ -37,12 +37,13 @@ async def plan_research(query: str, max_queries: int = 5) -> list[str]:
     logger.info("planning_research", query=query, max_queries=max_queries)
 
     try:
-        # Import LLM proxy
+        # Import LLM proxy and models (Sprint 70: Use correct LLMTask API)
         from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
+        from src.domains.llm_integration.models import LLMTask, TaskType, Complexity
 
         llm = get_aegis_llm_proxy()
 
-        # Generate research plan
+        # Generate research plan using LLMTask API
         planning_prompt = f"""Create a research plan to answer this question: "{query}"
 
 Generate 3-5 specific search queries that will help find information to answer this question.
@@ -56,14 +57,20 @@ etc.
 
 Research plan:"""
 
-        response = await llm.generate(
+        # Create LLMTask with correct API (Sprint 70: Fix TypeError)
+        task = LLMTask(
+            task_type=TaskType.GENERATION,
             prompt=planning_prompt,
-            temperature=0.7,
+            complexity=Complexity.LOW,  # Planning is straightforward
             max_tokens=500,
+            temperature=0.7,
         )
 
+        # Execute task
+        response = await llm.generate(task)
+
         # Parse the plan into individual queries
-        queries = parse_plan(response)
+        queries = parse_plan(response.content)
 
         # Limit to max_queries
         queries = queries[:max_queries]

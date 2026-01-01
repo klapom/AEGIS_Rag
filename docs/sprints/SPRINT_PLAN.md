@@ -2002,6 +2002,155 @@ mem0:
 
 ---
 
+## Sprint 69: Performance Optimization & Quality Improvements ✅ (COMPLETED 2026-01-01)
+**Ziel:** Sprint 68 Bug Fixes, LLM Streaming, Model Selection, Production Monitoring
+**Status:** ✅ **COMPLETED** - 9 Features, 53 SP
+
+**Breakdown:**
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 69.1 Sprint 68 E2E Test Fixes | 8 | 🔴 CRITICAL | ✅ DONE |
+| 69.2 LLM Generation Streaming (TTFT <100ms) | 8 | 🟡 MEDIUM | ✅ DONE |
+| 69.3 Query Complexity-Based Model Selection | 5 | 🟡 MEDIUM | ✅ DONE |
+| 69.4 Learned Reranker Weights (TrainingDataExtractor) | 8 | 🟡 MEDIUM | ✅ DONE |
+| 69.5 Query Rewriter v2 (Abstractive + Extractive) | 8 | 🟡 MEDIUM | ✅ DONE |
+| 69.6 Dataset Builder for Adaptation | 5 | 🟡 MEDIUM | ✅ DONE |
+| 69.7 Production Monitoring & Observability | 5 | 🟡 MEDIUM | ✅ DONE |
+| 69.8 Documentation & Deployment Guides | 3 | 🟢 LOW | ✅ DONE |
+| 69.9 Container Updates & Rebuild | 3 | 🔴 CRITICAL | ✅ DONE |
+
+**Total: 53 SP**
+
+### Deliverables
+- **Bug Fixes (69.1):**
+  - Memory integration test fixed (GraphitiEngine mocking)
+  - Domain training test fixed (proper await for async operations)
+  - All Sprint 68 E2E tests now passing
+- **LLM Streaming (69.2):**
+  - TTFT reduced from 320ms to <100ms
+  - Server-Sent Events for real-time token streaming
+  - StreamingClient abstraction over AegisLLMProxy
+- **Model Selection (69.3):**
+  - Three-tier complexity detection (SIMPLE/MODERATE/COMPLEX)
+  - Automatic model routing (nemotron-3-nano:latest → qwen3:8b → qwen2.5:7b)
+  - Admin UI configuration support
+- **Learned Weights (69.4):**
+  - TrainingDataExtractor from retrieval traces
+  - WeightOptimizer for reranker weight tuning
+  - Integration with adaptation framework
+- **Query Rewriter v2 (69.5):**
+  - Abstractive query expansion (synonyms, paraphrases)
+  - Extractive query simplification (core entities)
+  - Standalone question generation for follow-ups
+- **Dataset Builder (69.6):**
+  - Converts retrieval traces to training datasets
+  - Supports multiple formats (JSON, CSV, Parquet)
+  - Validation and quality metrics
+- **Production Monitoring (69.7):**
+  - Prometheus metrics (queries, latency, errors, cache, memory)
+  - 21 alert rules across 8 categories
+  - Grafana dashboard with 14 panels
+- **Documentation (69.8):**
+  - Sprint 69 feature summaries (7 documents)
+  - Manual testing guide (1,350 lines)
+  - Deployment runbooks
+
+### Success Criteria
+- [x] TTFT <100ms (achieved 87ms avg)
+- [x] Model selection by complexity working
+- [x] Prometheus metrics exported
+- [x] Grafana dashboard loaded
+- [x] All Sprint 68 tests passing
+- [x] Documentation complete
+
+### References
+- [SPRINT_69_CHECKLIST.md](SPRINT_69_CHECKLIST.md)
+- [SPRINT_69_FEATURE_69.2_SUMMARY.md](SPRINT_69_FEATURE_69.2_SUMMARY.md)
+- [SPRINT_69_FEATURE_69.7_SUMMARY.md](SPRINT_69_FEATURE_69.7_SUMMARY.md)
+- Commit: `d1b6930` - docs(sprint69): Implement Feature 69.8
+
+---
+
+## Sprint 70: Deep Research & Tool Use Integration 🔄 (IN PROGRESS 2026-01-01)
+**Ziel:** Fix Deep Research + Integrate MCP Tools via ReAct Pattern
+**Status:** 🔄 **IN PROGRESS** - Phase 1: Deep Research Repair (80% complete)
+
+**Breakdown:**
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 70.1 Deep Research Planner Fix (LLMTask API) | 3 | 🔴 CRITICAL | ✅ DONE |
+| 70.2 Deep Research Searcher Reuse (CoordinatorAgent) | 5 | 🔴 CRITICAL | ✅ DONE |
+| 70.3 Deep Research Synthesizer Reuse (AnswerGenerator) | 3 | 🔴 CRITICAL | ✅ DONE |
+| 70.4 Deep Research Supervisor Graph Creation | 5 | 🔴 CRITICAL | 🔄 IN PROGRESS |
+| 70.5 Tool Use ReAct Integration (Normal Chat) | 3 | 🟡 MEDIUM | 📋 PLANNED |
+| 70.6 Tool Use ReAct Integration (Deep Research) | 2 | 🟡 MEDIUM | 📋 PLANNED |
+
+**Total: 21 SP**
+
+### Problem Analysis
+**Deep Research was completely broken:**
+- TypeError: `AegisLLMProxy.generate() got an unexpected keyword argument 'prompt'`
+- ModuleNotFoundError: `No module named 'src.components.vector_search.hybrid'`
+- Code duplication: Re-implemented search instead of reusing CoordinatorAgent
+- Returns "No information found" instead of actual results
+
+**Action Agent (Tool Use) not integrated:**
+- Exists but isolated from main chat graph
+- No ReAct pattern for tool conversations
+- Cannot be called from normal queries or deep research
+
+### Solution Architecture
+**Supervisor Pattern with Component Reuse:**
+```
+planner → searcher → supervisor → [continue | synthesize]
+            ↑           ↓
+            └───────────┘  (multi-turn loop)
+```
+
+**ReAct Pattern for Tool Use:**
+```
+answer → should_use_tools? → [tools | END]
+           ↓                    ↓
+         END                  answer  (cycle back!)
+```
+
+### Deliverables
+- **Phase 1 (70.1-70.4): Deep Research Repair**
+  - [x] Planner uses correct LLMTask API (no TypeError)
+  - [x] Searcher reuses CoordinatorAgent (no broken imports)
+  - [x] Synthesizer reuses AnswerGenerator (no code duplication)
+  - [x] ResearchSupervisorState TypedDict created
+  - [ ] research_graph.py with Supervisor pattern
+  - [ ] Integration with `/api/v1/research/query` endpoint
+- **Phase 2 (70.5-70.6): Tool Use Integration**
+  - [ ] tools_node and should_use_tools in normal chat
+  - [ ] ReAct cycle edges (tools → answer → tools)
+  - [ ] research_tools_node in deep research
+  - [ ] Feature flag `ENABLE_TOOL_USE`
+
+### Success Criteria
+- [ ] Deep Research executes multi-turn queries without errors
+- [ ] CoordinatorAgent reuse eliminates code duplication
+- [ ] Comprehensive reports with citations generated
+- [ ] Tools callable from both normal chat and deep research
+- [ ] ReAct loop enables multi-turn tool conversations
+- [ ] <30s latency for 3-iteration deep research
+- [ ] <5s additional latency per tool call
+
+### Technical Debt Resolved
+- TD-070-01: Deep Research broken LLM API → Fixed with LLMTask
+- TD-070-02: Deep Research broken imports → Fixed with component reuse
+- TD-070-03: Deep Research code duplication → Removed
+- TD-070-04: Action Agent not integrated → Will be integrated via ReAct
+
+### References
+- [SPRINT_70_PLAN.md](SPRINT_70_PLAN.md)
+- [DEEP_RESEARCH_TOOL_USE_DESIGN.md](DEEP_RESEARCH_TOOL_USE_DESIGN.md)
+- LangGraph ReAct: https://langchain-ai.github.io/langgraph/how-tos/react-agent-from-scratch
+- LangGraph Supervisor: https://langchain-ai.github.io/langgraph/tutorials/multi_agent/hierarchical_agent_teams
+
+---
+
 ## Sprint 47+: Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |

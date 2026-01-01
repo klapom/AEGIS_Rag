@@ -1,9 +1,16 @@
-"""Result Synthesis Component.
+"""Result Synthesis Component - Reuses AnswerGenerator.
 
-Sprint 59 Feature 59.6: Synthesizes research findings into coherent answers.
+Sprint 70: Deep Research & Tool Use Integration
 
-This module combines results from multiple searches into a comprehensive,
-well-structured answer to the user's question.
+This module synthesizes research findings by reusing the existing AnswerGenerator
+infrastructure instead of duplicating LLM logic. This ensures consistency with
+normal chat answers and reduces code duplication.
+
+Key Design:
+- Reuses AnswerGenerator for LLM synthesis
+- Uses correct LLMTask API
+- Generates citations automatically
+- Consistent answer quality across all modes
 """
 
 from typing import Any
@@ -13,288 +20,231 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-async def synthesize_findings(
+async def synthesize_research_findings(
     query: str,
-    results: list[dict[str, Any]],
-    max_context_length: int = 4000,
-) -> str:
-    """Synthesize search results into comprehensive answer.
+    contexts: list[dict[str, Any]],
+    namespace: str = "default",
+) -> dict[str, Any]:
+    """Synthesize research findings into comprehensive answer.
+
+    Instead of duplicating LLM logic, this function reuses the existing
+    AnswerGenerator which already handles:
+    - LLM-based synthesis
+    - Source citations
+    - Quality control
+    - Model selection
 
     Args:
         query: Original research question
-        results: List of search results from all queries
-        max_context_length: Maximum context to send to LLM
+        contexts: List of retrieved contexts from all research queries
+        namespace: Namespace for context
 
     Returns:
-        Synthesized answer
+        Dict with synthesis results:
+        {
+            "answer": str,  # Synthesized answer
+            "sources": list[dict],  # Cited sources
+            "metadata": dict,  # Additional info
+        }
 
     Examples:
-        >>> answer = await synthesize_findings(
+        >>> result = await synthesize_research_findings(
         ...     "What is AI?",
-        ...     [{"text": "AI is..."}, {"text": "Machine learning..."}]
+        ...     [{"text": "AI is...", "source": "vector"}]
         ... )
-        >>> isinstance(answer, str)
+        >>> "answer" in result
         True
     """
     logger.info(
-        "synthesizing_findings",
+        "synthesizing_research_findings",
         query=query,
-        num_results=len(results),
+        num_contexts=len(contexts),
+        namespace=namespace,
     )
 
-    if not results:
-        logger.warning("no_results_to_synthesize")
-        return "No information found to answer the query."
+    if not contexts:
+        logger.warning("no_contexts_to_synthesize")
+        return {
+            "answer": "No information found to answer the query.",
+            "sources": [],
+            "metadata": {"num_contexts": 0},
+        }
 
     try:
-        # Import LLM proxy
-        from src.domains.llm_integration.proxy.aegis_llm_proxy import get_aegis_llm_proxy
+        # Import AnswerGenerator (lazy to avoid circular imports)
+        from src.agents.answer_generator import AnswerGenerator
 
-        llm = get_aegis_llm_proxy()
+        # Create answer generator instance
+        # Use slightly lower temperature for research synthesis (more factual)
+        generator = AnswerGenerator(temperature=0.2)
 
-        # Format results for context
-        formatted_context = format_results_for_synthesis(
-            results,
-            max_length=max_context_length,
+        # Generate comprehensive answer with citations
+        # AnswerGenerator automatically handles:
+        # - Context formatting
+        # - LLM synthesis via AegisLLMProxy
+        # - Citation generation
+        # - Quality control
+        answer_with_citations = await generator.generate_with_citations(
+            query=query,
+            contexts=contexts,
+            intent="hybrid",  # Research uses hybrid intent
+            namespace=namespace,
         )
 
-        # Create synthesis prompt
-        synthesis_prompt = f"""You are a research assistant synthesizing information to answer a question.
+        # Extract answer and sources
+        answer = answer_with_citations.get("answer", "")
+        sources = answer_with_citations.get("sources", [])
 
-Question: {query}
+        # Calculate synthesis metadata
+        metadata = {
+            "num_contexts": len(contexts),
+            "num_sources_cited": len(sources),
+            "answer_length": len(answer),
+            "synthesis_method": "AnswerGenerator",
+        }
 
-Research Findings:
-{formatted_context}
-
-Task:
-Synthesize the above research findings into a comprehensive, well-structured answer.
-- Start with a direct answer to the question
-- Provide supporting details from the research
-- Cite specific sources using [Source #N] notation (e.g., "According to [Source #1], ...")
-- Maintain accuracy - only state what is supported by the findings
-- If the findings don't fully answer the question, acknowledge this
-- Structure your answer with clear paragraphs
-
-Comprehensive Answer:"""
-
-        # Generate synthesis
-        synthesis = await llm.generate(
-            prompt=synthesis_prompt,
-            temperature=0.3,  # Lower temperature for accuracy
-            max_tokens=1500,
+        logger.info(
+            "synthesis_completed",
+            answer_length=len(answer),
+            num_sources_cited=len(sources),
         )
 
-        logger.info("synthesis_completed", length=len(synthesis))
-
-        return synthesis.strip()
+        return {
+            "answer": answer,
+            "sources": sources,
+            "metadata": metadata,
+        }
 
     except Exception as e:
         logger.error("synthesis_failed", error=str(e), exc_info=True)
-        # Fallback: return concatenated results
-        return _fallback_synthesis(query, results)
+        # Fallback: return simple concatenation
+        return _fallback_synthesis(query, contexts)
 
 
-def format_results_for_synthesis(
-    results: list[dict[str, Any]],
-    max_length: int = 4000,
-) -> str:
-    """Format search results as context for synthesis.
-
-    Args:
-        results: Search results
-        max_length: Maximum total length
-
-    Returns:
-        Formatted context string
-    """
-    formatted_lines = []
-    current_length = 0
-
-    for idx, result in enumerate(results, 1):
-        text = result.get("text", "").strip()
-        source = result.get("source", "unknown")
-        score = result.get("score", 0.0)
-
-        if not text:
-            continue
-
-        # Format: [Source #N | Score: X.XX] Text...
-        line = f"[{source.capitalize()} #{idx} | Score: {score:.2f}]\n{text}\n"
-
-        # Check if adding this would exceed max_length
-        if current_length + len(line) > max_length:
-            # Truncate text to fit
-            remaining = max_length - current_length
-            if remaining > 100:  # Only add if we have reasonable space
-                truncated = text[: remaining - 50] + "..."
-                line = f"[{source.capitalize()} #{idx} | Score: {score:.2f}]\n{truncated}\n"
-                formatted_lines.append(line)
-            break
-
-        formatted_lines.append(line)
-        current_length += len(line)
-
-    return "\n".join(formatted_lines)
-
-
-def _fallback_synthesis(query: str, results: list[dict[str, Any]]) -> str:
-    """Fallback synthesis when LLM is unavailable.
+def _fallback_synthesis(query: str, contexts: list[dict[str, Any]]) -> dict[str, Any]:
+    """Fallback synthesis when AnswerGenerator fails.
 
     Args:
         query: Research question
-        results: Search results
+        contexts: Retrieved contexts
 
     Returns:
-        Simple concatenation of top results
+        Dict with fallback synthesis
     """
     logger.warning("using_fallback_synthesis")
 
-    # Take top 3 results by score
-    top_results = sorted(
-        results,
-        key=lambda r: r.get("score", 0.0),
-        reverse=True,
-    )[:3]
-
-    if not top_results:
-        return "No information available."
-
-    synthesis_parts = [f"Information found for: {query}\n"]
-
-    for idx, result in enumerate(top_results, 1):
-        text = result.get("text", "").strip()
-        source = result.get("source", "unknown")
-
-        if text:
-            synthesis_parts.append(f"\n{idx}. [From {source}]\n{text}")
-
-    return "\n".join(synthesis_parts)
-
-
-async def create_structured_summary(
-    query: str,
-    results: list[dict[str, Any]],
-) -> dict[str, Any]:
-    """Create structured summary of research findings.
-
-    Args:
-        query: Research question
-        results: Search results
-
-    Returns:
-        Dict with structured summary components
-
-    Examples:
-        >>> summary = await create_structured_summary("What is AI?", results)
-        >>> "key_points" in summary
-        True
-    """
-    # Extract key information
-    sources = list({r.get("source", "unknown") for r in results})
-    top_results = sorted(
-        results,
-        key=lambda r: r.get("score", 0.0),
+    # Take top 5 results by score
+    top_contexts = sorted(
+        contexts,
+        key=lambda c: c.get("score", 0.0),
         reverse=True,
     )[:5]
 
-    # Extract entities (from graph results)
-    entities = []
-    for r in results:
-        if r.get("source") == "graph":
-            entities.extend(r.get("entities", []))
+    if not top_contexts:
+        return {
+            "answer": "No information available.",
+            "sources": [],
+            "metadata": {"fallback": True},
+        }
 
-    # Generate synthesis
-    synthesis = await synthesize_findings(query, results)
+    # Build simple answer from top contexts
+    answer_parts = [f"Research findings for: {query}\n"]
 
-    summary = {
-        "query": query,
-        "synthesis": synthesis,
-        "num_results": len(results),
+    sources = []
+    for idx, ctx in enumerate(top_contexts, 1):
+        text = ctx.get("text", "").strip()
+        source_type = ctx.get("source_channel", ctx.get("source", "unknown"))
+
+        if text:
+            # Truncate long texts
+            if len(text) > 300:
+                text = text[:297] + "..."
+
+            answer_parts.append(f"\n[{idx}] {text}")
+
+            # Add to sources
+            sources.append(
+                {
+                    "index": idx,
+                    "text": text,
+                    "source_type": source_type,
+                    "score": ctx.get("score", 0.0),
+                }
+            )
+
+    answer = "\n".join(answer_parts)
+
+    return {
+        "answer": answer,
         "sources": sources,
-        "key_findings": [
-            {
-                "text": r.get("text", "")[:200] + "...",
-                "source": r.get("source", "unknown"),
-                "score": r.get("score", 0.0),
-            }
-            for r in top_results
-        ],
-        "entities": list(set(entities))[:10],  # Top 10 unique entities
+        "metadata": {
+            "num_contexts": len(contexts),
+            "fallback": True,
+        },
     }
 
-    logger.info("structured_summary_created", query=query)
 
-    return summary
-
-
-def extract_citations(synthesis: str) -> list[int]:
-    """Extract source citations from synthesis text.
+def evaluate_synthesis_quality(result: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate the quality of synthesis.
 
     Args:
-        synthesis: Synthesized text with citations
+        result: Synthesis result dict
 
     Returns:
-        List of cited source numbers
+        Dict with quality metrics
 
     Examples:
-        >>> citations = extract_citations("According to [Source #1], AI is...")
-        >>> citations
-        [1]
+        >>> metrics = evaluate_synthesis_quality({
+        ...     "answer": "AI is...",
+        ...     "sources": [{"index": 1}],
+        ...     "metadata": {"num_contexts": 10}
+        ... })
+        >>> "quality_score" in metrics
+        True
     """
-    import re
+    answer = result.get("answer", "")
+    sources = result.get("sources", [])
+    metadata = result.get("metadata", {})
 
-    # Find all [Source #N] patterns
-    pattern = r"\[Source #(\d+)\]"
-    matches = re.findall(pattern, synthesis)
+    num_contexts = metadata.get("num_contexts", 0)
+    num_sources_cited = len(sources)
 
-    # Convert to integers and deduplicate
-    cited_sources = sorted({int(match) for match in matches})
+    # Calculate quality metrics
+    answer_length = len(answer)
+    has_citations = num_sources_cited > 0
+    citation_rate = num_sources_cited / max(num_contexts, 1)
 
-    logger.debug("citations_extracted", count=len(cited_sources), sources=cited_sources)
+    # Quality score (0-1)
+    quality_score = 0.0
 
-    return cited_sources
+    # Answer length (30%)
+    if answer_length > 500:
+        quality_score += 0.3
+    elif answer_length > 200:
+        quality_score += 0.15
 
+    # Citations (40%)
+    if has_citations:
+        quality_score += 0.2
+        if citation_rate > 0.3:  # Good citation coverage
+            quality_score += 0.2
 
-def extract_key_points(text: str, max_points: int = 5) -> list[str]:
-    """Extract key points from synthesis text.
+    # Context coverage (30%)
+    if num_contexts >= 10:
+        quality_score += 0.3
+    elif num_contexts >= 5:
+        quality_score += 0.15
 
-    Args:
-        text: Synthesized text
-        max_points: Maximum number of points
+    metrics = {
+        "quality_score": quality_score,
+        "answer_length": answer_length,
+        "num_contexts": num_contexts,
+        "num_sources_cited": num_sources_cited,
+        "citation_rate": citation_rate,
+        "has_citations": has_citations,
+        "has_fallback": metadata.get("fallback", False),
+    }
 
-    Returns:
-        List of key points
-    """
-    # Simple extraction: look for sentences with key indicators
-    import re
+    logger.debug("synthesis_quality_evaluated", metrics=metrics)
 
-    # Split into sentences
-    sentences = re.split(r"[.!?]+", text)
-
-    key_indicators = [
-        "first",
-        "second",
-        "third",
-        "importantly",
-        "primarily",
-        "mainly",
-        "key",
-        "critical",
-        "essential",
-    ]
-
-    key_sentences = []
-
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue
-
-        # Check for key indicators or high importance based on length and content
-        if any(indicator in sentence.lower() for indicator in key_indicators) or (
-            len(sentence) > 50 and len(sentence.split()) > 8
-        ):
-            key_sentences.append(sentence)
-
-    # Return top N by position (earlier is more important)
-    return key_sentences[:max_points]
+    return metrics

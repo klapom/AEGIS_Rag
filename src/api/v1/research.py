@@ -1,9 +1,12 @@
 """Research API Endpoints.
 
 Sprint 62 Feature 62.10: Research Endpoint Backend (6 SP)
+Sprint 70 Feature 70.4: Deep Research Supervisor Graph (5 SP)
 
 This module provides research endpoints for multi-step research queries
 with LangGraph workflow orchestration and SSE streaming support.
+
+Updated in Sprint 70 to use new Supervisor Pattern with component reuse.
 """
 
 import asyncio
@@ -15,7 +18,11 @@ import structlog
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 
-from src.agents.research.graph import ResearchState, create_research_graph
+from src.agents.research.research_graph import (
+    ResearchSupervisorState,
+    create_initial_research_state,
+    get_research_graph,
+)
 from src.api.models.research import (
     ResearchProgress,
     ResearchQueryRequest,
@@ -40,6 +47,8 @@ async def _stream_research_progress(
 ) -> AsyncGenerator[str, None]:
     """Stream research progress as SSE events.
 
+    Sprint 70: Updated to use new Supervisor Pattern graph.
+
     Args:
         query: Research question
         namespace: Namespace to search in
@@ -49,21 +58,15 @@ async def _stream_research_progress(
         SSE-formatted progress events
     """
     try:
-        # Create initial state
-        initial_state: ResearchState = {
-            "query": query,
-            "namespace": namespace,
-            "research_plan": [],
-            "search_results": [],
-            "synthesis": "",
-            "iteration": 0,
-            "max_iterations": max_iterations,
-            "quality_metrics": {},
-            "should_continue": True,
-        }
+        # Create initial state (Sprint 70: New state structure)
+        initial_state = create_initial_research_state(
+            query=query,
+            max_iterations=max_iterations,
+            namespace=namespace,
+        )
 
-        # Create graph
-        graph = create_research_graph()
+        # Create graph (Sprint 70: New Supervisor Pattern graph)
+        graph = get_research_graph()
 
         # Send initial progress
         progress = ResearchProgress(
@@ -92,42 +95,47 @@ async def _stream_research_progress(
                         break
 
                 if node_name and state_update:
-                    # Emit progress for each phase
-                    if node_name == "plan":
+                    # Emit progress for each phase (Sprint 70: Updated node names)
+                    if node_name == "planner":
                         progress = ResearchProgress(
                             phase="plan",
                             message="Creating research plan",
                             iteration=iteration_count,
-                            metadata={"num_queries": len(state_update.get("research_plan", []))},
+                            metadata={"num_queries": len(state_update.get("sub_queries", []))},
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
-                    elif node_name == "search":
+                    elif node_name == "searcher":
                         iteration_count = state_update.get("iteration", iteration_count)
                         progress = ResearchProgress(
                             phase="search",
                             message=f"Executing searches (iteration {iteration_count})",
                             iteration=iteration_count,
-                            metadata={"num_queries": len(state_update.get("research_plan", []))},
+                            metadata={
+                                "num_queries": len(state_update.get("sub_queries", [])),
+                                "num_contexts": len(state_update.get("all_contexts", [])),
+                            },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
-                    elif node_name == "evaluate":
-                        metrics = state_update.get("quality_metrics", {})
+                    elif node_name == "supervisor":
                         progress = ResearchProgress(
                             phase="evaluate",
-                            message="Evaluating search results",
+                            message="Evaluating search quality",
                             iteration=iteration_count,
-                            metadata=metrics,
+                            metadata={
+                                "should_continue": state_update.get("should_continue", False),
+                                "num_contexts": len(state_update.get("all_contexts", [])),
+                            },
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
-                    elif node_name == "synthesize":
+                    elif node_name == "synthesizer":
                         progress = ResearchProgress(
                             phase="synthesize",
                             message="Synthesizing final answer",
                             iteration=iteration_count,
-                            metadata={"num_results": len(state_update.get("search_results", []))},
+                            metadata={"num_contexts": len(state_update.get("all_contexts", []))},
                         )
                         yield f"data: {progress.model_dump_json()}\n\n"
 
@@ -140,17 +148,17 @@ async def _stream_research_progress(
         # Final state is the last_state
         final_state = last_state
 
-        # Extract sources from search results
-        sources = _extract_sources(final_state.get("search_results", []))
+        # Extract sources from contexts (Sprint 70: Changed from search_results to all_contexts)
+        sources = _extract_sources(final_state.get("all_contexts", []))
 
-        # Create final response
+        # Create final response (Sprint 70: Updated field names)
         response = ResearchQueryResponse(
             query=query,
             synthesis=final_state.get("synthesis", ""),
             sources=sources,
             iterations=final_state.get("iteration", 0),
-            quality_metrics=final_state.get("quality_metrics", {}),
-            research_plan=final_state.get("research_plan", []),
+            quality_metrics=final_state.get("metadata", {}).get("quality_metrics", {}),
+            research_plan=final_state.get("sub_queries", []),
         )
 
         # Send final result
@@ -272,20 +280,21 @@ async def research_query(
 
             start_time = time.time()
 
-            # Execute research workflow
-            from src.agents.research.graph import run_research
+            # Execute research workflow (Sprint 70: New Supervisor Pattern graph)
+            graph = get_research_graph()
+            initial_state = create_initial_research_state(
+                query=request.query,
+                max_iterations=request.max_iterations,
+                namespace=request.namespace,
+            )
 
             final_state = await asyncio.wait_for(
-                run_research(
-                    query=request.query,
-                    max_iterations=request.max_iterations,
-                    namespace=request.namespace,
-                ),
+                graph.ainvoke(initial_state),
                 timeout=RESEARCH_TIMEOUT_SECONDS,
             )
 
-            # Extract sources
-            sources = _extract_sources(final_state.get("search_results", []))
+            # Extract sources (Sprint 70: Changed from search_results to all_contexts)
+            sources = _extract_sources(final_state.get("all_contexts", []))
 
             logger.info(
                 "research_query_complete",
@@ -296,6 +305,7 @@ async def research_query(
             )
 
             # Sprint 63 Feature 63.4: Return structured format if requested
+            # Sprint 70: Updated field names
             if request.response_format == "structured":
                 from src.api.services.response_formatter import (
                     format_research_response_structured,
@@ -305,21 +315,23 @@ async def research_query(
                     query=request.query,
                     synthesis=final_state.get("synthesis", ""),
                     sources=sources,
-                    research_plan=final_state.get("research_plan", []),
+                    research_plan=final_state.get("sub_queries", []),
                     iterations=final_state.get("iteration", 0),
-                    quality_metrics=final_state.get("quality_metrics", {}),
+                    quality_metrics=final_state.get("metadata", {}).get(
+                        "quality_metrics", {}
+                    ),
                     start_time=start_time,
                 )
                 return structured_response.model_dump()
 
-            # Create natural format response (default)
+            # Create natural format response (default) (Sprint 70: Updated field names)
             response = ResearchQueryResponse(
                 query=request.query,
                 synthesis=final_state.get("synthesis", ""),
                 sources=sources,
                 iterations=final_state.get("iteration", 0),
-                quality_metrics=final_state.get("quality_metrics", {}),
-                research_plan=final_state.get("research_plan", []),
+                quality_metrics=final_state.get("metadata", {}).get("quality_metrics", {}),
+                research_plan=final_state.get("sub_queries", []),
             )
 
             return response
