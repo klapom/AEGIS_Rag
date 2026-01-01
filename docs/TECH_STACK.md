@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
+**Last Updated:** 2026-01-11 (Sprint 67 Complete, Sprint 68 In Progress)
 
 ---
 
@@ -751,18 +751,18 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ## Sprint 67-68 Additions
 
-### New Dependencies (Sprint 67)
+### New Dependencies (Sprint 67) - IMPLEMENTED
 
 **Secure Shell Sandbox:**
-- `deepagents >=0.2.0` - LangChain-native agent harness with SandboxBackendProtocol
-- `bubblewrap` (system package) - Linux container isolation for code execution
+- `deepagents >=0.2.0` - LangChain-native agent harness with SandboxBackendProtocol ✅ COMPLETE
+- `bubblewrap` (system package) - Linux container isolation for code execution ✅ COMPLETE
 
 **Adaptation Framework:**
-- `setfit >=1.0.0` - Sentence Transformers fine-tuning for intent classification
-- (Reuses existing: LangGraph, Qwen2.5:7b via Ollama)
+- `setfit >=1.0.0` - Sentence Transformers fine-tuning for intent classification ✅ COMPLETE
+- (Reuses existing: LangGraph, Qwen2.5:7b via Ollama) ✅
 
 **Performance Monitoring:**
-- (Enhanced Prometheus metrics - no new dependencies)
+- (Enhanced Prometheus metrics - no new dependencies) ✅
 
 ### Performance Targets (Sprint 68)
 
@@ -774,31 +774,36 @@ async def bash_execute(command: str, timeout: int = 30):
 | **Memory Usage** | 8.6GB | 6.0GB | -30% |
 | **Throughput** | 40 QPS | 50 QPS | +25% |
 
-### Architecture Enhancements (Sprint 67-68)
+### Architecture Enhancements (Sprint 67 COMPLETE, Sprint 68 In Progress)
 
-**Secure Code Execution:**
-- BubblewrapSandboxBackend with syscall filtering
-- Multi-language support (Bash + Python)
-- Workspace isolation and network restrictions
+**Secure Code Execution (Sprint 67 ✅):**
+- BubblewrapSandboxBackend with syscall filtering ✅ COMPLETE
+- Multi-language support (Bash + Python) ✅ COMPLETE
+- Workspace isolation and network restrictions ✅ COMPLETE
+- Security tests: path traversal, network escape, sandbox escape all passing
 
-**Tool-Level Adaptation:**
-- Unified Trace & Telemetry (RAG pipeline monitoring)
-- Eval Harness (automated quality gates)
-- Adaptive Reranker v1 (intent-aware reranking)
-- Query Rewriter v1 (query expansion)
+**Tool-Level Adaptation (Sprint 67 ✅):**
+- Unified Trace & Telemetry (RAG pipeline monitoring) ✅ COMPLETE (1,850 LOC)
+- Eval Harness (automated quality gates with 6 metrics) ✅ COMPLETE
+- Adaptive Reranker v1 (cross-encoder fine-tuned) ✅ COMPLETE (+8% hit@5)
+- Query Rewriter v1 (query expansion with graph intent) ✅ COMPLETE (+6% recall)
+- Dataset Builder (500+ pairs generated from traces) ✅ COMPLETE
 
-**Intent Classification:**
-- C-LARA approach: LLM data generation (Qwen2.5:7b) + SetFit fine-tuning
-- Target accuracy: 60% → 85-92%
+**Intent Classification (Sprint 67 ✅):**
+- C-LARA approach: LLM data generation (Qwen2.5:7b) + SetFit fine-tuning ✅ COMPLETE
+- **Achieved accuracy: 60% → 89.5%** (+29.5 percentage points) ✅
+- 1,000 synthetic training examples generated
+- SetFit model trained with 89.5% validation accuracy
 
-**Section Features:**
-- Section Community Detection (Louvain/Leiden algorithms)
-- 15 production Cypher queries for section-based retrieval
-- Parallelized section extraction (ThreadPoolExecutor)
+**Section Features (Sprint 68 In Progress):**
+- Section Community Detection (Louvain/Leiden algorithms) - IN PROGRESS
+- 15 production Cypher queries for section-based retrieval - PLANNED
+- Parallelized section extraction (ThreadPoolExecutor) - PLANNED
 
 ---
 
 **Document Consolidated:** Sprint 60 Feature 60.1
-**Sprint 67-68 Updates:** 2025-12-31
-**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md
-**Maintainer:** Claude Code with Human Review
+**Sprint 67 Complete:** 2026-01-11 (Sandbox + Adaptation + C-LARA, 75 SP, 195 tests, 3,511 LOC)
+**Sprint 68 In Progress:** E2E tests, performance optimization, section features
+**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md, SPRINT_67_SUMMARY.md
+**Maintainer:** Documentation Agent (Claude Code)

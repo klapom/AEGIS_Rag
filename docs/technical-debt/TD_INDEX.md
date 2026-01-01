@@ -55,8 +55,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | IN PROGRESS | 13 | **Sprint 67** (67.10 ✅) |
-| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | OPEN | 18 | **Sprint 67-68** |
+| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | ✅ COMPLETE | 13 | **Sprint 67** ✅ |
+| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | IN PROGRESS | 18 | **Sprint 67-68** |
 
 ### MEDIUM Priority
 

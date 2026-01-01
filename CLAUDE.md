@@ -293,7 +293,10 @@ docker images aegis-rag-test --format "{{.CreatedAt}}"
 **Wichtig:** Die Datenbank-Container (Qdrant, Neo4j, Redis, Ollama) müssen NICHT neu gebaut werden - diese verwenden offizielle Images.
 
 **Sprint 64 Complete:** Domain training optimization, LLM config backend integration (Redis persistence, 60s cache), multi-turn research agents, section-aware citations, production deployment (Docker Compose + Nginx @ 192.168.178.10), E2E testing (337/594 passed - core journeys working).
-**Sprint 65 Upcoming:** Fix critical E2E failures (follow-up questions, domain training timeouts), performance optimizations (history loading, graph filters), test infrastructure improvements.
+**Sprint 65 Complete:** CUDA optimization for embeddings (10-80x speedup), critical E2E test fixes (follow-ups, domain training, history loading), performance improvements.
+**Sprint 66 Complete:** Document upload pipeline stabilization, VLM metadata, Admin UI fixes.
+**Sprint 67 Complete:** Secure Shell Sandbox (deepagents), Agents Adaptation Framework (Trace, Eval, Dataset, Reranker, Query Rewriter), C-LARA Intent Classifier (60%→89.5% accuracy), 195 tests passing, 3,511 lines of new code.
+**Sprint 68 In Progress:** E2E test completion (594 tests, 57%→100%), performance optimization (500ms→350ms), section community detection, advanced adaptation features.
 
 ---
 
