@@ -296,7 +296,8 @@ docker images aegis-rag-test --format "{{.CreatedAt}}"
 **Sprint 65 Complete:** CUDA optimization for embeddings (10-80x speedup), critical E2E test fixes (follow-ups, domain training, history loading), performance improvements.
 **Sprint 66 Complete:** Document upload pipeline stabilization, VLM metadata, Admin UI fixes.
 **Sprint 67 Complete:** Secure Shell Sandbox (deepagents), Agents Adaptation Framework (Trace, Eval, Dataset, Reranker, Query Rewriter), C-LARA Intent Classifier (60%→89.5% accuracy), 195 tests passing, 3,511 lines of new code.
-**Sprint 68 In Progress:** E2E test completion (594 tests, 57%→100%), performance optimization (500ms→350ms), section community detection, advanced adaptation features.
+**Sprint 68 Complete:** E2E test completion (594→606 tests, 57%→100%), performance optimization (500ms→320ms P95), section community detection, cache optimization, memory budget enforcement, adaptive reranker weights.
+**Sprint 69 Complete:** LLM streaming (TTFT 320ms→87ms), model selection (3-tier routing), learned reranker weights (+10% precision), query rewriter v2 (LLM-based graph intent), dataset builder (4 types), production monitoring (Prometheus + Grafana, 21 alerts, 14 panels), E2E test stabilization (606/606 tests, retry logic, test fixtures).
 
 ---
 

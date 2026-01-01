@@ -59,6 +59,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -92,6 +93,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=180,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -121,6 +123,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=160,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -150,6 +153,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=170,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -178,6 +182,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=140,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -207,6 +212,7 @@ class TestGraphIntentExtraction:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=200,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -238,6 +244,7 @@ class TestCypherHintGeneration:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -269,6 +276,7 @@ class TestCypherHintGeneration:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=160,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -299,6 +307,7 @@ class TestCypherHintGeneration:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -326,6 +335,7 @@ class TestErrorHandling:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=50,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -371,6 +381,7 @@ class TestErrorHandling:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -395,6 +406,7 @@ class TestErrorHandling:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=100,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -426,6 +438,7 @@ class TestPerformance:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -463,27 +476,29 @@ class TestSingletonAndFactory:
     async def test_extract_graph_intents_convenience_function(self):
         """Test extract_graph_intents convenience function."""
         with patch("src.components.retrieval.query_rewriter_v2.get_aegis_llm_proxy") as mock_get_proxy:
-            mock_llm = AsyncMock()
-            mock_get_proxy.return_value = mock_llm
-            mock_llm.generate.return_value = LLMResponse(
-                content=json.dumps({
-                    "graph_intents": ["entity_relationships"],
-                    "entities_mentioned": ["A"],
-                    "relationship_types": [],
-                    "traversal_depth": None,
-                    "confidence": 0.8,
-                }),
-                provider="ollama",
-                model="llama3.2:8b",
-                tokens_used=150,
-            )
+            with patch("src.components.retrieval.query_rewriter_v2._query_rewriter_v2", None):
+                mock_llm = AsyncMock()
+                mock_get_proxy.return_value = mock_llm
+                mock_llm.generate.return_value = LLMResponse(
+                    content=json.dumps({
+                        "graph_intents": ["entity_relationships"],
+                        "entities_mentioned": ["A"],
+                        "relationship_types": [],
+                        "traversal_depth": None,
+                        "confidence": 0.8,
+                    }),
+                    provider="ollama",
+                    model="llama3.2:8b",
+                    tokens_used=150,
+                    cost_usd=0.0,
+                )
 
-            # Act
-            result = await extract_graph_intents("Test query")
+                # Act
+                result = await extract_graph_intents("Test query")
 
-            # Assert
-            assert result is not None
-            assert "entity_relationships" in result.graph_intents
+                # Assert
+                assert result is not None
+                assert "entity_relationships" in result.graph_intents
 
 
 class TestCypherHintQuality:
@@ -505,6 +520,7 @@ class TestCypherHintQuality:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -536,6 +552,7 @@ class TestCypherHintQuality:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=100,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 
@@ -561,6 +578,7 @@ class TestCypherHintQuality:
             provider="ollama",
             model="llama3.2:8b",
             tokens_used=150,
+            cost_usd=0.0,
         )
         mock_llm_proxy.generate.return_value = llm_response
 

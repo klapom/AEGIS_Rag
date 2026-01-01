@@ -255,14 +255,17 @@ class AnswerGenerator:
         self,
         query: str,
         contexts: list[dict[str, Any]],
+        intent: str | None = None,
     ) -> tuple[str, dict[int, dict[str, Any]]]:
         """Generate answer with inline source citations.
 
         Sprint 27 Feature 27.10: Inline Source Citations
+        Sprint 69 Feature 69.3: Added intent parameter for model selection
 
         Args:
             query: User question
             contexts: Retrieved document contexts (list of dicts with 'text', 'source', 'title', 'score', 'metadata')
+            intent: Query intent for complexity-based model selection (optional)
 
         Returns:
             Tuple of (answer_with_citations, citation_map)
@@ -306,8 +309,8 @@ class AnswerGenerator:
         )
 
         try:
-            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
-            model_name = await self._get_llm_model()
+            # Sprint 69 Feature 69.3: Get model with complexity-based selection
+            model_name = await self._get_llm_model(query=query, intent=intent)
 
             # Use AegisLLMProxy for generation
             task = LLMTask(
@@ -633,10 +636,12 @@ class AnswerGenerator:
         self,
         query: str,
         contexts: list[dict[str, Any]],
+        intent: str | None = None,
     ):
         """Stream LLM response token-by-token with citation support.
 
         Sprint 52: LLM Answer Streaming with Citations
+        Sprint 69 Feature 69.3: Added intent parameter for model selection
 
         This method combines citation generation with real-time token streaming.
         It yields tokens as they're generated while maintaining citation mapping.
@@ -644,12 +649,13 @@ class AnswerGenerator:
         Args:
             query: User question
             contexts: Retrieved document contexts
+            intent: Query intent for complexity-based model selection (optional)
 
         Yields:
             dict: Token events with format:
                 - {"event": "token", "data": {"content": "token_text"}}
                 - {"event": "citation_map", "data": {...}}  # Sent before tokens
-                - {"event": "complete", "data": {"done": True, "answer": "full_answer"}}
+                - {"event": "complete", "data": {"done": True, "answer": "full_answer", "citation_map": {...}}}
                 - {"event": "error", "data": {"error": "error_message"}}
         """
         import time
@@ -659,7 +665,7 @@ class AnswerGenerator:
             answer = self._no_context_answer(query)
             yield {"event": "citation_map", "data": {}}
             yield {"event": "token", "data": {"content": answer}}
-            yield {"event": "complete", "data": {"done": True, "answer": answer}}
+            yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}
             return
 
         # Limit to top 10 sources
@@ -682,8 +688,8 @@ class AnswerGenerator:
         )
 
         try:
-            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
-            model_name = await self._get_llm_model()
+            # Sprint 69 Feature 69.3: Get model with complexity-based selection
+            model_name = await self._get_llm_model(query=query, intent=intent)
 
             # Track TTFT
             start_time = time.perf_counter()

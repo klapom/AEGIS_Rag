@@ -522,9 +522,14 @@ class DatasetBuilder:
 
                     # Get context from selected chunks
                     chunks = trace.get("evidence", {}).get("selected_chunks", [])
-                    context = "\n\n".join(
-                        chunk.get("text", chunk.get("content", "")) for chunk in chunks
-                    )
+                    # Handle both list of chunks and integer count
+                    if isinstance(chunks, list):
+                        context = "\n\n".join(
+                            chunk.get("text", chunk.get("content", "")) for chunk in chunks
+                        )
+                    else:
+                        # If selected_chunks is a count, fallback to empty context
+                        context = ""
 
                     # Get answer
                     answer = trace.get("answer", {}).get("text", "")

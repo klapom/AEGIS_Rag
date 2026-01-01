@@ -55,8 +55,10 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
     query = state.get("query", "")
     contexts = state.get("retrieved_contexts", [])
+    # Sprint 69 Feature 69.3: Get intent for model selection
+    intent = state.get("intent")
 
-    logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts))
+    logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts), intent=intent)
 
     # Initialize phase_events list if not present
     if "phase_events" not in state:
@@ -80,10 +82,11 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         generator = get_answer_generator()
 
         # Sprint 52: Stream tokens in real-time to chat window
+        # Sprint 69 Feature 69.3: Pass intent for model selection
         answer = ""
         citation_map = {}
 
-        async for token_event in generator.generate_with_citations_streaming(query, contexts):
+        async for token_event in generator.generate_with_citations_streaming(query, contexts, intent=intent):
             event_type = token_event.get("event")
 
             if event_type == "citation_map":

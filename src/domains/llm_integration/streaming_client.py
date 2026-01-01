@@ -71,7 +71,7 @@ class StreamingClient:
         self,
         prompt: str,
         task_type: TaskType = TaskType.GENERATION,
-        quality_requirement: QualityRequirement = QualityRequirement.STANDARD,
+        quality_requirement: QualityRequirement = QualityRequirement.MEDIUM,
         temperature: float = 0.7,
         max_tokens: int = 2048,
         **kwargs: Any,
@@ -85,7 +85,7 @@ class StreamingClient:
         Args:
             prompt: User prompt for LLM generation
             task_type: Type of LLM task (default: GENERATION)
-            quality_requirement: Quality level (STANDARD, HIGH, CRITICAL)
+            quality_requirement: Quality level (LOW, MEDIUM, HIGH, CRITICAL)
             temperature: Sampling temperature (0.0 = deterministic, 1.0 = creative)
             max_tokens: Maximum tokens to generate
             **kwargs: Additional task parameters
@@ -228,7 +228,7 @@ def get_streaming_client() -> StreamingClient:
 # Convenience function for simple streaming
 async def stream_llm_response(
     prompt: str,
-    quality: QualityRequirement = QualityRequirement.STANDARD,
+    quality: QualityRequirement = QualityRequirement.MEDIUM,
     **kwargs: Any,
 ) -> AsyncIterator[str]:
     """
@@ -239,7 +239,7 @@ async def stream_llm_response(
 
     Args:
         prompt: User prompt
-        quality: Quality requirement (STANDARD, HIGH, CRITICAL)
+        quality: Quality requirement (LOW, MEDIUM, HIGH, CRITICAL)
         **kwargs: Additional parameters for StreamingClient.stream()
 
     Yields:

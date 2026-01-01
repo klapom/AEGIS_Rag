@@ -13,6 +13,8 @@ import pytest
 from src.adaptation.dataset_builder import (
     DatasetBuilder,
     DatasetBuilderError,
+    GraphExample,
+    QAExample,
     RerankExample,
     TrainingExample,
 )
@@ -138,6 +140,104 @@ def temp_trace_file(tmp_path: Path) -> Path:
 def dataset_builder(temp_trace_file: Path) -> DatasetBuilder:
     """Create DatasetBuilder instance with temp trace file."""
     return DatasetBuilder(trace_path=str(temp_trace_file))
+
+
+@pytest.fixture
+def temp_graph_trace_file(tmp_path: Path) -> Path:
+    """Create temporary trace file with graph query data."""
+    trace_file = tmp_path / "graph_traces.jsonl"
+
+    # Sample traces with graph queries
+    traces = [
+        # High quality graph trace
+        {
+            "trace_version": "v1",
+            "request_id": "req_graph_001",
+            "timestamp": "2025-12-31T10:00:00Z",
+            "query": {
+                "original": "What are the relationships between RAG and LLM?",
+                "intent": "exploratory",
+            },
+            "graph_query": {
+                "cypher": "MATCH (r:RAG)-[rel:RELATES_TO]->(l:LLM) RETURN r, rel, l",
+                "entities": ["RAG", "LLM"],
+                "relations": ["RELATES_TO"],
+            },
+            "retrieval": {
+                "graph_local": {
+                    "results": [
+                        {
+                            "chunk_id": "g1",
+                            "text": "RAG uses LLM for generation...",
+                            "score": 0.95,
+                        },
+                        {
+                            "chunk_id": "g2",
+                            "text": "LLM generates answers...",
+                            "score": 0.88,
+                        },
+                    ]
+                },
+                "graph_global": {
+                    "results": [
+                        {"chunk_id": "g3", "text": "Global context...", "score": 0.82}
+                    ]
+                },
+            },
+            "evidence": {
+                "selected_chunks": [
+                    {"text": "RAG uses LLM..."},
+                    {"text": "LLM generates..."},
+                ],
+                "citations": ["g1", "g2"],
+            },
+            "answer": {
+                "text": "RAG and LLM are closely related [1][2]...",
+                "model": "qwen2.5:7b",
+            },
+            "metrics": {
+                "quality_score": 0.90,
+            },
+        },
+        # Medium quality graph trace
+        {
+            "trace_version": "v1",
+            "request_id": "req_graph_002",
+            "timestamp": "2025-12-31T10:01:00Z",
+            "query": {
+                "original": "Find papers about embedding models",
+                "intent": "keyword",
+            },
+            "graph_query": {
+                "cypher": None,  # No Cypher generated
+                "entities": ["papers", "embedding models"],
+                "relations": [],
+            },
+            "retrieval": {
+                "graph_local": {"results": [{"chunk_id": "g4", "text": "...", "score": 0.75}]}
+            },
+            "answer": {"text": "Here are relevant papers...", "model": "qwen2.5:7b"},
+            "metrics": {
+                "quality_score": 0.78,
+            },
+        },
+        # No graph query (should be filtered out)
+        {
+            "trace_version": "v1",
+            "request_id": "req_no_graph",
+            "timestamp": "2025-12-31T10:02:00Z",
+            "query": {"original": "Simple query", "intent": "factual"},
+            "answer": {"text": "Simple answer"},
+            "metrics": {"quality_score": 0.85},
+            "evidence": {"citations": []},
+        },
+    ]
+
+    with open(trace_file, "w") as f:
+        for trace in traces:
+            f.write(json.dumps(trace) + "\n")
+
+    return trace_file
 
 
 @pytest.mark.asyncio
@@ -470,6 +570,129 @@ class TestDatasetBuilder:
         assert len(traces) == 2
         assert traces[0]["valid"] == "json"
         assert traces[1]["another"] == "valid"
+
+    async def test_build_qa_dataset__high_quality__creates_examples(
+        self, dataset_builder: DatasetBuilder, tmp_path: Path
+    ) -> None:
+        """Test QA dataset building from high-quality traces."""
+        output_path = tmp_path / "qa_dataset.jsonl"
+
+        examples = await dataset_builder.build_qa_dataset(
+            min_quality=0.8, output_path=str(output_path), max_examples=10
+        )
+
+        # Should include req_001 (0.92) and req_004 (0.88)
+        assert len(examples) == 2
+        assert isinstance(examples[0], QAExample)
+        assert examples[0].question == "What is RAG?"
+        assert examples[0].answer == "RAG is Retrieval Augmented Generation..."
+        assert examples[0].quality_score == 0.92
+        assert len(examples[0].citations) == 2
+
+        # Check file was created
+        assert output_path.exists()
+
+        # Verify JSONL format
+        with open(output_path) as f:
+            lines = f.readlines()
+            assert len(lines) == 2
+            first_example = json.loads(lines[0])
+            assert first_example["question"] == "What is RAG?"
+
+    async def test_build_qa_dataset__max_examples__limits_output(
+        self, dataset_builder: DatasetBuilder, tmp_path: Path
+    ) -> None:
+        """Test QA dataset respects max_examples limit."""
+        output_path = tmp_path / "qa_dataset.jsonl"
+
+        examples = await dataset_builder.build_qa_dataset(
+            min_quality=0.7, output_path=str(output_path), max_examples=2
+        )
+
+        # Should limit to 2 examples even if more qualify
+        assert len(examples) <= 2
+
+    async def test_build_graph_dataset__filters_graph_traces(
+        self, temp_graph_trace_file: Path, tmp_path: Path
+    ) -> None:
+        """Test graph dataset building filters for graph query traces."""
+        builder = DatasetBuilder(trace_path=str(temp_graph_trace_file))
+        output_path = tmp_path / "graph_dataset.jsonl"
+
+        examples = await builder.build_graph_dataset(
+            min_quality=0.7, output_path=str(output_path), max_examples=10
+        )
+
+        # Should include req_graph_001 (0.90) and req_graph_002 (0.78)
+        # Should exclude req_no_graph (no graph query)
+        assert len(examples) == 2
+        assert isinstance(examples[0], GraphExample)
+        assert examples[0].query == "What are the relationships between RAG and LLM?"
+        assert examples[0].cypher == "MATCH (r:RAG)-[rel:RELATES_TO]->(l:LLM) RETURN r, rel, l"
+        assert examples[0].entities == ["RAG", "LLM"]
+        assert examples[0].relations == ["RELATES_TO"]
+        assert len(examples[0].graph_results) == 3  # 2 local + 1 global
+
+        # Check file was created
+        assert output_path.exists()
+
+    async def test_build_graph_dataset__high_quality_threshold__filters(
+        self, temp_graph_trace_file: Path, tmp_path: Path
+    ) -> None:
+        """Test graph dataset with high quality threshold."""
+        builder = DatasetBuilder(trace_path=str(temp_graph_trace_file))
+        output_path = tmp_path / "graph_dataset.jsonl"
+
+        examples = await builder.build_graph_dataset(
+            min_quality=0.85, output_path=str(output_path), max_examples=10
+        )
+
+        # Should only include req_graph_001 (0.90), exclude req_graph_002 (0.78)
+        assert len(examples) == 1
+        assert examples[0].quality_score == 0.90
+
+    async def test_export_to_parquet__creates_versioned_dataset(
+        self, dataset_builder: DatasetBuilder, tmp_path: Path
+    ) -> None:
+        """Test exporting dataset to Parquet format with versioning."""
+        # Build some examples first
+        output_path = tmp_path / "qa_dataset.jsonl"
+        examples = await dataset_builder.build_qa_dataset(
+            min_quality=0.8, output_path=str(output_path), max_examples=10
+        )
+
+        # Export to Parquet
+        export_dir = tmp_path / "datasets"
+        result_path = await dataset_builder.export_to_parquet(
+            examples, "qa", str(export_dir), version="v1"
+        )
+
+        # Check directory structure
+        assert Path(result_path).exists()
+        parquet_file = Path(result_path) / "data.parquet"
+        metadata_file = Path(result_path) / "metadata.json"
+
+        assert parquet_file.exists()
+        assert metadata_file.exists()
+
+        # Verify metadata
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+            assert metadata["name"] == "qa"
+            assert metadata["version"] == "v1"
+            assert metadata["num_examples"] == len(examples)
+            assert "created_at" in metadata
+
+    async def test_export_to_parquet__empty_examples__returns_empty(
+        self, dataset_builder: DatasetBuilder, tmp_path: Path
+    ) -> None:
+        """Test export with empty examples list."""
+        result = await dataset_builder.export_to_parquet(
+            [], "qa", str(tmp_path / "datasets"), version="v1"
+        )
+
+        # Should return empty string for empty dataset
+        assert result == ""
 
 
 class TestTrainingExamples:
