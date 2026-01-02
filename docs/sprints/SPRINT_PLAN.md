@@ -2072,8 +2072,8 @@ mem0:
 ---
 
 ## Sprint 70: Deep Research & Tool Use Integration ✅ (COMPLETED 2026-01-02)
-**Ziel:** Fix Deep Research + Integrate MCP Tools via ReAct Pattern
-**Status:** ✅ **COMPLETED** - All 11 features implemented (37 SP)
+**Ziel:** Fix Deep Research + Integrate MCP Tools via ReAct Pattern + UX/Performance Improvements
+**Status:** ✅ **COMPLETED** - All 14 features implemented (44 SP)
 
 **Breakdown:**
 | Feature | SP | Priority | Status |
@@ -2092,8 +2092,12 @@ mem0:
 | 70.9 Tool Result Streaming (Phase Events) | 3 | 🟡 MEDIUM | ✅ DONE |
 | 70.10 Tool Analytics & Monitoring (Prometheus) | 3 | 🟡 MEDIUM | ✅ DONE |
 | 70.11 LLM-based Tool Detection (Adaptive Strategies) | 5 | 🟢 LOW | ✅ DONE |
+| **Phase 4: UX & Performance** | | | |
+| 70.12 LLM Prompt Tracing (PhaseEvents) | 3 | 🟡 MEDIUM | ✅ DONE |
+| 70.13 Balanced Anti-Hallucination Prompt + Sources Display Fix | 2 | 🟡 MEDIUM | ✅ DONE |
+| 70.14 Multilingual Stopword Removal for BM25 | 2 | 🟡 MEDIUM | ✅ DONE |
 
-**Total: 37 SP**
+**Total: 44 SP**
 
 ### Problem Analysis
 **Deep Research was completely broken:**
@@ -2142,6 +2146,13 @@ answer → should_use_tools? → [tools | END]
   - [x] Prometheus metrics: tool_executions_total, duration, active (70.10)
   - [x] LLM-based tool detection with 3 strategies (70.11)
   - [x] Editable marker lists in Admin UI (70.11)
+- **Phase 4 (70.12-70.14): UX & Performance**
+  - [x] Automatic PhaseEvent emission for individual LLM prompts (70.12)
+  - [x] 9 new PhaseType enums for LLM prompt tracking (70.12)
+  - [x] Balanced anti-hallucination prompt (general knowledge + strict sources) (70.13)
+  - [x] Hide sources when "information not available" (70.13)
+  - [x] Multilingual stopword removal (3,999 stopwords, 10 languages) (70.14)
+  - [x] BM25 cache invalidation and rebuild (70.14)
 
 ### Success Criteria
 - [x] Deep Research executes multi-turn queries without errors
@@ -2166,10 +2177,17 @@ answer → should_use_tools? → [tools | END]
 - `00b6f70` - Feature 70.7: Admin UI Toggle (3 SP)
 - `9a24ff1` - Features 70.8-70.10: Tests, Streaming, Analytics (8 SP)
 - `bc530fb` - Feature 70.11: LLM-based Tool Detection (5 SP)
+- `629c17c` - Feature 70.12: LLM Prompt Tracing (3 SP) - Fixed tests
+- `f8772b7` - Feature 70.13: Balanced Anti-Hallucination Prompt + Sources Display Fix (2 SP)
+- `a41240e` - Feature 70.14: Multilingual Stopword Removal for BM25 (2 SP)
+- `f8d1e6b` - docs(sprint70): Document Feature 70.14
 
 ### References
 - [SPRINT_70_PLAN.md](SPRINT_70_PLAN.md)
 - [DEEP_RESEARCH_TOOL_USE_DESIGN.md](DEEP_RESEARCH_TOOL_USE_DESIGN.md)
+- [SPRINT_70_FEATURE_70.12_SUMMARY.md](SPRINT_70_FEATURE_70.12_SUMMARY.md) - LLM Prompt Tracing
+- [SPRINT_70_FEATURE_70.13_SUMMARY.md](SPRINT_70_FEATURE_70.13_SUMMARY.md) - Balanced Anti-Hallucination Prompt (TO CREATE)
+- [SPRINT_70_FEATURE_70.14_SUMMARY.md](SPRINT_70_FEATURE_70.14_SUMMARY.md) - Multilingual Stopword Removal
 - LangGraph ReAct: https://langchain-ai.github.io/langgraph/how-tos/react-agent-from-scratch
 - LangGraph Supervisor: https://langchain-ai.github.io/langgraph/tutorials/multi_agent/hierarchical_agent_teams
 
@@ -2192,17 +2210,11 @@ answer → should_use_tools? → [tools | END]
 
 ---
 
-## Sprint 47+: Backlog Candidates 📋
+## Backlog Candidates 📋
 **Candidates:**
 | Feature | SP | Source |
 |---------|-----|--------|
 | JWT Authentication Frontend | 13 | Backlog |
-| Learned RRF Weights | 8 | Backlog |
-| NuExtract Model Evaluation | 5 | Backlog |
-| Qwen3:8b-Q4_K_M Benchmark | 3 | Backlog |
-| Reranking in Container (TD-059) | 3 | Tech Debt |
-| Unified Chunk IDs (TD-060) | 5 | Tech Debt |
-| Ollama GPU Docker Config (TD-061) | 3 | Tech Debt |
 
 ---
 
@@ -2218,13 +2230,11 @@ answer → should_use_tools? → [tools | END]
 - Query Analytics Dashboard
 - A/B Testing Framework
 - Multi-Tenancy Support
-- Backup & Disaster Recovery
-
-### Low Priority
 - Additional MCP Servers (Slack, Jira)
 - Voice Interface Integration
 - Mobile API Optimization
 - Internationalization (i18n)
+- Backup & Disaster Recovery
 
 ---
 
