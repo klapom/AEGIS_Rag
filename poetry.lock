@@ -8294,6 +8294,21 @@ files = [
 ]
 
 [[package]]
+name = "stop-words"
+version = "2025.11.4"
+description = "Get list of common stop words in various languages in Python"
+optional = false
+python-versions = ">=3.11"
+groups = ["main"]
+files = [
+    {file = "stop_words-2025.11.4-py3-none-any.whl", hash = "sha256:b3fc0722e42b722a9350aad59a8ba5850085a5b45a4ba9de390b4f5c4b86df25"},
+    {file = "stop_words-2025.11.4.tar.gz", hash = "sha256:0459072b54b11e43a6fb4c5b05bda87d2accfc4f14c1697974f3739af0f7b43d"},
+]
+
+[package.extras]
+dev = ["black (==25.9.0)", "coverage (==7.11.0)", "flake8 (==7.3.0)", "mypy (==1.18.2)"]
+
+[[package]]
 name = "striprtf"
 version = "0.0.26"
 description = "A simple library to convert rtf to text"
@@ -9824,4 +9839,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "d73c2dd8620c74a016430427fb2941500a2cc5d04d701ff78adc70fdb72385e0"
+content-hash = "a3b6391bfe6ff9981f9feebaf8485f8568808995cf0d5a8018c26bac0ac6f03c"
