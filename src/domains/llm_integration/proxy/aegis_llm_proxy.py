@@ -298,6 +298,7 @@ class AegisLLMProxy:
         stream: bool = False,
         use_cache: bool = True,
         namespace: str = "default",
+        emit_phase_event: bool = True,
     ) -> LLMResponse:
         """
         Generate LLM response with intelligent routing and caching.
@@ -306,12 +307,14 @@ class AegisLLMProxy:
         It handles cache lookup, routing, execution, fallback, and metrics tracking.
 
         Sprint 63 Feature 63.3: Prompt caching for cost reduction
+        Sprint 70 Feature 70.12: LLM Prompt Tracing - Automatic phase event emission
 
         Args:
             task: LLM task with prompt, quality requirements, data classification
             stream: Enable streaming response (token-by-token) - DEPRECATED, use generate_streaming()
             use_cache: Enable prompt caching (default: True)
             namespace: Tenant namespace for cache isolation (default: "default")
+            emit_phase_event: Enable automatic phase event emission for prompt tracing (default: True)
 
         Returns:
             LLMResponse with content, provider used, cost, latency
@@ -324,6 +327,7 @@ class AegisLLMProxy:
                 task_type=TaskType.EXTRACTION,
                 prompt="Extract entities...",
                 quality_requirement=QualityRequirement.HIGH,
+                metadata={"prompt_name": "ENTITY_EXTRACTION_PROMPT"},  # For prompt tracing
             )
             response = await proxy.generate(task)
         """
@@ -376,6 +380,32 @@ class AegisLLMProxy:
             complexity=task.complexity,
         )
 
+        # Sprint 70 Feature 70.12: Emit phase event for LLM prompt tracing
+        phase_type = None
+        if emit_phase_event:
+            phase_type = self._get_phase_type_from_task(task)
+            if phase_type:
+                try:
+                    from datetime import datetime
+                    from src.agents.phase_events_queue import stream_phase_event
+                    from src.models.phase_event import PhaseStatus
+
+                    stream_phase_event(
+                        phase_type=phase_type,
+                        status=PhaseStatus.IN_PROGRESS,
+                        metadata={
+                            "prompt_name": task.metadata.get("prompt_name", "unknown"),
+                            "task_type": task.task_type.value,
+                            "prompt_length": len(task.prompt),
+                            "quality": task.quality_requirement.value,
+                            "complexity": task.complexity.value if task.complexity else "unknown",
+                            "provider": provider,
+                        },
+                    )
+                except ImportError:
+                    # phase_events_queue not available - skip tracing
+                    logger.debug("phase_events_queue_not_available_skipping_tracing")
+
         # Step 2: ANY-LLM EXECUTION
         try:
             result = await self._execute_with_any_llm(
@@ -402,6 +432,28 @@ class AegisLLMProxy:
 
             # Step 3: AEGIS METRICS (custom)
             self._track_metrics(provider, task, result)
+
+            # Sprint 70 Feature 70.12: Emit completion event for LLM prompt tracing
+            if emit_phase_event and phase_type:
+                try:
+                    from src.agents.phase_events_queue import stream_phase_event
+                    from src.models.phase_event import PhaseStatus
+
+                    stream_phase_event(
+                        phase_type=phase_type,
+                        status=PhaseStatus.COMPLETED,
+                        metadata={
+                            "prompt_name": task.metadata.get("prompt_name", "unknown"),
+                            "duration_ms": result.latency_ms,
+                            "provider": result.provider,
+                            "model": result.model,
+                            "tokens_used": result.tokens_used,
+                            "cost_usd": result.cost_usd,
+                            "from_cache": result.provider == "cache",
+                        },
+                    )
+                except ImportError:
+                    logger.debug("phase_events_queue_not_available_skipping_completion")
 
             return result
 
@@ -437,9 +489,48 @@ class AegisLLMProxy:
                         ttl=ttl,
                     )
 
+                # Sprint 70 Feature 70.12: Emit completion event for fallback
+                if emit_phase_event and phase_type:
+                    try:
+                        from src.agents.phase_events_queue import stream_phase_event
+                        from src.models.phase_event import PhaseStatus
+
+                        stream_phase_event(
+                            phase_type=phase_type,
+                            status=PhaseStatus.COMPLETED,
+                            metadata={
+                                "prompt_name": task.metadata.get("prompt_name", "unknown"),
+                                "duration_ms": result.latency_ms,
+                                "provider": result.provider,
+                                "model": result.model,
+                                "fallback_used": True,
+                                "original_provider": provider,
+                            },
+                        )
+                    except ImportError:
+                        logger.debug("phase_events_queue_not_available_skipping_fallback_completion")
+
                 return result
 
             except Exception as local_error:
+                # Even local failed → emit FAILED phase event
+                if emit_phase_event and phase_type:
+                    try:
+                        from src.agents.phase_events_queue import stream_phase_event
+                        from src.models.phase_event import PhaseStatus
+
+                        stream_phase_event(
+                            phase_type=phase_type,
+                            status=PhaseStatus.FAILED,
+                            metadata={
+                                "prompt_name": task.metadata.get("prompt_name", "unknown"),
+                                "error": str(local_error),
+                                "provider": "all_providers_failed",
+                            },
+                        )
+                    except ImportError:
+                        logger.debug("phase_events_queue_not_available_skipping_error_event")
+
                 # Even local failed → raise error
                 logger.critical(
                     "all_providers_failed",
@@ -1102,6 +1193,67 @@ class AegisLLMProxy:
             print(f"Invalidated {removed} cache entries")
         """
         return await self.cache_service.invalidate_namespace(namespace)
+
+    def _get_phase_type_from_task(self, task: LLMTask):
+        """
+        Map LLMTask to PhaseType for prompt tracing.
+
+        Sprint 70 Feature 70.12: LLM Prompt Tracing
+
+        This method determines the appropriate PhaseType based on the task's
+        metadata.prompt_name or task_type. Enables granular tracking of individual
+        LLM prompt executions in the Real-Time Thinking Display.
+
+        Args:
+            task: LLM task with optional prompt_name in metadata
+
+        Returns:
+            PhaseType enum value for the LLM prompt execution
+
+        Example:
+            task = LLMTask(
+                task_type=TaskType.EXTRACTION,
+                metadata={"prompt_name": "GRAPH_INTENT_PROMPT"}
+            )
+            phase_type = self._get_phase_type_from_task(task)
+            # → PhaseType.LLM_PROMPT_INTENT
+        """
+        # Import PhaseType here to avoid circular import
+        try:
+            from src.models.phase_event import PhaseType
+        except ImportError:
+            # If phase_event not available, return None (no tracing)
+            return None
+
+        # Check if task has explicit prompt_name metadata
+        prompt_name = task.metadata.get("prompt_name", "").upper()
+
+        # Map prompt names to specific PhaseTypes
+        prompt_mapping = {
+            "GRAPH_INTENT_PROMPT": PhaseType.LLM_PROMPT_INTENT,
+            "DECOMPOSITION_PROMPT": PhaseType.LLM_PROMPT_DECOMPOSITION,
+            "QUERY_EXPANSION_PROMPT": PhaseType.LLM_PROMPT_EXPANSION,
+            "EXPANSION_PROMPT": PhaseType.LLM_PROMPT_EXPANSION,
+            "QUERY_REFINEMENT_PROMPT": PhaseType.LLM_PROMPT_REFINEMENT,
+            "REFINEMENT_PROMPT": PhaseType.LLM_PROMPT_REFINEMENT,
+            "ENTITY_EXTRACTION_PROMPT": PhaseType.LLM_PROMPT_ENTITY_EXTRACTION,
+            "RELATIONSHIP_EXTRACTION_PROMPT": PhaseType.LLM_PROMPT_ENTITY_EXTRACTION,
+            "RESEARCH_PLANNING_PROMPT": PhaseType.LLM_PROMPT_RESEARCH_PLANNING,
+            "CONTRADICTION_DETECTION_PROMPT": PhaseType.LLM_PROMPT_CONTRADICTION,
+            "CONTRADICTION_PROMPT": PhaseType.LLM_PROMPT_CONTRADICTION,
+            "VLM_IMAGE_DESCRIPTION": PhaseType.LLM_PROMPT_VLM,
+            "VLM_PROMPT": PhaseType.LLM_PROMPT_VLM,
+        }
+
+        # Return mapped phase type or generic fallback
+        if prompt_name in prompt_mapping:
+            return prompt_mapping[prompt_name]
+        elif prompt_name:
+            # Unknown prompt name → use generic LLM_PROMPT_OTHER
+            return PhaseType.LLM_PROMPT_OTHER
+        else:
+            # No prompt_name provided → skip tracing (return None)
+            return None
 
     def get_metrics_summary(self) -> dict:
         """

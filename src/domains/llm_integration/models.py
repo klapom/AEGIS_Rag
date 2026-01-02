@@ -10,6 +10,7 @@ including task types, quality requirements, and execution locations.
 """
 
 from enum import Enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -165,6 +166,12 @@ class LLMTask(BaseModel):
         default=None,
         ge=1,
         description="Number of items in batch (for parallel processing)",
+    )
+
+    # Sprint 70 Feature 70.12: LLM Prompt Tracing
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional task metadata (e.g., prompt_name for tracing)",
     )
 
     class Config:

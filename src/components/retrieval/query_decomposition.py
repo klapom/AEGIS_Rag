@@ -223,6 +223,7 @@ class QueryDecomposer:
 
         try:
             # Sprint 23: Use AegisLLMProxy for decomposition
+            # Sprint 70 Feature 70.12: Add prompt_name for tracing
             task = LLMTask(
                 task_type=TaskType.GENERATION,
                 prompt=prompt,
@@ -231,6 +232,7 @@ class QueryDecomposer:
                 temperature=0.3,
                 max_tokens=200,  # Enough for 2-3 sub-queries
                 model_local=self.model_name,
+                metadata={"prompt_name": "DECOMPOSITION_PROMPT"},
             )
 
             response = await self.proxy.generate(task)

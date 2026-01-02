@@ -59,12 +59,25 @@ class PhaseType(str, Enum):
     - TOOL_EXECUTION: ActionAgent executes MCP tools (Sprint 70 Feature 70.9)
     - LLM_GENERATION: Final answer generation
     - FOLLOW_UP_QUESTIONS: FollowUpGenerator creates suggested questions
+    - LLM_PROMPT_*: Granular LLM prompt executions (Sprint 70 Feature 70.12)
+
+    Sprint 70 Feature 70.12: LLM Prompt Tracing
+    The following phase types enable tracking individual LLM prompt executions:
+    - LLM_PROMPT_INTENT: Graph intent extraction (GRAPH_INTENT_PROMPT)
+    - LLM_PROMPT_DECOMPOSITION: Query decomposition (DECOMPOSITION_PROMPT)
+    - LLM_PROMPT_EXPANSION: Query expansion (QUERY_EXPANSION_PROMPT)
+    - LLM_PROMPT_REFINEMENT: Query refinement (QUERY_REFINEMENT_PROMPT)
+    - LLM_PROMPT_ENTITY_EXTRACTION: Entity extraction prompts
+    - LLM_PROMPT_RESEARCH_PLANNING: Research planning (RESEARCH_PLANNING_PROMPT)
+    - LLM_PROMPT_CONTRADICTION: Contradiction detection (multi-turn)
+    - LLM_PROMPT_VLM: Vision-Language Model image descriptions
+    - LLM_PROMPT_OTHER: Generic LLM prompt execution (fallback)
 
     Example:
         >>> PhaseType.VECTOR_SEARCH
         <PhaseType.VECTOR_SEARCH: 'vector_search'>
-        >>> PhaseType.VECTOR_SEARCH.value
-        'vector_search'
+        >>> PhaseType.LLM_PROMPT_INTENT
+        <PhaseType.LLM_PROMPT_INTENT: 'llm_prompt_intent'>
     """
 
     INTENT_CLASSIFICATION = "intent_classification"
@@ -77,6 +90,17 @@ class PhaseType(str, Enum):
     TOOL_EXECUTION = "tool_execution"  # Sprint 70 Feature 70.9
     LLM_GENERATION = "llm_generation"
     FOLLOW_UP_QUESTIONS = "follow_up_questions"
+
+    # Sprint 70 Feature 70.12: LLM Prompt Tracing
+    LLM_PROMPT_INTENT = "llm_prompt_intent"
+    LLM_PROMPT_DECOMPOSITION = "llm_prompt_decomposition"
+    LLM_PROMPT_EXPANSION = "llm_prompt_expansion"
+    LLM_PROMPT_REFINEMENT = "llm_prompt_refinement"
+    LLM_PROMPT_ENTITY_EXTRACTION = "llm_prompt_entity_extraction"
+    LLM_PROMPT_RESEARCH_PLANNING = "llm_prompt_research_planning"
+    LLM_PROMPT_CONTRADICTION = "llm_prompt_contradiction"
+    LLM_PROMPT_VLM = "llm_prompt_vlm"
+    LLM_PROMPT_OTHER = "llm_prompt_other"
 
 
 class PhaseStatus(str, Enum):

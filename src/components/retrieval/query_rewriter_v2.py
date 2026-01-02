@@ -271,13 +271,14 @@ class QueryRewriterV2:
         # Build prompt
         prompt = GRAPH_INTENT_PROMPT.format(query=query)
 
-        # Create LLM task
+        # Create LLM task (Sprint 70 Feature 70.12: Add prompt_name for tracing)
         task = LLMTask(
             task_type=TaskType.GENERATION,
             prompt=prompt,
             max_tokens=self._max_tokens,
             temperature=self._temperature,
             quality_requirement=QualityRequirement.MEDIUM,
+            metadata={"prompt_name": "GRAPH_INTENT_PROMPT"},
         )
 
         # Generate extraction
