@@ -1,10 +1,11 @@
 # Sprint 70: Deep Research & Tool Use Integration
 
-**Status:** IN_PROGRESS
+**Status:** ✅ COMPLETED
 **Branch:** `main` (direct commits - Bug Fixes)
 **Start Date:** 2026-01-01
-**Estimated Duration:** 2-3 Tage
-**Total Story Points:** 21 SP
+**End Date:** 2026-01-02
+**Duration:** 2 Tage
+**Total Story Points:** 37 SP
 
 ---
 
@@ -35,14 +36,22 @@ Sprint 70 repariert und integriert zwei kritische Features, die bisher **isolier
 
 | # | Feature | SP | Priority | Status |
 |---|--------|----|----------|--------|
+| **Phase 1: Deep Research Repair** | | | | |
 | 70.1 | Deep Research - Planner Fix (LLMTask API) | 3 | P0 | ✅ Done |
 | 70.2 | Deep Research - Searcher Reuse (CoordinatorAgent) | 5 | P0 | ✅ Done |
 | 70.3 | Deep Research - Synthesizer Reuse (AnswerGenerator) | 3 | P0 | ✅ Done |
-| 70.4 | Deep Research - Supervisor Graph Creation | 5 | P0 | In Progress |
-| 70.5 | Tool Use - ReAct Integration (Normal Chat) | 3 | P1 | Pending |
-| 70.6 | Tool Use - ReAct Integration (Deep Research) | 2 | P1 | Pending |
+| 70.4 | Deep Research - Supervisor Graph Creation | 5 | P0 | ✅ Done |
+| **Phase 2: Tool Use Integration** | | | | |
+| 70.5 | Tool Use - ReAct Integration (Normal Chat) | 3 | P1 | ✅ Done |
+| 70.6 | Tool Use - ReAct Integration (Deep Research) | 2 | P1 | ✅ Done |
+| **Phase 3: Tool Configuration & Monitoring** | | | | |
+| 70.7 | Admin UI Toggle for Tool Use | 3 | P1 | ✅ Done |
+| 70.8 | E2E Tests for Tool Use User Journeys | 2 | P2 | ✅ Done |
+| 70.9 | Tool Result Streaming (Phase Events) | 3 | P2 | ✅ Done |
+| 70.10 | Tool Analytics & Monitoring (Prometheus) | 3 | P2 | ✅ Done |
+| 70.11 | LLM-based Tool Detection (Adaptive Strategies) | 5 | P2 | ✅ Done |
 
-**Total: 21 SP**
+**Total: 37 SP**
 
 ---
 
@@ -186,7 +195,7 @@ answer_with_citations = await generator.generate_with_citations(
 ### Feature 70.4: Deep Research Supervisor Graph (5 SP)
 
 **Priority:** P0
-**Status:** In Progress
+**Status:** ✅ Completed
 **Ziel:** LangGraph Supervisor-Pattern für multi-turn iterative research
 
 **Architecture:**
@@ -231,18 +240,18 @@ class ResearchSupervisorState(TypedDict, total=False):
 ```
 
 **Acceptance Criteria:**
-- [ ] StateGraph mit Supervisor pattern
-- [ ] Planner/Searcher/Synthesizer nodes connected
-- [ ] Multi-turn iteration (max 3)
-- [ ] Quality-based stop condition
-- [ ] Error handling & fallback
+- [x] StateGraph mit Supervisor pattern
+- [x] Planner/Searcher/Synthesizer nodes connected
+- [x] Multi-turn iteration (max 3)
+- [x] Quality-based stop condition
+- [x] Error handling & fallback
 
 ---
 
 ### Feature 70.5: Tool Use Integration - Normal Chat (3 SP)
 
 **Priority:** P1
-**Status:** Pending
+**Status:** ✅ Completed
 **Ziel:** ReAct Pattern für Tool Use in normalem Chat Graph
 
 **Architecture (ReAct Pattern):**
@@ -279,18 +288,18 @@ async def tools_node(state: AgentState):
 - `src/agents/graph.py` (add tools_node, should_use_tools, ReAct edges)
 
 **Acceptance Criteria:**
-- [ ] ToolNode integriert
-- [ ] Conditional edge nach answer
-- [ ] Cycle von tools → answer
-- [ ] Tool results in contexts
-- [ ] Feature flag `ENABLE_TOOL_USE`
+- [x] ToolNode integriert
+- [x] Conditional edge nach answer
+- [x] Cycle von tools → answer
+- [x] Tool results in contexts
+- [x] Admin-configurable enablement (no feature flag)
 
 ---
 
 ### Feature 70.6: Tool Use Integration - Deep Research (2 SP)
 
 **Priority:** P1
-**Status:** Pending
+**Status:** ✅ Completed
 **Ziel:** Tool Use auch in Deep Research verfügbar
 
 **Architecture:**
@@ -314,42 +323,264 @@ def supervisor_decision(state: ResearchSupervisorState) -> str:
 ```
 
 **Acceptance Criteria:**
-- [ ] research_tools_node added
-- [ ] Supervisor routes to tools
-- [ ] Tools return to supervisor
-- [ ] Tool results in all_contexts
+- [x] research_tools_node added
+- [x] Supervisor routes to tools
+- [x] Tools return to supervisor
+- [x] Tool results in all_contexts
+
+---
+
+### Feature 70.7: Admin UI Toggle for Tool Use (3 SP)
+
+**Priority:** P1
+**Status:** ✅ Completed
+**Ziel:** Admin-Oberfläche für Tool-Konfiguration mit Hot-Reload
+
+**Architecture:**
+```
+Admin UI → PUT /api/v1/admin/tools/config → Redis
+                                              ↓ (60s cache)
+New Conversations → compile_graph_with_tools_config() → Graph with/without tools
+```
+
+**Implementation:**
+```python
+# Backend: src/components/tools_config/tools_config_service.py
+class ToolsConfig(BaseModel):
+    enable_chat_tools: bool = False
+    enable_research_tools: bool = False
+    updated_at: str | None
+    version: int = 1
+
+# Frontend: AdminLLMConfigPage.tsx
+<ToggleSwitch
+  label="Enable Tools in Normal Chat"
+  checked={toolsConfig.enable_chat_tools}
+  onChange={...}
+/>
+```
+
+**Geänderte Dateien:**
+- `src/api/v1/admin_tools.py` (GET/PUT endpoints)
+- `src/components/tools_config/tools_config_service.py` (Redis persistence + cache)
+- `src/agents/coordinator.py` (lazy graph compilation)
+- `src/agents/graph.py` (compile_graph_with_tools_config)
+- `frontend/src/pages/admin/AdminLLMConfigPage.tsx` (UI toggles)
+
+**Acceptance Criteria:**
+- [x] Backend API endpoints (GET/PUT)
+- [x] Redis persistence with 60s TTL cache
+- [x] Lazy graph compilation in CoordinatorAgent
+- [x] Frontend toggle switches
+- [x] Hot-reload: Config change → 60s → New graphs use new config
+
+---
+
+### Feature 70.8: E2E Tests for Tool Use (2 SP)
+
+**Priority:** P2
+**Status:** ✅ Completed
+**Ziel:** Integration tests für kompletten Tool Use Flow
+
+**Test Coverage:**
+- Config enablement/disablement (chat + research)
+- Graph compilation with config
+- Cache invalidation on config save
+- Coordinator lazy compilation
+- Graph cache expiry
+- Metrics existence
+
+**Neue Dateien:**
+- `tests/integration/test_tools_config_integration.py` (8 tests)
+
+**Acceptance Criteria:**
+- [x] 8 integration tests passing
+- [x] TestToolsConfigIntegration (6 tests)
+- [x] TestCoordinatorToolsIntegration (2 tests)
+- [x] Verifies Admin → Config → Execution flow
+
+---
+
+### Feature 70.9: Tool Result Streaming (3 SP)
+
+**Priority:** P2
+**Status:** ✅ Completed
+**Ziel:** Real-time Phase Events für Tool-Ausführung
+
+**Architecture:**
+```python
+tools_node(state, writer: StreamWriter):
+    # 1. Emit IN_PROGRESS
+    writer(PhaseEvent(
+        phase_type=PhaseType.TOOL_EXECUTION,
+        status=PhaseStatus.IN_PROGRESS,
+        metadata={"tool_action": "search", "parameters": {...}}
+    ))
+
+    # 2. Execute tool via ActionAgent
+    result = await action_agent.graph.ainvoke(...)
+
+    # 3. Emit COMPLETED or FAILED
+    writer(PhaseEvent(
+        phase_type=PhaseType.TOOL_EXECUTION,
+        status=PhaseStatus.COMPLETED,
+        duration_ms=150,
+        metadata={"result_length": 1234, "result_preview": "..."}
+    ))
+```
+
+**Geänderte Dateien:**
+- `src/models/phase_event.py` (added TOOL_EXECUTION PhaseType)
+- `src/agents/tools/tool_integration.py` (StreamWriter integration)
+
+**Acceptance Criteria:**
+- [x] PhaseType.TOOL_EXECUTION added
+- [x] Emits IN_PROGRESS when starting
+- [x] Emits COMPLETED with duration + result preview
+- [x] Emits FAILED with error on exception
+- [x] Frontend can display real-time tool progress
+
+---
+
+### Feature 70.10: Tool Analytics & Monitoring (3 SP)
+
+**Priority:** P2
+**Status:** ✅ Completed
+**Ziel:** Prometheus Metrics für Tool Use Monitoring
+
+**Metrics:**
+```python
+# Counter: Total tool executions
+tool_executions_total{tool_name="search", status="success"} 42
+tool_executions_total{tool_name="fetch", status="failed"} 3
+
+# Histogram: Tool execution latency
+tool_execution_duration_seconds{tool_name="search"} 0.45
+
+# Gauge: Currently executing tools
+active_tool_executions 2
+```
+
+**Implementation:**
+```python
+# Track execution
+increment_active_tools()
+try:
+    result = await execute_tool(...)
+    track_tool_execution(tool_name, "success", duration_seconds)
+except Exception as e:
+    track_tool_execution(tool_name, "failed", duration_seconds)
+finally:
+    decrement_active_tools()
+```
+
+**Geänderte Dateien:**
+- `src/core/metrics.py` (3 new metrics + helper functions)
+- `src/agents/tools/tool_integration.py` (metrics integration)
+
+**Acceptance Criteria:**
+- [x] tool_executions_total counter
+- [x] tool_execution_duration_seconds histogram
+- [x] active_tool_executions gauge
+- [x] Helper functions: track_tool_execution, increment/decrement
+- [x] Metrics tracked in tools_node success/error paths
+
+---
+
+### Feature 70.11: LLM-based Tool Detection (5 SP)
+
+**Priority:** P2
+**Status:** ✅ Completed
+**Ziel:** Adaptive Tool Detection mit 3 konfigurierbaren Strategien
+
+**Strategies:**
+1. **Markers (Fast, ~0ms)**: String matching on explicit markers
+2. **LLM (Smart, +50-200ms)**: LLM decision with structured output
+3. **Hybrid (Balanced, 0-200ms)**: Markers first, then LLM if action hints
+
+**Architecture:**
+```python
+async def should_use_tools(state) -> str:
+    config = await get_tools_config_service().get_config()
+
+    if config.tool_detection_strategy == "markers":
+        return _should_use_tools_markers(state, config)  # Check explicit markers
+    elif config.tool_detection_strategy == "llm":
+        return await _should_use_tools_llm(state, config)  # LLM structured output
+    else:  # "hybrid"
+        # Fast path: markers
+        if marker_found: return "tools"
+        # Slow path: LLM if action hints present
+        if action_hint_found: return await _should_use_tools_llm(...)
+        return "end"
+```
+
+**Configuration:**
+```python
+class ToolsConfig(BaseModel):
+    tool_detection_strategy: str = "markers"  # "markers" | "llm" | "hybrid"
+    explicit_tool_markers: list[str] = ["[TOOL:", "[SEARCH:", "[FETCH:"]
+    action_hint_phrases: list[str] = ["need to", "check", "search", "latest"]
+    version: int = 2  # Schema upgraded
+```
+
+**Frontend UI:**
+- Strategy selector (3 radio buttons)
+- Editable marker lists (conditional: hidden if strategy="llm")
+- Editable action hint phrases (conditional: only for strategy="hybrid")
+- Add/Remove buttons for dynamic list editing
+
+**Geänderte Dateien:**
+- `src/components/tools_config/tools_config_service.py` (schema v2)
+- `src/agents/tools/tool_integration.py` (3 strategies)
+- `src/api/v1/admin_tools.py` (DRY refactor)
+- `frontend/src/pages/admin/AdminLLMConfigPage.tsx` (strategy UI)
+- `tests/unit/agents/tools/test_tool_integration.py` (22 tests)
+
+**Acceptance Criteria:**
+- [x] 3 detection strategies implemented
+- [x] Admin UI for strategy selection
+- [x] Editable marker/hint lists
+- [x] Conditional rendering (markers hidden if LLM)
+- [x] 22 unit tests for all strategies
+- [x] Multilingual support (German/English)
+- [x] Trade-off analysis documented
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Deep Research Repair (70.1-70.4) ✅ Mostly Done
+### Phase 1: Deep Research Repair (70.1-70.4) ✅ COMPLETED
 
-**Week 1, Day 1-2**
+**Day 1 (2026-01-01)**
 1. ✅ Fix planner.py (LLMTask API)
 2. ✅ Rewrite searcher.py (CoordinatorAgent reuse)
 3. ✅ Rewrite synthesizer.py (AnswerGenerator reuse)
-4. 🚧 Create research_graph.py (Supervisor pattern)
-5. 🚧 Update `/api/v1/research/query` endpoint
-6. 🚧 Test deep research flow
+4. ✅ Create research_graph.py (Supervisor pattern)
+5. ✅ Update `/api/v1/research/query` endpoint
+6. ✅ Test deep research flow
 
-### Phase 2: Tool Use Integration (70.5-70.6)
+### Phase 2: Tool Use Integration (70.5-70.6) ✅ COMPLETED
 
-**Week 1, Day 3**
-1. Add `tools_node` to normal chat graph
-2. Add `should_use_tools` conditional
-3. Add ReAct cycle edges
-4. Feature flag `ENABLE_TOOL_USE=false`
-5. Test with flag enabled
+**Day 1-2 (2026-01-01)**
+1. ✅ Add `tools_node` to normal chat graph
+2. ✅ Add `should_use_tools` conditional
+3. ✅ Add ReAct cycle edges
+4. ✅ Admin-configurable enablement (no feature flag)
+5. ✅ Integration with research graph
+6. ✅ Test tool use in both graphs
 
-### Phase 3: Testing & Documentation
+### Phase 3: Configuration & Monitoring (70.7-70.11) ✅ COMPLETED
 
-**Week 1, Day 4-5**
-1. Unit tests for research nodes
-2. Integration tests for deep research
-3. Integration tests for tool use
-4. Update documentation
-5. E2E tests
+**Day 2 (2026-01-02)**
+1. ✅ Admin UI toggle with Redis persistence (70.7)
+2. ✅ 8 integration tests for tool flows (70.8)
+3. ✅ Phase event streaming for tools (70.9)
+4. ✅ Prometheus metrics implementation (70.10)
+5. ✅ LLM-based detection strategies (70.11)
+6. ✅ Editable marker lists UI (70.11)
+7. ✅ 22 unit tests for detection (70.11)
+8. ✅ Update documentation (SPRINT_PLAN.md, SPRINT_70_PLAN.md)
 
 ---
 
@@ -366,20 +597,30 @@ def supervisor_decision(state: ResearchSupervisorState) -> str:
 
 ## Success Criteria
 
-### Deep Research
+### Deep Research (Phase 1)
 - [x] Planner uses LLMTask API (no TypeError)
 - [x] Searcher uses CoordinatorAgent (no broken imports)
 - [x] Synthesizer uses AnswerGenerator (no code duplication)
-- [ ] Can execute multi-turn research queries
-- [ ] Generates comprehensive reports with citations
-- [ ] < 30s latency for 3 iterations
+- [x] Can execute multi-turn research queries
+- [x] Generates comprehensive reports with citations
+- [x] < 30s latency for 3 iterations
 
-### Tool Use
-- [ ] Tools callable from normal chat
-- [ ] Tools callable from deep research
-- [ ] ReAct loop works (multi-turn conversations)
-- [ ] Tool results integrated into answer
-- [ ] < 5s additional latency per tool call
+### Tool Use (Phase 2)
+- [x] Tools callable from normal chat
+- [x] Tools callable from deep research
+- [x] ReAct loop works (multi-turn conversations)
+- [x] Tool results integrated into answer
+- [x] < 5s additional latency per tool call
+
+### Configuration & Monitoring (Phase 3)
+- [x] Admin can toggle tools without service restart
+- [x] Hot-reload works (60s cache TTL)
+- [x] 8 integration tests verify config → execution flow
+- [x] Phase events stream in real-time (IN_PROGRESS/COMPLETED/FAILED)
+- [x] Prometheus metrics track all tool executions
+- [x] LLM-based detection works multilingually
+- [x] 3 configurable strategies (markers/LLM/hybrid)
+- [x] Admin can edit marker/hint lists dynamically
 
 ---
 
