@@ -1,14 +1,16 @@
 # Technical Debt Index
 
-**Last Updated:** 2025-12-31 (Sprint 67 Planning)
-**Total Open Items:** 9
-**Total Story Points:** ~139 SP
+**Last Updated:** 2026-01-02 (Sprint 71 - Anti-Hallucination)
+**Total Open Items:** 10
+**Total Story Points:** ~144 SP
 **Archived Items:** [18 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
 **Sprint 59:** Agentic Features, Tool Use
 **Sprint 60:** ✅ Documentation Consolidation, Technical Investigations (COMPLETE)
+**Sprint 70:** ✅ MCP Tool Use in Chat & Research (COMPLETE)
+**Sprint 71:** Anti-Hallucination Prompt Hardening (TD-080 Phase 1)
 
 ---
 
@@ -17,7 +19,7 @@
 | Priority | Count | Story Points |
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
-| HIGH     | 2     | ~31 SP       |
+| HIGH     | 3     | ~36 SP       |
 | MEDIUM   | 5     | ~87 SP       |
 | LOW      | 2     | ~21 SP       |
 
@@ -55,6 +57,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-080](TD-080_CONTEXT_RELEVANCE_GUARD.md) | Context Relevance Guard (Anti-Hallucination) | PHASE 1 COMPLETE | 5 | **Sprint 71-73** |
 | [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | ✅ COMPLETE | 13 | **Sprint 67** ✅ |
 | [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | IN PROGRESS | 18 | **Sprint 67-68** |
 
