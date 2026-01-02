@@ -228,8 +228,8 @@ export function StreamingAnswer({ query, mode, namespaces, sessionId, onSessionI
         <Tab icon="🌐" label={`Quellen ${sources.length > 0 ? `(${sources.length})` : ''}`} />
       </div>
 
-      {/* Source Cards */}
-      {sources.length > 0 && (
+      {/* Source Cards - Sprint 70.13: Hide when information is not available */}
+      {sources.length > 0 && !answer.includes('Diese Information ist nicht in der Wissensdatenbank verfügbar') && (
         <SourceCardsScroll ref={sourceCardsRef} sources={sources} />
       )}
 

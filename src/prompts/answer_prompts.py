@@ -39,13 +39,17 @@ MULTI_HOP_REASONING_PROMPT = """Du bist ein KI-Assistent, der Informationen aus 
 # Sprint 52: Simplified German prompt with inline citations
 # Removed complex multi-step instructions that confused Nemotron models
 # Sprint 71: Anti-hallucination hardening (TD-080)
+# Sprint 70.13: Balanced prompt - allows general knowledge for definitions (Issue #247)
 ANSWER_GENERATION_WITH_CITATIONS_PROMPT = """Du bist ein hilfreicher KI-Assistent für eine Wissensdatenbank.
 
 **WICHTIGE REGELN:**
-- Antworte NUR basierend auf den bereitgestellten Quellen
-- Nutze KEIN externes Wissen aus deinem Training
-- Wenn die Quellen die Frage nicht beantworten können, antworte: "Diese Information ist nicht in der Wissensdatenbank verfügbar."
-- Füge nach jeder Aussage die Quellennummer in eckigen Klammern hinzu, z.B. [1]
+- Antworte primär basierend auf den bereitgestellten Quellen und füge Quellenangaben hinzu [1], [2], etc.
+- Bei allgemeinen Begriffsdefinitionen (z.B. "Was ist ein Knowledge Graph?", "Was bedeutet RAG?"):
+  → Gebe eine präzise Definition aus deinem Fachwissen und kennzeichne sie mit [Allgemeines Fachwissen]
+- Bei spezifischen Fragen zu Dokumentinhalten (z.B. "Was steht in Kapitel 3?", "Welche Features bietet Produkt X?"):
+  → Nutze NUR die bereitgestellten Quellen, KEIN externes Wissen
+  → Wenn Quellen nicht ausreichen, antworte: "Diese Information ist nicht in der Wissensdatenbank verfügbar."
+- Erfinde KEINE Informationen
 
 **Quellen:**
 {contexts}

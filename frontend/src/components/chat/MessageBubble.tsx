@@ -140,7 +140,12 @@ export function MessageBubble({ message, onCitationClick }: MessageBubbleProps) 
     return filterCitedSources(message.sources, message.content);
   }, [message.sources, message.content]);
 
-  const hasSources = filteredSources.length > 0;
+  // Sprint 70.13: Hide sources when answer indicates information is not available
+  const isInformationNotAvailable = message.content.includes(
+    'Diese Information ist nicht in der Wissensdatenbank verfügbar'
+  );
+
+  const hasSources = filteredSources.length > 0 && !isInformationNotAvailable;
   const hasOriginalSources = message.sources && message.sources.length > 0;
 
   /**
