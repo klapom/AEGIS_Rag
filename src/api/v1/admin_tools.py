@@ -1,10 +1,13 @@
 """Admin Tools Configuration API endpoints.
 
 Sprint 70 Feature 70.7: Tool Use Configuration Management
+Sprint 70 Feature 70.11: LLM-based Tool Detection
 
 This module provides endpoints for:
 - Enabling/disabling tool use in Normal Chat
 - Enabling/disabling tool use in Deep Research
+- Configuring tool detection strategy (markers, LLM, hybrid)
+- Managing explicit tool markers and action hint phrases
 - Persisting configuration to Redis for hot-reload
 """
 
@@ -12,8 +15,8 @@ from datetime import datetime
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
 
+from src.components.tools_config import ToolsConfig
 from src.core.config import settings
 
 logger = structlog.get_logger(__name__)
@@ -25,47 +28,8 @@ REDIS_KEY_TOOLS_CONFIG = "admin:tools_config"
 
 
 # ============================================================================
-# Pydantic Models
+# Endpoints (using ToolsConfig from tools_config_service)
 # ============================================================================
-
-
-class ToolsConfig(BaseModel):
-    """Configuration for tool use across different modes.
-
-    Sprint 70 Feature 70.7: Admin Tools Configuration
-
-    This schema defines whether MCP tools should be enabled in:
-    1. Normal Chat (ReAct pattern in chat graph)
-    2. Deep Research (ReAct pattern in research graph)
-
-    Attributes:
-        enable_chat_tools: Enable tool use in normal chat conversations
-        enable_research_tools: Enable tool use in deep research mode
-        updated_at: ISO 8601 timestamp of last update
-        version: Config schema version (for future migrations)
-    """
-
-    enable_chat_tools: bool = Field(
-        default=False,
-        description="Enable MCP tool use in normal chat (ReAct pattern)",
-    )
-    enable_research_tools: bool = Field(
-        default=False,
-        description="Enable MCP tool use in deep research (ReAct pattern)",
-    )
-    updated_at: str | None = Field(None, description="ISO 8601 timestamp of last update")
-    version: int = Field(default=1, description="Config schema version")
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "enable_chat_tools": True,
-                "enable_research_tools": True,
-                "updated_at": "2025-12-25T10:30:00Z",
-                "version": 1,
-            }
-        }
-    }
 
 
 # ============================================================================

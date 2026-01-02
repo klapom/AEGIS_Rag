@@ -69,9 +69,13 @@ interface SummaryModelConfig {
 }
 
 // Sprint 70 Feature 70.7: Tool Use Configuration
+// Sprint 70 Feature 70.11: LLM-based Tool Detection
 interface ToolsConfig {
   enable_chat_tools: boolean;
   enable_research_tools: boolean;
+  tool_detection_strategy: string; // "markers" | "llm" | "hybrid"
+  explicit_tool_markers: string[];
+  action_hint_phrases: string[];
   updated_at: string | null;
   version: number;
 }
@@ -253,11 +257,20 @@ export function AdminLLMConfigPage() {
   const [summaryModelSaveStatus, setSummaryModelSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Sprint 70 Feature 70.7: Tool Use Configuration State
+  // Sprint 70 Feature 70.11: LLM-based Tool Detection State
   const [toolsConfig, setToolsConfig] = useState<ToolsConfig>({
     enable_chat_tools: false,
     enable_research_tools: false,
+    tool_detection_strategy: 'markers',
+    explicit_tool_markers: ['[TOOL:', '[SEARCH:', '[FETCH:'],
+    action_hint_phrases: [
+      'need to', 'haben zu', 'muss',
+      'check', 'search', 'look up', 'prüfen', 'suchen',
+      'current', 'latest', 'aktuell',
+      "I'll need to access", 'Let me check',
+    ],
     updated_at: null,
-    version: 1,
+    version: 2,
   });
   const [isSavingToolsConfig, setIsSavingToolsConfig] = useState(false);
   const [toolsConfigSaveStatus, setToolsConfigSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -814,6 +827,198 @@ export function AdminLLMConfigPage() {
                 </label>
               </div>
             </div>
+
+            {/* Sprint 70 Feature 70.11: Tool Detection Strategy Selector */}
+            <div className="border dark:border-gray-700 rounded-md p-3 mt-3">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                Tool Detection Strategy
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Choose how the system detects when to use tools
+              </p>
+
+              <div className="space-y-2">
+                {/* Markers Strategy */}
+                <label className="flex items-center gap-2 p-2 border dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <input
+                    type="radio"
+                    name="tool_detection_strategy"
+                    value="markers"
+                    checked={toolsConfig.tool_detection_strategy === 'markers'}
+                    onChange={(e) => {
+                      setToolsConfig(prev => ({ ...prev, tool_detection_strategy: e.target.value }));
+                      setToolsConfigSaveStatus('idle');
+                    }}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Only Markers (Fast, ~0ms)
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Use explicit markers like [TOOL:], [SEARCH:] - fragile but instant
+                    </div>
+                  </div>
+                </label>
+
+                {/* LLM Strategy */}
+                <label className="flex items-center gap-2 p-2 border dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <input
+                    type="radio"
+                    name="tool_detection_strategy"
+                    value="llm"
+                    checked={toolsConfig.tool_detection_strategy === 'llm'}
+                    onChange={(e) => {
+                      setToolsConfig(prev => ({ ...prev, tool_detection_strategy: e.target.value }));
+                      setToolsConfigSaveStatus('idle');
+                    }}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Only LLM (Smart, +50-200ms)
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      LLM intelligently decides when tools needed - multilingual, context-aware
+                    </div>
+                  </div>
+                </label>
+
+                {/* Hybrid Strategy */}
+                <label className="flex items-center gap-2 p-2 border dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <input
+                    type="radio"
+                    name="tool_detection_strategy"
+                    value="hybrid"
+                    checked={toolsConfig.tool_detection_strategy === 'hybrid'}
+                    onChange={(e) => {
+                      setToolsConfig(prev => ({ ...prev, tool_detection_strategy: e.target.value }));
+                      setToolsConfigSaveStatus('idle');
+                    }}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Hybrid (Balanced, 0-200ms)
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Check markers first, then LLM if action hints present - best of both worlds
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Sprint 70 Feature 70.11: Editable Marker Lists (conditional rendering) */}
+            {toolsConfig.tool_detection_strategy !== 'llm' && (
+              <>
+                {/* Explicit Tool Markers */}
+                <div className="border dark:border-gray-700 rounded-md p-3 mt-3">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                    Explicit Tool Markers
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    Markers that immediately trigger tool use (e.g., [TOOL:], [SEARCH:])
+                  </p>
+
+                  <div className="space-y-2">
+                    {toolsConfig.explicit_tool_markers.map((marker, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={marker}
+                          onChange={(e) => {
+                            const newMarkers = [...toolsConfig.explicit_tool_markers];
+                            newMarkers[idx] = e.target.value;
+                            setToolsConfig(prev => ({ ...prev, explicit_tool_markers: newMarkers }));
+                            setToolsConfigSaveStatus('idle');
+                          }}
+                          className="flex-1 px-2 py-1 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          placeholder="e.g., [TOOL:"
+                        />
+                        <button
+                          onClick={() => {
+                            const newMarkers = toolsConfig.explicit_tool_markers.filter((_, i) => i !== idx);
+                            setToolsConfig(prev => ({ ...prev, explicit_tool_markers: newMarkers }));
+                            setToolsConfigSaveStatus('idle');
+                          }}
+                          className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={() => {
+                        setToolsConfig(prev => ({
+                          ...prev,
+                          explicit_tool_markers: [...prev.explicit_tool_markers, ''],
+                        }));
+                        setToolsConfigSaveStatus('idle');
+                      }}
+                      className="w-full px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-400 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    >
+                      + Add Marker
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Hint Phrases (only for hybrid mode) */}
+                {toolsConfig.tool_detection_strategy === 'hybrid' && (
+                  <div className="border dark:border-gray-700 rounded-md p-3 mt-3">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Action Hint Phrases
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Phrases that trigger LLM tool decision (e.g., "need to", "check", "search")
+                    </p>
+
+                    <div className="space-y-2">
+                      {toolsConfig.action_hint_phrases.map((phrase, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={phrase}
+                            onChange={(e) => {
+                              const newPhrases = [...toolsConfig.action_hint_phrases];
+                              newPhrases[idx] = e.target.value;
+                              setToolsConfig(prev => ({ ...prev, action_hint_phrases: newPhrases }));
+                              setToolsConfigSaveStatus('idle');
+                            }}
+                            className="flex-1 px-2 py-1 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="e.g., need to"
+                          />
+                          <button
+                            onClick={() => {
+                              const newPhrases = toolsConfig.action_hint_phrases.filter((_, i) => i !== idx);
+                              setToolsConfig(prev => ({ ...prev, action_hint_phrases: newPhrases }));
+                              setToolsConfigSaveStatus('idle');
+                            }}
+                            className="px-2 py-1 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => {
+                          setToolsConfig(prev => ({
+                            ...prev,
+                            action_hint_phrases: [...prev.action_hint_phrases, ''],
+                          }));
+                          setToolsConfigSaveStatus('idle');
+                        }}
+                        className="w-full px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-400 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        + Add Phrase
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {toolsConfig.updated_at && (

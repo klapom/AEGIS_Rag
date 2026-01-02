@@ -39,17 +39,45 @@ CACHE_TTL_SECONDS = 60
 class ToolsConfig(BaseModel):
     """Tool use configuration schema.
 
+    Sprint 70 Feature 70.11: LLM-based Tool Detection
+
     Attributes:
         enable_chat_tools: Enable MCP tool use in normal chat
         enable_research_tools: Enable MCP tool use in deep research
+        tool_detection_strategy: Strategy for detecting when to use tools
+            - "markers": Fast marker-based detection (legacy, ~0ms)
+            - "llm": LLM-based intelligent detection (smart, +50-200ms)
+            - "hybrid": Markers first, LLM fallback (balanced)
+        explicit_tool_markers: List of explicit markers triggering tool use (e.g., "[TOOL:", "[SEARCH:")
+        action_hint_phrases: List of phrases suggesting tool use (for hybrid mode)
         updated_at: ISO 8601 timestamp of last update
         version: Config schema version
     """
 
     enable_chat_tools: bool = Field(default=False, description="Enable tools in chat")
     enable_research_tools: bool = Field(default=False, description="Enable tools in research")
+
+    # Sprint 70 Feature 70.11: Tool Detection Strategy
+    tool_detection_strategy: str = Field(
+        default="markers",
+        description="Detection strategy: 'markers', 'llm', or 'hybrid'"
+    )
+    explicit_tool_markers: list[str] = Field(
+        default_factory=lambda: ["[TOOL:", "[SEARCH:", "[FETCH:"],
+        description="Explicit markers triggering immediate tool use"
+    )
+    action_hint_phrases: list[str] = Field(
+        default_factory=lambda: [
+            "need to", "haben zu", "muss",  # Multilingual support
+            "check", "search", "look up", "prüfen", "suchen",
+            "current", "latest", "aktuell", "aktuell",
+            "I'll need to access", "Let me check",
+        ],
+        description="Phrases suggesting potential tool use (triggers LLM decision in hybrid mode)"
+    )
+
     updated_at: str | None = Field(None, description="Last update timestamp")
-    version: int = Field(default=1, description="Config version")
+    version: int = Field(default=2, description="Config version")
 
 
 class ToolsConfigService:

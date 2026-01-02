@@ -51,8 +51,15 @@ def get_mcp_client() -> MCPClient:
     return _mcp_client
 
 
-def should_use_tools(state: dict[str, Any]) -> str:
-    """Conditional edge: Decide if tools should be used.
+async def should_use_tools(state: dict[str, Any]) -> str:
+    """Adaptive tool detection based on configuration.
+
+    Sprint 70 Feature 70.11: LLM-based Tool Detection
+
+    Routes to appropriate detection strategy based on admin configuration:
+    - "markers": Fast marker-based detection (~0ms, legacy)
+    - "llm": LLM-based intelligent detection (+50-200ms, smart)
+    - "hybrid": Markers first, LLM fallback (balanced)
 
     Args:
         state: Current agent state with answer
@@ -61,29 +68,194 @@ def should_use_tools(state: dict[str, Any]) -> str:
         "tools" if tools should be used, "end" otherwise
 
     Examples:
-        >>> state = {"answer": "Let me search for that..."}
-        >>> should_use_tools(state)
-        'end'
+        >>> state = {"answer": "[TOOL:search] machine learning"}
+        >>> await should_use_tools(state)
+        'tools'
+    """
+    from src.components.tools_config import get_tools_config_service
+
+    # Load detection strategy from config
+    try:
+        config_service = get_tools_config_service()
+        config = await config_service.get_config()
+        strategy = config.tool_detection_strategy
+    except Exception as e:
+        logger.warning("failed_to_load_tool_detection_config", error=str(e))
+        # Fallback to markers on error (safe default)
+        strategy = "markers"
+
+    # Route to appropriate strategy
+    if strategy == "markers":
+        return _should_use_tools_markers(state, config)
+    elif strategy == "llm":
+        return await _should_use_tools_llm(state, config)
+    elif strategy == "hybrid":
+        return await _should_use_tools_hybrid(state, config)
+    else:
+        logger.warning(
+            "unknown_tool_detection_strategy",
+            strategy=strategy,
+            falling_back_to="markers"
+        )
+        return _should_use_tools_markers(state, config)
+
+
+def _should_use_tools_markers(state: dict[str, Any], config: Any) -> str:
+    """Marker-based tool detection (fast, ~0ms).
+
+    Sprint 70 Feature 70.11: Marker-based Strategy
+
+    Checks answer for explicit tool markers (e.g., "[TOOL:", "[SEARCH:").
+    Fast but fragile - requires LLM to emit exact markers.
+
+    Args:
+        state: Current agent state with answer
+        config: ToolsConfig with explicit_tool_markers list
+
+    Returns:
+        "tools" if marker found, "end" otherwise
     """
     answer = state.get("answer", "")
 
-    # Check for tool call indicators
-    # This is a simple heuristic - can be enhanced with LLM decision
-    tool_indicators = [
-        "[TOOL:",  # Explicit tool marker
-        "[SEARCH:",  # Search request
-        "[FETCH:",  # Data fetch request
-        "I need to",  # Action indicator
-        "Let me check",  # External check
-        "I'll need to access",  # Access requirement
-    ]
+    # Use configured explicit markers
+    explicit_markers = config.explicit_tool_markers
 
-    for indicator in tool_indicators:
-        if indicator in answer:
-            logger.info("tool_use_detected", indicator=indicator, answer_preview=answer[:100])
+    for marker in explicit_markers:
+        if marker in answer:
+            logger.info("tool_use_detected_marker", marker=marker, answer_preview=answer[:100])
             return "tools"
 
-    # Default: no tools needed
+    # No markers found
+    logger.debug("tool_use_not_needed_markers")
+    return "end"
+
+
+async def _should_use_tools_llm(state: dict[str, Any], config: Any) -> str:
+    """LLM-based tool detection (intelligent, +50-200ms).
+
+    Sprint 70 Feature 70.11: LLM-based Strategy
+
+    Uses LLM with structured output to intelligently decide if tools are needed.
+    Understands context, nuances, and works multilingually.
+
+    Args:
+        state: Current agent state with answer and question
+        config: ToolsConfig (unused in this strategy)
+
+    Returns:
+        "tools" if LLM decides tools needed, "end" otherwise
+    """
+    from pydantic import BaseModel, Field
+    from langchain_core.prompts import ChatPromptTemplate
+    from src.domains.llm_integration.streaming_client import get_llm_client
+
+    # Define structured output schema
+    class ToolDecision(BaseModel):
+        """LLM decision on whether to use tools."""
+        use_tools: bool = Field(description="True if external tools needed, False otherwise")
+        reasoning: str = Field(description="Brief explanation why tools are/aren't needed")
+        tool_type: str | None = Field(None, description="Type of tool: search, fetch, compute, etc.")
+        query: str | None = Field(None, description="Specific query for tool if use_tools=True")
+
+    answer = state.get("answer", "")
+    question = state.get("question", "")
+
+    # Create decision prompt
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are a tool usage classifier. Analyze the assistant's response and determine if external tools are needed.
+
+Tools should be used when:
+- Real-time data is needed (weather, stock prices, current events)
+- Web search would provide better information
+- External APIs need to be called
+- File operations are required
+- The answer indicates uncertainty that external data could resolve
+
+Tools should NOT be used when:
+- The answer can be given from existing context
+- The question is conversational or opinion-based
+- The information is general knowledge
+- The assistant is providing a complete answer
+
+Be conservative - only use tools when truly necessary."""),
+        ("user", """Question: {question}
+
+Assistant's Response: {answer}
+
+Does this response require external tool use? Provide your decision.""")
+    ])
+
+    try:
+        # Get LLM with structured output
+        llm_client = get_llm_client()
+        llm = llm_client.get_chat_model()
+        structured_llm = llm.with_structured_output(ToolDecision)
+
+        # Run decision
+        chain = prompt | structured_llm
+        decision: ToolDecision = await chain.ainvoke({
+            "question": question,
+            "answer": answer,
+        })
+
+        logger.info(
+            "llm_tool_decision",
+            use_tools=decision.use_tools,
+            reasoning=decision.reasoning,
+            tool_type=decision.tool_type,
+        )
+
+        if decision.use_tools:
+            # Store tool query in state for tools_node
+            state["tool_query"] = decision.query or answer
+            state["tool_type"] = decision.tool_type
+            return "tools"
+
+        return "end"
+
+    except Exception as e:
+        logger.error("llm_tool_decision_failed", error=str(e), exc_info=True)
+        # Fallback to "end" on error (safer than false positive)
+        return "end"
+
+
+async def _should_use_tools_hybrid(state: dict[str, Any], config: Any) -> str:
+    """Hybrid tool detection (balanced, 0-200ms).
+
+    Sprint 70 Feature 70.11: Hybrid Strategy
+
+    Fast path: Check explicit markers first (~0ms)
+    Slow path: Check action hints → LLM decision if hints present (~50-200ms)
+
+    Balances speed (markers) with intelligence (LLM).
+
+    Args:
+        state: Current agent state with answer
+        config: ToolsConfig with explicit_tool_markers and action_hint_phrases
+
+    Returns:
+        "tools" if marker found or LLM decides, "end" otherwise
+    """
+    answer = state.get("answer", "")
+
+    # Fast path: Check explicit markers first
+    explicit_markers = config.explicit_tool_markers
+    for marker in explicit_markers:
+        if marker in answer:
+            logger.info("tool_use_detected_marker_fast_path", marker=marker)
+            return "tools"
+
+    # Slow path: Check for action hints
+    action_hints = config.action_hint_phrases
+    has_action_hint = any(hint.lower() in answer.lower() for hint in action_hints)
+
+    if has_action_hint:
+        # Invoke LLM for intelligent decision
+        logger.info("tool_use_checking_with_llm_slow_path", hints_found=True)
+        return await _should_use_tools_llm(state, config)
+
+    # No markers, no hints → tools not needed
+    logger.debug("tool_use_not_needed_hybrid")
     return "end"
 
 
