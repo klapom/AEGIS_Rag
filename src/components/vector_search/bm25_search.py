@@ -5,6 +5,8 @@ as the keyword component of hybrid search.
 
 Sprint 10 Enhancement: Added disk persistence for BM25 index to avoid
 re-indexing on every backend restart.
+
+Sprint 70 Feature 70.14: German stopword removal for stronger BM25 signals.
 """
 
 import pickle
@@ -17,6 +19,30 @@ from rank_bm25 import BM25Okapi
 from src.core.exceptions import VectorSearchError
 
 logger = structlog.get_logger(__name__)
+
+# Sprint 70 Feature 70.14: German stopwords for BM25 preprocessing
+# Source: Common German stopwords (articles, prepositions, conjunctions)
+# These dilute BM25 term-frequency signals → removed for sharper keyword matching
+GERMAN_STOPWORDS = frozenset([
+    # Articles
+    "der", "die", "das", "den", "dem", "des", "ein", "eine", "einer", "eines", "einem", "einen",
+    # Pronouns
+    "ich", "du", "er", "sie", "es", "wir", "ihr", "mir", "dir", "ihm", "uns", "euch", "ihnen",
+    "mein", "dein", "sein", "ihr", "unser", "euer",
+    # Prepositions
+    "in", "an", "auf", "für", "von", "mit", "zu", "bei", "nach", "über", "unter", "aus", "um",
+    "durch", "gegen", "ohne", "hinter", "vor", "neben", "zwischen",
+    # Conjunctions
+    "und", "oder", "aber", "denn", "sondern", "doch", "jedoch", "sowie", "als", "wenn", "weil",
+    "dass", "ob", "bevor", "nachdem", "während", "bis",
+    # Common verbs
+    "ist", "sind", "war", "waren", "wird", "werden", "wurde", "wurden", "hat", "haben", "hatte",
+    "hatten", "sein", "werden", "können", "müssen", "sollen", "wollen", "dürfen", "mögen",
+    # Other common words
+    "nicht", "auch", "nur", "noch", "schon", "sehr", "wie", "was", "wo", "wann", "warum",
+    "welche", "welcher", "welches", "dieser", "diese", "dieses", "jener", "jene", "jenes",
+    "alle", "alles", "manche", "mancher", "manches", "einige", "mehrere", "viele", "wenige",
+])
 
 
 class BM25Search:
@@ -41,15 +67,24 @@ class BM25Search:
         logger.info("BM25 search initialized", cache_file=str(self._cache_file))
 
     def _tokenize(self, text: str) -> list[str]:
-        """Simple tokenization (split by whitespace and lowercase).
+        """Tokenization with German stopword removal.
+
+        Sprint 70 Feature 70.14: Removes German stopwords to strengthen BM25 signals.
+        Vector search keeps stopwords for semantic context.
 
         Args:
             text: Input text
 
         Returns:
-            list of tokens
+            list of tokens (stopwords removed, lowercased)
+
+        Example:
+            >>> self._tokenize("Was ist ein Knowledge Graph?")
+            ['knowledge', 'graph']  # "was", "ist", "ein" removed
         """
-        return text.lower().split()
+        tokens = text.lower().split()
+        # Sprint 70.14: Remove German stopwords for sharper BM25 keyword matching
+        return [token for token in tokens if token not in GERMAN_STOPWORDS]
 
     def fit(
         self,
