@@ -395,10 +395,10 @@ class AegisLLMProxy:
                         status=PhaseStatus.IN_PROGRESS,
                         metadata={
                             "prompt_name": task.metadata.get("prompt_name", "unknown"),
-                            "task_type": task.task_type.value,
+                            "task_type": task.task_type,  # Already string due to use_enum_values
                             "prompt_length": len(task.prompt),
-                            "quality": task.quality_requirement.value,
-                            "complexity": task.complexity.value if task.complexity else "unknown",
+                            "quality": task.quality_requirement,  # Already string
+                            "complexity": task.complexity if task.complexity else "unknown",  # Already string
                             "provider": provider,
                         },
                     )
