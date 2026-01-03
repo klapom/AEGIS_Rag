@@ -802,8 +802,96 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 72 Admin UI Features
+
+### MCP Tool Management Integration
+
+**New Frontend Components:**
+- `MCPToolsPage.tsx` - Main MCP tools admin page
+- `MCPServerList.tsx` - Server listing and connect/disconnect
+- `MCPServerCard.tsx` - Individual server status card
+- `MCPHealthMonitor.tsx` - Real-time health metrics display
+- `MCPToolExecutionPanel.tsx` - Tool parameter input and execution
+
+**New Backend Endpoints:**
+- `GET /api/v1/mcp/servers` - List all MCP servers
+- `POST /api/v1/mcp/servers/{name}/connect` - Connect to server
+- `POST /api/v1/mcp/servers/{name}/disconnect` - Disconnect from server
+- `GET /api/v1/mcp/servers/{name}/health` - Get server health metrics
+- `GET /api/v1/mcp/servers/{name}/tools` - List available tools
+- `POST /api/v1/mcp/tools/execute` - Execute a tool with parameters
+
+**Features:**
+- Real-time server health monitoring (CPU, memory, latency)
+- Connect/disconnect MCP servers via UI
+- Type-safe tool execution with parameter validation
+- Pretty-printed JSON result display
+- Auto-refresh every 30 seconds
+- Responsive design (desktop two-column, mobile tabs)
+
+**Documentation:** [docs/guides/MCP_TOOLS_ADMIN_GUIDE.md](guides/MCP_TOOLS_ADMIN_GUIDE.md)
+
+### Memory Management UI
+
+**New Frontend Components:**
+- `MemoryManagementPage.tsx` - Main memory admin page (3 tabs)
+- `MemoryStatsCard.tsx` - Statistics display for each memory layer
+- `MemorySearchPanel.tsx` - Cross-layer search interface
+- `ConsolidationControl.tsx` - Manual consolidation trigger and history
+
+**New Backend Endpoints:**
+- `GET /api/v1/memory/stats` - Get all layer statistics
+- `GET /api/v1/memory/redis/stats` - Redis layer statistics
+- `GET /api/v1/memory/qdrant/stats` - Qdrant layer statistics
+- `GET /api/v1/memory/graphiti/stats` - Graphiti layer statistics
+- `GET /api/v1/memory/search` - Search across memory layers
+- `POST /api/v1/memory/consolidate` - Trigger manual consolidation
+- `GET /api/v1/memory/consolidate/history` - Get consolidation history
+- `GET /api/v1/memory/consolidate/status` - Get current consolidation status
+- `POST /api/v1/memory/export` - Export memory data as JSON
+
+**Tab 1: Statistics**
+- Real-time metrics for Redis, Qdrant, and Graphiti
+- Per-layer health indicators and capacity usage
+- Refresh and optimization controls
+
+**Tab 2: Search**
+- Search across all memory layers simultaneously
+- Filter by user ID, session ID, date range, keywords
+- Results grouped by layer with relevance scores
+- Export/delete individual memories
+
+**Tab 3: Consolidation**
+- Manual consolidation trigger with progress monitoring
+- Consolidation history (last 30 operations)
+- Auto-consolidation settings (interval, threshold)
+- Retry failed items
+
+**Features:**
+- 3-layer visibility (Redis, Qdrant, Graphiti)
+- Cross-layer search without Neo4j browser
+- Manual consolidation without kubectl/docker commands
+- Memory usage trending and capacity planning
+- Automatic vs manual consolidation triggers
+
+**Documentation:** [docs/guides/MEMORY_MANAGEMENT_GUIDE.md](guides/MEMORY_MANAGEMENT_GUIDE.md)
+
+### Domain Training UI Completion (Feature 72.2)
+
+**Features Connected:**
+- Data Augmentation Dialog (71.13) - Generate synthetic training data
+- Batch Document Upload (71.14) - Upload multiple documents with progress
+- Domain Details Dialog (71.15) - View and edit domain configuration
+
+**Integration Notes:**
+- All backend APIs existed from Sprint 71
+- Feature 72.2 purely frontend wiring work
+- 18 previously skipped E2E tests now passing
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67 Complete:** 2026-01-11 (Sandbox + Adaptation + C-LARA, 75 SP, 195 tests, 3,511 LOC)
-**Sprint 68 In Progress:** E2E tests, performance optimization, section features
-**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md, SPRINT_67_SUMMARY.md
+**Sprint 72 Complete:** 2026-01-03 (Admin UI Features: MCP Tools + Memory Mgmt + Domain Training)
+**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md
 **Maintainer:** Documentation Agent (Claude Code)

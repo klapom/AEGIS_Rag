@@ -111,8 +111,8 @@ test.describe('Sprint 46 - Feature 46.5: Domain Auto Discovery', () => {
     const errorVisible = await errorMessage.isVisible().catch(() => false);
 
     // Either error message appears or file is rejected by input
-    const fileInput = page.locator('[data-testid="domain-discovery-file-input"]');
-    const fileCount = await fileInput.evaluate((el: HTMLInputElement) => el.files?.length || 0);
+    const fileInputCheck = page.locator('[data-testid="domain-discovery-file-input"]');
+    const fileCount = await fileInputCheck.evaluate((el: HTMLInputElement) => el.files?.length || 0);
 
     // File should not be accepted
     expect(fileCount === 0 || errorVisible).toBeTruthy();

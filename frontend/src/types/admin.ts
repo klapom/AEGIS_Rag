@@ -150,6 +150,62 @@ export interface DetailedProgress {
 }
 
 // ============================================================================
+// Sprint 71 Feature 71.8: Ingestion Job Monitoring Types
+// ============================================================================
+
+export type IngestionJobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface IngestionJobResponse {
+  job_id: string;
+  directory_path: string;
+  recursive: boolean;
+  total_files: number;
+  processed_files: number;
+  failed_files: number;
+  status: IngestionJobStatus;
+  created_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error?: string | null;
+}
+
+export interface IngestionEventResponse {
+  event_id: number;
+  job_id: string;
+  timestamp: string;
+  level: 'INFO' | 'WARNING' | 'ERROR';
+  message: string;
+  file_path?: string | null;
+  document_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface DocumentProgress {
+  document_id: string;
+  document_name: string;
+  file_path: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  progress_percent: number;
+  chunks_created: number;
+  entities_extracted: number;
+  relations_extracted: number;
+  error?: string | null;
+  current_step?: string | null; // "parsing" | "chunking" | "embedding" | "graph_extraction"
+}
+
+export interface BatchProgress {
+  batch_id: string;
+  job_id: string;
+  total_documents: number;
+  parallel_limit: number;
+  completed: number;
+  in_progress: number;
+  failed: number;
+  overall_progress_percent: number;
+  documents: DocumentProgress[];
+}
+
+// ============================================================================
 // Sprint 33 Feature 33.5: Error Tracking Types
 // ============================================================================
 
@@ -249,4 +305,301 @@ export interface PipelineConfig {
   // Resource Limits
   max_concurrent_llm: number;
   max_vram_mb: number;
+}
+
+// ============================================================================
+// Sprint 72 Feature 72.1: MCP Tool Management Types
+// ============================================================================
+
+/**
+ * MCP Server connection status
+ */
+export type MCPServerStatus = 'connected' | 'disconnected' | 'error' | 'connecting';
+
+/**
+ * MCP Server information
+ */
+export interface MCPServer {
+  name: string;
+  status: MCPServerStatus;
+  url?: string;
+  description?: string;
+  tools: MCPTool[];
+  last_connected?: string;
+  error_message?: string;
+}
+
+/**
+ * MCP Tool parameter schema
+ */
+export interface MCPToolParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description: string;
+  required: boolean;
+  default?: unknown;
+  enum?: string[];
+}
+
+/**
+ * MCP Tool information
+ */
+export interface MCPTool {
+  name: string;
+  description: string;
+  server_name: string;
+  parameters: MCPToolParameter[];
+}
+
+/**
+ * MCP Tool execution request
+ */
+export interface MCPToolExecutionRequest {
+  tool_name: string;
+  parameters: Record<string, unknown>;
+}
+
+/**
+ * MCP Tool execution result
+ */
+export interface MCPExecutionResult {
+  success: boolean;
+  tool_name: string;
+  result?: unknown;
+  error?: string;
+  execution_time_ms: number;
+  timestamp: string;
+}
+
+/**
+ * MCP Health status
+ */
+export interface MCPHealthStatus {
+  healthy: boolean;
+  total_servers: number;
+  connected_servers: number;
+  total_tools: number;
+  servers: MCPServerHealthInfo[];
+  timestamp: string;
+}
+
+/**
+ * Individual server health info
+ */
+export interface MCPServerHealthInfo {
+  name: string;
+  status: MCPServerStatus;
+  tool_count: number;
+  last_ping?: string;
+}
+
+// ============================================================================
+// Sprint 72 Feature 72.3: Memory Management Types
+// ============================================================================
+
+/**
+ * Redis layer statistics
+ */
+export interface RedisMemoryStats {
+  keys: number;
+  memory_mb: number;
+  hit_rate: number;
+}
+
+/**
+ * Qdrant layer statistics
+ */
+export interface QdrantMemoryStats {
+  documents: number;
+  size_mb: number;
+  avg_search_latency_ms: number;
+}
+
+/**
+ * Graphiti layer statistics
+ */
+export interface GraphitiMemoryStats {
+  episodes: number;
+  entities: number;
+  avg_search_latency_ms: number;
+}
+
+/**
+ * Combined memory statistics for all layers
+ */
+export interface MemoryStats {
+  redis: RedisMemoryStats;
+  qdrant: QdrantMemoryStats;
+  graphiti: GraphitiMemoryStats;
+  timestamp: string;
+}
+
+/**
+ * Memory search request parameters
+ */
+export interface MemorySearchRequest {
+  user_id?: string;
+  session_id?: string;
+  query?: string;
+  namespace?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * Individual memory search result
+ */
+export interface MemorySearchResult {
+  id: string;
+  content: string;
+  relevance_score: number;
+  timestamp: string;
+  layer: 'redis' | 'qdrant' | 'graphiti';
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Memory search response
+ */
+export interface MemorySearchResponse {
+  results: MemorySearchResult[];
+  total_count: number;
+  query: MemorySearchRequest;
+}
+
+/**
+ * Session memory data
+ */
+export interface SessionMemory {
+  session_id: string;
+  user_id?: string;
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp: string;
+  }>;
+  context?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Consolidation run history entry
+ */
+export interface ConsolidationHistoryEntry {
+  id: string;
+  started_at: string;
+  completed_at?: string;
+  status: 'running' | 'completed' | 'failed';
+  items_processed: number;
+  items_consolidated: number;
+  error?: string;
+}
+
+/**
+ * Consolidation status response
+ */
+export interface ConsolidationStatus {
+  is_running: boolean;
+  last_run?: ConsolidationHistoryEntry;
+  history: ConsolidationHistoryEntry[];
+}
+
+/**
+ * Point-in-time memory query request
+ */
+export interface PointInTimeRequest {
+  session_id: string;
+  timestamp: string;
+  include_context?: boolean;
+}
+
+// ============================================================================
+// Sprint 72 Feature 72.2: Domain Training Types (Wire-up)
+// ============================================================================
+
+/**
+ * Full domain details including training metrics and timestamps
+ * Sprint 72 Feature 72.2: Domain Details API
+ */
+export interface DomainDetails {
+  id: string;
+  name: string;
+  description: string;
+  status: 'pending' | 'training' | 'ready' | 'failed';
+  llm_model: string;
+  training_metrics?: Record<string, unknown> | null;
+  created_at: string;
+  trained_at?: string | null;
+}
+
+/**
+ * Request for data augmentation
+ * Sprint 72 Feature 72.2: Data Augmentation API
+ */
+export interface AugmentationRequest {
+  seed_samples: Array<{
+    text: string;
+    entities: string[];
+    relations?: Array<{ subject: string; predicate: string; object: string }>;
+  }>;
+  target_count: number;
+  llm_model?: string;
+}
+
+/**
+ * Response from data augmentation
+ * Sprint 72 Feature 72.2: Data Augmentation API
+ */
+export interface AugmentationResponse {
+  generated_samples: Array<{
+    text: string;
+    entities: string[];
+    relations?: Array<{ subject: string; predicate: string; object: string }>;
+  }>;
+  seed_count: number;
+  generated_count: number;
+  validation_rate: number;
+}
+
+/**
+ * Request for batch document upload
+ * Sprint 72 Feature 72.2: Batch Upload API
+ */
+export interface BatchUploadRequest {
+  domain_name: string;
+  file_paths: string[];
+  recursive: boolean;
+}
+
+/**
+ * Response from batch document upload
+ * Sprint 72 Feature 72.2: Batch Upload API
+ */
+export interface BatchUploadResponse {
+  job_id: string;
+  domain_name: string;
+  documents_queued: number;
+  message: string;
+}
+
+/**
+ * Domain validation response
+ * Sprint 72 Feature 72.2: Domain Validation API
+ */
+export interface ValidateDomainAdminResponse {
+  domain_name: string;
+  is_valid: boolean;
+  validation_errors: string[];
+  recommendations: string[];
+}
+
+/**
+ * Domain reindex response
+ * Sprint 72 Feature 72.2: Domain Reindex API
+ */
+export interface ReindexDomainAdminResponse {
+  message: string;
+  domain_name: string;
+  documents_queued: number;
 }

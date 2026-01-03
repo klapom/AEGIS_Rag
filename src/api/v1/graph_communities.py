@@ -1,19 +1,28 @@
 """Community Visualization API endpoints.
 
 Sprint 63 Feature 63.5: Section-Based Community Detection with Visualization
+Sprint 71 Feature 71.17: Document and Section Selection API
 
 Provides REST endpoints for:
 - Section community detection with visualization data
 - Community comparison across sections
 - Community overlap analysis
 - Visualization-ready JSON responses
+- Document listing for selection
+- Section listing per document
 """
 
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
 from fastapi import APIRouter, Body, HTTPException, Query, status
+from pydantic import BaseModel, Field
 
+from src.components.graph_rag.neo4j_client import get_neo4j_client
+from src.components.vector_search.qdrant_client import QdrantClient
+from src.core.config import settings
 from src.domains.knowledge_graph.communities import (
     CommunityComparisonOverview,
     SectionCommunityVisualizationResponse,
@@ -23,6 +32,373 @@ from src.domains.knowledge_graph.communities import (
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/graph", tags=["graph-communities"])
+
+
+# =============================================================================
+# Sprint 71 Feature 71.17: Pydantic Models for Document/Section Selection
+# =============================================================================
+
+
+class DocumentMetadata(BaseModel):
+    """Document metadata for selection dropdown."""
+
+    id: str = Field(..., description="Document ID")
+    title: str = Field(..., description="Document title")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+class DocumentsResponse(BaseModel):
+    """Response for GET /graph/documents."""
+
+    documents: list[DocumentMetadata] = Field(..., description="List of all documents")
+
+
+class DocumentSection(BaseModel):
+    """Section metadata for selection dropdown."""
+
+    id: str = Field(..., description="Section ID")
+    heading: str = Field(..., description="Section heading")
+    level: int = Field(..., description="Section level (1=top-level)")
+    entity_count: int = Field(default=0, description="Number of entities in section")
+    chunk_count: int = Field(default=0, description="Number of chunks in section")
+
+
+class SectionsResponse(BaseModel):
+    """Response for GET /graph/documents/{doc_id}/sections."""
+
+    document_id: str = Field(..., description="Document ID")
+    sections: list[DocumentSection] = Field(..., description="List of sections in document")
+
+
+# =============================================================================
+# Sprint 71 Feature 71.17: Document & Section Selection Endpoints
+# =============================================================================
+
+
+@router.get(
+    "/documents",
+    response_model=DocumentsResponse,
+    summary="Get all documents",
+    description="Retrieve all documents for selection dropdown in community analysis dialogs.",
+    responses={
+        200: {
+            "description": "List of all documents",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "documents": [
+                            {
+                                "id": "doc_123",
+                                "title": "Machine Learning Basics",
+                                "created_at": "2026-01-01T12:00:00Z",
+                                "updated_at": "2026-01-02T15:30:00Z",
+                            }
+                        ]
+                    }
+                }
+            },
+        },
+        500: {"description": "Server error"},
+    },
+)
+async def get_documents() -> DocumentsResponse:
+    """Get all documents for selection dropdown.
+
+    **Sprint 71 Feature 71.17: Document Selection API**
+
+    This endpoint returns all documents stored in Qdrant with their original filenames
+    extracted from the document_path payload field.
+
+    ### Response Structure:
+    - List of documents with id, title (filename), created_at, updated_at
+    - Sorted by creation date (newest first)
+
+    ### Example Usage:
+    ```
+    GET /api/v1/graph/documents
+
+    Response:
+    {
+        "documents": [
+            {
+                "id": "doc_123",
+                "title": "Machine_Learning_Basics.pdf",
+                "created_at": "2026-01-01T12:00:00Z",
+                "updated_at": "2026-01-02T15:30:00Z"
+            },
+            {
+                "id": "doc_456",
+                "title": "Deep_Learning_Advanced.pdf",
+                "created_at": "2025-12-15T10:00:00Z",
+                "updated_at": "2025-12-20T14:00:00Z"
+            }
+        ]
+    }
+    ```
+
+    Returns:
+        DocumentsResponse with list of all documents
+
+    Raises:
+        HTTPException: If database query fails
+    """
+    try:
+        logger.info("documents_list_requested")
+
+        # Get Qdrant client
+        qdrant_client = QdrantClient()
+
+        # Collection name from settings (default: documents_v1)
+        collection_name = settings.qdrant_collection
+
+        # Scroll through all points to get unique documents
+        # We need to scroll because there's no direct "get unique documents" query
+        unique_docs: dict[str, dict[str, Any]] = {}
+        offset = None
+        batch_size = 100
+
+        logger.info("scrolling_qdrant_for_documents", collection=collection_name)
+
+        while True:
+            # Scroll through points
+            scroll_result = await qdrant_client.async_client.scroll(
+                collection_name=collection_name,
+                limit=batch_size,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,  # We don't need vectors, just metadata
+            )
+
+            points, next_offset = scroll_result
+
+            # Extract unique documents from payloads
+            for point in points:
+                payload = point.payload
+                if not payload:
+                    continue
+
+                doc_id = payload.get("document_id")
+                doc_path = payload.get("document_path")
+                ingestion_ts = payload.get("ingestion_timestamp")
+
+                if not doc_id or not doc_path:
+                    continue
+
+                # Extract filename from full path
+                filename = Path(doc_path).name
+
+                # Track earliest ingestion time for each document
+                if doc_id not in unique_docs:
+                    unique_docs[doc_id] = {
+                        "id": doc_id,
+                        "filename": filename,
+                        "path": doc_path,
+                        "ingestion_timestamp": ingestion_ts or 0,
+                    }
+                else:
+                    # Update if we found an earlier chunk
+                    if ingestion_ts and ingestion_ts < unique_docs[doc_id]["ingestion_timestamp"]:
+                        unique_docs[doc_id]["ingestion_timestamp"] = ingestion_ts
+
+            # Check if there are more points
+            if next_offset is None:
+                break
+
+            offset = next_offset
+
+        logger.info("unique_documents_extracted", count=len(unique_docs))
+
+        # Convert to Pydantic models
+        documents = []
+        for doc_data in unique_docs.values():
+            # Convert Unix timestamp to datetime
+            created_at = datetime.fromtimestamp(doc_data["ingestion_timestamp"])
+
+            documents.append(
+                DocumentMetadata(
+                    id=doc_data["id"],
+                    title=doc_data["filename"],  # Original filename from document_path
+                    created_at=created_at,
+                    updated_at=created_at,  # Use same timestamp for both
+                )
+            )
+
+        # Sort by creation date (newest first)
+        documents.sort(key=lambda d: d.created_at, reverse=True)
+
+        # Limit to 100 most recent documents
+        documents = documents[:100]
+
+        logger.info("documents_list_returned", count=len(documents))
+
+        return DocumentsResponse(documents=documents)
+
+    except Exception as e:
+        logger.error("documents_list_error", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve documents",
+        ) from e
+
+
+@router.get(
+    "/documents/{doc_id}/sections",
+    response_model=SectionsResponse,
+    summary="Get sections for a document",
+    description="Retrieve all sections for a specific document for cascading selection.",
+    responses={
+        200: {
+            "description": "List of sections in document",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "document_id": "doc_123",
+                        "sections": [
+                            {
+                                "id": "sec_1",
+                                "heading": "Introduction",
+                                "level": 1,
+                                "entity_count": 15,
+                                "chunk_count": 8,
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        404: {"description": "Document not found"},
+        500: {"description": "Server error"},
+    },
+)
+async def get_document_sections(doc_id: str) -> SectionsResponse:
+    """Get all sections for a specific document.
+
+    **Sprint 71 Feature 71.17: Section Selection API**
+
+    This endpoint returns all sections for a document to enable cascading
+    selection in the frontend (select document → sections load automatically).
+
+    ### Response Structure:
+    - Document ID
+    - List of sections with heading, level, entity/chunk counts
+    - Sorted by level (top-level first), then by heading
+
+    ### Example Usage:
+    ```
+    GET /api/v1/graph/documents/doc_123/sections
+
+    Response:
+    {
+        "document_id": "doc_123",
+        "sections": [
+            {
+                "id": "sec_1",
+                "heading": "Introduction",
+                "level": 1,
+                "entity_count": 15,
+                "chunk_count": 8
+            },
+            {
+                "id": "sec_2",
+                "heading": "Methods",
+                "level": 1,
+                "entity_count": 23,
+                "chunk_count": 12
+            }
+        ]
+    }
+    ```
+
+    Args:
+        doc_id: Document ID to get sections for
+
+    Returns:
+        SectionsResponse with list of sections
+
+    Raises:
+        HTTPException: If document not found or query fails
+    """
+    try:
+        logger.info("document_sections_requested", document_id=doc_id)
+
+        # Get Neo4j client
+        neo4j_client = get_neo4j_client()
+
+        # First check if document exists (check for chunks with this document_id)
+        doc_check_query = """
+        MATCH (c:chunk {document_id: $doc_id})
+        RETURN c.document_id AS id
+        LIMIT 1
+        """
+        doc_results = await neo4j_client.execute_query(
+            doc_check_query, parameters={"doc_id": doc_id}
+        )
+
+        if not doc_results:
+            logger.warning("document_not_found", document_id=doc_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document '{doc_id}' not found",
+            )
+
+        # Query sections from chunks
+        # Note: Current ingestion pipeline doesn't create Section nodes
+        # This returns a single "Complete Document" section as fallback
+        query = """
+        MATCH (c:chunk {document_id: $doc_id})
+        WITH count(c) AS total_chunks
+        OPTIONAL MATCH (e:base)
+        WHERE EXISTS {
+            MATCH (e)<-[:MENTIONS]-(c2:chunk {document_id: $doc_id})
+        }
+        WITH total_chunks, count(DISTINCT e) AS entity_count
+        RETURN
+            'complete' AS id,
+            'Complete Document' AS heading,
+            1 AS level,
+            entity_count,
+            total_chunks AS chunk_count
+        """
+
+        results = await neo4j_client.execute_query(query, parameters={"doc_id": doc_id})
+
+        # Convert to Pydantic models
+        sections = []
+        for record in results:
+            sections.append(
+                DocumentSection(
+                    id=record["id"],
+                    heading=record["heading"],
+                    level=record["level"],
+                    entity_count=record["entity_count"],
+                    chunk_count=record["chunk_count"],
+                )
+            )
+
+        logger.info(
+            "document_sections_returned",
+            document_id=doc_id,
+            section_count=len(sections),
+        )
+
+        return SectionsResponse(document_id=doc_id, sections=sections)
+
+    except HTTPException:
+        # Re-raise HTTPException (404)
+        raise
+
+    except Exception as e:
+        logger.error(
+            "document_sections_error",
+            document_id=doc_id,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve document sections",
+        ) from e
 
 
 # =============================================================================

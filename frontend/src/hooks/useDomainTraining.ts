@@ -701,3 +701,157 @@ export function useTrainingStream(
 
   return { ...state, disconnect };
 }
+
+// ============================================================================
+// Sprint 71 Feature 71.13-71.15: Missing Domain Training APIs
+// ============================================================================
+
+/**
+ * Augmentation request
+ * Sprint 71 Feature 71.13: Data Augmentation UI
+ */
+export interface AugmentationRequest {
+  seed_samples: TrainingSample[];
+  target_count: number;
+}
+
+/**
+ * Augmentation response
+ * Sprint 71 Feature 71.13: Data Augmentation UI
+ */
+export interface AugmentationResponse {
+  generated_samples: TrainingSample[];
+  seed_count: number;
+  generated_count: number;
+  validation_rate: number;
+}
+
+/**
+ * Augment training data using LLM
+ * Sprint 71 Feature 71.13: Data Augmentation UI
+ *
+ * Expands a small dataset (5-10 samples) into a larger one (20+) using LLM-based
+ * paraphrasing and synonym replacement.
+ */
+export function useAugmentTrainingData() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(
+    async (data: AugmentationRequest): Promise<AugmentationResponse> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await apiClient.post<AugmentationResponse>(
+          '/admin/domains/augment',
+          data
+        );
+        return response;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to augment training data');
+        setError(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { mutateAsync, isLoading, error };
+}
+
+/**
+ * Batch ingestion request
+ * Sprint 71 Feature 71.14: Batch Document Upload
+ */
+export interface BatchIngestionRequest {
+  domain_name: string;
+  file_paths: string[];
+  recursive: boolean;
+}
+
+/**
+ * Batch ingestion response
+ * Sprint 71 Feature 71.14: Batch Document Upload
+ */
+export interface BatchIngestionResponse {
+  job_id: string;
+  domain_name: string;
+  documents_queued: number;
+  message: string;
+}
+
+/**
+ * Ingest batch of documents to a domain
+ * Sprint 71 Feature 71.14: Batch Document Upload
+ *
+ * Upload multiple documents to a domain for processing. Returns job_id for
+ * tracking progress via IngestionJobList.
+ */
+export function useIngestBatch() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = useCallback(
+    async (data: BatchIngestionRequest): Promise<BatchIngestionResponse> => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await apiClient.post<BatchIngestionResponse>(
+          '/admin/domains/ingest-batch',
+          data
+        );
+        return response;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to ingest batch');
+        setError(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  return { mutateAsync, isLoading, error };
+}
+
+/**
+ * Get full domain details
+ * Sprint 71 Feature 71.15: Get Domain Details
+ *
+ * Fetch complete domain configuration including prompts, trained metrics, and metadata.
+ * Different from useDomainStats which only returns statistics.
+ */
+export function useDomainDetails(domainName: string, enabled = true) {
+  const [data, setData] = useState<Domain | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchDetails = useCallback(async () => {
+    if (!enabled || !domainName) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.get<Domain>(
+        `/admin/domains/${domainName}`
+      );
+      setData(response);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch domain details'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [domainName, enabled]);
+
+  useEffect(() => {
+    fetchDetails();
+  }, [fetchDetails]);
+
+  return { data, isLoading, error, refetch: fetchDetails };
+}

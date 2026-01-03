@@ -11,6 +11,7 @@ import { useState } from 'react';
 import type { Domain } from '../../hooks/useDomainTraining';
 import { useDeleteDomain } from '../../hooks/useDomainTraining';
 import { DomainDetailDialog } from './DomainDetailDialog';
+import { BatchDocumentUploadDialog } from './BatchDocumentUploadDialog';
 
 interface DomainListProps {
   domains: Domain[] | null;
@@ -23,6 +24,7 @@ export function DomainList({ domains, isLoading, onRefresh }: DomainListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteConfirmDomain, setDeleteConfirmDomain] = useState<Domain | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [uploadDomain, setUploadDomain] = useState<Domain | null>(null);
   const { mutateAsync: deleteDomain, isLoading: isDeleting } = useDeleteDomain();
 
   const handleViewDomain = (domain: Domain) => {
@@ -70,6 +72,14 @@ export function DomainList({ domains, isLoading, onRefresh }: DomainListProps) {
     }
   };
 
+  const handleUploadClick = (domain: Domain) => {
+    setUploadDomain(domain);
+  };
+
+  const handleUploadClose = () => {
+    setUploadDomain(null);
+  };
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-md border p-6 text-center" data-testid="domain-list-loading">
@@ -107,6 +117,7 @@ export function DomainList({ domains, isLoading, onRefresh }: DomainListProps) {
                 domain={domain}
                 onView={() => handleViewDomain(domain)}
                 onDelete={() => handleDeleteClick(domain)}
+                onUpload={() => handleUploadClick(domain)}
               />
             ))}
           </tbody>
@@ -131,6 +142,14 @@ export function DomainList({ domains, isLoading, onRefresh }: DomainListProps) {
           onCancel={handleDeleteCancel}
         />
       )}
+
+      {/* Batch Document Upload Dialog (Sprint 71 Feature 71.14) */}
+      {uploadDomain && (
+        <BatchDocumentUploadDialog
+          domain={uploadDomain}
+          onClose={handleUploadClose}
+        />
+      )}
     </>
   );
 }
@@ -139,9 +158,10 @@ interface DomainRowProps {
   domain: Domain;
   onView: () => void;
   onDelete: () => void;
+  onUpload: () => void;
 }
 
-function DomainRow({ domain, onView, onDelete }: DomainRowProps) {
+function DomainRow({ domain, onView, onDelete, onUpload }: DomainRowProps) {
   const statusColors: Record<Domain['status'], string> = {
     ready: 'bg-green-100 text-green-800',
     training: 'bg-yellow-100 text-yellow-800',
@@ -174,6 +194,14 @@ function DomainRow({ domain, onView, onDelete }: DomainRowProps) {
             data-testid={`domain-view-${domain.name}`}
           >
             View
+          </button>
+          <button
+            onClick={onUpload}
+            className="text-green-600 hover:underline text-xs font-medium"
+            data-testid={`domain-upload-${domain.name}`}
+            aria-label={`Upload documents to ${domain.name}`}
+          >
+            Upload
           </button>
           <button
             onClick={onDelete}

@@ -14,6 +14,9 @@ import {
   Activity,
   GraduationCap,
   FileText,
+  ListChecks,
+  Wrench,
+  Database,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -66,6 +69,24 @@ const navItems: NavItem[] = [
     label: 'Indexing',
     icon: <FileText className="w-4 h-4" />,
     testId: 'admin-nav-indexing',
+  },
+  {
+    href: '/admin/jobs',
+    label: 'Jobs',
+    icon: <ListChecks className="w-4 h-4" />,
+    testId: 'admin-nav-jobs',
+  },
+  {
+    href: '/admin/tools',
+    label: 'Tools',
+    icon: <Wrench className="w-4 h-4" />,
+    testId: 'admin-nav-tools',
+  },
+  {
+    href: '/admin/memory',
+    label: 'Memory',
+    icon: <Database className="w-4 h-4" />,
+    testId: 'admin-nav-memory',
   },
 ];
 

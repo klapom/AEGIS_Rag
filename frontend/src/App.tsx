@@ -27,6 +27,9 @@ import { AdminLLMConfigPage } from './pages/admin/AdminLLMConfigPage';
 import { SharedConversationPage } from './pages/SharedConversationPage';
 import { DomainTrainingPage } from './pages/admin/DomainTrainingPage';
 import { UploadPage } from './pages/admin/UploadPage';
+import { IngestionJobsPage } from './pages/admin/IngestionJobsPage';
+import { MCPToolsPage } from './pages/admin/MCPToolsPage';
+import { MemoryManagementPage } from './pages/admin/MemoryManagementPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -57,6 +60,9 @@ function App() {
                       <Route path="/admin/llm-config" element={<AdminLLMConfigPage />} />
                       <Route path="/admin/domain-training" element={<DomainTrainingPage />} />
                       <Route path="/admin/upload" element={<UploadPage />} />
+                      <Route path="/admin/jobs" element={<IngestionJobsPage />} />
+                      <Route path="/admin/tools" element={<MCPToolsPage />} />
+                      <Route path="/admin/memory" element={<MemoryManagementPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>

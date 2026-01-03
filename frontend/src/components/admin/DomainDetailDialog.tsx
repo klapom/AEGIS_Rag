@@ -14,6 +14,7 @@ import {
   useDomainStats,
   useReindexDomain,
   useValidateDomain,
+  useDomainDetails,
   type Domain,
   type ValidateDomainResponse,
 } from '../../hooks/useDomainTraining';
@@ -34,6 +35,12 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
 
   // Fetch domain statistics (Sprint 52.2.2)
   const { data: domainStats, isLoading: statsLoading, refetch: refetchStats } = useDomainStats(
+    domain?.name || '',
+    isOpen && !!domain
+  );
+
+  // Fetch full domain details (Sprint 71 Feature 71.15)
+  const { data: domainDetails } = useDomainDetails(
     domain?.name || '',
     isOpen && !!domain
   );
@@ -365,7 +372,10 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <InfoRow label="Name" value={domain.name} />
               <InfoRow label="Description" value={domain.description || '-'} />
-              <InfoRow label="LLM Model" value={domain.llm_model || 'Not configured'} />
+              <div className="flex justify-between" data-testid="domain-llm-model">
+                <span className="text-sm text-gray-600">LLM Model</span>
+                <span className="text-sm font-medium text-gray-900">{domain.llm_model || 'Not configured'}</span>
+              </div>
               {domain.created_at && (
                 <InfoRow label="Created" value={formatDate(domain.created_at)} />
               )}
@@ -409,7 +419,7 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
                   </div>
                 )}
                 {trainingStatus.metrics && Object.keys(trainingStatus.metrics).length > 0 && (
-                  <div>
+                  <div data-testid="domain-training-metrics">
                     <p className="text-sm text-gray-600 mb-2">Metrics</p>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(trainingStatus.metrics).map(([key, value]) => (

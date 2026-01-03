@@ -12,6 +12,18 @@ import type {
   SystemStats,
   ScanDirectoryRequest,
   ScanDirectoryResponse,
+  IngestionJobResponse,
+  IngestionEventResponse,
+  BatchProgress,
+  MCPServer,
+  MCPTool,
+  MCPExecutionResult,
+  MCPHealthStatus,
+  MemoryStats,
+  MemorySearchRequest,
+  MemorySearchResponse,
+  SessionMemory,
+  ConsolidationStatus,
 } from '../types/admin';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -420,4 +432,484 @@ export async function fetchGraphStats(): Promise<GraphStats> {
   }
 
   return response.json();
+}
+
+// ============================================================================
+// Sprint 71 Feature 71.8: Ingestion Job Monitoring API
+// ============================================================================
+
+/**
+ * List all ingestion jobs with optional filtering
+ */
+export async function listIngestionJobs(params?: {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<IngestionJobResponse[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.limit !== undefined) queryParams.append('limit', String(params.limit));
+  if (params?.offset !== undefined) queryParams.append('offset', String(params.offset));
+
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs?${queryParams.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get ingestion job details by ID
+ */
+export async function getIngestionJob(jobId: string): Promise<IngestionJobResponse> {
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs/${jobId}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Cancel a running ingestion job
+ */
+export async function cancelIngestionJob(jobId: string): Promise<void> {
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs/${jobId}/cancel`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+}
+
+/**
+ * Get ingestion events for a job
+ */
+export async function getJobEvents(
+  jobId: string,
+  params?: {
+    level?: 'INFO' | 'WARNING' | 'ERROR';
+    limit?: number;
+    offset?: number;
+  }
+): Promise<IngestionEventResponse[]> {
+  const queryParams = new URLSearchParams();
+  if (params?.level) queryParams.append('level', params.level);
+  if (params?.limit !== undefined) queryParams.append('limit', String(params.limit));
+  if (params?.offset !== undefined) queryParams.append('offset', String(params.offset));
+
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs/${jobId}/events?${queryParams.toString()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get only ERROR-level events for a job
+ */
+export async function getJobErrors(jobId: string): Promise<IngestionEventResponse[]> {
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs/${jobId}/errors`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Stream batch progress via SSE
+ *
+ * @param jobId The job ID to stream progress for
+ * @param signal Optional AbortSignal to cancel the stream
+ * @yields BatchProgress objects with real-time progress updates
+ */
+export async function* streamBatchProgress(
+  jobId: string,
+  signal?: AbortSignal
+): AsyncGenerator<BatchProgress> {
+  const url = `${API_BASE_URL}/api/v1/admin/ingestion/jobs/${jobId}/progress`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Accept': 'text/event-stream' },
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  if (!response.body) {
+    throw new Error('Response body is null');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      // Decode chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Split by newlines to get individual SSE messages
+      const lines = buffer.split('\n');
+
+      // Keep the last incomplete line in buffer
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        // SSE messages start with "data: "
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6); // Remove "data: " prefix
+
+          try {
+            const progress: BatchProgress = JSON.parse(data);
+            yield progress;
+          } catch (e) {
+            console.error('Failed to parse SSE chunk:', e, 'Data:', data);
+          }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// ============================================================================
+// Sprint 72 Feature 72.1: MCP Tool Management API
+// ============================================================================
+
+/**
+ * Get MCP health status
+ * @returns MCPHealthStatus with server connectivity and tool counts
+ */
+export async function getMCPHealth(): Promise<MCPHealthStatus> {
+  const response = await fetch(`${API_BASE_URL}/mcp/health`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get list of all MCP servers
+ * @returns Array of MCPServer objects
+ */
+export async function getMCPServers(): Promise<MCPServer[]> {
+  const response = await fetch(`${API_BASE_URL}/mcp/servers`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Connect to an MCP server
+ * @param serverName Name of the server to connect
+ * @returns Updated MCPServer object
+ */
+export async function connectMCPServer(serverName: string): Promise<MCPServer> {
+  const response = await fetch(`${API_BASE_URL}/mcp/servers/${encodeURIComponent(serverName)}/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Disconnect from an MCP server
+ * @param serverName Name of the server to disconnect
+ * @returns Updated MCPServer object
+ */
+export async function disconnectMCPServer(serverName: string): Promise<MCPServer> {
+  const response = await fetch(`${API_BASE_URL}/mcp/servers/${encodeURIComponent(serverName)}/disconnect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get list of all available MCP tools
+ * @returns Array of MCPTool objects
+ */
+export async function getMCPTools(): Promise<MCPTool[]> {
+  const response = await fetch(`${API_BASE_URL}/mcp/tools`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get details of a specific MCP tool
+ * @param toolName Name of the tool
+ * @returns MCPTool object with full details
+ */
+export async function getMCPTool(toolName: string): Promise<MCPTool> {
+  const response = await fetch(`${API_BASE_URL}/mcp/tools/${encodeURIComponent(toolName)}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Execute an MCP tool with parameters
+ * @param toolName Name of the tool to execute
+ * @param parameters Tool parameters
+ * @returns MCPExecutionResult with success/error info
+ */
+export async function executeMCPTool(
+  toolName: string,
+  parameters: Record<string, unknown>
+): Promise<MCPExecutionResult> {
+  const response = await fetch(`${API_BASE_URL}/mcp/tools/${encodeURIComponent(toolName)}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parameters }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Sprint 72 Feature 72.3: Memory Management API
+// ============================================================================
+
+/**
+ * Get memory statistics for all layers (Redis, Qdrant, Graphiti)
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @returns MemoryStats with statistics for all memory layers
+ */
+export async function getMemoryStats(): Promise<MemoryStats> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/memory/stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Search memory across all layers
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @param request Search parameters including user_id, session_id, query, namespace
+ * @returns MemorySearchResponse with matching results
+ */
+export async function searchMemory(
+  request: MemorySearchRequest
+): Promise<MemorySearchResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/memory/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get session memory by session ID
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @param sessionId The session ID to retrieve
+ * @returns SessionMemory with messages and context
+ */
+export async function getSessionMemory(sessionId: string): Promise<SessionMemory> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/memory/session/${encodeURIComponent(sessionId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Trigger memory consolidation
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @returns ConsolidationStatus with current status and history
+ */
+export async function triggerConsolidation(): Promise<ConsolidationStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/memory/consolidate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get consolidation status and history
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @returns ConsolidationStatus with current status and last 10 runs
+ */
+export async function getConsolidationStatus(): Promise<ConsolidationStatus> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/memory/consolidation/status`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Export session memory as JSON file
+ * Sprint 72 Feature 72.3: Memory Management UI
+ *
+ * @param sessionId The session ID to export
+ */
+export async function exportMemory(sessionId: string): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/memory/session/${encodeURIComponent(sessionId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  // Create and download the JSON file
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `memory-${sessionId}-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

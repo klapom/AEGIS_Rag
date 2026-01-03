@@ -489,7 +489,171 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 72 Admin Features (UI-Frontend Gap Closure)
+
+### MCP Tool Management UI (Feature 72.1)
+
+**Purpose:** Unified interface for managing Model Context Protocol (MCP) servers and executing tools without SSH/CLI
+
+**Architecture:**
+
+```
+┌────────────────────────────────────────────────────────┐
+│   React Frontend (MCPToolsPage + Components)           │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │ MCPServerList    │  │ MCPToolExecutionPanel    │  │
+│  │ - Connect/Disco  │  │ - Parameter Input        │  │
+│  │ - Status Badge   │  │ - Tool Execution        │  │
+│  │ - Health Metrics │  │ - Result Display        │  │
+│  └─────────┬────────┘  └─────────┬────────────────┘  │
+│            │                     │                   │
+│            └─────────┬───────────┘                   │
+│                      │                               │
+│           [MCPHealthMonitor]                         │
+│           - Real-time metrics (CPU, Mem, Latency)    │
+│           - Auto-refresh every 30s                   │
+│                                                      │
+└────────────────────────────────┬──────────────────────┘
+                                 │ HTTP REST API
+                    ┌────────────▼──────────────┐
+                    │  FastAPI Backend          │
+                    │  /api/v1/mcp/*            │
+                    │  - servers (list)         │
+                    │  - connect/disconnect     │
+                    │  - health checks          │
+                    │  - tools (execute)        │
+                    └───────────────────────────┘
+```
+
+**Components:**
+
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `MCPToolsPage` | 200+ | Main page, tab switching |
+| `MCPServerList` | 250+ | Server list, connect/disconnect |
+| `MCPToolExecutionPanel` | 300+ | Parameter input, execution |
+| `MCPServerCard` | 150+ | Individual server status |
+| `MCPHealthMonitor` | 180+ | Real-time health metrics |
+
+**Features:**
+
+- **Server Management:** Connect/disconnect MCP servers in real-time
+- **Health Monitoring:** CPU, memory, response latency tracking
+- **Tool Execution:** Type-safe parameter input with validation
+- **Result Display:** Pretty-printed JSON with copy-to-clipboard
+- **Error Handling:** User-friendly error messages with retry logic
+- **Responsive Design:** Desktop two-column, mobile tab-based
+
+**User Guide:** [docs/guides/MCP_TOOLS_ADMIN_GUIDE.md](guides/MCP_TOOLS_ADMIN_GUIDE.md)
+
+### Domain Training UI Completion (Feature 72.2)
+
+**Purpose:** Complete wiring of Features 71.13-71.15 with backend APIs
+
+**Features Connected:**
+
+1. **Data Augmentation Dialog** (71.13)
+   - Generate synthetic training examples
+   - Configure augmentation parameters
+   - Preview augmented data
+
+2. **Batch Document Upload** (71.14)
+   - Upload multiple documents in bulk
+   - Progress tracking
+   - Error handling per document
+
+3. **Domain Details Dialog** (71.15)
+   - View domain configuration
+   - Edit domain metadata
+   - Trigger domain training pipeline
+
+**Backend Integration:**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/admin/domains/{id}/augment` | Generate synthetic data |
+| `POST /api/v1/admin/domains/{id}/documents/batch` | Bulk upload |
+| `GET /api/v1/admin/domains/{id}` | Get domain details |
+| `PUT /api/v1/admin/domains/{id}` | Update domain config |
+
+**Success Criteria:**
+- All 18 skipped E2E tests now passing
+- Domain training fully functional from UI
+- No API endpoints needed (all exist from Sprint 71)
+
+### Memory Management UI (Feature 72.3)
+
+**Purpose:** Comprehensive debugging interface for 3-layer memory system
+
+**Architecture:**
+
+```
+┌────────────────────────────────────────────────┐
+│  MemoryManagementPage (Tabs: Stats | Search)   │
+├────────────────────────────────────────────────┤
+│                                                │
+│  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
+│  │Statistics│  │ Search   │  │Consolidate │  │
+│  │- Redis   │  │- By user │  │- Trigger   │  │
+│  │- Qdrant  │  │- By date │  │- History   │  │
+│  │- Graphiti│  │- Keywords│  │- Settings  │  │
+│  └────┬─────┘  └────┬─────┘  └─────┬──────┘  │
+│       │              │               │        │
+│  ┌────▼──────────────▼───────────────▼──────┐ │
+│  │  MemoryStatsCard (each layer)            │ │
+│  │  MemorySearchPanel (global search)       │ │
+│  │  ConsolidationControl (manual trigger)   │ │
+│  └────────────────────────────────────────┘  │
+│                                                │
+└───────────────┬────────────────────────────────┘
+                │ REST API
+    ┌───────────▼──────────────┐
+    │  FastAPI Backend         │
+    │  /api/v1/memory/*        │
+    │  - stats (all layers)    │
+    │  - search (cross-layer)  │
+    │  - consolidate (trigger) │
+    │  - export (backup)       │
+    └──────────────────────────┘
+```
+
+**Components:**
+
+| Component | Purpose |
+|-----------|---------|
+| `MemoryStatsCard` | Display layer statistics (Redis, Qdrant, Graphiti) |
+| `MemorySearchPanel` | Cross-layer search by user, session, keywords |
+| `ConsolidationControl` | Manual consolidation trigger & history |
+
+**Statistics Display:**
+
+- **Redis (Layer 1):** Keys, memory, hit rate, latency, TTL
+- **Qdrant (Layer 2):** Collections, vectors, search latency
+- **Graphiti (Layer 3):** Nodes, relationships, temporal scope
+
+**Search Capabilities:**
+
+- By user ID (across all layers)
+- By session ID
+- By keywords (semantic search in Qdrant)
+- By date range
+- Export results as JSON
+
+**Consolidation Control:**
+
+- Manual trigger with progress monitoring
+- Consolidation history (last 30 consolidations)
+- Auto-consolidation settings (interval, threshold)
+- Retry failed items
+
+**User Guide:** [docs/guides/MEMORY_MANAGEMENT_GUIDE.md](guides/MEMORY_MANAGEMENT_GUIDE.md)
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67-68 Updates:** 2025-12-31
-**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_68_PLAN.md
+**Sprint 72 Updates:** 2026-01-03 (Admin Features)
+**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md
 **Maintainer:** Claude Code with Human Review

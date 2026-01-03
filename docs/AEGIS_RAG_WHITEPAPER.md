@@ -740,8 +740,7 @@ kubectl get pods -n aegis-rag
 
 # LLM Provider
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL_GENERATION=llama3.2:8b
-OLLAMA_MODEL_EMBEDDING=bge-m3
+OLLAMA_MODEL_GENERATION=nemotron3
 
 # Alibaba Cloud (Fallback)
 ALIBABA_CLOUD_API_KEY=sk-...

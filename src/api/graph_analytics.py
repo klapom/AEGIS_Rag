@@ -1,5 +1,19 @@
 """Graph Analytics API Router.
 
+⚠️ **DEPRECATED as of Sprint 72** ⚠️
+
+This module will be REMOVED in Sprint 73.
+
+Reason: Endpoints implemented but never integrated into frontend (dead code).
+
+Migration Guide: docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
+
+Replacement:
+- For statistics: Use /api/v1/graph/viz/statistics instead
+- For other endpoints: No replacement (unused features)
+
+---
+
 This module provides FastAPI endpoints for graph analytics:
 - Centrality metrics
 - PageRank scores
@@ -9,9 +23,18 @@ This module provides FastAPI endpoints for graph analytics:
 - Graph statistics
 """
 
+import warnings
 from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
+
+# Issue deprecation warning at module level
+warnings.warn(
+    "graph_analytics module is deprecated and will be removed in Sprint 73. "
+    "See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from src.components.graph_rag.analytics_engine import (
     CentralityMetric,
@@ -36,16 +59,21 @@ router = APIRouter(prefix="/graph/analytics", tags=["analytics"])
 @router.get(
     "/centrality/{entity_id}",
     response_model=CentralityMetrics,
-    summary="Get centrality metrics for entity",
-    description="Calculate centrality metrics (degree, betweenness, closeness, eigenvector) for an entity",
+    summary="[DEPRECATED] Get centrality metrics for entity",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. No replacement available (unused feature).",
+    deprecated=True,
 )
 async def get_entity_centrality(
     entity_id: str,
     metric: Annotated[
         CentralityMetric, Query(description="Centrality metric to calculate")
     ] = "degree",
+    response: Response = None,
 ) -> CentralityMetrics:
     """Get centrality metrics for an entity.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Args:
         entity_id: Entity ID to analyze
@@ -57,7 +85,16 @@ async def get_entity_centrality(
     Raises:
         HTTPException: If calculation fails
     """
-    logger.info("Calculating centrality", entity_id=entity_id, metric=metric)
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+
+    logger.warning("Using deprecated endpoint", entity_id=entity_id, metric=metric)
 
     try:
         engine = get_analytics_engine()
@@ -81,13 +118,18 @@ async def get_entity_centrality(
 @router.get(
     "/pagerank",
     response_model=list[dict[str, Any]],
-    summary="Get PageRank scores",
-    description="Calculate PageRank scores for top entities",
+    summary="[DEPRECATED] Get PageRank scores",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. No replacement available (unused feature).",
+    deprecated=True,
 )
 async def get_pagerank_scores(
     top_k: Annotated[int, Query(ge=1, le=100, description="Number of top entities")] = 10,
+    response: Response = None,
 ) -> list[dict[str, Any]]:
     """Get PageRank scores for top entities.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Args:
         top_k: Number of top entities to return (1-100)
@@ -98,7 +140,16 @@ async def get_pagerank_scores(
     Raises:
         HTTPException: If calculation fails
     """
-    logger.info("Calculating PageRank scores", top_k=top_k)
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+
+    logger.warning("Using deprecated endpoint", top_k=top_k)
 
     try:
         engine = get_analytics_engine()
@@ -122,13 +173,18 @@ async def get_pagerank_scores(
 @router.get(
     "/influential",
     response_model=list[dict[str, Any]],
-    summary="Get most influential entities",
-    description="Find the most influential entities by PageRank",
+    summary="[DEPRECATED] Get most influential entities",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. No replacement available (unused feature).",
+    deprecated=True,
 )
 async def get_influential_entities(
     top_k: Annotated[int, Query(ge=1, le=100, description="Number of top entities")] = 10,
+    response: Response = None,
 ) -> list[dict[str, Any]]:
     """Get most influential entities.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Args:
         top_k: Number of top entities to return (1-100)
@@ -139,7 +195,16 @@ async def get_influential_entities(
     Raises:
         HTTPException: If calculation fails
     """
-    logger.info("Finding influential entities", top_k=top_k)
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+
+    logger.warning("Using deprecated endpoint", top_k=top_k)
 
     try:
         engine = get_analytics_engine()
@@ -163,11 +228,15 @@ async def get_influential_entities(
 @router.get(
     "/gaps",
     response_model=dict[str, Any],
-    summary="Detect knowledge gaps",
-    description="Identify knowledge gaps (orphan entities, sparse areas, isolated components)",
+    summary="[DEPRECATED] Detect knowledge gaps",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. No replacement available (unused feature).",
+    deprecated=True,
 )
-async def detect_knowledge_gaps() -> dict[str, Any]:
+async def detect_knowledge_gaps(response: Response = None) -> dict[str, Any]:
     """Detect knowledge gaps in the graph.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Returns:
         Dictionary with:
@@ -178,7 +247,16 @@ async def detect_knowledge_gaps() -> dict[str, Any]:
     Raises:
         HTTPException: If detection fails
     """
-    logger.info("Detecting knowledge gaps")
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+
+    logger.warning("Using deprecated endpoint")
 
     try:
         engine = get_analytics_engine()
@@ -202,8 +280,9 @@ async def detect_knowledge_gaps() -> dict[str, Any]:
 @router.get(
     "/recommendations/{entity_id}",
     response_model=list[Recommendation],
-    summary="Get entity recommendations",
-    description="Get recommendations for similar or related entities",
+    summary="[DEPRECATED] Get entity recommendations",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. No replacement available (unused feature).",
+    deprecated=True,
 )
 async def get_entity_recommendations(
     entity_id: str,
@@ -214,8 +293,12 @@ async def get_entity_recommendations(
         ),
     ] = "collaborative",
     top_k: Annotated[int, Query(ge=1, le=50, description="Number of recommendations")] = 5,
+    response: Response = None,
 ) -> list[Recommendation]:
     """Get entity recommendations.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Args:
         entity_id: Source entity ID
@@ -228,7 +311,16 @@ async def get_entity_recommendations(
     Raises:
         HTTPException: If recommendation fails
     """
-    logger.info("Getting entity recommendations", entity_id=entity_id, method=method, top_k=top_k)
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+
+    logger.warning("Using deprecated endpoint", entity_id=entity_id, method=method, top_k=top_k)
 
     try:
         engine = get_recommendation_engine()
@@ -252,11 +344,16 @@ async def get_entity_recommendations(
 @router.get(
     "/statistics",
     response_model=GraphStatistics,
-    summary="Get graph statistics",
-    description="Get overall graph statistics and metrics",
+    summary="[DEPRECATED] Get graph statistics",
+    description="⚠️ DEPRECATED: This endpoint will be removed in Sprint 73. Use /api/v1/graph/viz/statistics instead.",
+    deprecated=True,
 )
-async def get_graph_statistics() -> GraphStatistics:
+async def get_graph_statistics(response: Response = None) -> GraphStatistics:
     """Get overall graph statistics.
+
+    ⚠️ DEPRECATED: This endpoint will be removed in Sprint 73.
+    Use /api/v1/graph/viz/statistics instead.
+    See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md
 
     Returns:
         GraphStatistics with graph-level metrics
@@ -264,7 +361,18 @@ async def get_graph_statistics() -> GraphStatistics:
     Raises:
         HTTPException: If calculation fails
     """
-    logger.info("Getting graph statistics")
+    # Add deprecation headers
+    if response:
+        response.headers["Warning"] = (
+            '299 - "DEPRECATED: This endpoint will be removed in Sprint 73. '
+            'Use /api/v1/graph/viz/statistics instead. '
+            'See docs/sprints/SPRINT_72_MIGRATION_GUIDE_GRAPH_ANALYTICS.md"'
+        )
+        response.headers["X-Deprecation-Date"] = "2026-01-06"
+        response.headers["X-Removal-Sprint"] = "73"
+        response.headers["X-Replacement"] = "/api/v1/graph/viz/statistics"
+
+    logger.warning("Using deprecated endpoint")
 
     try:
         engine = get_analytics_engine()

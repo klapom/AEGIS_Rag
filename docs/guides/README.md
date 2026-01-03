@@ -1,10 +1,14 @@
 # AegisRAG Guides
 
-Comprehensive guides for deploying, tuning, and troubleshooting AegisRAG.
+Comprehensive guides for administering, deploying, tuning, and troubleshooting AegisRAG.
 
 ---
 
-## Available Guides
+## Available Guides (Sprint 72 Update)
+
+**NEW in Sprint 72:**
+- [MCP Tools Admin Guide](#4-mcp-tools-admin-guide) - Tool execution and server management
+- [Memory Management Guide](#5-memory-management-guide) - Memory debugging and optimization
 
 ### 1. [Sprint 68 Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
 
@@ -79,6 +83,55 @@ Comprehensive guides for deploying, tuning, and troubleshooting AegisRAG.
 
 ---
 
+### 4. [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md)
+
+**Purpose:** Managing Model Context Protocol (MCP) servers and executing tools via UI
+
+**For:** Admins, developers, operations engineers
+
+**Contents (Sprint 72.1):**
+- MCP server management (connect/disconnect)
+- Tool execution with parameter input
+- Real-time health monitoring (CPU, memory, latency)
+- Common use cases (3 detailed scenarios)
+- Troubleshooting server and tool issues
+- API reference and best practices
+
+**Key Features:**
+- Execute tools without SSH/CLI access
+- Real-time server health metrics
+- Type-safe parameter validation
+- Responsive design (desktop + mobile)
+
+**Quick Start:** Go to [`/admin/tools`](../../frontend/src/pages/admin/MCPToolsPage.tsx) page or read [Tool Execution Guide](MCP_TOOLS_ADMIN_GUIDE.md#executing-tools)
+
+---
+
+### 5. [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md)
+
+**Purpose:** Administering and debugging the 3-layer memory system
+
+**For:** Admins, developers, operations engineers
+
+**Contents (Sprint 72.3):**
+- Understanding 3-layer architecture (Redis, Qdrant, Graphiti)
+- Statistics tab: Real-time memory metrics
+- Search tab: Cross-layer memory search
+- Consolidation tab: Manual triggers and history
+- Common use cases (monitoring, investigation, export)
+- Troubleshooting memory issues
+- API reference and best practices
+
+**Key Features:**
+- No Neo4j browser needed for debugging
+- Cross-layer search by user/session/keywords
+- Manual memory consolidation control
+- Memory export for backup
+
+**Quick Start:** Go to [`/admin/memory`](../../frontend/src/pages/admin/MemoryManagementPage.tsx) page or read [Statistics Tab Guide](MEMORY_MANAGEMENT_GUIDE.md#tab-1-statistics)
+
+---
+
 ## Quick Navigation
 
 ### By Role
@@ -94,9 +147,16 @@ Comprehensive guides for deploying, tuning, and troubleshooting AegisRAG.
 3. Schedule maintenance from [Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md#step-5-memory-consolidation-cron-job)
 
 **Developers:**
-1. Review [Performance Tuning](PERFORMANCE_TUNING.md) for optimization ideas
-2. Check [Troubleshooting](TROUBLESHOOTING.md) for debugging tips
-3. Reference [Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md) for environment setup
+1. Read [MCP Tools Guide](MCP_TOOLS_ADMIN_GUIDE.md) for tool framework understanding
+2. Review [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) for memory layer debugging
+3. Check [Performance Tuning](PERFORMANCE_TUNING.md) for optimization ideas
+4. Reference [Troubleshooting](TROUBLESHOOTING.md) for debugging tips
+
+**Admins / System Operators:**
+1. Start with [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md) for tool management
+2. Use [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) for memory debugging
+3. Reference [Troubleshooting](TROUBLESHOOTING.md) for issues
+4. Follow [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
 
 **QA / Testing:**
 1. Review [Troubleshooting Category 1](TROUBLESHOOTING.md#category-1-e2e-test-failures) for E2E test fixes
@@ -324,10 +384,18 @@ These guides are living documents based on Sprint 68 learnings. As you encounter
 
 ---
 
-**Last Updated:** 2026-01-01
+**Last Updated:** 2026-01-03 (Sprint 72)
 **Status:** Complete and production-ready
-**Version:** 1.0
+**Version:** 1.1 (Added Sprint 72 admin guides)
+
+**Latest Guides:**
+- [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md) - NEW in Sprint 72
+- [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) - NEW in Sprint 72
 
 ---
 
-**Start here:** [Sprint 68 Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
+**Start here:**
+- First deployment? → [Sprint 68 Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
+- Want to manage tools? → [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md)
+- Need memory debugging? → [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md)
+- Troubleshooting? → [Troubleshooting Guide](TROUBLESHOOTING.md)

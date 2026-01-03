@@ -206,3 +206,67 @@ export interface VersionDiff {
   };
   summary: string;
 }
+
+// Sprint 71 Feature 71.16: Section Community Visualization Types
+
+export interface CommunityNode {
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  centrality: number; // 0-1
+  degree: number;
+  x?: number | null;
+  y?: number | null;
+}
+
+export interface CommunityEdge {
+  source: string;
+  target: string;
+  relationship_type: string;
+  weight: number;
+}
+
+export interface CommunityVisualization {
+  community_id: string;
+  section_heading: string;
+  size: number;
+  cohesion_score: number; // 0-1
+  nodes: CommunityNode[];
+  edges: CommunityEdge[];
+  layout_type: string; // 'force-directed' | 'circular' | 'hierarchical'
+  algorithm: string; // 'louvain' | 'leiden'
+}
+
+export interface SectionCommunityVisualizationResponse {
+  document_id: string | null;
+  section_heading: string;
+  total_communities: number;
+  total_entities: number;
+  communities: CommunityVisualization[];
+  generation_time_ms: number;
+}
+
+export interface CommunityComparisonOverview {
+  section_count: number;
+  sections: string[];
+  total_shared_communities: number;
+  shared_entities: Record<string, string[]>; // section-pair -> entity IDs
+  overlap_matrix: Record<string, Record<string, number>>; // section -> section -> count
+  comparison_time_ms: number;
+}
+
+export interface SectionCommunitiesRequest {
+  document_id: string;
+  section_id: string;
+  algorithm?: 'louvain' | 'leiden';
+  resolution?: number;
+  include_layout?: boolean;
+  layout_algorithm?: 'force-directed' | 'circular' | 'hierarchical';
+}
+
+export interface CommunityComparisonRequest {
+  document_id: string;
+  sections: string[];
+  algorithm?: 'louvain' | 'leiden';
+  resolution?: number;
+}
