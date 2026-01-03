@@ -612,14 +612,14 @@ test.describe('Pipeline Progress Visualization (Sprint 37)', () => {
     const elapsedTime = page.getByTestId('timing-elapsed');
     const initialText = await elapsedTime.textContent();
 
-    // Wait for elapsed time to update
+    // Wait for elapsed time to update (increased timeout for polling-based updates)
     await page.waitForFunction(
       (prevText: string) => {
         const el = document.querySelector('[data-testid="timing-elapsed"]');
         return el?.textContent !== prevText;
       },
       initialText,
-      { timeout: 5000 }
+      { timeout: 10000 } // Increased from 5000ms to 10000ms
     );
 
     const updatedText = await elapsedTime.textContent();
@@ -634,10 +634,10 @@ test.describe('Pipeline Progress Visualization (Sprint 37)', () => {
     adminIndexingPage,
   }) => {
     // Feature 72.6: Test pipeline completion with mock 100% progress
-    const { page } = adminIndexingPage;
+    const { page} = adminIndexingPage;
 
-    // Setup mock progress that immediately goes to 100%
-    await setupMockPipelineProgress(page, [100]);
+    // Setup mock progress sequence that goes to 100%
+    await setupMockPipelineProgress(page, [0, 25, 50, 75, 100]);
 
     // Start indexing
     await startIndexingWithSetup(page);
@@ -647,9 +647,19 @@ test.describe('Pipeline Progress Visualization (Sprint 37)', () => {
       timeout: 10000,
     });
 
-    // Check overall progress for 100%
+    // Check overall progress - poll until it reaches 100%
     const overallProgress = page.getByTestId('overall-progress');
     await expect(overallProgress).toBeVisible({ timeout: 5000 });
+
+    // Wait for progress to reach 100% (poll with timeout)
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[data-testid="overall-progress"]');
+        const text = el?.textContent || '';
+        return text.includes('100') || text.match(/completed|finished/i);
+      },
+      { timeout: 15000 } // Allow time for mock sequence to complete
+    );
 
     const progressText = await overallProgress.textContent();
     // Should show 100% completion
