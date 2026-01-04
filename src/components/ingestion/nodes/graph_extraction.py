@@ -135,6 +135,7 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         graph_stats = await lightrag.insert_prechunked_documents(
             chunks=prechunked_docs,
             document_id=state["document_id"],
+            document_path=state["document_path"],
         )
 
         # Sprint 51: Emit progress event for entity extraction complete

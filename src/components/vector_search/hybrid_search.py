@@ -221,10 +221,12 @@ class HybridSearch:
         except Exception as e:
             logger.warning("Failed to load BM25 from cache", error=str(e))
 
+        # Sprint 75 Fix: Clarify lazy-loading behavior in logs
         logger.info(
             "Hybrid search initialized",
             collection=self.collection_name,
-            reranker_enabled=reranker is not None,
+            reranker_lazy_load=True,  # Always available via @property
+            reranker_preloaded=reranker is not None,  # Was it passed at init?
         )
 
     @property

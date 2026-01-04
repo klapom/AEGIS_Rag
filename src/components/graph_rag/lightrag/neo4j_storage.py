@@ -82,6 +82,7 @@ async def store_chunks_and_provenance(
                     MERGE (c:chunk {chunk_id: $chunk_id})
                     SET c.text = $text,
                         c.document_id = $document_id,
+                        c.document_path = $document_path,
                         c.chunk_index = $chunk_index,
                         c.tokens = $tokens,
                         c.start_token = $start_token,
@@ -92,6 +93,7 @@ async def store_chunks_and_provenance(
                     chunk_id=chunk_id,
                     text=chunk.get("text", chunk.get("content", "")),
                     document_id=chunk["document_id"],
+                    document_path=chunk.get("document_path", ""),
                     chunk_index=chunk["chunk_index"],
                     tokens=tokens,
                     start_token=start_token,

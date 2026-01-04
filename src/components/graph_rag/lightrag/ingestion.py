@@ -400,17 +400,20 @@ async def insert_prechunked_documents(
     rag: Any,
     chunks: list[dict[str, Any]],
     document_id: str,
+    document_path: str = "",
     namespace_id: str = "default",
 ) -> dict[str, Any]:
     """Insert pre-chunked documents with existing chunk_ids.
 
     Sprint 42: Unified chunk IDs between Qdrant and Neo4j for true hybrid search.
     Sprint 51: Added namespace_id for multi-tenant isolation.
+    Sprint 75 Fix: Added document_path for Neo4j source attribution.
 
     Args:
         rag: Initialized LightRAG instance
         chunks: List of pre-chunked documents with chunk_id, text, chunk_index
         document_id: Source document ID for provenance tracking
+        document_path: Source document path for attribution (default: "")
         namespace_id: Namespace for multi-tenant isolation
 
     Returns:
@@ -619,6 +622,7 @@ async def insert_prechunked_documents(
                 "chunk_id": c["source_id"],
                 "text": c["content"],
                 "document_id": document_id,
+                "document_path": document_path,
                 "chunk_index": i,
             }
             for i, c in enumerate(converted_chunks)

@@ -56,8 +56,10 @@ services:
       - OLLAMA_NUM_PARALLEL=4
       # Sprint 61 Feature 61.3: Request queue size for high-throughput scenarios
       - OLLAMA_MAX_QUEUE=512
-      # Increase context window for better extraction quality
-      - OLLAMA_NUM_CTX=8192
+      # Sprint 75: Increased to 32K for RAGAS evaluation with long contexts
+      # 32768 tokens = ~131K chars (covers even complex multi-document scenarios)
+      # gpt-oss:20b supports up to 128K context window
+      - OLLAMA_NUM_CTX=32768
       # Use all available CPU cores for prompt processing
       - OLLAMA_NUM_THREAD=20
       # Force ALL model layers to GPU (DGX Spark unified memory)
