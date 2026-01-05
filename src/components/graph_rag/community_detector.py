@@ -567,9 +567,8 @@ class CommunityDetector:
                     },
                 )
 
-                updated_count = (
-                    result[0].get("updated_count", 0) if result and len(result) > 0 else 0
-                )
+                # execute_write returns summary dict with properties_set count
+                updated_count = result.get("properties_set", 0) if isinstance(result, dict) else 0
                 logger.debug(
                     "community_stored",
                     community_id=community.id,
