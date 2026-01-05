@@ -33,7 +33,7 @@ class TestExtractionServiceDomain:
     async def test_get_extraction_prompts_domain_not_found(self, extraction_service):
         """Test that generic prompts are returned when domain doesn't exist."""
         with patch(
-            "src.components.graph_rag.extraction_service.get_domain_repository"
+            "src.components.domain_training.get_domain_repository"
         ) as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = None  # Domain not found
@@ -49,7 +49,7 @@ class TestExtractionServiceDomain:
     async def test_get_extraction_prompts_domain_no_custom_prompts(self, extraction_service):
         """Test fallback to generic when domain exists but has no custom prompts."""
         with patch(
-            "src.components.graph_rag.extraction_service.get_domain_repository"
+            "src.components.domain_training.get_domain_repository"
         ) as mock_repo:
             mock_domain_repo = AsyncMock()
             # Domain exists but no entity_prompt/relation_prompt fields
@@ -74,7 +74,7 @@ class TestExtractionServiceDomain:
         custom_relation_prompt = "Extract medical relations between: {entities} in {text}"
 
         with patch(
-            "src.components.graph_rag.extraction_service.get_domain_repository"
+            "src.components.domain_training.get_domain_repository"
         ) as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.return_value = {
@@ -96,7 +96,7 @@ class TestExtractionServiceDomain:
     async def test_get_extraction_prompts_error_fallback(self, extraction_service):
         """Test that generic prompts are used when domain lookup fails."""
         with patch(
-            "src.components.graph_rag.extraction_service.get_domain_repository"
+            "src.components.domain_training.get_domain_repository"
         ) as mock_repo:
             mock_domain_repo = AsyncMock()
             mock_domain_repo.get_domain.side_effect = Exception("Redis connection failed")
@@ -154,4 +154,8 @@ class TestExtractionServiceDomain:
                         pass
 
             # Verify get_extraction_prompts was called with the domain
-            mock_get_prompts.assert_called_once_with(domain)
+            # Note: May be called multiple times due to @retry decorator
+            # Check that it was called at least once with the correct domain
+            assert mock_get_prompts.called, "get_extraction_prompts should have been called"
+            # Verify the domain parameter was passed correctly (check last call)
+            mock_get_prompts.assert_called_with(domain)

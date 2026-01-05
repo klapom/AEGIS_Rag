@@ -92,9 +92,9 @@ async def ingest_ragas_dataset(
 
     logger.info(f"Loaded {len(questions)} questions from dataset")
 
-    # Create pipeline (skip graph extraction due to permission issues with LightRAG data files)
-    pipeline = create_ingestion_pipeline(skip_graph=True)
-    logger.info("Pipeline created (graph extraction skipped for namespace isolation testing)")
+    # Create pipeline with FULL graph extraction for RAGAS evaluation
+    pipeline = create_ingestion_pipeline(skip_graph=False)
+    logger.info("Pipeline created with chunking → embedding → graph extraction (full ER extraction)")
 
     # Ingest each document
     results = []
@@ -140,8 +140,8 @@ async def ingest_ragas_dataset(
             final_state = await pipeline.ainvoke(state)
             doc_time = time.time() - doc_start
 
-            # Check status (using embedding_status since graph extraction is skipped)
-            if final_state.get("embedding_status") == "completed":
+            # Check status (graph_status for full pipeline with ER extraction)
+            if final_state.get("graph_status") == "completed":
                 result = {
                     "document_id": doc_id,
                     "question": question,
@@ -151,10 +151,12 @@ async def ingest_ragas_dataset(
                     "time_seconds": doc_time,
                     "chunks": len(final_state.get("chunks", [])),
                     "points_uploaded": final_state.get("points_uploaded", 0),
+                    "entities": final_state.get("total_entities_extracted", 0),
+                    "relations": final_state.get("total_relations_created", 0),
                 }
                 results.append(result)
                 logger.info(f"  ✓ Success in {doc_time:.1f}s")
-                logger.info(f"    Chunks: {result['chunks']}, Points uploaded: {result['points_uploaded']}")
+                logger.info(f"    Chunks: {result['chunks']}, Entities: {result['entities']}, Relations: {result['relations']}")
             else:
                 logger.warning(f"  ✗ Failed: {final_state.get('errors', [])}")
 
@@ -176,10 +178,14 @@ async def ingest_ragas_dataset(
         avg_time = sum(r["time_seconds"] for r in results) / len(results)
         total_chunks = sum(r["chunks"] for r in results)
         total_points = sum(r["points_uploaded"] for r in results)
+        total_entities = sum(r["entities"] for r in results)
+        total_relations = sum(r["relations"] for r in results)
 
         logger.info(f"Average time per doc: {avg_time:.1f}s")
         logger.info(f"Total chunks: {total_chunks}")
         logger.info(f"Total points uploaded to Qdrant: {total_points}")
+        logger.info(f"Total entities extracted: {total_entities}")
+        logger.info(f"Total relations created: {total_relations}")
 
     return results
 
