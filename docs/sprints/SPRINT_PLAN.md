@@ -166,16 +166,169 @@
 
 ---
 
-## Sprint 73+: Future Sprints (Planned)
+## Sprint 73: E2E Test Infrastructure & Documentation ✅ (COMPLETED 2026-01-03)
+**Ziel:** Complete E2E test suite, documentation, and Sprint 73 wrap-up
+**Status:** ✅ **COMPLETE** - 4 Features, 300+ lines documentation
+**Total Story Points:** 29 SP
 
-### Sprint 73 Candidates (Prioritization TBD)
-1. **mem0 Frontend UI** (8 SP) - User preferences page (`/profile/preferences`)
-2. **Agent Memory Architecture** (13 SP) - ADR-047 completion (agent-level memory)
-3. **Retrieval Direct Access** (5 SP) - UI for `/retrieval/*` endpoints (debugging)
-4. **Graph Community Advanced Features** (8 SP) - Comparison visualizations
-5. **Performance Benchmarking Dashboard** (5 SP) - Automated regression testing
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 73.7 | Chat Interface E2E Tests (10/10 tests) | 8 | ✅ DONE |
+| 73.8 | Integration Tests Analysis (chat-multi-turn timeout issues) | 5 | ✅ DONE |
+| 73.9 | Documentation Cleanup (ADRs, Architecture) | 8 | ✅ DONE |
+| 73.10 | Sprint Summary Documentation | 8 | ✅ DONE |
 
-### Sprint 74+ Long-Term Roadmap
+### Deliverables
+- **E2E Tests:** `chat-interface-completion.spec.ts` (10 tests, 100% pass rate)
+- **Analysis:** Integration test timeout analysis (60s → need 180s for LLM)
+- **Documentation:**
+  - Sprint 71-73 summaries
+  - ADR cleanup and cross-referencing
+  - Architecture updates
+
+### Success Criteria
+- [x] 10/10 chat interface E2E tests passing
+- [x] Integration test behavior analyzed
+- [x] Documentation comprehensive and up-to-date
+- [x] Sprint summaries complete
+
+### References
+- [SPRINT_73_COMPLETION.md](SPRINT_73_COMPLETION.md)
+- [SPRINT_73_INTEGRATION_TEST_ANALYSIS.md](SPRINT_73_INTEGRATION_TEST_ANALYSIS.md)
+
+---
+
+## Sprint 74: RAGAS Integration & Quality Metrics ✅ (COMPLETED 2026-01-04)
+**Ziel:** RAGAS evaluation framework, retrieval comparison, Settings UI
+**Status:** ✅ **COMPLETE** - 3 Features, comprehensive test infrastructure
+**Total Story Points:** 34 SP
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 74.1 | Integration Test Fixes (timeouts, language-agnostic) | 8 | ✅ DONE |
+| 74.2 | RAGAS Backend Tests (20-question dataset, 8 tests) | 13 | ✅ DONE |
+| 74.3 | Retrieval Comparison (BM25/Vector/Hybrid, Settings UI) | 13 | ✅ DONE |
+
+### Deliverables
+
+**Feature 74.1: Integration Test Fixes ✅**
+- Updated timeouts: 60s → 180s (realistic for LLM+RAG)
+- Language-agnostic assertions (works with German/English)
+- `docs/PERFORMANCE_BASELINES.md` created
+
+**Feature 74.2: RAGAS Backend Tests ✅**
+- `tests/ragas/data/aegis_ragas_dataset.jsonl` (20 questions)
+  - 8 Factual, 6 Exploratory, 4 Summary, 2 Multi-hop
+- `tests/ragas/test_ragas_integration.py` (8 test functions)
+  - Context Precision (>0.75 target)
+  - Context Recall (>0.70 target)
+  - Faithfulness (>0.90 target)
+  - Answer Relevancy (>0.80 target)
+
+**Feature 74.3: Retrieval Comparison ✅**
+- `tests/ragas/data/retrieval_comparison_dataset.jsonl` (10 queries)
+  - 3 BM25-favored, 3 Vector-favored, 4 Hybrid-favored
+- `tests/ragas/test_retrieval_comparison.py` (5 comparison tests)
+  - RetrievalMethodEvaluator class
+  - Custom IntentWeights for method isolation
+- Settings UI: Retrieval method selector (Hybrid/Vector/BM25)
+
+### Success Criteria
+- [x] Integration tests pass with realistic timeouts
+- [x] RAGAS evaluation framework ready for production
+- [x] Retrieval comparison infrastructure complete
+- [x] User-facing retrieval method selector in Settings
+
+### References
+- [SPRINT_74_PLAN.md](SPRINT_74_PLAN.md)
+- `tests/ragas/` directory
+- `frontend/src/types/settings.ts` (RetrievalMethod type)
+
+---
+
+## Sprint 75: Architecture Review & Critical Gap Discovery ✅ (COMPLETED 2026-01-05)
+**Planned:** RAGAS Evaluation & RAG Quality Optimization
+**Actually Delivered:** **Critical Architecture Gap Analysis**
+**Status:** ✅ **COMPLETE** - 2 CRITICAL TDs discovered, blocked RAGAS execution
+**Sprint Duration:** 1 day (2026-01-05)
+**Total Story Points:** ~21 SP (architecture investigation + documentation)
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 75.0 | Infrastructure Fixes (Ollama context, GPU, Neo4j) | 5 | ✅ COMPLETE |
+| 75.A | Frontend/Backend API Parity Analysis | 3 | ✅ COMPLETE |
+| 75.B | **TD-084: Namespace Isolation in Ingestion** | 13 | 🔴 **CRITICAL - Discovered** |
+| 75.C | **TD-085: DSPy Domain Prompts Not Used** | 21 | 🔴 **CRITICAL - Discovered** |
+
+### Critical Findings
+
+**🔴 TD-084: Namespace Isolation BROKEN**
+- **Problem:** All docs hardcoded to `namespace_id="default"` in ingestion
+- **Impact:** RAGAS evaluation impossible (docs contaminate each other)
+- **Blocker for:** Multi-tenant isolation, project separation, evaluation
+- **Effort:** 13 SP (Sprint 76)
+
+**🔴 TD-085: DSPy Domain Training NOT USED**
+- **Problem:** 34 SP invested in Domain Training (Sprint 45) → Optimized prompts NEVER used in extraction!
+- **Impact:** Domain-specific extraction quality improvements unrealized
+- **Wasted Investment:** 34 SP from Sprint 45
+- **Effort:** 21 SP (Sprint 76-77)
+
+### Deliverables
+- ✅ **Infrastructure Fixes** (7 fixes committed)
+  - Ollama context: 16K→32K tokens
+  - GPU embeddings: PyTorch cu130 installed
+  - Neo4j document_path: Fixed in 3 files
+- ✅ **USER_JOURNEY_E2E.md** (~1,315 new lines)
+- ✅ **TD-084_NAMESPACE_ISOLATION_IN_INGESTION.md**
+- ✅ **TD-085_DSPY_DOMAIN_PROMPTS_NOT_USED_IN_EXTRACTION.md**
+- ✅ **TD_INDEX.md updated** (2 critical items added)
+- ✅ **E2E Test Scaffolds** (ragas-domain-setup.spec.ts, run_ragas_on_namespace.py)
+
+### Sprint Pivot Decision
+**Original Plan:** Execute RAGAS tests (Features 75.1-75.3)
+**Blocker Discovered:** Namespace isolation missing → RAGAS results invalid
+**Decision:** Deep-dive architecture review → Found 2 CRITICAL gaps
+**Outcome:** Sprint 75 features moved to Sprint 76+ (after TD-084/085 fixes)
+
+### Impact on Roadmap
+- **Sprint 76:** Focus on TD-084 + TD-085 (34 SP)
+- **Sprint 77:** RAGAS Evaluation (with proper namespace isolation)
+- **Total Delay:** ~2-3 weeks, but prevents months of invalid evaluation data
+
+### Success Criteria (Met)
+- [x] Critical architecture gaps identified and documented
+- [x] Infrastructure fixes deployed (7 fixes)
+- [x] Technical debt prioritized (2 CRITICAL TDs created)
+- [x] Sprint 76 roadmap clear (TD-084 + TD-085)
+- [x] E2E test infrastructure prepared for future RAGAS runs
+
+### References
+- [SPRINT_75_PLAN.md](SPRINT_75_PLAN.md) - Original plan (features deferred)
+- [SPRINT_75_RAGAS_FAILURE_ANALYSIS.md](SPRINT_75_RAGAS_FAILURE_ANALYSIS.md)
+- [TD-084](../technical-debt/TD-084_NAMESPACE_ISOLATION_IN_INGESTION.md)
+- [TD-085](../technical-debt/TD-085_DSPY_DOMAIN_PROMPTS_NOT_USED_IN_EXTRACTION.md)
+
+---
+
+## Sprint 76+: Future Sprints (Planned)
+
+### Sprint 76 Candidates (Based on Sprint 75 Results)
+1. **RAG Quality Improvements** (Priority based on RAGAS analysis)
+   - Chunking optimization
+   - Embedding tuning
+   - Retrieval parameter tuning
+   - Reranking improvements
+   - Context optimization
+   - Prompt engineering
+
+2. **Other Candidates:**
+   - **mem0 Frontend UI** (8 SP) - User preferences page
+   - **Agent Memory Architecture** (13 SP) - ADR-047 completion
+   - **Retrieval Direct Access** (5 SP) - UI for `/retrieval/*` endpoints
+   - **Graph Community Advanced Features** (8 SP) - Comparison visualizations
+
+### Long-Term Roadmap (Sprint 77+)
 - **Multi-Modal RAG:** Image + Video + Audio processing
 - **Federated Search:** Cross-domain knowledge aggregation
 - **Cloud LLM Integration:** Azure OpenAI, Anthropic, Cohere
@@ -199,10 +352,13 @@
 | 69 | 53 | 9 | ✅ | LLM Streaming (TTFT 320ms → 87ms) + Monitoring |
 | 70 | 44 | 14 | ✅ | Deep Research Repair + Tool Use Integration |
 | 71 | ~50 | 4 | ✅ | SearchableSelect + Original Filenames + API Integration |
-| **72** | **55** | **8** | ✅ | **API-Frontend Gap Closure (MCP, Domain, Memory UI)** |
+| 72 | 55 | 8 | ✅ | API-Frontend Gap Closure (MCP, Domain, Memory UI) |
+| 73 | 29 | 4 | ✅ | E2E Test Infrastructure & Documentation |
+| 74 | 34 | 3 | ✅ | RAGAS Integration & Quality Metrics |
+| **75** | **34** | **3** | 🎯 | **RAGAS Evaluation & RAG Quality Optimization** |
 
-**Cumulative Story Points (Sprints 1-72):** ~2,442 SP
-**Average Velocity (Sprints 61-72):** ~46 SP per sprint
+**Cumulative Story Points (Sprints 1-75):** ~2,539 SP
+**Average Velocity (Sprints 61-75):** ~44 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 
 ---
@@ -240,6 +396,6 @@
 
 ---
 
-**Last Updated:** 2026-01-03
-**Current Sprint:** 72 (Planned)
-**Next Sprint:** 73 (TBD)
+**Last Updated:** 2026-01-04
+**Current Sprint:** 75 (In Progress - RAGAS Evaluation & RAG Quality Optimization)
+**Next Sprint:** 76 (TBD - Based on Sprint 75 Results)

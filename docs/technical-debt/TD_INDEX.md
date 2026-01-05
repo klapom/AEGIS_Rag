@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-02 (Sprint 71 - Anti-Hallucination)
-**Total Open Items:** 10
-**Total Story Points:** ~144 SP
+**Last Updated:** 2026-01-05 (Sprint 75 - RAGAS Architecture Review)
+**Total Open Items:** 12
+**Total Story Points:** ~178 SP
 **Archived Items:** [18 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -11,6 +11,7 @@
 **Sprint 60:** ✅ Documentation Consolidation, Technical Investigations (COMPLETE)
 **Sprint 70:** ✅ MCP Tool Use in Chat & Research (COMPLETE)
 **Sprint 71:** Anti-Hallucination Prompt Hardening (TD-080 Phase 1)
+**Sprint 75:** 🔴 **CRITICAL Architecture Gaps Discovered** (TD-084, TD-085)
 
 ---
 
@@ -18,7 +19,7 @@
 
 | Priority | Count | Story Points |
 |----------|-------|--------------|
-| CRITICAL | 0     | 0 SP         |
+| CRITICAL | 2     | 34 SP        |
 | HIGH     | 3     | ~36 SP       |
 | MEDIUM   | 5     | ~87 SP       |
 | LOW      | 2     | ~21 SP       |
@@ -52,6 +53,17 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 ---
 
 ## Active Technical Debt Items
+
+### 🔴 CRITICAL Priority
+
+| TD# | Title | Status | SP | Target Sprint |
+|-----|-------|--------|-----|---------------|
+| [TD-084](TD-084_NAMESPACE_ISOLATION_IN_INGESTION.md) | **Namespace Isolation in Document Ingestion** | 🔴 OPEN | 13 | **Sprint 76** |
+| [TD-085](TD-085_DSPY_DOMAIN_PROMPTS_NOT_USED_IN_EXTRACTION.md) | **DSPy Domain Prompts Not Used in Extraction** | 🔴 OPEN | 21 | **Sprint 76-77** |
+
+**Critical Context:**
+- **TD-084:** All docs go to "default" namespace → Multi-tenant isolation BROKEN → RAGAS evaluation impossible
+- **TD-085:** 34 SP invested in Domain Training (Sprint 45) → Optimized prompts NEVER USED → Feature completely wasted
 
 ### HIGH Priority
 
