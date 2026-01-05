@@ -132,10 +132,14 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             details={"stage": "lightrag_insert"},
         )
 
+        # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
+        namespace_id = state.get("namespace_id", "default")
+
         graph_stats = await lightrag.insert_prechunked_documents(
             chunks=prechunked_docs,
             document_id=state["document_id"],
             document_path=state["document_path"],
+            namespace_id=namespace_id,  # Multi-tenant isolation
         )
 
         # Sprint 51: Emit progress event for entity extraction complete
@@ -283,12 +287,12 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                 relations = await relation_extractor.extract(chunk_text, entities)
 
                 # Store relations to Neo4j with RELATES_TO relationships
-                # Sprint 51: Added namespace_id for multi-tenant isolation
+                # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
                 if relations:
                     relations_created = await lightrag._store_relations_to_neo4j(
                         relations=relations,
                         chunk_id=chunk_id,
-                        namespace_id="default",  # Admin-indexed docs are globally searchable
+                        namespace_id=namespace_id,  # Multi-tenant isolation from state
                     )
                     total_relations_created += relations_created
 

@@ -196,10 +196,9 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 ],
                 # Timestamps
                 "ingestion_timestamp": time.time(),
-                # Sprint 51: Namespace for document isolation
-                # Admin-indexed docs use "default" namespace (globally searchable)
-                # User project docs will override this with their namespace
-                "namespace": "default",
+                # Sprint 76 Feature 76.1 (TD-084): Multi-tenant namespace isolation
+                # Use namespace_id from state instead of hardcoded "default"
+                "namespace": state.get("namespace_id", "default"),
             }
 
             point = PointStruct(

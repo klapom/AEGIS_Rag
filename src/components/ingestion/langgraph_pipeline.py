@@ -278,6 +278,8 @@ async def run_ingestion_pipeline(
     batch_id: str,
     batch_index: int = 0,
     total_documents: int = 1,
+    namespace_id: str = "default",
+    domain_id: str | None = None,
     max_retries: int = 3,
 ) -> IngestionState:
     """Run ingestion pipeline for a single document (convenience function).
@@ -288,6 +290,8 @@ async def run_ingestion_pipeline(
     3. Creates pipeline graph
     4. Executes pipeline (blocking)
     5. Returns final state
+
+    Sprint 76 TD-084 & TD-085: Added namespace_id and domain_id for multi-tenant isolation and DSPy domains
 
     Args:
         document_path: Absolute path to document file
@@ -361,12 +365,15 @@ async def run_ingestion_pipeline(
     # No need to check - both parsers are available
 
     # Create initial state
+    # Sprint 76 Feature 76.1 (TD-084) & Feature 76.2 (TD-085)
     state = create_initial_state(
         document_path=document_path,
         document_id=document_id,
         batch_id=batch_id,
         batch_index=batch_index,
         total_documents=total_documents,
+        namespace_id=namespace_id,  # Multi-tenant isolation
+        domain_id=domain_id,  # DSPy domain prompts
         max_retries=max_retries,
     )
 
@@ -465,6 +472,8 @@ async def run_ingestion_pipeline_streaming(
     batch_id: str,
     batch_index: int = 0,
     total_documents: int = 1,
+    namespace_id: str = "default",
+    domain_id: str | None = None,
     max_retries: int = 3,
 ) -> AsyncGenerator[dict[str, Any], None]:
     """Run ingestion pipeline with streaming progress updates (for SSE).
@@ -478,6 +487,8 @@ async def run_ingestion_pipeline_streaming(
         batch_id: Batch identifier
         batch_index: Index in batch (0-based)
         total_documents: Total documents in batch
+        namespace_id: Namespace for multi-tenant isolation (Sprint 76 TD-084)
+        domain_id: Optional domain ID for DSPy prompts (Sprint 76 TD-085)
         max_retries: Maximum retries (default: 3)
 
     Yields:
@@ -549,12 +560,15 @@ async def run_ingestion_pipeline_streaming(
     )
 
     # Create initial state
+    # Sprint 76 Feature 76.1 (TD-084) & Feature 76.2 (TD-085)
     state = create_initial_state(
         document_path=document_path,
         document_id=document_id,
         batch_id=batch_id,
         batch_index=batch_index,
         total_documents=total_documents,
+        namespace_id=namespace_id,  # Multi-tenant isolation
+        domain_id=domain_id,  # DSPy domain prompts
         max_retries=max_retries,
     )
 

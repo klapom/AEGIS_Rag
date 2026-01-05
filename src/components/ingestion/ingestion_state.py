@@ -51,6 +51,12 @@ class IngestionState(TypedDict, total=False):
         batch_index: Index of this document in the batch (0-based)
         total_documents: Total number of documents in the batch
 
+        # Sprint 76 Feature 76.1 (TD-084): Multi-tenant namespace isolation
+        namespace_id: Namespace for multi-tenant isolation (default: "default")
+
+        # Sprint 76 Feature 76.2 (TD-085): DSPy domain-specific extraction
+        domain_id: Optional domain ID for using optimized DSPy prompts
+
         # ============================================================
         # NODE 1: MEMORY CHECK
         # ============================================================
@@ -119,6 +125,12 @@ class IngestionState(TypedDict, total=False):
     batch_id: str  # Batch identifier
     batch_index: int  # Index in batch (0-based)
     total_documents: int  # Total documents in batch
+
+    # Sprint 76 Feature 76.1 (TD-084): Multi-tenant namespace isolation
+    namespace_id: str  # Namespace for document storage (default: "default")
+
+    # Sprint 76 Feature 76.2 (TD-085): DSPy domain-specific extraction
+    domain_id: str | None  # Optional domain ID for optimized prompts
 
     # ============================================================
     # NODE 1: MEMORY CHECK
@@ -195,6 +207,8 @@ def create_initial_state(
     batch_id: str,
     batch_index: int,
     total_documents: int,
+    namespace_id: str = "default",
+    domain_id: str | None = None,
     max_retries: int = 3,
 ) -> IngestionState:
     """Create initial ingestion state for a document.
@@ -205,6 +219,8 @@ def create_initial_state(
         batch_id: Batch identifier
         batch_index: Index in batch (0-based)
         total_documents: Total documents in batch
+        namespace_id: Namespace for multi-tenant isolation (default: "default")
+        domain_id: Optional domain ID for DSPy optimized prompts
         max_retries: Maximum retries before skipping (default: 3)
 
     Returns:
@@ -217,9 +233,11 @@ def create_initial_state(
         ...     batch_id="batch_001",
         ...     batch_index=0,
         ...     total_documents=10,
+        ...     namespace_id="ragas_eval",
+        ...     domain_id="medical_reports",
         ... )
-        >>> state["overall_progress"]
-        0.0
+        >>> state["namespace_id"]
+        'ragas_eval'
     """
     import time
 
@@ -230,6 +248,8 @@ def create_initial_state(
         batch_id=batch_id,
         batch_index=batch_index,
         total_documents=total_documents,
+        namespace_id=namespace_id,  # Sprint 76 Feature 76.1 (TD-084)
+        domain_id=domain_id,  # Sprint 76 Feature 76.2 (TD-085)
         # Memory check (initialized by memory_check_node)
         current_memory_mb=0.0,
         current_vram_mb=0.0,

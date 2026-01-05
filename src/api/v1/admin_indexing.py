@@ -593,12 +593,16 @@ def _build_detailed_progress(
 
 async def add_documents_stream(
     file_paths: list[str],
+    namespace_id: str = "default",
+    domain_id: str | None = None,
     dry_run: bool = False,
 ) -> AsyncGenerator[str, None]:
     """Stream progress updates during document addition (ADD-only, no deletion).
 
     Args:
         file_paths: List of file paths to add to index
+        namespace_id: Namespace for multi-tenant isolation (Sprint 76 TD-084)
+        domain_id: Optional domain ID for DSPy prompts (Sprint 76 TD-085)
         dry_run: If True, simulate operation without making changes
 
     Yields:
@@ -757,12 +761,15 @@ async def add_documents_stream(
                     await get_or_create_progress_queue(document_id)
 
                     # Create pipeline stream
+                    # Sprint 76 Feature 76.1 (TD-084) & Feature 76.2 (TD-085)
                     pipeline_stream = run_ingestion_pipeline_streaming(
                         document_path=doc_path,
                         document_id=document_id,
                         batch_id=batch_id,
                         batch_index=doc_index,
                         total_documents=total_docs,
+                        namespace_id=namespace_id,  # Multi-tenant isolation
+                        domain_id=domain_id,  # DSPy domain prompts
                     )
 
                     # Sprint 51: Stream with real-time progress polling (every 1 second)
@@ -1021,6 +1028,14 @@ async def add_documents_to_index(
         default=[],
         description="List of file paths to add to index",
     ),
+    namespace_id: str = Query(
+        default="default",
+        description="Namespace for multi-tenant document isolation (Sprint 76 TD-084)",
+    ),
+    domain_id: str | None = Query(
+        default=None,
+        description="Optional domain ID for DSPy-optimized extraction prompts (Sprint 76 TD-085)",
+    ),
     dry_run: bool = Query(
         default=False,
         description="Simulate operation without making changes",
@@ -1077,11 +1092,18 @@ async def add_documents_to_index(
     logger.info(
         "add_documents_started",
         file_count=len(valid_paths),
+        namespace_id=namespace_id,
+        domain_id=domain_id,
         dry_run=dry_run,
     )
 
     return StreamingResponse(
-        add_documents_stream(valid_paths, dry_run=dry_run),
+        add_documents_stream(
+            valid_paths,
+            namespace_id=namespace_id,
+            domain_id=domain_id,
+            dry_run=dry_run,
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
