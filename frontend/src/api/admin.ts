@@ -276,6 +276,8 @@ export async function uploadFiles(files: File[]): Promise<UploadResponse> {
 export async function* streamAddDocuments(
   filePaths: string[],
   dryRun: boolean = false,
+  namespaceId: string = 'default',
+  domainId: string | null = null,
   signal?: AbortSignal
 ): AsyncGenerator<ReindexProgressChunk> {
   const params = new URLSearchParams();
@@ -284,6 +286,12 @@ export async function* streamAddDocuments(
   }
   if (dryRun) {
     params.append('dry_run', 'true');
+  }
+  // Sprint 76 Feature 76.1 (TD-084): Multi-tenant namespace isolation
+  params.append('namespace_id', namespaceId);
+  // Sprint 76 Feature 76.2 (TD-085): DSPy domain prompts
+  if (domainId) {
+    params.append('domain_id', domainId);
   }
 
   const url = `${API_BASE_URL}/api/v1/admin/indexing/add?${params.toString()}`;
