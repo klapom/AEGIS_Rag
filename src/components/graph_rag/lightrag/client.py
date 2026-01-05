@@ -168,22 +168,30 @@ class LightRAGClient:
         chunks: list[dict[str, Any]],
         document_id: str,
         namespace_id: str = "default",
+        document_path: str = "",
+        domain_id: str | None = None,
     ) -> dict[str, Any]:
         """Insert pre-chunked documents with existing chunk_ids.
 
         Sprint 42: Unified chunk IDs between Qdrant and Neo4j.
         Sprint 51: Added namespace_id for multi-tenant isolation.
+        Sprint 75 Fix: Added document_path for Neo4j source attribution.
+        Sprint 76 TD-085: Added domain_id for DSPy-optimized extraction prompts.
 
         Args:
             chunks: List of pre-chunked documents with chunk_id, text, chunk_index
             document_id: Source document ID
             namespace_id: Namespace for multi-tenant isolation
+            document_path: Source document path for attribution (default: "")
+            domain_id: Optional domain for DSPy-optimized prompts
 
         Returns:
             Batch insertion result with entities/relations extracted
         """
         await self._ensure_initialized()
-        return await insert_prechunked_documents(self.rag, chunks, document_id, namespace_id)
+        return await insert_prechunked_documents(
+            self.rag, chunks, document_id, document_path, namespace_id, domain_id
+        )
 
     @retry(
         stop=stop_after_attempt(3),
