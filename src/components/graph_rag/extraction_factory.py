@@ -153,13 +153,14 @@ class ExtractionPipelineFactory:
                 )
 
             async def extract(
-                self, text: str, document_id: str = None
+                self, text: str, document_id: str = None, domain: str | None = None
             ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
                 """Extract entities and relations using LLM.
 
                 Args:
                     text: Source text to extract from
                     document_id: Optional document ID for provenance
+                    domain: Optional domain for DSPy-optimized prompts (Sprint 76 TD-085)
 
                 Returns:
                     Tuple of (entities, relations) in LightRAG format
@@ -168,14 +169,17 @@ class ExtractionPipelineFactory:
                     "llm_extraction_starting",
                     document_id=document_id,
                     text_length=len(text),
+                    domain=domain,
                 )
 
                 # Step 1: Extract entities using ExtractionService
-                entities_graph = await self.service.extract_entities(text, document_id)
+                # Sprint 76 Feature 76.2 (TD-085): Pass domain for prompt selection
+                entities_graph = await self.service.extract_entities(text, document_id, domain)
 
                 # Step 2: Extract relationships using ExtractionService
+                # Sprint 76 Feature 76.2 (TD-085): Pass domain for prompt selection
                 relationships_graph = await self.service.extract_relationships(
-                    text, entities_graph, document_id
+                    text, entities_graph, document_id, domain
                 )
 
                 # Step 3: Convert GraphEntity → LightRAG format

@@ -488,12 +488,14 @@ class ExtractionService:
         self,
         text: str,
         document_id: str | None = None,
+        domain: str | None = None,
     ) -> list[GraphEntity]:
         """Extract entities from text using LLM.
 
         Args:
             text: Document text to extract entities from
             document_id: Source document ID (optional)
+            domain: Domain name for domain-specific prompts (Sprint 76 TD-085)
 
         Returns:
             list of extracted entities as GraphEntity objects
@@ -505,10 +507,14 @@ class ExtractionService:
             "extracting_entities",
             text_length=len(text),
             document_id=document_id,
+            domain=domain,
         )
 
+        # Sprint 76 Feature 76.2 (TD-085): Get domain-specific or generic prompts
+        entity_prompt, _ = await self.get_extraction_prompts(domain)
+
         # Format prompt
-        prompt = ENTITY_EXTRACTION_PROMPT.format(text=text)
+        prompt = entity_prompt.format(text=text)
 
         try:
             # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
@@ -602,6 +608,7 @@ class ExtractionService:
         text: str,
         entities: list[GraphEntity],
         document_id: str | None = None,
+        domain: str | None = None,
     ) -> list[GraphRelationship]:
         """Extract relationships from text given entities.
 
@@ -609,6 +616,7 @@ class ExtractionService:
             text: Document text to extract relationships from
             entities: Extracted entities from the same text
             document_id: Source document ID (optional)
+            domain: Domain name for domain-specific prompts (Sprint 76 TD-085)
 
         Returns:
             list of extracted relationships as GraphRelationship objects
@@ -621,17 +629,21 @@ class ExtractionService:
             text_length=len(text),
             entity_count=len(entities),
             document_id=document_id,
+            domain=domain,
         )
 
         if not entities:
             logger.warning("no_entities_for_relationship_extraction")
             return []
 
+        # Sprint 76 Feature 76.2 (TD-085): Get domain-specific or generic prompts
+        _, relation_prompt = await self.get_extraction_prompts(domain)
+
         # Format entity list for prompt
         entity_list = "\n".join([f"- {e.name} ({e.type})" for e in entities])
 
         # Format prompt
-        prompt = RELATIONSHIP_EXTRACTION_PROMPT.format(
+        prompt = relation_prompt.format(
             entities=entity_list,
             text=text,
         )

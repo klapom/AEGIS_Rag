@@ -132,14 +132,16 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
             details={"stage": "lightrag_insert"},
         )
 
-        # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
+        # Sprint 76 Features 76.1 & 76.2 (TD-084 & TD-085): Use namespace and domain from state
         namespace_id = state.get("namespace_id", "default")
+        domain_id = state.get("domain_id")  # Optional
 
         graph_stats = await lightrag.insert_prechunked_documents(
             chunks=prechunked_docs,
             document_id=state["document_id"],
             document_path=state["document_path"],
             namespace_id=namespace_id,  # Multi-tenant isolation
+            domain_id=domain_id,  # DSPy-optimized prompts
         )
 
         # Sprint 51: Emit progress event for entity extraction complete

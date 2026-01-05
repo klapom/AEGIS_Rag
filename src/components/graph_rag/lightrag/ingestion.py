@@ -108,8 +108,9 @@ async def extract_per_chunk(
         )
 
         try:
+            # Sprint 76 Feature 76.2 (TD-085): Pass domain for optimized prompts
             entities, relations = await extractor.extract(
-                text=chunk_text, document_id=f"{document_id}#{chunk_index}"
+                text=chunk_text, document_id=f"{document_id}#{chunk_index}", domain=domain_id
             )
 
             # Annotate entities with chunk metadata
@@ -402,12 +403,14 @@ async def insert_prechunked_documents(
     document_id: str,
     document_path: str = "",
     namespace_id: str = "default",
+    domain_id: str | None = None,
 ) -> dict[str, Any]:
     """Insert pre-chunked documents with existing chunk_ids.
 
     Sprint 42: Unified chunk IDs between Qdrant and Neo4j for true hybrid search.
     Sprint 51: Added namespace_id for multi-tenant isolation.
     Sprint 75 Fix: Added document_path for Neo4j source attribution.
+    Sprint 76 TD-085: Added domain_id for DSPy-optimized extraction prompts.
 
     Args:
         rag: Initialized LightRAG instance
@@ -415,6 +418,7 @@ async def insert_prechunked_documents(
         document_id: Source document ID for provenance tracking
         document_path: Source document path for attribution (default: "")
         namespace_id: Namespace for multi-tenant isolation
+        domain_id: Domain for DSPy-optimized prompts (Sprint 76 TD-085)
 
     Returns:
         Batch insertion result with entities/relations extracted
@@ -456,8 +460,9 @@ async def insert_prechunked_documents(
         )
 
         try:
+            # Sprint 76 Feature 76.2 (TD-085): Pass domain for optimized prompts
             entities, relations = await extractor.extract(
-                text=chunk_text, document_id=f"{document_id}#{chunk_index}"
+                text=chunk_text, document_id=f"{document_id}#{chunk_index}", domain=domain_id
             )
 
             for entity in entities:
