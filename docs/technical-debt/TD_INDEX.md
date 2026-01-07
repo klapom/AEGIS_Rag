@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-05 (Sprint 75 - RAGAS Architecture Review)
-**Total Open Items:** 12
-**Total Story Points:** ~178 SP
-**Archived Items:** [18 items](archive/ARCHIVE_INDEX.md)
+**Last Updated:** 2026-01-07 (Sprint 76 - Namespace & Domain Integration Complete)
+**Total Open Items:** 10
+**Total Story Points:** ~144 SP
+**Archived Items:** [20 items](archive/ARCHIVE_INDEX.md)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -12,6 +12,7 @@
 **Sprint 70:** ✅ MCP Tool Use in Chat & Research (COMPLETE)
 **Sprint 71:** Anti-Hallucination Prompt Hardening (TD-080 Phase 1)
 **Sprint 75:** 🔴 **CRITICAL Architecture Gaps Discovered** (TD-084, TD-085)
+**Sprint 76:** ✅ **TD-084 & TD-085 RESOLVED** - Namespace & Domain Integration (34 SP Recovered)
 
 ---
 
@@ -19,10 +20,12 @@
 
 | Priority | Count | Story Points |
 |----------|-------|--------------|
-| CRITICAL | 2     | 34 SP        |
+| CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~36 SP       |
 | MEDIUM   | 5     | ~87 SP       |
 | LOW      | 2     | ~21 SP       |
+
+**Sprint 76 Resolution:** TD-084 & TD-085 (34 SP) moved to archive ✅
 
 ---
 
@@ -30,25 +33,27 @@
 
 Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
-| TD# | Title | Resolution Sprint |
-|-----|-------|-------------------|
-| TD-043 | Async Follow-up Questions | Sprint 52 |
-| TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 |
-| TD-045 | entity_id Property Migration | Sprint 34 |
-| TD-047 | Critical Path E2E Tests | Sprint 51 |
-| TD-048 | Graph Extraction with Unified Chunks | Sprint 49 |
-| TD-050 | Duplicate Answer Streaming | Sprint 47 |
-| TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 |
-| TD-058 | Community Summary Generation | Sprint 52 |
-| TD-059 | Reranking via Ollama | Sprint 48 |
-| TD-060 | Unified Chunk IDs | Sprint 42 |
-| TD-061 | Ollama GPU Docker Config | Sprint 42 |
-| TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 |
-| TD-063 | Relation Deduplication | Sprint 49 |
-| TD-069 | Multihop Endpoint Review | Sprint 60 |
-| TD-071 | vLLM vs Ollama Investigation | Sprint 60 |
-| TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 |
-| TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 |
+| TD# | Title | Resolution Sprint | SP |
+|-----|-------|-------------------|----|
+| TD-084 | **Namespace Isolation in Ingestion** | **Sprint 76** | **13** |
+| TD-085 | **DSPy Domain Prompts Integration** | **Sprint 76** | **21** |
+| TD-043 | Async Follow-up Questions | Sprint 52 | 5 |
+| TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 | - |
+| TD-045 | entity_id Property Migration | Sprint 34 | 3 |
+| TD-047 | Critical Path E2E Tests | Sprint 51 | 8 |
+| TD-048 | Graph Extraction with Unified Chunks | Sprint 49 | 5 |
+| TD-050 | Duplicate Answer Streaming | Sprint 47 | 3 |
+| TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 | 13 |
+| TD-058 | Community Summary Generation | Sprint 52 | 8 |
+| TD-059 | Reranking via Ollama | Sprint 48 | 5 |
+| TD-060 | Unified Chunk IDs | Sprint 42 | 8 |
+| TD-061 | Ollama GPU Docker Config | Sprint 42 | 3 |
+| TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 | 5 |
+| TD-063 | Relation Deduplication | Sprint 49 | 5 |
+| TD-069 | Multihop Endpoint Review | Sprint 60 | 8 |
+| TD-071 | vLLM vs Ollama Investigation | Sprint 60 | 5 |
+| TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 | 3 |
+| TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 | 3 |
 
 ---
 
@@ -56,14 +61,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ### 🔴 CRITICAL Priority
 
-| TD# | Title | Status | SP | Target Sprint |
-|-----|-------|--------|-----|---------------|
-| [TD-084](TD-084_NAMESPACE_ISOLATION_IN_INGESTION.md) | **Namespace Isolation in Document Ingestion** | 🔴 OPEN | 13 | **Sprint 76** |
-| [TD-085](TD-085_DSPY_DOMAIN_PROMPTS_NOT_USED_IN_EXTRACTION.md) | **DSPy Domain Prompts Not Used in Extraction** | 🔴 OPEN | 21 | **Sprint 76-77** |
-
-**Critical Context:**
-- **TD-084:** All docs go to "default" namespace → Multi-tenant isolation BROKEN → RAGAS evaluation impossible
-- **TD-085:** 34 SP invested in Domain Training (Sprint 45) → Optimized prompts NEVER USED → Feature completely wasted
+**None!** ✅ All critical technical debt resolved in Sprint 76.
 
 ### HIGH Priority
 
