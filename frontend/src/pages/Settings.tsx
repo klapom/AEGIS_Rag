@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
-import { AVAILABLE_MODELS, CLOUD_PROVIDERS } from '../types/settings';
+import { AVAILABLE_MODELS, CLOUD_PROVIDERS, RETRIEVAL_METHODS } from '../types/settings';
 
 type TabType = 'general' | 'models' | 'advanced';
 
@@ -319,6 +319,56 @@ export function Settings() {
                 </p>
               </div>
             )}
+
+            {/* Retrieval Method (Sprint 74 Feature 74.3) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Retrieval-Methode
+              </label>
+              <div className="space-y-3">
+                {RETRIEVAL_METHODS.map((method) => (
+                  <button
+                    key={method.value}
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        retrievalMethod: method.value as 'hybrid' | 'vector' | 'bm25',
+                      })
+                    }
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-colors ${
+                      formData.retrievalMethod === method.value
+                        ? 'border-primary bg-primary bg-opacity-10'
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-start">
+                      {/* Radio indicator */}
+                      <div className="flex-shrink-0 mt-0.5 mr-3">
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            formData.retrievalMethod === method.value
+                              ? 'border-primary'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {formData.retrievalMethod === method.value && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                          )}
+                        </div>
+                      </div>
+                      {/* Method info */}
+                      <div>
+                        <div className="font-medium text-gray-900">{method.label}</div>
+                        <div className="text-sm text-gray-600 mt-1">{method.description}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Wählen Sie die Retrieval-Methode für Ihre Suchanfragen. Hybrid (empfohlen) kombiniert semantische und Keyword-Suche für beste Ergebnisse.
+              </p>
+            </div>
           </div>
         )}
 

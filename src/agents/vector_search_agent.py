@@ -39,7 +39,7 @@ class VectorSearchAgent(BaseAgent):
         self,
         four_way_search: FourWayHybridSearch | None = None,
         top_k: int | None = None,
-        use_reranking: bool = False,  # TD-059: Disabled by default
+        use_reranking: bool | None = None,  # Sprint 76: Now uses config default
         max_retries: int = 3,
     ) -> None:
         """Initialize Vector Search Agent.
@@ -47,14 +47,14 @@ class VectorSearchAgent(BaseAgent):
         Args:
             four_way_search: FourWayHybridSearch instance (created if None)
             top_k: Number of results to retrieve (default from settings)
-            use_reranking: Whether to apply reranking (default from settings)
+            use_reranking: Whether to apply reranking (default: use settings.reranker_enabled)
             max_retries: Maximum retry attempts on failure (default: 3)
         """
         super().__init__(name="VectorSearchAgent")
         self.four_way_search = four_way_search or FourWayHybridSearch()
         self.top_k = top_k or settings.retrieval_top_k
-        # TD-059: Reranking disabled by default (sentence-transformers not in container)
-        self.use_reranking = use_reranking
+        # Sprint 76: Use config default (Ollama reranker available since Sprint 48)
+        self.use_reranking = use_reranking if use_reranking is not None else settings.reranker_enabled
         self.max_retries = max_retries
 
         self.logger.info(
@@ -321,7 +321,7 @@ class VectorSearchAgent(BaseAgent):
             try:
                 context = RetrievedContext(
                     id=result.get("id", ""),
-                    text=result.get("text", ""),
+                    text=result.get("text", result.get("content", "")),  # Sprint 76: Fallback to content field
                     score=float(score),
                     source=result.get("source", "unknown"),
                     document_id=result.get("document_id", ""),
@@ -338,7 +338,7 @@ class VectorSearchAgent(BaseAgent):
                     search_type=result.get("search_type", "unknown"),
                     score=score,
                     rank=rank,
-                    text_preview=result.get("text", "")[:100],
+                    text_preview=result.get("text", result.get("content", ""))[:100],  # Sprint 76: Fallback to content
                 )
                 # Continue with next result instead of failing completely
                 continue
