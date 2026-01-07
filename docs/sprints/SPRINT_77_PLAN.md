@@ -242,74 +242,156 @@ async def generate_community_summaries(
 
 ---
 
-#### Feature 77.5: Improve Entity Connectivity (TD-095)
+#### Feature 77.5: Entity Connectivity as Domain Training Metric (TD-095)
 **Priority**: MEDIUM | **Effort**: 3 SP | **Time**: 3 hours
 
 **Problem**: 0.45 relations/entity (low) - sparse graph reduces reasoning power
 
 **Context**:
-- HotpotQA .txt files are atomic facts (not narrative)
-- Current: 146 entities, 65 RELATES_TO relations
-- Expected: 1.5-3.0 relations/entity for narrative text
+- **Sprint 76 TD-084/TD-085**: DSPy Domain Training for ER-Extraction prompts implemented
+- Entity Connectivity is **domain-specific** (factual vs narrative vs technical)
+- Current: 146 entities, 65 RELATES_TO relations (hotpotqa domain)
+- Expected: Domain-dependent (see benchmarks below)
 
-**Root Cause Analysis**:
-1. **LLM Extraction Too Conservative**:
-   - Only extracts explicit relationships
-   - Misses implicit/inferred relations
-   - Relation prompt may be too strict
+**Root Cause**: ER-Extraction prompts come from Domain Training - manual tuning bypasses DSPy optimization!
 
-2. **Data Type Limitation**:
-   - HotpotQA designed for multi-hop reasoning
-   - Each .txt file = atomic fact (1 entity, 0-1 relations)
-   - Not representative of narrative documents
+**Architecture Insight**:
+```
+Current Pipeline:
+1. Domain Training (TD-085) → Domain-Optimized ER Prompts
+2. Graph Extraction → Entities + Relations
+3. [Missing] Domain Evaluation Metrics
 
-**Solution Options**:
-
-**Option A: Relation Extraction Prompt Tuning** (Recommended)
-```python
-# Current prompt (conservative):
-"Extract only explicitly stated relationships between entities."
-
-# New prompt (balanced):
-"Extract both explicit and strongly implied relationships.
-Include:
-- Explicit: 'X founded Y' → (X)-[:FOUNDED]->(Y)
-- Implicit: 'X, creator of Y' → (X)-[:CREATED]->(Y)
-- Temporal: 'X before Y' → (X)-[:PRECEDED]->(Y)
-
-Exclude weak or speculative relationships."
+Proposed:
+1. Domain Training → Domain-Optimized ER Prompts
+2. Graph Extraction → Entities + Relations
+3. Domain Evaluation → Entity Connectivity Metrics ← NEW!
+4. DSPy Optimization Loop → Improve Prompts based on Metrics
 ```
 
-**Option B: Relation Inference Rules**
+**Solution: Integrate Entity Connectivity into Domain Training**
+
+**Step 1: Domain-Specific Connectivity Benchmarks**
 ```python
-# Add post-processing rules:
-# If entity A and B mentioned in same sentence → (A)-[:CO_MENTIONED]->(B)
-# If entity has type Person + Organization → (Person)-[:AFFILIATED_WITH]->(Org)
+# src/domains/knowledge_graph/domain_metrics.py
+
+DOMAIN_CONNECTIVITY_BENCHMARKS = {
+    "factual": {
+        # Atomic facts (HotpotQA, Wikipedia snippets)
+        "relations_per_entity": (0.3, 0.8),  # (min, max)
+        "entities_per_community": (1.5, 3.0),
+        "description": "Sparse, fact-oriented graphs"
+    },
+    "narrative": {
+        # Stories, articles, reports
+        "relations_per_entity": (1.5, 3.0),
+        "entities_per_community": (5.0, 10.0),
+        "description": "Dense, narrative-driven graphs"
+    },
+    "technical": {
+        # Documentation, manuals, specifications
+        "relations_per_entity": (2.0, 4.0),
+        "entities_per_community": (3.0, 8.0),
+        "description": "Hierarchical, structured graphs"
+    },
+    "academic": {
+        # Research papers, theses
+        "relations_per_entity": (2.5, 5.0),
+        "entities_per_community": (4.0, 12.0),
+        "description": "Citation-heavy, interconnected graphs"
+    }
+}
 ```
 
-**Option C: Domain-Specific Relation Templates** (DSPy)
+**Step 2: Add Connectivity Metrics to Domain Training**
 ```python
-# Use Sprint 76 domain-optimized prompts (TD-085)
-# Create relation extraction templates per domain
+# src/components/graph_rag/domain_training.py
+
+async def evaluate_domain_extraction_quality(
+    domain_id: str,
+    namespace_id: str
+) -> DomainExtractionMetrics:
+    """Evaluate ER extraction quality for a domain.
+
+    Sprint 77 Feature 77.5: Entity connectivity as quality metric.
+    """
+    # Get domain benchmark
+    benchmark = DOMAIN_CONNECTIVITY_BENCHMARKS.get(
+        domain_id,
+        DOMAIN_CONNECTIVITY_BENCHMARKS["factual"]  # default
+    )
+
+    # Query Neo4j for connectivity stats
+    stats = await get_connectivity_stats(namespace_id)
+
+    # Compare to benchmark
+    metrics = {
+        "relations_per_entity": stats["relations"] / stats["entities"],
+        "entities_per_community": stats["entities"] / stats["communities"],
+        "benchmark_min": benchmark["relations_per_entity"][0],
+        "benchmark_max": benchmark["relations_per_entity"][1],
+        "within_benchmark": (
+            benchmark["relations_per_entity"][0]
+            <= (stats["relations"] / stats["entities"])
+            <= benchmark["relations_per_entity"][1]
+        )
+    }
+
+    return DomainExtractionMetrics(**metrics)
+```
+
+**Step 3: DSPy Optimization with Connectivity Metric**
+```python
+# Use connectivity as DSPy evaluation metric
+
+class ConnectivityMetric(dspy.Metric):
+    def __call__(self, example, prediction, trace=None):
+        """Score extraction quality by entity connectivity."""
+        relations_per_entity = len(prediction.relations) / len(prediction.entities)
+
+        # Domain-specific target
+        target = DOMAIN_CONNECTIVITY_BENCHMARKS[example.domain]["relations_per_entity"]
+
+        # Normalized score (0-1)
+        if target[0] <= relations_per_entity <= target[1]:
+            return 1.0  # Perfect
+        elif relations_per_entity < target[0]:
+            return relations_per_entity / target[0]  # Penalize sparse
+        else:
+            return target[1] / relations_per_entity  # Penalize over-extraction
 ```
 
 **Implementation**:
-1. Analyze low-connectivity documents (find patterns)
-2. Test Option A: Update relation extraction prompt
-3. Re-ingest 5 HotpotQA docs with new prompt
-4. Measure relations/entity improvement
-5. If insufficient, implement Option B
+1. **Add domain-specific connectivity benchmarks** (30min)
+   - Research typical connectivity per domain type
+   - Add to `domain_metrics.py`
+
+2. **Integrate connectivity into Domain Training UI** (1h)
+   - Frontend: Display connectivity metrics in Domain Training panel
+   - Backend: Add connectivity evaluation endpoint
+   - Show benchmark comparison (green if within range)
+
+3. **Add connectivity to DSPy optimization** (1h)
+   - Use ConnectivityMetric in DSPy prompt optimization
+   - Re-train hotpotqa domain with connectivity metric
+   - Compare before/after results
+
+4. **Create connectivity tracking dashboard** (30min)
+   - Prometheus metrics: `graph_connectivity_relations_per_entity{domain="..."}`
+   - Grafana panel: Connectivity by domain over time
 
 **Testing**:
-1. Baseline: 0.45 relations/entity (65/146)
-2. Target: 1.0 relations/entity (146 relations)
-3. Re-ingest hotpotqa_small (5 docs)
-4. Verify relation count increases
+1. **Baseline**: 0.45 relations/entity (hotpotqa, factual domain)
+2. **Benchmark**: 0.3-0.8 for factual domains → ✅ **Within Range!**
+3. **Re-train**: Use DSPy with ConnectivityMetric
+4. **Verify**: Connectivity improves while maintaining precision
 
 **Success Criteria**:
-- ✅ Relations/entity ≥ 1.0 (target met)
-- ✅ No spurious/incorrect relations
-- ✅ Graph reasoning quality improves (manual testing)
+- ✅ Domain-specific connectivity benchmarks defined (4 domains)
+- ✅ Connectivity metrics integrated into Domain Training UI
+- ✅ DSPy optimization uses connectivity metric
+- ✅ Grafana dashboard tracks connectivity over time
+- ✅ HotpotQA domain stays within factual benchmark (0.3-0.8)
 
 ---
 
@@ -326,7 +408,7 @@ Exclude weak or speculative relationships."
 | Task | File(s) | Time | Dependencies |
 |------|---------|------|--------------|
 | 77.4: Community summaries | `scripts/`, `admin_graph.py` | 3h | None |
-| 77.5: Entity connectivity | Relation extraction prompt | 3h | None |
+| 77.5: Entity connectivity | `domain_metrics.py`, `domain_training.py`, Domain UI | 3h | TD-084/TD-085 |
 | Documentation | Sprint results, TDs | 2h | All above |
 
 ---
@@ -339,7 +421,8 @@ Exclude weak or speculative relationships."
 | Chunk Consistency (Qdrant/Neo4j) | 82% (14/17) | 100% |
 | Indexed Vectors | 0 | 17+ |
 | Community Summaries | 0 (0%) | 92 (100%) |
-| Relations/Entity | 0.45 | 1.0+ |
+| Relations/Entity (factual domain) | 0.45 | 0.3-0.8 (within benchmark ✅) |
+| Domain Connectivity Benchmarks | 0 domains | 4 domains defined |
 
 ---
 
@@ -376,11 +459,16 @@ Exclude weak or speculative relationships."
 - **Mitigation**: Batch processing + background jobs
 - **Fallback**: Generate on-demand (lazy loading)
 
-### **Risk 3: Relation Extraction Tuning Ineffective**
+### **Risk 3: Domain Training Integration Complex**
 - **Likelihood**: MEDIUM
-- **Impact**: LOW (data quality, not critical)
-- **Mitigation**: Test on small dataset first
-- **Fallback**: Accept low connectivity for atomic facts
+- **Impact**: LOW (enhances existing system, not critical)
+- **Mitigation**:
+  - Start with simple benchmarks (4 domains)
+  - Test connectivity metric on HotpotQA first
+  - UI integration is optional (can use API)
+- **Fallback**:
+  - Manual connectivity monitoring
+  - Accept HotpotQA connectivity (0.45) as baseline for factual domain
 
 ---
 
