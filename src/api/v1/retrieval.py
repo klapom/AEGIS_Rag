@@ -22,6 +22,7 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -425,6 +426,7 @@ async def ingest(
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
+    namespace_id: str = Form("default"),
     current_user: str | None = Depends(get_current_user),
 ) -> IngestionResponse:
     """Upload and index a single document file.
@@ -437,6 +439,7 @@ async def upload_file(
     Args:
         request: FastAPI request (for rate limiting)
         file: Uploaded file (30 formats supported, see /formats endpoint)
+        namespace_id: Namespace for data isolation (default: "default")
         current_user: Authenticated user (optional)
 
     Returns:
@@ -445,7 +448,8 @@ async def upload_file(
     Example:
         ```bash
         curl -X POST "http://localhost:8000/api/v1/retrieval/upload" \\
-             -F "file=@document.pdf"
+             -F "file=@document.pdf" \\
+             -F "namespace_id=my_namespace"
         ```
     """
     import hashlib
@@ -510,6 +514,7 @@ async def upload_file(
                 batch_id=batch_id,
                 batch_index=0,
                 total_documents=1,
+                namespace_id=namespace_id,
                 max_retries=3,
             )
             duration_seconds = (datetime.now() - start_time).total_seconds()
