@@ -209,34 +209,39 @@ def _integrate_vlm_descriptions(
 def adaptive_section_chunking(
     sections: list[SectionMetadata],
     min_chunk: int = 800,
-    max_chunk: int = 1800,
-    large_section_threshold: int = 1200,
+    max_chunk: int = 1200,  # Sprint 77: GraphRAG default (was 1800)
+    large_section_threshold: int = 1200,  # Sprint 77: Match max_chunk
+    max_hard_limit: int = 1500,  # Sprint 77: NEW - prevent ER-Extraction timeouts
 ) -> list[AdaptiveChunk]:
     """Chunk with section-awareness, merging small sections intelligently (Feature 32.2).
 
     Implements ADR-039 adaptive section-aware chunking strategy:
-    - Large sections (>1200 tokens) -> Keep as standalone chunks
-    - Small sections (<1200 tokens) -> Merge until 800-1800 tokens
+    - Large sections (>1200 tokens) -> Split if >max_hard_limit (Sprint 77 FIX)
+    - Small sections (<1200 tokens) -> Merge until 800-1200 tokens
     - Track ALL sections in chunk metadata (multi-section support)
     - Preserve thematic coherence when merging
+
+    **Sprint 77 Root Cause Fix**:
+    Large sections were kept as standalone chunks without splitting, causing
+    6000+ char chunks → ER-Extraction timeouts → missing Neo4j data.
+    Now enforces max_hard_limit=1500 by splitting large sections.
 
     Args:
         sections: List of SectionMetadata from extract_section_hierarchy()
         min_chunk: Minimum tokens per chunk (default 800)
-        max_chunk: Maximum tokens per chunk (default 1800)
+        max_chunk: Maximum tokens per chunk (default 1200, GraphRAG best practice)
         large_section_threshold: Threshold for standalone sections (default 1200)
+        max_hard_limit: Hard limit for section splitting (default 1500, prevents timeouts)
 
     Returns:
-        List of AdaptiveChunk with multi-section metadata
+        List of AdaptiveChunk with multi-section metadata (all <=max_hard_limit tokens)
 
     Example:
         >>> sections = extract_section_hierarchy(docling_json)
-        >>> chunks = adaptive_section_chunking(sections)
-        >>> # PowerPoint (15 slides @ 150-250 tokens) -> 6-8 chunks
-        >>> len(chunks)
-        7
-        >>> chunks[0].section_headings
-        ['Multi-Server Architecture', 'Load Balancing', 'Caching']
+        >>> chunks = adaptive_section_chunking(sections, max_hard_limit=1500)
+        >>> # Large section (6000 tokens) -> split into 4 chunks
+        >>> all(c.token_count <= 1500 for c in chunks)
+        True  # ✅ No ER-Extraction timeouts!
     """
     if not sections:
         return []
@@ -248,7 +253,7 @@ def adaptive_section_chunking(
     for section in sections:
         section_tokens = section.token_count
 
-        # Large section -> standalone chunk (preserve clean extraction)
+        # Large section -> split if >max_hard_limit (Sprint 77 FIX!)
         if section_tokens > large_section_threshold:
             # Flush any accumulated small sections first
             if current_sections:
@@ -256,8 +261,9 @@ def adaptive_section_chunking(
                 current_sections = []
                 current_tokens = 0
 
-            # Create standalone chunk for large section
-            chunks.append(_create_chunk(section))
+            # Sprint 77 FIX: Split large sections to prevent ER-Extraction timeouts
+            split_chunks = _split_large_section(section, max_hard_limit=max_hard_limit)
+            chunks.extend(split_chunks)  # ✅ Now splits instead of keeping as-is!
 
         # Small section -> merge with others (reduce fragmentation)
         elif current_tokens + section_tokens <= max_chunk:
@@ -371,6 +377,112 @@ def _create_chunk(section: SectionMetadata) -> AdaptiveChunk:
         chunk.image_annotations = section.image_annotations
 
     return chunk
+
+
+def _split_large_section(
+    section: SectionMetadata,
+    max_hard_limit: int = 1500,
+) -> list[AdaptiveChunk]:
+    """Split large section into chunks <=max_hard_limit tokens (Sprint 77 Fix).
+
+    **ROOT CAUSE FIX**: Large sections (>1200 tokens) were kept as standalone chunks
+    without further splitting, causing ER-Extraction timeouts (6000+ char chunks).
+
+    This function enforces a hard limit by splitting large sections into
+    max_hard_limit-sized chunks using BGE-M3 tokenizer.
+
+    Args:
+        section: Section to split (may be >max_hard_limit tokens)
+        max_hard_limit: Maximum tokens per chunk (default 1500, prevents ER timeouts)
+
+    Returns:
+        List of AdaptiveChunk objects, each <=max_hard_limit tokens
+
+    Example:
+        >>> section = SectionMetadata(text="...", token_count=6000, ...)  # HUGE section
+        >>> chunks = _split_large_section(section, max_hard_limit=1500)
+        >>> len(chunks)
+        4  # Split into 4 chunks of ~1500 tokens each
+        >>> all(c.token_count <= 1500 for c in chunks)
+        True  # ✅ No ER-Extraction timeouts!
+    """
+    # Fast path: section already within limit
+    if section.token_count <= max_hard_limit:
+        return [_create_chunk(section)]
+
+    # Section is too large → split into max_hard_limit chunks
+    logger.info(
+        "splitting_large_section",
+        section_heading=section.heading,
+        section_tokens=section.token_count,
+        max_hard_limit=max_hard_limit,
+        split_factor=round(section.token_count / max_hard_limit, 1),
+    )
+
+    # Use BGE-M3 tokenizer for precise token counting
+    try:
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-m3")
+    except Exception as e:
+        logger.error("failed_to_load_tokenizer", error=str(e))
+        # Fallback: approximate split by characters (4 chars/token)
+        char_limit = max_hard_limit * 4
+        chunks = []
+        text = section.text
+        for i in range(0, len(text), char_limit):
+            chunk_text = text[i : i + char_limit]
+            chunk = AdaptiveChunk(
+                text=chunk_text,
+                token_count=len(chunk_text) // 4,  # Approximate
+                section_headings=[section.heading],
+                section_pages=[section.page_no],
+                section_bboxes=[section.bbox],
+                primary_section=section.heading,
+                metadata=section.metadata,
+            )
+            chunks.append(chunk)
+        return chunks
+
+    # Tokenize section text
+    tokens = tokenizer.encode(section.text, add_special_tokens=False)
+
+    # Split tokens into max_hard_limit chunks
+    chunks = []
+    for i in range(0, len(tokens), max_hard_limit):
+        chunk_tokens = tokens[i : i + max_hard_limit]
+        chunk_text = tokenizer.decode(chunk_tokens, skip_special_tokens=True)
+
+        chunk = AdaptiveChunk(
+            text=chunk_text,
+            token_count=len(chunk_tokens),
+            section_headings=[section.heading],
+            section_pages=[section.page_no],
+            section_bboxes=[section.bbox],
+            primary_section=section.heading,
+            metadata={
+                **section.metadata,
+                "split_from_large_section": True,
+                "original_section_tokens": section.token_count,
+                "split_index": len(chunks),
+            },
+        )
+
+        # Copy image_annotations from section (if any)
+        if hasattr(section, "image_annotations"):
+            chunk.image_annotations = section.image_annotations
+
+        chunks.append(chunk)
+
+    logger.info(
+        "large_section_split_complete",
+        section_heading=section.heading,
+        original_tokens=section.token_count,
+        chunks_created=len(chunks),
+        avg_chunk_tokens=round(sum(c.token_count for c in chunks) / len(chunks)),
+    )
+
+    return chunks
 
 
 def merge_small_chunks(
@@ -657,10 +769,15 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         if vlm_metadata:
             sections = _integrate_vlm_descriptions(sections, vlm_metadata)
 
-        # Apply adaptive chunking (800-1800 tokens, section-aware)
+        # Sprint 77: Apply adaptive chunking with hard limit (1200 tokens, GraphRAG default)
+        # ROOT CAUSE FIX: max_hard_limit=1500 prevents ER-Extraction timeouts
         adaptive_chunking_start = time.perf_counter()
         adaptive_chunks = adaptive_section_chunking(
-            sections=sections, min_chunk=800, max_chunk=1800, large_section_threshold=1200
+            sections=sections,
+            min_chunk=800,
+            max_chunk=1200,  # GraphRAG default (was 1800)
+            large_section_threshold=1200,
+            max_hard_limit=1500,  # NEW: Hard limit prevents 6000+ char chunks
         )
         adaptive_chunking_end = time.perf_counter()
         adaptive_chunking_ms = (adaptive_chunking_end - adaptive_chunking_start) * 1000
