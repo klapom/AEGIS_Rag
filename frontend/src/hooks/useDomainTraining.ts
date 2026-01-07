@@ -855,3 +855,82 @@ export function useDomainDetails(domainName: string, enabled = true) {
 
   return { data, isLoading, error, refetch: fetchDetails };
 }
+
+/**
+ * Connectivity evaluation request
+ * Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric
+ */
+export interface ConnectivityEvaluationRequest {
+  namespace_id: string;
+  domain_type: 'factual' | 'narrative' | 'technical' | 'academic';
+}
+
+/**
+ * Connectivity evaluation response
+ * Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric
+ */
+export interface ConnectivityEvaluationResponse {
+  namespace_id: string;
+  domain_type: string;
+  total_entities: number;
+  total_relationships: number;
+  total_communities: number;
+  relations_per_entity: number;
+  entities_per_community: number;
+  benchmark_min: number;
+  benchmark_max: number;
+  within_benchmark: boolean;
+  benchmark_status: 'below' | 'within' | 'above';
+  recommendations: string[];
+}
+
+/**
+ * Evaluate entity connectivity metrics for a namespace
+ * Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric
+ *
+ * Evaluates knowledge graph connectivity and compares it to domain-specific benchmarks.
+ * Returns metrics, benchmark comparison, and actionable recommendations.
+ *
+ * @param namespace_id - Namespace to evaluate (e.g., "hotpotqa_large")
+ * @param domain_type - Domain type for benchmark (factual, narrative, technical, academic)
+ * @param enabled - Whether to fetch connectivity metrics
+ */
+export function useConnectivityMetrics(
+  namespace_id: string,
+  domain_type: 'factual' | 'narrative' | 'technical' | 'academic' = 'factual',
+  enabled = true
+) {
+  const [data, setData] = useState<ConnectivityEvaluationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchMetrics = useCallback(async () => {
+    if (!enabled || !namespace_id) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<ConnectivityEvaluationResponse>(
+        '/admin/domains/connectivity/evaluate',
+        {
+          namespace_id,
+          domain_type,
+        }
+      );
+      setData(response);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch connectivity metrics'));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [namespace_id, domain_type, enabled]);
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [fetchMetrics]);
+
+  return { data, isLoading, error, refetch: fetchMetrics };
+}

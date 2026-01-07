@@ -706,3 +706,239 @@ class TestDataAugmentationEndpoint:
         )
 
         assert response.status_code == 422
+
+
+# ============================================================================
+# Sprint 77 Feature 77.5 (TD-095): Connectivity Evaluation Tests
+# ============================================================================
+
+
+class TestConnectivityEvaluationEndpoint:
+    """Tests for POST /admin/domains/connectivity/evaluate endpoint."""
+
+    def test_evaluate_connectivity_success(self, test_client):
+        """Test successful connectivity evaluation within benchmark."""
+        request_data = {
+            "namespace_id": "hotpotqa_large",
+            "domain_type": "factual",
+        }
+
+        # Mock Neo4j response (Sprint 76 HotpotQA data)
+        mock_result = [
+            {
+                "total_entities": 146,
+                "total_relationships": 65,
+                "total_communities": 92,
+            }
+        ]
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["namespace_id"] == "hotpotqa_large"
+            assert data["domain_type"] == "factual"
+            assert data["total_entities"] == 146
+            assert data["total_relationships"] == 65
+            assert data["total_communities"] == 92
+            assert "relations_per_entity" in data
+            assert "entities_per_community" in data
+            assert "benchmark_min" in data
+            assert "benchmark_max" in data
+            assert "within_benchmark" in data
+            assert "benchmark_status" in data
+            assert "recommendations" in data
+            assert len(data["recommendations"]) > 0
+
+    def test_evaluate_connectivity_empty_namespace(self, test_client):
+        """Test connectivity evaluation for empty namespace."""
+        request_data = {
+            "namespace_id": "empty_namespace",
+            "domain_type": "factual",
+        }
+
+        # Mock Neo4j response (empty namespace)
+        mock_result = []
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["namespace_id"] == "empty_namespace"
+            assert data["total_entities"] == 0
+            assert data["total_relationships"] == 0
+            assert data["relations_per_entity"] == 0.0
+            assert data["within_benchmark"] is False
+            assert data["benchmark_status"] == "below"
+            assert any("No entities found" in rec for rec in data["recommendations"])
+
+    def test_evaluate_connectivity_below_benchmark(self, test_client):
+        """Test connectivity evaluation below benchmark (sparse graph)."""
+        request_data = {
+            "namespace_id": "sparse_namespace",
+            "domain_type": "factual",
+        }
+
+        # Mock Neo4j response (below benchmark: 0.1 relations/entity)
+        mock_result = [
+            {
+                "total_entities": 100,
+                "total_relationships": 10,  # 0.1 relations/entity (below 0.3)
+                "total_communities": 50,
+            }
+        ]
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["relations_per_entity"] == 0.1
+            assert data["within_benchmark"] is False
+            assert data["benchmark_status"] == "below"
+            assert any("below benchmark" in rec.lower() for rec in data["recommendations"])
+
+    def test_evaluate_connectivity_above_benchmark(self, test_client):
+        """Test connectivity evaluation above benchmark (over-extraction)."""
+        request_data = {
+            "namespace_id": "dense_namespace",
+            "domain_type": "factual",
+        }
+
+        # Mock Neo4j response (above benchmark: 3.5 relations/entity)
+        mock_result = [
+            {
+                "total_entities": 100,
+                "total_relationships": 350,  # 3.5 relations/entity (above 0.8)
+                "total_communities": 20,
+            }
+        ]
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["relations_per_entity"] == 3.5
+            assert data["within_benchmark"] is False
+            assert data["benchmark_status"] == "above"
+            assert any("above benchmark" in rec.lower() for rec in data["recommendations"])
+
+    def test_evaluate_connectivity_invalid_domain_type(self, test_client):
+        """Test validation rejects invalid domain type."""
+        request_data = {
+            "namespace_id": "test_namespace",
+            "domain_type": "invalid_type",
+        }
+
+        response = test_client.post(
+            "/api/v1/admin/domains/connectivity/evaluate",
+            json=request_data,
+        )
+
+        assert response.status_code == 422
+
+    def test_evaluate_connectivity_narrative_domain(self, test_client):
+        """Test connectivity evaluation for narrative domain (higher benchmark)."""
+        request_data = {
+            "namespace_id": "narrative_namespace",
+            "domain_type": "narrative",
+        }
+
+        # Mock Neo4j response (narrative domain: higher connectivity expected)
+        mock_result = [
+            {
+                "total_entities": 100,
+                "total_relationships": 200,  # 2.0 relations/entity (within [1.5, 3.0])
+                "total_communities": 15,
+            }
+        ]
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(return_value=mock_result)
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["domain_type"] == "narrative"
+            assert data["relations_per_entity"] == 2.0
+            assert data["within_benchmark"] is True
+            assert data["benchmark_status"] == "within"
+            # Narrative benchmark should be different from factual
+            assert data["benchmark_min"] == 1.5
+            assert data["benchmark_max"] == 3.0
+
+    def test_evaluate_connectivity_neo4j_error(self, test_client):
+        """Test error handling for Neo4j failures."""
+        request_data = {
+            "namespace_id": "test_namespace",
+            "domain_type": "factual",
+        }
+
+        with patch(
+            "src.components.domain_training.domain_metrics.get_neo4j_client"
+        ) as mock_get_neo4j:
+            # Setup mock to raise error
+            mock_neo4j = AsyncMock()
+            mock_neo4j.execute_read = AsyncMock(
+                side_effect=Exception("Neo4j connection failed")
+            )
+            mock_get_neo4j.return_value = mock_neo4j
+
+            response = test_client.post(
+                "/api/v1/admin/domains/connectivity/evaluate",
+                json=request_data,
+            )
+
+            assert response.status_code == 500

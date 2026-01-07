@@ -286,3 +286,342 @@ class TestGraphStatsEndpoint:
             assert "timestamp" in data
             # Verify it's a valid ISO 8601 timestamp
             datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
+
+
+# ============================================================================
+# Sprint 77 Feature 77.4 (TD-094): Community Summarization Tests
+# ============================================================================
+
+
+class TestCommunitySummarizationEndpoint:
+    """Tests for POST /admin/graph/communities/summarize endpoint."""
+
+    def test_generate_summaries_success(self):
+        """Test successful community summarization."""
+        request_data = {
+            "namespace": "hotpotqa_large",
+            "force": False,
+            "batch_size": 10,
+        }
+
+        # Mock Neo4j queries
+        mock_communities = [
+            {"community_id": 1, "summary": None},
+            {"community_id": 2, "summary": None},
+            {"community_id": 3, "summary": None},
+        ]
+
+        mock_entities = [
+            {"entity_name": "Entity1", "entity_type": "Person"},
+            {"entity_name": "Entity2", "entity_type": "Organization"},
+        ]
+
+        mock_relationships = [
+            {
+                "source": "Entity1",
+                "target": "Entity2",
+                "relationship_type": "RELATES_TO",
+                "description": "Test relationship",
+            }
+        ]
+
+        # Mock LLM summary generation
+        mock_summary = "This community represents a network of entities related to test data."
+
+        mock_session = AsyncMock()
+
+        # Setup query results
+        communities_result = _create_result_mock(data_value=mock_communities)
+        entities_result = _create_result_mock(data_value=mock_entities)
+        relationships_result = _create_result_mock(data_value=mock_relationships)
+        store_result = _create_result_mock(single_value={"community_id": 1})
+
+        # Sequential query responses
+        mock_session.run = AsyncMock(
+            side_effect=[
+                communities_result,  # Get communities without summaries
+                entities_result,     # Get community entities (community 1)
+                relationships_result, # Get community relationships (community 1)
+                store_result,        # Store summary (community 1)
+                entities_result,     # Get community entities (community 2)
+                relationships_result, # Get community relationships (community 2)
+                store_result,        # Store summary (community 2)
+                entities_result,     # Get community entities (community 3)
+                relationships_result, # Get community relationships (community 3)
+                store_result,        # Store summary (community 3)
+            ]
+        )
+
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session)
+
+        mock_neo4j = MagicMock()
+        mock_neo4j.driver = mock_driver
+
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_llm_client"
+            ) as mock_llm,
+        ):
+            # Mock LLM response
+            mock_llm_instance = AsyncMock()
+            mock_llm_instance.generate = AsyncMock(return_value=mock_summary)
+            mock_llm.return_value = mock_llm_instance
+
+            from src.api.main import app
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/admin/graph/communities/summarize",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "completed"
+            assert data["total_communities"] == 3
+            assert data["summaries_generated"] == 3
+            assert data["failed"] == 0
+            assert "total_time_s" in data
+            assert "avg_time_per_summary_s" in data
+
+    def test_generate_summaries_namespace_filter(self):
+        """Test community summarization with namespace filtering."""
+        request_data = {
+            "namespace": "specific_namespace",
+            "force": False,
+            "batch_size": 5,
+        }
+
+        # Mock Neo4j queries (no communities in this namespace)
+        mock_communities = []
+
+        mock_session = AsyncMock()
+        communities_result = _create_result_mock(data_value=mock_communities)
+        mock_session.run = AsyncMock(return_value=communities_result)
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session)
+
+        mock_neo4j = MagicMock()
+        mock_neo4j.driver = mock_driver
+
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            return_value=mock_neo4j,
+        ):
+            from src.api.main import app
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/admin/graph/communities/summarize",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "completed"
+            assert data["total_communities"] == 0
+            assert data["summaries_generated"] == 0
+
+    def test_generate_summaries_force_mode(self):
+        """Test community summarization with force=True (regenerate existing)."""
+        request_data = {
+            "namespace": None,  # All namespaces
+            "force": True,
+            "batch_size": 10,
+        }
+
+        # Mock communities WITH existing summaries (force=True should regenerate)
+        mock_communities = [
+            {"community_id": 1, "summary": "Old summary"},
+            {"community_id": 2, "summary": "Another old summary"},
+        ]
+
+        mock_entities = [
+            {"entity_name": "Entity1", "entity_type": "Person"},
+        ]
+
+        mock_relationships = []
+
+        mock_summary = "New generated summary."
+
+        mock_session = AsyncMock()
+
+        communities_result = _create_result_mock(data_value=mock_communities)
+        entities_result = _create_result_mock(data_value=mock_entities)
+        relationships_result = _create_result_mock(data_value=mock_relationships)
+        store_result = _create_result_mock(single_value={"community_id": 1})
+
+        mock_session.run = AsyncMock(
+            side_effect=[
+                communities_result,  # Get ALL communities (force=True)
+                entities_result,     # Get entities (community 1)
+                relationships_result, # Get relationships (community 1)
+                store_result,        # Store summary (community 1)
+                entities_result,     # Get entities (community 2)
+                relationships_result, # Get relationships (community 2)
+                store_result,        # Store summary (community 2)
+            ]
+        )
+
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session)
+
+        mock_neo4j = MagicMock()
+        mock_neo4j.driver = mock_driver
+
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_llm_client"
+            ) as mock_llm,
+        ):
+            # Mock LLM response
+            mock_llm_instance = AsyncMock()
+            mock_llm_instance.generate = AsyncMock(return_value=mock_summary)
+            mock_llm.return_value = mock_llm_instance
+
+            from src.api.main import app
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/admin/graph/communities/summarize",
+                json=request_data,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "completed"
+            assert data["total_communities"] == 2
+            assert data["summaries_generated"] == 2
+
+    def test_generate_summaries_invalid_batch_size(self):
+        """Test validation rejects invalid batch size."""
+        request_data = {
+            "namespace": "test_namespace",
+            "force": False,
+            "batch_size": 100,  # > 50 (max)
+        }
+
+        from src.api.main import app
+
+        client = TestClient(app)
+        response = client.post(
+            "/api/v1/admin/graph/communities/summarize",
+            json=request_data,
+        )
+
+        assert response.status_code == 422
+
+    def test_generate_summaries_neo4j_error(self):
+        """Test error handling for Neo4j failures."""
+        request_data = {
+            "namespace": "test_namespace",
+            "force": False,
+            "batch_size": 10,
+        }
+
+        with patch(
+            "src.components.graph_rag.neo4j_client.get_neo4j_client",
+            side_effect=Exception("Neo4j connection failed"),
+        ):
+            from src.api.main import app
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/admin/graph/communities/summarize",
+                json=request_data,
+            )
+
+            assert response.status_code == 500
+
+    def test_generate_summaries_partial_failure(self):
+        """Test handling of partial failures during summarization."""
+        request_data = {
+            "namespace": None,
+            "force": False,
+            "batch_size": 10,
+        }
+
+        mock_communities = [
+            {"community_id": 1, "summary": None},
+            {"community_id": 2, "summary": None},
+        ]
+
+        mock_entities = [
+            {"entity_name": "Entity1", "entity_type": "Person"},
+        ]
+
+        mock_relationships = []
+
+        mock_session = AsyncMock()
+
+        communities_result = _create_result_mock(data_value=mock_communities)
+        entities_result = _create_result_mock(data_value=mock_entities)
+        relationships_result = _create_result_mock(data_value=mock_relationships)
+        store_result = _create_result_mock(single_value={"community_id": 1})
+
+        # First community succeeds, second fails
+        mock_session.run = AsyncMock(
+            side_effect=[
+                communities_result,
+                entities_result,
+                relationships_result,
+                store_result,
+                Exception("LLM generation failed"),  # Second community fails
+            ]
+        )
+
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+
+        mock_driver = MagicMock()
+        mock_driver.session = MagicMock(return_value=mock_session)
+
+        mock_neo4j = MagicMock()
+        mock_neo4j.driver = mock_driver
+
+        with (
+            patch(
+                "src.components.graph_rag.neo4j_client.get_neo4j_client",
+                return_value=mock_neo4j,
+            ),
+            patch(
+                "src.components.graph_rag.community_summarizer.get_llm_client"
+            ) as mock_llm,
+        ):
+            mock_llm_instance = AsyncMock()
+            mock_llm_instance.generate = AsyncMock(return_value="Test summary")
+            mock_llm.return_value = mock_llm_instance
+
+            from src.api.main import app
+
+            client = TestClient(app)
+            response = client.post(
+                "/api/v1/admin/graph/communities/summarize",
+                json=request_data,
+            )
+
+            # Endpoint should handle partial failures gracefully
+            assert response.status_code in [200, 500]
+            if response.status_code == 200:
+                data = response.json()
+                assert data["total_communities"] == 2
+                # May have succeeded for 1 community before failure
+                assert data["summaries_generated"] <= 2

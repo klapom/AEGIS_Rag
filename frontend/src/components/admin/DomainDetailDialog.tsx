@@ -3,6 +3,7 @@
  * Sprint 51 Feature: Domain View Dialog
  * Sprint 51 Feature 51.4: Domain deletion from detail dialog
  * Sprint 52 Feature 52.2.2: Domain Management Enhancement
+ * Sprint 77 Feature 77.5: Connectivity Metrics Display (TD-095)
  *
  * Shows domain details, statistics, health status, and bulk operations in a modal dialog
  */
@@ -18,6 +19,7 @@ import {
   type Domain,
   type ValidateDomainResponse,
 } from '../../hooks/useDomainTraining';
+import { ConnectivityMetrics } from './ConnectivityMetrics';
 
 interface DomainDetailDialogProps {
   domain: Domain | null;
@@ -270,6 +272,15 @@ export function DomainDetailDialog({ domain, isOpen, onClose, onDeleted }: Domai
               </div>
             )}
           </section>
+
+          {/* Connectivity Metrics Section (Sprint 77 Feature 77.5 - TD-095) */}
+          {domainStats && domainStats.chunks > 0 && (
+            <ConnectivityMetrics
+              namespaceId={domain.name}
+              domainType="factual"
+              enabled={isOpen}
+            />
+          )}
 
           {/* Bulk Operations Section (Sprint 52.2.2) */}
           <section data-testid="bulk-operations-section">

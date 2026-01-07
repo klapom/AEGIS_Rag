@@ -2186,3 +2186,183 @@ async def validate_domain(domain_name: str) -> ValidateDomainResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Domain validation failed",
         ) from e
+
+
+# ============================================================================
+# Connectivity Evaluation (Sprint 77 Feature 77.5 - TD-095)
+# ============================================================================
+
+
+class ConnectivityEvaluationRequest(BaseModel):
+    """Request for entity connectivity evaluation.
+
+    Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric
+    """
+
+    namespace_id: str = Field(..., description="Namespace to evaluate")
+    domain_type: str = Field(
+        default="factual",
+        description="Domain type for benchmark (factual, narrative, technical, academic)",
+        pattern="^(factual|narrative|technical|academic)$",
+    )
+
+
+class ConnectivityEvaluationResponse(BaseModel):
+    """Response with connectivity metrics and benchmark comparison.
+
+    Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric
+    """
+
+    namespace_id: str = Field(..., description="Namespace identifier")
+    domain_type: str = Field(..., description="Domain type used for benchmark")
+    total_entities: int = Field(..., description="Total entities in namespace")
+    total_relationships: int = Field(..., description="Total relationships")
+    total_communities: int = Field(..., description="Total communities")
+    relations_per_entity: float = Field(..., description="Relations per entity ratio")
+    entities_per_community: float = Field(..., description="Entities per community ratio")
+    benchmark_min: float = Field(..., description="Benchmark minimum")
+    benchmark_max: float = Field(..., description="Benchmark maximum")
+    within_benchmark: bool = Field(..., description="Whether within expected range")
+    benchmark_status: str = Field(..., description="Status: below, within, above")
+    recommendations: list[str] = Field(..., description="Actionable recommendations")
+
+
+@router.post(
+    "/connectivity/evaluate",
+    response_model=ConnectivityEvaluationResponse,
+    summary="Evaluate entity connectivity metrics",
+    description="Evaluate entity connectivity for a namespace against domain-specific benchmarks. "
+    "Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric",
+)
+async def evaluate_domain_connectivity(
+    request: ConnectivityEvaluationRequest,
+) -> ConnectivityEvaluationResponse:
+    """Evaluate entity connectivity metrics for a namespace.
+
+    **Sprint 77 Feature 77.5 (TD-095): Entity Connectivity as Domain Training Metric**
+
+    This endpoint evaluates knowledge graph connectivity and compares it to
+    domain-specific benchmarks. Different domains have different expected
+    connectivity patterns:
+
+    **Domain Types:**
+    - **Factual** (HotpotQA, Wikipedia): Sparse, atomic facts (0.3-0.8 relations/entity)
+    - **Narrative** (Stories, articles): Dense, narrative-driven (1.5-3.0 relations/entity)
+    - **Technical** (Documentation, manuals): Hierarchical (2.0-4.0 relations/entity)
+    - **Academic** (Research papers): Citation-heavy (2.5-5.0 relations/entity)
+
+    **Metrics Returned:**
+    - Total entities, relationships, communities
+    - Relations per entity ratio (key metric)
+    - Entities per community ratio
+    - Benchmark comparison (min/max range)
+    - Status (below, within, above benchmark)
+    - Actionable recommendations for improving connectivity
+
+    **Use Cases:**
+    - Domain Training UI: Display connectivity with benchmark indicators
+    - DSPy Optimization: Use as quality metric for prompt optimization
+    - Graph Health Monitoring: Track connectivity trends over time
+
+    Args:
+        request: ConnectivityEvaluationRequest with namespace_id and domain_type
+
+    Returns:
+        ConnectivityEvaluationResponse with metrics, benchmark comparison, recommendations
+
+    Raises:
+        HTTPException: If Neo4j connection fails or namespace not found
+
+    Example:
+        ```bash
+        curl -X POST http://localhost:8000/api/v1/admin/domains/connectivity/evaluate \\
+             -H "Content-Type: application/json" \\
+             -d '{"namespace_id": "hotpotqa_large", "domain_type": "factual"}'
+        ```
+
+        Response:
+        ```json
+        {
+          "namespace_id": "hotpotqa_large",
+          "domain_type": "factual",
+          "total_entities": 146,
+          "total_relationships": 65,
+          "total_communities": 92,
+          "relations_per_entity": 0.45,
+          "entities_per_community": 1.59,
+          "benchmark_min": 0.3,
+          "benchmark_max": 0.8,
+          "within_benchmark": true,
+          "benchmark_status": "within",
+          "recommendations": [
+            "✅ Entity connectivity within benchmark (0.45 in [0.3, 0.8])",
+            "Graph quality is appropriate for factual domain",
+            "Continue monitoring connectivity as more documents are ingested"
+          ]
+        }
+        ```
+    """
+    try:
+        from src.components.domain_training.domain_metrics import (
+            DomainType,
+            evaluate_connectivity,
+        )
+
+        logger.info(
+            "connectivity_evaluation_requested",
+            namespace_id=request.namespace_id,
+            domain_type=request.domain_type,
+        )
+
+        # Validate domain_type (should be caught by Pydantic but double-check)
+        if request.domain_type not in ["factual", "narrative", "technical", "academic"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid domain_type: {request.domain_type}. "
+                f"Must be one of: factual, narrative, technical, academic",
+            )
+
+        # Evaluate connectivity
+        metrics = await evaluate_connectivity(
+            namespace_id=request.namespace_id,
+            domain_type=request.domain_type,  # type: ignore[arg-type]
+        )
+
+        logger.info(
+            "connectivity_evaluation_complete",
+            namespace_id=request.namespace_id,
+            relations_per_entity=round(metrics.relations_per_entity, 2),
+            benchmark_status=metrics.benchmark_status,
+            within_benchmark=metrics.within_benchmark,
+        )
+
+        return ConnectivityEvaluationResponse(
+            namespace_id=metrics.namespace_id,
+            domain_type=metrics.domain_type,
+            total_entities=metrics.total_entities,
+            total_relationships=metrics.total_relationships,
+            total_communities=metrics.total_communities,
+            relations_per_entity=metrics.relations_per_entity,
+            entities_per_community=metrics.entities_per_community,
+            benchmark_min=metrics.benchmark_min,
+            benchmark_max=metrics.benchmark_max,
+            within_benchmark=metrics.within_benchmark,
+            benchmark_status=metrics.benchmark_status,
+            recommendations=metrics.recommendations,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(
+            "connectivity_evaluation_failed",
+            namespace_id=request.namespace_id,
+            domain_type=request.domain_type,
+            error=str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to evaluate connectivity: {str(e)}",
+        ) from e
