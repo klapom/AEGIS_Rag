@@ -683,6 +683,10 @@ class HybridSearch:
                         "section_headings": (
                             point.payload.get("section_headings", []) if point.payload else []
                         ),
+                        # Sprint 77 Feature 77.1 (TD-090): Include namespace for multi-tenant filtering
+                        "namespace": (
+                            str(point.payload.get("namespace", "unknown")) if point.payload else "unknown"
+                        ),
                     }
                     documents.append(doc)
 
