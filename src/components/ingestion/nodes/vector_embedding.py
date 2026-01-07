@@ -15,6 +15,7 @@ import time
 import uuid
 
 import structlog
+from qdrant_client import models
 from qdrant_client.models import PointStruct
 
 from src.components.ingestion.ingestion_state import (
@@ -288,6 +289,44 @@ async def embedding_node(state: IngestionState) -> IngestionState:
             batch_size=100,
             collection=collection_name,
         )
+
+        # Sprint 77 Feature 77.3 (TD-093): Trigger Qdrant index optimization
+        # User request: "Nach jedem Ingestion sollten QDRANT Indexed Vectors upgedatet werden"
+        if settings.qdrant_optimize_after_ingestion:
+            try:
+                logger.info(
+                    "triggering_qdrant_index_optimization",
+                    collection=collection_name,
+                    indexing_threshold=settings.qdrant_indexing_threshold,
+                )
+
+                optimize_start = time.perf_counter()
+
+                # Update collection to force immediate indexing
+                await qdrant.async_client.update_collection(
+                    collection_name=collection_name,
+                    optimizer_config=models.OptimizersConfigDiff(
+                        indexing_threshold=settings.qdrant_indexing_threshold
+                    ),
+                )
+
+                optimize_end = time.perf_counter()
+                optimize_ms = (optimize_end - optimize_start) * 1000
+
+                logger.info(
+                    "qdrant_index_optimization_triggered",
+                    collection=collection_name,
+                    duration_ms=round(optimize_ms, 2),
+                    indexing_threshold=settings.qdrant_indexing_threshold,
+                )
+
+            except Exception as e:
+                # Log but don't fail ingestion if optimization fails
+                logger.warning(
+                    "qdrant_index_optimization_failed",
+                    collection=collection_name,
+                    error=str(e),
+                )
 
         # Store point IDs
         state["embedded_chunk_ids"] = chunk_ids

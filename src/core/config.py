@@ -307,6 +307,16 @@ class Settings(BaseSettings):
     qdrant_collection: str = Field(default="documents_v1", description="Qdrant collection name")
     qdrant_use_grpc: bool = Field(default=False, description="Use gRPC for Qdrant")
 
+    # Sprint 77 Feature 77.3 (TD-093): Qdrant Index Optimization
+    qdrant_optimize_after_ingestion: bool = Field(
+        default=True,
+        description="Trigger Qdrant index rebuild after ingestion (Sprint 77 TD-093)",
+    )
+    qdrant_indexing_threshold: int = Field(
+        default=0,
+        description="HNSW indexing threshold (0=immediate, 20000=default). User request: index after every ingestion",
+    )
+
     # Document Ingestion Security
     documents_base_path: str = Field(
         default="./data", description="Base directory for document ingestion (security boundary)"
@@ -328,8 +338,8 @@ class Settings(BaseSettings):
         description="Enable reranking after RRF fusion",
     )
     reranker_backend: str = Field(
-        default="ollama",
-        description="Reranking backend: 'ollama' (TD-059, no sentence-transformers) or 'sentence-transformers' (legacy)",
+        default="sentence-transformers",
+        description="Reranking backend: 'sentence-transformers' (BGE-Reranker-v2-m3, Sprint 76) or 'ollama' (TD-059, requires qllama/bge-reranker-v2-m3 model)",
     )
     reranker_ollama_model: str = Field(
         default="qllama/bge-reranker-v2-m3:q8_0",
