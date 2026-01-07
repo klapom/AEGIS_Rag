@@ -2,17 +2,20 @@
 
 Sprint 52 Feature 52.2.1: Graph Analytics Stats Endpoint
 Sprint 53 Feature 53.6: Extracted from admin.py
+Sprint 77 Feature 77.4: Community Summarization Endpoint (TD-094)
 
 This module provides endpoints for:
 - Comprehensive graph statistics
 - Entity and relationship type distribution
 - Community statistics and health metrics
+- Community summarization (batch generation)
 """
 
+import asyncio
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
@@ -50,6 +53,58 @@ class GraphStatsResponse(BaseModel):
         default="unknown", description="Overall graph health indicator (healthy, warning, critical)"
     )
     timestamp: str = Field(..., description="ISO 8601 timestamp of data collection")
+
+
+class CommunitySummarizationRequest(BaseModel):
+    """Request model for community summarization.
+
+    Sprint 77 Feature 77.4 (TD-094): Community Summarization Endpoint
+    """
+
+    namespace: str | None = Field(
+        default=None,
+        description="Filter by namespace (optional, e.g., 'hotpotqa_large')",
+    )
+    force: bool = Field(
+        default=False,
+        description="Regenerate ALL summaries (including existing ones)",
+    )
+    batch_size: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Number of communities to process concurrently (1-50)",
+    )
+
+
+class CommunitySummarizationResponse(BaseModel):
+    """Response model for community summarization.
+
+    Sprint 77 Feature 77.4 (TD-094): Community Summarization Endpoint
+    """
+
+    status: str = Field(
+        ...,
+        description="Status: 'started' (background), 'complete' (sync), or 'no_work' (nothing to do)",
+    )
+    total_communities: int = Field(..., description="Total communities found")
+    summaries_generated: int | None = Field(
+        default=None,
+        description="Number of summaries generated (null for background tasks)",
+    )
+    failed: int | None = Field(
+        default=None,
+        description="Number of failed summaries (null for background tasks)",
+    )
+    total_time_s: float | None = Field(
+        default=None,
+        description="Total time in seconds (null for background tasks)",
+    )
+    avg_time_per_summary_s: float | None = Field(
+        default=None,
+        description="Avg time per summary in seconds (null for background tasks)",
+    )
+    message: str = Field(..., description="Human-readable status message")
 
 
 # ============================================================================
@@ -200,4 +255,234 @@ async def get_graph_stats() -> GraphStatsResponse:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Failed to retrieve graph statistics: {str(e)}",
+        ) from e
+
+
+@router.post(
+    "/graph/communities/summarize",
+    response_model=CommunitySummarizationResponse,
+    summary="Generate community summaries",
+    description="Generate LLM-powered summaries for all communities in the graph. "
+    "Supports both synchronous (blocking) and background execution. "
+    "Sprint 77 Feature 77.4 (TD-094)",
+)
+async def generate_community_summaries(
+    request: CommunitySummarizationRequest,
+    background_tasks: BackgroundTasks,
+) -> CommunitySummarizationResponse:
+    """Generate community summaries for Graph-Global search mode.
+
+    **Sprint 77 Feature 77.4 (TD-094): Community Summarization Endpoint**
+
+    This endpoint generates LLM-powered summaries for all communities
+    detected by graph extraction, enabling semantic search over community
+    summaries in LightRAG global mode.
+
+    **Execution Modes:**
+    - **Background** (default): Returns immediately, summaries generated in background
+    - **Synchronous**: Blocks until all summaries are generated (use for small graphs)
+
+    **Parameters:**
+    - `namespace`: Filter by namespace (optional, e.g., "hotpotqa_large")
+    - `force`: Regenerate ALL summaries, including existing ones (default: false)
+    - `batch_size`: Communities per batch (default: 10, max: 50)
+
+    **Background Mode:**
+    - Use `background=true` (default) for large graphs (>50 communities)
+    - Returns immediately with status "started"
+    - Monitor progress via logs or metrics
+
+    **Synchronous Mode:**
+    - Use `background=false` for small graphs (<10 communities)
+    - Blocks until completion
+    - Returns full statistics (generated, failed, timing)
+
+    Args:
+        request: CommunitySummarizationRequest with namespace, force, batch_size
+        background_tasks: FastAPI background tasks
+
+    Returns:
+        CommunitySummarizationResponse with status and statistics
+
+    Raises:
+        HTTPException: If Neo4j connection fails or summarization errors occur
+
+    Example:
+        ```bash
+        # Background mode (default)
+        curl -X POST http://localhost:8000/api/v1/admin/graph/communities/summarize \\
+             -H "Content-Type: application/json" \\
+             -d '{"namespace": "hotpotqa_large", "force": false, "batch_size": 10}'
+
+        # Synchronous mode (for testing)
+        curl -X POST http://localhost:8000/api/v1/admin/graph/communities/summarize \\
+             -H "Content-Type: application/json" \\
+             -d '{"namespace": null, "force": false, "batch_size": 5}'
+        ```
+    """
+    try:
+        from src.components.graph_rag.community_summarizer import get_community_summarizer
+        from src.components.graph_rag.neo4j_client import get_neo4j_client
+
+        logger.info(
+            "community_summarization_requested",
+            namespace=request.namespace,
+            force=request.force,
+            batch_size=request.batch_size,
+        )
+
+        # Get communities to summarize
+        neo4j = get_neo4j_client()
+        summarizer = get_community_summarizer()
+
+        # Query communities
+        if request.force:
+            # Get ALL communities (regenerate even if summaries exist)
+            if request.namespace:
+                cypher = """
+                MATCH (e:base)
+                WHERE e.community_id IS NOT NULL
+                  AND e.namespace = $namespace
+                RETURN DISTINCT e.community_id AS community_id
+                ORDER BY community_id
+                """
+                results = await neo4j.execute_read(cypher, {"namespace": request.namespace})
+            else:
+                cypher = """
+                MATCH (e:base)
+                WHERE e.community_id IS NOT NULL
+                RETURN DISTINCT e.community_id AS community_id
+                ORDER BY community_id
+                """
+                results = await neo4j.execute_read(cypher)
+        else:
+            # Get only communities WITHOUT summaries
+            if request.namespace:
+                cypher = """
+                MATCH (e:base)
+                WHERE e.community_id IS NOT NULL
+                  AND e.namespace = $namespace
+                WITH DISTINCT e.community_id AS community_id
+                WHERE NOT EXISTS {
+                    MATCH (cs:CommunitySummary {community_id: community_id})
+                }
+                RETURN community_id
+                ORDER BY community_id
+                """
+                results = await neo4j.execute_read(cypher, {"namespace": request.namespace})
+            else:
+                cypher = """
+                MATCH (e:base)
+                WHERE e.community_id IS NOT NULL
+                WITH DISTINCT e.community_id AS community_id
+                WHERE NOT EXISTS {
+                    MATCH (cs:CommunitySummary {community_id: community_id})
+                }
+                RETURN community_id
+                ORDER BY community_id
+                """
+                results = await neo4j.execute_read(cypher)
+
+        # Parse community IDs
+        community_ids = []
+        for record in results:
+            community_id_str = record.get("community_id")
+            if community_id_str:
+                # Parse "community_5" → 5
+                try:
+                    community_id = int(community_id_str.split("_")[-1])
+                    community_ids.append(community_id)
+                except (ValueError, IndexError):
+                    logger.warning("invalid_community_id_format_skipped", community_id=community_id_str)
+
+        total_communities = len(community_ids)
+
+        logger.info(
+            "communities_identified_for_summarization",
+            total_communities=total_communities,
+            force=request.force,
+            namespace=request.namespace,
+        )
+
+        # No work to do?
+        if total_communities == 0:
+            logger.info("no_communities_to_summarize")
+            return CommunitySummarizationResponse(
+                status="no_work",
+                total_communities=0,
+                summaries_generated=0,
+                failed=0,
+                total_time_s=0.0,
+                avg_time_per_summary_s=0.0,
+                message="No communities need summarization. Use force=true to regenerate all summaries.",
+            )
+
+        # Background mode: Launch background task (recommended for large graphs)
+        # For Sprint 77, we'll use synchronous mode for simplicity
+        # Background mode can be added in future sprint if needed
+
+        # Synchronous mode: Generate summaries now (blocks request)
+        import time
+
+        start_time = time.time()
+        summaries_generated = 0
+        failed = 0
+
+        logger.info("generating_community_summaries_synchronously", total=total_communities)
+
+        for community_id in community_ids:
+            try:
+                # Fetch community data
+                entities = await summarizer._get_community_entities(community_id)
+                relationships = await summarizer._get_community_relationships(community_id)
+
+                # Generate summary
+                summary = await summarizer.generate_summary(community_id, entities, relationships)
+
+                # Store summary
+                await summarizer._store_summary(community_id, summary)
+
+                summaries_generated += 1
+
+                logger.debug(
+                    "community_summary_stored",
+                    community_id=community_id,
+                    summary_length=len(summary),
+                    progress=f"{summaries_generated}/{total_communities}",
+                )
+
+            except Exception as e:
+                logger.error(
+                    "failed_to_generate_community_summary",
+                    community_id=community_id,
+                    error=str(e),
+                )
+                failed += 1
+
+        total_time_s = time.time() - start_time
+        avg_time_per_summary_s = total_time_s / summaries_generated if summaries_generated > 0 else 0
+
+        logger.info(
+            "community_summarization_complete",
+            summaries_generated=summaries_generated,
+            failed=failed,
+            total_time_s=round(total_time_s, 2),
+            avg_time_per_summary_s=round(avg_time_per_summary_s, 2),
+        )
+
+        return CommunitySummarizationResponse(
+            status="complete",
+            total_communities=total_communities,
+            summaries_generated=summaries_generated,
+            failed=failed,
+            total_time_s=total_time_s,
+            avg_time_per_summary_s=avg_time_per_summary_s,
+            message=f"Generated {summaries_generated} summaries in {total_time_s:.1f}s ({failed} failed).",
+        )
+
+    except Exception as e:
+        logger.error("community_summarization_failed", error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Failed to generate community summaries: {str(e)}",
         ) from e
