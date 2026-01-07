@@ -628,15 +628,247 @@ class DoclingClient:
             reason=f"Docling container health check timeout after {elapsed:.1f}s ({attempts} attempts)",
         )
 
+    async def parse_text_file(self, file_path: Path) -> DoclingParsedDocument:
+        """Parse plain text file using Docling convert_source() with Markdown format.
+
+        Sprint 76 Feature (TD-089): Handle .txt files via convert_source API.
+
+        Workflow:
+            1. Read .txt file content
+            2. POST /v1/convert/source/async with format=markdown
+            3. Parse response as DoclingParsedDocument
+
+        Args:
+            file_path: Path to .txt document file
+
+        Returns:
+            DoclingParsedDocument with text content
+
+        Raises:
+            IngestionError: If parsing fails or file not found
+            FileNotFoundError: If file does not exist
+
+        Example:
+            >>> parsed = await client.parse_text_file(Path("document.txt"))
+            >>> print(f"Text length: {len(parsed.text)}")
+
+        Note:
+            Uses InputFormat.MD (Markdown) which handles plain text gracefully.
+            This avoids PDF conversion overhead and leverages Docling's
+            GPU-accelerated pipeline for consistent processing.
+        """
+        if not file_path.exists():
+            raise FileNotFoundError(f"Document not found: {file_path}")
+
+        if not self._container_running:
+            logger.warning(
+                "docling_parse_txt_without_start",
+                file_path=str(file_path),
+                message="Container not explicitly started, health may be unknown",
+            )
+
+        file_size_bytes = file_path.stat().st_size
+        logger.info(
+            "TIMING_docling_txt_parse_start",
+            stage="docling_txt",
+            file_path=str(file_path),
+            file_size_bytes=file_size_bytes,
+        )
+
+        client = await self._ensure_client()
+        start_time = time.perf_counter()
+
+        try:
+            # Step 1: Read text content
+            content = file_path.read_text(encoding="utf-8", errors="replace")
+
+            # Step 2: Submit to convert_source API (base64-encoded content)
+            upload_start = time.perf_counter()
+
+            # Encode content as base64
+            content_bytes = content.encode("utf-8")
+            base64_content = base64.b64encode(content_bytes).decode("ascii")
+
+            data = {
+                "sources": [
+                    {
+                        "kind": "file",
+                        "base64_string": base64_content,
+                        "filename": f"{file_path.stem}.md",  # Treat as markdown
+                    }
+                ],
+                "options": {
+                    "from_formats": ["md"],
+                    "to_formats": ["md", "json"],
+                    "image_export_mode": "embedded",
+                    "include_images": True,
+                },
+            }
+
+            response = await client.post(
+                f"{self.base_url}/v1/convert/source/async",
+                json=data,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+
+            upload_end = time.perf_counter()
+            upload_duration_ms = (upload_end - upload_start) * 1000
+
+            task_data = response.json()
+            task_id = task_data.get("task_id")
+            if not task_id:
+                raise IngestionError(str(file_path), f"No task_id in response: {task_data}")
+
+            logger.info(
+                "TIMING_docling_txt_submitted",
+                stage="docling_txt",
+                substage="string_upload",
+                duration_ms=round(upload_duration_ms, 2),
+                task_id=task_id,
+                file_path=str(file_path),
+            )
+
+            # Step 3: Poll for completion (same as parse_document)
+            polling_start = time.perf_counter()
+            poll_interval = 2.0
+            max_polls = int(self.timeout_seconds / poll_interval)
+
+            for attempt in range(max_polls):
+                await asyncio.sleep(poll_interval)
+
+                status_response = await client.get(
+                    f"{self.base_url}/v1/status/poll/{task_id}",
+                    timeout=30.0,
+                )
+                status_response.raise_for_status()
+                status_data = status_response.json()
+                task_status = status_data.get("task_status")
+
+                if task_status == "success":
+                    polling_end = time.perf_counter()
+                    polling_duration_ms = (polling_end - polling_start) * 1000
+                    logger.info(
+                        "TIMING_docling_txt_task_completed",
+                        stage="docling_txt",
+                        substage="task_polling",
+                        duration_ms=round(polling_duration_ms, 2),
+                        task_id=task_id,
+                        poll_attempts=attempt + 1,
+                    )
+                    break
+                elif task_status == "failure":
+                    raise IngestionError(str(file_path), f"Docling task failed: {status_data}")
+                elif task_status in ("pending", "processing", "started"):
+                    continue
+                else:
+                    raise IngestionError(str(file_path), f"Unknown task status: {task_status}")
+
+            else:
+                elapsed = time.perf_counter() - start_time
+                raise IngestionError(
+                    str(file_path),
+                    f"Docling task timeout after {elapsed:.1f}s (task_id: {task_id}, file: {file_path.name})",
+                )
+
+            # Step 4: Fetch result
+            result_download_start = time.perf_counter()
+            result_response = await client.get(
+                f"{self.base_url}/v1/result/{task_id}",
+                timeout=30.0,
+            )
+            result_response.raise_for_status()
+            result_data = result_response.json()
+            result_download_end = time.perf_counter()
+            result_download_ms = (result_download_end - result_download_start) * 1000
+
+            logger.info(
+                "TIMING_docling_txt_result_downloaded",
+                stage="docling_txt",
+                substage="result_download",
+                duration_ms=round(result_download_ms, 2),
+                task_id=task_id,
+            )
+
+            parse_time = (time.perf_counter() - start_time) * 1000
+
+            # Extract document content
+            document = result_data.get("document", {})
+            text = document.get("md_content", "") or document.get("text_content", "")
+            json_content = document.get("json_content", {})
+            md_content = document.get("md_content", "")
+
+            # Create DoclingParsedDocument (minimal for .txt files)
+            parsed = DoclingParsedDocument(
+                text=text,
+                metadata={
+                    "filename": file_path.name,
+                    "format": "text",
+                    "parser": "docling_txt",
+                },
+                tables=[],
+                images=[],
+                layout={},
+                parse_time_ms=parse_time,
+                json_content=json_content,
+                md_content=md_content,
+            )
+
+            logger.info(
+                "TIMING_docling_txt_parse_complete",
+                stage="docling_txt",
+                duration_ms=round(parse_time, 2),
+                file_path=str(file_path),
+                file_size_bytes=file_size_bytes,
+                text_length=len(parsed.text),
+                timing_breakdown={
+                    "string_upload_ms": round(upload_duration_ms, 2),
+                    "task_polling_ms": round(polling_duration_ms, 2),
+                    "result_download_ms": round(result_download_ms, 2),
+                },
+            )
+
+            return parsed
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "docling_txt_parse_http_error",
+                file_path=str(file_path),
+                status_code=e.response.status_code,
+                response_text=e.response.text[:500],
+            )
+            raise IngestionError(
+                str(file_path),
+                f"Docling .txt parse failed (HTTP {e.response.status_code}): {e.response.text[:200]}",
+            ) from e
+        except httpx.TimeoutException as e:
+            elapsed = (time.time() - start_time) * 1000
+            logger.error(
+                "docling_txt_parse_timeout",
+                file_path=str(file_path),
+                elapsed_ms=round(elapsed, 2),
+                timeout_seconds=self.timeout_seconds,
+            )
+            raise IngestionError(
+                str(file_path),
+                f"Docling .txt parse timeout after {elapsed/1000:.1f}s (file: {file_path.name})",
+            ) from e
+        except Exception as e:
+            logger.error(
+                "docling_txt_parse_error", file_path=str(file_path), error=str(e), exc_info=True
+            )
+            raise IngestionError(str(file_path), f"Unexpected error parsing .txt document: {e}") from e
+
     async def parse_document(self, file_path: Path) -> DoclingParsedDocument:
         """Parse a single document via Docling container (async pattern).
 
         Workflow:
             1. Validate file exists and is readable
-            2. POST /v1/convert/file/async → get task_id
-            3. Poll GET /v1/status/poll/{task_id} until success/failure
-            4. GET /v1/result/{task_id} → parse content
-            5. Return DoclingParsedDocument
+            2. Check if .txt → use parse_text_file() instead
+            3. POST /v1/convert/file/async → get task_id
+            4. Poll GET /v1/status/poll/{task_id} until success/failure
+            5. GET /v1/result/{task_id} → parse content
+            6. Return DoclingParsedDocument
 
         Args:
             file_path: Path to document file (PDF, DOCX, PPTX, TXT, etc.)
@@ -656,6 +888,15 @@ class DoclingClient:
         """
         if not file_path.exists():
             raise FileNotFoundError(f"Document not found: {file_path}")
+
+        # Sprint 76: Check if .txt file → use convert_string() API
+        if file_path.suffix.lower() == ".txt":
+            logger.info(
+                "docling_txt_routing",
+                file_path=str(file_path),
+                note="Using convert_string() API for .txt file",
+            )
+            return await self.parse_text_file(file_path)
 
         # Sprint 33: Reject legacy Office formats (not supported by Docling)
         legacy_formats = {".doc", ".xls", ".ppt"}

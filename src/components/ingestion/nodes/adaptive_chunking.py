@@ -677,27 +677,36 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             ),
         )
 
+        # Sprint 76: Replace dynamic type() with Pydantic Chunk model
+        # This fixes the repr() bug where Neo4j stored object representations instead of text
+        from src.core.chunk import Chunk
+
         merged_chunks = []
-        for adaptive_chunk in adaptive_chunks:
-            # Create chunk object compatible with downstream processing
-            chunk_obj = type(
-                "Chunk",
-                (),
-                {
-                    "text": adaptive_chunk.text,
-                    "meta": type(
-                        "Meta",
-                        (),
-                        {
-                            "section_headings": adaptive_chunk.section_headings,
-                            "section_pages": adaptive_chunk.section_pages,
-                            "section_bboxes": adaptive_chunk.section_bboxes,
-                            "primary_section": adaptive_chunk.primary_section,
-                            "token_count": adaptive_chunk.token_count,
-                        },
-                    )(),
-                },
-            )()
+        for idx, adaptive_chunk in enumerate(adaptive_chunks):
+            # Create proper Pydantic Chunk (not dynamic type!)
+            # Generate deterministic chunk_id
+            chunk_id = Chunk.generate_chunk_id(
+                document_id=state["document_id"],
+                chunk_index=idx,
+                content=adaptive_chunk.text,
+            )
+
+            chunk_obj = Chunk(
+                chunk_id=chunk_id,
+                document_id=state["document_id"],
+                chunk_index=idx,
+                content=adaptive_chunk.text,  # Pydantic uses "content" not "text"
+                start_char=0,  # TODO: Calculate from section provenance in future
+                end_char=len(adaptive_chunk.text),
+                token_count=adaptive_chunk.token_count,
+                overlap_tokens=0,  # No overlap in section-aware chunking
+                section_headings=adaptive_chunk.section_headings,
+                section_pages=adaptive_chunk.section_pages,
+                section_bboxes=adaptive_chunk.section_bboxes,
+                primary_section=adaptive_chunk.primary_section,  # Sprint 76: New field
+                metadata=adaptive_chunk.metadata,
+                document_type=state.get("document_type", "unknown"),
+            )
 
             # Collect image_bboxes from chunk's image_annotations (Sprint 64)
             chunk_bboxes = []

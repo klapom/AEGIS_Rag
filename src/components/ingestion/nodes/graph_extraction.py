@@ -101,7 +101,41 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
 
             # Get chunk ID (from embedded_chunk_ids if available)
             chunk_id = embedded_chunk_ids[idx] if idx < len(embedded_chunk_ids) else f"chunk_{idx}"
-            chunk_text = chunk.text if hasattr(chunk, "text") else str(chunk)
+
+            # Sprint 76: All chunks MUST be Pydantic Chunk with .content field
+            # If this fails, there's a bug in chunking_node or document_parsers
+            if hasattr(chunk, "content"):
+                chunk_text = chunk.content
+            elif hasattr(chunk, "text"):
+                # Legacy fallback (should not happen after Sprint 76)
+                chunk_text = chunk.text
+                logger.warning(
+                    "chunk_has_text_not_content",
+                    chunk_id=chunk_id,
+                    chunk_type=type(chunk).__name__,
+                    note="Found .text instead of .content - check chunking_node for legacy code path",
+                )
+            else:
+                # HARD FAILURE: This should NEVER happen
+                # If you see this error, a chunk was created incorrectly somewhere.
+                # Possible sources:
+                # - src/components/ingestion/nodes/adaptive_chunking.py (Docling path)
+                # - src/components/ingestion/nodes/document_parsers.py (legacy path)
+                # - src/core/chunking_service.py (ChunkingService)
+                # FIX: Ensure all chunking code paths create Pydantic Chunk objects
+                logger.error(
+                    "chunk_missing_content_and_text",
+                    chunk_id=chunk_id,
+                    chunk_type=type(chunk).__name__,
+                    chunk_attributes=dir(chunk),
+                    note="CRITICAL: Chunk has neither .content nor .text attribute",
+                )
+                raise ValueError(
+                    f"Chunk {chunk_id} has neither 'content' nor 'text' attribute. "
+                    f"Type: {type(chunk).__name__}. "
+                    f"This indicates a bug in the chunking pipeline. "
+                    f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
+                )
 
             prechunked_docs.append(
                 {

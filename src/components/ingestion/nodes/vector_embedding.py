@@ -92,8 +92,38 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 contextualized_text = chunk.contextualize()
                 texts.append(contextualized_text)
             else:
-                # Fallback for legacy chunks
-                texts.append(chunk.content if hasattr(chunk, "content") else str(chunk))
+                # Sprint 76: All chunks MUST be Pydantic Chunk with .content field
+                # If this fails, there's a bug in chunking_node or document_parsers
+                if hasattr(chunk, "content"):
+                    texts.append(chunk.content)
+                elif hasattr(chunk, "text"):
+                    # Legacy fallback (should not happen after Sprint 76)
+                    texts.append(chunk.text)
+                    logger.warning(
+                        "chunk_has_text_not_content_embedding",
+                        chunk_type=type(chunk).__name__,
+                        note="Found .text instead of .content - check chunking_node for legacy code path",
+                    )
+                else:
+                    # HARD FAILURE: This should NEVER happen
+                    # If you see this error, a chunk was created incorrectly somewhere.
+                    # Possible sources:
+                    # - src/components/ingestion/nodes/adaptive_chunking.py (Docling path)
+                    # - src/components/ingestion/nodes/document_parsers.py (legacy path)
+                    # - src/core/chunking_service.py (ChunkingService)
+                    # FIX: Ensure all chunking code paths create Pydantic Chunk objects
+                    logger.error(
+                        "chunk_missing_content_and_text_embedding",
+                        chunk_type=type(chunk).__name__,
+                        chunk_attributes=dir(chunk),
+                        note="CRITICAL: Chunk has neither .content nor .text attribute",
+                    )
+                    raise ValueError(
+                        f"Chunk has neither 'content' nor 'text' attribute. "
+                        f"Type: {type(chunk).__name__}. "
+                        f"This indicates a bug in the chunking pipeline. "
+                        f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
+                    )
 
         # Generate embeddings
         embedding_gen_start = time.perf_counter()
@@ -146,7 +176,38 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 image_bboxes = []
 
             # Generate deterministic chunk ID (Sprint 30: Use UUID format for Qdrant)
-            chunk_text = chunk.text if hasattr(chunk, "text") else str(chunk)
+            # Sprint 76: All chunks MUST be Pydantic Chunk with .content field
+            if hasattr(chunk, "content"):
+                chunk_text = chunk.content
+            elif hasattr(chunk, "text"):
+                # Legacy fallback (should not happen after Sprint 76)
+                chunk_text = chunk.text
+                logger.warning(
+                    "chunk_id_has_text_not_content",
+                    chunk_type=type(chunk).__name__,
+                    note="Found .text instead of .content - check chunking_node for legacy code path",
+                )
+            else:
+                # HARD FAILURE: This should NEVER happen
+                # If you see this error, a chunk was created incorrectly somewhere.
+                # Possible sources:
+                # - src/components/ingestion/nodes/adaptive_chunking.py (Docling path)
+                # - src/components/ingestion/nodes/document_parsers.py (legacy path)
+                # - src/core/chunking_service.py (ChunkingService)
+                # FIX: Ensure all chunking code paths create Pydantic Chunk objects
+                logger.error(
+                    "chunk_id_missing_content_and_text",
+                    chunk_type=type(chunk).__name__,
+                    chunk_attributes=dir(chunk),
+                    note="CRITICAL: Chunk has neither .content nor .text attribute",
+                )
+                raise ValueError(
+                    f"Chunk has neither 'content' nor 'text' attribute for ID generation. "
+                    f"Type: {type(chunk).__name__}. "
+                    f"This indicates a bug in the chunking pipeline. "
+                    f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
+                )
+
             chunk_name = f"{state['document_id']}_chunk_{hashlib.sha256(chunk_text.encode()).hexdigest()[:8]}"
             # Convert to UUID using uuid5 (deterministic, namespace-based)
             chunk_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_name))

@@ -127,6 +127,10 @@ class Chunk(BaseModel):
         default_factory=list,
         description="Bounding boxes for each section",
     )
+    primary_section: str | None = Field(
+        default=None,
+        description="Primary/dominant section heading in this chunk (for multi-section chunks)",
+    )
 
     # Document type support (Sprint 62 Feature 62.7)
     document_type: str = Field(
