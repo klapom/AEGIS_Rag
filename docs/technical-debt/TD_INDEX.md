@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-07 (Sprint 76 - Namespace & Domain Integration Complete)
+**Last Updated:** 2026-01-07 (Sprint 77 - RAGAS Preparation Complete)
 **Total Open Items:** 10
 **Total Story Points:** ~144 SP
-**Archived Items:** [20 items](archive/ARCHIVE_INDEX.md)
+**Archived Items:** [23 items](archive/ARCHIVE_INDEX.md) (TD-091, TD-094, TD-095 added Sprint 77)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)

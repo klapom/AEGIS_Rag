@@ -1,7 +1,7 @@
 # Technical Debt Archive Index
 
-**Last Updated:** 2025-12-18
-**Total Archived Items:** 12
+**Last Updated:** 2026-01-07 (Sprint 77)
+**Total Archived Items:** 15 (TD-091, TD-094, TD-095 added)
 
 ---
 
@@ -25,6 +25,9 @@ This archive contains resolved, completed, or obsolete Technical Debt items that
 | [TD-061](TD-061_OLLAMA_GPU_DOCKER_CONFIG.md) | Ollama Container GPU Config | RESOLVED | Sprint 42 | 2025-12-10 |
 | [TD-062](TD-062_MULTI_CRITERIA_ENTITY_DEDUPLICATION.md) | Multi-Criteria Entity Deduplication | COMPLETE | Sprint 43 | 2025-12-11 |
 | [TD-063](TD-063_RELATION_DEDUPLICATION.md) | Relation Deduplication (Semantic + NLP) | RESOLVED | Sprint 49 | 2025-12-16 |
+| [TD-091](TD-091_CHUNK_COUNT_MISMATCH.md) | Chunk Count Mismatch (Qdrant vs Neo4j) | RESOLVED | Sprint 77 | 2026-01-07 |
+| [TD-094](TD-094_COMMUNITY_SUMMARIZATION_BATCH_JOB.md) | Community Summarization Batch Job | RESOLVED | Sprint 77 | 2026-01-07 |
+| [TD-095](TD-095_ENTITY_CONNECTIVITY_DOMAIN_METRIC.md) | Entity Connectivity as Domain Training Metric | RESOLVED | Sprint 77 | 2026-01-07 |
 
 ---
 
