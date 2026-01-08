@@ -32,7 +32,7 @@ import httpx
 import structlog
 from openai import AsyncOpenAI  # For Ollama OpenAI-compatible API (async needed for RAGAS)
 from pydantic import BaseModel, Field
-from ragas.embeddings.base import BaseRagasEmbeddings, embedding_factory  # RAGAS 0.4.2 base + factory
+from ragas.embeddings.base import BaseRagasEmbeddings, BaseRagasEmbedding, embedding_factory  # RAGAS 0.4.2 base + factory
 from ragas.llms import llm_factory  # RAGAS 0.4 unified LLM factory
 from sentence_transformers import SentenceTransformer  # For BGE-M3 embeddings
 from ragas.metrics.collections import (  # RAGAS 0.4.2 Collections metrics
@@ -186,6 +186,53 @@ class SimpleBGEM3Embeddings(BaseRagasEmbeddings):
         return embedding[0].tolist()
 
 
+class ModernBGEM3Embeddings(BaseRagasEmbedding):
+    """Modern BGE-M3 embeddings for RAGAS 0.4.2 Collections metrics.
+
+    Sprint 79.8.4: RAGAS 0.4.2 Collections metrics require BaseRagasEmbedding (singular)
+    with embed_text() method, not BaseRagasEmbeddings (plural) with embed_documents().
+
+    This is the "modern" interface that passes _validate_embeddings() checks.
+    """
+
+    def __init__(self):
+        """Initialize BGE-M3 model."""
+        self.model = SentenceTransformer("BAAI/bge-m3")
+
+    def embed_text(self, text: str, **kwargs) -> list[float]:
+        """Embed single text (modern interface, sync).
+
+        RAGAS 0.4.2 Collections metrics call this method.
+        """
+        embedding = self.model.encode([text], normalize_embeddings=True)
+        return embedding[0].tolist()
+
+    async def aembed_text(self, text: str, **kwargs) -> list[float]:
+        """Embed single text (modern interface, async).
+
+        RAGAS 0.4.2 Collections metrics call this method.
+        """
+        # SentenceTransformer is sync, but wrap for async compatibility
+        import asyncio
+        return await asyncio.to_thread(self.embed_text, text, **kwargs)
+
+    def embed_texts(self, texts: list[str], **kwargs) -> list[list[float]]:
+        """Embed multiple texts (modern interface, sync, batch).
+
+        Optional batch method - RAGAS provides default implementation.
+        """
+        embeddings = self.model.encode(texts, normalize_embeddings=True)
+        return embeddings.tolist()
+
+    async def aembed_texts(self, texts: list[str], **kwargs) -> list[list[float]]:
+        """Embed multiple texts (modern interface, async, batch).
+
+        Optional batch method - RAGAS provides default implementation.
+        """
+        import asyncio
+        return await asyncio.to_thread(self.embed_texts, texts, **kwargs)
+
+
 def get_ragas_embeddings():
     """Get embeddings for RAGAS metrics.
 
@@ -197,11 +244,14 @@ def get_ragas_embeddings():
 
     Sprint 79.8.3: Switched to SimpleBGEM3Embeddings (SentenceTransformer) due to Ollama
     NaN-bug with long texts. Direct SentenceTransformer is more robust and matches ingestion.
+
+    Sprint 79.8.4: Switched to ModernBGEM3Embeddings (BaseRagasEmbedding) to pass
+    Collections metrics _validate_embeddings() check. Requires embed_text() interface.
     """
-    # Use SimpleBGEM3Embeddings (SentenceTransformer BAAI/bge-m3)
+    # Use ModernBGEM3Embeddings (SentenceTransformer BAAI/bge-m3 with modern interface)
     # This is the SAME model used in ingestion (ADR-024) - guaranteed 1024-dim
-    # Avoids Ollama NaN bugs with complex queries
-    return SimpleBGEM3Embeddings()
+    # Implements BaseRagasEmbedding (singular) with embed_text() for Collections metrics
+    return ModernBGEM3Embeddings()
 
 
 logger = structlog.get_logger(__name__)
