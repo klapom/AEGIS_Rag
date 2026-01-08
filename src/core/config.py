@@ -576,6 +576,22 @@ class Settings(BaseSettings):
         default=True, description="Enable semantic reranking of graph entities (BGE-M3)"
     )
 
+    # Sprint 80 Feature 80.1: Faithfulness Optimization
+    strict_faithfulness_enabled: bool = Field(
+        default=False,
+        description="Enable strict citation mode requiring citations for EVERY sentence. "
+        "When True, uses FAITHFULNESS_STRICT_PROMPT which forbids general knowledge. "
+        "Designed to maximize RAGAS Faithfulness score (F=0.55→0.85+). Default: False.",
+    )
+
+    # Sprint 80 Feature 80.2: Graph→Vector Fallback
+    graph_vector_fallback_enabled: bool = Field(
+        default=True,
+        description="Enable automatic fallback to vector search when graph search returns "
+        "empty results. Improves Context Recall by ensuring contexts are always retrieved. "
+        "Default: True.",
+    )
+
     # Temporal Graph Features (Sprint 6.4: Bi-Temporal Model)
     graph_temporal_enabled: bool = Field(
         default=True, description="Enable temporal features (bi-temporal model)"
@@ -723,7 +739,15 @@ class Settings(BaseSettings):
     request_timeout: int = Field(default=60, description="Request timeout in seconds")
 
     # Retrieval Configuration
-    retrieval_top_k: int = Field(default=5, description="Number of documents to retrieve")
+    # Sprint 80 Feature 80.4: Increased from 5→10 to improve Context Recall (RAGAS optimization)
+    # SOTA systems use 10-20 contexts. More contexts = higher Context Recall, but diminishing returns.
+    retrieval_top_k: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Number of documents to retrieve. Increased to 10 for better Context Recall "
+        "(RAGAS metric). SOTA systems use 10-20. Higher values improve recall but add latency.",
+    )
     retrieval_score_threshold: float = Field(default=0.7, description="Minimum relevance score")
 
     # Sprint 51: Relevance Threshold for Hybrid Search

@@ -22,6 +22,8 @@ from src.core.config import settings
 from src.prompts.answer_prompts import (
     ANSWER_GENERATION_PROMPT,
     ANSWER_GENERATION_WITH_CITATIONS_PROMPT,
+    FAITHFULNESS_STRICT_PROMPT,
+    FAITHFULNESS_STRICT_PROMPT_EN,
     MULTI_HOP_REASONING_PROMPT,
 )
 
@@ -256,16 +258,21 @@ class AnswerGenerator:
         query: str,
         contexts: list[dict[str, Any]],
         intent: str | None = None,
+        strict_faithfulness: bool = False,
     ) -> tuple[str, dict[int, dict[str, Any]]]:
         """Generate answer with inline source citations.
 
         Sprint 27 Feature 27.10: Inline Source Citations
         Sprint 69 Feature 69.3: Added intent parameter for model selection
+        Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
 
         Args:
             query: User question
             contexts: Retrieved document contexts (list of dicts with 'text', 'source', 'title', 'score', 'metadata')
             intent: Query intent for complexity-based model selection (optional)
+            strict_faithfulness: When True, uses strict citation prompt that requires
+                citations for EVERY sentence (no general knowledge allowed). This mode
+                is designed to maximize RAGAS Faithfulness score. Default: False.
 
         Returns:
             Tuple of (answer_with_citations, citation_map)
@@ -295,8 +302,14 @@ class AnswerGenerator:
         # Format contexts with source IDs for prompt
         context_text = self._format_contexts_with_citations(top_contexts)
 
-        # Build prompt for citation generation
-        prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+        # Sprint 80 Feature 80.1: Select prompt based on strict_faithfulness mode
+        # Strict mode requires citations for EVERY sentence (no general knowledge)
+        if strict_faithfulness:
+            prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "strict_faithfulness"
+        else:
+            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "standard_citations"
 
         # Phase 1 Diagnostic Logging: Log full prompt for debugging
         logger.info(
@@ -306,6 +319,8 @@ class AnswerGenerator:
             query=query,
             contexts_count=len(top_contexts),
             context_text_preview=context_text[:500] if len(context_text) > 500 else context_text,
+            prompt_mode=prompt_mode,
+            strict_faithfulness=strict_faithfulness,
         )
 
         try:
@@ -637,11 +652,13 @@ class AnswerGenerator:
         query: str,
         contexts: list[dict[str, Any]],
         intent: str | None = None,
+        strict_faithfulness: bool = False,
     ):
         """Stream LLM response token-by-token with citation support.
 
         Sprint 52: LLM Answer Streaming with Citations
         Sprint 69 Feature 69.3: Added intent parameter for model selection
+        Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
 
         This method combines citation generation with real-time token streaming.
         It yields tokens as they're generated while maintaining citation mapping.
@@ -650,6 +667,9 @@ class AnswerGenerator:
             query: User question
             contexts: Retrieved document contexts
             intent: Query intent for complexity-based model selection (optional)
+            strict_faithfulness: When True, uses strict citation prompt that requires
+                citations for EVERY sentence (no general knowledge allowed). This mode
+                is designed to maximize RAGAS Faithfulness score. Default: False.
 
         Yields:
             dict: Token events with format:
@@ -678,13 +698,20 @@ class AnswerGenerator:
         # Format contexts with source IDs for prompt
         context_text = self._format_contexts_with_citations(top_contexts)
 
-        # Build prompt for citation generation
-        prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+        # Sprint 80 Feature 80.1: Select prompt based on strict_faithfulness mode
+        if strict_faithfulness:
+            prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "strict_faithfulness"
+        else:
+            prompt = ANSWER_GENERATION_WITH_CITATIONS_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "standard_citations"
 
         logger.debug(
             "generating_answer_with_citations_streaming",
             query=query[:100],
             contexts_count=len(top_contexts),
+            prompt_mode=prompt_mode,
+            strict_faithfulness=strict_faithfulness,
         )
 
         try:

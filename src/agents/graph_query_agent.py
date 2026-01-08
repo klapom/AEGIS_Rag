@@ -532,6 +532,7 @@ async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
     It instantiates the GraphQueryAgent and calls process().
 
     Sprint 48 Feature 48.3: Emits phase events for graph query.
+    Sprint 80 Feature 80.2: Graph→Vector fallback when graph returns empty results.
 
     Args:
         state: Current agent state
@@ -581,11 +582,49 @@ async def graph_query_node(state: dict[str, Any]) -> dict[str, Any]:
         # Add phase event to state
         updated_state["phase_event"] = event
 
+        # Sprint 80 Feature 80.2: Graph→Vector Fallback
+        # If graph search returns empty contexts, fall back to vector search
+        graph_contexts = updated_state.get("retrieved_contexts", [])
+        if len(graph_contexts) == 0 and settings.graph_vector_fallback_enabled:
+            logger.warning(
+                "graph_empty_fallback_to_vector",
+                query=state.get("query", "")[:50],
+                reason="graph_returned_empty_contexts",
+            )
+
+            # Import vector search node (lazy import to avoid circular dependency)
+            from src.agents.vector_search_agent import vector_search_node
+
+            # Run vector search as fallback
+            fallback_state = await vector_search_node(state.copy())
+
+            # Merge fallback results
+            fallback_contexts = fallback_state.get("retrieved_contexts", [])
+            for ctx in fallback_contexts:
+                ctx["search_type"] = "vector_fallback"  # Mark as fallback
+            updated_state["retrieved_contexts"] = fallback_contexts
+
+            # Update metadata to indicate fallback was used
+            if "metadata" not in updated_state:
+                updated_state["metadata"] = {}
+            updated_state["metadata"]["graph_vector_fallback"] = {
+                "triggered": True,
+                "fallback_contexts_count": len(fallback_contexts),
+                "reason": "graph_returned_empty_contexts",
+            }
+
+            logger.info(
+                "graph_vector_fallback_complete",
+                query=state.get("query", "")[:50],
+                fallback_contexts_count=len(fallback_contexts),
+            )
+
         logger.info(
             "graph_query_node_complete",
             query=state.get("query", "")[:50],
             entities_found=event.metadata["entities_found"],
             duration_ms=event.duration_ms,
+            contexts_count=len(updated_state.get("retrieved_contexts", [])),
         )
 
         return updated_state

@@ -3,6 +3,7 @@
 Sprint 11: Feature 11.1 - LLM-Based Answer Generation
 Sprint 52: Simplified German prompts for better Nemotron compatibility
 Sprint 71: Anti-hallucination prompt hardening (TD-080)
+Sprint 80: Feature 80.1 - Strict citation enforcement for Faithfulness optimization
 """
 
 # Sprint 71: Prompt hardening to prevent hallucinations (TD-080)
@@ -57,3 +58,57 @@ ANSWER_GENERATION_WITH_CITATIONS_PROMPT = """Du bist ein hilfreicher KI-Assisten
 **Frage:** {query}
 
 **Antwort:**"""
+
+# Sprint 80 Feature 80.1: STRICT citation enforcement for maximum Faithfulness
+# This prompt is designed specifically to maximize RAGAS Faithfulness score
+# by requiring a citation for EVERY claim made in the answer.
+#
+# Key differences from ANSWER_GENERATION_WITH_CITATIONS_PROMPT:
+# 1. NO general knowledge allowed (all info must be from sources)
+# 2. EVERY sentence must have a citation [X]
+# 3. Explicit instruction to say "not available" if info missing
+# 4. Clear format example showing proper citation usage
+#
+# Expected impact: Faithfulness +50-80% (F=0.550 → 0.825-0.990)
+FAITHFULNESS_STRICT_PROMPT = """Du bist ein präziser KI-Assistent. Deine Antworten basieren AUSSCHLIESSLICH auf den bereitgestellten Quellen.
+
+**KRITISCHE REGELN (STRIKT EINHALTEN!):**
+
+1. **JEDE Aussage MUSS eine Quellenangabe haben** - Schreibe [1], [2], etc. am Ende JEDES Satzes
+2. **KEIN externes Wissen** - Nutze NUR Informationen aus den Quellen, NIEMALS Wissen aus deinem Training
+3. **Fehlende Information** - Wenn eine Information NICHT in den Quellen steht, schreibe: "Diese Information ist nicht in den bereitgestellten Quellen verfügbar."
+4. **Keine Interpretation** - Fasse nur zusammen was explizit in den Quellen steht, füge KEINE eigenen Schlussfolgerungen hinzu
+
+**FORMAT-BEISPIEL:**
+Frage: "Was ist X?"
+✅ KORREKT: "X ist ein System zur Datenverarbeitung [1]. Es wurde 2020 entwickelt [2]. Die Hauptfunktion umfasst drei Bereiche [1, 3]."
+❌ FALSCH: "X ist ein bekanntes System zur Datenverarbeitung, das von Experten geschätzt wird." (keine Quellenangaben!)
+
+**Quellen:**
+{contexts}
+
+**Frage:** {query}
+
+**Antwort (mit Quellenangaben für JEDEN Satz):**"""
+
+# English version of strict prompt for multilingual support
+FAITHFULNESS_STRICT_PROMPT_EN = """You are a precise AI assistant. Your answers are based EXCLUSIVELY on the provided sources.
+
+**CRITICAL RULES (FOLLOW STRICTLY!):**
+
+1. **EVERY claim MUST have a citation** - Write [1], [2], etc. at the end of EVERY sentence
+2. **NO external knowledge** - Use ONLY information from the sources, NEVER knowledge from your training
+3. **Missing information** - If information is NOT in the sources, write: "This information is not available in the provided sources."
+4. **No interpretation** - Only summarize what is explicitly stated in the sources, add NO own conclusions
+
+**FORMAT EXAMPLE:**
+Question: "What is X?"
+✅ CORRECT: "X is a data processing system [1]. It was developed in 2020 [2]. The main function covers three areas [1, 3]."
+❌ WRONG: "X is a well-known data processing system valued by experts." (no citations!)
+
+**Sources:**
+{contexts}
+
+**Question:** {query}
+
+**Answer (with citations for EVERY sentence):**"""

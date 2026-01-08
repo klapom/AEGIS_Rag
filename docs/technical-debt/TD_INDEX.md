@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-07 (Sprint 77 - RAGAS Preparation Complete)
-**Total Open Items:** 10
-**Total Story Points:** ~144 SP
+**Last Updated:** 2026-01-08 (Sprint 80 - RAGAS Faithfulness Optimization)
+**Total Open Items:** 12
+**Total Story Points:** ~152 SP
 **Archived Items:** [23 items](archive/ARCHIVE_INDEX.md) (TD-091, TD-094, TD-095 added Sprint 77)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -22,10 +22,10 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~36 SP       |
-| MEDIUM   | 5     | ~87 SP       |
+| MEDIUM   | 7     | ~95 SP       |
 | LOW      | 2     | ~21 SP       |
 
-**Sprint 76 Resolution:** TD-084 & TD-085 (34 SP) moved to archive ✅
+**Sprint 80:** TD-096 & TD-097 added (8 SP) - Settings UI Integration
 
 ---
 
@@ -75,6 +75,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-096](TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | OPEN | 5 | **Sprint 81** |
+| [TD-097](TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | OPEN | 3 | **Sprint 81** |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | **Sprint 68** |
 | [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 68** |

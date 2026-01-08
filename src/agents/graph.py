@@ -43,6 +43,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     Sprint 51 Feature 51.1: Adds phase events to list for streaming.
     Sprint 52: Real-time phase event emission via LangGraph stream_writer.
     Sprint 52: Token-by-token streaming to chat window.
+    Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization.
     Uses AnswerGenerator to synthesize answers with citation markers [1], [2], etc.
 
     Args:
@@ -52,13 +53,22 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         State with generated answer in messages, citation_map, and phase_event
     """
     from src.agents.answer_generator import get_answer_generator
+    from src.core.config import settings
 
     query = state.get("query", "")
     contexts = state.get("retrieved_contexts", [])
     # Sprint 69 Feature 69.3: Get intent for model selection
     intent = state.get("intent")
+    # Sprint 80 Feature 80.1: Get strict_faithfulness from state or global config
+    strict_faithfulness = state.get("strict_faithfulness", settings.strict_faithfulness_enabled)
 
-    logger.info("llm_answer_node_start", query=query[:100], contexts_count=len(contexts), intent=intent)
+    logger.info(
+        "llm_answer_node_start",
+        query=query[:100],
+        contexts_count=len(contexts),
+        intent=intent,
+        strict_faithfulness=strict_faithfulness,
+    )
 
     # Initialize phase_events list if not present
     if "phase_events" not in state:
@@ -83,10 +93,13 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
 
         # Sprint 52: Stream tokens in real-time to chat window
         # Sprint 69 Feature 69.3: Pass intent for model selection
+        # Sprint 80 Feature 80.1: Pass strict_faithfulness for citation enforcement
         answer = ""
         citation_map = {}
 
-        async for token_event in generator.generate_with_citations_streaming(query, contexts, intent=intent):
+        async for token_event in generator.generate_with_citations_streaming(
+            query, contexts, intent=intent, strict_faithfulness=strict_faithfulness
+        ):
             event_type = token_event.get("event")
 
             if event_type == "citation_map":
