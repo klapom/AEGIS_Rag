@@ -149,7 +149,7 @@ optional = true
 
 [tool.poetry.group.evaluation.dependencies]
 # RAG Evaluation Framework (Sprint 3)
-ragas = "^0.3.7"  # RAG evaluation framework (0.3.7 for better Ollama support)
+ragas = "^0.4.2"  # RAG evaluation framework (0.4.2: Experiment API, Universal LLM Factory, DSPy Optimizer)
 datasets = "^4.0.0"  # HuggingFace datasets for evaluation (~500MB+ !!!)
 
 # ----------------------------------------------------------------------------

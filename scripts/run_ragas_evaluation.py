@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """RAGAS Evaluation Runner for AegisRAG System.
 
-Sprint 76 Feature 76.3: End-to-end RAGAS evaluation with all 4 metrics.
+Sprint 79 Feature 79.8: RAGAS 0.4.2 Upgrade with Experiment API.
 
 This script:
 1. Loads RAGAS dataset (questions, ground_truth, contexts)
@@ -9,6 +9,11 @@ This script:
 3. Collects answers + retrieved contexts
 4. Computes RAGAS metrics (Context Precision, Recall, Faithfulness, Answer Relevancy)
 5. Saves results for comparison
+
+RAGAS 0.4.2 Changes:
+- New @experiment() decorator API (replaces evaluate())
+- llm_factory() requires OpenAI client
+- Metrics from ragas.metrics.collections
 
 Usage:
     poetry run python scripts/run_ragas_evaluation.py --namespace ragas_eval --mode hybrid
@@ -25,17 +30,16 @@ from typing import Any
 
 import httpx
 import structlog
-from datasets import Dataset
-from langchain_community.chat_models import ChatOllama
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from ragas import evaluate
-from ragas.metrics import (
-    answer_relevancy,
-    context_precision,
-    context_recall,
-    faithfulness,
+from openai import AsyncOpenAI  # For Ollama OpenAI-compatible API (async needed for RAGAS)
+from pydantic import BaseModel, Field
+from ragas.embeddings import OpenAIEmbeddings  # RAGAS 0.4.2 modern embeddings
+from ragas.llms import llm_factory  # RAGAS 0.4 unified LLM factory
+from ragas.metrics.collections import (  # RAGAS 0.4.2 Collections metrics
+    AnswerRelevancy,
+    ContextPrecision,
+    ContextRecall,
+    Faithfulness,
 )
-from ragas.run_config import RunConfig
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -48,34 +52,57 @@ def get_ragas_llm():
 
     Uses gpt-oss:20b via Ollama for reliable evaluation.
     Better reasoning capabilities than Nemotron for complex metric computation.
+
+    RAGAS 0.4.2: Collections metrics REQUIRE InstructorLLM via llm_factory().
+    We use Ollama's OpenAI-compatible API (/v1 endpoint) to enable llm_factory().
     """
-    return ChatOllama(
+    # Create AsyncOpenAI client pointing to Ollama's OpenAI-compatible endpoint
+    ollama_openai_client = AsyncOpenAI(
+        base_url=f"{settings.ollama_base_url}/v1",
+        api_key="ollama",  # Dummy key (Ollama doesn't require auth)
+    )
+
+    # Use llm_factory with Ollama via OpenAI-compatible API
+    return llm_factory(
         model="gpt-oss:20b",
-        base_url=settings.ollama_base_url,
+        client=ollama_openai_client,
         temperature=0.0,  # Deterministic for evaluation
     )
 
 
-def get_ragas_embeddings():
-    """Get embeddings for RAGAS metrics.
+def get_ollama_openai_client():
+    """Get AsyncOpenAI client pointing to Ollama's OpenAI-compatible endpoint.
 
-    Uses BGE-M3 via HuggingFace/sentence-transformers on GPU.
-    Same model as production system for consistency.
-    GPU provides ~10-80x speedup for embedding generation.
+    RAGAS 0.4.2 requires an AsyncOpenAI client for ascore() metrics.
+    Ollama provides an OpenAI-compatible API at /v1 endpoint.
     """
-    return HuggingFaceEmbeddings(
-        model_name="BAAI/bge-m3",
-        model_kwargs={
-            "device": "cuda",
-            "trust_remote_code": True,
-        },
-        encode_kwargs={
-            "normalize_embeddings": True,
-            "batch_size": 32,  # Smaller batch to avoid OOM with gpt-oss:20b
-        },
+    return AsyncOpenAI(
+        base_url=f"{settings.ollama_base_url}/v1",
+        api_key="ollama",  # Dummy key (Ollama doesn't require auth)
     )
 
+
+def get_ragas_embeddings(ollama_client: AsyncOpenAI):
+    """Get embeddings for RAGAS metrics.
+
+    RAGAS 0.4.2: Use OpenAIEmbeddings with Ollama client.
+    """
+    return OpenAIEmbeddings(
+        model="bge-m3",  # Ollama BGE-M3 model
+        client=ollama_client,
+    )
+
+
 logger = structlog.get_logger(__name__)
+
+
+# RAGAS 0.4.2: Define result model for experiment
+class RAGASMetricsResult(BaseModel):
+    """RAGAS evaluation metrics result."""
+    context_precision: float = Field(description="Context precision score (0-1)")
+    context_recall: float = Field(description="Context recall score (0-1)")
+    faithfulness: float = Field(description="Faithfulness score (0-1)")
+    answer_relevancy: float = Field(description="Answer relevancy score (0-1)")
 
 
 async def query_aegis_rag(
@@ -134,6 +161,81 @@ async def query_aegis_rag(
         }
 
 
+async def compute_ragas_metrics_for_sample(
+    question: str,
+    answer: str,
+    contexts: list[str],
+    ground_truth: str,
+    ragas_llm: Any,
+    ragas_embeddings: Any,
+) -> RAGASMetricsResult:
+    """Compute RAGAS metrics for a single sample.
+
+    RAGAS 0.4.2: Use async metric scoring with ascore().
+
+    Args:
+        question: User question
+        answer: Generated answer
+        contexts: Retrieved contexts
+        ground_truth: Ground truth answer
+        ragas_llm: LLM instance from llm_factory()
+        ragas_embeddings: Embeddings from OpenAIEmbeddings (async)
+
+    Returns:
+        RAGASMetricsResult with all 4 metric scores
+    """
+    # Initialize metrics (RAGAS 0.4.2 Collections API)
+    context_precision = ContextPrecision(llm=ragas_llm, embeddings=ragas_embeddings)
+    context_recall = ContextRecall(llm=ragas_llm, embeddings=ragas_embeddings)
+    faithfulness = Faithfulness(llm=ragas_llm)
+    answer_relevancy = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
+
+    # Compute metrics (RAGAS 0.4.2: use ascore() method with correct signatures)
+    try:
+        # Context Precision: uses reference (ground truth)
+        cp_result = await context_precision.ascore(
+            user_input=question,
+            reference=ground_truth,
+            retrieved_contexts=contexts,
+        )
+
+        # Context Recall: uses reference (ground truth)
+        cr_result = await context_recall.ascore(
+            user_input=question,
+            retrieved_contexts=contexts,
+            reference=ground_truth,
+        )
+
+        # Faithfulness: uses response (generated answer)
+        f_result = await faithfulness.ascore(
+            user_input=question,
+            response=answer,
+            retrieved_contexts=contexts,
+        )
+
+        # Answer Relevancy: uses only response (no contexts!)
+        ar_result = await answer_relevancy.ascore(
+            user_input=question,
+            response=answer,
+        )
+
+        return RAGASMetricsResult(
+            context_precision=cp_result.value if hasattr(cp_result, 'value') else float(cp_result),
+            context_recall=cr_result.value if hasattr(cr_result, 'value') else float(cr_result),
+            faithfulness=f_result.value if hasattr(f_result, 'value') else float(f_result),
+            answer_relevancy=ar_result.value if hasattr(ar_result, 'value') else float(ar_result),
+        )
+    except Exception as e:
+        logger.error(f"Metric computation failed: {e}")
+        # Return zeros on failure
+        return RAGASMetricsResult(
+            context_precision=0.0,
+            context_recall=0.0,
+            faithfulness=0.0,
+            answer_relevancy=0.0,
+        )
+
+
 async def run_ragas_evaluation(
     dataset_path: str = "data/evaluation/ragas_dataset.jsonl",
     namespace_id: str = "ragas_eval",
@@ -154,7 +256,7 @@ async def run_ragas_evaluation(
         Evaluation results with all 4 RAGAS metrics
     """
     logger.info("=" * 80)
-    logger.info(f"RAGAS EVALUATION - Sprint 76 Feature 76.3")
+    logger.info(f"RAGAS EVALUATION - Sprint 79 Feature 79.8 (RAGAS 0.4.2)")
     logger.info("=" * 80)
     logger.info(f"Dataset: {dataset_path}")
     logger.info(f"Namespace: {namespace_id}")
@@ -230,81 +332,79 @@ async def run_ragas_evaluation(
                 "error": str(e),
             })
 
-    total_time = time.time() - start_time
-
-    # Prepare RAGAS dataset
-    logger.info("\n" + "=" * 80)
-    logger.info("COMPUTING RAGAS METRICS")
-    logger.info("=" * 80)
-
-    # Convert to RAGAS dataset format
-    ragas_data = {
-        "question": [r["question"] for r in results],
-        "answer": [r["answer"] for r in results],
-        "contexts": [r["contexts"] for r in results],
-        "ground_truth": [r["ground_truth"] for r in results],
-    }
-
-    dataset = Dataset.from_dict(ragas_data)
+    total_query_time = time.time() - start_time
 
     # Compute RAGAS metrics
-    logger.info("Computing metrics (this may take a few minutes)...")
+    logger.info("\n" + "=" * 80)
+    logger.info("COMPUTING RAGAS METRICS (0.4.2 API)")
+    logger.info("=" * 80)
     logger.info("Using GPT-OSS:20b (Ollama) for LLM-based metrics...")
 
-    # Get LLM and embeddings for RAGAS
+    # Get LLM and embeddings for RAGAS (RAGAS 0.4.2)
     ragas_llm = get_ragas_llm()
-    ragas_embeddings = get_ragas_embeddings()
+    ollama_client = get_ollama_openai_client()
+    ragas_embeddings = get_ragas_embeddings(ollama_client)
+
+    # Track metrics per sample
+    all_metrics = []
+    metrics_start_time = time.time()
 
     try:
-        # RAGAS 0.3.9 API with custom LLM/embeddings
-        # Sprint 78: Use 1 worker for fully sequential execution to prevent timeouts with GPT-OSS:20b
-        run_config = RunConfig(
-            max_workers=1,  # Sequential execution to prevent GPU contention with slow GPT-OSS:20b
-            timeout=300,  # 300s timeout per job (GPT-OSS:20b needs ~17s per query)
-            max_retries=3,  # Reduce retries to fail faster
-        )
+        # RAGAS 0.4.2: Compute metrics for each sample individually
+        for i, result in enumerate(results):
+            logger.info(f"\nComputing metrics for sample {i+1}/{len(results)}...")
 
-        evaluation_result = evaluate(
-            dataset,
-            metrics=[
-                context_precision,
-                context_recall,
-                faithfulness,
-                answer_relevancy,
-            ],
-            llm=ragas_llm,
-            embeddings=ragas_embeddings,
-            run_config=run_config,
-        )
+            sample_start = time.time()
+            sample_metrics = await compute_ragas_metrics_for_sample(
+                question=result["question"],
+                answer=result["answer"],
+                contexts=result["contexts"],
+                ground_truth=result["ground_truth"],
+                ragas_llm=ragas_llm,
+                ragas_embeddings=ragas_embeddings,
+            )
+            sample_time = time.time() - sample_start
 
-        # RAGAS returns per-sample scores as lists - compute averages
-        def safe_mean(values):
-            """Compute mean, handling lists and NaN values."""
-            if isinstance(values, list):
-                valid_values = [v for v in values if v is not None and not (isinstance(v, float) and v != v)]  # Filter None and NaN
-                return sum(valid_values) / len(valid_values) if valid_values else 0.0
-            return float(values) if values is not None else 0.0
+            all_metrics.append(sample_metrics)
+            result["metrics"] = sample_metrics.model_dump()
+            result["metrics_time"] = sample_time
 
-        metrics = {
-            "context_precision": safe_mean(evaluation_result["context_precision"]),
-            "context_recall": safe_mean(evaluation_result["context_recall"]),
-            "faithfulness": safe_mean(evaluation_result["faithfulness"]),
-            "answer_relevancy": safe_mean(evaluation_result["answer_relevancy"]),
+            logger.info(f"  ✓ Metrics computed in {sample_time:.2f}s")
+            logger.info(f"    CP: {sample_metrics.context_precision:.3f}, "
+                       f"CR: {sample_metrics.context_recall:.3f}, "
+                       f"F: {sample_metrics.faithfulness:.3f}, "
+                       f"AR: {sample_metrics.answer_relevancy:.3f}")
+
+        metrics_total_time = time.time() - metrics_start_time
+
+        # Compute average metrics
+        avg_metrics = {
+            "context_precision": sum(m.context_precision for m in all_metrics) / len(all_metrics),
+            "context_recall": sum(m.context_recall for m in all_metrics) / len(all_metrics),
+            "faithfulness": sum(m.faithfulness for m in all_metrics) / len(all_metrics),
+            "answer_relevancy": sum(m.answer_relevancy for m in all_metrics) / len(all_metrics),
             "per_sample_scores": {
-                "context_precision": evaluation_result["context_precision"],
-                "context_recall": evaluation_result["context_recall"],
-                "faithfulness": evaluation_result["faithfulness"],
-                "answer_relevancy": evaluation_result["answer_relevancy"],
-            }
+                "context_precision": [m.context_precision for m in all_metrics],
+                "context_recall": [m.context_recall for m in all_metrics],
+                "faithfulness": [m.faithfulness for m in all_metrics],
+                "answer_relevancy": [m.answer_relevancy for m in all_metrics],
+            },
+            "total_time_seconds": metrics_total_time,
+            "avg_time_per_sample": metrics_total_time / len(all_metrics),
         }
 
         logger.info("\n" + "=" * 80)
-        logger.info("RAGAS METRICS")
+        logger.info("RAGAS METRICS (AVERAGED)")
         logger.info("=" * 80)
-        logger.info(f"Context Precision: {metrics['context_precision']:.4f}")
-        logger.info(f"Context Recall:    {metrics['context_recall']:.4f}")
-        logger.info(f"Faithfulness:      {metrics['faithfulness']:.4f}")
-        logger.info(f"Answer Relevancy:  {metrics['answer_relevancy']:.4f}")
+        logger.info(f"Context Precision: {avg_metrics['context_precision']:.4f}")
+        logger.info(f"Context Recall:    {avg_metrics['context_recall']:.4f}")
+        logger.info(f"Faithfulness:      {avg_metrics['faithfulness']:.4f}")
+        logger.info(f"Answer Relevancy:  {avg_metrics['answer_relevancy']:.4f}")
+        logger.info(f"\nMetrics Timing:")
+        logger.info(f"  Total: {metrics_total_time:.1f}s")
+        logger.info(f"  Avg per sample: {avg_metrics['avg_time_per_sample']:.1f}s")
+
+        metrics = avg_metrics
 
     except Exception as e:
         logger.error(f"RAGAS evaluation failed: {e}")
@@ -331,8 +431,11 @@ async def run_ragas_evaluation(
             "namespace_id": namespace_id,
             "dataset_path": dataset_path,
             "num_questions": len(questions_data),
-            "total_time_seconds": total_time,
+            "total_query_time_seconds": total_query_time,
+            "total_metrics_time_seconds": metrics.get("total_time_seconds", 0),
+            "total_time_seconds": total_query_time + metrics.get("total_time_seconds", 0),
             "timestamp": timestamp,
+            "ragas_version": "0.4.2",
         },
         "metrics": metrics,
         "per_question_results": results,
@@ -344,13 +447,19 @@ async def run_ragas_evaluation(
     logger.info(f"\n✓ Results saved to: {results_file}")
 
     # Summary
+    total_time = total_query_time + metrics.get("total_time_seconds", 0)
+
     logger.info("\n" + "=" * 80)
     logger.info("SUMMARY")
     logger.info("=" * 80)
+    logger.info(f"RAGAS Version: 0.4.2")
     logger.info(f"Mode: {mode}")
     logger.info(f"Questions evaluated: {len(questions_data)}")
+    logger.info(f"Query time: {total_query_time:.1f}s")
+    logger.info(f"Metrics time: {metrics.get('total_time_seconds', 0):.1f}s")
     logger.info(f"Total time: {total_time:.1f}s")
-    logger.info(f"Avg time per question: {total_time/len(questions_data):.2f}s")
+    logger.info(f"Avg time per question (query only): {total_query_time/len(questions_data):.2f}s")
+    logger.info(f"Avg time per sample (metrics): {metrics.get('avg_time_per_sample', 0):.2f}s")
     logger.info(f"\nMetrics:")
     logger.info(f"  Context Precision: {metrics['context_precision']:.4f}")
     logger.info(f"  Context Recall:    {metrics['context_recall']:.4f}")
