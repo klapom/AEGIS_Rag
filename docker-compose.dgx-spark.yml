@@ -397,6 +397,11 @@ services:
       - ST_MODEL_NAME=BAAI/bge-m3
       - ST_DEVICE=auto
       - ST_BATCH_SIZE=64
+      # HuggingFace Model Caching (Sprint 76 Feature 76.4)
+      # Cache BGE-M3 and other HF models in data/models/ to avoid re-downloads
+      - HF_HOME=/app/data/models
+      - TRANSFORMERS_CACHE=/app/data/models
+      - SENTENCE_TRANSFORMERS_HOME=/app/data/models
       # Databases
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333

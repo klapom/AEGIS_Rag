@@ -120,107 +120,113 @@ class DualLevelSearch:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def local_search(self, query: str, top_k: int = 5) -> list[GraphEntity]:
-        """Execute entity-level (local) search.
+    async def local_search(
+        self, query: str, top_k: int = 5, namespaces: list[str] | None = None
+    ) -> list[GraphEntity]:
+        """Execute entity-level (local) search with chunk expansion.
 
-        Retrieves specific entities and their direct relationships relevant to the query.
+        Sprint 78 Feature 78.1: Entity → Chunk Expansion
+
+        Finds entities matching the query, then expands to full document chunks
+        via MENTIONED_IN relationships. Returns chunks as GraphEntity objects
+        for backward compatibility.
 
         Args:
             query: User query
-            top_k: Number of entities to retrieve
+            top_k: Number of chunks to retrieve
+            namespaces: List of namespaces to filter by (default: None = all namespaces)
 
         Returns:
-            list of GraphEntity objects
+            list of GraphEntity objects (containing chunk data in description field)
         """
         start_time = time.time()
 
         logger.info("local_search_started", query=query[:100], top_k=top_k)
 
         try:
-            # Query Neo4j for entities matching the query
-            # Use full-text search or embedding similarity (simplified version here)
-            cypher_query = """
-            MATCH (e:base)
-            WHERE toLower(e.name) CONTAINS toLower($query_term)
-               OR toLower(e.description) CONTAINS toLower($query_term)
-            RETURN e.id AS id, e.name AS name, e.type AS type,
-                   e.description AS description, e.properties AS properties,
-                   e.source_document AS source_document, e.confidence AS confidence
-            LIMIT $top_k
-            """
+            # Sprint 78 Feature 78.2 & 78.4: Use SmartEntityExpander instead of manual stop words
+            # LLM extracts entities directly → stop words filtering not needed anymore
+            from src.components.graph_rag.entity_expansion import SmartEntityExpander
+            from src.core.config import settings
 
-            # Sprint 42: Extract meaningful query terms (skip stop words)
-            # German + English stop words commonly used in questions
-            stop_words = {
-                "was",
-                "weißt",
-                "du",
-                "über",
-                "wie",
-                "ist",
-                "sind",
-                "der",
-                "die",
-                "das",
-                "ein",
-                "eine",
-                "und",
-                "oder",
-                "mit",
-                "von",
-                "zu",
-                "für",
-                "auf",
-                "in",
-                "what",
-                "is",
-                "are",
-                "the",
-                "a",
-                "an",
-                "and",
-                "or",
-                "with",
-                "from",
-                "to",
-                "for",
-                "on",
-                "who",
-                "where",
-                "when",
-                "how",
-                "why",
-                "tell",
-                "me",
-                "about",
-                "know",
-                "do",
-                "you",
-                "can",
-                "could",
-                "would",
-            }
-            words = query.lower().split()
-            meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
-            # Use meaningful words if found, otherwise use full query
-            query_term = " ".join(meaningful_words) if meaningful_words else query
-
-            results = await self.neo4j_client.execute_read(
-                cypher_query,
-                {"query_term": query_term, "top_k": top_k},
+            # Sprint 78 Feature 78.5: Load config from settings (UI-configurable via env vars)
+            expander = SmartEntityExpander(
+                neo4j_client=self.neo4j_client,
+                graph_expansion_hops=settings.graph_expansion_hops,
+                min_entities_threshold=settings.graph_min_entities_threshold,
+                max_synonyms_per_entity=settings.graph_max_synonyms_per_entity,
             )
 
-            # Convert to GraphEntity objects
+            # Stage 1-3: Expand entities (LLM → Graph → Synonyms)
+            expanded_entity_names = await expander.expand_entities(
+                query=query,
+                namespaces=namespaces or ["default"],
+                top_k=top_k * 3
+            )
+
+            # Sprint 78 Feature 78.1: Entity → Chunk Expansion
+            # Use expanded entity names to find chunks they're mentioned in
+            if namespaces:
+                cypher_query = """
+                MATCH (e:base)-[:MENTIONED_IN]->(c:chunk)
+                WHERE e.namespace_id IN $namespaces
+                  AND c.namespace_id IN $namespaces
+                  AND e.entity_name IN $expanded_entities
+                WITH c, collect(DISTINCT e.entity_name) AS matched_entities, count(DISTINCT e) AS entity_count
+                RETURN
+                  c.chunk_id AS id,
+                  c.text AS chunk_text,
+                  c.document_id AS document_id,
+                  c.chunk_index AS chunk_index,
+                  matched_entities,
+                  entity_count
+                ORDER BY entity_count DESC
+                LIMIT $top_k
+                """
+            else:
+                cypher_query = """
+                MATCH (e:base)-[:MENTIONED_IN]->(c:chunk)
+                WHERE e.entity_name IN $expanded_entities
+                WITH c, collect(DISTINCT e.entity_name) AS matched_entities, count(DISTINCT e) AS entity_count
+                RETURN
+                  c.chunk_id AS id,
+                  c.text AS chunk_text,
+                  c.document_id AS document_id,
+                  c.chunk_index AS chunk_index,
+                  matched_entities,
+                  entity_count
+                ORDER BY entity_count DESC
+                LIMIT $top_k
+                """
+
+            # Build query parameters
+            params = {"expanded_entities": expanded_entity_names, "top_k": top_k}
+            if namespaces:
+                params["namespaces"] = namespaces
+
+            results = await self.neo4j_client.execute_read(cypher_query, params)
+
+            # Sprint 78: Convert chunks to GraphEntity objects for backward compatibility
+            # The "description" field now contains the full chunk text instead of entity description
             entities = []
-            for record in results:
+            for i, record in enumerate(results):
+                # Create a pseudo-entity representing the chunk
+                matched_entities_str = ", ".join(record.get("matched_entities", [])[:5])
+                entity_count = record.get("entity_count", 0)
+
                 entity = GraphEntity(
-                    id=record.get("id", ""),
-                    name=record.get("name", ""),
-                    type=record.get("type", "UNKNOWN"),
-                    description=record.get("description", ""),
-                    properties=record.get("properties", {}),
-                    source_document=record.get("source_document"),
-                    confidence=record.get("confidence", 1.0),
+                    id=record.get("id", f"chunk_{i}"),
+                    name=f"Chunk with {entity_count} entities: {matched_entities_str}",
+                    type="CHUNK",
+                    description=record.get("chunk_text", ""),  # FULL CHUNK TEXT HERE!
+                    properties={
+                        "page_no": record.get("page_no"),
+                        "heading": record.get("heading"),
+                        "matched_entities": record.get("matched_entities", []),
+                        "entity_match_count": entity_count,
+                    },
+                    source_document=record.get("document_id", ""),
+                    confidence=1.0 / (1.0 + i),  # Simple ranking
                 )
                 entities.append(entity)
 
@@ -229,7 +235,7 @@ class DualLevelSearch:
             logger.info(
                 "local_search_completed",
                 query=query[:100],
-                entities_found=len(entities),
+                chunks_found=len(entities),
                 execution_time_ms=execution_time,
             )
 
@@ -245,7 +251,9 @@ class DualLevelSearch:
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def global_search(self, query: str, top_k: int = 3) -> list[Topic]:
+    async def global_search(
+        self, query: str, top_k: int = 3, namespaces: list[str] | None = None
+    ) -> list[Topic]:
         """Execute topic-level (global) search.
 
         Retrieves high-level topics/communities relevant to the query.
@@ -254,6 +262,7 @@ class DualLevelSearch:
         Args:
             query: User query
             top_k: Number of topics to retrieve
+            namespaces: List of namespaces to filter by (default: None = all namespaces)
 
         Returns:
             list of Topic objects
@@ -266,19 +275,9 @@ class DualLevelSearch:
             # Query Neo4j for topic-level information
             # This is a simplified implementation - production would use
             # community detection algorithms (Leiden, Louvain)
-            cypher_query = """
-            MATCH (e:base)
-            WHERE toLower(e.name) CONTAINS toLower($query_term)
-               OR toLower(e.description) CONTAINS toLower($query_term)
-            WITH e.type AS entity_type, collect(e.name) AS entity_names,
-                 collect(e.id) AS entity_ids, count(e) AS entity_count
-            RETURN entity_type AS topic_name,
-                   entity_names[..5] AS sample_entities,
-                   entity_ids AS entity_ids,
-                   entity_count
-            ORDER BY entity_count DESC
-            LIMIT $top_k
-            """
+            # Sprint 76: Add namespace filtering for multi-tenant isolation
+            # Sprint 76: Use entity_name/entity_type (actual property names in Neo4j)
+            # Sprint 77 Feature 77.6: Fix text matching - search for individual words, not concatenated string
 
             # Sprint 42: Extract meaningful query terms (skip stop words)
             stop_words = {
@@ -332,12 +331,49 @@ class DualLevelSearch:
             }
             words = query.lower().split()
             meaningful_words = [w for w in words if w not in stop_words and len(w) > 2]
-            query_term = " ".join(meaningful_words) if meaningful_words else query
+            # Use meaningful words if found, otherwise use full query words
+            query_words = meaningful_words if meaningful_words else query.lower().split()
 
-            results = await self.neo4j_client.execute_read(
-                cypher_query,
-                {"query_term": query_term, "top_k": top_k},
-            )
+            # Sprint 77 Feature 77.6: Build Cypher query with ANY word matching
+            # Search for entities that contain ANY of the query words (not all concatenated)
+            if namespaces:
+                cypher_query = """
+                MATCH (e:base)
+                WHERE e.namespace_id IN $namespaces
+                  AND ANY(word IN $query_words WHERE
+                      toLower(e.entity_name) CONTAINS toLower(word)
+                      OR toLower(e.description) CONTAINS toLower(word))
+                WITH e.entity_type AS entity_type, collect(e.entity_name) AS entity_names,
+                     collect(e.entity_id) AS entity_ids, count(e) AS entity_count
+                RETURN entity_type AS topic_name,
+                       entity_names[..5] AS sample_entities,
+                       entity_ids AS entity_ids,
+                       entity_count
+                ORDER BY entity_count DESC
+                LIMIT $top_k
+                """
+            else:
+                cypher_query = """
+                MATCH (e:base)
+                WHERE ANY(word IN $query_words WHERE
+                      toLower(e.entity_name) CONTAINS toLower(word)
+                      OR toLower(e.description) CONTAINS toLower(word))
+                WITH e.entity_type AS entity_type, collect(e.entity_name) AS entity_names,
+                     collect(e.entity_id) AS entity_ids, count(e) AS entity_count
+                RETURN entity_type AS topic_name,
+                       entity_names[..5] AS sample_entities,
+                       entity_ids AS entity_ids,
+                       entity_count
+                ORDER BY entity_count DESC
+                LIMIT $top_k
+                """
+
+            # Build query parameters
+            params = {"query_words": query_words, "top_k": top_k}
+            if namespaces:
+                params["namespaces"] = namespaces
+
+            results = await self.neo4j_client.execute_read(cypher_query, params)
 
             # Convert to Topic objects
             topics = []
@@ -429,7 +465,9 @@ Answer:"""
         retry=retry_if_exception_type(Exception),
         reraise=True,
     )
-    async def hybrid_search(self, query: str, top_k: int = 10) -> GraphQueryResult:
+    async def hybrid_search(
+        self, query: str, top_k: int = 10, namespaces: list[str] | None = None
+    ) -> GraphQueryResult:
         """Execute combined local + global search with answer generation.
 
         Combines entity-level and topic-level results, generates an answer
@@ -438,6 +476,7 @@ Answer:"""
         Args:
             query: User query
             top_k: Total number of results to retrieve (split between local/global)
+            namespaces: List of namespaces to filter by (default: None = all namespaces)
 
         Returns:
             GraphQueryResult with combined information and generated answer
@@ -452,8 +491,8 @@ Answer:"""
             global_k = max(top_k - local_k, 2)
 
             # Execute both searches in parallel would be ideal, but for simplicity:
-            entities = await self.local_search(query, top_k=local_k)
-            topics = await self.global_search(query, top_k=global_k)
+            entities = await self.local_search(query, top_k=local_k, namespaces=namespaces)
+            topics = await self.global_search(query, top_k=global_k, namespaces=namespaces)
 
             # Retrieve relationships for found entities
             relationships = await self._get_entity_relationships(entities)
@@ -516,12 +555,13 @@ Answer:"""
         try:
             entity_names = [e.name for e in entities]
 
+            # Sprint 76: Use entity_name (actual property name in Neo4j)
             cypher_query = """
             MATCH (e1:base)-[r:RELATED_TO]->(e2:base)
-            WHERE e1.name IN $entity_names OR e2.name IN $entity_names
-            RETURN r.id AS id, e1.name AS source, e2.name AS target, r.type AS type,
-                   r.description AS description, r.properties AS properties,
-                   r.source_document AS source_document, r.confidence AS confidence
+            WHERE e1.entity_name IN $entity_names OR e2.entity_name IN $entity_names
+            RETURN r.relationship_id AS id, e1.entity_name AS source, e2.entity_name AS target,
+                   r.relationship_type AS type, r.description AS description,
+                   r.source_id AS source_document
             LIMIT 20
             """
 

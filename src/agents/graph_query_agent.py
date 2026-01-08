@@ -259,10 +259,16 @@ class GraphQueryAgent(BaseAgent):
             self.logger.warning("graph_query_no_query", state=state)
             return state
 
+        # Sprint 76: Extract namespaces for multi-tenant isolation
+        namespaces = state.get("namespaces")
+        if not namespaces:
+            namespaces = ["default", "general"]  # Default namespaces
+
         self.logger.info(
             "graph_query_started",
             query=query[:100],
             intent=state.get("intent", "unknown"),
+            namespaces=namespaces,
         )
 
         # Add agent to trace
@@ -349,7 +355,9 @@ class GraphQueryAgent(BaseAgent):
 
                 if search_mode == SearchMode.LOCAL:
                     # Entity-level search
-                    entities = await self.dual_level_search.local_search(query=query, top_k=top_k)
+                    entities = await self.dual_level_search.local_search(
+                        query=query, top_k=top_k, namespaces=namespaces
+                    )
                     graph_result = GraphSearchResult(
                         query=query,
                         answer=f"Found {len(entities)} entities related to the query.",
@@ -363,7 +371,7 @@ class GraphQueryAgent(BaseAgent):
                 elif search_mode == SearchMode.GLOBAL:
                     # Topic-level search
                     topics = await self.dual_level_search.global_search(
-                        query=query, top_k=min(top_k, 5)
+                        query=query, top_k=min(top_k, 5), namespaces=namespaces
                     )
                     graph_result = GraphSearchResult(
                         query=query,
@@ -377,7 +385,9 @@ class GraphQueryAgent(BaseAgent):
                     )
                 else:  # HYBRID
                     # Combined search with LLM answer
-                    graph_result = await self.dual_level_search.hybrid_search(query=query, top_k=top_k)
+                    graph_result = await self.dual_level_search.hybrid_search(
+                        query=query, top_k=top_k, namespaces=namespaces
+                    )
 
                 # Calculate latency
                 latency_ms = self._calculate_latency_ms(timing)

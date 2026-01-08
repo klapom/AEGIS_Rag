@@ -35,6 +35,7 @@ from ragas.metrics import (
     context_recall,
     faithfulness,
 )
+from ragas.run_config import RunConfig
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -94,7 +95,7 @@ async def query_aegis_rag(
     """
     api_base = "http://localhost:8000"
 
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
         # Call chat endpoint
         response = await client.post(
             f"{api_base}/api/v1/chat/",
@@ -248,7 +249,7 @@ async def run_ragas_evaluation(
 
     # Compute RAGAS metrics
     logger.info("Computing metrics (this may take a few minutes)...")
-    logger.info("Using Nemotron (Ollama) for LLM-based metrics...")
+    logger.info("Using GPT-OSS:20b (Ollama) for LLM-based metrics...")
 
     # Get LLM and embeddings for RAGAS
     ragas_llm = get_ragas_llm()
@@ -256,6 +257,13 @@ async def run_ragas_evaluation(
 
     try:
         # RAGAS 0.3.9 API with custom LLM/embeddings
+        # Sprint 78: Use 1 worker for fully sequential execution to prevent timeouts with GPT-OSS:20b
+        run_config = RunConfig(
+            max_workers=1,  # Sequential execution to prevent GPU contention with slow GPT-OSS:20b
+            timeout=300,  # 300s timeout per job (GPT-OSS:20b needs ~17s per query)
+            max_retries=3,  # Reduce retries to fail faster
+        )
+
         evaluation_result = evaluate(
             dataset,
             metrics=[
@@ -266,6 +274,7 @@ async def run_ragas_evaluation(
             ],
             llm=ragas_llm,
             embeddings=ragas_embeddings,
+            run_config=run_config,
         )
 
         # RAGAS returns per-sample scores as lists - compute averages

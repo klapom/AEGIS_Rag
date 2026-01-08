@@ -562,6 +562,20 @@ class Settings(BaseSettings):
         description="Default recommendation method (collaborative, community, relationships, attributes)",
     )
 
+    # Sprint 78: Semantic Graph Search Configuration
+    graph_expansion_hops: int = Field(
+        default=1, ge=1, le=3, description="Number of hops for graph entity expansion (1-3)"
+    )
+    graph_min_entities_threshold: int = Field(
+        default=10, ge=5, le=20, description="Minimum entities before LLM synonym fallback (5-20)"
+    )
+    graph_max_synonyms_per_entity: int = Field(
+        default=3, ge=1, le=5, description="Maximum synonyms to generate per entity (1-5)"
+    )
+    graph_semantic_reranking_enabled: bool = Field(
+        default=True, description="Enable semantic reranking of graph entities (BGE-M3)"
+    )
+
     # Temporal Graph Features (Sprint 6.4: Bi-Temporal Model)
     graph_temporal_enabled: bool = Field(
         default=True, description="Enable temporal features (bi-temporal model)"

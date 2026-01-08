@@ -259,8 +259,8 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 # Timestamps
                 "ingestion_timestamp": time.time(),
                 # Sprint 76 Feature 76.1 (TD-084): Multi-tenant namespace isolation
-                # Use namespace_id from state instead of hardcoded "default"
-                "namespace": state.get("namespace_id", "default"),
+                # FIXED: Use "namespace_id" (not "namespace") to match retrieval filters
+                "namespace_id": state.get("namespace_id", "default"),
             }
 
             point = PointStruct(

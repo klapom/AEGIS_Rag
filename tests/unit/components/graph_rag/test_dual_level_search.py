@@ -369,3 +369,231 @@ class TestDualLevelSearchIntegration:
         result = await search.hybrid_search("python programming", top_k=10)
         assert isinstance(result, GraphQueryResult)
         assert result.answer != ""
+
+
+class TestSprint78EntityChunkExpansion:
+    """Test Sprint 78 Feature 78.1: Entity→Chunk Expansion."""
+
+    @pytest.fixture
+    def mock_neo4j_client(self):
+        """Mock Neo4j client for chunk expansion tests."""
+        with patch("src.components.graph_rag.dual_level_search.Neo4jClient") as mock_client_class:
+            mock_instance = MagicMock()
+            mock_instance.execute_read = AsyncMock(return_value=[])
+            mock_client_class.return_value = mock_instance
+            yield mock_instance
+
+    @pytest.fixture
+    def mock_entity_expander(self):
+        """Mock SmartEntityExpander for 3-stage expansion."""
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander") as mock_expander_class:
+            mock_instance = MagicMock()
+            mock_instance.expand_entities = AsyncMock(return_value=["abortion", "reproductive rights"])
+            mock_expander_class.return_value = mock_instance
+            yield mock_instance
+
+    @pytest.fixture
+    def dual_level_search(self, mock_neo4j_client):
+        """DualLevelSearch instance with mocked dependencies."""
+        with patch("src.components.graph_rag.dual_level_search.get_aegis_llm_proxy"), \
+             patch("src.components.graph_rag.dual_level_search.Neo4jClient", return_value=mock_neo4j_client):
+            search = DualLevelSearch(
+                neo4j_uri="bolt://localhost:7687",
+                neo4j_user="neo4j",
+                neo4j_password="password",
+            )
+            return search
+
+    @pytest.mark.asyncio
+    async def test_local_search_returns_chunks_not_descriptions(
+        self, dual_level_search, mock_neo4j_client, mock_entity_expander
+    ):
+        """Test that local_search returns full chunk text, not entity descriptions."""
+        # Mock chunk data from Neo4j (Sprint 78: MENTIONED_IN traversal)
+        mock_neo4j_client.execute_read.return_value = [
+            {
+                "id": "chunk_001",
+                "chunk_text": "The Supreme Court ruling on abortion has significant global implications for reproductive rights. Many countries look to USA jurisprudence when shaping their own policies on women's health and bodily autonomy.",
+                "document_id": "amnesty_report_2023.pdf",
+                "chunk_index": 5,
+                "matched_entities": ["abortion", "reproductive rights", "Supreme Court"],
+                "entity_count": 3,
+            },
+            {
+                "id": "chunk_002",
+                "chunk_text": "International organizations have expressed concern about the impact of restrictive abortion laws on women's health outcomes globally.",
+                "document_id": "who_report_2024.pdf",
+                "chunk_index": 12,
+                "matched_entities": ["abortion", "women's health"],
+                "entity_count": 2,
+            }
+        ]
+
+        # Execute
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+            entities = await dual_level_search.local_search(
+                query="What are the global implications of abortion?",
+                top_k=5,
+                namespaces=["amnesty_qa"]
+            )
+
+        # Verify - should return chunks as GraphEntity objects
+        assert len(entities) == 2
+
+        # Check first chunk
+        assert entities[0].id == "chunk_001"
+        assert "Supreme Court ruling" in entities[0].description  # Full chunk text
+        assert len(entities[0].description) > 100  # Real chunk, not 100-char description
+        assert entities[0].type == "CHUNK"
+        assert entities[0].source_document == "amnesty_report_2023.pdf"
+
+        # Check metadata
+        assert "matched_entities" in entities[0].properties
+        assert "abortion" in entities[0].properties["matched_entities"]
+        assert entities[0].properties["entity_match_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_local_search_uses_mentioned_in_relationship(
+        self, dual_level_search, mock_neo4j_client, mock_entity_expander
+    ):
+        """Test that Cypher query uses MENTIONED_IN relationship to expand to chunks."""
+        mock_neo4j_client.execute_read.return_value = []
+
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+            await dual_level_search.local_search(
+                query="Test query",
+                top_k=5,
+                namespaces=["test_ns"]
+            )
+
+        # Verify Cypher query structure
+        call_args = mock_neo4j_client.execute_read.call_args
+        cypher_query = call_args[0][0]
+
+        # Should traverse from entities to chunks
+        assert "MATCH (e:base)-[:MENTIONED_IN]->(c:chunk)" in cypher_query
+        # Should return chunk properties
+        assert "c.chunk_id" in cypher_query
+        assert "c.text" in cypher_query
+        assert "c.document_id" in cypher_query
+
+    @pytest.mark.asyncio
+    async def test_local_search_uses_smart_entity_expander(
+        self, dual_level_search, mock_neo4j_client
+    ):
+        """Test that local_search uses SmartEntityExpander instead of manual stop words."""
+        mock_neo4j_client.execute_read.return_value = []
+
+        # Mock SmartEntityExpander
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander") as mock_expander_class:
+            mock_instance = MagicMock()
+            mock_instance.expand_entities = AsyncMock(
+                return_value=["abortion", "reproductive rights", "Supreme Court"]
+            )
+            mock_expander_class.return_value = mock_instance
+
+            await dual_level_search.local_search(
+                query="What are the global implications of abortion?",
+                top_k=5,
+                namespaces=["amnesty_qa"]
+            )
+
+            # Verify SmartEntityExpander was instantiated and called
+            mock_expander_class.assert_called_once()
+            mock_instance.expand_entities.assert_called_once()
+
+            # Check expand_entities was called with correct parameters
+            call_kwargs = mock_instance.expand_entities.call_args[1]
+            assert call_kwargs["query"] == "What are the global implications of abortion?"
+            assert call_kwargs["namespaces"] == ["amnesty_qa"]
+
+    @pytest.mark.asyncio
+    async def test_local_search_filters_by_namespace(
+        self, dual_level_search, mock_neo4j_client, mock_entity_expander
+    ):
+        """Test that local_search correctly filters chunks by namespace."""
+        mock_neo4j_client.execute_read.return_value = []
+
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+            await dual_level_search.local_search(
+                query="Test query",
+                top_k=5,
+                namespaces=["namespace_a", "namespace_b"]
+            )
+
+        # Verify Cypher query filters by namespace
+        call_args = mock_neo4j_client.execute_read.call_args
+        cypher_query = call_args[0][0]
+        params = call_args[0][1]
+
+        assert "e.namespace_id IN $namespaces" in cypher_query
+        assert "c.namespace_id IN $namespaces" in cypher_query
+        assert params["namespaces"] == ["namespace_a", "namespace_b"]
+
+    @pytest.mark.asyncio
+    async def test_local_search_orders_by_entity_count(
+        self, dual_level_search, mock_neo4j_client, mock_entity_expander
+    ):
+        """Test that local_search orders results by entity match count."""
+        # Mock chunks with different entity counts
+        mock_neo4j_client.execute_read.return_value = [
+            {
+                "id": "chunk_high",
+                "chunk_text": "Text with many entity matches",
+                "document_id": "doc1.pdf",
+                "chunk_index": 1,
+                "matched_entities": ["e1", "e2", "e3"],
+                "entity_count": 3,
+            },
+            {
+                "id": "chunk_low",
+                "chunk_text": "Text with fewer matches",
+                "document_id": "doc2.pdf",
+                "chunk_index": 2,
+                "matched_entities": ["e1"],
+                "entity_count": 1,
+            }
+        ]
+
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+            entities = await dual_level_search.local_search(
+                query="Test",
+                top_k=5,
+                namespaces=["test"]
+            )
+
+        # Verify ordering - higher entity count should come first
+        assert entities[0].id == "chunk_high"
+        assert entities[0].properties["entity_match_count"] == 3
+        assert entities[1].id == "chunk_low"
+        assert entities[1].properties["entity_match_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_local_search_respects_top_k(
+        self, dual_level_search, mock_neo4j_client, mock_entity_expander
+    ):
+        """Test that local_search respects top_k limit."""
+        # Mock more chunks than top_k
+        mock_neo4j_client.execute_read.return_value = [
+            {
+                "id": f"chunk_{i}",
+                "chunk_text": f"Chunk text {i}",
+                "document_id": f"doc{i}.pdf",
+                "chunk_index": i,
+                "matched_entities": ["entity"],
+                "entity_count": 1,
+            }
+            for i in range(10)
+        ]
+
+        with patch("src.components.graph_rag.entity_expansion.SmartEntityExpander", return_value=mock_entity_expander):
+            entities = await dual_level_search.local_search(
+                query="Test",
+                top_k=3,
+                namespaces=["test"]
+            )
+
+        # Verify Cypher LIMIT was applied
+        call_args = mock_neo4j_client.execute_read.call_args
+        params = call_args[0][1]
+        assert params["top_k"] == 3
