@@ -703,9 +703,11 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 | 76 | ~13 | 4 | ✅ | .txt File Support + RAGAS Baseline (146 entities) |
 | 77 | 11 | 5 | ✅ | Critical Bug Fixes + Community Summarization (2,108 LOC) |
 | 78 | 34 | 6 | ✅ | Graph Entity→Chunk Expansion + 3-Stage Semantic Search |
-| **79** | **31** | **8** | 📝 | **RAGAS 0.4 Upgrade + Optional DSPy + Frontend UI (Planned)** |
+| **79** | **12** | **4** | ✅ | **RAGAS 0.4.2 Migration + Graph UI + Admin Graph Ops (Completed)** |
+| **80** | **21** | **10** | 📝 | **RAGAS P0 Critical Fixes - Faithfulness & Hybrid Fusion (Planned)** |
+| **81** | **24** | **10** | 📝 | **Query-Adaptive Routing & Entity Extraction Improvements (Planned)** |
 
-**Cumulative Story Points (Sprints 1-79):** ~2,649 SP
+**Cumulative Story Points (Sprints 1-81):** ~2,694 SP
 **Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 **Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency
@@ -746,6 +748,29 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 ---
 
 **Last Updated:** 2026-01-08
-**Current Sprint:** 79 (Planned - DSPy RAGAS Prompt Optimization)
-**Previous Sprints:** 76-78 (Completed - .txt Support, Bug Fixes, Graph Entity Expansion)
-**Next Sprint:** 80 (TBD - RAGAS Quality Improvements based on Sprint 79 results)
+**Current Sprint:** 80 (Planned - RAGAS P0 Critical Fixes: Faithfulness & Hybrid Fusion)
+**Previous Sprints:** 77-79 (Completed - Bug Fixes, Graph Entity Expansion, RAGAS 0.4.2 Migration)
+**Next Sprint:** 81 (Planned - Query-Adaptive Routing & Entity Extraction Improvements)
+
+---
+
+## Sprint 80-81: RAGAS Optimization Roadmap (Planned)
+
+Based on comprehensive RAGAS evaluation (2026-01-08), prioritized improvements:
+
+**Sprint 80 Focus (P0 Critical):**
+- Cite-sources prompt engineering (Faithfulness +50-80%)
+- Graph→Vector fallback on empty contexts (100% success rate)
+- Hybrid cross-encoder reranking (Hallucination fix)
+- Expanded evaluation datasets (50 Amnesty, 20 HotpotQA)
+
+**Sprint 81 Focus (P1 High Priority):**
+- Query-adaptive routing (automatic mode selection)
+- Domain-agnostic entity extraction (70% coverage)
+- Parent chunk retrieval (Context Recall +14%)
+- Automated RAGAS CI/CD pipeline
+
+**For detailed plans, see:**
+- [SPRINT_80_PLAN.md](SPRINT_80_PLAN.md) - RAGAS P0 Critical Fixes
+- [SPRINT_81_PLAN.md](SPRINT_81_PLAN.md) - Query Routing & Entity Extraction
+- [RAGAS_ANALYSIS_2026_01_08.md](../ragas/RAGAS_ANALYSIS_2026_01_08.md) - Full evaluation analysis

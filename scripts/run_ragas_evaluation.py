@@ -314,13 +314,121 @@ async def query_aegis_rag(
         # Extract context texts from sources
         contexts = [source.get("text", "") for source in sources if source.get("text")]
 
+        # RAG Tuning: Extract detailed source metadata for analysis
+        source_metadata = []
+        for idx, source in enumerate(sources):
+            meta = {
+                "index": idx,
+                "chunk_id": source.get("chunk_id", source.get("id", f"unknown_{idx}")),
+                "document_id": source.get("document_id", "unknown"),
+                "filename": source.get("filename", source.get("document_name", "unknown")),
+                "section_title": source.get("section_title", source.get("title", "")),
+                "text": source.get("text", ""),
+                "text_length": len(source.get("text", "")),
+                "score": source.get("score", source.get("similarity", None)),
+                "retrieval_type": source.get("retrieval_type", mode),
+            }
+            source_metadata.append(meta)
+
         return {
             "answer": answer,
             "contexts": contexts,
             "sources": sources,
+            "source_metadata": source_metadata,  # RAG Tuning: Detailed metadata
             "mode": mode,
             "question": question,
+            "raw_response": data,  # RAG Tuning: Full API response for debugging
         }
+
+
+async def compute_single_metric(
+    metric_name: str,
+    metric_func,
+    metric_kwargs: dict,
+    timeout: float,
+) -> tuple[float, str, float, dict]:
+    """Compute a single RAGAS metric with detailed logging.
+
+    Args:
+        metric_name: Name of the metric (for logging)
+        metric_func: Async scoring function (metric.ascore)
+        metric_kwargs: Keyword arguments for the metric
+        timeout: Timeout in seconds
+
+    Returns:
+        Tuple of (score, status_message, time_taken, details_dict)
+        details_dict contains RAG tuning data: reason, statements, verdicts, claims
+    """
+    start_time = time.time()
+    details = {}  # RAG Tuning: Capture all available details
+
+    try:
+        result = await asyncio.wait_for(
+            metric_func(**metric_kwargs),
+            timeout=timeout,
+        )
+        elapsed = time.time() - start_time
+
+        # Extract score value
+        if hasattr(result, 'value'):
+            score = float(result.value)
+        else:
+            score = float(result)
+
+        # Log detailed result info
+        status = "OK"
+        logger.info(f"    [{metric_name}] ✓ Score: {score:.3f} in {elapsed:.1f}s")
+
+        # RAG Tuning: Extract all available details from RAGAS result
+        if hasattr(result, 'reason') and result.reason:
+            details["reason"] = str(result.reason)
+            reason_preview = str(result.reason)[:200]
+            logger.info(f"    [{metric_name}] LLM Reason: {reason_preview}...")
+
+        if hasattr(result, 'statements') and result.statements:
+            details["statements"] = result.statements
+            logger.info(f"    [{metric_name}] Statements analyzed: {len(result.statements)}")
+
+        if hasattr(result, 'verdicts') and result.verdicts:
+            details["verdicts"] = result.verdicts
+            logger.info(f"    [{metric_name}] Verdicts: {result.verdicts}")
+
+        if hasattr(result, 'claims') and result.claims:
+            details["claims"] = result.claims
+            logger.info(f"    [{metric_name}] Claims extracted: {len(result.claims)}")
+
+        # RAG Tuning: Additional attributes that might be useful
+        if hasattr(result, 'questions_generated'):
+            details["questions_generated"] = result.questions_generated
+        if hasattr(result, 'context_precision_scores'):
+            details["per_context_scores"] = result.context_precision_scores
+        if hasattr(result, 'sentence_scores'):
+            details["sentence_scores"] = result.sentence_scores
+
+        return score, status, elapsed, details
+
+    except asyncio.TimeoutError:
+        elapsed = time.time() - start_time
+        logger.error(f"    [{metric_name}] ✗ TIMEOUT after {elapsed:.1f}s (limit: {timeout}s)")
+        logger.error(f"    [{metric_name}] → This could indicate LLM overload or Ollama issues")
+        details["error"] = f"TIMEOUT after {elapsed:.1f}s"
+        return 0.0, "TIMEOUT", elapsed, details
+
+    except Exception as e:
+        elapsed = time.time() - start_time
+        error_msg = str(e)[:300]
+        logger.error(f"    [{metric_name}] ✗ ERROR after {elapsed:.1f}s: {error_msg}")
+
+        # Log more details for debugging
+        if "connection" in error_msg.lower():
+            logger.error(f"    [{metric_name}] → Possible Ollama connection issue")
+        elif "json" in error_msg.lower() or "parse" in error_msg.lower():
+            logger.error(f"    [{metric_name}] → LLM returned unparseable response")
+        elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
+            logger.error(f"    [{metric_name}] → Rate limiting detected")
+
+        details["error"] = error_msg
+        return 0.0, f"ERROR: {error_msg[:100]}", elapsed, details
 
 
 async def compute_ragas_metrics_for_sample(
@@ -330,13 +438,19 @@ async def compute_ragas_metrics_for_sample(
     ground_truth: str,
     ragas_llm: Any,
     ragas_embeddings: Any,
-) -> RAGASMetricsResult:
-    """Compute RAGAS metrics for a single sample.
+) -> tuple[RAGASMetricsResult, dict]:
+    """Compute RAGAS metrics for a single sample with detailed logging.
 
     RAGAS 0.4.2: Use async metric scoring with ascore().
 
     Sprint 79.8.1: Increased timeout to 240s per metric (GPT-OSS:20b needs ~47s/metric).
     Total per sample: ~200s for all 4 metrics.
+
+    Sprint 79 Enhanced: Added per-metric logging to diagnose LLM judging issues.
+    Each metric is computed individually with detailed timing and error reporting.
+
+    RAG Tuning: Returns detailed breakdown for each metric including claims, verdicts,
+    and LLM reasoning for systematic optimization.
 
     Args:
         question: User question
@@ -347,7 +461,7 @@ async def compute_ragas_metrics_for_sample(
         ragas_embeddings: Embeddings from OllamaEmbeddings (async)
 
     Returns:
-        RAGASMetricsResult with all 4 metric scores
+        Tuple of (RAGASMetricsResult, rag_tuning_details_dict)
     """
     # Initialize metrics (RAGAS 0.4.2 Collections API)
     context_precision = ContextPrecision(llm=ragas_llm, embeddings=ragas_embeddings)
@@ -355,74 +469,113 @@ async def compute_ragas_metrics_for_sample(
     faithfulness = Faithfulness(llm=ragas_llm)
     answer_relevancy = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
 
-    # Compute metrics (RAGAS 0.4.2: use ascore() method with correct signatures)
     # Sprint 79.8.1: Added asyncio.wait_for with 240s timeout per metric
     metric_timeout = 240.0  # 240s per metric (GPT-OSS:20b measured at ~47s/metric)
 
-    try:
-        # Context Precision: uses reference (ground truth)
-        cp_result = await asyncio.wait_for(
-            context_precision.ascore(
-                user_input=question,
-                reference=ground_truth,
-                retrieved_contexts=contexts,
-            ),
-            timeout=metric_timeout,
-        )
+    logger.info(f"  Computing 4 RAGAS metrics (timeout: {metric_timeout}s each)...")
 
-        # Context Recall: uses reference (ground truth)
-        cr_result = await asyncio.wait_for(
-            context_recall.ascore(
-                user_input=question,
-                retrieved_contexts=contexts,
-                reference=ground_truth,
-            ),
-            timeout=metric_timeout,
-        )
+    # RAG Tuning: Collect all metric details
+    rag_tuning_details = {
+        "metric_timing": {},
+        "metric_status": {},
+        "metric_details": {},
+    }
 
-        # Faithfulness: uses response (generated answer)
-        f_result = await asyncio.wait_for(
-            faithfulness.ascore(
-                user_input=question,
-                response=answer,
-                retrieved_contexts=contexts,
-            ),
-            timeout=metric_timeout,
-        )
+    # 1. Context Precision: uses reference (ground truth)
+    logger.info(f"  [1/4] Context Precision - Checking if retrieved contexts are relevant...")
+    cp_score, cp_status, cp_time, cp_details = await compute_single_metric(
+        metric_name="ContextPrecision",
+        metric_func=context_precision.ascore,
+        metric_kwargs={
+            "user_input": question,
+            "reference": ground_truth,
+            "retrieved_contexts": contexts,
+        },
+        timeout=metric_timeout,
+    )
+    rag_tuning_details["metric_timing"]["context_precision"] = cp_time
+    rag_tuning_details["metric_status"]["context_precision"] = cp_status
+    rag_tuning_details["metric_details"]["context_precision"] = cp_details
 
-        # Answer Relevancy: uses only response (no contexts!)
-        ar_result = await asyncio.wait_for(
-            answer_relevancy.ascore(
-                user_input=question,
-                response=answer,
-            ),
-            timeout=metric_timeout,
-        )
+    # 2. Context Recall: uses reference (ground truth)
+    logger.info(f"  [2/4] Context Recall - Checking if all needed contexts were retrieved...")
+    cr_score, cr_status, cr_time, cr_details = await compute_single_metric(
+        metric_name="ContextRecall",
+        metric_func=context_recall.ascore,
+        metric_kwargs={
+            "user_input": question,
+            "retrieved_contexts": contexts,
+            "reference": ground_truth,
+        },
+        timeout=metric_timeout,
+    )
+    rag_tuning_details["metric_timing"]["context_recall"] = cr_time
+    rag_tuning_details["metric_status"]["context_recall"] = cr_status
+    rag_tuning_details["metric_details"]["context_recall"] = cr_details
 
-        return RAGASMetricsResult(
-            context_precision=cp_result.value if hasattr(cp_result, 'value') else float(cp_result),
-            context_recall=cr_result.value if hasattr(cr_result, 'value') else float(cr_result),
-            faithfulness=f_result.value if hasattr(f_result, 'value') else float(f_result),
-            answer_relevancy=ar_result.value if hasattr(ar_result, 'value') else float(ar_result),
-        )
-    except asyncio.TimeoutError:
-        logger.error(f"Metric computation timed out after {metric_timeout}s per metric")
-        # Return zeros on timeout
-        return RAGASMetricsResult(
-            context_precision=0.0,
-            context_recall=0.0,
-            faithfulness=0.0,
-            answer_relevancy=0.0,
-        )
-    except Exception as e:
-        logger.error(f"Metric computation failed: {e}")
-        # Return zeros on failure
-        return RAGASMetricsResult(
-            context_precision=0.0,
-            context_recall=0.0,
-            faithfulness=0.0,
-            answer_relevancy=0.0,
-        )
+    # 3. Faithfulness: uses response (generated answer)
+    logger.info(f"  [3/4] Faithfulness - Checking if answer is grounded in contexts...")
+    f_score, f_status, f_time, f_details = await compute_single_metric(
+        metric_name="Faithfulness",
+        metric_func=faithfulness.ascore,
+        metric_kwargs={
+            "user_input": question,
+            "response": answer,
+            "retrieved_contexts": contexts,
+        },
+        timeout=metric_timeout,
+    )
+    rag_tuning_details["metric_timing"]["faithfulness"] = f_time
+    rag_tuning_details["metric_status"]["faithfulness"] = f_status
+    rag_tuning_details["metric_details"]["faithfulness"] = f_details
+
+    # 4. Answer Relevancy: uses only response (no contexts!)
+    logger.info(f"  [4/4] Answer Relevancy - Checking if answer addresses the question...")
+    ar_score, ar_status, ar_time, ar_details = await compute_single_metric(
+        metric_name="AnswerRelevancy",
+        metric_func=answer_relevancy.ascore,
+        metric_kwargs={
+            "user_input": question,
+            "response": answer,
+        },
+        timeout=metric_timeout,
+    )
+    rag_tuning_details["metric_timing"]["answer_relevancy"] = ar_time
+    rag_tuning_details["metric_status"]["answer_relevancy"] = ar_status
+    rag_tuning_details["metric_details"]["answer_relevancy"] = ar_details
+
+    # Log summary
+    total_time = cp_time + cr_time + f_time + ar_time
+    rag_tuning_details["total_metric_time"] = total_time
+    logger.info(f"  Metrics Summary:")
+    logger.info(f"    CP: {cp_score:.3f} ({cp_status}) | CR: {cr_score:.3f} ({cr_status})")
+    logger.info(f"    F:  {f_score:.3f} ({f_status}) | AR: {ar_score:.3f} ({ar_status})")
+    logger.info(f"    Total metric time: {total_time:.1f}s")
+
+    # Warn if any metrics failed
+    failed_metrics = []
+    if cp_status != "OK":
+        failed_metrics.append(f"ContextPrecision ({cp_status})")
+    if cr_status != "OK":
+        failed_metrics.append(f"ContextRecall ({cr_status})")
+    if f_status != "OK":
+        failed_metrics.append(f"Faithfulness ({f_status})")
+    if ar_status != "OK":
+        failed_metrics.append(f"AnswerRelevancy ({ar_status})")
+
+    if failed_metrics:
+        logger.warning(f"  ⚠️ Failed metrics: {', '.join(failed_metrics)}")
+        logger.warning(f"  → Zero scores may indicate LLM judging issues, not retrieval quality!")
+        rag_tuning_details["failed_metrics"] = failed_metrics
+
+    result = RAGASMetricsResult(
+        context_precision=cp_score,
+        context_recall=cr_score,
+        faithfulness=f_score,
+        answer_relevancy=ar_score,
+    )
+
+    return result, rag_tuning_details
 
 
 async def run_ragas_evaluation(
@@ -515,21 +668,31 @@ async def run_ragas_evaluation(
                 query_time = time.time() - query_start
 
             # Collect for RAGAS evaluation
+            # RAG Tuning: Include full context texts and metadata for analysis
             result = {
                 "question": question,
                 "answer": response["answer"],
-                "contexts": response["contexts"],
+                "contexts": response["contexts"],  # Full context texts
                 "ground_truth": ground_truth,
                 "expected_contexts": expected_contexts,
                 "mode": mode,
                 "query_time": query_time,
                 "num_contexts_retrieved": len(response["contexts"]),
                 "poc_mode": use_ground_truth,
+                # RAG Tuning: Additional data for optimization analysis
+                "source_metadata": response.get("source_metadata", []),  # Chunk IDs, scores, etc.
+                "full_context_texts": response["contexts"],  # Keep full texts for analysis
             }
             results.append(result)
 
+            # Log retrieved sources for RAG Tuning visibility
             logger.info(f"  ✓ Answer: {response['answer'][:100]}...")
             logger.info(f"  Retrieved {len(response['contexts'])} contexts in {query_time:.2f}s")
+            # RAG Tuning: Log source details
+            if response.get("source_metadata"):
+                for src in response["source_metadata"][:3]:  # Log first 3 sources
+                    logger.info(f"    - [{src.get('index', '?')}] {src.get('filename', 'unknown')[:40]} "
+                               f"(score: {src.get('score', 'N/A')}, len: {src.get('text_length', 0)})")
 
         except Exception as e:
             logger.error(f"  ✗ Query failed: {e}")
@@ -566,10 +729,24 @@ async def run_ragas_evaluation(
     try:
         # RAGAS 0.4.2: Compute metrics for each sample individually
         for i, result in enumerate(results):
-            logger.info(f"\nComputing metrics for sample {i+1}/{len(results)}...")
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Computing metrics for sample {i+1}/{len(results)}")
+            logger.info(f"{'='*60}")
+
+            # Log question, answer, ground truth for manual verification (min 300 chars)
+            q_truncated = result["question"][:300] + "..." if len(result["question"]) > 300 else result["question"]
+            a_truncated = result["answer"][:400] + "..." if len(result["answer"]) > 400 else result["answer"]
+            gt_truncated = result["ground_truth"][:400] + "..." if len(result["ground_truth"]) > 400 else result["ground_truth"]
+
+            logger.info(f"  Q: {q_truncated}")
+            logger.info(f"  A: {a_truncated}")
+            logger.info(f"  GT: {gt_truncated}")
+            logger.info(f"  Contexts: {len(result['contexts'])} retrieved, "
+                       f"total {sum(len(c) for c in result['contexts'])} chars")
 
             sample_start = time.time()
-            sample_metrics = await compute_ragas_metrics_for_sample(
+            # RAG Tuning: Returns tuple of (metrics, rag_tuning_details)
+            sample_metrics, rag_tuning_details = await compute_ragas_metrics_for_sample(
                 question=result["question"],
                 answer=result["answer"],
                 contexts=result["contexts"],
@@ -582,12 +759,13 @@ async def run_ragas_evaluation(
             all_metrics.append(sample_metrics)
             result["metrics"] = sample_metrics.model_dump()
             result["metrics_time"] = sample_time
+            result["rag_tuning_details"] = rag_tuning_details  # RAG Tuning: Save details
 
             logger.info(f"  ✓ Metrics computed in {sample_time:.2f}s")
-            logger.info(f"    CP: {sample_metrics.context_precision:.3f}, "
-                       f"CR: {sample_metrics.context_recall:.3f}, "
-                       f"F: {sample_metrics.faithfulness:.3f}, "
-                       f"AR: {sample_metrics.answer_relevancy:.3f}")
+            logger.info(f"  SCORES: CP={sample_metrics.context_precision:.3f} | "
+                       f"CR={sample_metrics.context_recall:.3f} | "
+                       f"F={sample_metrics.faithfulness:.3f} | "
+                       f"AR={sample_metrics.answer_relevancy:.3f}")
 
         metrics_total_time = time.time() - metrics_start_time
 

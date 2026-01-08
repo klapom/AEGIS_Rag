@@ -36,19 +36,19 @@ You are responsible for these files and directories:
 **What it measures:** Completeness of retrieved contexts (recall = captures all relevant info)
 **Formula:** `CR = (Ground Truth Statements Found) / (Total Ground Truth Statements)`
 **Target:** ≥ 0.75 (SOTA: 0.79)
-**Current Best:** 0.291 (Graph Mode) ⚠️ **CRITICAL BOTTLENECK**
+**Current Best:** 0.600 (HotpotQA Hybrid) / 0.587 (Amnesty Graph) 🟡 **IMPROVED from 0.291**
 
 ### Faithfulness (F)
 **What it measures:** Grounding of generated answer in sources (no hallucination)
 **Formula:** `F = (Supported Claims) / (Total Claims in Answer)`
 **Target:** ≥ 0.90 (SOTA: 0.91)
-**Current Best:** 0.542 (Vector Mode) ⚠️ **CRITICAL BOTTLENECK**
+**Current Best:** 0.550 (Amnesty Graph) / 0.500 (HotpotQA Hybrid) ⚠️ **CRITICAL BOTTLENECK**
 
 ### Answer Relevancy (AR)
 **What it measures:** On-topic relevance of answer to question
 **Formula:** `AR = cosine_similarity(question, answer)` + LLM validation
 **Target:** ≥ 0.95 (SOTA: 0.96)
-**Current Best:** 0.935 (Graph Mode) ✅ **NEAR TARGET**
+**Current Best:** 0.781 (Amnesty Hybrid) / 0.735 (Amnesty Graph) 🟡 **OK**
 
 ## RAGAS Journey Documentation Protocol
 
@@ -105,24 +105,24 @@ After each experiment, update the "Current Status" table at the top of RAGAS_JOU
 
 ### Step 1: Baseline Evaluation
 
-Run all three modes in parallel:
+Run all three modes sequential to not overload GPU on DXG Spark:
 
 ```bash
-# Terminal 1: Vector Mode
+# Vector Mode
 poetry run python scripts/run_ragas_evaluation.py \
   --mode vector \
   --namespace amnesty_qa \
   --dataset data/amnesty_qa_contexts/ragas_amnesty_tiny.jsonl \
   --output-dir data/evaluation/results/
 
-# Terminal 2: Graph Mode
+# Graph Mode
 poetry run python scripts/run_ragas_evaluation.py --mode graph ...
 
-# Terminal 3: Hybrid Mode
+# Hybrid Mode
 poetry run python scripts/run_ragas_evaluation.py --mode hybrid ...
 ```
 
-**Expected Duration:** ~7 minutes per mode (parallel = 7 min total)
+**Expected Duration:** 10 minutes per mode ( 30 min total)
 
 ### Step 2: Analyze Bottlenecks
 
@@ -246,13 +246,54 @@ def search(query: str, top_k: int = 15):  # EXPERIMENT #X: Increased for better 
 
 2. **GraphRAG community detection (Leiden algorithm)**
    - **File:** `src/components/graph_rag/community_detection.py`
+   - **Status:** ✅ ALREADY IMPLEMENTED - used in Graph Global mode
+   - **Action:** Test integration with regular Graph/Hybrid mode
    - **Expected:** CP +30%, CR +50% (Graph Mode)
-   - **Risk:** High (algorithm complexity)
 
 3. **Multi-hop graph traversal (2-5 hops)**
-   - **File:** `src/components/graph_rag/traversal.py`
+   - **File:** `src/components/graph_rag/entity_expansion.py`
+   - **Status:** ✅ ALREADY IMPLEMENTED - but default is only 1 hop!
+   - **Current Config:** `graph_expansion_hops: int = 1` in `src/core/config.py:566`
+   - **Action:** Test with 2-3 hops via UI settings
    - **Expected:** CR +100% (Graph Mode)
    - **Risk:** Medium (performance impact)
+
+## Existing Features Status
+
+These features are ALREADY IMPLEMENTED but may need configuration or testing:
+
+| Feature | Location | Current Status | Action Needed |
+|---------|----------|----------------|---------------|
+| **Community Detection (Leiden/Louvain)** | `src/components/graph_rag/community_detector.py` | Used in Graph Global mode only | Test in regular Graph/Hybrid |
+| **Hierarchical Summaries** | Document sections stored in chunks/graph | Available | Leverage for context filtering |
+| **Multi-hop Traversal (1-3 hops)** | `src/components/graph_rag/entity_expansion.py` | **Default: 1 hop only!** | Test with 2-3 hops |
+
+## Dataset Sources & Ingestion
+
+### Available Datasets
+
+| Dataset | Source | Questions | Namespace |
+|---------|--------|-----------|-----------|
+| **Amnesty QA** | HuggingFace `explodinggradients/amnesty_qa` | 20+ (eval split) | `amnesty_qa` |
+| **HotpotQA** | HuggingFace `hotpot_qa` (distractor) | 113,000 | `ragas_eval_txt` |
+
+### ⚠️ CRITICAL: Ingestion Method
+
+**ALWAYS use Frontend API for ingestion:**
+
+```bash
+# Amnesty contexts
+scripts/upload_amnesty_contexts.sh
+# - Uses: POST /api/v1/retrieval/upload
+# - Namespace: amnesty_qa
+
+# HotpotQA contexts
+scripts/upload_ragas_frontend.sh
+# - Uses: POST /api/v1/retrieval/upload
+# - Namespace: ragas_eval_txt
+```
+
+**❌ DO NOT use `scripts/ingest_ragas_simple.py`** - bypasses namespace settings!
 
 ## SOTA Benchmarks (Reference)
 
@@ -264,7 +305,7 @@ Track progress against state-of-the-art RAG systems:
 | **Self-RAG** | 0.82 | 0.79 | 0.91 | 0.93 | Adaptive retrieval with query routing |
 | **RAPTOR** | 0.76 | 0.71 | 0.86 | 0.92 | Recursive abstraction |
 | **LlamaIndex** | 0.71 | 0.68 | 0.85 | 0.91 | Standard vector RAG with reranking |
-| **AegisRAG Target** | 0.85 | 0.75 | 0.90 | 0.95 | Sprint 85 Goal (Q2 2026) |
+| **AegisRAG Target** | 0.85 | 0.75 | 0.90 | 0.95 | Sprint 85 Goal |
 
 ## Collaboration with Other Agents
 
@@ -292,16 +333,29 @@ Your optimization is successful when:
 5. **Verify embedding consistency** - RAGAS must use BGE-M3 (1024-dim), same as ingestion
 6. **Check for side effects** - An improvement in CR might degrade CP (document trade-offs)
 
-## Current Focus (Sprint 79-80)
+## Current Focus (Sprint 80-81)
 
-**Top Priority (P0):**
-1. Fix embedding dimension mismatch (BGE-M3 1024-dim) ✅ DONE
-2. Re-run RAGAS with correct embeddings (Vector/Graph/Hybrid) 🔄 IN PROGRESS
-3. Generate updated comparison report
+**Completed (Sprint 79):**
+- ✅ Fix embedding dimension mismatch (BGE-M3 1024-dim)
+- ✅ Re-run RAGAS with correct embeddings (Experiment #2)
+- ✅ Generate comprehensive analysis (RAGAS_ANALYSIS_2026_01_08.md)
 
-**Next Priorities (P1):**
-1. Increase top_k to 10-15 (expected: CR +100%)
-2. Add cross-encoder reranking to Hybrid (expected: CP +300%)
-3. Prompt: "Cite sources" (expected: F +50%)
+**Sprint 80 Priorities (P0 Critical):**
+1. **Cite-sources prompt** - Add source citations to answer generation (expected: F +50-80%)
+2. **Graph→Vector fallback** - Fallback when Graph returns empty contexts (fixes 3/5 HotpotQA failures)
+3. **Hybrid cross-encoder reranking** - Add reranker after fusion (expected: Amnesty Hybrid F 0.301 → 0.600)
+4. **Increase top_k** - Vector 5→10, Graph 3→7 (expected: CR +19%)
 
-You are the guardian of RAG quality metrics. Through systematic experimentation and rigorous documentation in `docs/ragas/RAGAS_JOURNEY.md`, you drive AegisRAG towards SOTA performance.
+**Sprint 81 Priorities (P1 High):**
+1. **Query-adaptive routing** - Auto-select Vector/Graph/Hybrid (expected: all metrics +20-30%)
+2. **Entity extraction V2** - Domain-agnostic types (expected: HotpotQA Graph coverage 40%→70%)
+3. **Parent chunk retrieval** - Return sections instead of chunks (expected: CR +14%)
+4. **Test multi-hop (2-3 hops)** - Already implemented, needs testing
+
+**Reference Documents:**
+- `docs/ragas/RAGAS_JOURNEY.md` - Living experiment log
+- `docs/ragas/RAGAS_ANALYSIS_2026_01_08.md` - Full analysis with recommendations
+- `docs/sprints/SPRINT_80_PLAN.md` - P0 fixes
+- `docs/sprints/SPRINT_81_PLAN.md` - P1 features
+
+You are the guardian of RAG quality metrics. Through systematic experimentation and rigorous documentation in `docs/ragas/RAGAS_JOURNEY.md` and `docs/ragas/RAGAS_ANALYSIS*.md`, you drive AegisRAG towards SOTA performance.
