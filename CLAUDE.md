@@ -169,12 +169,19 @@ Scopes: vector, graph, memory, agent, api, infra
 
 ## Subagent Responsibilities
 
-| Subagent | Focus |
-|----------|-------|
-| **Backend** | LangGraph agents, retrieval algorithms, memory logic |
-| **Infrastructure** | Docker, K8s, CI/CD, monitoring |
-| **API** | FastAPI routers, Pydantic models, OpenAPI |
-| **Testing** | Unit, integration, E2E tests |
+**Claude Code hat 7 spezialisierte Subagents, die automatisch getriggert werden können:**
+
+| Subagent | Focus | Trigger Keywords |
+|----------|-------|------------------|
+| **backend-agent** | LangGraph agents, retrieval algorithms, memory logic, core business logic | "implement", "fix", "LangGraph", "agent", "retrieval", "memory" |
+| **documentation-agent** | ADRs, API docs, guides, README updates, technical writing | "document", "ADR", "README", "guide", "write docs" |
+| **infrastructure-agent** | Docker, K8s, CI/CD, monitoring, deployment, environment setup | "Docker", "deploy", "CI/CD", "infrastructure", "monitoring" |
+| **testing-agent** | Unit tests, integration tests, E2E tests, fixtures, test coverage | "test", "pytest", "coverage", "E2E", "Playwright" |
+| **performance-agent** | Performance optimization, profiling, benchmarking, latency analysis | "optimize", "performance", "benchmark", "profiling", "latency" |
+| **api-agent** | FastAPI routers, Pydantic models, OpenAPI, REST endpoints | "API", "endpoint", "FastAPI", "Pydantic", "OpenAPI" |
+| **frontend-agent** | React components, TypeScript, UI implementation, state management | "UI", "frontend", "React", "component", "TypeScript" |
+
+**Usage:** Diese Agents werden automatisch vom Task-Tool getriggert, wenn relevante Keywords im Task erkannt werden.
 
 ---
 
