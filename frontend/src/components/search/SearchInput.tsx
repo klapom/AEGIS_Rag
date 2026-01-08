@@ -4,6 +4,7 @@
  * Sprint 42: Added namespace/project selection for search filtering
  * Sprint 52: ChatGPT-style floating input with auto-grow textarea
  * Sprint 63 Feature 63.8: Added Research Mode toggle
+ * Sprint 79 Feature 79.6: Added Graph Expansion Settings toggle
  *
  * ChatGPT-inspired search input with:
  * - Auto-growing textarea that expands with content
@@ -11,16 +12,22 @@
  * - Fixed Hybrid mode (mode selector removed)
  * - Clean, minimal design
  * - Research Mode toggle (Sprint 63)
+ * - Graph Expansion settings (Sprint 79)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { NamespaceSelector } from './NamespaceSelector';
 import { ResearchModeToggleCompact } from '../research';
+import {
+  GraphExpansionSettingsCompact,
+  loadGraphExpansionConfig,
+} from '../settings';
+import type { GraphExpansionConfig } from '../../types/settings';
 
 export type SearchMode = 'hybrid' | 'vector' | 'graph' | 'memory';
 
 interface SearchInputProps {
-  onSubmit: (query: string, mode: SearchMode, namespaces: string[]) => void;
+  onSubmit: (query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig) => void;
   placeholder?: string;
   autoFocus?: boolean;
   /** Sprint 63: Whether Research Mode is enabled */
@@ -29,6 +36,8 @@ interface SearchInputProps {
   onResearchModeToggle?: () => void;
   /** Sprint 63: Whether Research Mode toggle should be shown */
   showResearchToggle?: boolean;
+  /** Sprint 79: Whether Graph Expansion settings should be shown */
+  showGraphExpansionToggle?: boolean;
 }
 
 export function SearchInput({
@@ -38,12 +47,18 @@ export function SearchInput({
   isResearchMode = false,
   onResearchModeToggle,
   showResearchToggle = true,
+  showGraphExpansionToggle = true,
 }: SearchInputProps) {
   const [query, setQuery] = useState('');
   // Sprint 52: Fixed to hybrid mode (mode selector removed)
   const mode: SearchMode = 'hybrid';
   const [selectedNamespaces, setSelectedNamespaces] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sprint 79 Feature 79.6: Graph expansion config state
+  const [graphExpansionConfig, setGraphExpansionConfig] = useState<GraphExpansionConfig>(
+    () => loadGraphExpansionConfig()
+  );
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = useCallback(() => {
@@ -73,7 +88,8 @@ export function SearchInput({
     if (!trimmedQuery) {
       return;
     }
-    onSubmit(trimmedQuery, mode, selectedNamespaces);
+    // Sprint 79 Feature 79.6: Pass graph expansion config with submit
+    onSubmit(trimmedQuery, mode, selectedNamespaces, graphExpansionConfig);
     setQuery('');
     // Reset textarea height after clearing
     if (textareaRef.current) {
@@ -140,9 +156,9 @@ export function SearchInput({
         </button>
       </div>
 
-      {/* Bottom row: Project selector and Research toggle - overflow-visible for dropdown */}
+      {/* Bottom row: Project selector, Graph Expansion, and Research toggle - overflow-visible for dropdown */}
       <div className="flex items-center justify-between overflow-visible">
-        {/* Left side: Project Selector and Research Toggle */}
+        {/* Left side: Project Selector, Graph Expansion, and Research Toggle */}
         <div className="flex items-center gap-2">
           {/* Compact Project Selector */}
           <NamespaceSelector
@@ -150,6 +166,14 @@ export function SearchInput({
             onSelectionChange={setSelectedNamespaces}
             compact={true}
           />
+
+          {/* Sprint 79 Feature 79.6: Graph Expansion Settings */}
+          {showGraphExpansionToggle && (
+            <GraphExpansionSettingsCompact
+              config={graphExpansionConfig}
+              onChange={setGraphExpansionConfig}
+            />
+          )}
 
           {/* Sprint 63: Research Mode Toggle */}
           {showResearchToggle && onResearchModeToggle && (

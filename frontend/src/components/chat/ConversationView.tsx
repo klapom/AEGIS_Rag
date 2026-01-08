@@ -25,6 +25,7 @@ import { MessageBubble, type MessageData } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
 import { SearchInput, type SearchMode } from '../search';
 import type { PhaseEvent, PhaseType } from '../../types/reasoning';
+import type { GraphExpansionConfig } from '../../types/settings';
 
 /**
  * Props for the ConversationView component
@@ -34,8 +35,8 @@ interface ConversationViewProps {
   messages: MessageData[];
   /** Whether the assistant is currently streaming a response */
   isStreaming?: boolean;
-  /** Callback when user submits a new message */
-  onSendMessage: (query: string, mode: SearchMode, namespaces: string[]) => void;
+  /** Callback when user submits a new message (Sprint 79: added graphExpansionConfig) */
+  onSendMessage: (query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig) => void;
   /** Callback when a citation is clicked */
   onCitationClick?: (sourceId: string) => void;
   /** Placeholder text for the input */

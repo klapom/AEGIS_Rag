@@ -1,6 +1,7 @@
 /**
  * AdminNavigationBar Component
  * Sprint 51: Admin Dashboard Navigation Improvement
+ * Sprint 79 Feature 79.7: Added Graph Operations link
  *
  * Navigation bar for admin subpages, displayed at the top of the admin dashboard.
  * Provides quick access to Graph Analytics, Costs, LLM Config, Health, and Training pages.
@@ -17,6 +18,7 @@ import {
   ListChecks,
   Wrench,
   Database,
+  Layers,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -39,6 +41,12 @@ const navItems: NavItem[] = [
     label: 'Graph',
     icon: <Share2 className="w-4 h-4" />,
     testId: 'admin-nav-graph',
+  },
+  {
+    href: '/admin/graph-operations',
+    label: 'Graph Ops',
+    icon: <Layers className="w-4 h-4" />,
+    testId: 'admin-nav-graph-ops',
   },
   {
     href: '/admin/costs',

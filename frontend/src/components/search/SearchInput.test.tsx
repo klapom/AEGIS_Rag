@@ -1,13 +1,45 @@
 /**
  * SearchInput Component Tests
  * Sprint 15 Feature 15.3
+ * Sprint 79 Feature 79.6: Updated to expect graph expansion config parameter
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SearchInput } from './SearchInput';
+import { DEFAULT_GRAPH_EXPANSION_CONFIG, GRAPH_EXPANSION_STORAGE_KEY } from '../../types/settings';
+
+// Mock localStorage to provide consistent graph expansion config
+const mockLocalStorage = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: mockLocalStorage,
+});
 
 describe('SearchInput', () => {
+  beforeEach(() => {
+    mockLocalStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should render input field with placeholder', () => {
     const mockOnSubmit = vi.fn();
     render(<SearchInput onSubmit={mockOnSubmit} placeholder="Test placeholder" />);
@@ -24,7 +56,8 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'test query' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
+    // Sprint 79: onSubmit now includes graph expansion config
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', [], DEFAULT_GRAPH_EXPANSION_CONFIG);
   });
 
   it('should call onSubmit when submit button is clicked', () => {
@@ -37,7 +70,8 @@ describe('SearchInput', () => {
     const submitButton = screen.getByTitle(/Suche starten/);
     fireEvent.click(submitButton);
 
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
+    // Sprint 79: onSubmit now includes graph expansion config
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', [], DEFAULT_GRAPH_EXPANSION_CONFIG);
   });
 
   it('should not submit empty query', () => {
@@ -60,8 +94,8 @@ describe('SearchInput', () => {
     fireEvent.change(input, { target: { value: 'test' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    // Should always submit with hybrid mode
-    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'hybrid', []);
+    // Should always submit with hybrid mode (Sprint 79: includes graph expansion config)
+    expect(mockOnSubmit).toHaveBeenCalledWith('test', 'hybrid', [], DEFAULT_GRAPH_EXPANSION_CONFIG);
   });
 
   it('should disable submit button when query is empty', () => {
@@ -99,7 +133,8 @@ describe('SearchInput', () => {
 
     // Input should be cleared immediately
     expect(input.value).toBe('');
-    expect(mockOnSubmit).toHaveBeenCalledWith('What is AI?', 'hybrid', []);
+    // Sprint 79: onSubmit now includes graph expansion config
+    expect(mockOnSubmit).toHaveBeenCalledWith('What is AI?', 'hybrid', [], DEFAULT_GRAPH_EXPANSION_CONFIG);
   });
 
   it('should clear input field after Enter key submission', () => {
@@ -117,6 +152,7 @@ describe('SearchInput', () => {
 
     // Input should be cleared immediately
     expect(input.value).toBe('');
-    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', []);
+    // Sprint 79: onSubmit now includes graph expansion config
+    expect(mockOnSubmit).toHaveBeenCalledWith('test query', 'hybrid', [], DEFAULT_GRAPH_EXPANSION_CONFIG);
   });
 });

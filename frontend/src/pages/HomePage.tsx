@@ -32,9 +32,11 @@ import {
 } from '../components/research';
 import { getConversation } from '../api/chat';
 import type { Source } from '../types/chat';
+import type { GraphExpansionConfig } from '../types/settings';
 import type { ReasoningData } from '../types/reasoning';
 import { useStreamChat, buildReasoningData } from '../hooks/useStreamChat';
 import { useResearchSSE } from '../hooks/useResearchSSE';
+import { loadGraphExpansionConfig } from '../components/settings';
 
 /**
  * Internal message format for conversation history
@@ -68,6 +70,9 @@ export function HomePage() {
   const [currentQuery, setCurrentQuery] = useState<string | null>(null);
   const [currentMode, setCurrentMode] = useState<SearchMode>('hybrid');
   const [currentNamespaces, setCurrentNamespaces] = useState<string[]>([]);
+
+  // Sprint 79 Feature 79.6: Graph expansion config for current query
+  const [currentGraphExpansionConfig, setCurrentGraphExpansionConfig] = useState<GraphExpansionConfig | undefined>();
 
   // Sprint 63: Research Mode state
   const research = useResearchSSE();
@@ -105,6 +110,7 @@ export function HomePage() {
   }, []);
 
   // Use streaming hook for SSE
+  // Sprint 79 Feature 79.6: Pass graph expansion config to streaming
   const streamingState = useStreamChat({
     query: currentQuery,
     mode: currentMode,
@@ -112,13 +118,15 @@ export function HomePage() {
     sessionId: activeSessionId,
     onSessionIdReceived: handleSessionIdReceived,
     onComplete: handleStreamComplete,
+    graphExpansionConfig: currentGraphExpansionConfig,
   });
 
   /**
    * Handle new message submission
    * Sprint 63: Routes to Research Mode or standard chat based on toggle
+   * Sprint 79 Feature 79.6: Accepts graph expansion config
    */
-  const handleSearch = useCallback((query: string, mode: SearchMode, namespaces: string[]) => {
+  const handleSearch = useCallback((query: string, mode: SearchMode, namespaces: string[], graphExpansionConfig?: GraphExpansionConfig) => {
     // Add user message to history
     setConversationHistory((prev) => [
       ...prev,
@@ -141,14 +149,18 @@ export function HomePage() {
       setCurrentQuery(query);
       setCurrentMode(mode);
       setCurrentNamespaces(namespaces);
+      // Sprint 79 Feature 79.6: Store graph expansion config for streaming
+      setCurrentGraphExpansionConfig(graphExpansionConfig);
     }
   }, [research]);
 
   /**
    * Handle quick prompt click
+   * Sprint 79 Feature 79.6: Load graph expansion config for quick prompts
    */
   const handleQuickPrompt = useCallback((prompt: string) => {
-    handleSearch(prompt, 'hybrid', currentNamespaces);
+    const graphConfig = loadGraphExpansionConfig();
+    handleSearch(prompt, 'hybrid', currentNamespaces, graphConfig);
   }, [handleSearch, currentNamespaces]);
 
   /**

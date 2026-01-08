@@ -6,6 +6,7 @@
  * Sprint 38 Feature 38.1b: JWT Authentication Frontend
  * Sprint 38 Feature 38.3: Share Conversation Links (public route)
  * Sprint 46 Feature 46.8: Admin Area Consolidation
+ * Sprint 79 Feature 79.7: Admin Graph Operations UI
  */
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -30,6 +31,7 @@ import { UploadPage } from './pages/admin/UploadPage';
 import { IngestionJobsPage } from './pages/admin/IngestionJobsPage';
 import { MCPToolsPage } from './pages/admin/MCPToolsPage';
 import { MemoryManagementPage } from './pages/admin/MemoryManagementPage';
+import { AdminGraphOperationsPage } from './pages/admin/AdminGraphOperationsPage';
 
 function App() {
   // Sprint 46: Sidebar state moved to individual pages (HomePage, etc.)
@@ -63,6 +65,7 @@ function App() {
                       <Route path="/admin/jobs" element={<IngestionJobsPage />} />
                       <Route path="/admin/tools" element={<MCPToolsPage />} />
                       <Route path="/admin/memory" element={<MemoryManagementPage />} />
+                      <Route path="/admin/graph-operations" element={<AdminGraphOperationsPage />} />
                       <Route path="/dashboard/costs" element={<CostDashboardPage />} />
                       <Route path="/settings" element={<Settings />} />
                     </Routes>

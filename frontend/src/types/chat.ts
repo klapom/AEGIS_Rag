@@ -8,6 +8,21 @@ import type { SectionMetadata, DocumentType } from './section';
 
 export type RetrievalMode = 'hybrid' | 'vector' | 'graph' | 'memory';
 
+/**
+ * Graph expansion configuration for API requests
+ * Sprint 79 Feature 79.6: UI Settings for Graph Expansion
+ */
+export interface GraphExpansionConfigRequest {
+  /** Enable/disable graph expansion feature */
+  enabled: boolean;
+  /** Number of hops for graph traversal (1-3) */
+  graph_expansion_hops: number;
+  /** Minimum entities before LLM synonym fallback (5-20) */
+  min_entities_threshold: number;
+  /** Maximum synonyms to generate per entity (1-5) */
+  max_synonyms_per_entity: number;
+}
+
 export interface ChatRequest {
   query: string;
   session_id?: string;
@@ -15,6 +30,7 @@ export interface ChatRequest {
   include_sources?: boolean;
   include_tool_calls?: boolean;
   namespaces?: string[];  // Sprint 42: Filter search by namespace/project
+  graph_expansion_config?: GraphExpansionConfigRequest;  // Sprint 79 Feature 79.6
 }
 
 export interface Source {

@@ -32,8 +32,9 @@ import httpx
 import structlog
 from openai import AsyncOpenAI  # For Ollama OpenAI-compatible API (async needed for RAGAS)
 from pydantic import BaseModel, Field
-from ragas.embeddings import OpenAIEmbeddings  # RAGAS 0.4.2 modern embeddings
+from ragas.embeddings.base import BaseRagasEmbeddings, embedding_factory  # RAGAS 0.4.2 base + factory
 from ragas.llms import llm_factory  # RAGAS 0.4 unified LLM factory
+from sentence_transformers import SentenceTransformer  # For BGE-M3 embeddings
 from ragas.metrics.collections import (  # RAGAS 0.4.2 Collections metrics
     AnswerRelevancy,
     ContextPrecision,
@@ -63,10 +64,13 @@ def get_ragas_llm():
     )
 
     # Use llm_factory with Ollama via OpenAI-compatible API
+    # CRITICAL FIX (Sprint 79.8): Increase max_tokens to handle RAGAS Few-Shot prompts
+    # RAGAS prompts are ~6000 tokens, default 3072 was causing timeouts
     return llm_factory(
         model="gpt-oss:20b",
         client=ollama_openai_client,
         temperature=0.0,  # Deterministic for evaluation
+        max_tokens=16384,  # Increased from default 3072 to handle complex prompts
     )
 
 
@@ -82,14 +86,125 @@ def get_ollama_openai_client():
     )
 
 
-def get_ragas_embeddings(ollama_client: AsyncOpenAI):
+class OllamaEmbeddings(BaseRagasEmbeddings):
+    """Ollama embeddings wrapper for RAGAS 0.4.2.
+
+    Sprint 79.8.1: Use Ollama's native embedding API (nomic-embed-text).
+    This is faster and more aligned with our Ollama-based architecture.
+    """
+
+    def __init__(self, model: str = "nomic-embed-text", base_url: str = "http://localhost:11434"):
+        """Initialize Ollama embeddings.
+
+        Args:
+            model: Ollama embedding model name (default: nomic-embed-text)
+            base_url: Ollama API base URL
+        """
+        self.model = model
+        self.base_url = base_url
+
+    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents asynchronously via Ollama API."""
+        embeddings = []
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            for text in texts:
+                response = await client.post(
+                    f"{self.base_url}/api/embeddings",
+                    json={"model": self.model, "prompt": text},
+                )
+                response.raise_for_status()
+                data = response.json()
+                embeddings.append(data["embedding"])
+        return embeddings
+
+    async def aembed_query(self, text: str) -> list[float]:
+        """Embed query asynchronously via Ollama API."""
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                f"{self.base_url}/api/embeddings",
+                json={"model": self.model, "prompt": text},
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["embedding"]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents synchronously (fallback - not used by RAGAS 0.4.2)."""
+        import requests
+        embeddings = []
+        for text in texts:
+            response = requests.post(
+                f"{self.base_url}/api/embeddings",
+                json={"model": self.model, "prompt": text},
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            embeddings.append(response.json()["embedding"])
+        return embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed query synchronously (fallback - not used by RAGAS 0.4.2)."""
+        import requests
+        response = requests.post(
+            f"{self.base_url}/api/embeddings",
+            json={"model": self.model, "prompt": text},
+            timeout=60.0,
+        )
+        response.raise_for_status()
+        return response.json()["embedding"]
+
+
+class SimpleBGEM3Embeddings(BaseRagasEmbeddings):
+    """Simple wrapper for BGE-M3 embeddings compatible with RAGAS 0.4.2.
+
+    NOTE: This is kept for reference but OllamaEmbeddings is now preferred.
+    """
+
+    def __init__(self):
+        """Initialize BGE-M3 model."""
+        self.model = SentenceTransformer("BAAI/bge-m3")
+
+    async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents asynchronously."""
+        # SentenceTransformer is sync, but we can run in executor for async compat
+        embeddings = self.model.encode(texts, normalize_embeddings=True)
+        return embeddings.tolist()
+
+    async def aembed_query(self, text: str) -> list[float]:
+        """Embed query asynchronously."""
+        embedding = self.model.encode([text], normalize_embeddings=True)
+        return embedding[0].tolist()
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents synchronously (fallback)."""
+        embeddings = self.model.encode(texts, normalize_embeddings=True)
+        return embeddings.tolist()
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed query synchronously (fallback)."""
+        embedding = self.model.encode([text], normalize_embeddings=True)
+        return embedding[0].tolist()
+
+
+def get_ragas_embeddings():
     """Get embeddings for RAGAS metrics.
 
-    RAGAS 0.4.2: Use OpenAIEmbeddings with Ollama client.
+    Sprint 79.8.1: Use RAGAS embedding_factory with Ollama's OpenAI-compatible endpoint.
+    This creates "modern" embeddings that work with RAGAS 0.4.2 Collections metrics.
     """
-    return OpenAIEmbeddings(
-        model="bge-m3",  # Ollama BGE-M3 model
-        client=ollama_client,
+    # Create OpenAI client pointing to Ollama (for embedding_factory)
+    ollama_openai_client = AsyncOpenAI(
+        base_url=f"{settings.ollama_base_url}/v1",
+        api_key="ollama",  # Dummy key
+    )
+
+    # Use embedding_factory to create modern embeddings
+    # Ollama's OpenAI-compatible endpoint requires the actual model name (nomic-embed-text)
+    return embedding_factory(
+        "openai",
+        model="nomic-embed-text",  # Ollama embedding model
+        client=ollama_openai_client,
+        interface="modern",
     )
 
 
@@ -122,7 +237,8 @@ async def query_aegis_rag(
     """
     api_base = "http://localhost:8000"
 
-    async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
+    # Sprint 79.8.1: Increased timeout to 300s for complex graph queries
+    async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
         # Call chat endpoint
         response = await client.post(
             f"{api_base}/api/v1/chat/",
@@ -173,13 +289,16 @@ async def compute_ragas_metrics_for_sample(
 
     RAGAS 0.4.2: Use async metric scoring with ascore().
 
+    Sprint 79.8.1: Increased timeout to 240s per metric (GPT-OSS:20b needs ~47s/metric).
+    Total per sample: ~200s for all 4 metrics.
+
     Args:
         question: User question
         answer: Generated answer
         contexts: Retrieved contexts
         ground_truth: Ground truth answer
         ragas_llm: LLM instance from llm_factory()
-        ragas_embeddings: Embeddings from OpenAIEmbeddings (async)
+        ragas_embeddings: Embeddings from OllamaEmbeddings (async)
 
     Returns:
         RAGASMetricsResult with all 4 metric scores
@@ -191,32 +310,47 @@ async def compute_ragas_metrics_for_sample(
     answer_relevancy = AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)
 
     # Compute metrics (RAGAS 0.4.2: use ascore() method with correct signatures)
+    # Sprint 79.8.1: Added asyncio.wait_for with 240s timeout per metric
+    metric_timeout = 240.0  # 240s per metric (GPT-OSS:20b measured at ~47s/metric)
+
     try:
         # Context Precision: uses reference (ground truth)
-        cp_result = await context_precision.ascore(
-            user_input=question,
-            reference=ground_truth,
-            retrieved_contexts=contexts,
+        cp_result = await asyncio.wait_for(
+            context_precision.ascore(
+                user_input=question,
+                reference=ground_truth,
+                retrieved_contexts=contexts,
+            ),
+            timeout=metric_timeout,
         )
 
         # Context Recall: uses reference (ground truth)
-        cr_result = await context_recall.ascore(
-            user_input=question,
-            retrieved_contexts=contexts,
-            reference=ground_truth,
+        cr_result = await asyncio.wait_for(
+            context_recall.ascore(
+                user_input=question,
+                retrieved_contexts=contexts,
+                reference=ground_truth,
+            ),
+            timeout=metric_timeout,
         )
 
         # Faithfulness: uses response (generated answer)
-        f_result = await faithfulness.ascore(
-            user_input=question,
-            response=answer,
-            retrieved_contexts=contexts,
+        f_result = await asyncio.wait_for(
+            faithfulness.ascore(
+                user_input=question,
+                response=answer,
+                retrieved_contexts=contexts,
+            ),
+            timeout=metric_timeout,
         )
 
         # Answer Relevancy: uses only response (no contexts!)
-        ar_result = await answer_relevancy.ascore(
-            user_input=question,
-            response=answer,
+        ar_result = await asyncio.wait_for(
+            answer_relevancy.ascore(
+                user_input=question,
+                response=answer,
+            ),
+            timeout=metric_timeout,
         )
 
         return RAGASMetricsResult(
@@ -224,6 +358,15 @@ async def compute_ragas_metrics_for_sample(
             context_recall=cr_result.value if hasattr(cr_result, 'value') else float(cr_result),
             faithfulness=f_result.value if hasattr(f_result, 'value') else float(f_result),
             answer_relevancy=ar_result.value if hasattr(ar_result, 'value') else float(ar_result),
+        )
+    except asyncio.TimeoutError:
+        logger.error(f"Metric computation timed out after {metric_timeout}s per metric")
+        # Return zeros on timeout
+        return RAGASMetricsResult(
+            context_precision=0.0,
+            context_recall=0.0,
+            faithfulness=0.0,
+            answer_relevancy=0.0,
         )
     except Exception as e:
         logger.error(f"Metric computation failed: {e}")
@@ -342,8 +485,7 @@ async def run_ragas_evaluation(
 
     # Get LLM and embeddings for RAGAS (RAGAS 0.4.2)
     ragas_llm = get_ragas_llm()
-    ollama_client = get_ollama_openai_client()
-    ragas_embeddings = get_ragas_embeddings(ollama_client)
+    ragas_embeddings = get_ragas_embeddings()
 
     # Track metrics per sample
     all_metrics = []

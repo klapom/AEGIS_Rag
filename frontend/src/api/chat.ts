@@ -3,10 +3,26 @@
  * Sprint 15 Feature 15.1: SSE Streaming Client (ADR-020)
  */
 
-import type { ChatRequest, ChatChunk, ChatResponse, SessionListResponse, ConversationHistoryResponse, SessionInfo } from '../types/chat';
+import type { ChatRequest, ChatChunk, ChatResponse, SessionListResponse, ConversationHistoryResponse, SessionInfo, GraphExpansionConfigRequest } from '../types/chat';
+import type { GraphExpansionConfig } from '../types/settings';
 
 // Re-export types for easier imports
 export type { ChatChunk, ChatRequest, ChatResponse, SessionListResponse, ConversationHistoryResponse, SessionInfo };
+
+/**
+ * Convert frontend GraphExpansionConfig to API request format
+ * Sprint 79 Feature 79.6: Graph Expansion Settings UI
+ */
+export function toGraphExpansionConfigRequest(
+  config: GraphExpansionConfig
+): GraphExpansionConfigRequest {
+  return {
+    enabled: config.enabled,
+    graph_expansion_hops: config.graphExpansionHops,
+    min_entities_threshold: config.minEntitiesThreshold,
+    max_synonyms_per_entity: config.maxSynonymsPerEntity,
+  };
+}
 
 /**
  * SessionSummary for SessionSidebar display
@@ -23,19 +39,38 @@ export type SessionSummary = {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
+ * Extended chat request options for streamChat
+ * Sprint 79 Feature 79.6: Graph Expansion Settings UI
+ */
+export interface StreamChatOptions {
+  /** Graph expansion configuration */
+  graphExpansionConfig?: GraphExpansionConfig;
+}
+
+/**
  * Stream chat response using Server-Sent Events (SSE)
  *
  * Sprint 17 Feature 17.5: Added AbortController support to prevent duplicate streams
+ * Sprint 79 Feature 79.6: Added graph expansion config parameter
  *
  * @param request Chat request with query and optional session_id
  * @param signal Optional AbortSignal to cancel the stream
+ * @param options Additional options including graph expansion config
  * @yields ChatChunk objects (metadata, tokens, sources, errors)
  */
-export async function* streamChat(request: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatChunk> {
+export async function* streamChat(
+  request: ChatRequest,
+  signal?: AbortSignal,
+  options?: StreamChatOptions
+): AsyncGenerator<ChatChunk> {
   // Sprint 53-58 Refactoring Fix: Ensure namespace is always sent
-  const requestWithNamespace = {
+  // Sprint 79 Feature 79.6: Include graph expansion config if provided
+  const requestWithNamespace: ChatRequest = {
     ...request,
     namespaces: request.namespaces || ['default'],
+    graph_expansion_config: options?.graphExpansionConfig
+      ? toGraphExpansionConfigRequest(options.graphExpansionConfig)
+      : undefined,
   };
 
   const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {

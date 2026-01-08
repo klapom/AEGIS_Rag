@@ -1,6 +1,7 @@
 /**
  * AdminNavigationBar Component Tests
  * Sprint 51: Admin Dashboard Navigation Improvement
+ * Sprint 79 Feature 79.7: Added Graph Operations link tests
  */
 
 import { describe, it, expect } from 'vitest';
@@ -27,6 +28,7 @@ describe('AdminNavigationBar', () => {
       renderComponent();
 
       expect(screen.getByTestId('admin-nav-graph')).toBeInTheDocument();
+      expect(screen.getByTestId('admin-nav-graph-ops')).toBeInTheDocument();
       expect(screen.getByTestId('admin-nav-costs')).toBeInTheDocument();
       expect(screen.getByTestId('admin-nav-llm')).toBeInTheDocument();
       expect(screen.getByTestId('admin-nav-health')).toBeInTheDocument();
@@ -38,6 +40,7 @@ describe('AdminNavigationBar', () => {
       renderComponent();
 
       expect(screen.getByText('Graph')).toBeInTheDocument();
+      expect(screen.getByText('Graph Ops')).toBeInTheDocument();
       expect(screen.getByText('Costs')).toBeInTheDocument();
       expect(screen.getByText('LLM')).toBeInTheDocument();
       expect(screen.getByText('Health')).toBeInTheDocument();
@@ -51,6 +54,7 @@ describe('AdminNavigationBar', () => {
       renderComponent();
 
       expect(screen.getByTestId('admin-nav-graph')).toHaveAttribute('href', '/admin/graph');
+      expect(screen.getByTestId('admin-nav-graph-ops')).toHaveAttribute('href', '/admin/graph-operations');
       expect(screen.getByTestId('admin-nav-costs')).toHaveAttribute('href', '/admin/costs');
       expect(screen.getByTestId('admin-nav-llm')).toHaveAttribute('href', '/admin/llm-config');
       expect(screen.getByTestId('admin-nav-health')).toHaveAttribute('href', '/admin/health');
@@ -105,11 +109,19 @@ describe('AdminNavigationBar', () => {
       expect(indexingLink).toHaveAttribute('aria-current', 'page');
     });
 
+    it('should highlight graph-ops link when on graph-operations page', () => {
+      renderComponent('/admin/graph-operations');
+
+      const graphOpsLink = screen.getByTestId('admin-nav-graph-ops');
+      expect(graphOpsLink).toHaveAttribute('aria-current', 'page');
+    });
+
     it('should not highlight any link on main admin dashboard', () => {
       renderComponent('/admin');
 
       // None should have aria-current="page"
       expect(screen.getByTestId('admin-nav-graph')).not.toHaveAttribute('aria-current');
+      expect(screen.getByTestId('admin-nav-graph-ops')).not.toHaveAttribute('aria-current');
       expect(screen.getByTestId('admin-nav-costs')).not.toHaveAttribute('aria-current');
       expect(screen.getByTestId('admin-nav-llm')).not.toHaveAttribute('aria-current');
       expect(screen.getByTestId('admin-nav-health')).not.toHaveAttribute('aria-current');
@@ -137,7 +149,7 @@ describe('AdminNavigationBar', () => {
       renderComponent();
 
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(6);
+      expect(links).toHaveLength(10);
     });
   });
 });

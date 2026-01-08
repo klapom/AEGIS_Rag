@@ -26,6 +26,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { streamChat, type ChatChunk } from '../api/chat';
 import type { Source } from '../types/chat';
+import type { GraphExpansionConfig } from '../types/settings';
 import type { ReasoningData, IntentType, RetrievalStep as RetrievalStepType, PhaseEvent, PhaseType, FourWayResults, IntentWeights, ChannelSamples } from '../types/reasoning';
 
 /**
@@ -94,6 +95,8 @@ interface UseStreamChatOptions {
   onSessionIdReceived?: (sessionId: string) => void;
   /** Callback when streaming completes */
   onComplete?: (answer: string, sources: Source[], reasoningData: ReasoningData | null) => void;
+  /** Sprint 79 Feature 79.6: Graph expansion configuration */
+  graphExpansionConfig?: GraphExpansionConfig;
 }
 
 /**
@@ -111,6 +114,7 @@ export function useStreamChat({
   sessionId: initialSessionId,
   onSessionIdReceived,
   onComplete,
+  graphExpansionConfig,
 }: UseStreamChatOptions): StreamingState {
   const [answer, setAnswer] = useState('');
   const [sources, setSources] = useState<Source[]>([]);
@@ -248,7 +252,9 @@ export function useStreamChat({
             include_sources: true,
             namespaces: namespaces && namespaces.length > 0 ? namespaces : undefined,
           },
-          abortController.signal
+          abortController.signal,
+          // Sprint 79 Feature 79.6: Pass graph expansion config
+          { graphExpansionConfig }
         )) {
           if (isAborted) break;
           handleChunk(chunk);
@@ -597,7 +603,8 @@ export function useStreamChat({
     };
     // Sprint 47 Fix: Removed onSessionIdReceived from dependencies - use ref instead
     // Sprint 48: Added clearTimers to dependencies
-  }, [query, mode, namespaces, initialSessionId, clearTimers]);
+    // Sprint 79: Added graphExpansionConfig to dependencies
+  }, [query, mode, namespaces, initialSessionId, clearTimers, graphExpansionConfig]);
 
   // Sprint 47 Fix: Fallback onComplete call when streaming finishes
   // This handles edge cases where the 'complete' event might be missed
