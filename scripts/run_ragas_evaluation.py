@@ -191,21 +191,17 @@ def get_ragas_embeddings():
 
     Sprint 79.8.1: Use RAGAS embedding_factory with Ollama's OpenAI-compatible endpoint.
     This creates "modern" embeddings that work with RAGAS 0.4.2 Collections metrics.
-    """
-    # Create OpenAI client pointing to Ollama (for embedding_factory)
-    ollama_openai_client = AsyncOpenAI(
-        base_url=f"{settings.ollama_base_url}/v1",
-        api_key="ollama",  # Dummy key
-    )
 
-    # Use embedding_factory to create modern embeddings
-    # Ollama's OpenAI-compatible endpoint requires the actual model name (nomic-embed-text)
-    return embedding_factory(
-        "openai",
-        model="nomic-embed-text",  # Ollama embedding model
-        client=ollama_openai_client,
-        interface="modern",
-    )
+    Sprint 79.8.2: Fixed to use BGE-M3 (1024-dim) instead of nomic-embed-text (768-dim)
+    to match ingestion embeddings (ADR-024).
+
+    Sprint 79.8.3: Switched to SimpleBGEM3Embeddings (SentenceTransformer) due to Ollama
+    NaN-bug with long texts. Direct SentenceTransformer is more robust and matches ingestion.
+    """
+    # Use SimpleBGEM3Embeddings (SentenceTransformer BAAI/bge-m3)
+    # This is the SAME model used in ingestion (ADR-024) - guaranteed 1024-dim
+    # Avoids Ollama NaN bugs with complex queries
+    return SimpleBGEM3Embeddings()
 
 
 logger = structlog.get_logger(__name__)
@@ -385,8 +381,12 @@ async def run_ragas_evaluation(
     mode: str = "hybrid",
     max_questions: int = -1,
     output_dir: str = "data/evaluation/results",
+    use_ground_truth: bool = False,
 ) -> dict[str, Any]:
     """Run RAGAS evaluation on AegisRAG system.
+
+    Sprint 79 POC Feature 79.10: Proof-of-concept workaround to demonstrate RAGAS works
+    when given real answers. This bypasses API response and uses ground_truth instead.
 
     Args:
         dataset_path: Path to RAGAS JSONL dataset
@@ -394,16 +394,24 @@ async def run_ragas_evaluation(
         mode: Retrieval mode (vector, hybrid, graph)
         max_questions: Max questions to evaluate (-1 = all)
         output_dir: Directory to save results
+        use_ground_truth: If True, use ground_truth as answer instead of API response (POC mode)
 
     Returns:
         Evaluation results with all 4 RAGAS metrics
     """
     logger.info("=" * 80)
-    logger.info(f"RAGAS EVALUATION - Sprint 79 Feature 79.8 (RAGAS 0.4.2)")
+    if use_ground_truth:
+        logger.info(f"RAGAS EVALUATION - Sprint 79 POC 79.10 (RAGAS 0.4.2 + Ground Truth)")
+    else:
+        logger.info(f"RAGAS EVALUATION - Sprint 79 Feature 79.8 (RAGAS 0.4.2)")
     logger.info("=" * 80)
     logger.info(f"Dataset: {dataset_path}")
     logger.info(f"Namespace: {namespace_id}")
     logger.info(f"Mode: {mode}")
+    if use_ground_truth:
+        logger.info(f"POC Mode: Using ground_truth as answer (bypassing API)")
+    else:
+        logger.info(f"Mode: Using API responses as answers")
 
     # Load dataset
     dataset_file = Path(dataset_path)
@@ -435,14 +443,26 @@ async def run_ragas_evaluation(
         logger.info(f"\n[{i+1}/{len(questions_data)}] {question[:80]}...")
 
         try:
-            # Query system
-            query_start = time.time()
-            response = await query_aegis_rag(
-                question=question,
-                namespace_id=namespace_id,
-                mode=mode,
-            )
-            query_time = time.time() - query_start
+            # Sprint 79 POC 79.10: If use_ground_truth flag set, skip API and use ground_truth
+            if use_ground_truth:
+                logger.info(f"  POC Mode: Using ground_truth as answer (skipping API query)")
+                response = {
+                    "answer": ground_truth,
+                    "contexts": expected_contexts,  # Use expected contexts from dataset
+                    "sources": [{"text": ctx} for ctx in expected_contexts],
+                    "mode": mode,
+                    "question": question,
+                }
+                query_time = 0.0  # No API call in POC mode
+            else:
+                # Query system normally
+                query_start = time.time()
+                response = await query_aegis_rag(
+                    question=question,
+                    namespace_id=namespace_id,
+                    mode=mode,
+                )
+                query_time = time.time() - query_start
 
             # Collect for RAGAS evaluation
             result = {
@@ -454,6 +474,7 @@ async def run_ragas_evaluation(
                 "mode": mode,
                 "query_time": query_time,
                 "num_contexts_retrieved": len(response["contexts"]),
+                "poc_mode": use_ground_truth,
             }
             results.append(result)
 
@@ -473,6 +494,7 @@ async def run_ragas_evaluation(
                 "query_time": 0,
                 "num_contexts_retrieved": 0,
                 "error": str(e),
+                "poc_mode": use_ground_truth,
             })
 
     total_query_time = time.time() - start_time
@@ -565,7 +587,10 @@ async def run_ragas_evaluation(
     output_path.mkdir(parents=True, exist_ok=True)
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    results_file = output_path / f"ragas_eval_{mode}_{timestamp}.json"
+
+    # Sprint 79 POC 79.10: Mark POC results with special naming
+    poc_suffix = "_poc_ground_truth" if use_ground_truth else ""
+    results_file = output_path / f"ragas_eval_{mode}{poc_suffix}_{timestamp}.json"
 
     output_data = {
         "metadata": {
@@ -578,6 +603,8 @@ async def run_ragas_evaluation(
             "total_time_seconds": total_query_time + metrics.get("total_time_seconds", 0),
             "timestamp": timestamp,
             "ragas_version": "0.4.2",
+            "poc_mode": use_ground_truth,
+            "poc_description": "Sprint 79 POC 79.10: Using ground_truth as answer to prove RAGAS metrics work" if use_ground_truth else None,
         },
         "metrics": metrics,
         "per_question_results": results,
@@ -596,6 +623,8 @@ async def run_ragas_evaluation(
     logger.info("=" * 80)
     logger.info(f"RAGAS Version: 0.4.2")
     logger.info(f"Mode: {mode}")
+    if use_ground_truth:
+        logger.info(f"Test Type: POC (Sprint 79.10) - Ground Truth Mode")
     logger.info(f"Questions evaluated: {len(questions_data)}")
     logger.info(f"Query time: {total_query_time:.1f}s")
     logger.info(f"Metrics time: {metrics.get('total_time_seconds', 0):.1f}s")
@@ -607,6 +636,15 @@ async def run_ragas_evaluation(
     logger.info(f"  Context Recall:    {metrics['context_recall']:.4f}")
     logger.info(f"  Faithfulness:      {metrics['faithfulness']:.4f}")
     logger.info(f"  Answer Relevancy:  {metrics['answer_relevancy']:.4f}")
+
+    if use_ground_truth:
+        logger.info(f"\nPOC MODE INTERPRETATION:")
+        logger.info(f"  Context Precision/Recall are measuring retrieval quality against expected contexts")
+        logger.info(f"  Faithfulness measures: Is ground_truth faithful to retrieved contexts? (should be high)")
+        logger.info(f"  Answer Relevancy measures: Is ground_truth relevant to the question? (should be high)")
+        logger.info(f"\nExpected Results in POC mode:")
+        logger.info(f"  - Faithfulness should be >0.5 (proves RAGAS can evaluate real answers)")
+        logger.info(f"  - Answer Relevancy should be >0.5 (proves RAGAS can evaluate real answers)")
 
     return output_data
 
@@ -643,6 +681,12 @@ async def main():
         default="data/evaluation/results",
         help="Output directory for results (default: data/evaluation/results)",
     )
+    parser.add_argument(
+        "--use-ground-truth",
+        action="store_true",
+        help="POC Mode (Sprint 79.10): Use ground_truth as answer instead of API response. "
+             "This proves RAGAS works when given real answers. Bypasses API queries.",
+    )
 
     args = parser.parse_args()
 
@@ -653,6 +697,7 @@ async def main():
         mode=args.mode,
         max_questions=args.max_questions,
         output_dir=args.output_dir,
+        use_ground_truth=args.use_ground_truth,
     )
 
 

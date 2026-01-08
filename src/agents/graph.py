@@ -480,8 +480,9 @@ def create_base_graph(enable_tools: bool = False) -> StateGraph:
     # Sprint 10: Connect vector_search to answer generator
     graph.add_edge("vector_search", "answer")
 
-    # Sprint 5: Connect graph_query to END (has its own answer generation)
-    graph.add_edge("graph_query", END)
+    # Sprint 79 Fix: Connect graph_query to answer generator (was going to END)
+    # graph_query retrieves contexts but does NOT generate answers
+    graph.add_edge("graph_query", "answer")
 
     # Sprint 7: Connect memory to END
     graph.add_edge("memory", END)

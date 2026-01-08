@@ -9,6 +9,7 @@
 4. Consolidated Architecture: docs/ARCHITECTURE.md
 5. Technology Stack: docs/TECH_STACK.md
 6. Code Conventions: docs/CONVENTIONS.md
+7. **RAGAS Journey:** [docs/ragas/RAGAS_JOURNEY.md](docs/ragas/RAGAS_JOURNEY.md) - Living document for RAGAS metrics optimization (Sprint 79+)
 
 ---
 
@@ -169,7 +170,7 @@ Scopes: vector, graph, memory, agent, api, infra
 
 ## Subagent Responsibilities
 
-**Claude Code hat 7 spezialisierte Subagents, die automatisch getriggert werden können:**
+**Claude Code hat 8 spezialisierte Subagents, die automatisch getriggert werden können:**
 
 | Subagent | Focus | Trigger Keywords |
 |----------|-------|------------------|
@@ -180,8 +181,53 @@ Scopes: vector, graph, memory, agent, api, infra
 | **performance-agent** | Performance optimization, profiling, benchmarking, latency analysis | "optimize", "performance", "benchmark", "profiling", "latency" |
 | **api-agent** | FastAPI routers, Pydantic models, OpenAPI, REST endpoints | "API", "endpoint", "FastAPI", "Pydantic", "OpenAPI" |
 | **frontend-agent** | React components, TypeScript, UI implementation, state management | "UI", "frontend", "React", "component", "TypeScript" |
+| **rag-tuning-agent** | RAGAS metrics optimization, A/B testing retrieval params, systematic RAG evaluation | "RAGAS", "metrics", "evaluate", "optimize RAG", "tuning", "Context Precision", "Faithfulness" |
 
 **Usage:** Diese Agents werden automatisch vom Task-Tool getriggert, wenn relevante Keywords im Task erkannt werden.
+
+### RAG Tuning Agent (Sprint 80+)
+
+**Purpose:** Automated agent for systematic RAGAS metrics optimization.
+
+**Capabilities:**
+- Run RAGAS evaluations in parallel (Vector/Graph/Hybrid modes)
+- A/B test parameter changes (top_k, reranking weights, prompts)
+- Track metric evolution over time (updates docs/ragas/RAGAS_JOURNEY.md)
+- Suggest optimizations based on bottleneck analysis
+- Auto-generate experiment reports
+
+**Triggers:**
+- User requests RAGAS evaluation ("run RAGAS", "evaluate retrieval quality")
+- User wants to improve metrics ("increase Context Recall", "reduce hallucination")
+- User asks about RAG performance ("why is Faithfulness low?")
+
+**Process:**
+1. **Baseline:** Run current RAGAS evaluation (all 3 modes)
+2. **Analysis:** Identify bottlenecks (low CR? low F? low CP?)
+3. **Hypothesis:** Generate optimization hypotheses based on analysis
+4. **Experiment:** Implement changes, re-run RAGAS
+5. **Document:** Update docs/ragas/RAGAS_JOURNEY.md with results
+6. **Iterate:** Continue until targets achieved or user stops
+
+**Example Usage:**
+```
+User: "Our Context Recall is only 0.29, how can we improve it?"
+
+rag-tuning-agent:
+1. Runs baseline RAGAS (confirms CR=0.291)
+2. Analyzes bottleneck: "Retrieving only 3-5 contexts vs SOTA 10-20"
+3. Hypotheses:
+   - Increase top_k from 5 to 15 (expected: CR +100%)
+   - Add parent chunk retrieval (expected: CR +50%)
+   - Audit entity extraction coverage (expected: CR +40%)
+4. Experiments:
+   - A: top_k=15 → CR=0.58 (+99%)
+   - B: top_k=15 + parent chunks → CR=0.72 (+148%)
+5. Documents results in RAGAS_JOURNEY.md
+6. Recommends: "Implement parent chunk retrieval (B) for best results"
+```
+
+**Output Location:** docs/ragas/RAGAS_JOURNEY.md (Experiment Log section)
 
 ---
 
@@ -383,7 +429,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 76 Complete:** .txt File Support + RAGAS Baseline (15 HotpotQA files, 146 entities, 38 types), Entity extraction fix, RAGAS (Faithfulness 80%, Relevancy 93%).
 **Sprint 77 Complete:** Critical Bug Fixes (BM25 namespace, chunk mismatch, Qdrant index), Community Summarization (92/92, batch job + API), Entity Connectivity Benchmarks (4 domains), 2,108 LOC.
 **Sprint 78 Complete:** Graph Entity→Chunk Expansion (100-char→447-char full chunks), 3-Stage Semantic Search (LLM→Graph N-hop→Synonym→BGE-M3), 4 UI settings (hops 1-3, threshold 5-20), 20 unit tests (100%), ADR-041, RAGAS deferred (GPT-OSS:20b 85.76s, Nemotron3 >600s).
-**Sprint 79 Planned:** DSPy RAGAS Optimization (21 SP), Target: GPT-OSS:20b <20s (4x), Nemotron3 <60s (10x), ≥90% accuracy, 5 features (DSPy integration, optimized prompts, benchmarking, evaluation).
+**Sprint 79 Complete:** RAGAS 0.4.2 Migration (4 features, 12 SP), Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample), DSPy deferred to Sprint 80 (21 SP).
 
 ---
 
