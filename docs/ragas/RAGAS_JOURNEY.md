@@ -646,6 +646,57 @@ graph_expansion_hops: int = Field(
 - `strict_faithfulness_enabled` needs Admin UI toggle
 - `graph_vector_fallback_enabled` needs Admin UI toggle
 
+### Evaluation Results (2026-01-08 23:39) - Pre-Restart Baseline
+
+**Dataset:** HotpotQA Small (5 questions)
+**Status:** ⚠️ Config changes NOT YET ACTIVE (server restart required)
+
+| Mode | Context Precision | Context Recall | Faithfulness | Answer Relevancy |
+|------|-------------------|----------------|--------------|------------------|
+| **Vector** | 0.417 | 0.600 | 0.400 | 0.476 |
+| **Hybrid** | 0.483 | 0.600 | 0.433 | 0.499 |
+| **Graph** | 0.200 | 0.200 | 0.200 | 0.340 |
+
+**Key Observations:**
+1. **Graph Mode: 60% empty contexts** - Entity extraction failing for 3/5 questions
+2. **Feature 80.2 (Graph→Vector Fallback) would help** - But server restart needed
+3. **Feature 80.4 (top_k=10) not active** - Still retrieving 5 contexts
+4. **Multi-hop (2 hops) not active** - Still using 1 hop default
+
+**Next:** Restart API server and re-run evaluation to measure Sprint 80 impact.
+
+---
+
+## Critical Rules
+
+### ⚠️ NEVER Run RAGAS Evaluations in Parallel!
+
+**CRITICAL:** RAGAS evaluations must ALWAYS be run **sequentially**, one mode at a time.
+
+**Why:**
+1. **LLM Resource Contention:** Ollama/GPT-OSS can only handle one request at a time efficiently
+2. **Memory Exhaustion:** BGE-M3 embeddings + LLM metrics require significant GPU memory
+3. **Unreliable Results:** Parallel runs cause timeouts and incomplete evaluations
+4. **Database Locks:** Concurrent Neo4j/Qdrant queries can cause lock contention
+
+**Correct:**
+```bash
+# Run modes SEQUENTIALLY
+poetry run python scripts/run_ragas_evaluation.py --mode hybrid ...
+# Wait for completion, then:
+poetry run python scripts/run_ragas_evaluation.py --mode vector ...
+# Wait for completion, then:
+poetry run python scripts/run_ragas_evaluation.py --mode graph ...
+```
+
+**WRONG:**
+```bash
+# NEVER do this!
+poetry run python scripts/run_ragas_evaluation.py --mode hybrid ... &
+poetry run python scripts/run_ragas_evaluation.py --mode vector ... &
+poetry run python scripts/run_ragas_evaluation.py --mode graph ... &
+```
+
 ---
 
 ## Tools & Infrastructure
