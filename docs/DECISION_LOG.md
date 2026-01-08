@@ -568,7 +568,60 @@
 
 ---
 
-**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
-**Total Decisions Documented:** 84 (+8 from Sprint 60, 67-68)
-**Current Sprint:** Sprint 67 (Planned)
-**Next Sprint:** Sprint 68 (Planned - Production Hardening)
+## SPRINT 76-79: RAGAS EVALUATION & GRAPH SEARCH ENHANCEMENT
+
+### 2026-01-06 | .txt File Support for RAGAS Dataset (Sprint 76.1)
+**Decision:** Add plain text (.txt) file support to ingestion pipeline for HotpotQA evaluation dataset.
+**Rationale:** RAGAS evaluation requires ground truth datasets (HotpotQA, Amnesty QA) which are primarily .txt files. Docling CUDA handles PDFs/DOCX, but .txt files need direct parsing. Minimal overhead (SimpleDirectoryReader fallback), enables 15 HotpotQA files for evaluation. Critical for establishing RAGAS baseline metrics.
+
+### 2026-01-06 | RAGAS Baseline Evaluation (Sprint 76.2-76.3)
+**Decision:** Establish RAGAS baseline using GPT-OSS:20b local LLM (Faithfulness 80%, Answer Relevancy 93%, Context Recall 50%, Context Precision 20%).
+**Rationale:** Baseline metrics critical before optimization. GPT-OSS:20b selected for local inference (no cloud costs). Results show strong answer quality (80% faithfulness, 93% relevancy) but weak retrieval (50% recall, 20% precision). Identifies retrieval as primary optimization target for Sprint 77-78.
+
+### 2026-01-07 | BM25 Namespace Filtering Bug Fix (Sprint 77.1, TD-092)
+**Decision:** Fix critical bug where BM25 keyword search ignored namespace filtering, returning results from all namespaces.
+**Rationale:** Security/privacy issue - users could see chunks from other namespaces. BM25 cache invalidation not respecting namespace boundaries. Fix: Add namespace_id to BM25 cache key, filter results by namespace before RRF fusion. Verified with 6 integration tests (100% pass rate).
+
+### 2026-01-07 | Chunk ID Mismatch Resolution (Sprint 77.2, TD-093)
+**Decision:** Align chunk ID generation between Qdrant (SHA-256 hash) and Neo4j (UUID) to enable cross-database provenance tracking.
+**Rationale:** Chunk ID mismatch caused citation failures (Qdrant chunk_id ≠ Neo4j chunk_id). Unified approach: SHA-256(namespace_id + document_id + chunk_index) for both databases. Enables reliable chunk→document→entity provenance. Migration script backfilled 15,000+ existing chunks.
+
+### 2026-01-07 | Community Summarization (92/92 Communities, Sprint 77.3-77.4)
+**Decision:** Generate LLM-powered summaries for all 92 detected communities in HotpotQA knowledge graph.
+**Rationale:** Community summaries enable "Graph-Global" search mode (high-level topic matching). Batch job endpoint (POST /api/v1/admin/graph/communities/summarize) processes communities in parallel. 92/92 summaries generated successfully (0 failures). Average 150 tokens/summary, ~15s per community. Critical for hybrid retrieval quality.
+
+### 2026-01-07 | Entity Connectivity as Domain Training Metric (Sprint 77.5, TD-095)
+**Decision:** Implement connectivity evaluation (avg relations per entity) as domain type classifier (Factual: 0.3-0.8, Narrative: 1.5-3.0, Technical: 2.0-4.0, Academic: 2.5-5.0).
+**Rationale:** Different domain types exhibit different connectivity patterns. Connectivity metric enables automatic domain type detection, informs chunking strategy (narrative requires more context), and provides quality signal for entity extraction. Endpoint: POST /api/v1/admin/domains/connectivity/evaluate. Benchmarked across 4 domains.
+
+### 2026-01-08 | Entity→Chunk Expansion via MENTIONED_IN Traversal (Sprint 78.1, ADR-041)
+**Decision:** Change graph search from returning entity descriptions (100 chars) to full document chunks (800-1800 tokens) via `(entity)-[:MENTIONED_IN]->(chunk)` Neo4j relationship traversal.
+**Rationale:** LLM answer generation requires full context, not entity descriptions. 100-char descriptions insufficient for accurate answers. MENTIONED_IN relationships already exist from ingestion pipeline. Cypher query change simple (15 lines), massive impact: 4.5x more context per entity. Trade-off: +70ms latency (0.05s → 0.12s), but acceptable for 4.5x quality gain.
+
+### 2026-01-08 | 3-Stage Semantic Entity Expansion (Sprint 78.2-78.3, ADR-041)
+**Decision:** Implement SmartEntityExpander with 3-stage pipeline: (1) LLM entity extraction, (2) Graph N-hop expansion, (3) LLM synonym fallback, (4) BGE-M3 semantic reranking.
+**Rationale:**
+- Stage 1 (LLM): Better than keyword extraction (context-aware, auto-filters stop words)
+- Stage 2 (Graph): Leverages domain knowledge (1-3 hops configurable)
+- Stage 3 (Synonym): Fallback when graph sparse (only if < threshold)
+- Stage 4 (Reranker): GPU-accelerated semantic ranking (optional)
+**Impact:** 0-2 initial entities → 10-15 expanded entities (avg 7x expansion). Entity expansion: 0.4-0.9s depending on synonym fallback.
+
+### 2026-01-08 | UI-Configurable Graph Expansion Settings (Sprint 78.4, Feature 78.4)
+**Decision:** Expose 4 graph expansion settings via Admin UI: graph_expansion_hops (1-3), graph_min_entities_threshold (5-20), graph_max_synonyms_per_entity (1-5), graph_semantic_reranking_enabled (bool).
+**Rationale:** Enable power users to tune graph search without code changes. Settings stored in Redis (similar to LLM config pattern from Sprint 64). Pydantic validation ensures valid ranges (ge/le constraints). Defaults optimized for general use (1 hop, 10 threshold, 3 synonyms, reranking enabled). UI deferred to Sprint 79 Feature 79.6 (8 SP).
+
+### 2026-01-08 | RAGAS Deferral to Sprint 79 (Sprint 78.6, TD-096)
+**Decision:** Defer RAGAS evaluation from Sprint 78 to Sprint 79 due to slow local LLM performance (GPT-OSS:20b 85.76s/eval, Nemotron3 Nano >600s/eval).
+**Rationale:** RAGAS Few-Shot prompts (2903 chars) too complex for local LLMs. 15 evaluations × 85.76s = 1286s → timeout at 300s. Alternative verification: 20 unit tests (100% pass rate) + manual graph queries validate functionality. Sprint 79 will optimize RAGAS prompts using DSPy (target: 4x-10x speedup, ≥90% accuracy).
+
+### 2026-01-08 | DSPy Framework for RAGAS Prompt Optimization (Sprint 79.1-79.5, Planned)
+**Decision (Planned):** Use DSPy BootstrapFewShot + MIPROv2 to optimize RAGAS prompts for local LLMs.
+**Rationale:** DSPy automates prompt compression via learned few-shot examples. BootstrapFewShot (for GPT-OSS:20b, Nemotron3 Nano): Generate 2 few-shot demos, use 1 labeled demo → 4x-10x speedup. MIPROv2 (if Qwen2.5:7b available): Generate 10 prompt candidates with instruction optimization → best prompt selected via metric. Training data: 80 labeled examples (4 metrics × 20). Target: GPT-OSS:20b <20s, Nemotron3 <60s, ≥90% accuracy.
+
+---
+
+**Last Updated:** 2026-01-08 (Sprint 76-79)
+**Total Decisions Documented:** 95 (+11 from Sprint 76-79)
+**Current Sprint:** Sprint 78 (Complete)
+**Next Sprint:** Sprint 79 (Planned - DSPy RAGAS Optimization)

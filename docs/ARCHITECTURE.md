@@ -215,6 +215,9 @@ src/
 | **45-48** | LangGraph State | Unified AgentState, cancellation, phase events |
 | **51** | Maximum Hybrid | 4-signal fusion, community detection fixes |
 | **53-59** | Refactoring | DDD structure, protocols, 80% coverage, tool framework |
+| **76-77** | RAGAS & Bug Fixes | .txt support (15 HotpotQA), RAGAS baseline (80% faithfulness), BM25 namespace fix, community summarization (92/92) |
+| **78** | Graph Search Enhancement | Entity→Chunk expansion (100-char→447-char), 3-stage semantic search (LLM→Graph→Synonym→BGE-M3), 4 UI settings |
+| **79** | DSPy Optimization (Planned) | RAGAS prompt optimization (4x-10x speedup), BootstrapFewShot + MIPROv2, ≥90% accuracy target |
 
 ### Sprint 53-59: Major Refactoring
 
@@ -652,8 +655,168 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 76-79: Graph Search Enhancement & RAGAS Evaluation
+
+### Sprint 76-77: RAGAS Foundation & Critical Bug Fixes
+
+**Sprint 76 Achievements:**
+- **.txt File Support:** Added 15 HotpotQA files for evaluation dataset
+- **RAGAS Baseline:** Faithfulness 80%, Answer Relevancy 93% (using GPT-OSS:20b)
+- **Entity Extraction:** 146 entities extracted from HotpotQA dataset
+
+**Sprint 77 Critical Fixes:**
+- **BM25 Namespace Fix:** Corrected namespace filtering in keyword search
+- **Chunk Mismatch Resolution:** Fixed chunk ID alignment between Qdrant and Neo4j
+- **Community Summarization:** Generated summaries for 92/92 communities
+- **Entity Connectivity Benchmarks:** Evaluated connectivity metrics across 4 domain types (Factual, Narrative, Technical, Academic)
+
+### Sprint 78: Entity→Chunk Expansion & 3-Stage Semantic Search (ADR-041)
+
+**Problem Statement:**
+Graph search was returning only 100-character entity descriptions instead of full document chunks, providing insufficient context for LLM answer generation.
+
+**Solution Architecture:**
+
+```python
+# BEFORE (Sprint 77) - Entity descriptions only
+MATCH (e:base)
+WHERE e.entity_name IN $entities
+RETURN e.entity_id, e.entity_name, e.description  -- Only 100 chars!
+
+# AFTER (Sprint 78) - Full document chunks via MENTIONED_IN traversal
+MATCH (e:base)-[:MENTIONED_IN]->(c:chunk)
+WHERE e.entity_name IN $expanded_entities
+  AND c.namespace_id IN $namespaces
+WITH c, collect(DISTINCT e.entity_name) AS matched_entities,
+     count(DISTINCT e) AS entity_count
+RETURN c.chunk_id, c.text, c.document_id, c.chunk_index,
+       matched_entities, entity_count
+ORDER BY entity_count DESC
+LIMIT $top_k
+```
+
+**3-Stage Semantic Entity Expansion Pipeline:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│          SmartEntityExpander (3-Stage Pipeline)             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Stage 1: LLM Entity Extraction                            │
+│  ┌────────────────────────────────────────┐                │
+│  │ Input: "Who developed Ollama?"         │                │
+│  │ LLM: Extract entities from query       │                │
+│  │ Output: ["Ollama", "developer"]        │                │
+│  │ Features: Context-aware, auto-filters  │                │
+│  └────────────────┬───────────────────────┘                │
+│                   │                                         │
+│  Stage 2: Graph N-Hop Expansion                            │
+│  ┌────────────────▼───────────────────────┐                │
+│  │ Input: ["Ollama", "developer"]         │                │
+│  │ Neo4j: Traverse N-hops (configurable)  │                │
+│  │ Cypher: MATCH (e)-[*1..N]-(related)    │                │
+│  │ Output: ["Ollama", "Meta", "LLaMA",    │                │
+│  │          "vLLM", "inference"]          │                │
+│  │ Config: graph_expansion_hops (1-3)     │                │
+│  └────────────────┬───────────────────────┘                │
+│                   │                                         │
+│  Stage 3: LLM Synonym Fallback (if < threshold)            │
+│  ┌────────────────▼───────────────────────┐                │
+│  │ Condition: len(entities) < threshold   │                │
+│  │ LLM: Generate synonyms for top 2       │                │
+│  │ Input: ["Ollama", "developer"]         │                │
+│  │ Output: ["LLM runtime", "creator",     │                │
+│  │          "maintainer"]                 │                │
+│  │ Config: graph_max_synonyms_per_entity  │                │
+│  └────────────────┬───────────────────────┘                │
+│                   │                                         │
+│  Stage 4: BGE-M3 Semantic Reranking (optional)             │
+│  ┌────────────────▼───────────────────────┐                │
+│  │ Input: All expanded entities           │                │
+│  │ BGE-M3: Rank by semantic similarity    │                │
+│  │ Output: Top-K most relevant entities   │                │
+│  │ Config: graph_semantic_reranking_enabled│               │
+│  └────────────────────────────────────────┘                │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Configuration Settings (UI-Exposed, Sprint 78):**
+
+| Setting | Type | Range | Default | Purpose |
+|---------|------|-------|---------|---------|
+| `graph_expansion_hops` | int | 1-3 | 1 | Graph traversal depth |
+| `graph_min_entities_threshold` | int | 5-20 | 10 | Synonym fallback trigger |
+| `graph_max_synonyms_per_entity` | int | 1-5 | 3 | LLM synonym generation limit |
+| `graph_semantic_reranking_enabled` | bool | - | true | Enable BGE-M3 reranking |
+
+**Impact:**
+- **Context Quality:** 4.5x more context (100 chars → 447 chars avg chunk size)
+- **Graph Query Latency:** +70ms (0.05s → 0.12s) for 4.5x more context
+- **Entity Expansion:** 0.4-0.9s (depending on synonym fallback)
+- **End-to-End Query:** ~500ms (within target <500ms for hybrid queries)
+
+**Test Coverage:** 20 comprehensive unit tests (100% pass rate)
+- 14 tests for SmartEntityExpander (all 4 stages + edge cases)
+- 6 tests for dual_level_search (Entity→Chunk traversal, namespace filtering, ranking)
+
+### Sprint 79: DSPy RAGAS Prompt Optimization (Planned)
+
+**Problem Statement:**
+RAGAS Few-Shot prompts (2903 chars) too complex for local LLMs:
+- GPT-OSS:20b: 85.76s per evaluation (timeout at 300s for 15 contexts)
+- Nemotron3 Nano: >600s per simple query
+
+**Solution Approach: DSPy Framework v2.5+**
+
+**DSPy BootstrapFewShot (for GPT-OSS:20b, Nemotron3 Nano):**
+```python
+# Define RAGAS Context Precision as DSPy Signature
+class ContextPrecisionSignature(dspy.Signature):
+    """Verify if context was useful in arriving at the answer."""
+    question: str = dspy.InputField()
+    answer: str = dspy.InputField()
+    context: str = dspy.InputField()
+    verdict: int = dspy.OutputField(desc="1 if useful, 0 if not")
+
+# Optimize with BootstrapFewShot (for small models)
+optimizer = dspy.BootstrapFewShot(
+    max_bootstrapped_demos=2,  # Generate 2 few-shot examples
+    max_labeled_demos=1,       # Use 1 labeled example
+)
+compiled_program = optimizer.compile(
+    student=ContextPrecisionModule(),
+    trainset=training_examples  # 20 examples per metric
+)
+```
+
+**DSPy MIPROv2 (for Qwen2.5:7b - if available):**
+```python
+# Multi-Prompt Instruction Proposal Optimizer v2
+optimizer = dspy.MIPROv2(
+    prompt_model=qwen25_7b,  # Use Qwen2.5:7b for prompt generation
+    task_model=gpt_oss_20b,  # Use GPT-OSS:20b for evaluation
+    metric=ragas_f1_score,   # Composite RAGAS metric
+    num_candidates=10,       # Generate 10 prompt candidates
+    init_temperature=1.4,    # High temp for diversity
+)
+```
+
+**Performance Targets (Sprint 79):**
+- GPT-OSS:20b: 85.76s → <20s (4x speedup)
+- Nemotron3 Nano: >600s → <60s (10x speedup)
+- Accuracy: ≥90% (vs 100% baseline)
+
+**Training Data Requirements:**
+- 20 labeled examples per metric (4 metrics × 20 = 80 examples total)
+- Amnesty QA dataset (10 questions) + HotpotQA (15 questions)
+- Human validation for ground truth
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67-68 Updates:** 2025-12-31
 **Sprint 72 Updates:** 2026-01-03 (Admin Features)
-**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md
+**Sprint 76-79 Updates:** 2026-01-08 (Graph Search Enhancement, RAGAS Optimization)
+**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_79_PLAN.md, ADR-041
 **Maintainer:** Claude Code with Human Review

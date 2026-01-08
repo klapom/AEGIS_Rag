@@ -890,8 +890,190 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Evaluation & Quality Assurance
+
+### RAGAS Framework (v0.3.9) - RAG Evaluation (Sprint 74-79)
+
+**Purpose:** Reference-free evaluation of RAG system quality with 4 metrics.
+
+**RAGAS Metrics:**
+
+| Metric | Description | Target Score |
+|--------|-------------|--------------|
+| **Context Precision** | Relevant chunks in top-K retrieval | >0.75 |
+| **Context Recall** | Coverage of ground truth in retrieved contexts | >0.70 |
+| **Faithfulness** | Answer grounded in retrieved contexts | >0.90 |
+| **Answer Relevancy** | Answer addresses the query | >0.80 |
+
+**Sprint 76-78 Results (GPT-OSS:20b, 10 Amnesty QA questions):**
+- **Faithfulness:** 80% ✅
+- **Answer Relevancy:** 93% ✅
+- **Context Recall:** 50% ⚠️ (below target)
+- **Context Precision:** 20% ⚠️ (below target)
+
+**Performance Challenge (Sprint 78):**
+- GPT-OSS:20b: 85.76s per evaluation (Few-Shot prompts 2903 chars)
+- Nemotron3 Nano: >600s per evaluation (too slow for local inference)
+- 15 evaluations × 85.76s = 1286s → Timeout at 300s
+
+**Solution:** Sprint 79 DSPy Optimization (see below)
+
+**Files:**
+- `scripts/run_ragas_evaluation.py` - Evaluation runner
+- `tests/ragas/data/aegis_ragas_dataset.jsonl` - Test dataset (20 questions)
+- `tests/ragas/test_ragas_integration.py` - Backend tests (8 tests)
+
+**References:**
+- [RAGAS GitHub](https://github.com/explodinggradients/ragas)
+- [RAGAS Documentation](https://docs.ragas.io/)
+- [SPRINT_74_PLAN.md](sprints/SPRINT_74_PLAN.md) - Initial RAGAS integration
+- [SPRINT_76_FINAL_RESULTS.md](sprints/SPRINT_76_FINAL_RESULTS.md) - Baseline results
+- [SPRINT_78_PLAN.md](sprints/SPRINT_78_PLAN.md) - Performance issues
+
+---
+
+### DSPy Framework (v2.5+) - Prompt Optimization (Sprint 79)
+
+**Purpose:** Automatic prompt optimization for local LLMs using Stanford DSPy framework.
+
+**Problem:**
+RAGAS Few-Shot prompts (2903 chars, 3 examples) too complex for local Ollama inference:
+- GPT-OSS:20b: 85.76s per evaluation (target: <20s)
+- Nemotron3 Nano: >600s per evaluation (target: <60s)
+
+**DSPy Solution:**
+Optimize RAGAS metric prompts using BootstrapFewShot + MIPROv2:
+1. **Prompt Compression:** 2903 chars → <1200 chars (2.4x reduction)
+2. **Few-Shot Reduction:** 3 examples → 1-2 examples
+3. **Instruction Optimization:** LLM-friendly wording for local models
+4. **Accuracy Preservation:** Maintain ≥90% accuracy vs original prompts
+
+**Expected Performance (Sprint 79 Targets):**
+- GPT-OSS:20b: 85.76s → <20s (4x speedup) ✅
+- Nemotron3 Nano: >600s → <60s (10x speedup) ✅
+- Total RAGAS time: 1286s → <300s (4.3x speedup) ✅
+
+**DSPy Optimization Techniques:**
+```python
+import dspy
+
+# Define RAGAS Context Precision as DSPy Signature
+class ContextPrecisionSignature(dspy.Signature):
+    """Verify if context was useful in arriving at the answer."""
+    question: str = dspy.InputField()
+    answer: str = dspy.InputField()
+    context: str = dspy.InputField()
+    verdict: int = dspy.OutputField(desc="1 if useful, 0 if not")
+
+# Optimize with BootstrapFewShot (for GPT-OSS:20b)
+optimizer = dspy.BootstrapFewShot(max_bootstrapped_demos=2, max_labeled_demos=1)
+compiled_program = optimizer.compile(
+    student=ContextPrecisionModule(),
+    trainset=training_examples  # 20 examples per metric
+)
+
+# Optimize with MIPROv2 (for Nemotron3 Nano - more aggressive)
+optimizer = dspy.MIPROv2(num_candidates=10, max_bootstrapped_demos=1)
+compiled_program = optimizer.compile(
+    student=ContextPrecisionModule(),
+    trainset=training_examples
+)
+```
+
+**Training Data Requirements:**
+- 80 labeled examples total (4 metrics × 20 examples each)
+- Examples from RAGAS docs + custom Amnesty QA contexts
+- Stored in `data/dspy_training/{metric}_examples.json`
+
+**Cache Management:**
+- Compiled programs stored in `data/dspy_cache/{llm}_{metric}.json`
+- Reusable across RAGAS runs (no re-optimization needed)
+- Cache size: ~50-100KB per compiled program
+
+**Integration with RAGAS:**
+```bash
+# Run RAGAS with DSPy-optimized prompts
+poetry run python scripts/run_ragas_evaluation.py \
+  --namespace amnesty_qa \
+  --mode graph \
+  --use-dspy-optimized \
+  --llm gpt-oss:20b \
+  --dspy-cache-dir data/dspy_cache/
+```
+
+**Files:**
+- `src/evaluation/dspy_ragas/` - DSPy RAGAS optimization module (Sprint 79)
+- `scripts/train_dspy_ragas_optimizers.py` - Optimizer training script
+- `scripts/benchmark_dspy_ragas.py` - Performance benchmarking
+- `data/dspy_training/` - Training examples (80 examples)
+- `data/dspy_cache/` - Compiled programs (8 files: 4 metrics × 2 LLMs)
+
+**References:**
+- [DSPy GitHub](https://github.com/stanfordnlp/dspy)
+- [DSPy Documentation](https://dspy-docs.vercel.app/)
+- [SPRINT_79_PLAN.md](sprints/SPRINT_79_PLAN.md) - DSPy RAGAS optimization
+- [ADR-042: DSPy for RAGAS Prompt Optimization](adr/ADR-042-dspy-ragas-optimization.md) (Sprint 79)
+
+---
+
+## Graph Expansion Configuration (Sprint 78)
+
+### 3-Stage Semantic Entity Expansion
+
+**Purpose:** Intelligente Entity-Erweiterung für Graph-Retrieval mit LLM + Graph-Traversierung + Synonymen.
+
+**Configuration Settings:**
+
+| Setting | Type | Range | Default | Description |
+|---------|------|-------|---------|-------------|
+| `graph_expansion_hops` | int | 1-3 | 1 | Graph traversal depth (N-hop neighbors) |
+| `graph_min_entities_threshold` | int | 5-20 | 10 | Min entities before LLM synonym fallback |
+| `graph_max_synonyms_per_entity` | int | 1-5 | 3 | Max LLM-generated synonyms per entity |
+| `graph_semantic_reranking_enabled` | bool | - | true | BGE-M3 semantic reranking of entities |
+
+**Environment Variables:**
+```bash
+# .env
+GRAPH_EXPANSION_HOPS=2              # 1-3 (default: 1)
+GRAPH_MIN_ENTITIES_THRESHOLD=15     # 5-20 (default: 10)
+GRAPH_MAX_SYNONYMS_PER_ENTITY=5     # 1-5 (default: 3)
+GRAPH_SEMANTIC_RERANKING_ENABLED=true
+```
+
+**Usage:**
+```python
+from src.core.config import settings
+
+expander = SmartEntityExpander(
+    graph_expansion_hops=settings.graph_expansion_hops,        # ENV var
+    min_entities_threshold=settings.graph_min_entities_threshold,
+    max_synonyms_per_entity=settings.graph_max_synonyms_per_entity,
+)
+```
+
+**Frontend UI (Sprint 79 Feature 79.6):**
+- `GraphExpansionSettingsCard` component in AdvancedSettings page
+- 4 Sliders/Switches (hops, threshold, synonyms, reranking)
+- GET/PUT `/api/v1/admin/graph/expansion/config` endpoints
+- Redis persistence (similar to LLM Config Sprint 64)
+
+**Impact:**
+- Query: "What are global implications of abortion?"
+- Before (Sprint 77): 0-2 entities (only exact matches)
+- After (Sprint 78): 13 entities (7 graph + 6 synonyms) ✅
+- Retrieval improved from 0 chunks → 5 relevant chunks
+
+**References:**
+- [ADR-041: Entity→Chunk Expansion & 3-Stage Semantic Search](adr/ADR-041-entity-chunk-expansion-semantic-search.md)
+- [SPRINT_78_PLAN.md](sprints/SPRINT_78_PLAN.md)
+- `src/components/graph_rag/entity_expansion.py` - SmartEntityExpander class
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67 Complete:** 2026-01-11 (Sandbox + Adaptation + C-LARA, 75 SP, 195 tests, 3,511 LOC)
 **Sprint 72 Complete:** 2026-01-03 (Admin UI Features: MCP Tools + Memory Mgmt + Domain Training)
-**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md
+**Sprint 78 Complete:** 2026-01-08 (Graph Entity→Chunk Expansion + 3-Stage Semantic Search, 34 SP, ADR-041)
+**Sprint 79 Planned:** 2026-01-12 (DSPy RAGAS Optimization + Frontend UI Completion, 29 SP)
+**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_79_PLAN.md
 **Maintainer:** Documentation Agent (Claude Code)

@@ -1,9 +1,9 @@
 # AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-**Status:** Sprint 64 Complete (2025-12-25)
-**Version:** 2.1.0 (Production-Ready, Multi-Turn + Domain Training)
+**Status:** Sprint 78 Complete (2026-01-08) | Sprint 79 Planned
+**Version:** 2.4.0 (Production-Ready, Graph Semantic Search + RAGAS)
 
-Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, GPU-accelerated ingestion, and comprehensive technical investigations completed.
+Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, GPU-accelerated ingestion, 3-stage semantic graph search, and comprehensive RAGAS evaluation framework.
 
 ---
 
@@ -24,33 +24,54 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 
 ## Current Sprint Status
 
-### Sprint 64: Domain Training Optimization & Critical Bug Fixes (COMPLETE)
-**Duration:** 2025-12-22 to 2025-12-25
-**Total Story Points:** 35 SP (Delivered via Parallel Agent Execution)
+### Sprint 78: Graph Entity→Chunk Expansion & Semantic Search (COMPLETE)
+**Duration:** 2026-01-08
+**Total Story Points:** 34 SP
+**Status:** ✅ **FUNCTIONALLY COMPLETE** (5/6 features, RAGAS deferred to Sprint 79)
 
 **Key Achievements:**
-- **VLM Image Search (5 SP):** VLM-based chunking with community detection, image search endpoint
-- **Domain Training (10 SP):** Transactional domain creation, validation fixes, LLM config integration
-- **Multi-Turn Research (5 SP):** Conversational research agents with follow-up, query decomposition
-- **Section-Aware RAG (8 SP):** Section citations, hierarchical queries, community detection visualization
-- **LLM Config Backend (13 SP):** Admin UI config persisted to Redis, 60s cache, 6 agents integrated
-- **Production Deployment:** Complete Docker Compose setup with Nginx reverse proxy (http://192.168.178.10)
-- **E2E Testing:** 337/594 Playwright tests passed (57% - core user journeys working)
+- **Entity→Chunk Expansion Fix (5 SP):** Graph search now returns full 447-char chunks instead of 100-char entity descriptions
+  - Modified `dual_level_search.py` to traverse `(entity)-[:MENTIONED_IN]->(chunk)` relationships
+  - Impact: 4.5x more context for LLM (100 chars → 447 chars avg)
+- **3-Stage Entity Expansion Pipeline (13 SP):** SmartEntityExpander with LLM→Graph→Synonym→Reranking
+  - Stage 1: LLM extracts entities from query (context-aware, auto-filters stop words)
+  - Stage 2: Graph N-hop traversal (configurable 1-3 hops, preserves domain knowledge)
+  - Stage 3: LLM synonym fallback (only when < threshold, prevents semantic drift)
+  - Stage 4: BGE-M3 semantic reranking (GPU-accelerated, optional)
+- **UI Configuration (3 SP):** 4 new settings in Admin UI
+  - `graph_expansion_hops`: 1-3 (default: 1)
+  - `graph_min_entities_threshold`: 5-20 (default: 10)
+  - `graph_max_synonyms_per_entity`: 1-5 (default: 3)
+  - `graph_semantic_reranking_enabled`: bool (default: true)
+- **Unit Tests (5 SP):** 20 comprehensive tests (100% pass rate)
+  - 14 tests for SmartEntityExpander (all 4 stages + edge cases)
+  - 6 tests for dual_level_search (Entity→Chunk traversal, namespace filtering, ranking)
+- **Documentation (5 SP):** ADR-041 created, comprehensive Sprint 78 documentation
 
-**Critical Bug Fixes:**
-- Domain training now respects Admin UI LLM configuration (was using hardcoded models)
-- Transactional domain creation prevents "zombie domains" on training failures
-- Frontend LLM config migrated from localStorage to backend Redis persistence
+**RAGAS Evaluation (1 SP - Deferred to Sprint 79):**
+- Root Cause: RAGAS Few-Shot prompts (2903 chars) too complex for local LLMs
+  - GPT-OSS:20b: 85.76s per evaluation (timeout at 300s for 15 contexts)
+  - Nemotron3 Nano: >600s per simple query
+- Alternative Verification: Functional testing (20 unit tests + manual graph queries)
+- Sprint 79 Solution: DSPy prompt optimization (target: 4x speedup, ≥90% accuracy)
 
-**Documentation:**
-- Sprint 62+63 plan consolidated (93 SP across 7 features)
-- Sprint 64 plan created (35 SP across 6 features)
-- Production deployment guide with systemd integration
+**Performance:**
+- Graph query latency: +70ms (0.05s→0.12s) for 4.5x more context
+- Entity expansion: 0.4-0.9s (depending on synonym fallback)
+- End-to-end query: ~500ms (within target <500ms for hybrid queries)
 
-### Sprint 61-63: Multi-Turn & Section-Aware Features (COMPLETE)
-**Sprint 61:** Performance investigations (embeddings, reranking)
-**Sprint 62:** Multi-turn research agents, follow-up generation
-**Sprint 63:** Section-aware citations, community detection, Playwright E2E tests
+### Sprint 76-77: RAGAS Foundation & Critical Bug Fixes (COMPLETE)
+**Sprint 76:** .txt File Support (15 HotpotQA files), RAGAS Baseline (Faithfulness 80%, Answer Relevancy 93%), 146 entities extracted
+**Sprint 77:** BM25 namespace fix, chunk mismatch resolved, Community Summarization (92/92), Entity Connectivity Benchmarks (4 domains), 2,108 LOC added
+
+### Sprint 79: DSPy RAGAS Prompt Optimization (PLANNED)
+**Goal:** Optimize RAGAS prompts for local LLMs using DSPy
+**Total Story Points:** 21 SP
+**Target Performance:**
+- GPT-OSS:20b: 85.76s → <20s (4x speedup)
+- Nemotron3 Nano: >600s → <60s (10x speedup)
+- Accuracy: ≥90% (vs 100% baseline)
+**Approach:** DSPy BootstrapFewShot + MIPROv2 for automatic prompt compression
 
 ---
 

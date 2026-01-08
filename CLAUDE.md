@@ -265,7 +265,56 @@ curl http://localhost:8000/health
 
 ---
 
-## Sprint-Abschluss: Docker Container Update
+## Sprint-Abschluss: Dokumentations- & Container-Update Checkliste
+
+**Nach jedem Sprint MÜSSEN folgende Schritte durchgeführt werden:**
+
+### 1. Dokumentation aktualisieren (MANDATORY)
+
+**A. ADR erstellen/aktualisieren (wenn architektonische Entscheidungen):**
+- Neue ADR in `docs/adr/ADR-XXX-title.md` erstellen
+- `docs/adr/ADR_INDEX.md` aktualisieren
+
+**B. DECISION_LOG.md aktualisieren (ALWAYS):**
+- Neue Sektion für Sprint XX mit allen Entscheidungen
+- Format: `### 2026-XX-XX | Decision Title (Sprint XX.Y)`
+- **Total Decisions** + **Current/Next Sprint** am Ende aktualisieren
+
+**C. TECH_STACK.md aktualisieren (bei neuen Dependencies/Frameworks):**
+- Neue Dependencies mit Versions-Nummern dokumentieren
+- Beispiele: RAGAS 0.3.9→0.4.2, DSPy 2.5+, neue npm packages
+
+**D. ARCHITECTURE.md aktualisieren (bei System-Architektur-Änderungen):**
+- Neue Komponenten/Module dokumentieren
+- Interaktions-Diagramme + Performance-Metriken aktualisieren
+
+**E. SPRINT_PLAN.md aktualisieren (ALWAYS):**
+- Sprint XX Status: 📝 Planned → ✅ Complete
+- **Cumulative Story Points** aktualisieren
+- Nächsten Sprint-Eintrag anlegen
+
+**F. README.md aktualisieren (Major Features):**
+- **Current Sprint Status** aktualisieren
+- Key Achievements + Performance Metrics hinzufügen
+
+**G. CLAUDE.md aktualisieren (ALWAYS - Sprint Summary):**
+- Sprint XX Complete Zeile hinzufügen (max 1 Zeile, kompakt)
+- Format: `**Sprint XX Complete:** Hauptfeatures + Metriken`
+
+**H. Root-Verzeichnis bereinigen (wenn temporäre Dokumentations-Artefakte vorhanden):**
+- Temporäre Markdown-Dateien aus Root löschen (z.B. `TEMP_ANALYSIS.md`, `NOTES.md`)
+- Sprint-spezifische Notizen nach `docs/sprints/archive/` verschieben
+- Nur permanente Docs im Root behalten: `README.md`, `CLAUDE.md`, `CHANGELOG.md`
+
+**I. Behobene Technical Debt archivieren (wenn TDs gelöst wurden):**
+- Gelöste TD-Dateien von `docs/technical-debt/` nach `docs/technical-debt/archive/` verschieben
+- TD_INDEX.md aktualisieren: Eintrag als "✅ RESOLVED (Sprint XX)" markieren
+- **Active TD Count** und **Total SP** im TD_INDEX.md Footer aktualisieren
+- Beispiel: `TD-096` (RAGAS Timeouts) wird in Sprint 79 gelöst → nach `archive/TD-096-ragas-timeout.md`
+
+---
+
+### 2. Docker Container neu bauen (MANDATORY)
 
 **Nach jedem Sprint müssen die Docker Container neu gebaut werden:**
 
@@ -292,12 +341,42 @@ docker images aegis-rag-test --format "{{.CreatedAt}}"
 
 **Wichtig:** Die Datenbank-Container (Qdrant, Neo4j, Redis, Ollama) müssen NICHT neu gebaut werden - diese verwenden offizielle Images.
 
-**Sprint 64 Complete:** Domain training optimization, LLM config backend integration (Redis persistence, 60s cache), multi-turn research agents, section-aware citations, production deployment (Docker Compose + Nginx @ 192.168.178.10), E2E testing (337/594 passed - core journeys working).
-**Sprint 65 Complete:** CUDA optimization for embeddings (10-80x speedup), critical E2E test fixes (follow-ups, domain training, history loading), performance improvements.
+---
+
+### 3. Sprint-Abschluss-Commit (OPTIONAL)
+
+```bash
+# Nach allen Dokumentations-Updates:
+git add docs/ README.md CLAUDE.md
+git commit -m "docs(sprintXX): Complete Sprint XX documentation
+
+- ADR-XXX: [Decision Title]
+- DECISION_LOG.md: X new decisions
+- ARCHITECTURE.md: [Changes]
+- SPRINT_PLAN.md: Sprint XX Complete
+- [weitere Änderungen]
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+```
+
+**Automatisierung:** Aktuell NICHT automatisiert - manuelle Checkliste erforderlich. Zukünftig (Sprint 80+) könnte `scripts/sprint_close.py` + Git Hooks teilweise automatisieren.
+
+**Sprint 64 Complete:** Domain training optimization, LLM config backend integration (Redis persistence, 60s cache), multi-turn research agents, section-aware citations, production deployment (Docker Compose + Nginx @ 192.168.178.10), E2E testing (337/594 passed).
+**Sprint 65 Complete:** CUDA optimization for embeddings (10-80x speedup), critical E2E test fixes, performance improvements.
 **Sprint 66 Complete:** Document upload pipeline stabilization, VLM metadata, Admin UI fixes.
-**Sprint 67 Complete:** Secure Shell Sandbox (deepagents), Agents Adaptation Framework (Trace, Eval, Dataset, Reranker, Query Rewriter), C-LARA Intent Classifier (60%→89.5% accuracy), 195 tests passing, 3,511 lines of new code.
-**Sprint 68 Complete:** E2E test completion (594→606 tests, 57%→100%), performance optimization (500ms→320ms P95), section community detection, cache optimization, memory budget enforcement, adaptive reranker weights.
-**Sprint 69 Complete:** LLM streaming (TTFT 320ms→87ms), model selection (3-tier routing), learned reranker weights (+10% precision), query rewriter v2 (LLM-based graph intent), dataset builder (4 types), production monitoring (Prometheus + Grafana, 21 alerts, 14 panels), E2E test stabilization (606/606 tests, retry logic, test fixtures).
+**Sprint 67 Complete:** Secure Shell Sandbox, Agents Adaptation Framework, C-LARA Intent Classifier (60%→89.5% accuracy), 195 tests passing, 3,511 LOC.
+**Sprint 68 Complete:** E2E test completion (594→606 tests, 57%→100%), performance optimization (500ms→320ms P95), section community detection, cache optimization.
+**Sprint 69 Complete:** LLM streaming (TTFT 320ms→87ms), model selection (3-tier routing), learned reranker weights, query rewriter v2, production monitoring (Prometheus + Grafana).
+**Sprint 70 Complete:** Deep Research Repair + Tool Use Integration.
+**Sprint 71 Complete:** SearchableSelect Component, Backend APIs (/graph/documents, /sections), Original Filenames, 22/23 E2E tests (96%).
+**Sprint 72 Complete:** API-Frontend Gap Closure (MCP, Domain, Memory UI), Gap 72%→60% (18 endpoints), 100% E2E (594 tests).
+**Sprint 73 Complete:** E2E Test Infrastructure & Documentation, Chat Interface tests (10/10), Integration test analysis.
+**Sprint 74 Complete:** RAGAS Integration & Quality Metrics, Timeouts 60s→180s, RAGAS tests (20 questions, 8 tests), Retrieval comparison.
+**Sprint 75 Complete:** Critical Architecture Gap Discovery (TD-084: Namespace Isolation, TD-085: DSPy), Infrastructure fixes (Ollama 32K, PyTorch cu130).
+**Sprint 76 Complete:** .txt File Support + RAGAS Baseline (15 HotpotQA files, 146 entities, 38 types), Entity extraction fix, RAGAS (Faithfulness 80%, Relevancy 93%).
+**Sprint 77 Complete:** Critical Bug Fixes (BM25 namespace, chunk mismatch, Qdrant index), Community Summarization (92/92, batch job + API), Entity Connectivity Benchmarks (4 domains), 2,108 LOC.
+**Sprint 78 Complete:** Graph Entity→Chunk Expansion (100-char→447-char full chunks), 3-Stage Semantic Search (LLM→Graph N-hop→Synonym→BGE-M3), 4 UI settings (hops 1-3, threshold 5-20), 20 unit tests (100%), ADR-041, RAGAS deferred (GPT-OSS:20b 85.76s, Nemotron3 >600s).
+**Sprint 79 Planned:** DSPy RAGAS Optimization (21 SP), Target: GPT-OSS:20b <20s (4x), Nemotron3 <60s (10x), ≥90% accuracy, 5 features (DSPy integration, optimized prompts, benchmarking, evaluation).
 
 ---
 

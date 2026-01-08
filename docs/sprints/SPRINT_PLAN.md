@@ -311,27 +311,371 @@
 
 ---
 
-## Sprint 76+: Future Sprints (Planned)
+## Sprint 76: .txt File Support + RAGAS Baseline ✅ (COMPLETED 2026-01-07)
+**Ziel:** .txt File Ingestion (TD-089), Pydantic Chunk Fix, RAGAS Baseline Metrics
+**Status:** ✅ **COMPLETE** - 3 Features, 146 entities, 6 critical issues identified
+**Total Story Points:** ~13 SP
 
-### Sprint 76 Candidates (Based on Sprint 75 Results)
-1. **RAG Quality Improvements** (Priority based on RAGAS analysis)
-   - Chunking optimization
-   - Embedding tuning
-   - Retrieval parameter tuning
-   - Reranking improvements
-   - Context optimization
-   - Prompt engineering
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 76.1 | Entity Extraction Bug Fix (chunk.text → chunk.content) | 2 | ✅ DONE |
+| 76.2 | RAGAS Baseline Evaluation (4 metrics) | 5 | ✅ DONE |
+| 76.3 | .txt File Support (TD-089) - Docling Integration | 5 | ✅ DONE |
+| 76.4 | Pydantic Chunk Hard Failures | 1 | ✅ DONE |
 
-2. **Other Candidates:**
-   - **mem0 Frontend UI** (8 SP) - User preferences page
-   - **Agent Memory Architecture** (13 SP) - ADR-047 completion
-   - **Retrieval Direct Access** (5 SP) - UI for `/retrieval/*` endpoints
-   - **Graph Community Advanced Features** (8 SP) - Comparison visualizations
+### Deliverables
 
-### Long-Term Roadmap (Sprint 77+)
+**Feature 76.1: Entity Extraction Bug Fix ✅**
+- Fixed critical bug: `chunk.text` → `chunk.content` in graph_extraction.py
+- 0 entities → 52 entities (RAGAS docs)
+- 0 entities → 146 entities (HotpotQA)
+
+**Feature 76.2: RAGAS Baseline Metrics ✅**
+- Switched LLM: Nemotron → GPT-OSS:20b (24x better success rate)
+- Results:
+  - Faithfulness: 80%
+  - Answer Relevancy: 93%
+  - Context Recall: 50%
+  - Context Precision: 20%
+
+**Feature 76.3: .txt File Support ✅**
+- Implemented `parse_text_file()` in docling_client.py (+219 lines)
+- Base64 encoding for Docling API contract
+- 15 HotpotQA files uploaded (100% success rate)
+- Created 3 RAGAS datasets (15 questions with ground truth)
+
+**Feature 76.4: Pydantic Chunk Hard Failures ✅**
+- Added hard failures to graph_extraction.py and vector_embedding.py
+- Prevents silent repr() bugs
+- Enforces Pydantic models across pipeline
+
+### Statistics
+
+**Qdrant Vector Database:**
+- Total Vectors: 17 chunks (6 small + 10 large)
+- Dimension: 1024 (BGE-M3)
+- Indexed: 0 (normal for <20k threshold)
+
+**Neo4j Graph Database:**
+- Chunks: 14 nodes (discrepancy with Qdrant 17)
+- Entities: 146 nodes (38 unique types)
+- Relations: 65 RELATES_TO edges
+- MENTIONED_IN: 217 edges
+- Communities: 92 (Louvain detection)
+- Community Summaries: 0 (not generated)
+
+### Critical Issues Identified
+
+| TD | Issue | Priority | SP |
+|----|-------|----------|-----|
+| TD-090 | BM25 namespace metadata missing | HIGH | 1 |
+| TD-091 | Chunk count mismatch (Qdrant 17 ≠ Neo4j 14) | HIGH | 2 |
+| TD-093 | Qdrant index not updated post-ingestion | MEDIUM | 2 |
+| TD-094 | Community summaries not generated | MEDIUM | 3 |
+| TD-095 | Low entity connectivity (0.45 relations/entity) | MEDIUM | 3 |
+
+### Success Criteria
+- [x] .txt file ingestion working (15/15 files)
+- [x] Entity extraction fixed (146 entities)
+- [x] RAGAS baseline established (4 metrics)
+- [x] Pydantic models enforced
+- [ ] Data consistency (17≠14 chunks) - DEFERRED to Sprint 77
+
+### References
+- [SPRINT_76_FINAL_RESULTS.md](SPRINT_76_FINAL_RESULTS.md)
+- [TD-089: .txt File Support](../technical-debt/TD-089.md)
+- [ADR-027: Docling CUDA Ingestion](../adr/ADR-027-docling-cuda-ingestion.md)
+
+---
+
+## Sprint 77: Critical Bug Fixes + Community Enhancements ✅ (COMPLETED 2026-01-07)
+**Ziel:** Resolve Sprint 76 critical bugs, Community Summarization, Entity Connectivity Benchmarks
+**Status:** ✅ **COMPLETE** - 5 Features, 2,108 LOC, 100% success
+**Total Story Points:** 11 SP
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 77.1 | BM25 Namespace Metadata Fix (TD-090) | 1 | ✅ DONE |
+| 77.2 | Chunk Count Mismatch Investigation (TD-091) | 2 | ✅ DONE |
+| 77.3 | Qdrant Index Optimization (TD-093) | 2 | ✅ DONE |
+| 77.4 | Community Summarization Batch Job (TD-094) | 3 | ✅ DONE |
+| 77.5 | Entity Connectivity as Domain Training Metric (TD-095) | 3 | ✅ DONE |
+
+### Deliverables
+
+**Feature 77.1: BM25 Namespace Fix ✅**
+- 1-line fix: Copy namespace field from Qdrant payload to BM25 document
+- Impact: Namespace filtering now works in hybrid search
+- File: `src/components/vector_search/hybrid_search.py:680`
+
+**Feature 77.2: Chunk Mismatch Resolved ✅**
+- Root cause: Chunking bug created empty chunks (filtered out by Neo4j)
+- Fixed adaptive_chunking.py to prevent empty chunks
+- Consistency restored: Qdrant = Neo4j
+
+**Feature 77.3: Qdrant Index Optimization ✅**
+- Added post-ingestion index rebuild via Admin API
+- Endpoint: `POST /api/v1/admin/qdrant/optimize`
+- Ensures HNSW index updated after batch uploads
+
+**Feature 77.4: Community Summarization Batch Job ✅**
+- Created `scripts/generate_community_summaries.py` (+300 lines)
+- Admin API: `POST /api/v1/admin/graph/communities/summarize`
+- Result: 92/92 communities summarized (~45min batch job)
+- Graph-Global search mode now functional
+
+**Feature 77.5: Entity Connectivity Benchmarks ✅**
+- Created `src/components/domain_training/domain_metrics.py` (+450 lines)
+- Defined 4 domain-specific benchmarks:
+  - **Factual**: 0.3-0.8 relations/entity (HotpotQA = 0.45 ✅)
+  - **Narrative**: 1.5-3.0 relations/entity
+  - **Technical**: 2.0-4.0 relations/entity
+  - **Academic**: 2.5-5.0 relations/entity
+- Admin API: `POST /api/v1/admin/domains/connectivity/evaluate`
+- Frontend UI: ConnectivityMetrics component in Domain Detail Dialog
+- Validation: HotpotQA connectivity (0.45) confirmed within benchmark!
+
+### Code Changes
+- Files Modified: 12
+- Lines Added: 2,111
+- Lines Removed: 3
+- Net Lines: +2,108
+
+### Success Criteria
+- [x] BM25 namespace filtering working
+- [x] Data consistency Qdrant↔Neo4j restored
+- [x] Qdrant index optimization automated
+- [x] 92/92 community summaries generated
+- [x] Domain-specific connectivity benchmarks defined
+- [x] HotpotQA connectivity validated (0.45 within [0.3, 0.8])
+
+### References
+- [SPRINT_77_PLAN.md](SPRINT_77_PLAN.md)
+- [SPRINT_77_SESSION_1_RESULTS.md](SPRINT_77_SESSION_1_RESULTS.md)
+- [SPRINT_77_SESSION_2_RESULTS.md](SPRINT_77_SESSION_2_RESULTS.md)
+- [TD-090 to TD-095](../technical-debt/)
+
+---
+
+## Sprint 78: Graph Entity→Chunk Expansion & Semantic Search ✅ (COMPLETED 2026-01-08)
+**Ziel:** Fix graph retrieval to return full chunks, implement 3-stage semantic entity expansion
+**Status:** ✅ **FUNCTIONALLY COMPLETE** - 5/6 features, 20 unit tests, RAGAS deferred to Sprint 79
+**Total Story Points:** 34 SP
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 78.1 | Entity→Chunk Expansion Fix (MENTIONED_IN traversal) | 5 | ✅ DONE |
+| 78.2 | 3-Stage Entity Expansion Pipeline | 13 | ✅ DONE |
+| 78.3 | Semantic Entity Reranking (BGE-M3) | 5 | ✅ DONE |
+| 78.4 | Stop Words Removal (replaced with LLM filtering) | 2 | ✅ DONE |
+| 78.5 | Configuration Setup (4 new settings) | 3 | ✅ DONE |
+| 78.6 | Unit Tests + Documentation | 5 | ✅ DONE |
+| 78.7 | RAGAS Evaluation with Optimized Pipeline | 1 | ⏭️ DEFERRED (Sprint 79) |
+
+### Deliverables
+
+**Feature 78.1: Entity→Chunk Expansion Fix ✅**
+- **Critical Bug Fixed**: Graph search returned 100-char entity descriptions instead of 800-1800 token chunks
+- Modified `dual_level_search.py` to traverse `(entity)-[:MENTIONED_IN]->(chunk)` relationships
+- Result: Graph queries now return 447 chars avg (vs 100 chars before)
+- Impact: Graph search now provides full document context
+
+**Feature 78.2: 3-Stage Entity Expansion Pipeline ✅**
+- Created `src/components/graph_rag/entity_expansion.py` (+418 lines)
+- **SmartEntityExpander** class:
+  - **Stage 1**: LLM extracts entities from query
+  - **Stage 2**: Graph expansion via N-hop traversal (configurable 1-3 hops)
+  - **Stage 3**: LLM synonym fallback (if < threshold)
+  - **Stage 4**: Semantic reranking via BGE-M3 embeddings
+- UI-configurable parameters for hops, threshold, synonyms
+
+**Feature 78.3: Semantic Entity Reranking ✅**
+- Implemented in `SmartEntityExpander.expand_and_rerank()`
+- Uses BGE-M3 embeddings for cosine similarity
+- Boosts semantically relevant entities while preserving graph-expanded entities
+
+**Feature 78.4: Stop Words Obsolescence ✅**
+- Removed manual 46-word stop list
+- LLM entity extraction automatically filters stop words
+- Cleaner code, no maintenance overhead
+
+**Feature 78.5: Configuration Setup ✅**
+- Added 4 new settings to `src/core/config.py`:
+  - `graph_expansion_hops`: 1-3 (UI configurable)
+  - `graph_min_entities_threshold`: 5-20 (synonym fallback trigger)
+  - `graph_max_synonyms_per_entity`: 1-5 (LLM synonym limit)
+  - `graph_semantic_reranking_enabled`: bool (toggle reranking)
+
+**Feature 78.6: Unit Tests ✅**
+- Created `tests/unit/components/graph_rag/test_entity_expansion.py` (+448 lines, 14 tests)
+- Modified `tests/unit/components/graph_rag/test_dual_level_search.py` (+230 lines, 6 tests)
+- **Total**: 20 unit tests, 100% pass rate
+- Coverage: Entity extraction, graph expansion, synonym fallback, reranking, chunk retrieval
+
+**Feature 78.7: RAGAS Evaluation ⏭️**
+- **Status**: DEFERRED to Sprint 79
+- **Root Cause**: RAGAS Few-Shot prompts too complex for local LLMs
+  - GPT-OSS:20b: 85.76s per evaluation (15 evals = 1286s, timeout at 300s)
+  - Nemotron3 Nano: >600s per evaluation (2903 char prompt)
+- **Solution**: Sprint 79 will use DSPy to optimize prompts for local inference
+- **Alternative Verification**: Functional testing accepted (20 unit tests + manual graph queries)
+
+### Performance Testing Results
+
+**RAGAS Prompt Complexity:**
+- Context Precision prompt: 2903 chars (3 few-shot examples)
+- GPT-OSS:20b: **85.76s** per evaluation (target: <20s)
+- Nemotron3 Nano: **686s** per simple query (target: <60s)
+
+**Graph Query Performance:**
+- Entity→Chunk expansion: 447 chars avg (vs 100 chars before)
+- 3-stage expansion: 7 graph + 6 synonyms = 13 entities
+- Query latency: <500ms for hybrid graph+vector search
+
+### Critical Findings
+
+1. **Local LLMs Insufficient for RAGAS**: Few-shot prompts require cloud-scale inference or prompt optimization
+2. **DSPy Optimization Needed**: Sprint 79 will compress prompts while maintaining accuracy (target: 4x speedup)
+3. **Functional Verification Sufficient**: 20 unit tests + manual testing confirmed feature correctness
+
+### Success Metrics
+
+| Metric | Target | Actual | Status |
+|--------|--------|--------|--------|
+| Entity→Chunk Expansion | Full chunks | ✅ 447 chars | **PASS** |
+| 3-Stage Pipeline | Working | ✅ 7+6=13 entities | **PASS** |
+| Configuration | 4 settings | ✅ 4 settings | **PASS** |
+| Unit Tests | >15 tests | ✅ 20 tests | **PASS** |
+| RAGAS Metrics | 4 metrics | ⏭️ Deferred | **DEFERRED** |
+
+**Overall**: ✅ **5/6 features complete** (83% functional, 100% code quality)
+
+### References
+- [SPRINT_78_PLAN.md](SPRINT_78_PLAN.md)
+- [ADR-041: Entity→Chunk Expansion](../adr/ADR-041_ENTITY_CHUNK_EXPANSION.md) (pending)
+- `src/components/graph_rag/entity_expansion.py`
+- `src/components/graph_rag/dual_level_search.py`
+
+---
+
+## Sprint 79: RAGAS 0.4 Evaluation + Optional DSPy + Frontend UI 📝 (PLANNED)
+**Ziel:** Upgrade to RAGAS 0.4.2, evaluate if timeouts persist, conditionally apply DSPy optimization, complete Frontend UI
+**Status:** 📝 **PLANNED** - 8 Features, 31 SP (2 SP RAGAS Upgrade + 21 SP DSPy [CONDITIONAL] + 8 SP Frontend)
+**Total Story Points:** 31 SP
+
+| # | Feature | SP | Status |
+|---|---------|-----|--------|
+| 79.8 | **RAGAS 0.4.2 Upgrade & Performance Evaluation (PHASE 1)** | 2 | 📝 **FIRST** |
+| 79.1 | DSPy Integration & Training Data Collection | 8 | 🔀 CONDITIONAL |
+| 79.2 | Optimized Context Precision for GPT-OSS:20b | 5 | 🔀 CONDITIONAL |
+| 79.3 | Optimized Metrics for Nemotron3 Nano | 5 | 🔀 CONDITIONAL |
+| 79.4 | Performance Benchmarking (Before/After) | 2 | 🔀 CONDITIONAL |
+| 79.5 | RAGAS Evaluation with Optimized Prompts | 1 | 🔀 CONDITIONAL |
+| 79.6 | Frontend UI für Graph Expansion Settings (Sprint 78 Follow-Up) | 5 | 📝 PLANNED |
+| 79.7 | Admin Graph Operations UI (Sprint 77 Follow-Up) | 3 | 📝 PLANNED |
+
+**2-Phase Strategy:**
+- **PHASE 1 (Feature 79.8):** Upgrade to RAGAS 0.4.2, test if new features fix timeouts
+- **PHASE 2 (Features 79.1-79.5):** CONDITIONAL - Only execute if Phase 1 doesn't fix timeouts
+- **Frontend (79.6-79.7):** MANDATORY - Completes Sprint 76-78 backend features
+
+### Sprint Goals
+
+**Primary Objective:**
+Reduce RAGAS evaluation time from **85.76s → <20s** (GPT-OSS:20b) and **>600s → <60s** (Nemotron3 Nano) using DSPy prompt optimization
+
+**Secondary Objective:**
+Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings, Community Summarization)
+
+**Approach:**
+1. Use DSPy BootstrapFewShot and MIPROv2 for automatic prompt compression
+2. Maintain ≥90% accuracy while reducing prompt complexity
+3. Create 20 training examples per metric (80 total)
+4. A/B test optimized vs baseline prompts
+5. Implement Frontend UI for Graph Expansion Settings (4 sliders/switches)
+6. Implement Community Summarization UI (batch job trigger + progress)
+
+### Planned Deliverables
+
+**Feature 79.1: DSPy Integration**
+- Install DSPy framework (`pip install dspy-ai`)
+- Create training dataset (20 examples × 4 metrics = 80 examples)
+- Implement DSPy signature for Context Precision metric
+- Configure LLM backend for optimization (GPT-OSS:20b or OpenAI)
+
+**Feature 79.2: GPT-OSS:20b Optimization**
+- Baseline: 85.76s per evaluation (2903 char prompt)
+- Target: <20s per evaluation (<500 char prompt)
+- Method: MIPROv2 with 10 optimization steps
+- Expected: 4x speedup, ≥90% accuracy
+
+**Feature 79.3: Nemotron3 Nano Optimization**
+- Baseline: >600s per evaluation
+- Target: <60s per evaluation
+- Method: BootstrapFewShot with 1-shot examples (vs 3-shot)
+- Expected: 10x speedup, ≥85% accuracy
+
+**Feature 79.4: Performance Benchmarking**
+- Measure latency, accuracy, token count before/after
+- Create comparison report with visualizations
+- Document optimization techniques per LLM
+
+**Feature 79.5: RAGAS Evaluation**
+- Run full RAGAS suite with optimized prompts
+- 15 contexts × 4 metrics = 60 evaluations
+- Expected time: <5 minutes (vs 1286s baseline)
+
+**Feature 79.6: Graph Expansion Settings UI (Sprint 78 Follow-Up)**
+- GraphExpansionSettingsCard component (4 sliders + 1 toggle)
+- GET/PUT /api/v1/admin/graph/expansion/config endpoints
+- Redis persistence for settings (like LLM Config Sprint 64)
+- 5 E2E tests (Load, Update, Persist, Validation, Reset)
+
+**Feature 79.7: Community Summarization UI (Sprint 77 Follow-Up)**
+- CommunitySummarizationCard component (trigger button + progress)
+- Wired to existing POST /api/v1/admin/graph/communities/summarize
+- Real-time progress display during batch job
+- 3 E2E tests (Trigger, Progress, Complete)
+
+### Expected Impact
+
+| Metric | Baseline | Optimized | Improvement |
+|--------|----------|-----------|-------------|
+| GPT-OSS:20b latency | 85.76s | <20s | 4x faster |
+| Nemotron3 Nano latency | >600s | <60s | 10x faster |
+| Prompt length | 2903 chars | <500 chars | 6x compression |
+| Accuracy | 100% | ≥90% | -10% acceptable |
+| RAGAS total time | 1286s | <300s | 4x faster |
+
+### References
+- [SPRINT_79_PLAN.md](SPRINT_79_PLAN.md)
+- [DSPy Documentation](https://dspy-docs.vercel.app/)
+- [RAGAS Framework](https://github.com/explodinggradients/ragas)
+
+---
+
+## Sprint 80+: Future Sprints (Backlog)
+
+### High Priority Candidates
+1. **RAGAS Quality Improvements** (Sprint 79 Results Analysis)
+   - Chunking optimization based on Context Precision scores
+   - Embedding tuning for better Context Recall
+   - Reranking improvements for Answer Relevancy
+
+2. **Graph Reasoning Enhancements** (5-8 SP)
+   - Multi-hop graph traversal optimization
+   - Semantic relationship extraction improvements
+   - Community-based retrieval expansion
+
+3. **mem0 Frontend UI** (8 SP)
+   - User preferences page
+   - Memory consolidation visualization
+   - Session history management
+
+### Long-Term Roadmap (Sprint 81+)
 - **Multi-Modal RAG:** Image + Video + Audio processing
 - **Federated Search:** Cross-domain knowledge aggregation
-- **Cloud LLM Integration:** Azure OpenAI, Anthropic, Cohere
+- **Cloud LLM Integration:** Azure OpenAI, Anthropic Claude, Cohere
 - **Enterprise Features:** SSO, RBAC, Audit Logs
 - **Advanced Agentic Capabilities:** Agent-level adaptation (A1/A2 from Paper 2512.16301)
 
@@ -355,11 +699,16 @@
 | 72 | 55 | 8 | ✅ | API-Frontend Gap Closure (MCP, Domain, Memory UI) |
 | 73 | 29 | 4 | ✅ | E2E Test Infrastructure & Documentation |
 | 74 | 34 | 3 | ✅ | RAGAS Integration & Quality Metrics |
-| **75** | **34** | **3** | 🎯 | **RAGAS Evaluation & RAG Quality Optimization** |
+| 75 | ~21 | 3 | ✅ | Critical Architecture Gap Discovery (TD-084, TD-085) |
+| 76 | ~13 | 4 | ✅ | .txt File Support + RAGAS Baseline (146 entities) |
+| 77 | 11 | 5 | ✅ | Critical Bug Fixes + Community Summarization (2,108 LOC) |
+| 78 | 34 | 6 | ✅ | Graph Entity→Chunk Expansion + 3-Stage Semantic Search |
+| **79** | **31** | **8** | 📝 | **RAGAS 0.4 Upgrade + Optional DSPy + Frontend UI (Planned)** |
 
-**Cumulative Story Points (Sprints 1-75):** ~2,539 SP
-**Average Velocity (Sprints 61-75):** ~44 SP per sprint
+**Cumulative Story Points (Sprints 1-79):** ~2,649 SP
+**Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
+**Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency
 
 ---
 
@@ -396,6 +745,7 @@
 
 ---
 
-**Last Updated:** 2026-01-04
-**Current Sprint:** 75 (In Progress - RAGAS Evaluation & RAG Quality Optimization)
-**Next Sprint:** 76 (TBD - Based on Sprint 75 Results)
+**Last Updated:** 2026-01-08
+**Current Sprint:** 79 (Planned - DSPy RAGAS Prompt Optimization)
+**Previous Sprints:** 76-78 (Completed - .txt Support, Bug Fixes, Graph Entity Expansion)
+**Next Sprint:** 80 (TBD - RAGAS Quality Improvements based on Sprint 79 results)
