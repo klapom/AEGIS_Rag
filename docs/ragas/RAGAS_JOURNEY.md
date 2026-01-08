@@ -599,16 +599,52 @@ WHERE e.namespace_id IN allowed_namespaces
 
 ### Multi-hop Graph Configuration
 
-**Current Default:** Only 1 hop (`src/core/config.py:566`)
+**Current Default:** 2 hops (`src/core/config.py:566`) - **Updated Sprint 80**
 ```python
 graph_expansion_hops: int = Field(
-    default=1, ge=1, le=3, description="Number of hops for graph entity expansion (1-3)"
+    default=2, ge=1, le=3, description="Number of hops for graph entity expansion (1-3). "
+    "2+ recommended for multi-hop reasoning questions like HotpotQA."
 )
 ```
 
 **UI-Configurable:** Yes, via Settings page (Sprint 78)
 - Adjustable 1-3 hops
-- Sprint 81 recommends testing 2-3 hops for improved Context Recall
+- Sprint 80: Default increased from 1→2 for better Context Recall
+
+---
+
+## Sprint 80 Configuration Changes (2026-01-08)
+
+### Features Implemented
+
+| Feature | Config Setting | Default | Impact |
+|---------|---------------|---------|--------|
+| **80.1: Strict Faithfulness** | `strict_faithfulness_enabled` | `false` | Require citations for EVERY sentence |
+| **80.2: Graph→Vector Fallback** | `graph_vector_fallback_enabled` | `true` | Auto-fallback when graph returns empty |
+| **80.4: Increased top_k** | `retrieval_top_k` | `10` (was 5) | Better Context Recall |
+| **Quick Win: Multi-hop** | `graph_expansion_hops` | `2` (was 1) | Better multi-hop reasoning |
+
+### New Prompts Added
+
+**`FAITHFULNESS_STRICT_PROMPT`** (German):
+- Requires `[X]` citation at end of EVERY sentence
+- No general knowledge allowed
+- Designed to maximize RAGAS Faithfulness score
+
+### Expected Impact
+
+| Change | Metric Affected | Expected Improvement |
+|--------|-----------------|---------------------|
+| `strict_faithfulness_enabled=true` | Faithfulness | +50-80% (F=0.55→0.85+) |
+| `retrieval_top_k=10` | Context Recall | +30-50% (more contexts retrieved) |
+| `graph_expansion_hops=2` | Context Recall | +20-40% (more related entities found) |
+| `graph_vector_fallback_enabled=true` | Context Recall | +50-100% (no empty contexts) |
+
+### Technical Debt Created
+
+**TD-097:** Settings UI/DB Integration (3 SP, Sprint 81)
+- `strict_faithfulness_enabled` needs Admin UI toggle
+- `graph_vector_fallback_enabled` needs Admin UI toggle
 
 ---
 

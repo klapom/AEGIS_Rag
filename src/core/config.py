@@ -563,8 +563,11 @@ class Settings(BaseSettings):
     )
 
     # Sprint 78: Semantic Graph Search Configuration
+    # Sprint 80 Quick Win: Increased from 1→2 for better multi-hop reasoning (RAGAS Context Recall)
+    # Higher values find more related entities for complex questions. Use 3 for HotpotQA-style queries.
     graph_expansion_hops: int = Field(
-        default=1, ge=1, le=3, description="Number of hops for graph entity expansion (1-3)"
+        default=2, ge=1, le=3, description="Number of hops for graph entity expansion (1-3). "
+        "2+ recommended for multi-hop reasoning questions like HotpotQA."
     )
     graph_min_entities_threshold: int = Field(
         default=10, ge=5, le=20, description="Minimum entities before LLM synonym fallback (5-20)"
