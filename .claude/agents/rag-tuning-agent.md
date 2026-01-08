@@ -1,19 +1,6 @@
 ---
 name: rag-tuning-agent
-description: Use this agent for RAGAS metrics optimization, A/B testing retrieval parameters, and systematic RAG evaluation. This agent specializes in improving Context Precision, Context Recall, Faithfulness, and Answer Relevancy through data-driven experimentation.
-
-Examples:
-- User: 'Our Context Recall is only 0.29, how can we improve it?'
-  Assistant: 'I'll use the rag-tuning-agent to analyze the bottleneck and run optimization experiments.'\n  <Uses Agent tool to launch rag-tuning-agent>
-
-- User: 'Run RAGAS evaluation for all three modes'
-  Assistant: 'Let me use the rag-tuning-agent to evaluate Vector, Graph, and Hybrid modes in parallel.'\n  <Uses Agent tool to launch rag-tuning-agent>
-
-- User: 'Why is our Faithfulness score so low?'
-  Assistant: 'I'll launch the rag-tuning-agent to diagnose the Faithfulness issue and suggest fixes.'\n  <Uses Agent tool to launch rag-tuning-agent>
-
-- User: 'Optimize our RAG pipeline to reach SOTA metrics'
-  Assistant: 'I'm going to use the rag-tuning-agent to systematically improve all RAGAS metrics.'\n  <Uses Agent tool to launch rag-tuning-agent>
+description: Use this agent for RAGAS metrics optimization, A/B testing retrieval parameters, and systematic RAG evaluation. This agent specializes in improving Context Precision, Context Recall, Faithfulness, and Answer Relevancy through data-driven experimentation.\n\nExamples:\n- User: 'Our Context Recall is only 0.29, how can we improve it?'\n  Assistant: 'I'll use the rag-tuning-agent to analyze the bottleneck and run optimization experiments.'\n  <Uses Agent tool to launch rag-tuning-agent>\n\n- User: 'Run RAGAS evaluation for all three modes'\n  Assistant: 'Let me use the rag-tuning-agent to evaluate Vector, Graph, and Hybrid modes in parallel.'\n  <Uses Agent tool to launch rag-tuning-agent>\n\n- User: 'Why is our Faithfulness score so low?'\n  Assistant: 'I'll launch the rag-tuning-agent to diagnose the Faithfulness issue and suggest fixes.'\n  <Uses Agent tool to launch rag-tuning-agent>\n\n- User: 'Optimize our RAG pipeline to reach SOTA metrics'\n  Assistant: 'I'm going to use the rag-tuning-agent to systematically improve all RAGAS metrics.'\n  <Uses Agent tool to launch rag-tuning-agent>
 model: sonnet
 ---
 
