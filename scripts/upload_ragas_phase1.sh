@@ -90,18 +90,27 @@ if [ "$DRY_RUN" = true ]; then
     exit 0
 fi
 
-# Step 1: Login and get JWT token
+# Function to authenticate and get JWT token
+authenticate() {
+    LOGIN_RESPONSE=$(curl -s -X POST "$LOGIN_ENDPOINT" \
+        -H "Content-Type: application/json" \
+        -d '{"username": "admin", "password": "admin123"}')
+
+    TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.access_token')
+
+    if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+        echo "  ERROR: Login failed!"
+        echo "$LOGIN_RESPONSE" | jq .
+        return 1
+    fi
+
+    return 0
+}
+
+# Step 1: Initial authentication
 echo ""
 echo "=== Step 1: Authenticating ==="
-LOGIN_RESPONSE=$(curl -s -X POST "$LOGIN_ENDPOINT" \
-    -H "Content-Type: application/json" \
-    -d '{"username": "admin", "password": "admin123"}')
-
-TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.access_token')
-
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-    echo "  ERROR: Login failed!"
-    echo "$LOGIN_RESPONSE" | jq .
+if ! authenticate; then
     exit 1
 fi
 
@@ -119,32 +128,59 @@ upload_file() {
     echo ""
     echo "[${index}/${total}] Uploading: ${filename}"
 
-    RESPONSE=$(curl -s -X POST "$UPLOAD_ENDPOINT" \
-        -H "Authorization: Bearer $TOKEN" \
-        -F "file=@$file" \
-        -F "namespace_id=$namespace" \
-        -w "\n%{http_code}" \
-        --max-time 300)  # 5 min timeout per file
+    # Try upload (with retry on 401)
+    local max_auth_retries=2
+    local auth_retry=0
 
-    HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-    BODY=$(echo "$RESPONSE" | head -n -1)
+    while [ $auth_retry -le $max_auth_retries ]; do
+        RESPONSE=$(curl -s -X POST "$UPLOAD_ENDPOINT" \
+            -H "Authorization: Bearer $TOKEN" \
+            -F "file=@$file" \
+            -F "namespace_id=$namespace" \
+            -w "\n%{http_code}" \
+            --max-time 300)  # 5 min timeout per file
 
-    if [ "$HTTP_CODE" = "200" ]; then
-        # Parse response
-        STATUS=$(echo "$BODY" | jq -r '.status // "unknown"')
-        CHUNKS=$(echo "$BODY" | jq -r '.chunks_created // 0')
-        ENTITIES=$(echo "$BODY" | jq -r '.entities_extracted // 0')
-        RELATIONS=$(echo "$BODY" | jq -r '.relations_extracted // 0')
-        DURATION=$(echo "$BODY" | jq -r '.processing_time_s // 0')
+        HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+        BODY=$(echo "$RESPONSE" | head -n -1)
 
-        echo "  ✓ Success (${DURATION}s)"
-        echo "    Chunks: ${CHUNKS}, Entities: ${ENTITIES}, Relations: ${RELATIONS}"
-        return 0
-    else
+        # Handle 401 token expiration
+        if [ "$HTTP_CODE" = "401" ]; then
+            if [ $auth_retry -lt $max_auth_retries ]; then
+                echo "  ⚠ Token expired, re-authenticating..."
+                if authenticate; then
+                    echo "  ✓ Re-authenticated, retrying upload..."
+                    auth_retry=$((auth_retry + 1))
+                    continue
+                else
+                    echo "  ✗ Re-authentication failed!"
+                    return 1
+                fi
+            else
+                echo "  ✗ Failed (HTTP ${HTTP_CODE}) - Max auth retries reached"
+                return 1
+            fi
+        fi
+
+        # Handle success
+        if [ "$HTTP_CODE" = "200" ]; then
+            # Parse response (Sprint 82 Fix: neo4j_entities/neo4j_relationships)
+            CHUNKS=$(echo "$BODY" | jq -r '.chunks_created // 0')
+            ENTITIES=$(echo "$BODY" | jq -r '.neo4j_entities // 0')
+            RELATIONS=$(echo "$BODY" | jq -r '.neo4j_relationships // 0')
+            DURATION=$(echo "$BODY" | jq -r '.processing_time_s // 0')
+
+            echo "  ✓ Success (${DURATION}s)"
+            echo "    Chunks: ${CHUNKS}, Entities: ${ENTITIES}, Relations: ${RELATIONS}"
+            return 0
+        fi
+
+        # Handle other errors (don't retry)
         echo "  ✗ Failed (HTTP ${HTTP_CODE})"
         echo "    Error: $(echo "$BODY" | jq -r '.detail // .error.message // "Unknown error"' 2>/dev/null || echo "$BODY")"
         return 1
-    fi
+    done
+
+    return 1
 }
 
 # Step 2: Upload files
