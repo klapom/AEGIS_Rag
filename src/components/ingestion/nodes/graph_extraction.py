@@ -534,15 +534,17 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         # Store community detection stats in state
         state["community_detection_stats"] = community_detection_stats
 
-        # Store statistics
+        # Extract stats from nested structure (Sprint 32 Fix)
+        stats = graph_stats.get("stats", {})
+
+        # Store statistics (Sprint 82 Fix: Store counts for API response)
         state["entities"] = []  # Full entities stored in Neo4j
         state["relations"] = []  # Full relations stored in Neo4j
+        state["entities_count"] = stats.get("total_entities", 0)  # Count for API response
+        # relations_count already set at line 370
         state["graph_status"] = "completed"
         state["graph_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
-
-        # Extract stats from nested structure (Sprint 32 Fix)
-        stats = graph_stats.get("stats", {})
         graph_node_end = time.perf_counter()
         total_graph_ms = (graph_node_end - graph_node_start) * 1000
 

@@ -541,8 +541,9 @@ async def upload_file(
             # Extract statistics from final state
             chunks_created = len(final_state.get("chunks", []))
             points_indexed = len(final_state.get("embedded_chunk_ids", []))
-            neo4j_entities = len(final_state.get("entities", []))
-            neo4j_relationships = len(final_state.get("relations", []))
+            # Sprint 82 Fix: Use count fields instead of empty arrays
+            neo4j_entities = final_state.get("entities_count", 0)
+            neo4j_relationships = final_state.get("relations_count", 0)
 
             logger.info(
                 "file_ingestion_complete",
