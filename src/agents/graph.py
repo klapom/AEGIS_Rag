@@ -61,6 +61,8 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
     intent = state.get("intent")
     # Sprint 80 Feature 80.1: Get strict_faithfulness from state or global config
     strict_faithfulness = state.get("strict_faithfulness", settings.strict_faithfulness_enabled)
+    # Sprint 81 Feature 81.8: Get no_hedging from state or global config
+    no_hedging = state.get("no_hedging", settings.no_hedging_enabled)
 
     logger.info(
         "llm_answer_node_start",
@@ -68,6 +70,7 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         contexts_count=len(contexts),
         intent=intent,
         strict_faithfulness=strict_faithfulness,
+        no_hedging=no_hedging,
     )
 
     # Initialize phase_events list if not present
@@ -97,8 +100,9 @@ async def llm_answer_node(state: dict[str, Any]) -> dict[str, Any]:
         answer = ""
         citation_map = {}
 
+        # Sprint 81 Feature 81.8: Pass no_hedging to eliminate meta-commentary
         async for token_event in generator.generate_with_citations_streaming(
-            query, contexts, intent=intent, strict_faithfulness=strict_faithfulness
+            query, contexts, intent=intent, strict_faithfulness=strict_faithfulness, no_hedging=no_hedging
         ):
             event_type = token_event.get("event")
 

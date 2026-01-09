@@ -589,6 +589,16 @@ class Settings(BaseSettings):
         "Designed to maximize RAGAS Faithfulness score (F=0.55→0.85+). Default: True.",
     )
 
+    # Sprint 81 Feature 81.8: No-Hedging Faithfulness Optimization
+    # Eliminates LLM meta-commentary like "This information is not available"
+    # that causes RAGAS Faithfulness penalties even when info IS in context.
+    no_hedging_enabled: bool = Field(
+        default=True,
+        description="Enable no-hedging prompt mode that forbids LLM meta-commentary about "
+        "document contents (e.g., 'This information is not available'). "
+        "Eliminates false Faithfulness penalties. Expected: F=0.63→0.80 (+27%). Default: True.",
+    )
+
     # Sprint 80 Feature 80.2: Graph→Vector Fallback
     graph_vector_fallback_enabled: bool = Field(
         default=True,

@@ -25,6 +25,8 @@ from src.prompts.answer_prompts import (
     FAITHFULNESS_STRICT_PROMPT,
     FAITHFULNESS_STRICT_PROMPT_EN,
     MULTI_HOP_REASONING_PROMPT,
+    NO_HEDGING_FAITHFULNESS_PROMPT,
+    NO_HEDGING_FAITHFULNESS_PROMPT_EN,
 )
 
 logger = structlog.get_logger(__name__)
@@ -259,12 +261,14 @@ class AnswerGenerator:
         contexts: list[dict[str, Any]],
         intent: str | None = None,
         strict_faithfulness: bool = False,
+        no_hedging: bool = False,
     ) -> tuple[str, dict[int, dict[str, Any]]]:
         """Generate answer with inline source citations.
 
         Sprint 27 Feature 27.10: Inline Source Citations
         Sprint 69 Feature 69.3: Added intent parameter for model selection
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
+        Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
 
         Args:
             query: User question
@@ -273,6 +277,9 @@ class AnswerGenerator:
             strict_faithfulness: When True, uses strict citation prompt that requires
                 citations for EVERY sentence (no general knowledge allowed). This mode
                 is designed to maximize RAGAS Faithfulness score. Default: False.
+            no_hedging: When True, uses no-hedging prompt that forbids meta-commentary
+                like "This information is not available". Eliminates LLM hedging behavior
+                that causes Faithfulness penalties. Default: False. (Sprint 81 Feature 81.8)
 
         Returns:
             Tuple of (answer_with_citations, citation_map)
@@ -302,9 +309,14 @@ class AnswerGenerator:
         # Format contexts with source IDs for prompt
         context_text = self._format_contexts_with_citations(top_contexts)
 
-        # Sprint 80 Feature 80.1: Select prompt based on strict_faithfulness mode
-        # Strict mode requires citations for EVERY sentence (no general knowledge)
-        if strict_faithfulness:
+        # Sprint 81 Feature 81.8: Select prompt based on no_hedging and strict_faithfulness modes
+        # Priority: no_hedging > strict_faithfulness > standard_citations
+        if no_hedging:
+            # Sprint 81: No-hedging prompt forbids meta-commentary about document contents
+            prompt = NO_HEDGING_FAITHFULNESS_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "no_hedging"
+        elif strict_faithfulness:
+            # Sprint 80: Strict mode requires citations for EVERY sentence (no general knowledge)
             prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
             prompt_mode = "strict_faithfulness"
         else:
@@ -321,6 +333,7 @@ class AnswerGenerator:
             context_text_preview=context_text[:500] if len(context_text) > 500 else context_text,
             prompt_mode=prompt_mode,
             strict_faithfulness=strict_faithfulness,
+            no_hedging=no_hedging,
         )
 
         try:
@@ -653,12 +666,14 @@ class AnswerGenerator:
         contexts: list[dict[str, Any]],
         intent: str | None = None,
         strict_faithfulness: bool = False,
+        no_hedging: bool = False,
     ):
         """Stream LLM response token-by-token with citation support.
 
         Sprint 52: LLM Answer Streaming with Citations
         Sprint 69 Feature 69.3: Added intent parameter for model selection
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
+        Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
 
         This method combines citation generation with real-time token streaming.
         It yields tokens as they're generated while maintaining citation mapping.
@@ -670,6 +685,9 @@ class AnswerGenerator:
             strict_faithfulness: When True, uses strict citation prompt that requires
                 citations for EVERY sentence (no general knowledge allowed). This mode
                 is designed to maximize RAGAS Faithfulness score. Default: False.
+            no_hedging: When True, uses no-hedging prompt that forbids meta-commentary
+                like "This information is not available". Eliminates LLM hedging behavior
+                that causes Faithfulness penalties. Default: False. (Sprint 81 Feature 81.8)
 
         Yields:
             dict: Token events with format:
@@ -698,8 +716,14 @@ class AnswerGenerator:
         # Format contexts with source IDs for prompt
         context_text = self._format_contexts_with_citations(top_contexts)
 
-        # Sprint 80 Feature 80.1: Select prompt based on strict_faithfulness mode
-        if strict_faithfulness:
+        # Sprint 81 Feature 81.8: Select prompt based on no_hedging and strict_faithfulness modes
+        # Priority: no_hedging > strict_faithfulness > standard_citations
+        if no_hedging:
+            # Sprint 81: No-hedging prompt forbids meta-commentary about document contents
+            prompt = NO_HEDGING_FAITHFULNESS_PROMPT.format(contexts=context_text, query=query)
+            prompt_mode = "no_hedging"
+        elif strict_faithfulness:
+            # Sprint 80: Strict mode requires citations for EVERY sentence (no general knowledge)
             prompt = FAITHFULNESS_STRICT_PROMPT.format(contexts=context_text, query=query)
             prompt_mode = "strict_faithfulness"
         else:
@@ -712,6 +736,7 @@ class AnswerGenerator:
             contexts_count=len(top_contexts),
             prompt_mode=prompt_mode,
             strict_faithfulness=strict_faithfulness,
+            no_hedging=no_hedging,
         )
 
         try:
