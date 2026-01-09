@@ -163,3 +163,10 @@ tests/performance/results/
 
 # Frontend local data
 frontend/data/
+# Sprint 81: SetFit Intent Classifier Model (418 MB - too large for git)
+models/intent_classifier/*.safetensors
+models/intent_classifier/*.pkl
+models/intent_classifier/*.bin
+
+# Training runs
+runs/

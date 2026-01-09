@@ -211,13 +211,13 @@ async def verify_namespace_isolation(namespace_id: str = "ragas_eval"):
         )
 
         # Count points in namespace
-        # NOTE: The payload field is "namespace", not "namespace_id"
+        # TD-099 FIX: The payload field is "namespace_id" (Sprint 81)
         collection_name = settings.qdrant_collection
         count_result = client.count(
             collection_name=collection_name,
             count_filter={
                 "must": [
-                    {"key": "namespace", "match": {"value": namespace_id}}
+                    {"key": "namespace_id", "match": {"value": namespace_id}}
                 ]
             },
         )
@@ -229,7 +229,7 @@ async def verify_namespace_isolation(namespace_id: str = "ragas_eval"):
             collection_name=collection_name,
             count_filter={
                 "must": [
-                    {"key": "namespace", "match": {"value": "default"}}
+                    {"key": "namespace_id", "match": {"value": "default"}}
                 ]
             },
         )
@@ -265,6 +265,11 @@ async def main():
         help="Maximum number of documents to ingest (default: 10)",
     )
     parser.add_argument(
+        "--dataset",
+        default="data/evaluation/ragas_dataset.jsonl",
+        help="Path to RAGAS JSONL dataset (default: data/evaluation/ragas_dataset.jsonl)",
+    )
+    parser.add_argument(
         "--verify",
         action="store_true",
         help="Verify namespace isolation after ingestion",
@@ -274,6 +279,7 @@ async def main():
 
     # Ingest documents
     results = await ingest_ragas_dataset(
+        dataset_path=args.dataset,
         namespace_id=args.namespace,
         domain_id=args.domain,
         max_docs=args.max_docs,

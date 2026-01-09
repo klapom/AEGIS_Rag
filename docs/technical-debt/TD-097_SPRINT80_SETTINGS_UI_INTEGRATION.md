@@ -255,20 +255,72 @@ test('Admin can toggle strict faithfulness mode', async ({ page }) => {
 
 ---
 
+## Use Case Guidance for UI
+
+**IMPORTANT:** Include this guidance in the Admin UI for operators to understand when to use each mode.
+
+### Recommended Configurations by Use Case
+
+| Use Case | strict_faithfulness | Why |
+|----------|---------------------|-----|
+| **General Q&A** | `false` (OFF) | Balance of Faithfulness (F=0.52) and Answer Relevancy (AR=0.86). Best for conversational queries. |
+| **Research/Academic** | `true` (ON) | Higher Faithfulness (F=0.69), every claim cited. Essential for verifiable answers. |
+| **Legal/Compliance** | `true` (ON) | Faithfulness > Relevancy for risk mitigation. No unsourced claims allowed. |
+| **Medical/Healthcare** | `true` (ON) | Patient safety requires cited sources only. |
+| **Financial/Audit** | `true` (ON) | Regulatory compliance requires traceable claims. |
+| **Customer Support** | `false` (OFF) | Conversational tone more important than strict citations. |
+| **Technical Documentation** | `true` (ON) | Precise, verifiable technical information required. |
+
+### RAGAS Evaluation Results (Sprint 80 Experiment #5)
+
+| Metric | strict=False | strict=True | Impact |
+|--------|--------------|-------------|--------|
+| **Faithfulness** | 0.520 | **0.693** | **+33%** ⭐ |
+| **Answer Relevancy** | **0.859** | 0.621 | -28% |
+| **Context Precision** | 0.717 | 0.717 | 0% |
+| **Context Recall** | 1.000 | 1.000 | 0% |
+
+**Key Insight:** Strict mode improves Faithfulness by +33% but reduces Answer Relevancy by -28%. This is the expected trade-off: more conservative, citation-heavy answers are less conversationally natural.
+
+### UI Warning Text
+
+Display this warning when strict_faithfulness is toggled ON:
+
+```
+⚠️ Strict Faithfulness Mode
+
+When enabled:
+• Every sentence must include a source citation [1], [2], etc.
+• General knowledge and common sense are NOT allowed
+• Answers will be shorter and more conservative
+• Answer Relevancy may decrease by ~25-30%
+
+Recommended for: Legal, Medical, Financial, Academic domains
+Not recommended for: General Q&A, Customer Support
+```
+
+---
+
 ## Related Issues
 
 - **Feature 80.1**: Cite-Sources Prompt Engineering (Sprint 80)
 - **TD-096**: Chunking Parameters UI Integration (similar pattern)
-- **RAGAS_JOURNEY.md**: Documents Faithfulness optimization experiments
+- **TD-098**: Cross-Encoder Fine-tuning (Sprint 82)
+- **RAGAS_JOURNEY.md**: Documents Faithfulness optimization experiments (Exp #5)
 
 ---
 
 ## References
 
 **Sprint 80 Context**:
-- RAGAS Faithfulness target: F=0.55 → 0.85+ with strict citations
-- `FAITHFULNESS_STRICT_PROMPT` requires [1], [2] for every sentence
-- Default OFF to preserve backwards compatibility
+- RAGAS Faithfulness: F=0.52 (default) → F=0.69 (strict mode) = +33%
+- `FAITHFULNESS_STRICT_PROMPT` requires [X] citation for every sentence
+- Default OFF to preserve backwards compatibility and conversational quality
+
+**RAGAS_JOURNEY.md Experiment #5**:
+- Full evaluation results documented in docs/ragas/RAGAS_JOURNEY.md
+- Dataset: HotpotQA (5 questions)
+- Statistical significance requires 10+ questions (planned follow-up)
 
 ---
 

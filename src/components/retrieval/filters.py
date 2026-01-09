@@ -215,10 +215,11 @@ class MetadataFilterEngine:
             logger.debug("filter_tags_contains", tags=filters.tags_contains)
 
         # Namespace filter (Sprint 41 Feature 41.4)
+        # TD-099 FIX: Use "namespace_id" to match Qdrant payload field (Sprint 81)
         if filters.namespace is not None and len(filters.namespace) > 0:
             conditions.append(
                 FieldCondition(
-                    key="namespace",
+                    key="namespace_id",  # Fixed: was "namespace", now matches ingestion payload
                     match=MatchAny(any=filters.namespace),
                 )
             )

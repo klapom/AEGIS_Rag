@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-31 (Sprint 67-68 Planning)
+**Last Updated:** 2026-01-09 (Sprint 81: C-LARA SetFit 95% Accuracy)
 
 ---
 
@@ -217,7 +217,8 @@ src/
 | **53-59** | Refactoring | DDD structure, protocols, 80% coverage, tool framework |
 | **76-77** | RAGAS & Bug Fixes | .txt support (15 HotpotQA), RAGAS baseline (80% faithfulness), BM25 namespace fix, community summarization (92/92) |
 | **78** | Graph Search Enhancement | Entity→Chunk expansion (100-char→447-char), 3-stage semantic search (LLM→Graph→Synonym→BGE-M3), 4 UI settings |
-| **79** | DSPy Optimization (Planned) | RAGAS prompt optimization (4x-10x speedup), BootstrapFewShot + MIPROv2, ≥90% accuracy target |
+| **79** | RAGAS 0.4.2 Migration | RAGAS 0.4.2 upgrade, Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample) |
+| **81** | C-LARA Intent Classification | Multi-Teacher SetFit (4 LLMs + 42 edge cases), 5-class C-LARA intents, 95.22% accuracy, ~40ms inference |
 
 ### Sprint 53-59: Major Refactoring
 
@@ -818,5 +819,6 @@ optimizer = dspy.MIPROv2(
 **Sprint 67-68 Updates:** 2025-12-31
 **Sprint 72 Updates:** 2026-01-03 (Admin Features)
 **Sprint 76-79 Updates:** 2026-01-08 (Graph Search Enhancement, RAGAS Optimization)
-**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_79_PLAN.md, ADR-041
+**Sprint 81 Updates:** 2026-01-09 (C-LARA SetFit Multi-Teacher Intent Classification 95.22%)
+**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_81_PLAN.md
 **Maintainer:** Claude Code with Human Review

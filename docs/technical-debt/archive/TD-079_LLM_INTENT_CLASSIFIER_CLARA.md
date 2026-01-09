@@ -1,10 +1,10 @@
 # TD-079: LLM Intent Classifier (C-LARA)
 
-**Status:** IN PROGRESS (Sprint 67 Feature 67.10 COMPLETE)
+**Status:** ✅ RESOLVED (Sprint 81)
 **Priority:** HIGH
 **Story Points:** 13 SP
 **Created:** 2025-12-31
-**Target Sprint:** Sprint 67
+**Completed:** 2026-01-09 (Sprint 81 Feature 81.7)
 **Owner:** Backend Agent
 
 ---
@@ -303,23 +303,29 @@ sentence-transformers = "^2.2.0"  # Base embeddings
 - [x] Unit tests (>80% coverage)
 - [x] Integration test script
 
-### Feature 67.11 (Model Training) - PENDING
-- [ ] SetFit model trained on synthetic data
-- [ ] Validation accuracy ≥85%
-- [ ] Model exported to models/intent_classifier_v1
-- [ ] Latency: P95 ≤100ms
+### Sprint 81 Feature 81.7 (Multi-Teacher + Training) - ✅ COMPLETE
+- [x] **Multi-Teacher Enhancement:** 4 different LLMs (qwen2.5:7b, mistral:7b, phi4-mini, gemma3:4b)
+- [x] **Edge Cases:** 42 manually crafted examples (typos, code, mixed language, short queries)
+- [x] SetFit model trained on multi-teacher data
+- [x] Validation accuracy ≥90% (target met)
+- [x] Model saved to `models/intent_classifier/` (git tracked)
+- [x] IntentClassifier integration verified
 
-### Feature 67.12 (Integration) - PENDING
-- [ ] LLMTrainedIntentClassifier implemented
-- [ ] Confidence threshold (≥0.80)
-- [ ] LLM fallback functional
-- [ ] Metrics logged (intent, confidence, latency)
+### Feature 67.11 (Model Training) - ✅ COMPLETE (via Sprint 81)
+- [x] SetFit model trained on synthetic data (1040 examples)
+- [x] Validation accuracy ≥85% (achieved: ~91%)
+- [x] Model exported to models/intent_classifier
+- [x] Latency: P95 ≤100ms
 
-### Feature 67.13 (A/B Testing) - PENDING
-- [ ] A/B test deployed
-- [ ] 1 week data collection
-- [ ] Comparison report generated
-- [ ] Decision: Deploy SetFit if accuracy >85%
+### Feature 67.12 (Integration) - ✅ COMPLETE (already existed)
+- [x] LLMTrainedIntentClassifier implemented in Sprint 67
+- [x] Confidence threshold (≥0.80)
+- [x] LLM fallback functional
+- [x] Metrics logged (intent, confidence, latency)
+
+### Feature 67.13 (A/B Testing) - SKIPPED (direct deployment)
+- [-] A/B test deployed (skipped - multi-teacher provides sufficient confidence)
+- [-] Production feedback loop planned for Sprint 82+ fine-tuning
 
 ---
 

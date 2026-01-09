@@ -1,7 +1,7 @@
 # AEGIS RAG - Agentic Enterprise Graph Intelligence System
 
-**Status:** Sprint 78 Complete (2026-01-08) | Sprint 79 Planned
-**Version:** 2.4.0 (Production-Ready, Graph Semantic Search + RAGAS)
+**Status:** Sprint 81 In Progress (2026-01-09) | Feature 81.7 C-LARA Complete ✅
+**Version:** 2.5.0 (Production-Ready, C-LARA Intent Classification 95%)
 
 Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestration, temporal memory, GPU-accelerated ingestion, 3-stage semantic graph search, and comprehensive RAGAS evaluation framework.
 
@@ -23,6 +23,28 @@ Enterprise-grade Retrieval-Augmented Generation System with multi-agent orchestr
 ---
 
 ## Current Sprint Status
+
+### Sprint 81: Query-Adaptive Routing & C-LARA Intent Classification (IN PROGRESS)
+**Duration:** 2026-01-09 to 2026-01-20
+**Total Story Points:** 38 SP (3 SP done)
+**Status:** 🚧 **IN PROGRESS** - Feature 81.7 C-LARA Complete ✅
+
+**Completed - Feature 81.7: C-LARA SetFit Intent Classifier (3 SP):**
+- **Multi-Teacher Training:** 4 LLMs (qwen2.5:7b, mistral:7b, phi4-mini, gemma3:4b) + 42 edge cases
+- **Training Data:** 1,043 examples (reduced single-model bias, handles typos/code/mixed language)
+- **Achieved Accuracy:** **95.22%** (exceeded 91-96% target!)
+- **5-Class C-LARA Intents:** factual, procedural, comparison, recommendation, navigation
+- **Inference Latency:** ~40ms (vs 200-500ms LLM-based)
+- **Per-Class F1:** All >92% (factual 93%, procedural 94%, comparison 98%, recommendation 98%, navigation 94%)
+- **TD-079 Resolved:** LLM Intent Classifier moved to archive
+
+**Remaining Sprint 81 Work:**
+- Feature 81.1: Query-Adaptive Routing Classifier (5 SP)
+- Feature 81.2: Domain-Agnostic Entity Extraction (8 SP)
+- Feature 81.3: Parent Chunk Retrieval (5 SP)
+- Feature 81.4-81.6: Entity benchmarks, RAGAS pipeline automation
+
+---
 
 ### Sprint 78: Graph Entity→Chunk Expansion & Semantic Search (COMPLETE)
 **Duration:** 2026-01-08

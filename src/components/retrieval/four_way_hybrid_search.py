@@ -439,12 +439,13 @@ class FourWayHybridSearch:
             List of search results with namespace info
         """
         # Build namespace filter for Qdrant
+        # TD-099 FIX: Use "namespace_id" to match Qdrant payload field (Sprint 81)
         namespace_filter = None
         if allowed_namespaces:
             namespace_filter = Filter(
                 must=[
                     FieldCondition(
-                        key="namespace",  # Field name in Qdrant payload
+                        key="namespace_id",  # Fixed: was "namespace", now matches ingestion payload
                         match=MatchAny(any=allowed_namespaces),
                     )
                 ]

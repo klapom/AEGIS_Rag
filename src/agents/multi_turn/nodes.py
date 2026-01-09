@@ -368,9 +368,11 @@ async def answer_node(state: MultiTurnState) -> dict:
     )
 
     # Format contexts
+    # Sprint 80 BUG FIX: Use full context text, not truncated 500 chars
+    # Truncation was causing loss of critical information for multi-turn synthesis
     context_parts = []
     for i, ctx in enumerate(state["current_context"][:5], 1):
-        context_parts.append(f"[{i}] {ctx.get('text', '')[:500]}")
+        context_parts.append(f"[{i}] {ctx.get('text', '')}")  # Full text, no truncation
     context_str = "\n\n".join(context_parts)
 
     # Build prompt

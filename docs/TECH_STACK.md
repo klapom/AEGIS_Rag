@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-11 (Sprint 67 Complete, Sprint 68 In Progress)
+**Last Updated:** 2026-01-09 (Sprint 81: C-LARA SetFit Intent Classifier 95% Accuracy)
 
 ---
 
@@ -789,11 +789,14 @@ async def bash_execute(command: str, timeout: int = 30):
 - Query Rewriter v1 (query expansion with graph intent) ✅ COMPLETE (+6% recall)
 - Dataset Builder (500+ pairs generated from traces) ✅ COMPLETE
 
-**Intent Classification (Sprint 67 ✅):**
+**Intent Classification (Sprint 67 → Sprint 81 ✅):**
 - C-LARA approach: LLM data generation (Qwen2.5:7b) + SetFit fine-tuning ✅ COMPLETE
-- **Achieved accuracy: 60% → 89.5%** (+29.5 percentage points) ✅
-- 1,000 synthetic training examples generated
-- SetFit model trained with 89.5% validation accuracy
+- **Sprint 67 accuracy: 60% → 89.5%** (+29.5 percentage points) ✅
+- **Sprint 81 Multi-Teacher: 89.5% → 95.22%** (+5.7 percentage points) ✅
+- Multi-Teacher data generation: 4 LLMs (qwen2.5:7b, mistral:7b, phi4-mini, gemma3:4b)
+- 1,043 training examples (1,001 LLM-generated + 42 edge cases)
+- 5-Class C-LARA intents: factual, procedural, comparison, recommendation, navigation
+- ~40ms inference latency, 99.7%+ confidence scores
 
 **Section Features (Sprint 68 In Progress):**
 - Section Community Detection (Louvain/Leiden algorithms) - IN PROGRESS
@@ -1070,10 +1073,100 @@ expander = SmartEntityExpander(
 
 ---
 
+---
+
+## Sprint 81: C-LARA SetFit Multi-Teacher Intent Classification
+
+### C-LARA 5-Class Intent Framework
+
+**Architecture:** Amazon Science C-LARA (Context-aware LLM-Assisted RAG) + SetFit Contrastive Learning
+
+| Intent | Description | RRF Weights (V/BM25/L/G) |
+|--------|-------------|--------------------------|
+| **factual** | Specific fact lookup (who, what, when) | 0.30 / 0.30 / 0.40 / 0.00 |
+| **procedural** | How-to queries (step-by-step) | 0.40 / 0.10 / 0.20 / 0.30 |
+| **comparison** | Compare options (X vs Y) | 0.35 / 0.25 / 0.20 / 0.20 |
+| **recommendation** | Suggestions (best X for Y) | 0.30 / 0.20 / 0.20 / 0.30 |
+| **navigation** | Find specific docs/sections | 0.20 / 0.50 / 0.30 / 0.00 |
+
+### Multi-Teacher Data Generation
+
+**Why Multi-Teacher:**
+- Reduces single-model bias (4 LLMs with different architectures/training)
+- Diverse linguistic patterns (creative vs technical vs precise)
+- Better generalization on edge cases
+
+| Teacher | Examples | Style | Purpose |
+|---------|----------|-------|---------|
+| **qwen2.5:7b** | 300 | Precise | Structured, technical queries |
+| **mistral:7b** | 300 | Creative | Varied phrasing, natural language |
+| **phi4-mini** | 200 | Technical | Domain-specific terminology |
+| **gemma3:4b** | 200 | Diverse | Multilingual, short queries |
+| **Edge Cases** | 42 | Manual | Typos, code, mixed lang, short |
+
+**Total:** 1,043 training examples
+
+### Edge Cases (Sprint 81 Robustness)
+
+| Category | Examples | Purpose |
+|----------|----------|---------|
+| **Typos** | "Waht is the defualt port?" | Handle spelling errors |
+| **Code** | "Was macht os.path.join()?" | Code snippet queries |
+| **Mixed Language** | "Wie mache ich X in Python?" | DE/EN mixed queries |
+| **Short Queries** | "RAG?" | Single-word queries |
+
+### Training Results
+
+| Metric | Sprint 67 | Sprint 81 | Improvement |
+|--------|-----------|-----------|-------------|
+| **Validation Accuracy** | 89.5% | **95.22%** | +5.7pp |
+| **Training Time** | 8 min (CPU) | **37 min** (NGC GPU) | - |
+| **Model Size** | 420 MB | 418 MB | ~same |
+| **Inference Latency** | ~50ms | **~40ms** | -20% |
+| **Confidence** | ~85% | **99.7%+** | +17% |
+
+### Per-Class F1 Scores (Sprint 81)
+
+| Intent | F1 Score | Status |
+|--------|----------|--------|
+| factual | 92.68% | ✅ |
+| procedural | 94.12% | ✅ |
+| comparison | 97.56% | ✅ |
+| recommendation | 97.67% | ✅ |
+| navigation | 93.98% | ✅ |
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `src/adaptation/intent_data_generator.py` | Multi-teacher data generation |
+| `src/adaptation/intent_trainer.py` | SetFit training pipeline |
+| `scripts/train_intent_standalone.py` | NGC container training script |
+| `src/components/retrieval/intent_classifier.py` | Production classifier (5-class) |
+| `models/intent_classifier/` | Trained SetFit model (418 MB) |
+| `data/intent_training_multi_teacher_v1.jsonl` | Training data (1,043 examples) |
+
+### Integration
+
+```python
+from src.components.retrieval.intent_classifier import classify_intent, CLARAIntent
+
+# Classify query
+result = await classify_intent("How do I configure Redis?")
+print(result.clara_intent)  # CLARAIntent.PROCEDURAL
+print(result.confidence)    # 0.9975
+print(result.weights)       # IntentWeights(vector=0.4, bm25=0.1, local=0.2, global_=0.3)
+```
+
+**Environment Variable:** `USE_SETFIT_CLASSIFIER=true` (default: true)
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67 Complete:** 2026-01-11 (Sandbox + Adaptation + C-LARA, 75 SP, 195 tests, 3,511 LOC)
 **Sprint 72 Complete:** 2026-01-03 (Admin UI Features: MCP Tools + Memory Mgmt + Domain Training)
 **Sprint 78 Complete:** 2026-01-08 (Graph Entity→Chunk Expansion + 3-Stage Semantic Search, 34 SP, ADR-041)
-**Sprint 79 Planned:** 2026-01-12 (DSPy RAGAS Optimization + Frontend UI Completion, 29 SP)
-**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_79_PLAN.md
+**Sprint 79 Complete:** 2026-01-08 (RAGAS 0.4.2 Migration, Graph Expansion UI, Admin Graph Ops UI)
+**Sprint 81 In Progress:** 2026-01-09 (C-LARA SetFit Multi-Teacher 95.22% Accuracy, Feature 81.7)
+**Sources:** TECH_STACK.md, DEPENDENCY_RATIONALE.md, DGX_SPARK_SM121_REFERENCE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_81_PLAN.md
 **Maintainer:** Documentation Agent (Claude Code)

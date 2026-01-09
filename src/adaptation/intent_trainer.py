@@ -62,14 +62,15 @@ class TrainingConfig:
         device: Device to train on ("cuda" or "cpu")
     """
 
-    base_model: str = "sentence-transformers/paraphrase-mpnet-base-v2"
-    num_epochs: int = 3
-    batch_size: int = 16
+    # Sprint 81: Optimized for CPU training on DGX Spark (no CUDA PyTorch)
+    base_model: str = "sentence-transformers/all-MiniLM-L6-v2"  # Smaller, faster model (384-dim)
+    num_epochs: int = 1  # Reduced from 3 (CPU optimization)
+    batch_size: int = 64  # Increased from 16 (faster processing)
     learning_rate: float = 2e-5
-    output_dir: str = "models/intent_classifier_v1"
+    output_dir: str = "models/intent_classifier"  # Sprint 81: Match IntentClassifier expected path
     val_split: float = 0.2
-    max_iter: int = 100
-    device: str = "cuda"
+    max_iter: int = 50  # Reduced for CPU (was 100)
+    device: str = "cpu"  # CPU-only until CUDA PyTorch installed
 
 
 class IntentTrainer:
@@ -478,7 +479,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output",
-        default="models/intent_classifier_v1",
+        default="models/intent_classifier",
         help="Output directory for trained model",
     )
     parser.add_argument(

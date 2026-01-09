@@ -369,10 +369,12 @@ class GraphRAGRetriever:
         context = GraphContext()
 
         # Step 1: Vector search
+        # Sprint 80 Feature 80.3: Enable cross-encoder reranking with BAAI/bge-reranker-v2-m3
+        from src.core.config import settings
         search_result = await self.hybrid_search.hybrid_search(
             query=query,
             top_k=top_k,
-            use_reranking=False,  # TD-059: Disabled
+            use_reranking=settings.reranker_enabled,  # Sprint 80: Re-enabled with BGE reranker
         )
 
         # Convert search results to documents
@@ -502,10 +504,11 @@ class GraphRAGRetriever:
                 augmented_query = f"{sq.query}\n\nRelevant entities: {', '.join(entity_names)}"
 
             # Execute vector search
+            # Sprint 80 Feature 80.3: Enable cross-encoder reranking with BAAI/bge-reranker-v2-m3
             search_result = await self.hybrid_search.hybrid_search(
                 query=augmented_query,
                 top_k=top_k,
-                use_reranking=False,  # TD-059: Disabled
+                use_reranking=settings.reranker_enabled,  # Sprint 80: Re-enabled with BGE reranker
             )
 
             # Add documents to context

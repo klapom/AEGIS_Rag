@@ -323,9 +323,10 @@ class Settings(BaseSettings):
     )
 
     # Reranker Settings (Sprint 3: Cross-Encoder Reranking)
+    # Sprint 80 Feature 80.3: Updated to BAAI reranker (same family as BGE-M3 embeddings)
     reranker_model: str = Field(
-        default="cross-encoder/ms-marco-MiniLM-L-6-v2",
-        description="HuggingFace cross-encoder model for reranking",
+        default="BAAI/bge-reranker-v2-m3",
+        description="HuggingFace cross-encoder model for reranking. BAAI/bge-reranker-v2-m3 is multilingual and pairs with BGE-M3 embeddings.",
     )
     reranker_batch_size: int = Field(default=32, description="Batch size for reranking inference")
     reranker_cache_dir: str = Field(
@@ -580,11 +581,12 @@ class Settings(BaseSettings):
     )
 
     # Sprint 80 Feature 80.1: Faithfulness Optimization
+    # Activated 2026-01-09 for RAGAS Faithfulness testing (Sprint 80.3+)
     strict_faithfulness_enabled: bool = Field(
-        default=False,
+        default=True,
         description="Enable strict citation mode requiring citations for EVERY sentence. "
         "When True, uses FAITHFULNESS_STRICT_PROMPT which forbids general knowledge. "
-        "Designed to maximize RAGAS Faithfulness score (F=0.55→0.85+). Default: False.",
+        "Designed to maximize RAGAS Faithfulness score (F=0.55→0.85+). Default: True.",
     )
 
     # Sprint 80 Feature 80.2: Graph→Vector Fallback

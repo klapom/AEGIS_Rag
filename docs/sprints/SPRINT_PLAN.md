@@ -705,9 +705,9 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 | 78 | 34 | 6 | ✅ | Graph Entity→Chunk Expansion + 3-Stage Semantic Search |
 | **79** | **12** | **4** | ✅ | **RAGAS 0.4.2 Migration + Graph UI + Admin Graph Ops (Completed)** |
 | **80** | **21** | **10** | 📝 | **RAGAS P0 Critical Fixes - Faithfulness & Hybrid Fusion (Planned)** |
-| **81** | **24** | **10** | 📝 | **Query-Adaptive Routing & Entity Extraction Improvements (Planned)** |
+| **81** | **38** | **10** | 🚧 | **C-LARA SetFit 95% (Feature 81.7 Done) + Query Routing (In Progress)** |
 
-**Cumulative Story Points (Sprints 1-81):** ~2,694 SP
+**Cumulative Story Points (Sprints 1-81):** ~2,708 SP (+3 SP done)
 **Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 **Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency

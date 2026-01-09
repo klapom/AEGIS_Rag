@@ -103,6 +103,12 @@ class SearchRequest(BaseModel):
             }
         ],
     )
+    # Sprint 81: TD-099 - Namespace filtering for multi-tenant isolation
+    namespaces: list[str] | None = Field(
+        None,
+        description="Namespaces to filter by (Sprint 81 TD-099)",
+        examples=[["default"], ["ragas_eval"], ["default", "general"]],
+    )
 
     model_config = ConfigDict(
         # P1: Validate assignment to prevent invalid data
@@ -127,6 +133,8 @@ class SearchResult(BaseModel):
     normalized_rerank_score: float | None = Field(None, description="Normalized rerank score (0-1)")
     original_rrf_rank: int | None = Field(None, description="Rank before reranking")
     final_rank: int | None = Field(None, description="Rank after reranking")
+    # Sprint 81: TD-099 fix - Include namespace_id in response for debugging
+    namespace_id: str | None = Field(None, description="Namespace for multi-tenant isolation")
 
 
 class SearchResponse(BaseModel):
@@ -259,6 +267,17 @@ async def search(
                 logger.warning("Failed to parse metadata filters", error=str(e))
                 # Sprint 22 Feature 22.2.2: Use custom exception
                 raise ValidationError(field="filters", issue=str(e)) from None
+
+        # Sprint 81: TD-099 - Add namespace filtering to MetadataFilters
+        if search_params.namespaces:
+            if metadata_filters is None:
+                metadata_filters = MetadataFilters(namespace=search_params.namespaces)
+            else:
+                metadata_filters.namespace = search_params.namespaces
+            logger.info(
+                "namespace_filter_applied",
+                namespaces=search_params.namespaces,
+            )
 
         if search_params.search_type == "hybrid":
             # Hybrid search (Vector + BM25 + RRF + optional Reranking + optional Filters)

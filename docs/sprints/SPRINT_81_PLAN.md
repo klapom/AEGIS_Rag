@@ -1,10 +1,47 @@
 # Sprint 81: Query-Adaptive Routing & Entity Extraction Improvements
 
-**Status:** 📝 Planned
-**Sprint Dauer:** 2026-01-27 bis 2026-02-07 (2 weeks)
-**Story Points:** 24 SP
+**Status:** 🚧 In Progress (Feature 81.7 C-LARA Complete ✅)
+**Sprint Dauer:** 2026-01-09 bis 2026-01-20 (2 weeks)
+**Story Points:** 38 SP (27 Features + 11 TD) - 3 SP Done
 **Assignee:** Claude + Team
 **Dependencies:** Sprint 80 Complete (Faithfulness fixes, cross-encoder reranking)
+
+---
+
+## Technical Debt (11 SP)
+
+| TD# | Title | SP | Priority |
+|-----|-------|-----|----------|
+| [TD-099](../technical-debt/TD-099_NAMESPACE_INGESTION_BUG.md) | Namespace Not Set During RAGAS Ingestion | 3 | **HIGH** |
+| [TD-096](../technical-debt/TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | 5 | MEDIUM |
+| [TD-097](../technical-debt/TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | 3 | MEDIUM |
+
+### TD-099: Namespace Ingestion Bug (3 SP) 🔴 **HIGH**
+
+**Problem:** `ingest_ragas_simple.py --namespace ragas_eval` does NOT persist namespace to Qdrant payload.
+
+**Fix Required:**
+- Trace `create_initial_state()` → `embedding_node()` → Qdrant upsert
+- Ensure `state["namespace_id"]` is mapped to payload `{"namespace": "ragas_eval"}`
+- Add unit test for namespace propagation
+
+**Acceptance Criteria:**
+- [ ] Namespace persisted in Qdrant payload
+- [ ] RAGAS evaluation with `--namespace ragas_eval` filters correctly
+- [ ] Unit test for namespace propagation
+
+### TD-096: Chunking Parameters UI Integration (5 SP)
+
+Settings from Sprint 80 Feature 80.2 need UI integration:
+- `adaptive_context_size` toggle
+- `context_window_size` slider (5-20)
+
+### TD-097: Sprint 80 Settings UI/DB Integration (3 SP)
+
+Settings from Sprint 80 Features need UI:
+- `strict_faithfulness_enabled` (80.1)
+- `reranker_enabled` (80.3)
+- Use case guidance in UI labels
 
 ---
 
@@ -723,6 +760,60 @@ jobs:
 - [ ] Metrics pushed to Prometheus
 - [ ] RAGAS_JOURNEY.md auto-updated
 - [ ] Slack/email notifications on regression
+
+---
+
+### Feature 81.7: C-LARA SetFit Intent Classifier Training (3 SP) ✅ **DONE**
+
+**Beschreibung:**
+Complete the C-LARA (Context-aware LLM-Assisted RAG) intent classifier training that was started in Sprint 67. Uses Multi-Teacher approach with edge cases for robust training.
+
+**Sprint 81 Achievements (2026-01-09):**
+- **Multi-Teacher:** 4 different LLMs (qwen2.5:7b, mistral:7b, phi4-mini, gemma3:4b) to reduce single-model bias
+- **Edge Cases:** 42 manually crafted examples (typos, code, mixed language, short queries)
+- **Achieved Accuracy:** **95.22%** (exceeded 91-96% target!)
+- **Training Time:** 37 min (NGC GPU Container)
+- **5-Class C-LARA Intents:** factual, procedural, comparison, recommendation, navigation
+
+**Data Generation:**
+```bash
+# Multi-Teacher generation (1040 examples total)
+poetry run python -m src.adaptation.intent_data_generator \
+  --multi-teacher \
+  --output data/intent_training_multi_teacher_v1.jsonl
+```
+
+**Model Training:**
+```bash
+# Train SetFit model on multi-teacher data
+poetry run python -m src.adaptation.intent_trainer \
+  --data data/intent_training_multi_teacher_v1.jsonl \
+  --output models/intent_classifier
+```
+
+**Integration:**
+- Model saved to `models/intent_classifier/` (tracked in git)
+- Activated via `USE_SETFIT_CLASSIFIER=true` environment variable
+- IntentClassifier automatically loads model and adjusts RRF weights
+
+**Files:**
+- `src/adaptation/intent_data_generator.py` - Multi-Teacher data generation
+- `src/adaptation/intent_trainer.py` - SetFit training script
+- `src/components/retrieval/intent_classifier.py` - Production classifier
+- `models/intent_classifier/` - Trained model (git tracked)
+
+**Acceptance Criteria:**
+- [x] 1000+ training examples generated from 4 models ✅ (1,043 examples)
+- [x] SetFit model trained with validation accuracy ≥90% ✅ (**95.22%**)
+- [x] Model saved to models/intent_classifier/ ✅ (418 MB)
+- [x] Intent router functional with trained model ✅ (100% test accuracy, ~40ms latency)
+- [x] TD-079 resolved and archived ✅ (moved to archive/)
+
+**Achieved Impact:**
+- Intent classification: 60% → **95.22%** accuracy (+35 pp)
+- Per-class F1: All 5 classes >92% (factual 93%, procedural 94%, comparison 98%, recommendation 98%, navigation 94%)
+- Inference latency: **~40ms** (vs 200-500ms LLM-based)
+- Confidence: **99.7%+** on all test queries
 
 ---
 

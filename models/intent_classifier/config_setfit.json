@@ -1,0 +1,10 @@
+{
+  "normalize_embeddings": false,
+  "labels": [
+    "factual",
+    "procedural",
+    "comparison",
+    "recommendation",
+    "navigation"
+  ]
+}

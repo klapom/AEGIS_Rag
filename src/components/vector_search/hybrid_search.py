@@ -301,6 +301,8 @@ class HybridSearch:
                         "score": result["score"],
                         "source": payload.get("document_path", payload.get("source", "unknown")),
                         "document_id": payload.get("document_id", ""),
+                        # Sprint 81: TD-099 fix - Include namespace_id in response
+                        "namespace_id": payload.get("namespace_id", "default"),
                         "rank": rank,
                         "search_type": "vector",
                         # Sprint 62.2: Include section metadata at top level
@@ -375,6 +377,8 @@ class HybridSearch:
                         "score": result["score"],
                         "source": result.get("metadata", {}).get("source", "unknown"),
                         "document_id": result.get("metadata", {}).get("document_id", ""),
+                        # Sprint 81: TD-099 fix - Include namespace_id in response
+                        "namespace_id": result.get("metadata", {}).get("namespace_id", "default"),
                         "rank": result["rank"],
                         "search_type": "bm25",
                         # Sprint 62.2: Include section metadata
@@ -684,8 +688,9 @@ class HybridSearch:
                             point.payload.get("section_headings", []) if point.payload else []
                         ),
                         # Sprint 77 Feature 77.1 (TD-090): Include namespace for multi-tenant filtering
-                        "namespace": (
-                            str(point.payload.get("namespace", "unknown")) if point.payload else "unknown"
+                        # Sprint 81: TD-099 fix - Use namespace_id (consistent with ingestion)
+                        "namespace_id": (
+                            str(point.payload.get("namespace_id", "default")) if point.payload else "default"
                         ),
                     }
                     documents.append(doc)

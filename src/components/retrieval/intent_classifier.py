@@ -55,6 +55,28 @@ class Intent(str, Enum):
     SUMMARY = "summary"
 
 
+class CLARAIntent(str, Enum):
+    """C-LARA intent types from SetFit training (Sprint 81).
+
+    Amazon Science C-LARA Framework:
+    - Context-aware LLM-Assisted RAG intent detection
+    - 5 classes for fine-grained query routing
+
+    Mapping to IntentWeights (for 4-Way Hybrid RRF):
+    - factual → high local graph (entity facts)
+    - procedural → high vector + global (how-to guides)
+    - comparison → balanced (compare options)
+    - recommendation → balanced (suggestions)
+    - navigation → high BM25 + local (find documents)
+    """
+
+    FACTUAL = "factual"
+    PROCEDURAL = "procedural"
+    COMPARISON = "comparison"
+    RECOMMENDATION = "recommendation"
+    NAVIGATION = "navigation"
+
+
 @dataclass(frozen=True)
 class IntentWeights:
     """RRF weights for each retrieval channel based on intent.
@@ -83,12 +105,27 @@ class IntentWeights:
             raise ValueError(f"Weights must sum to 1.0, got {total}")
 
 
-# Intent → Weight Mappings (from TD-057)
+# Intent → Weight Mappings (from TD-057) - Legacy 4-class
 INTENT_WEIGHT_PROFILES: dict[Intent, IntentWeights] = {
     Intent.FACTUAL: IntentWeights(vector=0.3, bm25=0.3, local=0.4, global_=0.0),
     Intent.KEYWORD: IntentWeights(vector=0.1, bm25=0.6, local=0.3, global_=0.0),
     Intent.EXPLORATORY: IntentWeights(vector=0.2, bm25=0.1, local=0.2, global_=0.5),
     Intent.SUMMARY: IntentWeights(vector=0.1, bm25=0.0, local=0.1, global_=0.8),
+}
+
+# Sprint 81: C-LARA 5-class intent → Weight Mappings (from SetFit training)
+# Based on query intent characteristics and retrieval channel strengths
+CLARA_INTENT_WEIGHT_PROFILES: dict[CLARAIntent, IntentWeights] = {
+    # Factual: Specific facts → high local graph (entity lookup)
+    CLARAIntent.FACTUAL: IntentWeights(vector=0.3, bm25=0.3, local=0.4, global_=0.0),
+    # Procedural: How-to queries → high vector (semantic) + global (context)
+    CLARAIntent.PROCEDURAL: IntentWeights(vector=0.4, bm25=0.1, local=0.2, global_=0.3),
+    # Comparison: Compare options → balanced vector + BM25
+    CLARAIntent.COMPARISON: IntentWeights(vector=0.35, bm25=0.25, local=0.2, global_=0.2),
+    # Recommendation: Suggestions → balanced with slight global preference
+    CLARAIntent.RECOMMENDATION: IntentWeights(vector=0.3, bm25=0.2, local=0.2, global_=0.3),
+    # Navigation: Find specific docs → high BM25 + local
+    CLARAIntent.NAVIGATION: IntentWeights(vector=0.2, bm25=0.5, local=0.3, global_=0.0),
 }
 
 
@@ -314,16 +351,17 @@ class IntentClassifier:
             # Don't set initialized - will retry on next call
             raise
 
-    def _classify_with_setfit(self, query: str) -> tuple[Intent, float]:
+    def _classify_with_setfit(self, query: str) -> tuple[CLARAIntent, float]:
         """Classify using C-LARA trained SetFit model.
 
         Sprint 67: Uses fine-tuned SetFit model for 85-92% accuracy.
+        Sprint 81: Updated for 5-class C-LARA intents (95% accuracy).
 
         Args:
             query: User query
 
         Returns:
-            Tuple of (Intent, confidence)
+            Tuple of (CLARAIntent, confidence)
 
         Raises:
             ValueError: If SetFit model is not loaded
@@ -336,22 +374,49 @@ class IntentClassifier:
         predictions = self.setfit_model.predict([query])
         predict_time_ms = (time.perf_counter() - predict_start) * 1000
 
-        # Get predicted label (0-3 for factual, keyword, exploratory, summary)
-        predicted_label = int(predictions[0])
+        # Get predicted label - handle both string, int, and tensor predictions
+        prediction = predictions[0]
 
-        # Map label to Intent
-        label_to_intent = {
-            0: Intent.FACTUAL,
-            1: Intent.KEYWORD,
-            2: Intent.EXPLORATORY,
-            3: Intent.SUMMARY,
-        }
+        # Convert tensor to native Python type if needed
+        if hasattr(prediction, 'item'):
+            # PyTorch/NumPy tensor - convert to Python scalar
+            prediction = prediction.item()
+        elif hasattr(prediction, 'numpy'):
+            # Tensor without .item() - convert via numpy
+            prediction = prediction.numpy().item()
 
-        intent = label_to_intent.get(predicted_label, Intent.EXPLORATORY)
+        # Sprint 81: C-LARA 5-class model returns string labels
+        if isinstance(prediction, str):
+            # Direct string label from SetFit
+            label_str = prediction.lower()
+            string_to_intent = {
+                "factual": CLARAIntent.FACTUAL,
+                "procedural": CLARAIntent.PROCEDURAL,
+                "comparison": CLARAIntent.COMPARISON,
+                "recommendation": CLARAIntent.RECOMMENDATION,
+                "navigation": CLARAIntent.NAVIGATION,
+            }
+            intent = string_to_intent.get(label_str, CLARAIntent.FACTUAL)
+        else:
+            # Legacy: Integer label (0-4 for C-LARA 5-class)
+            predicted_label = int(prediction)
+            label_to_intent = {
+                0: CLARAIntent.FACTUAL,
+                1: CLARAIntent.PROCEDURAL,
+                2: CLARAIntent.COMPARISON,
+                3: CLARAIntent.RECOMMENDATION,
+                4: CLARAIntent.NAVIGATION,
+            }
+            intent = label_to_intent.get(predicted_label, CLARAIntent.FACTUAL)
 
         # Get prediction probabilities for confidence
         try:
             probs = self.setfit_model.predict_proba([query])[0]
+            # Convert tensor to list/array if needed
+            if hasattr(probs, 'tolist'):
+                probs = probs.tolist()
+            elif hasattr(probs, 'numpy'):
+                probs = probs.numpy().tolist()
             confidence = float(max(probs))
 
             # Calculate margin (difference between top 2 predictions)
@@ -395,33 +460,54 @@ class IntentClassifier:
         # Normalize query for cache lookup
         cache_key = query.lower().strip()
 
-        # Check cache first
+        # Check cache first (cache stores tuple of (intent_value, weights, clara_intent_value))
         if cache_key in self._cache:
-            cached_intent, cached_time = self._cache[cache_key]
-            logger.debug("intent_cache_hit", query=query[:50], intent=cached_intent.value)
+            cached_data = self._cache[cache_key]
+            if len(cached_data) == 3:
+                cached_intent_val, cached_weights, cached_clara_val = cached_data
+            else:
+                # Legacy cache format
+                cached_intent, cached_time = cached_data
+                cached_intent_val = cached_intent.value if hasattr(cached_intent, 'value') else str(cached_intent)
+                cached_weights = INTENT_WEIGHT_PROFILES.get(cached_intent, INTENT_WEIGHT_PROFILES[Intent.FACTUAL])
+                cached_clara_val = None
+
+            logger.debug("intent_cache_hit", query=query[:50], intent=cached_intent_val)
+            # Reconstruct intent enum
+            try:
+                legacy_intent = Intent(cached_intent_val) if cached_intent_val in [e.value for e in Intent] else Intent.FACTUAL
+            except ValueError:
+                legacy_intent = Intent.FACTUAL
+
             return IntentClassificationResult(
-                intent=cached_intent,
-                weights=INTENT_WEIGHT_PROFILES[cached_intent],
+                intent=legacy_intent,
+                weights=cached_weights,
                 confidence=1.0,
                 latency_ms=0.0,
                 method="cache",
+                clara_intent=CLARAIntent(cached_clara_val) if cached_clara_val else None,
             )
 
         # Classify based on configured method
         intent: Intent | None = None
+        clara_intent: CLARAIntent | None = None
+        weights: IntentWeights | None = None
         confidence = 0.0
         method = self.method
 
-        # Sprint 67: Try SetFit first if enabled
+        # Sprint 67/81: Try SetFit first if enabled (returns CLARAIntent)
         if self.method == "setfit":
             try:
                 self._ensure_setfit_model()
                 if self.setfit_model is not None:
-                    intent, confidence = self._classify_with_setfit(query)
+                    clara_intent, confidence = self._classify_with_setfit(query)
+                    weights = CLARA_INTENT_WEIGHT_PROFILES[clara_intent]
+                    # Map CLARAIntent to legacy Intent for backward compatibility
+                    intent = self._clara_to_legacy_intent(clara_intent)
                     method = "setfit"
                 else:
                     # SetFit not available, fall through to embedding
-                    intent = None
+                    clara_intent = None
             except Exception as e:
                 logger.warning(
                     "setfit_classification_failed",
@@ -429,12 +515,13 @@ class IntentClassifier:
                     error=str(e),
                     fallback="embedding or rule_based",
                 )
-                intent = None
+                clara_intent = None
 
         # Fallback to embedding if setfit failed or method is embedding
         if intent is None and self.method in ["setfit", "embedding"]:
             try:
                 intent, confidence = await self._classify_with_embeddings(query)
+                weights = INTENT_WEIGHT_PROFILES[intent]
                 method = "embedding"
             except Exception as e:
                 logger.warning(
@@ -449,6 +536,7 @@ class IntentClassifier:
         elif intent is None and self.method == "llm":
             try:
                 intent, confidence = await self._classify_with_llm(query)
+                weights = INTENT_WEIGHT_PROFILES[intent]
                 method = "llm"
             except Exception as e:
                 logger.warning(
@@ -462,6 +550,7 @@ class IntentClassifier:
         # Fallback to rule-based if all methods failed or is rule_based
         if intent is None:
             intent = self._classify_rule_based(query)
+            weights = INTENT_WEIGHT_PROFILES[intent]
             confidence = 0.7
             method = "rule_based"
 
@@ -469,7 +558,11 @@ class IntentClassifier:
         if len(self._cache) >= self._cache_max_size:
             oldest_key = next(iter(self._cache))
             del self._cache[oldest_key]
-        self._cache[cache_key] = (intent, time.time())
+        self._cache[cache_key] = (
+            intent.value,
+            weights,
+            clara_intent.value if clara_intent else None,
+        )
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -477,6 +570,7 @@ class IntentClassifier:
             "intent_classified",
             query=query[:50],
             intent=intent.value,
+            clara_intent=clara_intent.value if clara_intent else None,
             confidence=round(confidence, 2),
             method=method,
             latency_ms=round(latency_ms, 2),
@@ -484,11 +578,33 @@ class IntentClassifier:
 
         return IntentClassificationResult(
             intent=intent,
-            weights=INTENT_WEIGHT_PROFILES[intent],
+            weights=weights,
             confidence=confidence,
             latency_ms=latency_ms,
             method=method,
+            clara_intent=clara_intent,
         )
+
+    def _clara_to_legacy_intent(self, clara: CLARAIntent) -> Intent:
+        """Map C-LARA 5-class intent to legacy 4-class Intent.
+
+        Sprint 81: Provides backward compatibility with existing code.
+
+        Mapping:
+        - factual → FACTUAL (direct)
+        - procedural → EXPLORATORY (how-to questions)
+        - comparison → EXPLORATORY (comparative analysis)
+        - recommendation → EXPLORATORY (suggestion queries)
+        - navigation → KEYWORD (find specific content)
+        """
+        mapping = {
+            CLARAIntent.FACTUAL: Intent.FACTUAL,
+            CLARAIntent.PROCEDURAL: Intent.EXPLORATORY,
+            CLARAIntent.COMPARISON: Intent.EXPLORATORY,
+            CLARAIntent.RECOMMENDATION: Intent.EXPLORATORY,
+            CLARAIntent.NAVIGATION: Intent.KEYWORD,
+        }
+        return mapping.get(clara, Intent.EXPLORATORY)
 
     async def _classify_with_embeddings(self, query: str) -> tuple[Intent, float]:
         """Classify using Zero-Shot Embedding similarity.
@@ -714,11 +830,12 @@ class IntentClassificationResult:
     """Result of intent classification.
 
     Attributes:
-        intent: Classified intent type
+        intent: Classified intent type (legacy 4-class)
         weights: RRF weights for 4-Way Hybrid Retrieval
         confidence: Classification confidence (0.0-1.0)
         latency_ms: Classification latency in milliseconds
-        method: Classification method used (embedding, llm, rule_based, cache)
+        method: Classification method used (setfit, embedding, llm, rule_based, cache)
+        clara_intent: C-LARA 5-class intent (Sprint 81, None for non-SetFit methods)
     """
 
     intent: Intent
@@ -726,6 +843,7 @@ class IntentClassificationResult:
     confidence: float
     latency_ms: float
     method: str
+    clara_intent: CLARAIntent | None = None
 
 
 # Singleton instance

@@ -384,6 +384,10 @@ services:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - API_WORKERS=4
+      # Sprint 81: C-LARA SetFit Intent Classifier (A/B Testing)
+      # Set to 'true' to use C-LARA SetFit model (95.22% accuracy, ~40ms)
+      # Set to 'false' to use legacy LLM-based classifier
+      - USE_SETFIT_CLASSIFIER=${USE_SETFIT_CLASSIFIER:-true}
       # LLM Configuration
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL_GENERATION=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}

@@ -383,9 +383,10 @@ async def vector_search_node(state: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Execute vector search (this internally runs vector, BM25, graph, and RRF)
+        # Sprint 80 Feature 80.3: Enable cross-encoder reranking with BAAI/bge-reranker-v2-m3
         agent = VectorSearchAgent(
             top_k=settings.retrieval_top_k,
-            use_reranking=False,  # TD-059: Disabled - sentence-transformers not in container
+            use_reranking=settings.reranker_enabled,  # Sprint 80: Re-enabled with BGE reranker
         )
         result_state = await agent.process(state)
 

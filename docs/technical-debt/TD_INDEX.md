@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-08 (Sprint 80 - RAGAS Faithfulness Optimization)
-**Total Open Items:** 12
-**Total Story Points:** ~152 SP
+**Last Updated:** 2026-01-09 (Sprint 80 - Namespace Ingestion Bug TD added)
+**Total Open Items:** 14
+**Total Story Points:** ~163 SP
 **Archived Items:** [23 items](archive/ARCHIVE_INDEX.md) (TD-091, TD-094, TD-095 added Sprint 77)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -22,10 +22,10 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~36 SP       |
-| MEDIUM   | 7     | ~95 SP       |
+| MEDIUM   | 8     | ~103 SP      |
 | LOW      | 2     | ~21 SP       |
 
-**Sprint 80:** TD-096 & TD-097 added (8 SP) - Settings UI Integration
+**Sprint 80:** TD-096, TD-097, TD-098 added (16 SP) - Settings UI Integration + Cross-Encoder Fine-tuning
 
 ---
 
@@ -67,6 +67,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-099](TD-099_NAMESPACE_INGESTION_BUG.md) | Namespace Not Set During RAGAS Ingestion | OPEN | 3 | **Sprint 81** |
 | [TD-080](TD-080_CONTEXT_RELEVANCE_GUARD.md) | Context Relevance Guard (Anti-Hallucination) | PHASE 1 COMPLETE | 5 | **Sprint 71-73** |
 | [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | ✅ COMPLETE | 13 | **Sprint 67** ✅ |
 | [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | IN PROGRESS | 18 | **Sprint 67-68** |
@@ -77,6 +78,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 |-----|-------|--------|-----|---------------|
 | [TD-096](TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | OPEN | 5 | **Sprint 81** |
 | [TD-097](TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | OPEN | 3 | **Sprint 81** |
+| [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 82** |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | **Sprint 68** |
 | [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 68** |
@@ -236,11 +238,11 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
   - Dataset Builder (8 SP)
   - Adaptive Reranker v1 (13 SP)
   - Query Rewriter v1 (6 SP)
-- **67.10-67.13: LLM Intent Classifier (C-LARA)** - 13 SP (TD-079)
+- **67.10-67.13: LLM Intent Classifier (C-LARA)** - 13 SP (TD-079) ✅ RESOLVED Sprint 81
   - ✅ 67.10: Data generation with Qwen2.5:7b (COMPLETE)
-  - 67.11: SetFit model training (PENDING)
-  - 67.12: Integration (PENDING)
-  - 67.13: A/B testing vs Semantic Router (PENDING)
+  - ✅ 81.7: Multi-Teacher training (4 models, 1040 examples) (COMPLETE)
+  - ✅ Model deployed to models/intent_classifier/
+  - ✅ Integration verified (USE_SETFIT_CLASSIFIER=true)
 - **67.14: Section Extraction Quick Wins** - 7 SP (TD-078 Phase 1)
   - Profiling + batch tokenization + regex optimization
 
