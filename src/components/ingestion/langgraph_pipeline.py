@@ -441,7 +441,7 @@ async def run_ingestion_pipeline(
         slowest_node=max(node_timings, key=node_timings.get) if node_timings else None,
         slowest_duration_ms=round(max(node_timings.values()) * 1000, 0) if node_timings else 0,
         chunks_created=chunks_created,
-        entities_extracted=len(final_state.get("entities", [])),
+        entities_extracted=final_state.get("entities_count", 0),  # Sprint 82 Fix: Use count
         sections_created=final_state.get("section_node_stats", {}).get("sections_created", 0),
         parser_used=routing_decision.parser.value,
         performance_summary={

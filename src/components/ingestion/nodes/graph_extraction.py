@@ -537,12 +537,27 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
         # Extract stats from nested structure (Sprint 32 Fix)
         stats = graph_stats.get("stats", {})
 
+        # Sprint 82 DEBUG: Log stats structure to diagnose entities_count=0 bug
+        logger.info(
+            "DEBUG_graph_stats_structure",
+            graph_stats_keys=list(graph_stats.keys()),
+            stats_dict=stats,
+            total_entities_from_stats=stats.get("total_entities", -999),
+        )
+
         # Store statistics (Sprint 82 Fix: Store counts for API response)
         state["entities"] = []  # Full entities stored in Neo4j
         state["relations"] = []  # Full relations stored in Neo4j
         state["entities_count"] = stats.get("total_entities", 0)  # Count for API response
         # relations_count already set at line 370
         state["graph_status"] = "completed"
+
+        # Sprint 82 DEBUG: Verify state was updated
+        logger.info(
+            "DEBUG_state_entities_count_set",
+            entities_count=state.get("entities_count", -888),
+            relations_count=state.get("relations_count", -777),
+        )
         state["graph_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
         graph_node_end = time.perf_counter()

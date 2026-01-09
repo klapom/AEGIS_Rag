@@ -175,6 +175,7 @@ class IngestionState(TypedDict, total=False):
     # ============================================================
     entities: list[Any]  # Extracted entities (stored in Neo4j, not in state)
     relations: list[Any]  # Extracted relations (stored in Neo4j, not in state)
+    entities_count: int  # Number of entities extracted (Sprint 82 Fix for API response)
     relations_count: int  # Number of RELATES_TO relationships created (Sprint 34)
     graph_status: Literal["pending", "running", "completed", "failed"]
 
@@ -276,6 +277,7 @@ def create_initial_state(
         # Graph extraction (initialized by graph_extraction_node)
         entities=[],
         relations=[],
+        entities_count=0,  # Sprint 82 Fix: Entities extracted count
         relations_count=0,  # Sprint 34: RELATES_TO relationships count
         graph_status="pending",
         # Progress tracking
