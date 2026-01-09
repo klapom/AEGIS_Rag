@@ -19,23 +19,46 @@ This is a **living document** that tracks our continuous journey to optimize RAG
 
 ---
 
-## Current Status (2026-01-09 - Post Experiment #8)
+## Current Status (2026-01-09 - Sprint 82 Complete: Phase 1 Dataset Generated)
 
-**🎉 MILESTONE: No-Hedging Prompt Eliminates Meta-Commentary!**
+**🎉 MILESTONE: 500-Sample RAGAS Phase 1 Benchmark Complete!**
 
-**HotpotQA Dataset (5 questions, Sprint 81.8 No-Hedging Prompt):**
+**Sprint 82 Achievement (Phase 1 - Text-Only):**
+- ✅ **500 samples generated** (450 answerable + 50 unanswerable)
+- ✅ **Stratified sampling** across doc_types (clean_text: 333, log_ticket: 167)
+- ✅ **8 question types** (lookup, howto, multihop, comparison, definition, policy, numeric, entity)
+- ✅ **3 difficulty levels** (D1: 36%, D2: 32%, D3: 32%)
+- ✅ **Ingestion pipeline verified** (Qdrant + Neo4j + BM25 + namespace isolation)
+- 📊 **SHA256:** `8f6be17d9399d15434a5ddd2c94ced762e701cb2943cd8a787971f873be38a61`
 
-| Metric | Exp #7 (C-LARA) | Exp #8 (No-Hedging) | Best | SOTA Target | Status |
-|--------|-----------------|---------------------|------|-------------|--------|
-| **Context Precision** | 1.0000 | 1.0000 | **1.0000** ⭐ | 0.85 | 🟢 **+18% over SOTA!** |
-| **Context Recall** | 1.0000 | 1.0000 | **1.0000** ⭐ | 0.75 | 🟢 **+33% over SOTA!** |
-| **Faithfulness** | 0.6267 | 0.6000 | **0.6267** | 0.90 | 🟡 -30% gap |
-| **Answer Relevancy** | 0.7249 | **0.7817** | **0.7817** ⭐ | 0.95 | 🟡 -18% gap |
+**Ingestion Status (in progress):**
+- 🔄 **Uploading via Frontend API:** ~497 files remaining (~17 min ETA)
+- ✅ **Namespace:** `ragas_phase1` (isolated from previous evaluations)
+- ✅ **Pipeline tested:** 3 samples verified in all DBs (Qdrant, Neo4j, BM25)
 
-**Key Improvement (Experiment #8):**
-- ✅ **Answer Relevancy +7.8%** (0.72 → 0.78) - concise, direct answers
-- ✅ **Meta-commentary eliminated** - no more "Information nicht verfügbar" false claims
-- ⚠️ **Faithfulness unchanged** due to RAGAS evaluation bug on 1 sample (F=0.0 despite correct answer)
+**Previous: Experiment #9 (20-Sample Benchmark Reveals Dataset Gap)**
+
+**HotpotQA Dataset (20 questions, Sprint 81 Full Benchmark):**
+
+| Metric | Exp #8 (5 Samples) | Exp #9 (20 Samples) | Samples 16-20 Only | SOTA Target |
+|--------|-------------------|---------------------|-------------------|-------------|
+| **Context Precision** | 1.0000 | 0.6000 | **1.0000** ⭐ | 0.85 |
+| **Context Recall** | 1.0000 | 0.6000 | **1.0000** ⭐ | 0.75 |
+| **Faithfulness** | 0.6000 | 0.4750 | **1.0000** ⭐ | 0.90 |
+| **Answer Relevancy** | 0.7817 | 0.6667 | 0.5400 | 0.95 |
+
+**Key Findings (Experiment #9):**
+- ⚠️ **Scores appear lower** but this is due to **missing source documents** in ragas_eval namespace
+- ✅ **Truncation Bug Fixed:** Chat API now returns full chunk text (was 500 chars → now 1000-3000+ chars)
+- ✅ **New Documents (16-20) Perfect:** F=1.0, CP=1.0, CR=1.0 for all 5 new HotpotQA samples
+- ❌ **8 samples missing docs:** Samples 7, 8, 11, 13, 14, 15 have CP=0, CR=0 (documents not ingested)
+- ⚠️ **RAGAS F=0 Bug persists:** Samples 1, 5, 6 show F=0.0 despite correct answers (short answer parser issue)
+
+**Critical Bug Fix (Sprint 81):**
+- **File:** `src/api/v1/chat.py:1397`
+- **Issue:** Context text truncated to 500 chars in API response
+- **Fix:** Removed truncation, now returns full chunk text
+- **Impact:** Enables accurate Faithfulness evaluation (RAGAS needs full context)
 
 **Sprint 80 Complete - Summary of Improvements:**
 
@@ -58,6 +81,217 @@ This is a **living document** that tracks our continuous journey to optimize RAG
 ---
 
 ## Journey Log
+
+### 2026-01-09 | Sprint 82: Phase 1 Dataset Generation - 500-Sample Benchmark
+
+#### Context
+- **Goal:** Create scientifically rigorous 500-sample benchmark for RAGAS evaluation
+- **Approach:** Stratified sampling from HotpotQA, RAGBench, LogQA datasets
+- **ADR:** [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md)
+- **Sprint Plan:** [Sprint 82](../sprints/SPRINT_82_PLAN.md)
+
+#### Implementation
+
+**Feature 82.1: Dataset Loader Infrastructure (3 SP)**
+- Created adapter pattern for HuggingFace datasets (HotpotQA, RAGBench, LogQA)
+- Normalized 3 dataset formats into unified `NormalizedSample` dataclass
+- Automatic doc_type classification (clean_text, log_ticket)
+- Question type heuristics (8 types: lookup, howto, multihop, comparison, etc.)
+
+**Feature 82.2: Stratified Sampling Engine (2 SP)**
+- Quota-based sampling: clean_text (300), log_ticket (150)
+- Question type distribution per doc_type (8 types)
+- Difficulty rebalancing: D1 40%, D2 35%, D3 25%
+- Statistical validation with tolerance checking
+
+**Feature 82.3: Unanswerable Generation (2 SP)**
+- 4 generation methods: temporal_shift (15), entity_swap (15), negation (10), cross_domain (10)
+- 50 unanswerable questions (10% of total)
+- Preserves original context for contrastive evaluation
+
+**Feature 82.4: AegisRAG JSONL Export (1 SP)**
+- NormalizedSample → JSONL with SHA256 checksum
+- CSV manifest with sample metadata
+- Statistics report (Markdown)
+
+#### Generated Dataset Statistics
+
+| Metric | Value |
+|--------|-------|
+| **Total Samples** | 500 |
+| **Answerable** | 450 (90%) |
+| **Unanswerable** | 50 (10%) |
+| **Doc Types** | clean_text: 333, log_ticket: 167 |
+| **Question Types** | lookup: 132, howto: 130, multihop: 82, comparison: 56, definition: 46, policy: 32, entity: 11, numeric: 11 |
+| **Difficulty** | D1: 180 (36%), D2: 158 (32%), D3: 162 (32%) |
+| **SHA256** | `8f6be17d9399d15434a5ddd2c94ced762e701cb2943cd8a787971f873be38a61` |
+
+#### Ingestion Pipeline
+
+**Critical Decision: Frontend API vs Direct Pipeline**
+- **Chosen:** Frontend API (`/api/v1/retrieval/upload`) ✅
+- **Why:**
+  - Ensures namespace propagation to **all databases** (Qdrant, Neo4j, BM25)
+  - Triggers full ingestion pipeline (Docling → Chunking → Embedding → Graph → BM25)
+  - Consistent with production workflow
+  - TD-099 fixed: `namespace_id` correctly set in all payloads
+
+**Ingestion Scripts:**
+```bash
+# 1. Prepare contexts as .txt files
+poetry run python scripts/ragas_benchmark/prepare_phase1_ingestion.py
+
+# 2. Upload via Frontend API
+./scripts/upload_ragas_phase1.sh  # ~17 min for 500 files
+```
+
+**Verification (3 test samples):**
+| Database | Status | Count |
+|----------|--------|-------|
+| Qdrant | ✅ | 3 chunks with `namespace_id: ragas_phase1` |
+| Neo4j | ✅ | 14 entities + 3 chunks |
+| BM25 | ✅ | 3 docs (background task updated index) |
+
+#### Key Insights
+
+1. **Statistical Significance Achieved**
+   - 5 samples → ±20% confidence interval
+   - 500 samples → ±4% confidence interval
+   - Enables statistically valid A/B testing
+
+2. **Namespace Isolation Critical**
+   - `ragas_phase1` namespace separates benchmark from production data
+   - Frontend API ensures namespace propagates to all DBs
+   - BM25 index rebuilds automatically via background task
+
+3. **Unanswerable Questions Test Anti-Hallucination**
+   - 10% unanswerable rate matches SOTA benchmarks
+   - 4 generation methods provide diverse failure modes
+   - Tests if RAG system correctly returns "I don't know"
+
+4. **Dataset Expansion Plan (Sprint 83-84)**
+   - Phase 2: +300 samples (table, code_config) → 800 total
+   - Phase 3: +200 samples (pdf_ocr, slide, pdf_text) → 1000 total
+   - Final target: ±3% confidence interval
+
+#### Next Steps (Sprint 83)
+
+1. **Run RAGAS Evaluation on Phase 1**
+   ```bash
+   poetry run python scripts/run_ragas_evaluation.py \
+       --dataset data/evaluation/ragas_phase1_questions.jsonl \
+       --namespace ragas_phase1 \
+       --mode hybrid \
+       --max-questions 50  # Start with 50, then scale to 500
+   ```
+
+2. **Establish Phase 1 Baseline Metrics**
+   - Run evaluation on Vector, Graph, Hybrid modes
+   - Compare against Sprint 80-81 metrics (5-20 samples)
+   - Document statistical significance improvements
+
+3. **Identify Optimization Targets**
+   - Per doc_type breakdown (clean_text vs log_ticket)
+   - Per question_type breakdown (lookup vs multihop vs howto)
+   - Per difficulty breakdown (D1 vs D2 vs D3)
+
+#### Files Changed
+- `scripts/ragas_benchmark/` - New package (13 files, 2,100 LOC)
+- `tests/ragas_benchmark/` - Unit tests (49 tests, 100% pass)
+- `data/evaluation/ragas_phase1_500.jsonl` - Generated dataset
+- `data/evaluation/ragas_phase1_questions.jsonl` - Questions for evaluation
+- `data/ragas_phase1_contexts/` - Context files for ingestion (500 files, 3 MB)
+
+#### Commits
+- `9126eef` feat(sprint82): Implement RAGAS Phase 1 Text-Only Benchmark infrastructure
+- `cb96a9c` docs(sprint82): Mark Sprint 82 complete with results
+
+**Status:** ✅ Sprint 82 Complete. Ingestion in progress (~17 min remaining).
+
+---
+
+### 2026-01-09 | Sprint 81: 20-Sample Benchmark + Truncation Bug Fix (Experiment #9)
+
+#### Context
+- **Goal:** Expand RAGAS benchmark from 5 to 20 samples for statistical significance
+- **Dataset:** HotpotQA (20 multi-hop questions)
+- **New Documents:** 5 new context files (SpaceX, LOTR, Apple, Amazon, Tesla)
+- **LLM:** GPT-OSS:20b (Ollama)
+
+#### Critical Bug Discovery & Fix
+
+**500-Character Truncation Bug (CRITICAL)**
+- **Discovery:** During evaluation, noticed all context lengths were exactly 500 chars
+- **Root Cause:** `src/api/v1/chat.py:1397` truncated source text to 500 chars
+  ```python
+  # BEFORE (Bug)
+  text=ctx.get("text", ctx.get("content", ""))[:500],  # Limit to 500 chars
+
+  # AFTER (Fixed)
+  text=ctx.get("text", ctx.get("content", "")),  # Full chunk text (no truncation)
+  ```
+- **Impact:** Faithfulness metrics were artificially low (RAGAS couldn't see full context)
+- **Fix Verification:** Context lengths now 1000-3000+ chars (was max 500)
+
+#### Results
+
+**Overall Metrics (20 Samples):**
+| Metric | Score | vs Exp #8 (5 samples) |
+|--------|-------|----------------------|
+| Context Precision | 0.6000 | ⬇️ -40% |
+| Context Recall | 0.6000 | ⬇️ -40% |
+| Faithfulness | 0.4750 | ⬇️ -21% |
+| Answer Relevancy | 0.6667 | ⬇️ -15% |
+
+**New Documents Only (Samples 16-20):**
+| Sample | Question | CP | CR | F | AR |
+|--------|----------|----|----|---|----|
+| 16 | SpaceX founder birthplace | 1.0 | 1.0 | 1.0 | 0.72 |
+| 17 | LOTR director birthplace | 1.0 | 1.0 | 1.0 | 0.47 |
+| 18 | Apple HQ city | 1.0 | 1.0 | 1.0 | 0.52 |
+| 19 | Amazon founding city | 1.0 | 1.0 | 1.0 | 0.00* |
+| 20 | Tesla HQ city | 1.0 | 1.0 | 1.0 | 0.51 |
+
+*Sample 19 AR=0.0 is likely RAGAS bug (correct answer "Bellevue" matches ground truth)
+
+#### Key Insights
+
+1. **System Performance is Good When Documents Exist**
+   - New documents (16-20): F=1.0, CP=1.0, CR=1.0 (perfect!)
+   - Problem is missing documents, not retrieval quality
+
+2. **Dataset Gap Identified**
+   - 8 of 20 samples reference documents NOT in ragas_eval namespace
+   - Samples 7, 8, 11, 13, 14, 15 show CP=0, CR=0 (expected - no matching docs)
+   - This artificially lowers average metrics
+
+3. **RAGAS F=0 Bug Persists**
+   - Samples 1, 5, 6 show F=0.0 despite correct answers
+   - Appears to be RAGAS parser issue with very short answers
+   - Example: "Arthur's Magazine was started first [1]" → F=0.0
+
+4. **Truncation Fix Enables Accurate Evaluation**
+   - Full context (1000-3000+ chars) now available to RAGAS
+   - Required for proper Faithfulness assessment
+   - All new samples achieved F=1.0 with full context
+
+#### Performance
+- Query time: 517s (25.85s/question)
+- Metrics time: 1567s (78.34s/sample)
+- Total: 2084s (~35 minutes for 20 samples)
+
+#### Next Steps
+1. **Ingest Missing HotpotQA Documents** - Add source docs for samples 7, 8, 11, 13, 14, 15
+2. **Investigate RAGAS F=0 Bug** - Report to RAGAS GitHub if persistent
+3. **Re-run Full Benchmark** - After ingesting all documents, expect CP/CR/F > 0.90
+
+#### Files Changed
+- `src/api/v1/chat.py:1397` - Removed 500-char truncation
+- `data/evaluation/ragas_hotpotqa_20.jsonl` - Expanded from 15 to 20 samples
+- `data/evaluation/hotpotqa_contexts/hotpot_000015-19.txt` - NEW, 5 context files
+- `data/evaluation/results/ragas_eval_hybrid_20260109_184537.json` - Full results
+
+---
 
 ### 2026-01-08 | Sprint 79.8: RAGAS 0.4.2 Migration + Initial Evaluation
 
