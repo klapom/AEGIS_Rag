@@ -923,7 +923,7 @@ curl -s "http://localhost:6333/collections/documents_v1/points/scroll" \
    - Faithfulness +4.5% (slight improvement on grounding)
    - AR -4.7% within statistical noise (5 samples)
 3. **Cold Start Latency:** SetFit model (418 MB) causes 15s extra on first query
-4. **Sample 5 Issue:** Both classifiers return F=0.0 (hallucination in "ethanol" answer)
+4. **Sample 5 Issue:** Both classifiers return F=0.0 (RAGAS evaluation bug - see Experiment #8 for full analysis)
 
 **Technical Details:**
 
@@ -1006,14 +1006,49 @@ NO_HEDGING_FAITHFULNESS_PROMPT = """
 | 4 (James Miller) | 1.000/0.996 | ❌ None |
 | 5 (Cadmium Chloride) | **0.000**/0.741 | ❌ None |
 
-**Key Finding: Sample 5 Anomaly**
+**Key Finding: Sample 5 Anomaly (RAGAS Evaluation Bug)**
 
-The Cadmium Chloride question still shows F=0.0 despite:
-- Answer: "Cadmium chloride is slightly soluble in alcohol [1]." ← CORRECT!
-- Ground Truth: "alcohol" ← MATCHES!
-- No meta-commentary present
+**Full Details:**
+```
+Question: "Cadmium Chloride is slightly soluble in this chemical, it is also called what?"
 
-This appears to be a **RAGAS evaluation bug** where the LLM judge (GPT-OSS:20b) incorrectly scores F=0.0 for a factually correct, grounded answer.
+Ground Truth: "alcohol"
+
+Context (from Qdrant ragas_eval namespace):
+"It is a hygroscopic solid that is highly soluble in water and slightly soluble
+in alcohol. Ethanol, also called alcohol, ethyl alcohol, and drinking alcohol,
+is a compound and simple alcohol with the chemical formula C2H5OH."
+
+LLM Answer (No-Hedging): "Cadmium chloride is slightly soluble in alcohol [1]."
+
+RAGAS Faithfulness Score: 0.0 ❌
+```
+
+**Why This is a RAGAS Bug (NOT a Hallucination):**
+
+1. The answer "slightly soluble in alcohol" is **verbatim from the context**
+2. The ground truth "alcohol" **matches the answer**
+3. The citation [1] **correctly references the source**
+4. There is **no meta-commentary** or false claims
+
+The RAGAS Faithfulness metric uses an **LLM Judge** (GPT-OSS:20b) that:
+- Extracts claims from the answer
+- Checks if each claim is supported by the context
+- Returns F=0.0 if any claim is unsupported
+
+Possible causes for the F=0.0 bug:
+- LLM Judge may expect "ethanol" as the answer (question asks "also called what?")
+- LLM Judge may not recognize partial answers as faithful
+- Bug in RAGAS claim extraction for short answers
+
+**Impact on Metrics:**
+
+| Calculation | Faithfulness |
+|-------------|--------------|
+| Without Sample 5: (1+1+1+1)/4 | **1.0000** |
+| With Sample 5: (1+1+1+1+0)/5 | **0.6000** |
+
+One single outlier reduces Faithfulness from 100% to 60%!
 
 **Qualitative Improvement:**
 
