@@ -2,33 +2,33 @@
 
 **Status:** 🚧 In Progress (Feature 81.7 C-LARA Complete ✅)
 **Sprint Dauer:** 2026-01-09 bis 2026-01-20 (2 weeks)
-**Story Points:** 38 SP (27 Features + 11 TD) - 3 SP Done
+**Story Points:** 24 SP (13 SP Features + 11 TD) - 3 SP Done
 **Assignee:** Claude + Team
 **Dependencies:** Sprint 80 Complete (Faithfulness fixes, cross-encoder reranking)
 
+> **Note:** Features 81.1 (5 SP) and 81.2 (6 SP) deprecated - C-LARA SetFit (81.7) now handles intent classification.
+
 ---
 
-## Technical Debt (11 SP)
+## Technical Debt (8 SP remaining, 3 SP done)
 
-| TD# | Title | SP | Priority |
-|-----|-------|-----|----------|
-| [TD-099](../technical-debt/TD-099_NAMESPACE_INGESTION_BUG.md) | Namespace Not Set During RAGAS Ingestion | 3 | **HIGH** |
-| [TD-096](../technical-debt/TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | 5 | MEDIUM |
-| [TD-097](../technical-debt/TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | 3 | MEDIUM |
+| TD# | Title | SP | Priority | Status |
+|-----|-------|-----|----------|--------|
+| [TD-099](../technical-debt/TD-099_NAMESPACE_INGESTION_BUG.md) | Namespace Not Set During RAGAS Ingestion | 3 | **HIGH** | ✅ DONE |
+| [TD-096](../technical-debt/TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | 5 | MEDIUM | 🎯 |
+| [TD-097](../technical-debt/TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | 3 | MEDIUM | 🎯 |
 
-### TD-099: Namespace Ingestion Bug (3 SP) 🔴 **HIGH**
+### TD-099: Namespace Ingestion Bug (3 SP) ✅ **RESOLVED (2026-01-09)**
 
-**Problem:** `ingest_ragas_simple.py --namespace ragas_eval` does NOT persist namespace to Qdrant payload.
+**Problem:** Field name mismatch - ingestion wrote `namespace_id` but retrieval filtered by `namespace`.
 
-**Fix Required:**
-- Trace `create_initial_state()` → `embedding_node()` → Qdrant upsert
-- Ensure `state["namespace_id"]` is mapped to payload `{"namespace": "ragas_eval"}`
-- Add unit test for namespace propagation
+**Fix Applied:**
+- `filters.py:222` - Changed `key="namespace"` → `key="namespace_id"`
+- `four_way_hybrid_search.py:448` - Same fix
+- `src/api/v1/retrieval.py` - Added `namespace_id` to SearchResult model
+- `hybrid_search.py` - Added `namespace_id` to result mapping
 
-**Acceptance Criteria:**
-- [ ] Namespace persisted in Qdrant payload
-- [ ] RAGAS evaluation with `--namespace ragas_eval` filters correctly
-- [ ] Unit test for namespace propagation
+**Verified:** RAGAS A/B test successfully used `--namespace ragas_eval` filtering
 
 ### TD-096: Chunking Parameters UI Integration (5 SP)
 
@@ -47,11 +47,13 @@ Settings from Sprint 80 Features need UI:
 
 ## Sprint Ziele
 
-**Primär:** Implement intelligent query routing to automatically select the best retrieval mode (Vector/Graph/Hybrid) based on query characteristics.
+**Primär (UPDATED):** C-LARA Intent Classification ✅ DONE + Faithfulness Optimization (RAG Tuning Agent P0: No-Hedging Prompt).
 
-**Sekundär:** Fix entity extraction gaps that caused 60% HotpotQA Graph failures by adding domain-agnostic entity types.
+**Sekundär:** Implement parent chunk retrieval to improve Context Recall by returning full sections instead of isolated sentence-level chunks.
 
-**Tertiär:** Implement parent chunk retrieval to improve Context Recall by returning full sections instead of isolated sentence-level chunks.
+**Tertiär:** Performance dashboards and automated RAGAS evaluation pipeline.
+
+> **Scope Change:** Features 81.1 (Query Routing) and 81.2 (Entity Extraction) deprecated. C-LARA (81.7) achieved **95.22% intent accuracy**, replacing LLM-based query routing. Focus shifts to Faithfulness optimization per RAG Tuning Agent recommendations.
 
 ---
 
@@ -92,7 +94,10 @@ Settings from Sprint 80 Features need UI:
 
 ## Features
 
-### Feature 81.1: Query-Adaptive Routing Classifier (5 SP) 🎯 **P1 - HIGH**
+### Feature 81.1: Query-Adaptive Routing Classifier (5 SP) ❌ **DEPRECATED**
+
+> **Deprecated:** Replaced by C-LARA SetFit Intent Classifier (Feature 81.7).
+> C-LARA provides 5-class intent classification (factual, procedural, comparison, recommendation, navigation) with 95.22% accuracy and ~40ms latency.
 
 **Beschreibung:**
 Implement LLM-based query classification to automatically route queries to the optimal retrieval mode (Graph/Vector/Hybrid).
@@ -272,7 +277,10 @@ class QueryRouter:
 
 ---
 
-### Feature 81.2: Domain-Agnostic Entity Extraction (6 SP) 🎯 **P1 - HIGH**
+### Feature 81.2: Domain-Agnostic Entity Extraction (6 SP) ❌ **DEPRECATED**
+
+> **Deprecated:** Deferred in favor of Faithfulness optimization (RAG Tuning Agent recommendations).
+> C-LARA handles query routing; entity extraction improvements deferred to Sprint 82+ if needed.
 
 **Beschreibung:**
 Improve entity extraction to handle diverse document types beyond legal/policy documents. Add entity types for publications, chemicals, scientific terms, and generic proper nouns.
@@ -817,6 +825,48 @@ poetry run python -m src.adaptation.intent_trainer \
 
 ---
 
+### Feature 81.8: No-Hedging Prompt for Faithfulness (1 SP) 🎯 **P0 - CRITICAL**
+
+**Beschreibung:**
+Implement "No-Hedging Prompt" to eliminate LLM meta-commentary hallucination and improve Faithfulness score.
+
+**Problem (from RAG Tuning Agent Analysis):**
+- Current Faithfulness: 0.6267 (with C-LARA ON)
+- LLM adds meta-commentary like "The provided documents do not contain information about..."
+- This contradicts the context (which may contain relevant info) → Faithfulness penalty
+- Root cause: LLM "hedging" behavior, not retrieval quality issue
+
+**Solution:**
+
+```python
+# src/agents/multi_turn/prompts.py
+
+NO_HEDGING_PROMPT = """
+CRITICAL INSTRUCTION - FAITHFULNESS REQUIREMENTS:
+
+1. ONLY use facts explicitly stated in the provided context
+2. NEVER add meta-commentary about what the documents contain/don't contain
+3. NEVER say "The documents don't mention..." or "No information available about..."
+4. If information is not in context: Simply answer based on what IS available
+5. If completely unanswerable: Say "I cannot answer this based on the provided information."
+
+DO NOT hedge, qualify, or comment on document contents - just answer the question directly.
+"""
+```
+
+**Expected Impact:**
+- Faithfulness: 0.63 → **0.80** (+27%)
+- Eliminates LLM-induced hallucination ("meta-commentary")
+- Maintains high Answer Relevancy (0.72+)
+
+**Acceptance Criteria:**
+- [ ] NO_HEDGING_PROMPT added to generation prompts
+- [ ] RAGAS evaluation shows Faithfulness ≥0.75
+- [ ] No regression on other metrics (CP, CR, AR)
+- [ ] Integration with C-LARA (conditional hedging based on confidence)
+
+---
+
 ### Feature 81.6: Entity Extraction Benchmark Suite (2 SP)
 
 **Beschreibung:**
@@ -924,11 +974,13 @@ pytest tests/integration/test_entity_extraction_hotpotqa.py -v
 
 | Metric | Baseline (Sprint 80) | Target (Sprint 81) | Status |
 |--------|---------------------|-------------------|--------|
-| Query routing accuracy | N/A | ≥85% | 🎯 |
-| Entity coverage (HotpotQA) | ~40% | ≥70% | 🎯 |
-| Context Recall | 0.700 | ≥0.800 | 🎯 |
-| Overall RAGAS avg | ~0.65 | ≥0.75 | 🎯 |
-| Graph empty contexts | 0% (S80) | 0% | ✅ |
+| Intent classification accuracy | 60% (LLM-based) | ≥90% | ✅ **95.22%** (C-LARA) |
+| Faithfulness | 0.60 (S80) | ≥0.75 | 🎯 0.6267 (+4.5% C-LARA) |
+| Context Recall | 1.0000 | ≥1.00 | ✅ **1.0000** |
+| Context Precision | 1.0000 | ≥1.00 | ✅ **1.0000** |
+| Answer Relevancy | 0.72 | ≥0.75 | 🎯 0.7249 |
+| ~Query routing accuracy~ | ~N/A~ | ~≥85%~ | ❌ Deprecated (81.1) |
+| ~Entity coverage (HotpotQA)~ | ~40%~ | ~≥70%~ | ❌ Deprecated (81.2) |
 
 ---
 
