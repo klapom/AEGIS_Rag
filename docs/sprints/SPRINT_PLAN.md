@@ -706,8 +706,11 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 | **79** | **12** | **4** | ✅ | **RAGAS 0.4.2 Migration + Graph UI + Admin Graph Ops (Completed)** |
 | **80** | **21** | **10** | 📝 | **RAGAS P0 Critical Fixes - Faithfulness & Hybrid Fusion (Planned)** |
 | **81** | **38** | **10** | 🚧 | **C-LARA SetFit 95% (Feature 81.7 Done) + Query Routing (In Progress)** |
+| **82** | **8** | **4** | 📝 | **RAGAS 1000 Phase 1 - Text-Only Benchmark (500 samples)** |
+| **83** | **13** | **4** | 📝 | **RAGAS 1000 Phase 2 - Structured Data (Tables/Code)** |
+| **84** | **21** | **4** | 📝 | **RAGAS 1000 Phase 3 - Visual Assets (PDF/OCR/Slides)** |
 
-**Cumulative Story Points (Sprints 1-81):** ~2,708 SP (+3 SP done)
+**Cumulative Story Points (Sprints 1-84):** ~2,750 SP
 **Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 **Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency
@@ -747,10 +750,10 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 
 ---
 
-**Last Updated:** 2026-01-08
-**Current Sprint:** 80 (Planned - RAGAS P0 Critical Fixes: Faithfulness & Hybrid Fusion)
-**Previous Sprints:** 77-79 (Completed - Bug Fixes, Graph Entity Expansion, RAGAS 0.4.2 Migration)
-**Next Sprint:** 81 (Planned - Query-Adaptive Routing & Entity Extraction Improvements)
+**Last Updated:** 2026-01-09
+**Current Sprint:** 81 (In Progress - C-LARA SetFit 95% + Query Routing)
+**Previous Sprints:** 77-80 (Completed - Bug Fixes, Graph Expansion, RAGAS 0.4.2)
+**Upcoming:** Sprint 82-84 (RAGAS 1000-Sample Benchmark - 42 SP)
 
 ---
 
@@ -774,3 +777,62 @@ Based on comprehensive RAGAS evaluation (2026-01-08), prioritized improvements:
 - [SPRINT_80_PLAN.md](SPRINT_80_PLAN.md) - RAGAS P0 Critical Fixes
 - [SPRINT_81_PLAN.md](SPRINT_81_PLAN.md) - Query Routing & Entity Extraction
 - [RAGAS_ANALYSIS_2026_01_08.md](../ragas/RAGAS_ANALYSIS_2026_01_08.md) - Full evaluation analysis
+
+---
+
+## Sprint 82-84: RAGAS 1000-Sample Benchmark (42 SP)
+
+**Epic:** Build statistically robust 1000-sample evaluation benchmark
+**ADR Reference:** [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md)
+**Timeline:** 6-8 weeks (after Sprint 81)
+
+### Goals
+
+Replace current 5-sample HotpotQA evaluation with 1000-sample stratified benchmark enabling:
+
+- **Statistical validity:** ±3% confidence intervals (vs. ±20% with 5 samples)
+- **Capability breakdown:** Per doc_type, question_type analysis
+- **Anti-hallucination testing:** 12% unanswerable questions
+- **Regression tracking:** Sprint-over-sprint comparison
+
+### Phase Breakdown
+
+| Sprint | Phase | Samples | Doc Types | SP |
+|--------|-------|---------|-----------|-----|
+| 82 | Text-Only | 500 | clean_text, log_ticket | 8 |
+| 83 | Structured | +300 | table, code_config | 13 |
+| 84 | Visual | +200 | pdf_ocr, slide, pdf_text | 21 |
+| **Total** | | **1000** | **7 types** | **42** |
+
+### Key Features
+
+**Sprint 82 (Phase 1 - Text-Only):**
+- Dataset loader infrastructure (HotpotQA, RAGBench, LogQA)
+- Stratified sampling engine with quotas
+- Unanswerable question generation (12%)
+- AegisRAG JSONL export format
+
+**Sprint 83 (Phase 2 - Structured):**
+- T2-RAGBench table processor (markdown conversion)
+- CodeRepoQA code extractor (syntax-aware)
+- Statistical rigor package (Bootstrap CI, McNemar's test)
+
+**Sprint 84 (Phase 3 - Visual):**
+- Asset downloader with SHA256 caching
+- DocVQA dual-mode OCR (dataset vs Docling)
+- SlideVQA multi-image processor
+- PDF text extraction fallback
+
+### Scientific Rigor
+
+- Bootstrap 95% confidence intervals for all metrics
+- McNemar's test for pairwise mode comparisons
+- Cohen's d effect sizes
+- Power analysis (n=1000 detects d=0.089 at 80% power)
+- Provenance tracking (SHA256 hashes, generation timestamps)
+
+**For detailed plans, see:**
+- [SPRINT_82_PLAN.md](SPRINT_82_PLAN.md) - Phase 1: Text-Only Benchmark
+- [SPRINT_83_PLAN.md](SPRINT_83_PLAN.md) - Phase 2: Structured Data
+- [SPRINT_84_PLAN.md](SPRINT_84_PLAN.md) - Phase 3: Visual Assets
+- [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md) - Full strategy documentation

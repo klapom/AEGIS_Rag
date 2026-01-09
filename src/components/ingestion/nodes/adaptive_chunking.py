@@ -769,15 +769,34 @@ async def chunking_node(state: IngestionState) -> IngestionState:
         if vlm_metadata:
             sections = _integrate_vlm_descriptions(sections, vlm_metadata)
 
-        # Sprint 77: Apply adaptive chunking with hard limit (1200 tokens, GraphRAG default)
-        # ROOT CAUSE FIX: max_hard_limit=1500 prevents ER-Extraction timeouts
+        # TD-096: Load chunking config from Redis (with 60s cache)
+        # Allows operators to tune chunk size, overlap, gleaning, and hard limits via Admin UI
+        try:
+            from src.components.chunking_config import get_chunking_config_service
+
+            chunking_config = await get_chunking_config_service().get_config()
+            chunk_size = chunking_config.chunk_size
+            max_hard_limit = chunking_config.max_hard_limit
+            logger.debug(
+                "chunking_config_loaded",
+                chunk_size=chunk_size,
+                max_hard_limit=max_hard_limit,
+            )
+        except Exception as e:
+            # Fallback to defaults if config service fails
+            logger.warning("chunking_config_fallback", error=str(e))
+            chunk_size = 1200
+            max_hard_limit = 1500
+
+        # Sprint 77: Apply adaptive chunking with configurable parameters
+        # TD-096: Parameters now loaded from Redis config
         adaptive_chunking_start = time.perf_counter()
         adaptive_chunks = adaptive_section_chunking(
             sections=sections,
-            min_chunk=800,
-            max_chunk=1200,  # GraphRAG default (was 1800)
-            large_section_threshold=1200,
-            max_hard_limit=1500,  # NEW: Hard limit prevents 6000+ char chunks
+            min_chunk=max(600, chunk_size - 400),  # Dynamic min based on chunk_size
+            max_chunk=chunk_size,  # From config (default: 1200)
+            large_section_threshold=chunk_size,  # From config
+            max_hard_limit=max_hard_limit,  # From config (default: 1500)
         )
         adaptive_chunking_end = time.perf_counter()
         adaptive_chunking_ms = (adaptive_chunking_end - adaptive_chunking_start) * 1000

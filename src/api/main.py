@@ -31,6 +31,8 @@ from src.api.v1.admin_graph import router as admin_graph_router
 from src.api.v1.admin_indexing import router as admin_indexing_router
 from src.api.v1.admin_llm import router as admin_llm_router
 from src.api.v1.admin_tools import router as admin_tools_router  # Sprint 70 Feature 70.7
+from src.api.v1.admin_chunking import router as admin_chunking_router  # TD-096: Chunking UI
+from src.api.v1.admin_generation import router as admin_generation_router  # TD-097: Generation UI
 from src.api.v1.analytics import router as analytics_router  # Sprint 62 Feature 62.9
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
@@ -402,10 +404,12 @@ app.include_router(admin_llm_router, prefix="/api/v1")
 app.include_router(admin_tools_router, prefix="/api/v1")  # Sprint 70 Feature 70.7
 app.include_router(admin_graph_router, prefix="/api/v1")
 app.include_router(admin_indexing_router, prefix="/api/v1")
+app.include_router(admin_chunking_router, prefix="/api/v1")  # TD-096: Chunking Parameters UI
+app.include_router(admin_generation_router, prefix="/api/v1")  # TD-097: Generation Config UI
 logger.info(
     "admin_split_routers_registered",
-    routers=["admin_costs", "admin_llm", "admin_graph", "admin_indexing"],
-    note="Sprint 53: Admin module split for maintainability",
+    routers=["admin_costs", "admin_llm", "admin_graph", "admin_indexing", "admin_chunking", "admin_generation"],
+    note="Sprint 53: Admin module split for maintainability + TD-096/TD-097",
 )
 
 # Sprint 63 Feature 63.5: Graph Communities API

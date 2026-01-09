@@ -365,6 +365,32 @@ poetry run python scripts/run_ragas_evaluation.py \
 
 ---
 
+### Sprint 82-84: 1000-Sample RAGAS Benchmark (42 SP) 🆕
+
+**NEW: ADR-048 approved for comprehensive benchmark expansion.**
+
+See: [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md) | [Sprint 82-84 Plan](../sprints/SPRINT_82_84_RAGAS_1000_PLAN.md)
+
+| Phase | Sprint | Samples | Doc Types | SP |
+|-------|--------|---------|-----------|-----|
+| **Phase 1** | 82 | 500 | clean_text, log_ticket | 8 |
+| **Phase 2** | 83 | +300 | table, code_config | 13 |
+| **Phase 3** | 84 | +200 | pdf_ocr, slide, pdf_text | 21 |
+| **Total** | | **1000** | **7 doc types** | **42** |
+
+**Key Features:**
+- **12% unanswerable questions** → Tests anti-hallucination
+- **Statistical rigor** → ±3% confidence intervals (vs ±20% with 5 samples)
+- **Capability breakdown** → Per doc_type, question_type analysis
+- **Scientific caveats** → Paper-ready methodology documentation
+
+**Image Processing Challenges (Phase 3):**
+- DocVQA: Dual-mode OCR (dataset vs Docling)
+- SlideVQA: Multi-image processing with VLM
+- Asset caching: 15-20GB storage required
+
+---
+
 ### Sprint 81-82: Retrieval Improvements (8 SP)
 - [ ] Query-adaptive routing (Vector vs Graph vs Hybrid)
 - [ ] Parent chunk retrieval (sentence → paragraph)
@@ -372,6 +398,24 @@ poetry run python scripts/run_ragas_evaluation.py \
 - [ ] Multi-hop graph traversal (1-3 hops → 2-5 hops)
 
 **Expected Improvements:** CR +80%, CP +30%
+
+---
+
+### Sprint 85+: Scientific Enhancements (44 SP) 🆕
+
+**Purpose:** Upgrade benchmark for publication-readiness.
+
+| Enhancement | Sprint | SP | Priority |
+|-------------|--------|-----|----------|
+| Statistical rigor package | 83 | 2 | Required |
+| Human validation (100 samples) | 85 | 5 | Essential |
+| Multi-judge ensemble | 85 | 3 | Recommended |
+| Real unanswerables | 84 | 8 | High |
+| Adversarial subset | 86 | 13 | Important |
+| Continuous evaluation | 85 | 5 | Required |
+| Cross-language (German) | 87+ | 8 | Optional |
+
+See: [ADR-048 Enhancement Section](../adr/ADR-048-ragas-1000-sample-benchmark.md#enhancement-potential-scientific-rigor-upgrades)
 
 ---
 

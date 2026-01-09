@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-09 (Sprint 80 - Namespace Ingestion Bug TD added)
-**Total Open Items:** 14
-**Total Story Points:** ~163 SP
-**Archived Items:** [23 items](archive/ARCHIVE_INDEX.md) (TD-091, TD-094, TD-095 added Sprint 77)
+**Last Updated:** 2026-01-09 (Sprint 81 - TD-096, TD-097 RESOLVED)
+**Total Open Items:** 12
+**Total Story Points:** ~155 SP
+**Archived Items:** [25 items](archive/ARCHIVE_INDEX.md) (TD-096, TD-097 added Sprint 81)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -22,10 +22,10 @@
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
 | HIGH     | 3     | ~36 SP       |
-| MEDIUM   | 8     | ~103 SP      |
+| MEDIUM   | 6     | ~95 SP       |
 | LOW      | 2     | ~21 SP       |
 
-**Sprint 80:** TD-096, TD-097, TD-098 added (16 SP) - Settings UI Integration + Cross-Encoder Fine-tuning
+**Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
 
 ---
 
@@ -54,6 +54,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-071 | vLLM vs Ollama Investigation | Sprint 60 | 5 |
 | TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 | 3 |
 | TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 | 3 |
+| TD-096 | Chunking Parameters UI Integration | **Sprint 81** | **5** |
+| TD-097 | Sprint 80 Settings UI/DB Integration | **Sprint 81** | **3** |
 
 ---
 
@@ -76,8 +78,6 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-096](TD-096_CHUNKING_PARAMS_UI_INTEGRATION.md) | Chunking Parameters UI Integration | OPEN | 5 | **Sprint 81** |
-| [TD-097](TD-097_SPRINT80_SETTINGS_UI_INTEGRATION.md) | Sprint 80 Settings UI/DB Integration | OPEN | 3 | **Sprint 81** |
 | [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 82** |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | **Sprint 68** |

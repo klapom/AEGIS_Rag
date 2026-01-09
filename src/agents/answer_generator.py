@@ -260,7 +260,7 @@ class AnswerGenerator:
         query: str,
         contexts: list[dict[str, Any]],
         intent: str | None = None,
-        strict_faithfulness: bool = False,
+        strict_faithfulness: bool | None = None,
         no_hedging: bool = False,
     ) -> tuple[str, dict[int, dict[str, Any]]]:
         """Generate answer with inline source citations.
@@ -269,6 +269,7 @@ class AnswerGenerator:
         Sprint 69 Feature 69.3: Added intent parameter for model selection
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
         Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
+        TD-097: Load strict_faithfulness from Redis config if not explicitly passed
 
         Args:
             query: User question
@@ -276,7 +277,8 @@ class AnswerGenerator:
             intent: Query intent for complexity-based model selection (optional)
             strict_faithfulness: When True, uses strict citation prompt that requires
                 citations for EVERY sentence (no general knowledge allowed). This mode
-                is designed to maximize RAGAS Faithfulness score. Default: False.
+                is designed to maximize RAGAS Faithfulness score.
+                When None (default), loads value from Redis config (TD-097).
             no_hedging: When True, uses no-hedging prompt that forbids meta-commentary
                 like "This information is not available". Eliminates LLM hedging behavior
                 that causes Faithfulness penalties. Default: False. (Sprint 81 Feature 81.8)
@@ -299,6 +301,22 @@ class AnswerGenerator:
         # Handle no contexts case
         if not contexts:
             return self._no_context_answer(query), {}
+
+        # TD-097: Load strict_faithfulness from Redis config if not explicitly passed
+        if strict_faithfulness is None:
+            try:
+                from src.components.generation_config import get_generation_config_service
+
+                gen_config = await get_generation_config_service().get_config()
+                strict_faithfulness = gen_config.strict_faithfulness_enabled
+                logger.debug(
+                    "generation_config_loaded",
+                    strict_faithfulness=strict_faithfulness,
+                )
+            except Exception as e:
+                # Fallback to False if config service fails
+                logger.warning("generation_config_fallback", error=str(e))
+                strict_faithfulness = False
 
         # Limit to top 10 sources (as per test requirements)
         top_contexts = contexts[:10]
@@ -665,7 +683,7 @@ class AnswerGenerator:
         query: str,
         contexts: list[dict[str, Any]],
         intent: str | None = None,
-        strict_faithfulness: bool = False,
+        strict_faithfulness: bool | None = None,
         no_hedging: bool = False,
     ):
         """Stream LLM response token-by-token with citation support.
@@ -674,6 +692,7 @@ class AnswerGenerator:
         Sprint 69 Feature 69.3: Added intent parameter for model selection
         Sprint 80 Feature 80.1: Strict faithfulness mode for RAGAS optimization
         Sprint 81 Feature 81.8: No-hedging mode to eliminate meta-commentary
+        TD-097: Load strict_faithfulness from Redis config if not explicitly passed
 
         This method combines citation generation with real-time token streaming.
         It yields tokens as they're generated while maintaining citation mapping.
@@ -684,7 +703,8 @@ class AnswerGenerator:
             intent: Query intent for complexity-based model selection (optional)
             strict_faithfulness: When True, uses strict citation prompt that requires
                 citations for EVERY sentence (no general knowledge allowed). This mode
-                is designed to maximize RAGAS Faithfulness score. Default: False.
+                is designed to maximize RAGAS Faithfulness score.
+                When None (default), loads value from Redis config (TD-097).
             no_hedging: When True, uses no-hedging prompt that forbids meta-commentary
                 like "This information is not available". Eliminates LLM hedging behavior
                 that causes Faithfulness penalties. Default: False. (Sprint 81 Feature 81.8)
@@ -705,6 +725,22 @@ class AnswerGenerator:
             yield {"event": "token", "data": {"content": answer}}
             yield {"event": "complete", "data": {"done": True, "answer": answer, "citation_map": {}}}
             return
+
+        # TD-097: Load strict_faithfulness from Redis config if not explicitly passed
+        if strict_faithfulness is None:
+            try:
+                from src.components.generation_config import get_generation_config_service
+
+                gen_config = await get_generation_config_service().get_config()
+                strict_faithfulness = gen_config.strict_faithfulness_enabled
+                logger.debug(
+                    "generation_config_loaded_streaming",
+                    strict_faithfulness=strict_faithfulness,
+                )
+            except Exception as e:
+                # Fallback to False if config service fails
+                logger.warning("generation_config_fallback_streaming", error=str(e))
+                strict_faithfulness = False
 
         # Limit to top 10 sources
         top_contexts = contexts[:10]

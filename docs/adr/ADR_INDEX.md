@@ -58,6 +58,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 045 | Namespace Isolation Architecture | Accepted | 2025-12-17 |
 | 046 | Comprehensive Refactoring Strategy | Accepted | 2025-12-19 |
 | 047 | Hybrid Agent Memory Architecture | Accepted | 2025-12-19 |
+| 048 | 1000-Sample RAGAS Benchmark Strategy | Proposed | 2026-01-09 |
 
 ---
 
