@@ -1393,8 +1393,10 @@ def _extract_sources(result: dict[str, Any]) -> list[SourceDocument]:
             if primary_section:
                 enhanced_metadata["primary_section"] = primary_section
 
+            # Sprint 81: Removed 500-char truncation for full context in RAGAS evaluation
+            # Full chunk text is needed for accurate Faithfulness metrics
             source = SourceDocument(
-                text=ctx.get("text", ctx.get("content", ""))[:500],  # Limit to 500 chars
+                text=ctx.get("text", ctx.get("content", "")),  # Full chunk text (no truncation)
                 title=title,  # Enhanced with section info
                 source=ctx.get("source", ctx.get("file_path", "Unknown")),
                 score=ctx.get("score", ctx.get("relevance", None)),
