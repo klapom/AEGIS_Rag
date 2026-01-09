@@ -431,6 +431,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 78 Complete:** Graph Entity→Chunk Expansion (100-char→447-char full chunks), 3-Stage Semantic Search (LLM→Graph N-hop→Synonym→BGE-M3), 4 UI settings (hops 1-3, threshold 5-20), 20 unit tests (100%), ADR-041, RAGAS deferred (GPT-OSS:20b 85.76s, Nemotron3 >600s).
 **Sprint 79 Complete:** RAGAS 0.4.2 Migration (4 features, 12 SP), Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample), DSPy deferred to Sprint 80 (21 SP).
 **Sprint 81 In Progress:** C-LARA SetFit Intent Classifier **95.22%** (Feature 81.7 ✅), Multi-Teacher training (4 LLMs + 42 edge cases), 5-class intents (factual/procedural/comparison/recommendation/navigation), ~40ms inference, TD-079 resolved.
+**Sprint 82 Complete:** RAGAS Phase 1 Text-Only Benchmark (8 SP), 500 samples (450 answerable + 50 unanswerable), HotpotQA + RAGBench adapters, stratified sampling engine, 49 unit tests (100%), SHA256: 8f6be17d...
 
 ---
 
