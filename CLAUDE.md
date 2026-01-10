@@ -81,6 +81,57 @@ Ollama:    http://localhost:11434 # LLM (llama3.2:8b)
 - Datenbanken: Native Installation auf DGX Spark
 - Docling Container: Muss separat gestartet werden für PDF-Ingestion
 
+### Ingestion API (KRITISCH für RAGAS Testing)
+
+**IMMER die Frontend API verwenden - NIE direkte Backend-Funktionen!**
+
+```bash
+# ✅ RICHTIG: Frontend API (verwendet von React UI)
+POST http://localhost:8000/api/v1/retrieval/upload
+Content-Type: multipart/form-data
+
+# Datei-Upload
+file: <binary PDF/TXT/DOCX>
+namespace: "ragas_phase2_sprint83_v1"
+domain: "research_papers"
+
+# Response (Sprint 83: Two-Phase Upload)
+{
+  "document_id": "doc_abc123",
+  "status": "processing_background",
+  "message": "Document uploaded! Processing in background..."
+}
+
+# Status prüfen (2-5s nach Upload)
+GET http://localhost:8000/api/v1/admin/upload-status/doc_abc123
+
+# ❌ FALSCH: Admin-Endpoints, direkte Service-Aufrufe
+# POST /api/v1/admin/ingest (alt, deprecated)
+# POST /api/v1/admin/upload-fast (nur intern)
+```
+
+**Warum Frontend API?**
+1. **Vollständige Indexierung:** Alle 4 DBs werden befüllt (Qdrant, Neo4j, BM25, Redis)
+2. **Sprint 83 Features aktiv:** 3-Rank Cascade, Gleaning, Fast Upload, Comprehensive Logging
+3. **Production-like Testing:** Gleiche Code-Pfade wie echte Nutzer
+4. **RAGAS Konsistenz:** Retrieval-API erwartet Daten aus diesem Endpoint
+
+**Verwendung in Scripts:**
+```python
+# scripts/upload_ragas_phase2.py
+import requests
+
+def upload_document(file_path: str, namespace: str = "ragas_phase2"):
+    """Upload document via frontend API."""
+    with open(file_path, 'rb') as f:
+        response = requests.post(
+            "http://localhost:8000/api/v1/retrieval/upload",
+            files={"file": f},
+            data={"namespace": namespace, "domain": "research_papers"}
+        )
+    return response.json()["document_id"]
+```
+
 ### Framework Compatibility
 | Framework | Status | Notes |
 |-----------|--------|-------|
@@ -430,8 +481,9 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 77 Complete:** Critical Bug Fixes (BM25 namespace, chunk mismatch, Qdrant index), Community Summarization (92/92, batch job + API), Entity Connectivity Benchmarks (4 domains), 2,108 LOC.
 **Sprint 78 Complete:** Graph Entity→Chunk Expansion (100-char→447-char full chunks), 3-Stage Semantic Search (LLM→Graph N-hop→Synonym→BGE-M3), 4 UI settings (hops 1-3, threshold 5-20), 20 unit tests (100%), ADR-041, RAGAS deferred (GPT-OSS:20b 85.76s, Nemotron3 >600s).
 **Sprint 79 Complete:** RAGAS 0.4.2 Migration (4 features, 12 SP), Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample), DSPy deferred to Sprint 80 (21 SP).
-**Sprint 81 In Progress:** C-LARA SetFit Intent Classifier **95.22%** (Feature 81.7 ✅), Multi-Teacher training (4 LLMs + 42 edge cases), 5-class intents (factual/procedural/comparison/recommendation/navigation), ~40ms inference, TD-079 resolved.
+**Sprint 81 Complete:** C-LARA SetFit Intent Classifier **95.22%** (Multi-Teacher training: 4 LLMs + 42 edge cases), 5-class intents, ~40ms inference, TD-079 resolved, namespace bug fix (TD-099).
 **Sprint 82 Complete:** RAGAS Phase 1 Text-Only Benchmark (8 SP), 500 samples (450 answerable + 50 unanswerable), HotpotQA + RAGBench adapters, stratified sampling engine, 49 unit tests (100%), SHA256: 8f6be17d...
+**Sprint 83 Complete:** ER-Extraction Improvements (26 SP, 4 features), 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid SpaCy NER, 99.9% success), Gleaning (+20-40% recall, Microsoft GraphRAG), Fast Upload (2-5s response, 10-15x faster), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost), Ollama Health Monitor, 94+ tests (100%), 7,638 LOC, 5 TDs archived (27 SP).
 
 ---
 

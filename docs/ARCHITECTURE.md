@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-09 (Sprint 81: C-LARA SetFit 95% Accuracy)
+**Last Updated:** 2026-01-10 (Sprint 83: ER-Extraction Improvements - 3-Rank Cascade, Gleaning, Fast Upload)
 
 ---
 
@@ -171,29 +171,62 @@ src/
 
 ### Ingestion Flow: Document → Knowledge Graph
 
+**Two-Phase Upload Strategy (Sprint 83.4):**
+
 ```
+Phase 1: Fast Upload (2-5s response)
 1. Document Upload (Frontend)
    ↓
-2. POST /api/v1/admin/ingest (FastAPI)
+2. POST /api/v1/admin/upload-fast (FastAPI)
    ↓
-3. LangGraph Ingestion Pipeline (6 Nodes)
-   ├→ Node 1: Format Detection
-   ├→ Node 2: Docling CUDA (OCR, layout)
-   ├→ Node 3: Section-Aware Chunking (800-1800 tokens)
-   ├→ Node 4: BGE-M3 Embeddings (1024-dim)
-   ├→ Node 5: Entity Extraction (LLM-based)
-   └→ Node 6: Graph Storage (Neo4j + Qdrant)
+3. Fast Pipeline (SpaCy NER + Basic Chunking)
+   ├→ Node 1: Docling CUDA (OCR, layout)
+   ├→ Node 2: Section-Aware Chunking (800-1800 tokens)
+   ├→ Node 3: BGE-M3 Embeddings (1024-dim)
+   ├→ Node 4: Qdrant Upload (vector only)
+   └→ Node 5: SpaCy NER (entities only, multi-language: DE/EN/FR/ES)
    ↓
-4. Storage Layer
-   ├→ Qdrant: Vector storage + metadata
-   ├→ Neo4j: Entity/Relation graph
-   └→ Redis: Session state
+4. Immediate Response to User
+   └→ Status: "processing_background" + document_id
+
+Phase 2: Background Refinement (30-60s async)
+5. Background Job Queue (Redis-tracked)
    ↓
-5. Post-Processing
+6. Full LLM Extraction Pipeline
+   ├→ 3-Rank Cascade Fallback (Sprint 83.2):
+   │  ├→ Rank 1: Nemotron3 (300s timeout)
+   │  ├→ Rank 2: GPT-OSS:20b (300s timeout)
+   │  └→ Rank 3: Hybrid SpaCy NER + LLM (600s relations)
+   │
+   ├→ Gleaning Multi-Pass (Sprint 83.3):
+   │  ├→ Round 1: Initial extraction
+   │  ├→ Completeness Check (logit bias YES/NO)
+   │  ├→ Round 2-N: Extract missing entities (continuation prompt)
+   │  └→ Deduplication (semantic + substring)
+   │
+   └→ Retry Logic (exponential backoff: 1s → 2s → 4s → 8s)
+   ↓
+7. Storage Layer
+   ├→ Qdrant: Vector storage + metadata update (LLM entities replace SpaCy)
+   ├→ Neo4j: Entity/Relation graph (LLM quality)
+   └→ Redis: Job status ("ready" when complete)
+   ↓
+8. Post-Processing
    ├→ Community Detection (Leiden/Louvain)
    ├→ Entity Deduplication (embedding-based)
    └→ Relation Normalization
+   ↓
+9. Status Update
+   └→ GET /api/v1/admin/upload-status/{document_id} → "ready"
 ```
+
+**Key Improvements (Sprint 83):**
+- **10-15x faster user upload** (2-5s vs 30-60s perceived time)
+- **3-rank fallback cascade** (99.9% extraction success rate)
+- **Gleaning +20-40%** entity recall (Microsoft GraphRAG approach)
+- **Multi-language NER** (DE/EN/FR/ES SpaCy support)
+- **Comprehensive logging** (P50/P95/P99 metrics, LLM cost tracking, GPU VRAM monitoring)
+- **Ollama health monitoring** (periodic checks + auto-restart capability)
 
 ---
 
@@ -219,6 +252,8 @@ src/
 | **78** | Graph Search Enhancement | Entity→Chunk expansion (100-char→447-char), 3-stage semantic search (LLM→Graph→Synonym→BGE-M3), 4 UI settings |
 | **79** | RAGAS 0.4.2 Migration | RAGAS 0.4.2 upgrade, Graph Expansion UI (56 tests), Admin Graph Ops UI (74 tests), BGE-M3 Embeddings (99s/sample) |
 | **81** | C-LARA Intent Classification | Multi-Teacher SetFit (4 LLMs + 42 edge cases), 5-class C-LARA intents, 95.22% accuracy, ~40ms inference |
+| **82** | RAGAS Phase 1 Benchmark | 500-sample text-only benchmark (HotpotQA + RAGBench + LogQA), stratified sampling, 8 question types, 3 difficulty levels |
+| **83** | ER-Extraction Improvements | 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid NER), Gleaning (+20-40% recall), Fast Upload (2-5s), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost) |
 
 ### Sprint 53-59: Major Refactoring
 

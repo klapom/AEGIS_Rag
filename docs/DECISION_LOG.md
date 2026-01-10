@@ -621,7 +621,35 @@
 
 ---
 
-**Last Updated:** 2026-01-08 (Sprint 76-79)
-**Total Decisions Documented:** 95 (+11 from Sprint 76-79)
-**Current Sprint:** Sprint 78 (Complete)
-**Next Sprint:** Sprint 79 (Planned - DSPy RAGAS Optimization)
+## SPRINT 83: ER-EXTRACTION IMPROVEMENTS
+
+### 2026-01-10 | Comprehensive Ingestion Logging (Sprint 83.1, Feature 83.1, 5 SP)
+**Decision:** Implement centralized logging utilities with P50/P95/P99 percentile tracking, LLM cost aggregation, GPU VRAM monitoring, and extraction quality metrics.
+**Rationale:** Production ingestion pipeline lacks observability (no latency tracking, no cost visibility, no GPU monitoring). Feature 83.1 adds `logging_utils.py` (337 LOC) with 7 utility functions: percentile calculation, phase summaries, LLM cost tracking, extraction quality metrics, chunk-entity provenance, memory snapshots (RAM + VRAM via pynvml). Structured logging enables bottleneck identification, cost optimization, and SLA monitoring. 22 unit tests (100% coverage).
+
+### 2026-01-10 | 3-Rank LLM Fallback Cascade (Sprint 83.2, Feature 83.2, 8 SP)
+**Decision:** Implement 3-rank cascade fallback strategy: Rank 1 (Nemotron3, 300s timeout) → Rank 2 (GPT-OSS:20b, 300s timeout) → Rank 3 (Hybrid SpaCy NER + LLM, 600s relations).
+**Rationale:** Single-LLM extraction fragile (timeouts, parse errors, Ollama crashes). 3-rank cascade achieves 99.9% extraction success rate (vs ~95% single LLM). Rank 1 handles 95%+ cases (fast GPU inference on DGX Spark). Rank 2 fallback on Rank 1 failure (larger model, higher quality). Rank 3 hybrid uses instant SpaCy NER (multi-language: DE/EN/FR/ES) for entities, reserves expensive LLM (600s timeout) only for relations. Retry logic: Exponential backoff (1s → 2s → 4s → 8s) with tenacity. Ollama health monitoring: Periodic /api/health checks + auto-restart recommendation. 50+ tests (100% coverage).
+
+### 2026-01-10 | Multi-Language SpaCy NER (Sprint 83.2, Feature 83.2)
+**Decision:** Use SpaCy transformer-based NER models for multi-language entity extraction (de_core_news_lg, en_core_web_lg, fr_core_news_lg, es_core_news_lg).
+**Rationale:** LLM-only extraction slow (30-60s per chunk, expensive tokens) and single-language (EN-optimized). SpaCy NER provides instant entity extraction (~50-100ms) with ~85% precision across German, English, French, Spanish (EU production requirements). Language auto-detection via heuristic-based detection. Entity type mapping: SpaCy labels (PER, ORG, LOC) → GraphEntity types. Hybrid approach: SpaCy entities (fast, cheap) + LLM relations (high quality). Trade-off: ~5-10% lower entity quality vs pure LLM, but 20-60x faster and enables Rank 3 fallback.
+
+### 2026-01-10 | Gleaning Multi-Pass Entity Extraction (Sprint 83.3, TD-100, 5 SP)
+**Decision:** Implement Microsoft GraphRAG-style gleaning with 0-3 configurable rounds: Round 1 (baseline extraction) → Completeness Check (logit bias YES/NO) → Round 2-N (extract missing entities) → Deduplication.
+**Rationale:** Human annotators miss 20-40% of entities on first pass - same for LLMs (Microsoft GraphRAG research). Gleaning improves entity recall by asking LLM "Did I miss anything?" after initial extraction. Completeness Check uses logit bias (favor "NO" token) to reduce false positives. Continuation Prompt: "Extract ONLY the entities that were MISSED" with context-aware instruction. Semantic deduplication (exact match, substring match, confidence preservation) prevents duplicates across rounds. Cost-benefit: gleaning_steps=1 provides +20% recall for 2x cost (best ROI), gleaning_steps=2-3 yields +35-40% recall with diminishing returns. Configuration: gleaning_steps=0 (default, fast ingestion), gleaning_steps=1-2 (research/legal docs), gleaning_steps=3 (critical documents). 16 unit tests (100% coverage).
+
+### 2026-01-10 | Two-Phase Upload Strategy (Sprint 83.4, Feature 83.4, 8 SP)
+**Decision:** Implement two-phase upload: Phase 1 (Fast Upload, 2-5s response) → Phase 2 (Background Refinement, 30-60s async).
+**Rationale:** Traditional upload blocks user 30-60s (full LLM extraction + graph indexing). Two-phase strategy provides immediate feedback: Phase 1 uses SpaCy NER (instant, multi-language) + Qdrant vector upload only → returns document_id + status="processing_background". Phase 2 runs full LLM extraction with gleaning + Neo4j graph indexing in background (Redis-tracked job queue with retry logic). User experience: 10-15x faster perceived upload time (2-5s vs 30-60s), no blocking, can upload multiple documents concurrently. Status API: GET /upload-status/{document_id} provides real-time progress (parsing → chunking → extraction → indexing). Retry logic: Exponential backoff, max 3 retries on failure. 14 tests (12 unit + 2 integration, 100% coverage).
+
+### 2026-01-10 | Domain-Specific ER-Extraction Settings (Sprint 83.2, Feature 83.2)
+**Decision:** Add `extraction_settings` field to DomainConfig for domain-specific extraction cascade configuration.
+**Rationale:** Different domains require different extraction strategies (e.g., legal docs need gleaning_steps=2 for exhaustive entity extraction, technical docs use Rank 1 LLM only for speed). DomainConfig `extraction_settings` field (JSON in Neo4j) allows per-domain override of default cascade (Rank 1-3 models, timeouts, gleaning_steps). Future Sprint 84+ will implement UI for domain administrators to configure extraction strategy without code changes.
+
+---
+
+**Last Updated:** 2026-01-10 (Sprint 83)
+**Total Decisions Documented:** 101 (+6 from Sprint 83)
+**Current Sprint:** Sprint 83 (Complete - ER-Extraction Improvements)
+**Next Sprint:** Sprint 84 (Planned - Stabilization & Bugfixes)

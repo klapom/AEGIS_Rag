@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-09 (Sprint 81 - TD-096, TD-097 RESOLVED)
-**Total Open Items:** 12
-**Total Story Points:** ~155 SP
-**Archived Items:** [25 items](archive/ARCHIVE_INDEX.md) (TD-096, TD-097 added Sprint 81)
+**Last Updated:** 2026-01-10 (Sprint 83 - Technical Debt Review & Cleanup)
+**Total Open Items:** 10
+**Total Story Points:** ~128 SP
+**Archived Items:** [20 items](archive/ARCHIVE_INDEX.md) (TD-044, TD-046, TD-052, TD-079, TD-099 added Sprint 81-83)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -21,11 +21,12 @@
 | Priority | Count | Story Points |
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
-| HIGH     | 3     | ~36 SP       |
-| MEDIUM   | 6     | ~95 SP       |
-| LOW      | 2     | ~21 SP       |
+| HIGH     | 2     | ~23 SP       |
+| MEDIUM   | 6     | ~50 SP       |
+| LOW      | 2     | ~55 SP       |
 
 **Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
+**Sprint 83:** TD-044, TD-046, TD-052, TD-079, TD-099 RESOLVED (27 SP) - Logging improvements, namespace fixes, user upload, intent classifier
 
 ---
 
@@ -39,10 +40,13 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-085 | **DSPy Domain Prompts Integration** | **Sprint 76** | **21** |
 | TD-043 | Async Follow-up Questions | Sprint 52 | 5 |
 | TD-043_FIX_SUMMARY | Follow-up Questions Fix Summary | Sprint 35 | - |
+| TD-044 | DoclingParsedDocument Interface Fix | **Sprint 83** | **8** |
 | TD-045 | entity_id Property Migration | Sprint 34 | 3 |
+| TD-046 | RELATES_TO Relationship Extraction | Sprint 42 | 5 |
 | TD-047 | Critical Path E2E Tests | Sprint 51 | 8 |
 | TD-048 | Graph Extraction with Unified Chunks | Sprint 49 | 5 |
 | TD-050 | Duplicate Answer Streaming | Sprint 47 | 3 |
+| TD-052 | User Document Upload | **Sprint 83** | **5** |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 | 13 |
 | TD-058 | Community Summary Generation | Sprint 52 | 8 |
 | TD-059 | Reranking via Ollama | Sprint 48 | 5 |
@@ -54,8 +58,10 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-071 | vLLM vs Ollama Investigation | Sprint 60 | 5 |
 | TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 | 3 |
 | TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 | 3 |
+| TD-079 | LLM Intent Classifier (C-LARA) | **Sprint 81** | **13** |
 | TD-096 | Chunking Parameters UI Integration | **Sprint 81** | **5** |
 | TD-097 | Sprint 80 Settings UI/DB Integration | **Sprint 81** | **3** |
+| TD-099 | Namespace Not Set During RAGAS Ingestion | **Sprint 81** | **3** |
 
 ---
 
@@ -69,20 +75,18 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-099](TD-099_NAMESPACE_INGESTION_BUG.md) | Namespace Not Set During RAGAS Ingestion | OPEN | 3 | **Sprint 81** |
 | [TD-080](TD-080_CONTEXT_RELEVANCE_GUARD.md) | Context Relevance Guard (Anti-Hallucination) | PHASE 1 COMPLETE | 5 | **Sprint 71-73** |
-| [TD-079](TD-079_LLM_INTENT_CLASSIFIER_CLARA.md) | LLM-Based Intent Classifier (C-LARA) | ✅ COMPLETE | 13 | **Sprint 67** ✅ |
 | [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | IN PROGRESS | 18 | **Sprint 67-68** |
 
 ### MEDIUM Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-100](TD-100_GLEANING_MULTI_PASS_EXTRACTION.md) | Gleaning (Multi-Pass ER-Extraction) | 🔄 IN PROGRESS | 5 | **Sprint 83** ✅ |
 | [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 82** |
 | [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
-| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | OPEN | 13 | **Sprint 68** |
+| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 68** |
 | [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 68** |
-| [TD-044](TD-044_DOCLING_PARSED_DOCUMENT_INTERFACE.md) | DoclingParsedDocument Interface Fix | IN PROGRESS | 8 | Sprint 69+ |
 | [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 69+ |
 
 ### LOW Priority

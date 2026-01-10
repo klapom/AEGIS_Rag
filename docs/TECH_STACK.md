@@ -1,7 +1,7 @@
 # AEGIS RAG Technology Stack
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-09 (Sprint 81: C-LARA SetFit Intent Classifier 95% Accuracy)
+**Last Updated:** 2026-01-10 (Sprint 83: ER-Extraction Improvements - 3-Rank Cascade, Gleaning, Multi-language NER)
 
 ---
 
@@ -120,6 +120,10 @@ pip install --break-system-packages <package>
 | **Cache** | Redis | 7.x | Short-Term Memory |
 | **Data Ingestion** | Docling CUDA | Latest | GPU OCR (95% accuracy) |
 | **Fallback Ingestion** | LlamaIndex Core | 0.14.3 | 300+ Connectors |
+| **Multi-language NER** | SpaCy | 3.7.0 | DE/EN/FR/ES Entity Extraction (Sprint 83) |
+| **NER Models** | SpaCy Transformers | 1.3.0 | Transformer-based NER (Sprint 83) |
+| **GPU Monitoring** | pynvml | 11.5.0 | VRAM Tracking (Sprint 83) |
+| **Retry Logic** | Tenacity | 8.0.0 | Exponential Backoff (Sprint 83) |
 
 ### Frontend Stack
 
@@ -166,7 +170,9 @@ pip install --break-system-packages <package>
 |------|-------|----------|------|---------|
 | **Query Understanding** | llama3.2:3b | Ollama | 2GB | Fast intent classification |
 | **Answer Generation** | llama3.2:8b | Ollama | 4.7GB | Quality responses |
-| **Entity Extraction** | gemma-3-4b-it-Q8_0 | Ollama | 2.7GB | Pure LLM extraction (ADR-026) |
+| **Entity Extraction (Rank 1)** | Nemotron3 Nano 30/3a | Ollama | 2.5GB | Primary ER-Extraction (Sprint 83) |
+| **Entity Extraction (Rank 2)** | gpt-oss:20b | Ollama | 12GB | Fallback ER-Extraction (Sprint 83) |
+| **Entity Extraction (Rank 3)** | SpaCy NER + gpt-oss:20b | SpaCy + Ollama | - | Hybrid NER (DE/EN/FR/ES) + LLM relations (Sprint 83) |
 | **Complex Reasoning** | qwen2.5:7b | Ollama | 4.7GB | Multi-hop queries |
 | **Embeddings** | BGE-M3 (1024-dim) | Ollama | 2.3GB | Universal semantic embeddings |
 | **Reranking** | bge-reranker-v2-m3 | Ollama | - | Cross-encoder reranking |
