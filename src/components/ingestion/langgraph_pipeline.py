@@ -403,7 +403,10 @@ async def run_ingestion_pipeline(
         node_duration = node_end - last_node_end
 
         node_timings[node_name] = node_duration
-        final_state = event[node_name]
+        # Sprint 84 Fix: Merge state updates instead of replacing
+        # astream yields partial state updates per node, not accumulated state
+        # Must merge to preserve fields from earlier nodes (e.g., chunks from chunking node)
+        final_state = {**final_state, **event[node_name]}
 
         # Log each node's timing
         logger.info(
