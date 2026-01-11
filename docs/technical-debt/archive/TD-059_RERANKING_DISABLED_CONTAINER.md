@@ -75,3 +75,22 @@ Das Modell ist multilingual und kompatibel mit BGE-M3 Embeddings.
 
 - ADR-024: BGE-M3 Embeddings
 - [BGE-Reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)
+
+---
+
+## ✅ RESOLUTION
+
+**Status:** RESOLVED
+**Resolution Sprint:** Sprint 61+ (Native Sentence-Transformers Migration)
+**Resolution Date:** 2026-01-10 (Sprint 84 Technical Debt Review)
+**Resolved By:** Code Analysis (sentence-transformers is CORE dependency)
+
+**Implementation Evidence:**
+- `pyproject.toml:47` - `sentence-transformers = "^3.3.1"` as CORE dependency (not optional!)
+- `poetry show sentence-transformers` → version 3.4.1 INSTALLED
+- `src/components/retrieval/reranker.py:1-624` - Complete CrossEncoderReranker implementation active
+- `src/components/retrieval/reranker.py:464` - `rerank_scores = self.model.predict(pairs, batch_size=self.batch_size)`
+
+**Verification:** Cross-encoder reranking is FULLY FUNCTIONAL since Sprint 61 Feature 61.2 (Cross-Encoder Reranking, 9 SP). sentence-transformers moved from optional `--with reranking` group to core dependencies.
+
+**Root Cause of Documentation Drift:** Feature re-enabled in Sprint 61 but TD-059 not archived due to missing TD-archiving automation (see CLAUDE.md Sprint-Abschluss Checkliste I).

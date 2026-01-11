@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-10 (Sprint 83 - Technical Debt Review & Cleanup)
-**Total Open Items:** 10
-**Total Story Points:** ~128 SP
-**Archived Items:** [20 items](archive/ARCHIVE_INDEX.md) (TD-044, TD-046, TD-052, TD-079, TD-099 added Sprint 81-83)
+**Last Updated:** 2026-01-10 (Sprint 84 - Technical Debt Review & Cleanup)
+**Total Open Items:** 5
+**Total Story Points:** ~97 SP
+**Archived Items:** [26 items](archive/ARCHIVE_INDEX.md) (TD-059, TD-075, TD-077, TD-083, TD-100 added Sprint 84 Code Analysis)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -21,12 +21,14 @@
 | Priority | Count | Story Points |
 |----------|-------|--------------|
 | CRITICAL | 0     | 0 SP         |
-| HIGH     | 2     | ~23 SP       |
-| MEDIUM   | 6     | ~50 SP       |
+| HIGH     | 1     | ~18 SP       |
+| MEDIUM   | 2     | ~18 SP       |
 | LOW      | 2     | ~55 SP       |
+| PARTIAL  | 1     | ~6 SP        |
 
 **Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
 **Sprint 83:** TD-044, TD-046, TD-052, TD-079, TD-099 RESOLVED (27 SP) - Logging improvements, namespace fixes, user upload, intent classifier
+**Sprint 84:** TD-059, TD-075, TD-077, TD-083, TD-100 RESOLVED (31 SP) - Code analysis revealed features already implemented but not archived
 
 ---
 
@@ -49,7 +51,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-052 | User Document Upload | **Sprint 83** | **5** |
 | TD-057 (Sprint 42) | 4-Way Hybrid RRF Retrieval | Sprint 42 | 13 |
 | TD-058 | Community Summary Generation | Sprint 52 | 8 |
-| TD-059 | Reranking via Ollama | Sprint 48 | 5 |
+| **TD-059** | **Reranking Disabled in Container** | **Sprint 61** (Code Analysis Sprint 84) | **5** |
 | TD-060 | Unified Chunk IDs | Sprint 42 | 8 |
 | TD-061 | Ollama GPU Docker Config | Sprint 42 | 3 |
 | TD-062 | Multi-Criteria Entity Deduplication | Sprint 43 | 5 |
@@ -58,10 +60,14 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-071 | vLLM vs Ollama Investigation | Sprint 60 | 5 |
 | TD-072 | Sentence-Transformers Reranking Investigation | Sprint 60 | 3 |
 | TD-073 | Sentence-Transformers Embeddings Investigation | Sprint 60 | 3 |
+| **TD-075** | **VLM Image Descriptions → Chunks Integration** | **Sprint 64** (Code Analysis Sprint 84) | **8** |
+| **TD-077** | **VLM Admin UI Integration** | **Sprint 66** | **0** |
 | TD-079 | LLM Intent Classifier (C-LARA) | **Sprint 81** | **13** |
+| **TD-083** | **SetFit Intent Classifier Training (C-LARA)** | **Sprint 67+81** (Code Analysis Sprint 84) | **13** |
 | TD-096 | Chunking Parameters UI Integration | **Sprint 81** | **5** |
 | TD-097 | Sprint 80 Settings UI/DB Integration | **Sprint 81** | **3** |
 | TD-099 | Namespace Not Set During RAGAS Ingestion | **Sprint 81** | **3** |
+| **TD-100** | **Gleaning Multi-Pass Extraction** | **Sprint 83** (Code Analysis Sprint 84) | **5** |
 
 ---
 
@@ -82,19 +88,23 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-100](TD-100_GLEANING_MULTI_PASS_EXTRACTION.md) | Gleaning (Multi-Pass ER-Extraction) | 🔄 IN PROGRESS | 5 | **Sprint 83** ✅ |
-| [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 82** |
-| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | PLANNED | 13 | **Sprint 68** (Optional) |
-| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 68** |
-| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 68** |
-| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | PARTIAL | 6 | Sprint 69+ |
+| [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 85+** |
+| [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 85** |
+| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 85** |
 
 ### LOW Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
-| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 69+ |
-| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 69+ |
+| [TD-055](TD-055_MCP_CLIENT_IMPLEMENTATION.md) | MCP Client Implementation | OPEN | 21 | Sprint 90+ |
+| [TD-056](TD-056_PROJECT_COLLABORATION_SYSTEM.md) | Project Collaboration System | PLANNED | 34 | Sprint 90+ |
+| [TD-064](TD-064_TEMPORAL_COMMUNITY_SUMMARIES.md) | Temporal Community Summaries | BACKLOG | 13 | Sprint 90+ (Optional) |
+
+### PARTIAL (Refactoring)
+
+| TD# | Title | Status | SP | Target Sprint |
+|-----|-------|--------|-----|---------------|
+| [TD-054](TD-054_UNIFIED_CHUNKING_SERVICE.md) | Unified Chunking Service | Section-Aware ✅, Unified Service ❌ | 6 | Sprint 85+ |
 
 ---
 

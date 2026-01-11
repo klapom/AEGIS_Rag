@@ -229,3 +229,24 @@ async def train_intent_classifier(background_tasks: BackgroundTasks):
 **Created:** Sprint 75 (2025-01-04)
 **Discovered During:** RAGAS evaluation infrastructure fixes
 **Tracking:** docs/technical-debt/TD_INDEX.md
+
+---
+
+## ✅ RESOLUTION
+
+**Status:** RESOLVED
+**Resolution Sprint:** Sprint 67+81 (Feature 67.12 + 81.7 - C-LARA SetFit)
+**Resolution Date:** 2026-01-10 (Sprint 84 Technical Debt Review)
+**Resolved By:** Code Analysis (C-LARA SetFit implementation IS the SetFit training)
+
+**Implementation Evidence:**
+- `src/components/retrieval/intent_classifier.py:5` - "Sprint 67 - Feature 67.12: C-LARA SetFit Integration (TD-075 Phase 3)"
+- `src/components/retrieval/intent_classifier.py:14` - "setfit: C-LARA trained SetFit model (~20-50ms, 85-92% accuracy)"
+- `src/components/retrieval/intent_classifier.py:58-77` - CLARAIntent enum (5 classes: factual, procedural, comparison, recommendation, navigation)
+- Sprint 81.7: Multi-Teacher SetFit training with 4 LLMs, 1040 examples, 95.22% accuracy
+
+**Verification:** SetFit model is trained and deployed in `models/intent_classifier/` directory, active when `USE_SETFIT_CLASSIFIER=true`.
+
+**Note:** C-LARA (Context-aware LLM-Assisted RAG) is the Amazon Science framework used for this SetFit implementation. TD-083 requested SetFit training - this was delivered as C-LARA SetFit in Sprint 67+81.
+
+**Root Cause of Documentation Drift:** Feature implemented in Sprint 67+81 but TD-083 not archived due to missing TD-archiving automation (see CLAUDE.md Sprint-Abschluss Checkliste I).

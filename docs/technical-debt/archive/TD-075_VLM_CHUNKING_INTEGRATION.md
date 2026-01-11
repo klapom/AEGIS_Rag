@@ -241,3 +241,21 @@ def test_image_content_searchable():
 - **Implementation:** 5 SP (BBox matching, text integration, metadata)
 - **Testing:** 2 SP (unit tests, E2E tests, verification)
 - **Total:** 8 SP
+
+---
+
+## ✅ RESOLUTION
+
+**Status:** RESOLVED
+**Resolution Sprint:** Sprint 64+ (Feature 62.3)
+**Resolution Date:** 2026-01-10 (Sprint 84 Technical Debt Review)
+**Resolved By:** Code Analysis (feature was implemented but not archived)
+
+**Implementation Evidence:**
+- `src/components/ingestion/nodes/adaptive_chunking.py:82-204` - `_integrate_vlm_descriptions()` function
+- `src/components/ingestion/nodes/adaptive_chunking.py:769-771` - VLM integration active
+- `src/components/ingestion/nodes/adaptive_chunking.py:340-341, 377-378, 473-474` - image_annotations copied to chunks
+
+**Verification:** Grep shows VLM metadata integration fully implemented with BBox matching and section-level image annotations.
+
+**Root Cause of Documentation Drift:** Feature implemented in Sprint 64 but TD not archived due to missing TD-archiving automation (see CLAUDE.md Sprint-Abschluss Checkliste I).
