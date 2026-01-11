@@ -56,6 +56,8 @@ from src.prompts.extraction_prompts import (
     ENTITY_EXTRACTION_PROMPT,
     GENERIC_ENTITY_EXTRACTION_PROMPT,
     GENERIC_RELATION_EXTRACTION_PROMPT,
+    RELATIONSHIP_COMPLETENESS_CHECK_PROMPT,
+    RELATIONSHIP_CONTINUATION_PROMPT,
     RELATIONSHIP_EXTRACTION_PROMPT,
 )
 
@@ -1431,6 +1433,290 @@ class ExtractionService:
 
         # All ranks failed
         raise last_error or Exception("Relationship extraction failed on all cascade ranks")
+
+    async def _check_relationship_completeness(
+        self,
+        text: str,
+        entities: list[GraphEntity],
+        relationships: list[GraphRelationship],
+        document_id: str | None = None,
+    ) -> bool:
+        """Check if relationship extraction is complete using LLM.
+
+        Sprint 85 Feature 85.8: Relationship Gleaning Completeness Check.
+
+        Args:
+            text: Document text
+            entities: Extracted entities
+            relationships: Current relationships
+            document_id: Source document ID
+
+        Returns:
+            True if extraction is INCOMPLETE (need more relationships), False if complete
+        """
+        # Format relationships for prompt
+        rel_strs = []
+        for rel in relationships:
+            rel_strs.append(f"{rel.source} --[{rel.type}]--> {rel.target}")
+        relationship_list = "\n".join(rel_strs) if rel_strs else "(no relationships extracted yet)"
+
+        # Format entities for prompt
+        entity_strs = [f"- {e.name} ({e.type})" for e in entities]
+        entity_list = "\n".join(entity_strs)
+
+        prompt = RELATIONSHIP_COMPLETENESS_CHECK_PROMPT.format(
+            extracted_relationships=relationship_list,
+            entities=entity_list,
+            document_text=text[:3000],  # Limit text length
+        )
+
+        try:
+            result = await self.llm_proxy.generate(
+                task=LLMTask(
+                    task_type=TaskType.CLASSIFICATION,
+                    prompt=prompt,
+                    complexity=Complexity.LOW,
+                    quality=QualityRequirement.STANDARD,
+                ),
+            )
+
+            response = result.content.strip().upper() if result.content else ""
+
+            if response.startswith("YES"):
+                logger.debug(
+                    "relationship_gleaning_completeness_check_incomplete",
+                    document_id=document_id,
+                    current_relationships=len(relationships),
+                )
+                return True  # Incomplete - need more relationships
+
+            logger.debug(
+                "relationship_gleaning_completeness_check_complete",
+                document_id=document_id,
+                current_relationships=len(relationships),
+            )
+            return False  # Complete
+
+        except Exception as e:
+            logger.warning(
+                "relationship_gleaning_completeness_check_failed",
+                document_id=document_id,
+                error=str(e),
+            )
+            # On error, assume incomplete to try gleaning
+            return True
+
+    async def _extract_missing_relationships(
+        self,
+        text: str,
+        entities: list[GraphEntity],
+        existing_relationships: list[GraphRelationship],
+        document_id: str | None = None,
+    ) -> list[GraphRelationship]:
+        """Extract relationships that were missed in the initial pass.
+
+        Sprint 85 Feature 85.8: Relationship Gleaning Continuation.
+
+        Args:
+            text: Document text
+            entities: Extracted entities
+            existing_relationships: Already extracted relationships
+            document_id: Source document ID
+
+        Returns:
+            List of newly extracted relationships (excluding duplicates)
+        """
+        # Format existing relationships for prompt
+        rel_strs = []
+        for rel in existing_relationships:
+            rel_strs.append(f'{{"source": "{rel.source}", "target": "{rel.target}", "type": "{rel.type}"}}')
+        relationship_list = "\n".join(rel_strs) if rel_strs else "(no relationships extracted yet)"
+
+        # Format entities for prompt
+        entity_strs = [f"- {e.name} ({e.type})" for e in entities]
+        entity_list = "\n".join(entity_strs)
+
+        prompt = RELATIONSHIP_CONTINUATION_PROMPT.format(
+            extracted_relationships=relationship_list,
+            entities=entity_list,
+            document_text=text[:3000],  # Limit text length
+        )
+
+        try:
+            result = await self.llm_proxy.generate(
+                task=LLMTask(
+                    task_type=TaskType.EXTRACTION,
+                    prompt=prompt,
+                    complexity=Complexity.MEDIUM,
+                    quality=QualityRequirement.HIGH,
+                ),
+            )
+
+            # Parse the response
+            relationships_data = self._parse_json_response(result.content, data_type="relationship")
+
+            # Create GraphRelationship objects
+            new_relationships = []
+            existing_pairs = {(r.source.lower(), r.target.lower(), r.type.upper()) for r in existing_relationships}
+
+            for rel_dict in relationships_data:
+                try:
+                    source = rel_dict.get("source", "")
+                    target = rel_dict.get("target", "")
+                    rel_type = rel_dict.get("type", "RELATES_TO")
+
+                    # Skip duplicates
+                    key = (source.lower(), target.lower(), rel_type.upper())
+                    if key in existing_pairs:
+                        continue
+
+                    relationship = GraphRelationship(
+                        id=str(uuid.uuid4()),
+                        source=source,
+                        target=target,
+                        type=rel_type,
+                        evidence=rel_dict.get("description", ""),
+                    )
+                    new_relationships.append(relationship)
+                    existing_pairs.add(key)  # Avoid duplicates within this batch
+
+                except Exception as e:
+                    logger.debug(
+                        "relationship_creation_failed_gleaning",
+                        error=str(e),
+                        rel_dict=rel_dict,
+                    )
+
+            logger.info(
+                "relationship_gleaning_extracted",
+                document_id=document_id,
+                new_relationships=len(new_relationships),
+            )
+
+            return new_relationships
+
+        except Exception as e:
+            logger.warning(
+                "relationship_gleaning_extraction_failed",
+                document_id=document_id,
+                error=str(e),
+            )
+            return []
+
+    async def extract_relationships_with_gleaning(
+        self,
+        text: str,
+        entities: list[GraphEntity],
+        document_id: str | None = None,
+        domain: str | None = None,
+        gleaning_steps: int = 1,
+    ) -> list[GraphRelationship]:
+        """Extract relationships with multi-pass gleaning for improved ER ratio.
+
+        Sprint 85 Feature 85.8: Relationship Gleaning for ER Ratio >= 1.0.
+
+        Similar to entity gleaning (Microsoft GraphRAG), this method:
+        1. Initial extraction of relationships
+        2. Completeness check using LLM
+        3. If incomplete, extract missing relationships
+        4. Repeat for gleaning_steps rounds
+        5. Merge and deduplicate all relationships
+
+        Args:
+            text: Document text
+            entities: Extracted entities
+            document_id: Source document ID
+            domain: Domain name for domain-specific prompts
+            gleaning_steps: Number of gleaning rounds (0=disabled, 1-2 recommended)
+
+        Returns:
+            List of all extracted relationships (deduplicated)
+        """
+        logger.info(
+            "extracting_relationships_with_gleaning",
+            entity_count=len(entities),
+            document_id=document_id,
+            gleaning_steps=gleaning_steps,
+        )
+
+        if not entities:
+            logger.warning("no_entities_for_relationship_gleaning")
+            return []
+
+        # Initial extraction
+        logger.info("relationship_gleaning_round_1_start", document_id=document_id)
+        all_relationships = await self.extract_relationships(text, entities, document_id, domain)
+        logger.info(
+            "relationship_gleaning_round_1_complete",
+            document_id=document_id,
+            relationships=len(all_relationships),
+        )
+
+        # If gleaning disabled, return initial results
+        if gleaning_steps == 0:
+            return all_relationships
+
+        # Gleaning rounds
+        for gleaning_round in range(1, gleaning_steps + 1):
+            logger.info(
+                f"relationship_gleaning_round_{gleaning_round + 1}_start",
+                document_id=document_id,
+                current_relationships=len(all_relationships),
+            )
+
+            # Check completeness
+            is_incomplete = await self._check_relationship_completeness(
+                text=text,
+                entities=entities,
+                relationships=all_relationships,
+                document_id=document_id,
+            )
+
+            if not is_incomplete:
+                logger.info(
+                    "relationship_gleaning_complete_early",
+                    document_id=document_id,
+                    round=gleaning_round + 1,
+                    total_relationships=len(all_relationships),
+                )
+                break
+
+            # Extract missing relationships
+            new_relationships = await self._extract_missing_relationships(
+                text=text,
+                entities=entities,
+                existing_relationships=all_relationships,
+                document_id=document_id,
+            )
+
+            if new_relationships:
+                all_relationships.extend(new_relationships)
+                logger.info(
+                    f"relationship_gleaning_round_{gleaning_round + 1}_complete",
+                    document_id=document_id,
+                    new_relationships=len(new_relationships),
+                    total_relationships=len(all_relationships),
+                )
+            else:
+                logger.info(
+                    f"relationship_gleaning_round_{gleaning_round + 1}_no_new",
+                    document_id=document_id,
+                )
+                break
+
+        # Calculate ER ratio
+        er_ratio = len(all_relationships) / len(entities) if entities else 0.0
+
+        logger.info(
+            "relationship_gleaning_extraction_complete",
+            document_id=document_id,
+            total_relationships=len(all_relationships),
+            entity_count=len(entities),
+            er_ratio=round(er_ratio, 2),
+            gleaning_rounds_used=gleaning_round if gleaning_steps > 0 else 0,
+        )
+
+        return all_relationships
 
     async def extract_and_store(
         self,

@@ -306,6 +306,235 @@ class RelationExtractor:
             return {"relations": []}
 
 
+    async def extract_with_gleaning(
+        self,
+        text: str,
+        entities: list[dict[str, Any]],
+        gleaning_steps: int = 1,
+    ) -> list[dict[str, Any]]:
+        """Extract relations with multi-pass gleaning for improved ER ratio.
+
+        Sprint 85 Feature 85.8: Relationship Gleaning for ER Ratio >= 1.0.
+
+        Similar to entity gleaning (Microsoft GraphRAG), this method:
+        1. Initial extraction of relationships
+        2. Completeness check using LLM
+        3. If incomplete, extract missing relationships
+        4. Merge and deduplicate all relationships
+
+        Args:
+            text: Source text containing entities
+            entities: List of entities with 'name' key
+            gleaning_steps: Number of gleaning rounds (0=disabled, 1-2 recommended)
+
+        Returns:
+            List of relation dicts (deduplicated)
+        """
+        if not entities or len(entities) < 2:
+            logger.warning("relation_gleaning_skipped", reason="insufficient_entities")
+            return []
+
+        # Initial extraction
+        logger.info(
+            "relation_gleaning_round_1_start",
+            entity_count=len(entities),
+            gleaning_steps=gleaning_steps,
+        )
+        all_relations = await self.extract(text, entities)
+        logger.info(
+            "relation_gleaning_round_1_complete",
+            relations_found=len(all_relations),
+        )
+
+        # If gleaning disabled, return initial results
+        if gleaning_steps == 0:
+            return all_relations
+
+        # Gleaning rounds
+        for gleaning_round in range(1, gleaning_steps + 1):
+            logger.info(
+                f"relation_gleaning_round_{gleaning_round + 1}_start",
+                current_relations=len(all_relations),
+            )
+
+            # Check completeness
+            is_incomplete = await self._check_completeness(text, entities, all_relations)
+
+            if not is_incomplete:
+                logger.info(
+                    "relation_gleaning_complete_early",
+                    round=gleaning_round + 1,
+                    total_relations=len(all_relations),
+                )
+                break
+
+            # Extract missing relationships
+            new_relations = await self._extract_missing(text, entities, all_relations)
+
+            if new_relations:
+                all_relations.extend(new_relations)
+                logger.info(
+                    f"relation_gleaning_round_{gleaning_round + 1}_complete",
+                    new_relations=len(new_relations),
+                    total_relations=len(all_relations),
+                )
+            else:
+                logger.info(
+                    f"relation_gleaning_round_{gleaning_round + 1}_no_new",
+                )
+                break
+
+        # Calculate ER ratio
+        er_ratio = len(all_relations) / len(entities) if entities else 0.0
+
+        logger.info(
+            "relation_gleaning_complete",
+            total_relations=len(all_relations),
+            entity_count=len(entities),
+            er_ratio=round(er_ratio, 2),
+        )
+
+        return all_relations
+
+    async def _check_completeness(
+        self,
+        text: str,
+        entities: list[dict[str, Any]],
+        relations: list[dict[str, Any]],
+    ) -> bool:
+        """Check if relationship extraction is complete.
+
+        Args:
+            text: Source text
+            entities: Entity list
+            relations: Current relations
+
+        Returns:
+            True if INCOMPLETE (need more), False if complete
+        """
+        # Format relations for prompt
+        rel_strs = []
+        for rel in relations:
+            rel_strs.append(f"{rel.get('source', '?')} --[RELATES_TO]--> {rel.get('target', '?')}")
+        relationship_list = "\n".join(rel_strs) if rel_strs else "(no relationships extracted yet)"
+
+        # Format entities for prompt
+        entity_strs = [f"- {e['name']}" for e in entities]
+        entity_list = "\n".join(entity_strs)
+
+        prompt = f"""You have extracted the following relationships:
+{relationship_list}
+
+From entities:
+{entity_list}
+
+Text (excerpt):
+{text[:2000]}
+
+Are there any significant RELATIONSHIPS between the entities that were MISSED?
+Answer with ONLY "YES" or "NO".
+
+Answer:"""
+
+        try:
+            task = LLMTask(
+                task_type=TaskType.CLASSIFICATION,
+                prompt=prompt,
+                complexity=Complexity.LOW,
+                quality_requirement=QualityRequirement.STANDARD,
+                temperature=0.1,
+                max_tokens=10,
+                model_local=self.model,
+            )
+            response = await self.proxy.generate(task)
+            result = response.content.strip().upper() if response.content else ""
+
+            if result.startswith("YES"):
+                return True  # Incomplete
+            return False  # Complete
+
+        except Exception as e:
+            logger.warning("relation_completeness_check_failed", error=str(e))
+            return True  # Assume incomplete on error
+
+    async def _extract_missing(
+        self,
+        text: str,
+        entities: list[dict[str, Any]],
+        existing_relations: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Extract relationships that were missed.
+
+        Args:
+            text: Source text
+            entities: Entity list
+            existing_relations: Already extracted relations
+
+        Returns:
+            List of new relations (excluding duplicates)
+        """
+        # Format existing relations
+        rel_strs = []
+        for rel in existing_relations:
+            rel_strs.append(f'- {rel.get("source", "?")} -> {rel.get("target", "?")}')
+        existing_list = "\n".join(rel_strs) if rel_strs else "(none)"
+
+        # Format entities
+        entity_names = [e["name"] for e in entities]
+        entity_list_str = ", ".join(entity_names)
+
+        prompt = f"""{SYSTEM_PROMPT_RELATION}
+
+Previously extracted relationships:
+{existing_list}
+
+Entity list: {entity_list_str}
+
+Text:
+{text[:2000]}
+
+IMPORTANT: Extract ONLY relationships that were MISSED above.
+Do NOT repeat already extracted relationships.
+Focus on CAUSAL, HIERARCHICAL, and SEMANTIC relationships.
+
+Output (valid JSON only):"""
+
+        try:
+            task = LLMTask(
+                task_type=TaskType.EXTRACTION,
+                prompt=prompt,
+                complexity=Complexity.MEDIUM,
+                quality_requirement=QualityRequirement.HIGH,
+                temperature=self.temperature,
+                max_tokens=self.num_predict,
+                model_local=self.model,
+            )
+            response = await self.proxy.generate(task)
+
+            # Parse response
+            relation_data = self._parse_json_response(response.content)
+            new_relations = relation_data.get("relations", [])
+
+            # Deduplicate against existing
+            existing_pairs = {
+                (r.get("source", "").lower(), r.get("target", "").lower())
+                for r in existing_relations
+            }
+
+            unique_relations = []
+            for rel in new_relations:
+                pair = (rel.get("source", "").lower(), rel.get("target", "").lower())
+                if pair not in existing_pairs:
+                    unique_relations.append(rel)
+                    existing_pairs.add(pair)
+
+            return unique_relations
+
+        except Exception as e:
+            logger.warning("relation_continuation_failed", error=str(e))
+            return []
+
+
 def create_relation_extractor_from_config(config) -> RelationExtractor:
     """Factory function to create relation extractor from app config.
 

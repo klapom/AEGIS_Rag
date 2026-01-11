@@ -426,6 +426,13 @@ class Settings(BaseSettings):
         "when normalizing to canonical type (e.g., STARRED_IN → ACTED_IN).",
     )
 
+    # DSPy Training Data Collection (Sprint 85: Feature 85.7)
+    enable_dspy_training_collection: bool = Field(
+        default=True,
+        description="Enable collection of high-quality training data for DSPy optimization. "
+        "Samples are collected when extraction quality thresholds are met.",
+    )
+
     # Gemma Relation Extraction (Sprint 13: ADR-018)
     # Sprint 51: Updated default to nemotron-3-nano (fast MoE model on DGX Spark)
     gemma_model: str = Field(

@@ -232,3 +232,125 @@ Required JSON format (copy this structure exactly):
 ]
 
 Output (JSON array only):"""
+
+
+# Sprint 85 Feature 85.8: Relationship Gleaning Prompts
+# Adds multi-pass extraction for relationships to improve ER ratio
+
+RELATIONSHIP_COMPLETENESS_CHECK_PROMPT = """You have extracted the following relationships between entities:
+
+{extracted_relationships}
+
+From entities:
+{entities}
+
+Document text:
+{document_text}
+
+Are there any significant RELATIONSHIPS between the entities that were MISSED?
+
+Think carefully about:
+- Explicit relationships stated in the text (e.g., "X works at Y", "A created B")
+- Implicit relationships strongly implied (e.g., "X and Y collaborated" implies COLLABORATES_WITH)
+- Causal relationships (X causes Y, X leads to Y, X enables Y)
+- Temporal relationships (X precedes Y, X follows Y)
+- Spatial relationships (X is located in Y, X is part of Y)
+- Hierarchical relationships (X manages Y, X owns Y, X contains Y)
+
+Answer with ONLY "YES" or "NO" (no explanation needed).
+
+If you believe the extraction is complete and comprehensive, answer: NO
+If you believe there are missing relationships worth extracting, answer: YES
+
+Answer:"""
+
+
+RELATIONSHIP_CONTINUATION_PROMPT = """You previously extracted these relationships:
+
+{extracted_relationships}
+
+From entities:
+{entities}
+
+Full document text:
+{document_text}
+
+Please extract ONLY the relationships that were MISSED in the previous extraction.
+Do NOT repeat relationships that were already extracted in the list above.
+
+Focus on extracting:
+- CAUSAL relationships: CAUSES, LEADS_TO, ENABLES, RESULTS_IN, TRIGGERS
+- FUNCTIONAL relationships: USES, IMPLEMENTS, EXTENDS, INTEGRATES_WITH
+- ORGANIZATIONAL relationships: MANAGES, OWNS, CONTROLS, CONTAINS, PART_OF
+- KNOWLEDGE relationships: KNOWS, CREATED, DEVELOPED, DISCOVERED, INVENTED
+- TEMPORAL relationships: PRECEDES, FOLLOWS, CONCURRENT_WITH
+- SEMANTIC relationships: RELATES_TO, SIMILAR_TO, CONTRASTS_WITH, DEPENDS_ON
+
+CRITICAL: For each pair of related entities, try to find AT LEAST ONE relationship.
+If two entities appear in the same sentence or context, they likely have a relationship.
+
+For each missing relationship, identify:
+1. Source entity (must be from the entity list)
+2. Target entity (must be from the entity list)
+3. Relationship type (use UPPERCASE_WITH_UNDERSCORES)
+4. Description (1 sentence explaining the relationship)
+
+CRITICAL OUTPUT INSTRUCTIONS:
+- You MUST return ONLY a valid JSON array
+- Do NOT include any explanatory text before or after the JSON array
+- Do NOT use markdown code fences (no ``` or ```json)
+- If there are NO missing relationships, return an empty array: []
+
+Required JSON format:
+[
+  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "One sentence description"}},
+  ...
+]
+
+Output (JSON array only):"""
+
+
+# Enhanced relationship extraction prompt for better ER ratio (Sprint 85)
+ENHANCED_RELATIONSHIP_EXTRACTION_PROMPT = """Extract ALL relationships between entities from the following text.
+
+IMPORTANT: Be thorough! For a knowledge graph to be useful, we need MANY relationships.
+A good knowledge graph has at least 1 relationship per entity.
+
+Entities found in this text:
+{entities}
+
+Text:
+{text}
+
+For EVERY pair of entities that interact or relate in the text, extract a relationship.
+
+Relationship types to consider:
+- FUNCTIONAL: USES, CREATES, IMPLEMENTS, PROCESSES, GENERATES, TRANSFORMS
+- CAUSAL: CAUSES, ENABLES, LEADS_TO, RESULTS_IN, INFLUENCES, TRIGGERS
+- HIERARCHICAL: CONTAINS, PART_OF, MANAGES, OWNS, CONTROLS, BELONGS_TO
+- TEMPORAL: PRECEDES, FOLLOWS, DURING, CONCURRENT_WITH
+- KNOWLEDGE: KNOWS, CREATED_BY, DEVELOPED_BY, DISCOVERED_BY, INVENTED_BY
+- LOCATION: LOCATED_IN, BASED_IN, OPERATES_IN, HEADQUARTERED_IN
+- ASSOCIATION: WORKS_AT, WORKS_WITH, COLLABORATES_WITH, ASSOCIATED_WITH
+- SEMANTIC: RELATES_TO, SIMILAR_TO, CONTRASTS_WITH, DEPENDS_ON, EXTENDS
+
+For each relationship, provide:
+1. source: The entity that is the subject of the relationship
+2. target: The entity that is the object of the relationship
+3. type: Relationship type from the list above (UPPERCASE_WITH_UNDERSCORES)
+4. description: One sentence explaining the relationship based on text
+
+CRITICAL OUTPUT INSTRUCTIONS:
+- Return ONLY a valid JSON array
+- Do NOT include any explanatory text
+- Do NOT use markdown code fences
+- Extract ALL possible relationships (aim for at least {min_relations} relationships)
+
+Output format:
+[
+  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Explanation"}},
+  ...
+]
+
+Output (JSON array only):
+"""

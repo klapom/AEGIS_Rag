@@ -179,6 +179,9 @@ class IngestionState(TypedDict, total=False):
     relations_count: int  # Number of RELATES_TO relationships created (Sprint 34)
     graph_status: Literal["pending", "running", "completed", "failed"]
 
+    # Sprint 85 Feature 85.6: Extraction Metrics for LangGraph state aggregation
+    extraction_metrics: dict[str, Any]  # ExtractionMetrics.to_dict() for state merge
+
     # ============================================================
     # PROGRESS & ERROR TRACKING
     # ============================================================
@@ -280,6 +283,7 @@ def create_initial_state(
         entities_count=0,  # Sprint 82 Fix: Entities extracted count
         relations_count=0,  # Sprint 34: RELATES_TO relationships count
         graph_status="pending",
+        extraction_metrics={},  # Sprint 85 Feature 85.6: Metrics for LangGraph state
         # Progress tracking
         overall_progress=0.0,
         errors=[],

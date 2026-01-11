@@ -1,12 +1,16 @@
 """LightRAG ingestion operations.
 
 Sprint 55 Feature 55.4: Document ingestion functionality extracted from lightrag_wrapper.py
+Sprint 85: Added extraction metrics, KG hygiene, and DSPy training data collection
 
 This module handles:
 - Per-chunk entity/relation extraction
 - Document insertion (basic and optimized)
 - Pre-chunked document insertion
 - Deduplication integration
+- Extraction metrics tracking (Sprint 85.6)
+- KG hygiene validation (Sprint 85.5)
+- DSPy training data collection (Sprint 85.7)
 """
 
 import time
@@ -21,6 +25,12 @@ from tenacity import (
 )
 
 from src.components.graph_rag.extraction_factory import create_extraction_pipeline_from_config
+from src.components.graph_rag.extraction_metrics import (
+    ExtractionMetrics,
+    create_metrics_from_extraction,
+    log_extraction_metrics,
+)
+from src.components.graph_rag.kg_hygiene import KGHygieneService
 from src.components.graph_rag.lightrag.converters import (
     chunk_text_with_metadata,
     convert_chunks_to_lightrag_format,
@@ -30,6 +40,7 @@ from src.components.graph_rag.lightrag.converters import (
 from src.components.graph_rag.lightrag.neo4j_storage import store_chunks_and_provenance
 from src.components.graph_rag.relation_deduplicator import create_relation_deduplicator_from_config
 from src.components.graph_rag.semantic_deduplicator import create_deduplicator_from_config
+from src.components.domain_training.training_data_collector import get_training_data_collector
 from src.core.config import settings
 from src.monitoring.metrics import record_deduplication_detail, record_extraction_by_type
 
@@ -504,7 +515,8 @@ async def insert_prechunked_documents(
 
     if settings.enable_multi_criteria_dedup and all_entities:
         try:
-            deduplicator = create_deduplicator_from_config()
+            # Sprint 85 Fix: Pass settings to create_deduplicator_from_config
+            deduplicator = create_deduplicator_from_config(settings)
             deduplicated_entities, entity_mapping = await deduplicator.deduplicate_with_mapping(
                 all_entities
             )
@@ -586,6 +598,110 @@ async def insert_prechunked_documents(
         relation_types=relation_type_counts,
         model=settings.lightrag_llm_model,
     )
+
+    # =========================================================================
+    # Sprint 85 Feature 85.5: KG Hygiene Validation
+    # Validate relations before storing (filter self-loops, missing evidence)
+    # =========================================================================
+    hygiene_service = KGHygieneService()
+    validated_relations = []
+    hygiene_violations = 0
+
+    for relation in all_relations:
+        is_valid, reason = hygiene_service.validate_relation(
+            relation, require_evidence=False  # Don't require evidence for initial extraction
+        )
+        if is_valid:
+            validated_relations.append(relation)
+        else:
+            hygiene_violations += 1
+            logger.debug(
+                "relation_hygiene_violation",
+                source=relation.get("source_entity", "")[:20],
+                target=relation.get("target_entity", "")[:20],
+                reason=reason,
+            )
+
+    if hygiene_violations > 0:
+        logger.info(
+            "kg_hygiene_validation_complete",
+            document_id=document_id,
+            relations_before=len(all_relations),
+            relations_after=len(validated_relations),
+            violations_filtered=hygiene_violations,
+        )
+        all_relations = validated_relations
+
+    # =========================================================================
+    # Sprint 85 Feature 85.6: Extraction Metrics
+    # Calculate and log extraction metrics for quality monitoring
+    # =========================================================================
+    extraction_time_ms = (time.time() - total_start) * 1000
+    extraction_metrics = create_metrics_from_extraction(
+        entities=all_entities,
+        relations=all_relations,
+        spacy_count=0,  # Will be set if hybrid extraction used
+        llm_count=len(all_entities),  # All from LLM extraction
+        duplicates_removed=entities_before_dedup - len(all_entities),
+        llm_latency_ms=extraction_time_ms,
+        languages=[],  # Will be set if language detection used
+        extraction_method="llm_cascade",
+        cascade_rank=1,  # Will be updated by cascade logic
+        gleaning_rounds=0,  # Will be updated if gleaning enabled
+    )
+
+    # Log metrics with appropriate severity based on relation_ratio
+    log_extraction_metrics(
+        metrics=extraction_metrics,
+        document_id=document_id,
+    )
+
+    # =========================================================================
+    # Sprint 85 Feature 85.7: DSPy Training Data Collection
+    # Collect high-quality samples for future DSPy optimization
+    # =========================================================================
+    if settings.enable_dspy_training_collection:
+        try:
+            training_collector = get_training_data_collector()
+
+            # Collect samples per chunk if quality thresholds met
+            for chunk in chunks:
+                chunk_id = chunk.get("chunk_id", "")
+                chunk_text = chunk.get("text", "")
+
+                # Get entities and relations for this chunk
+                chunk_entities = [e for e in all_entities if e.get("chunk_id") == chunk_id]
+                chunk_relations = [r for r in all_relations if r.get("chunk_id") == chunk_id]
+
+                if chunk_entities and chunk_relations:
+                    training_collector.collect(
+                        text=chunk_text,
+                        entities=chunk_entities,
+                        relations=chunk_relations,
+                        metadata={
+                            "doc_type": "pdf_text",  # Will be detected from document
+                            "language": "en",  # Will be detected
+                            "document_id": document_id,
+                            "chunk_id": chunk_id,
+                            "domain": domain_id,
+                        },
+                    )
+
+            # Log collection statistics
+            stats = training_collector.get_statistics()
+            if stats["total_samples"] > 0:
+                logger.info(
+                    "dspy_training_data_collected",
+                    document_id=document_id,
+                    total_samples=stats["total_samples"],
+                    acceptance_rate=round(stats["acceptance_rate"], 2),
+                )
+        except Exception as e:
+            logger.warning(
+                "dspy_training_collection_failed",
+                document_id=document_id,
+                error=str(e),
+            )
 
     # Convert to LightRAG format
     lightrag_entities = convert_entities_to_lightrag_format(all_entities)

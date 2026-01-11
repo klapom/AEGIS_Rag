@@ -350,8 +350,11 @@ async def graph_extraction_node(state: IngestionState) -> IngestionState:
                     continue
 
                 try:
-                    # Extract relations between entities in this chunk
-                    relations = await relation_extractor.extract(chunk_text, entities)
+                    # Sprint 85 Feature 85.8: Extract relations with gleaning for improved ER ratio
+                    # Use gleaning_steps=2 for two additional passes if completeness check fails
+                    relations = await relation_extractor.extract_with_gleaning(
+                        chunk_text, entities, gleaning_steps=2
+                    )
 
                     # Store relations to Neo4j with RELATES_TO relationships
                     # Sprint 76 Feature 76.1 (TD-084): Use namespace_id from state
