@@ -17,6 +17,35 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
+def _sanitize_cypher_label(label: str) -> str:
+    """Sanitize label for Cypher query safety.
+
+    Sprint 84 Feature 84.7: Neo4j Cypher Escaping Bug Fix
+
+    Neo4j Cypher requires backticks (`) for labels/identifiers with special characters:
+    - Spaces: "Dataset Processing" → `Dataset Processing`
+    - Colons: "Work: Title" → `Work: Title`
+    - Slashes: "Path/To/File" → `Path/To/File`
+
+    Args:
+        label: Raw label string (e.g., entity_type, entity_name)
+
+    Returns:
+        Sanitized label ready for Cypher query
+
+    Examples:
+        >>> _sanitize_cypher_label("Dataset Processing")
+        '`Dataset Processing`'
+        >>> _sanitize_cypher_label("SimpleLabel")
+        '`SimpleLabel`'
+    """
+    # Escape existing backticks to prevent injection
+    sanitized = label.replace("`", "\\`")
+
+    # Always wrap in backticks for safety (no performance cost)
+    return f"`{sanitized}`"
+
+
 async def store_chunks_and_provenance(
     rag: Any,
     chunks: list[dict[str, Any]],
@@ -118,7 +147,9 @@ async def store_chunks_and_provenance(
                     entities_skipped += 1
                     continue
 
-                labels_str = f"base:{entity_type}"
+                # Sprint 84 Feature 84.7: Sanitize entity_type label for Cypher safety
+                sanitized_type = _sanitize_cypher_label(entity_type)
+                labels_str = f"base:{sanitized_type}"
 
                 try:
                     await session.run(

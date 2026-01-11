@@ -1,8 +1,8 @@
 # Sprint 84: Stabilization & Iterative Ingestion
 
 **Duration:** 3-5 days
-**Story Points:** 20 SP (6 features + bugfixes)
-**Status:** 📝 Planned
+**Story Points:** 26 SP (8 features + bugfixes)
+**Status:** 🏗️ In Progress
 **Goal:** Fehlerfreie Ingestion von 500 RAGAS Phase 1 Samples mit Sprint 83 Features + Enhanced Logging
 
 ---
@@ -444,6 +444,257 @@ def upload_with_resume(
 **Expected Impact:**
 - **Efficiency:** No re-processing on resume
 - **Recovery:** Fast recovery from failures
+
+---
+
+### Feature 84.7: Neo4j Cypher Escaping Bug Fix (3 SP) ✅ CRITICAL
+
+**User Story:**
+**As a** Graph Storage System
+**I want to** properly escape entity IDs with special characters (spaces, colons, slashes)
+**So that** entities are persisted to Neo4j without Cypher syntax errors
+
+**Root Cause (Discovered in Iteration 1):**
+
+**Problem:** LightRAG Neo4j storage creates broken Cypher queries for entity IDs containing special characters:
+
+```
+ERROR entity_creation_failed entity_id="RAGAS Phase 1 Benchmark"
+error={code: Neo.ClientError.Statement.SyntaxError}
+message: Invalid input 'Dataset': expected a parameter, '&', ')', ':', 'WHERE', '{' or '|'
+```
+
+**Impact:**
+- ❌ **Neo4j**: 0 documents, 0 chunks, 0 entities persisted (complete persistence failure)
+- ❌ **Qdrant**: 0 ragas points (transaction rollback)
+- ✅ **API**: Returns "success" + entity counts (from in-memory extraction)
+- 🔴 **Silent Failure**: No HTTP error, user unaware of data loss!
+
+**Iteration 1 Evidence:**
+- 5/5 files processed, 139 entities extracted, **0 persisted to any database**
+- Entities with spaces/colons/slashes: "RAGAS Phase 1 Benchmark", "Moloch: or, This Gentile World", "Henry Miller Memorial Library"
+
+**Requirements:**
+
+1. **Fix `src/components/graph_rag/lightrag/neo4j_storage.py`:**
+   ```python
+   def _sanitize_entity_id(self, entity_id: str) -> str:
+       """Sanitize entity ID for Cypher query safety.
+
+       Neo4j Cypher requires:
+       - Backticks (`) for node labels/IDs with special chars
+       - No unescaped colons, slashes, quotes
+       """
+       # Replace problematic characters
+       sanitized = entity_id.replace("`", "\\`")  # Escape existing backticks
+
+       # Always use backticks for safe Cypher identifiers
+       return f"`{sanitized}`"
+
+   def upsert_entity(self, entity_name: str, entity_type: str, description: str):
+       """Create or update entity in Neo4j."""
+       # Sanitize entity_name for Cypher
+       safe_entity_name = self._sanitize_entity_id(entity_name)
+       safe_entity_type = self._sanitize_entity_id(entity_type)
+
+       query = f"""
+       MERGE (e:Entity {safe_entity_name})
+       ON CREATE SET e.entity_type = {safe_entity_type},
+                     e.description = $description,
+                     e.created_at = timestamp()
+       ON MATCH SET e.description = $description,
+                    e.updated_at = timestamp()
+       """
+
+       self.session.run(query, description=description)
+   ```
+
+2. **Add Transaction Rollback on Entity Creation Failure:**
+   ```python
+   def persist_graph(self, entities, relations):
+       """Persist graph with rollback on failure."""
+       try:
+           with self.driver.session() as session:
+               with session.begin_transaction() as tx:
+                   # Persist entities
+                   for entity in entities:
+                       self._upsert_entity_tx(tx, entity)
+
+                   # Persist relations
+                   for relation in relations:
+                       self._upsert_relation_tx(tx, relation)
+
+                   tx.commit()
+                   return {"success": True, "entities": len(entities), "relations": len(relations)}
+
+       except Exception as e:
+           logger.error("graph_persistence_failed", error=str(e))
+           # Rollback handled automatically by context manager
+           return {"success": False, "error": str(e)}
+   ```
+
+3. **Update API Response to Reflect Persistence Status:**
+   ```python
+   # src/api/v1/retrieval.py
+
+   graph_result = graph_storage.persist_graph(entities, relations)
+
+   if not graph_result["success"]:
+       # Rollback Qdrant points if Neo4j failed
+       qdrant_client.delete(collection_name="documents", points=[chunk_ids])
+
+       raise HTTPException(
+           status_code=500,
+           detail=f"Graph persistence failed: {graph_result['error']}"
+       )
+
+   return IngestionResponse(
+       status="success",  # Only if ALL persistence succeeded
+       neo4j_entities=graph_result["entities"],
+       neo4j_relationships=graph_result["relations"]
+   )
+   ```
+
+4. **Add Unit Tests:**
+   ```python
+   # tests/unit/test_neo4j_escaping.py (NEW)
+
+   def test_entity_id_with_spaces():
+       entity_id = "RAGAS Phase 1 Benchmark"
+       safe_id = storage._sanitize_entity_id(entity_id)
+       assert safe_id == "`RAGAS Phase 1 Benchmark`"
+
+   def test_entity_id_with_colon():
+       entity_id = "Moloch: or, This Gentile World"
+       safe_id = storage._sanitize_entity_id(entity_id)
+       assert safe_id == "`Moloch: or, This Gentile World`"
+
+   def test_entity_id_with_slash():
+       entity_id = "Henry Miller Memorial Library"  # "/" in description
+       safe_id = storage._sanitize_entity_id(entity_id)
+       # Backticks handle all special chars
+       assert safe_id.startswith("`") and safe_id.endswith("`")
+
+   @pytest.mark.integration
+   def test_entity_persistence_with_special_chars(neo4j_session):
+       """Integration test: Verify entities with special chars persist."""
+       storage = Neo4jStorage(neo4j_session)
+
+       # Create entity with problematic ID
+       storage.upsert_entity(
+           entity_name="Test: Entity / With Special <Chars>",
+           entity_type="Test Type",
+           description="Test description"
+       )
+
+       # Verify entity exists in Neo4j
+       result = neo4j_session.run(
+           "MATCH (e:Entity {name: $name}) RETURN e",
+           name="Test: Entity / With Special <Chars>"
+       ).single()
+
+       assert result is not None
+   ```
+
+**Acceptance Criteria:**
+- [x] `_sanitize_entity_id()` method implemented in `neo4j_storage.py`
+- [x] Transaction rollback on entity creation failure
+- [x] API returns HTTP 500 if Neo4j persistence fails
+- [x] Qdrant points deleted if Neo4j persistence fails
+- [x] Unit tests for entity ID escaping (4+ test cases)
+- [x] Integration test: Entities with special chars persist to Neo4j
+- [ ] Re-run Iteration 1 (5 files) → All 139 entities persist successfully
+
+**Expected Impact:**
+- **Data Integrity:** 0% → 100% persistence success rate
+- **Error Visibility:** Silent failures → HTTP 500 errors
+- **Robustness:** Handles all Unicode characters in entity IDs
+
+---
+
+### Feature 84.8: Section Extraction Performance Optimization (TD-078) (3 SP)
+
+**User Story:**
+**As a** Ingestion Pipeline
+**I want to** reduce section-aware chunking latency from 42s to <5s for 3.6KB .txt files
+**So that** overall ingestion throughput increases by 8-10x
+
+**Root Cause Analysis (From Iteration 1 Logs):**
+
+**Problem:** Section extraction takes 42-43s for tiny 3.6KB .txt files:
+
+```
+File 1 (3.6KB): node_timings_ms={'chunking': 42756.0}  = 42.8s
+File 1 retry:   node_timings_ms={'chunking': 43116.0}  = 43.1s
+```
+
+**Expected Performance:** 3.6KB should chunk in <1s (similar to PDF chunking)
+
+**Hypothesis:**
+1. **LLM Section Detection**: Currently uses LLM to detect sections in .txt files
+2. **.txt Format Mismatch**: Docling's section detection designed for PDFs (headings, layout)
+3. **Overhead**: .txt files have no structural markup → LLM makes many inference calls
+
+**Investigation Required:**
+
+```bash
+# Check if section detection is active for .txt files
+grep -A 5 "node_chunking_start" logs/ingestion.log | grep -E "chunking_strategy|section_detection"
+
+# Compare .txt vs .pdf chunking timings
+grep "node_timings_ms" logs/ingestion.log | grep -E "\.txt|\.pdf"
+```
+
+**Requirements (To Be Determined After Analysis):**
+
+**Option A: Disable Section Detection for .txt Files**
+```python
+# src/components/ingestion/nodes/chunking.py
+
+def should_use_section_detection(file_format: str) -> bool:
+    """Determine if section detection is beneficial."""
+    # Section detection only useful for structured formats
+    if file_format in [".txt", ".md"]:
+        return False  # Use simple sentence-based chunking
+
+    if file_format in [".pdf", ".docx", ".pptx"]:
+        return True  # Use Docling section detection
+
+    return False  # Default: simple chunking
+```
+
+**Option B: Use Regex-Based Section Detection for .txt**
+```python
+def detect_txt_sections(text: str) -> List[Section]:
+    """Fast regex-based section detection for .txt files."""
+    import re
+
+    # Pattern: Lines starting with ###, ##, or ALL CAPS
+    section_pattern = r"^(#{1,3}\s+.+|[A-Z\s]{10,})\n"
+
+    sections = []
+    for match in re.finditer(section_pattern, text, re.MULTILINE):
+        sections.append({
+            "heading": match.group(1).strip(),
+            "start_offset": match.start()
+        })
+
+    return sections if len(sections) > 1 else []  # Only if multiple sections found
+```
+
+**Acceptance Criteria:**
+- [ ] **Analysis Complete**: Identify root cause via logs + code inspection
+- [ ] **Fix Implemented**: .txt chunking < 5s for 3.6KB files
+- [ ] **Throughput Improvement**: 8-10x faster ingestion for .txt files
+- [ ] **Tests Added**: Unit tests for .txt vs .pdf chunking strategies
+- [ ] **Documentation**: Update TD-078 with resolution details
+
+**Expected Impact:**
+- **Performance:** 42s → <5s chunking (8.4x faster)
+- **Scalability:** 500 .txt files: 5.8 hours → 41 minutes
+- **Cost**: Fewer LLM calls for section detection
+
+**Status:** 📊 ANALYSIS PHASE (Feature 84.8)
 
 ---
 
