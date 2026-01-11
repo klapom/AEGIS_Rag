@@ -13,6 +13,7 @@ Functions: adaptive_section_chunking, merge_small_chunks
 """
 
 import time
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -22,6 +23,7 @@ from src.components.ingestion.ingestion_state import (
     add_error,
     calculate_progress,
 )
+from src.components.ingestion.logging_utils import log_phase_summary
 from src.components.ingestion.nodes.models import AdaptiveChunk, SectionMetadata
 from src.core.chunking_service import get_chunking_service
 from src.core.exceptions import IngestionError
@@ -685,24 +687,40 @@ async def chunking_node(state: IngestionState) -> IngestionState:
             return state
 
         # Sprint 32 Feature 32.1 & 32.2: Adaptive Section-Aware Chunking (ADR-039)
-        # Extract section hierarchy from Docling JSON
-        section_extraction_start = time.perf_counter()
-        from src.components.ingestion.section_extraction import extract_section_hierarchy
+        # Sprint 84 Feature 84.8: Skip section extraction for .txt files (42s → <1s speedup)
+        document_path = state.get("document_path", "")
+        file_extension = Path(document_path).suffix.lower() if document_path else ""
+        skip_section_extraction = file_extension in [".txt", ".md"]
 
-        sections = extract_section_hierarchy(enriched_doc, SectionMetadata)
-        section_extraction_end = time.perf_counter()
-        section_extraction_ms = (section_extraction_end - section_extraction_start) * 1000
+        if skip_section_extraction:
+            logger.info(
+                "chunking_skip_section_extraction",
+                document_id=state["document_id"],
+                file_extension=file_extension,
+                reason="Section detection not beneficial for plain text files",
+                optimization="Sprint 84 Feature 84.8 (42s → <1s speedup)",
+            )
+            sections = []  # Empty sections list → triggers fallback
+            section_extraction_ms = 0  # No extraction performed
+        else:
+            # Extract section hierarchy from Docling JSON (for PDFs, DOCX, PPTX)
+            section_extraction_start = time.perf_counter()
+            from src.components.ingestion.section_extraction import extract_section_hierarchy
 
-        # CRITICAL LOGGING: Section extraction results
-        logger.info(
-            "TIMING_chunking_section_extraction",
-            stage="chunking",
-            substage="section_extraction",
-            duration_ms=round(section_extraction_ms, 2),
-            document_id=state["document_id"],
-            sections_found=len(sections),
-            total_section_text_length=sum(len(s.text) for s in sections),
-        )
+            sections = extract_section_hierarchy(enriched_doc, SectionMetadata)
+            section_extraction_end = time.perf_counter()
+            section_extraction_ms = (section_extraction_end - section_extraction_start) * 1000
+
+            # CRITICAL LOGGING: Section extraction results
+            logger.info(
+                "TIMING_chunking_section_extraction",
+                stage="chunking",
+                substage="section_extraction",
+                duration_ms=round(section_extraction_ms, 2),
+                document_id=state["document_id"],
+                sections_found=len(sections),
+                total_section_text_length=sum(len(s.text) for s in sections),
+            )
 
         # FALLBACK: If no sections found, create single default section from document text
         if not sections:
@@ -892,6 +910,16 @@ async def chunking_node(state: IngestionState) -> IngestionState:
                 "section_extraction_ms": round(section_extraction_ms, 2),
                 "adaptive_merge_ms": round(adaptive_chunking_ms, 2),
             },
+        )
+
+        # Sprint 83 Feature 83.1: Log chunking phase summary with percentile metrics
+        log_phase_summary(
+            phase="chunking",
+            total_time_ms=total_chunking_ms,
+            items_processed=len(merged_chunks),
+            original_sections=len(sections),
+            total_tokens=total_tokens,
+            chunks_with_images=sum(1 for c in merged_chunks if c["image_bboxes"]),
         )
 
         return state
