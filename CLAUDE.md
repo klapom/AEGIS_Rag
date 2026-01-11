@@ -416,6 +416,20 @@ curl http://localhost:8000/health
 - **Active TD Count** und **Total SP** im TD_INDEX.md Footer aktualisieren
 - Beispiel: `TD-096` (RAGAS Timeouts) wird in Sprint 79 gelöst → nach `archive/TD-096-ragas-timeout.md`
 
+**⚠️ CRITICAL PROCESS GAP (Sprint 84 Erkenntnisse):**
+- **Problem:** TDs werden im Code gelöst, aber Dokumentation wird nicht aktualisiert → Documentation Drift
+- **Root Cause:** Fehlende Automatisierung der TD-Archivierung nach Feature-Abschluss
+- **Best Practice (Future Sprint 85+):**
+  ```bash
+  # Git Hook: .git/hooks/commit-msg
+  # 1. Suche nach "TD-XXX" in Commit-Message
+  # 2. Automatisches Verschieben nach docs/technical-debt/archive/
+  # 3. Update TD_INDEX.md (Active Count, Total SP)
+  # 4. Füge "Resolved in Sprint XX" Footer hinzu
+  ```
+- **Interim Manual Process:** Mindestens bei Sprint-Abschluss alle TD-Dateien reviewen
+- **Example (Sprint 83):** TD-075, TD-100, TD-083, TD-059 waren Code-seitig gelöst, aber als "OPEN" dokumentiert
+
 ---
 
 ### 2. Docker Container neu bauen (MANDATORY)

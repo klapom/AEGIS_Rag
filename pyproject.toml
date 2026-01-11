@@ -59,6 +59,11 @@ scikit-learn = "^1.3.0"  # For cosine similarity in semantic deduplication (Spri
 python-Levenshtein = "^0.26.0"  # Edit distance for entity deduplication (ADR-044)
 apscheduler = "^3.10.0"  # Cron-based scheduling for memory consolidation (Sprint 9)
 cachetools = "^5.5.0"  # TTL-based caching for query optimization (Sprint 68, Feature 68.4)
+pynvml = "^11.5.0"  # NVIDIA GPU memory monitoring (Sprint 83, Feature 83.1)
+
+# NER (Sprint 83: Hybrid Extraction - Feature 83.2)
+spacy = "^3.7.0"  # Multi-language NER for hybrid extraction (Rank 3 fallback)
+spacy-transformers = "^1.3.0"  # Transformer-based NER models (optional, improves accuracy)
 
 # Monitoring (Sprint 2: Metrics)
 prometheus-client = "^0.21.0"
