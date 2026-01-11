@@ -1,11 +1,26 @@
 """Entity and relationship extraction service using Ollama LLM.
 
 Sprint 5: Feature 5.3 - Entity & Relationship Extraction
+Sprint 83: Feature 83.2 - LLM Fallback & Retry Strategy (3-Rank Cascade)
+Sprint 83: Feature 83.3 - Gleaning Multi-Pass Extraction (TD-100)
 
 This module provides extraction services for building knowledge graphs from text documents.
-Uses Ollama's llama3.2:8b model with structured prompts for reliable JSON output.
+Uses a 3-rank cascade fallback strategy for robust extraction:
+- Rank 1: Nemotron3 (LLM-Only) - Fast, local
+- Rank 2: GPT-OSS:20b (LLM-Only) - Larger model, more accurate
+- Rank 3: Hybrid SpaCy NER + LLM - Maximum recall with NER + LLM relations
+
+Each rank has retry logic with exponential backoff (3 attempts).
+Falls back to next rank on timeout/error/parsing failure.
+
+Gleaning Multi-Pass Extraction (Microsoft GraphRAG approach):
+- Round 1: Initial entity extraction
+- Completeness Check: LLM with logit bias determines if extraction is complete
+- Rounds 2+: Extract "missing" entities with continuation prompt
+- Merge & Deduplicate: Combine all entities from all rounds
 """
 
+import asyncio
 import json
 import re
 import uuid
@@ -19,6 +34,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from src.components.ingestion.logging_utils import log_llm_cost_summary
 from src.components.llm_proxy.aegis_llm_proxy import AegisLLMProxy
 from src.components.llm_proxy.models import (
     Complexity,
@@ -26,9 +42,17 @@ from src.components.llm_proxy.models import (
     QualityRequirement,
     TaskType,
 )
+from src.config.extraction_cascade import (
+    CascadeRankConfig,
+    ExtractionMethod,
+    get_cascade_for_domain,
+    log_cascade_fallback,
+)
 from src.core.config import settings
 from src.core.models import GraphEntity, GraphRelationship
 from src.prompts.extraction_prompts import (
+    COMPLETENESS_CHECK_PROMPT,
+    CONTINUATION_EXTRACTION_PROMPT,
     ENTITY_EXTRACTION_PROMPT,
     GENERIC_ENTITY_EXTRACTION_PROMPT,
     GENERIC_RELATION_EXTRACTION_PROMPT,
@@ -205,6 +229,46 @@ class ExtractionService:
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
+
+    async def _extract_with_timeout(
+        self,
+        extraction_func: Any,
+        timeout_s: int,
+        rank_config: CascadeRankConfig,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute extraction with timeout wrapper.
+
+        Args:
+            extraction_func: Async extraction function to call
+            timeout_s: Timeout in seconds
+            rank_config: Current cascade rank configuration
+            *args: Positional arguments for extraction_func
+            **kwargs: Keyword arguments for extraction_func
+
+        Returns:
+            Extraction result from extraction_func
+
+        Raises:
+            asyncio.TimeoutError: If extraction exceeds timeout
+        """
+        try:
+            result = await asyncio.wait_for(
+                extraction_func(*args, **kwargs),
+                timeout=timeout_s,
+            )
+            return result
+
+        except asyncio.TimeoutError as e:
+            logger.error(
+                "extraction_timeout",
+                rank=rank_config.rank,
+                model=rank_config.model,
+                timeout_s=timeout_s,
+                method=rank_config.method.value,
+            )
+            raise
 
     async def get_extraction_prompts(self, domain: str | None = None) -> tuple[str, str]:
         """Get extraction prompts for a given domain.
@@ -478,22 +542,20 @@ class ExtractionService:
                 f"Failed to parse JSON from LLM response after trying strategy '{strategy_used}' and individual extraction: {str(e)}"
             ) from e
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
-        reraise=True,
-    )
-    async def extract_entities(
+    async def _extract_entities_with_rank(
         self,
         text: str,
+        rank_config: CascadeRankConfig,
         document_id: str | None = None,
         domain: str | None = None,
     ) -> list[GraphEntity]:
-        """Extract entities from text using LLM.
+        """Extract entities using a specific cascade rank.
+
+        Sprint 83 Feature 83.2: Single-rank extraction with retry logic.
 
         Args:
             text: Document text to extract entities from
+            rank_config: Cascade rank configuration
             document_id: Source document ID (optional)
             domain: Domain name for domain-specific prompts (Sprint 76 TD-085)
 
@@ -501,55 +563,72 @@ class ExtractionService:
             list of extracted entities as GraphEntity objects
 
         Raises:
-            Exception: If extraction fails after retries
+            Exception: If extraction fails after retries for this rank
         """
         logger.info(
-            "extracting_entities",
+            "extracting_entities_with_rank",
+            rank=rank_config.rank,
+            model=rank_config.model,
+            method=rank_config.method.value,
             text_length=len(text),
             document_id=document_id,
-            domain=domain,
         )
 
-        # Sprint 76 Feature 76.2 (TD-085): Get domain-specific or generic prompts
-        entity_prompt, _ = await self.get_extraction_prompts(domain)
+        # Hybrid extraction: SpaCy NER for entities
+        if rank_config.method == ExtractionMethod.HYBRID_NER_LLM:
+            from src.components.graph_rag.hybrid_extraction_service import (
+                get_hybrid_extraction_service,
+            )
 
-        # Format prompt
+            hybrid_service = get_hybrid_extraction_service(self)
+
+            # SpaCy NER extraction (no timeout needed - synchronous)
+            entities = await hybrid_service.extract_entities_with_spacy(
+                text=text,
+                document_id=document_id,
+                language=None,  # Auto-detect
+            )
+
+            logger.info(
+                "entities_extracted_with_hybrid_spacy",
+                rank=rank_config.rank,
+                count=len(entities),
+                document_id=document_id,
+            )
+
+            return entities
+
+        # LLM-Only extraction
+        entity_prompt, _ = await self.get_extraction_prompts(domain)
         prompt = entity_prompt.format(text=text)
 
-        try:
-            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
-            llm_model = await self._get_llm_model()
+        # Create LLM task with rank-specific model
+        task = LLMTask(
+            task_type=TaskType.EXTRACTION,
+            prompt=prompt,
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.HIGH,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            model_local=rank_config.model,  # Use rank-specific model
+        )
 
-            # Create LLM task for entity extraction
-            task = LLMTask(
-                task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
-                prompt=prompt,
-                quality_requirement=QualityRequirement.HIGH,  # High quality for accurate extraction
-                complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                model_local=llm_model,  # Uses Admin UI config (not hardcoded settings.*)
-            )
-
-            # Call AegisLLMProxy
+        # Add retry decorator dynamically with rank-specific config
+        @retry(
+            stop=stop_after_attempt(rank_config.max_retries),
+            wait=wait_exponential(
+                multiplier=rank_config.retry_backoff_multiplier,
+                min=1,
+                max=8,
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )
+        async def extract_with_retry() -> Any:
             result = await self.llm_proxy.generate(task)
 
-            llm_response = result.content
-
-            # ENHANCED LOGGING: Log LLM response before parsing
-            logger.info(
-                "llm_entity_extraction_response",
-                model=result.model,
-                provider=result.provider,
-                temperature=self.temperature,
-                response_length=len(llm_response),
-                response_preview=llm_response[:500],
-                response_full=llm_response,  # Full response for debugging
-                cost_usd=result.cost_usd,
-            )
-
             # Parse JSON response
-            entities_data = self._parse_json_response(llm_response)
+            entities_data = self._parse_json_response(result.content)
 
             # Limit entities per document
             if len(entities_data) > MAX_ENTITIES_PER_DOC:
@@ -565,13 +644,13 @@ class ExtractionService:
             for entity_dict in entities_data:
                 try:
                     entity = GraphEntity(
-                        id=str(uuid.uuid4()),  # Generate unique ID
+                        id=str(uuid.uuid4()),
                         name=entity_dict.get("name", ""),
                         type=entity_dict.get("type", "UNKNOWN"),
                         description=entity_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
-                        confidence=1.0,  # TODO: Add confidence scoring
+                        confidence=1.0,
                     )
                     entities.append(entity)
                 except Exception as e:
@@ -581,62 +660,578 @@ class ExtractionService:
                         error=str(e),
                     )
 
-            logger.info(
-                "entities_extracted",
-                count=len(entities),
-                document_id=document_id,
-            )
+            # Log LLM cost summary
+            if document_id:
+                # Sprint 84: Handle both old (prompt_tokens) and new (tokens_input) SDK formats
+                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(result, "tokens_input", 0)
+                completion_tokens = getattr(result, "completion_tokens", None) or getattr(result, "tokens_output", 0)
+                model = getattr(result, "model", "unknown")
+                cost_usd = getattr(result, "cost_usd", 0.0)
+                log_llm_cost_summary(
+                    document_id=document_id,
+                    phase="entity_extraction",
+                    total_tokens=prompt_tokens + completion_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    model=model,
+                    estimated_cost_usd=cost_usd,
+                )
 
             return entities
 
-        except Exception as e:
-            logger.error(
-                "entity_extraction_failed",
-                document_id=document_id,
-                error=str(e),
-            )
-            raise
+        # Execute with timeout
+        entities = await self._extract_with_timeout(
+            extract_with_retry,
+            rank_config.entity_timeout_s,
+            rank_config,
+        )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception),
-        reraise=True,
-    )
-    async def extract_relationships(
+        logger.info(
+            "entities_extracted_with_llm",
+            rank=rank_config.rank,
+            model=rank_config.model,
+            count=len(entities),
+            document_id=document_id,
+        )
+
+        return entities
+
+    async def extract_entities(
+        self,
+        text: str,
+        document_id: str | None = None,
+        domain: str | None = None,
+        gleaning_steps: int | None = None,
+    ) -> list[GraphEntity]:
+        """Extract entities from text using 3-rank cascade fallback.
+
+        Sprint 83 Feature 83.2: Cascade fallback strategy.
+        Sprint 83 Feature 83.3: Optional gleaning multi-pass extraction.
+
+        Tries each cascade rank in order until success:
+        - Rank 1: Nemotron3 (LLM-Only)
+        - Rank 2: GPT-OSS:20b (LLM-Only)
+        - Rank 3: Hybrid SpaCy NER + LLM
+
+        Args:
+            text: Document text to extract entities from
+            document_id: Source document ID (optional)
+            domain: Domain name for domain-specific prompts (Sprint 76 TD-085)
+            gleaning_steps: Number of gleaning rounds (0=disabled, 1-3=enabled)
+                           If None, will try to fetch from ChunkingConfig
+
+        Returns:
+            list of extracted entities as GraphEntity objects
+
+        Raises:
+            Exception: If extraction fails on all ranks
+        """
+        # Get gleaning_steps from ChunkingConfig if not provided
+        if gleaning_steps is None:
+            try:
+                from src.components.chunking_config import get_chunking_config_service
+
+                chunking_service = get_chunking_config_service()
+                config = await chunking_service.get_config()
+                gleaning_steps = config.gleaning_steps
+
+                logger.debug(
+                    "gleaning_steps_from_config",
+                    gleaning_steps=gleaning_steps,
+                    document_id=document_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "failed_to_load_gleaning_config",
+                    error=str(e),
+                    using_default=0,
+                )
+                gleaning_steps = 0
+
+        # If gleaning is enabled, use extract_entities_with_gleaning
+        if gleaning_steps > 0:
+            logger.info(
+                "using_gleaning_extraction",
+                gleaning_steps=gleaning_steps,
+                document_id=document_id,
+                domain=domain,
+            )
+            return await self.extract_entities_with_gleaning(
+                text=text,
+                document_id=document_id,
+                domain=domain,
+                gleaning_steps=gleaning_steps,
+            )
+
+        # Standard extraction (no gleaning) - use cascade fallback
+        logger.info(
+            "extracting_entities_with_cascade",
+            text_length=len(text),
+            document_id=document_id,
+            domain=domain,
+        )
+
+        # Get cascade configuration for domain
+        cascade = get_cascade_for_domain(domain)
+
+        last_error: Exception | None = None
+
+        # Try each rank in cascade
+        for rank_config in cascade:
+            try:
+                logger.info(
+                    "trying_cascade_rank",
+                    rank=rank_config.rank,
+                    model=rank_config.model,
+                    method=rank_config.method.value,
+                )
+
+                entities = await self._extract_entities_with_rank(
+                    text=text,
+                    rank_config=rank_config,
+                    document_id=document_id,
+                    domain=domain,
+                )
+
+                logger.info(
+                    "cascade_rank_success",
+                    rank=rank_config.rank,
+                    model=rank_config.model,
+                    entity_count=len(entities),
+                )
+
+                return entities
+
+            except Exception as e:
+                last_error = e
+
+                # Log fallback if not last rank
+                if rank_config.rank < len(cascade):
+                    next_rank = cascade[rank_config.rank]  # rank_config.rank is 1-indexed
+                    log_cascade_fallback(
+                        from_rank=rank_config.rank,
+                        to_rank=next_rank.rank,
+                        reason=type(e).__name__,
+                        document_id=document_id,
+                    )
+                else:
+                    logger.error(
+                        "all_cascade_ranks_failed",
+                        document_id=document_id,
+                        error=str(e),
+                    )
+
+        # All ranks failed
+        raise last_error or Exception("Extraction failed on all cascade ranks")
+
+    async def _check_extraction_completeness(
         self,
         text: str,
         entities: list[GraphEntity],
+        rank_config: CascadeRankConfig,
+    ) -> bool:
+        """Check if entity extraction is complete using LLM with logit bias.
+
+        Sprint 83 Feature 83.3: Completeness check for gleaning.
+
+        Args:
+            text: Document text
+            entities: Entities extracted so far
+            rank_config: Cascade rank configuration
+
+        Returns:
+            True if extraction is complete (no more entities needed)
+            False if there are likely missing entities
+        """
+        # Format extracted entities for prompt
+        entity_list = "\n".join([f"- {e.name} ({e.type})" for e in entities])
+
+        # Create completeness check prompt
+        prompt = COMPLETENESS_CHECK_PROMPT.format(
+            extracted_entities=entity_list,
+            document_text=text[:2000],  # Limit text length to avoid token overflow
+        )
+
+        # Create LLM task with logit bias for YES/NO
+        task = LLMTask(
+            task_type=TaskType.EXTRACTION,
+            prompt=prompt,
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.LOW,
+            max_tokens=10,  # Only need YES or NO
+            temperature=0.0,  # Deterministic
+            model_local=rank_config.model,
+        )
+
+        try:
+            result = await self.llm_proxy.generate(task)
+            response = result.content.strip().upper()
+
+            # Check if response contains "YES" or "NO"
+            if "YES" in response:
+                logger.info(
+                    "gleaning_completeness_check_incomplete",
+                    entities_count=len(entities),
+                )
+                return False
+            else:
+                logger.info(
+                    "gleaning_completeness_check_complete",
+                    entities_count=len(entities),
+                )
+                return True
+
+        except Exception as e:
+            logger.warning(
+                "gleaning_completeness_check_failed",
+                error=str(e),
+                assuming_incomplete=True,
+            )
+            # On error, assume incomplete to continue gleaning
+            return False
+
+    async def _extract_missing_entities(
+        self,
+        text: str,
+        existing_entities: list[GraphEntity],
+        rank_config: CascadeRankConfig,
+        document_id: str | None = None,
+    ) -> list[GraphEntity]:
+        """Extract entities that were missed in previous rounds.
+
+        Sprint 83 Feature 83.3: Continuation extraction for gleaning.
+
+        Args:
+            text: Document text
+            existing_entities: Entities already extracted
+            rank_config: Cascade rank configuration
+            document_id: Source document ID (optional)
+
+        Returns:
+            List of newly extracted entities
+        """
+        # Format existing entities for prompt
+        entity_list = "\n".join([f"- {e.name} ({e.type}): {e.description}" for e in existing_entities])
+
+        # Create continuation prompt
+        prompt = CONTINUATION_EXTRACTION_PROMPT.format(
+            extracted_entities=entity_list,
+            document_text=text,
+        )
+
+        # Create LLM task
+        task = LLMTask(
+            task_type=TaskType.EXTRACTION,
+            prompt=prompt,
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.HIGH,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            model_local=rank_config.model,
+        )
+
+        # Add retry decorator dynamically
+        @retry(
+            stop=stop_after_attempt(rank_config.max_retries),
+            wait=wait_exponential(
+                multiplier=rank_config.retry_backoff_multiplier,
+                min=1,
+                max=8,
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )
+        async def extract_with_retry() -> Any:
+            result = await self.llm_proxy.generate(task)
+
+            # Parse JSON response
+            entities_data = self._parse_json_response(result.content)
+
+            # Create GraphEntity objects
+            new_entities = []
+            for entity_dict in entities_data:
+                try:
+                    entity = GraphEntity(
+                        id=str(uuid.uuid4()),
+                        name=entity_dict.get("name", ""),
+                        type=entity_dict.get("type", "UNKNOWN"),
+                        description=entity_dict.get("description", ""),
+                        properties={},
+                        source_document=document_id,
+                        confidence=1.0,
+                    )
+                    new_entities.append(entity)
+                except Exception as e:
+                    logger.warning(
+                        "entity_creation_failed_gleaning",
+                        entity_dict=entity_dict,
+                        error=str(e),
+                    )
+
+            # Log LLM cost summary
+            if document_id:
+                log_llm_cost_summary(
+                    document_id=document_id,
+                    phase="entity_extraction_gleaning",
+                    total_tokens=result.tokens_used,
+                    prompt_tokens=result.tokens_input,
+                    completion_tokens=result.tokens_output,
+                    model=result.model,
+                    estimated_cost_usd=result.cost_usd,
+                )
+
+            return new_entities
+
+        # Execute with timeout
+        new_entities = await self._extract_with_timeout(
+            extract_with_retry,
+            rank_config.entity_timeout_s,
+            rank_config,
+        )
+
+        return new_entities
+
+    def _merge_and_deduplicate_entities(
+        self,
+        entities: list[GraphEntity],
+    ) -> list[GraphEntity]:
+        """Merge and deduplicate entities from multiple gleaning rounds.
+
+        Sprint 83 Feature 83.3: Deduplication for gleaning.
+
+        Uses semantic similarity (name matching) to deduplicate entities.
+        Preserves highest-confidence entity on duplicate.
+
+        Args:
+            entities: All entities from all gleaning rounds
+
+        Returns:
+            Deduplicated list of entities
+        """
+        if not entities:
+            return []
+
+        # Track unique entities by normalized name
+        unique_entities: dict[str, GraphEntity] = {}
+        duplicate_count = 0
+
+        for entity in entities:
+            # Normalize name for comparison (lowercase, strip whitespace)
+            normalized_name = entity.name.lower().strip()
+
+            # Check for exact match or substring match
+            found_duplicate = False
+            for existing_name, existing_entity in list(unique_entities.items()):
+                # Case 1: Exact match (case-insensitive)
+                if normalized_name == existing_name:
+                    duplicate_count += 1
+                    found_duplicate = True
+                    # Keep entity with higher confidence
+                    if entity.confidence > existing_entity.confidence:
+                        unique_entities[existing_name] = entity
+                    break
+
+                # Case 2: Substring match (one is subset of other)
+                if normalized_name in existing_name or existing_name in normalized_name:
+                    duplicate_count += 1
+                    found_duplicate = True
+                    # Keep the longer, more specific entity name
+                    if len(normalized_name) > len(existing_name):
+                        del unique_entities[existing_name]
+                        unique_entities[normalized_name] = entity
+                    break
+
+            if not found_duplicate:
+                unique_entities[normalized_name] = entity
+
+        logger.info(
+            "gleaning_deduplication_complete",
+            total_entities=len(entities),
+            unique_entities=len(unique_entities),
+            duplicates_removed=duplicate_count,
+            deduplication_rate=duplicate_count / len(entities) if entities else 0,
+        )
+
+        return list(unique_entities.values())
+
+    async def extract_entities_with_gleaning(
+        self,
+        text: str,
+        document_id: str | None = None,
+        domain: str | None = None,
+        gleaning_steps: int = 0,
+    ) -> list[GraphEntity]:
+        """Extract entities with optional multi-pass gleaning.
+
+        Sprint 83 Feature 83.3: Gleaning multi-pass extraction (TD-100).
+
+        Implements Microsoft GraphRAG-style gleaning:
+        1. Round 1: Initial entity extraction
+        2. Completeness Check: LLM determines if extraction is complete
+        3. Rounds 2+: Extract missing entities with continuation prompt
+        4. Merge & Deduplicate: Combine all entities from all rounds
+
+        Args:
+            text: Document text to extract entities from
+            document_id: Source document ID (optional)
+            domain: Domain name for domain-specific prompts
+            gleaning_steps: Number of gleaning rounds (0=disabled, 1-3=enabled)
+
+        Returns:
+            List of extracted entities (deduplicated)
+
+        Raises:
+            Exception: If extraction fails on all ranks
+
+        Example:
+            >>> service = ExtractionService()
+            >>> entities = await service.extract_entities_with_gleaning(
+            ...     text="Tesla was founded by Elon Musk in 2003.",
+            ...     gleaning_steps=1,
+            ... )
+            >>> # Round 1: Extracts "Tesla", "Elon Musk"
+            >>> # Completeness Check: LLM says "YES" (2003 is missing)
+            >>> # Round 2: Extracts "2003"
+            >>> # Result: 3 entities total
+        """
+        logger.info(
+            "extracting_entities_with_gleaning",
+            text_length=len(text),
+            document_id=document_id,
+            domain=domain,
+            gleaning_steps=gleaning_steps,
+        )
+
+        # Get cascade configuration for domain
+        cascade = get_cascade_for_domain(domain)
+        rank_config = cascade[0]  # Use first rank for gleaning
+
+        # Round 1: Initial entity extraction
+        logger.info("gleaning_round_1_start", document_id=document_id)
+        all_entities = await self._extract_entities_with_rank(
+            text=text,
+            rank_config=rank_config,
+            document_id=document_id,
+            domain=domain,
+        )
+        logger.info(
+            "gleaning_round_1_complete",
+            document_id=document_id,
+            entities_found=len(all_entities),
+        )
+
+        # If gleaning disabled, return initial entities
+        if gleaning_steps == 0:
+            logger.info(
+                "gleaning_disabled",
+                document_id=document_id,
+                total_entities=len(all_entities),
+            )
+            return all_entities
+
+        # Gleaning rounds 2..N
+        for gleaning_round in range(1, gleaning_steps + 1):
+            logger.info(
+                f"gleaning_round_{gleaning_round + 1}_start",
+                document_id=document_id,
+                entities_so_far=len(all_entities),
+            )
+
+            # Check completeness with logit bias
+            is_complete = await self._check_extraction_completeness(
+                text=text,
+                entities=all_entities,
+                rank_config=rank_config,
+            )
+
+            if is_complete:
+                logger.info(
+                    "gleaning_complete_early",
+                    document_id=document_id,
+                    round=gleaning_round + 1,
+                    total_entities=len(all_entities),
+                )
+                break
+
+            # Extract missing entities
+            try:
+                new_entities = await self._extract_missing_entities(
+                    text=text,
+                    existing_entities=all_entities,
+                    rank_config=rank_config,
+                    document_id=document_id,
+                )
+
+                logger.info(
+                    f"gleaning_round_{gleaning_round + 1}_complete",
+                    document_id=document_id,
+                    new_entities_found=len(new_entities),
+                    total_entities=len(all_entities) + len(new_entities),
+                )
+
+                # Add new entities to collection
+                all_entities.extend(new_entities)
+
+            except Exception as e:
+                logger.error(
+                    f"gleaning_round_{gleaning_round + 1}_failed",
+                    document_id=document_id,
+                    error=str(e),
+                )
+                # Continue with existing entities
+
+        # Merge and deduplicate entities from all rounds
+        deduplicated_entities = self._merge_and_deduplicate_entities(all_entities)
+
+        logger.info(
+            "gleaning_extraction_complete",
+            document_id=document_id,
+            total_rounds=gleaning_steps + 1,
+            total_entities_before_dedup=len(all_entities),
+            total_entities_after_dedup=len(deduplicated_entities),
+        )
+
+        return deduplicated_entities
+
+    async def _extract_relationships_with_rank(
+        self,
+        text: str,
+        entities: list[GraphEntity],
+        rank_config: CascadeRankConfig,
         document_id: str | None = None,
         domain: str | None = None,
     ) -> list[GraphRelationship]:
-        """Extract relationships from text given entities.
+        """Extract relationships using a specific cascade rank.
+
+        Sprint 83 Feature 83.2: Single-rank relationship extraction with retry logic.
 
         Args:
             text: Document text to extract relationships from
             entities: Extracted entities from the same text
+            rank_config: Cascade rank configuration
             document_id: Source document ID (optional)
-            domain: Domain name for domain-specific prompts (Sprint 76 TD-085)
+            domain: Domain name for domain-specific prompts
 
         Returns:
             list of extracted relationships as GraphRelationship objects
 
         Raises:
-            Exception: If extraction fails after retries
+            Exception: If extraction fails after retries for this rank
         """
         logger.info(
-            "extracting_relationships",
-            text_length=len(text),
+            "extracting_relationships_with_rank",
+            rank=rank_config.rank,
+            model=rank_config.model,
+            method=rank_config.method.value,
             entity_count=len(entities),
             document_id=document_id,
-            domain=domain,
         )
 
         if not entities:
             logger.warning("no_entities_for_relationship_extraction")
             return []
 
-        # Sprint 76 Feature 76.2 (TD-085): Get domain-specific or generic prompts
+        # Get domain-specific or generic prompts
         _, relation_prompt = await self.get_extraction_prompts(domain)
 
         # Format entity list for prompt
@@ -648,28 +1243,34 @@ class ExtractionService:
             text=text,
         )
 
-        try:
-            # Sprint 64 Feature 64.6: Get model from Admin UI config (or explicit override)
-            llm_model = await self._get_llm_model()
+        # Create LLM task with rank-specific model
+        # Note: Both LLM-Only and Hybrid use LLM for relationship extraction
+        task = LLMTask(
+            task_type=TaskType.EXTRACTION,
+            prompt=prompt,
+            quality_requirement=QualityRequirement.HIGH,
+            complexity=Complexity.HIGH,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            model_local=rank_config.model,  # Use rank-specific model
+        )
 
-            # Create LLM task for relationship extraction
-            task = LLMTask(
-                task_type=TaskType.EXTRACTION,  # Entity/relationship extraction
-                prompt=prompt,
-                quality_requirement=QualityRequirement.HIGH,
-                complexity=Complexity.HIGH,  # Sprint 30: High complexity → Alibaba Cloud (qwen3-32b) routing
-                max_tokens=self.max_tokens,
-                temperature=self.temperature,
-                model_local=llm_model,  # Uses Admin UI config (not hardcoded settings.*)
-            )
-
-            # Call AegisLLMProxy
+        # Add retry decorator dynamically with rank-specific config
+        @retry(
+            stop=stop_after_attempt(rank_config.max_retries),
+            wait=wait_exponential(
+                multiplier=rank_config.retry_backoff_multiplier,
+                min=1,
+                max=8,
+            ),
+            retry=retry_if_exception_type(Exception),
+            reraise=True,
+        )
+        async def extract_with_retry() -> Any:
             result = await self.llm_proxy.generate(task)
 
-            llm_response = result.content
-
             # Parse JSON response
-            relationships_data = self._parse_json_response(llm_response, data_type="relationship")
+            relationships_data = self._parse_json_response(result.content, data_type="relationship")
 
             # Limit relationships per document
             if len(relationships_data) > MAX_RELATIONSHIPS_PER_DOC:
@@ -685,14 +1286,14 @@ class ExtractionService:
             for rel_dict in relationships_data:
                 try:
                     relationship = GraphRelationship(
-                        id=str(uuid.uuid4()),  # Generate unique ID
+                        id=str(uuid.uuid4()),
                         source=rel_dict.get("source", ""),
                         target=rel_dict.get("target", ""),
                         type=rel_dict.get("type", "RELATED_TO"),
                         description=rel_dict.get("description", ""),
                         properties={},
                         source_document=document_id,
-                        confidence=1.0,  # TODO: Add confidence scoring
+                        confidence=1.0,
                     )
                     relationships.append(relationship)
                 except Exception as e:
@@ -702,23 +1303,134 @@ class ExtractionService:
                         error=str(e),
                     )
 
-            logger.info(
-                "relationships_extracted",
-                count=len(relationships),
-                document_id=document_id,
-                provider=result.provider,
-                cost_usd=result.cost_usd,
-            )
+            # Log LLM cost summary
+            if document_id:
+                # Sprint 84: Handle both old (prompt_tokens) and new (tokens_input) SDK formats
+                prompt_tokens = getattr(result, "prompt_tokens", None) or getattr(result, "tokens_input", 0)
+                completion_tokens = getattr(result, "completion_tokens", None) or getattr(result, "tokens_output", 0)
+                model = getattr(result, "model", "unknown")
+                cost_usd = getattr(result, "cost_usd", 0.0)
+                log_llm_cost_summary(
+                    document_id=document_id,
+                    phase="relation_extraction",
+                    total_tokens=prompt_tokens + completion_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    model=model,
+                    estimated_cost_usd=cost_usd,
+                )
 
             return relationships
 
-        except Exception as e:
-            logger.error(
-                "relationship_extraction_failed",
-                document_id=document_id,
-                error=str(e),
-            )
-            raise
+        # Execute with timeout
+        relationships = await self._extract_with_timeout(
+            extract_with_retry,
+            rank_config.relation_timeout_s,
+            rank_config,
+        )
+
+        logger.info(
+            "relationships_extracted_with_llm",
+            rank=rank_config.rank,
+            model=rank_config.model,
+            count=len(relationships),
+            document_id=document_id,
+        )
+
+        return relationships
+
+    async def extract_relationships(
+        self,
+        text: str,
+        entities: list[GraphEntity],
+        document_id: str | None = None,
+        domain: str | None = None,
+    ) -> list[GraphRelationship]:
+        """Extract relationships from text using 3-rank cascade fallback.
+
+        Sprint 83 Feature 83.2: Cascade fallback strategy.
+
+        Tries each cascade rank in order until success:
+        - Rank 1: Nemotron3 (LLM-Only)
+        - Rank 2: GPT-OSS:20b (LLM-Only)
+        - Rank 3: Hybrid SpaCy NER + LLM (uses gpt-oss:20b for relations)
+
+        Args:
+            text: Document text to extract relationships from
+            entities: Extracted entities from the same text
+            document_id: Source document ID (optional)
+            domain: Domain name for domain-specific prompts
+
+        Returns:
+            list of extracted relationships as GraphRelationship objects
+
+        Raises:
+            Exception: If extraction fails on all ranks
+        """
+        logger.info(
+            "extracting_relationships_with_cascade",
+            entity_count=len(entities),
+            document_id=document_id,
+            domain=domain,
+        )
+
+        if not entities:
+            logger.warning("no_entities_for_relationship_extraction")
+            return []
+
+        # Get cascade configuration for domain
+        cascade = get_cascade_for_domain(domain)
+
+        last_error: Exception | None = None
+
+        # Try each rank in cascade
+        for rank_config in cascade:
+            try:
+                logger.info(
+                    "trying_cascade_rank_relationships",
+                    rank=rank_config.rank,
+                    model=rank_config.model,
+                    method=rank_config.method.value,
+                )
+
+                relationships = await self._extract_relationships_with_rank(
+                    text=text,
+                    entities=entities,
+                    rank_config=rank_config,
+                    document_id=document_id,
+                    domain=domain,
+                )
+
+                logger.info(
+                    "cascade_rank_success_relationships",
+                    rank=rank_config.rank,
+                    model=rank_config.model,
+                    relationship_count=len(relationships),
+                )
+
+                return relationships
+
+            except Exception as e:
+                last_error = e
+
+                # Log fallback if not last rank
+                if rank_config.rank < len(cascade):
+                    next_rank = cascade[rank_config.rank]  # rank_config.rank is 1-indexed
+                    log_cascade_fallback(
+                        from_rank=rank_config.rank,
+                        to_rank=next_rank.rank,
+                        reason=type(e).__name__,
+                        document_id=document_id,
+                    )
+                else:
+                    logger.error(
+                        "all_cascade_ranks_failed_relationships",
+                        document_id=document_id,
+                        error=str(e),
+                    )
+
+        # All ranks failed
+        raise last_error or Exception("Relationship extraction failed on all cascade ranks")
 
     async def extract_and_store(
         self,

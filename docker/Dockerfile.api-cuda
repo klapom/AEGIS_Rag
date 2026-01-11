@@ -54,6 +54,17 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Sprint 84: Remove apex to prevent conflict with transformers (spacy-transformers)
+# NGC container's apex 'amp' module is incompatible with HuggingFace transformers
+RUN pip uninstall -y apex || true
+
+# Sprint 83/84: Install SpaCy language models for hybrid extraction (Rank 3 fallback)
+# Models: de (German), en (English), fr (French), es (Spanish)
+RUN pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_lg-3.8.0/de_core_news_lg-3.8.0-py3-none-any.whl && \
+    pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl && \
+    pip install https://github.com/explosion/spacy-models/releases/download/fr_core_news_lg-3.8.0/fr_core_news_lg-3.8.0-py3-none-any.whl && \
+    pip install https://github.com/explosion/spacy-models/releases/download/es_core_news_lg-3.8.0/es_core_news_lg-3.8.0-py3-none-any.whl
+
 # Create non-root user for security BEFORE copying files
 # NGC container may already have UID 1000, so use 1001 instead
 RUN useradd -m -u 1001 aegis
@@ -85,6 +96,12 @@ ENV PYTHONUNBUFFERED=1
 # DGX Spark: Force all PyTorch operations to GPU
 ENV CUDA_VISIBLE_DEVICES=0
 ENV TORCH_CUDA_ARCH_LIST="12.1a"
+
+# Sprint 84: Disable apex in transformers to avoid NGC container conflict
+# NGC's apex version is incompatible with newer transformers (spacy-transformers)
+ENV TRANSFORMERS_NO_ADVISORY_WARNINGS=1
+# Remove apex from import path to prevent 'cannot import amp' error
+ENV NO_APEX=1
 
 USER aegis
 
