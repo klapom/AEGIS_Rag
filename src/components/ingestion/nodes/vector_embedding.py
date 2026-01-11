@@ -23,6 +23,7 @@ from src.components.ingestion.ingestion_state import (
     add_error,
     calculate_progress,
 )
+from src.components.ingestion.logging_utils import log_phase_summary
 from src.components.shared.embedding_service import get_embedding_service
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
@@ -349,6 +350,16 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 "embedding_generation_ms": round(embedding_gen_ms, 2),
                 "qdrant_upsert_ms": round(qdrant_upsert_ms, 2),
             },
+        )
+
+        # Sprint 83 Feature 83.1: Log embedding phase summary with percentile metrics
+        log_phase_summary(
+            phase="embedding",
+            total_time_ms=total_embedding_ms,
+            items_processed=len(points),
+            points_with_images=sum(1 for p in points if p.payload.get("contains_images")),
+            embedding_dim=len(embeddings[0]) if embeddings else 0,
+            throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
         )
 
         return state

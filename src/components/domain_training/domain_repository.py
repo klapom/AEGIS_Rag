@@ -1,6 +1,7 @@
 """Domain Repository for DSPy-based Training Configuration.
 
 Sprint 45 - Feature 45.1: Domain Registry in Neo4j
+Sprint 83 - Feature 83.2: ERExtractionSettings (Cascade Configuration)
 
 This module provides a repository for managing domain-specific extraction prompts
 and training configurations in Neo4j. Domains are matched to documents using
@@ -17,6 +18,8 @@ Neo4j Schema:
         entity_examples: string (JSON array),
         relation_examples: string (JSON array),
         llm_model: string,
+        extraction_model_cascade: string (JSON array, Sprint 83),  # Custom cascade configuration
+        extraction_settings: string (JSON object, Sprint 83.4),  # ERExtractionSettings (fast vs refinement)
         training_samples: int,
         training_metrics: string (JSON object),
         status: string (pending/training/ready/failed),
@@ -249,6 +252,7 @@ class DomainRepository:
             entity_examples: '[]',
             relation_examples: '[]',
             llm_model: $llm_model,
+            extraction_settings: '{}',
             training_samples: 0,
             training_metrics: '{}',
             status: $status,
@@ -567,6 +571,95 @@ class DomainRepository:
         except Exception as e:
             logger.error("update_domain_prompts_failed", name=name, error=str(e))
             raise DatabaseConnectionError("Neo4j", f"Update domain prompts failed: {e}") from e
+
+    async def update_extraction_settings(
+        self,
+        name: str,
+        extraction_settings: dict[str, Any],
+    ) -> bool:
+        """Update domain extraction settings for fast vs refinement strategies.
+
+        Sprint 83 Feature 83.4: ERExtractionSettings for two-phase upload.
+
+        Args:
+            name: Domain name
+            extraction_settings: Extraction settings dict (e.g., {"fast_strategy": "spacy_ner", "refinement_strategy": "llm_gleaning"})
+
+        Returns:
+            True if update successful
+
+        Raises:
+            DatabaseConnectionError: If update fails
+        """
+        logger.info(
+            "updating_extraction_settings",
+            name=name,
+            settings=extraction_settings,
+        )
+
+        now = datetime.utcnow().isoformat()
+        settings_json = json.dumps(extraction_settings)
+
+        try:
+            await self.neo4j_client.execute_write(
+                """
+                MATCH (d:Domain {name: $name})
+                SET d.extraction_settings = $settings,
+                    d.updated_at = datetime($updated_at)
+                RETURN d.name as name
+                """,
+                {
+                    "name": name,
+                    "settings": settings_json,
+                    "updated_at": now,
+                },
+            )
+
+            logger.info("extraction_settings_updated", name=name)
+            return True
+
+        except Exception as e:
+            logger.error("update_extraction_settings_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Update extraction settings failed: {e}") from e
+
+    async def get_extraction_settings(self, name: str) -> dict[str, Any]:
+        """Get domain extraction settings.
+
+        Sprint 83 Feature 83.4: Retrieve ERExtractionSettings for document processing.
+
+        Args:
+            name: Domain name
+
+        Returns:
+            Extraction settings dict (empty dict if not set)
+
+        Raises:
+            DatabaseConnectionError: If query fails
+        """
+        logger.info("getting_extraction_settings", name=name)
+
+        try:
+            result = await self.neo4j_client.execute_read(
+                """
+                MATCH (d:Domain {name: $name})
+                RETURN d.extraction_settings as extraction_settings
+                """,
+                {"name": name},
+            )
+
+            if not result or not result[0].get("extraction_settings"):
+                logger.info("extraction_settings_not_found", name=name)
+                return {}
+
+            settings_json = result[0]["extraction_settings"]
+            settings = json.loads(settings_json) if settings_json else {}
+
+            logger.info("extraction_settings_retrieved", name=name, settings=settings)
+            return settings
+
+        except Exception as e:
+            logger.error("get_extraction_settings_failed", name=name, error=str(e))
+            raise DatabaseConnectionError("Neo4j", f"Get extraction settings failed: {e}") from e
 
     async def find_best_matching_domain(
         self,

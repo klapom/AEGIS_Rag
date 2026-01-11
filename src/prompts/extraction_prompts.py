@@ -3,6 +3,7 @@
 Sprint 5: Feature 5.3 - Entity & Relationship Extraction
 Sprint 13: Enhanced prompts for llama3.2:3b compatibility (TD-30 fix)
 Sprint 45: Feature 45.8 - Generic extraction prompts for domain fallback
+Sprint 83: Feature 83.3 - Gleaning multi-pass extraction prompts (TD-100)
 """
 
 # Entity Extraction Prompt with Few-Shot Examples
@@ -169,3 +170,65 @@ Output format (JSON array):
 
 Output (JSON array only):
 """
+
+# Sprint 83 Feature 83.3: Gleaning Multi-Pass Extraction (TD-100)
+# Based on Microsoft GraphRAG approach
+
+COMPLETENESS_CHECK_PROMPT = """You have extracted the following entities from a document:
+
+{extracted_entities}
+
+Document text:
+{document_text}
+
+Are there any significant entities (people, organizations, locations, concepts, technologies, products, events) that were MISSED in this extraction?
+
+Think carefully about:
+- Named entities that appear in the text but are not in the list above
+- Important concepts or terminology not captured
+- Relationships or connections that imply missing entities
+
+Answer with ONLY "YES" or "NO" (no explanation needed).
+
+If you believe the extraction is complete and comprehensive, answer: NO
+If you believe there are missing entities worth extracting, answer: YES
+
+Answer:"""
+
+CONTINUATION_EXTRACTION_PROMPT = """You previously extracted these entities from a document:
+
+{extracted_entities}
+
+The full document text is:
+{document_text}
+
+Please extract ONLY the entities that were MISSED in the previous extraction.
+Do NOT repeat entities that were already extracted in the list above.
+
+Focus on:
+- Named entities (people, organizations, locations)
+- Important concepts and topics not captured before
+- Domain-specific terminology that was overlooked
+- Products, technologies, or events mentioned but not extracted
+
+For each missing entity, identify:
+1. Entity name (exact string from text)
+2. Entity type (PERSON, ORGANIZATION, LOCATION, CONCEPT, TECHNOLOGY, PRODUCT, EVENT, or other)
+3. Short description (1 sentence, based on context in text)
+
+CRITICAL OUTPUT INSTRUCTIONS:
+- You MUST return ONLY a valid JSON array
+- Do NOT include any explanatory text before the JSON array
+- Do NOT include any explanatory text after the JSON array
+- Do NOT use markdown code fences (no ``` or ```json)
+- Do NOT say "Here are the missing entities" or similar phrases
+- Just output the raw JSON array starting with [ and ending with ]
+- If there are NO missing entities, return an empty array: []
+
+Required JSON format (copy this structure exactly):
+[
+  {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "One sentence description"}},
+  ...
+]
+
+Output (JSON array only):"""

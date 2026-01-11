@@ -18,11 +18,11 @@ import contextlib
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path as PathLib
 from typing import Literal
 
 import structlog
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, Path, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from qdrant_client.models import Distance
@@ -182,7 +182,7 @@ async def reindex_progress_stream(
 
             # Clear BM25 cache (will be rebuilt during indexing)
             # Note: BM25Search uses "bm25_index.pkl" (not "bm25_model.pkl")
-            bm25_cache_path = Path("data/cache/bm25_index.pkl")
+            bm25_cache_path = PathLib("data/cache/bm25_index.pkl")
             if bm25_cache_path.exists():
                 bm25_cache_path.unlink()
                 logger.info("cleared_bm25_cache")
@@ -232,7 +232,7 @@ async def reindex_progress_stream(
                     doc_progress = (completed_docs / total_docs) * 0.3  # 30% of total
                     overall_progress = 30 + doc_progress
 
-                    message = f"Indexed {Path(doc_path).name}: {chunk_count} chunks"
+                    message = f"Indexed {PathLib(doc_path).name}: {chunk_count} chunks"
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
 
                     logger.info(
@@ -249,7 +249,7 @@ async def reindex_progress_stream(
                     logger.error("reindex_document_failed", document_path=doc_path, error=error_msg)
 
                     # Continue with remaining documents
-                    message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
+                    message = f"[{_ts()}] FAILED: {PathLib(doc_path).name} - {error_msg}"
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': 30 + (completed_docs / total_docs) * 30, 'message': message, 'completed_documents': completed_docs, 'total_documents': total_docs})}\n\n"
 
             points_indexed = total_chunks
@@ -403,7 +403,7 @@ async def reindex_all_documents(
             detail="Confirmation required: set confirm=true to execute re-indexing. This will delete all existing indexes!",
         )
 
-    input_path = Path(input_dir)
+    input_path = PathLib(input_dir)
 
     logger.info(
         "reindex_started",
@@ -449,8 +449,8 @@ def _build_detailed_progress(
     """
     from pathlib import Path
 
-    file_name = Path(file_path).name
-    file_ext = Path(file_path).suffix.lower().lstrip(".")
+    file_name = PathLib(file_path).name
+    file_ext = PathLib(file_path).suffix.lower().lstrip(".")
 
     # Build current_file info
     current_file = {
@@ -798,19 +798,19 @@ async def add_documents_stream(
                             overall_progress = doc_base_progress + (
                                 phase_progress * doc_progress_range
                             )
-                            message = f"[{event_timestamp}] {Path(doc_path).name}: {event_message}"
+                            message = f"[{event_timestamp}] {PathLib(doc_path).name}: {event_message}"
 
                             # Sprint 51: Include entity/relation counts for Live Metrics
                             event_details = progress_event.get("details", {})
                             detailed_progress = {
-                                "current_file": Path(doc_path).name,
+                                "current_file": PathLib(doc_path).name,
                                 "entities": {
                                     "total_entities": event_details.get("total_entities", 0),
                                     "total_relations": event_details.get("total_relations", 0),
                                 },
                             }
 
-                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'extraction_phase': event_phase, 'detailed_progress': detailed_progress})}\n\n"
+                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': PathLib(doc_path).name, 'extraction_phase': event_phase, 'detailed_progress': detailed_progress})}\n\n"
 
                             logger.debug(
                                 "realtime_progress_event",
@@ -858,8 +858,8 @@ async def add_documents_stream(
 
                         # Sprint 51: Add timestamp to all messages
                         timestamp = _format_timestamp()
-                        message = f"[{timestamp}] {Path(doc_path).name}: {phase_info[1]}"
-                        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
+                        message = f"[{timestamp}] {PathLib(doc_path).name}: {phase_info[1]}"
+                        yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': overall_progress, 'message': message, 'documents_processed': doc_index, 'documents_total': total_docs, 'current_document': PathLib(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                         logger.debug(
                             "add_document_node_progress",
@@ -882,12 +882,12 @@ async def add_documents_stream(
                         error_info = {
                             "type": "error",
                             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                            "file_name": Path(doc_path).name,
+                            "file_name": PathLib(doc_path).name,
                             "message": error_msg,
                             "details": str(error_list),
                         }
 
-                        message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
+                        message = f"[{_ts()}] FAILED: {PathLib(doc_path).name} - {error_msg}"
                         yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
                     else:
                         # Success - count chunks
@@ -906,8 +906,8 @@ async def add_documents_stream(
                                 pipeline_status="completed",
                             )
 
-                            message = f"[{_ts()}] Added {Path(doc_path).name}: {chunk_count} chunks"
-                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'current_document': Path(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
+                            message = f"[{_ts()}] Added {PathLib(doc_path).name}: {chunk_count} chunks"
+                            yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'current_document': PathLib(doc_path).name, 'detailed_progress': detailed_progress})}\n\n"
 
                             logger.info(
                                 "add_document_indexed",
@@ -928,12 +928,12 @@ async def add_documents_stream(
                     error_info = {
                         "type": "error",
                         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                        "file_name": Path(doc_path).name,
+                        "file_name": PathLib(doc_path).name,
                         "message": error_msg,
                         "details": "",
                     }
 
-                    message = f"[{_ts()}] FAILED: {Path(doc_path).name} - {error_msg}"
+                    message = f"[{_ts()}] FAILED: {PathLib(doc_path).name} - {error_msg}"
                     yield f"data: {json.dumps({'status': 'in_progress', 'phase': 'indexing', 'progress_percent': doc_base_progress + doc_progress_range, 'message': message, 'documents_processed': doc_index + 1, 'documents_total': total_docs, 'errors': [error_info]})}\n\n"
 
                     # Sprint 51: Cleanup progress queue even on error
@@ -1077,7 +1077,7 @@ async def add_documents_to_index(
     # Validate file paths exist
     valid_paths = []
     for fp in file_paths:
-        path = Path(fp)
+        path = PathLib(fp)
         if path.exists() and path.is_file():
             valid_paths.append(str(path))
         else:
@@ -1196,7 +1196,7 @@ async def upload_files(
 
     # Create unique upload directory
     upload_session_id = str(uuid.uuid4())
-    upload_dir = Path("data/uploads") / upload_session_id
+    upload_dir = PathLib("data/uploads") / upload_session_id
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(
@@ -1227,7 +1227,7 @@ async def upload_files(
                 f.write(file_content)
 
             # Get file extension
-            file_ext = Path(file.filename).suffix.lower().lstrip(".")
+            file_ext = PathLib(file.filename).suffix.lower().lstrip(".")
 
             uploaded_files.append(
                 UploadFileInfo(
@@ -1359,7 +1359,7 @@ async def start_batch_indexing(
     # Validate file paths exist
     valid_paths = []
     for fp in request.file_paths:
-        path = Path(fp)
+        path = PathLib(fp)
         if path.exists() and path.is_file():
             valid_paths.append(str(path))
         else:
@@ -1386,7 +1386,7 @@ async def start_batch_indexing(
 
     progress_manager = get_multi_doc_progress_manager()
     documents = [
-        {"id": f"{batch_id}-{i}", "name": Path(p).name, "path": p}
+        {"id": f"{batch_id}-{i}", "name": PathLib(p).name, "path": p}
         for i, p in enumerate(valid_paths)
     ]
     progress_manager.start_batch(batch_id, documents, parallel_limit=3)
@@ -1426,7 +1426,7 @@ async def _run_parallel_batch(
 
     orchestrator = get_parallel_orchestrator()
     job_tracker = get_job_tracker()
-    files = [Path(p) for p in file_paths]
+    files = [PathLib(p) for p in file_paths]
 
     # Create ingestion job for tracking
     job_id = await job_tracker.create_job(
@@ -1701,7 +1701,7 @@ async def reindex_with_vlm_enrichment(
             detail="Confirmation required: set confirm=true to execute VLM re-indexing. This will delete all existing indexes!",
         )
 
-    input_path = Path(input_dir)
+    input_path = PathLib(input_dir)
 
     if not input_path.exists():
         raise HTTPException(
@@ -1764,7 +1764,7 @@ async def reindex_with_vlm_enrichment(
 
             # Clear BM25 cache
             # Note: BM25Search uses "bm25_index.pkl" (not "bm25_model.pkl")
-            bm25_cache_path = Path("data/cache/bm25_index.pkl")
+            bm25_cache_path = PathLib("data/cache/bm25_index.pkl")
             if bm25_cache_path.exists():
                 bm25_cache_path.unlink()
                 logger.info("cleared_bm25_cache")
@@ -1810,7 +1810,7 @@ async def reindex_with_vlm_enrichment(
                     total_vlm_images += vlm_count
                     total_errors += error_count
 
-                    doc_name = Path(doc_path).name
+                    doc_name = PathLib(doc_path).name
                     data = {
                         "status": "ingestion",
                         "progress": overall_progress,
@@ -1840,7 +1840,7 @@ async def reindex_with_vlm_enrichment(
                     error_msg = result.get("error", "Unknown error")
                     total_errors += 1
 
-                    doc_name = Path(doc_path).name
+                    doc_name = PathLib(doc_path).name
                     error_data = {
                         "status": "ingestion",
                         "progress": overall_progress,
@@ -2100,7 +2100,7 @@ async def scan_directory(request: ScanDirectoryRequest) -> ScanDirectoryResponse
         SHARED_FORMATS,
     )
 
-    dir_path = Path(request.path)
+    dir_path = PathLib(request.path)
 
     # Validate directory exists
     if not dir_path.exists():
@@ -3269,4 +3269,250 @@ async def validate_index_consistency(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to validate index consistency: {str(e)}",
+        ) from e
+
+
+# ============================================================================
+# Sprint 83 Feature 83.4: Fast User Upload + Background Refinement
+# ============================================================================
+
+
+class FastUploadResponse(BaseModel):
+    """Response model for fast upload endpoint.
+
+    Sprint 83 Feature 83.4: Two-Phase Upload Response.
+    """
+
+    document_id: str = Field(..., description="Unique document ID")
+    status: str = Field(..., description="Upload status (processing_background)")
+    message: str = Field(..., description="User-friendly status message")
+    namespace: str = Field(..., description="Document namespace")
+    domain: str = Field(..., description="Document domain")
+
+
+class UploadStatusResponse(BaseModel):
+    """Response model for upload status endpoint.
+
+    Sprint 83 Feature 83.4: Background Job Status Tracking.
+    """
+
+    document_id: str = Field(..., description="Unique document ID")
+    status: str = Field(
+        ...,
+        description="Job status (processing_fast, processing_background, ready, failed)",
+    )
+    progress_pct: float = Field(..., description="Progress percentage (0-100)")
+    current_phase: str = Field(..., description="Current processing phase")
+    error_message: str | None = Field(None, description="Error message if failed")
+    created_at: str = Field(..., description="Job creation timestamp (ISO 8601)")
+    updated_at: str = Field(..., description="Last update timestamp (ISO 8601)")
+    namespace: str = Field(..., description="Document namespace")
+    domain: str = Field(..., description="Document domain")
+
+
+@router.post(
+    "/upload-fast",
+    response_model=FastUploadResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Fast Document Upload (Phase 1: 2-5s)",
+    description="""
+    Upload document with fast response (Phase 1: 2-5s).
+
+    **Phase 1: Fast Upload (2-5s response)**
+    - Docling parsing
+    - Adaptive chunking
+    - BGE-M3 embeddings
+    - Qdrant vector upload (skip Neo4j initially)
+    - SpaCy NER entities (fast, no LLM)
+
+    **Phase 2: Background Refinement (30-60s async)**
+    - Full LLM extraction with gleaning
+    - Neo4j graph indexing
+    - Qdrant metadata update with higher-quality entities
+
+    **Performance:**
+    - Phase 1: <5s response time (user can continue working)
+    - Phase 2: 30-60s background processing
+
+    **Status Tracking:**
+    - Poll `/upload-status/{document_id}` for progress
+    - Status values: processing_fast → processing_background → ready/failed
+
+    **Use Case:**
+    - User uploads document → Immediate feedback
+    - Background refinement improves quality
+    - User can continue working without waiting
+
+    Sprint 83 Feature 83.4: Two-Phase Document Upload.
+    """,
+)
+async def upload_document_fast(
+    file: UploadFile = File(..., description="Document file to upload"),
+    namespace: str = Query("default", description="Document namespace (multi-tenant isolation)"),
+    domain: str = Query("general", description="Document domain (domain-specific extraction)"),
+) -> FastUploadResponse:
+    """Fast document upload endpoint (Sprint 83 Feature 83.4).
+
+    Phase 1: Fast upload (2-5s) returns immediately with document_id.
+    Phase 2: Background refinement (30-60s) runs asynchronously.
+
+    Args:
+        file: Uploaded document file
+        namespace: Document namespace (for multi-tenant isolation)
+        domain: Document domain (for domain-specific extraction prompts)
+
+    Returns:
+        FastUploadResponse with document_id and status
+
+    Raises:
+        HTTPException: If upload fails or file type not supported
+    """
+    import tempfile
+
+    from src.components.ingestion.background_jobs import get_background_job_queue
+    from src.components.ingestion.fast_pipeline import run_fast_upload
+    from src.components.ingestion.refinement_pipeline import run_background_refinement
+
+    logger.info(
+        "fast_upload_request",
+        filename=file.filename,
+        content_type=file.content_type,
+        namespace=namespace,
+        domain=domain,
+    )
+
+    try:
+        # Save uploaded file to temp directory
+        with tempfile.NamedTemporaryFile(delete=False, suffix=PathLib(file.filename).suffix) as tmp_file:
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        # Run Phase 1: Fast upload (2-5s)
+        document_id = await run_fast_upload(
+            file_path=tmp_file_path,
+            namespace=namespace,
+            domain=domain,
+            original_filename=file.filename,
+        )
+
+        # Enqueue Phase 2: Background refinement (30-60s async)
+        job_queue = get_background_job_queue()
+        await job_queue.initialize()
+        await job_queue.enqueue_job(
+            document_id=document_id,
+            func=run_background_refinement,
+            namespace=namespace,
+            domain=domain,
+        )
+
+        logger.info(
+            "fast_upload_success",
+            document_id=document_id,
+            filename=file.filename,
+            namespace=namespace,
+            domain=domain,
+        )
+
+        return FastUploadResponse(
+            document_id=document_id,
+            status="processing_background",
+            message="Document uploaded! Processing in background...",
+            namespace=namespace,
+            domain=domain,
+        )
+
+    except Exception as e:
+        logger.error(
+            "fast_upload_failed",
+            filename=file.filename,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Fast upload failed: {str(e)}",
+        ) from e
+
+
+@router.get(
+    "/upload-status/{document_id}",
+    response_model=UploadStatusResponse,
+    summary="Get Upload Status (Background Job Tracking)",
+    description="""
+    Get real-time status of document upload and refinement.
+
+    **Status Values:**
+    - `processing_fast`: Phase 1 fast upload in progress (0-5s)
+    - `processing_background`: Phase 2 background refinement in progress (5-60s)
+    - `ready`: Document fully processed and ready for search
+    - `failed`: Processing failed (check error_message for details)
+
+    **Progress Tracking:**
+    - `progress_pct`: 0-100 (percentage complete)
+    - `current_phase`: Current processing step (parsing, chunking, embedding, extraction, indexing)
+
+    **Polling:**
+    - Poll every 2 seconds for updates
+    - Stop polling when status = "ready" or "failed"
+
+    **TTL:**
+    - Status expires after 24 hours (auto-cleanup)
+
+    Sprint 83 Feature 83.4: Background Job Status Tracking.
+    """,
+)
+async def get_upload_status(
+    document_id: str = Path(..., description="Document ID from fast upload response"),
+) -> UploadStatusResponse:
+    """Get upload status for background job (Sprint 83 Feature 83.4).
+
+    Args:
+        document_id: Document ID
+
+    Returns:
+        UploadStatusResponse with current status and progress
+
+    Raises:
+        HTTPException: If document_id not found or Redis error
+    """
+    from src.components.ingestion.background_jobs import get_background_job_queue
+
+    logger.info("upload_status_request", document_id=document_id)
+
+    try:
+        job_queue = get_background_job_queue()
+        await job_queue.initialize()
+
+        status_data = await job_queue.get_status(document_id)
+
+        if not status_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Upload status not found for document_id: {document_id}",
+            )
+
+        logger.info(
+            "upload_status_retrieved",
+            document_id=document_id,
+            status=status_data["status"],
+            progress_pct=status_data["progress_pct"],
+        )
+
+        return UploadStatusResponse(**status_data)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "upload_status_failed",
+            document_id=document_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get upload status: {str(e)}",
         ) from e

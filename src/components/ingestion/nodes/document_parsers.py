@@ -24,6 +24,7 @@ from src.components.ingestion.ingestion_state import (
     add_error,
     calculate_progress,
 )
+from src.components.ingestion.logging_utils import log_memory_snapshot, log_phase_summary
 from src.core.exceptions import IngestionError
 
 logger = structlog.get_logger(__name__)
@@ -54,6 +55,8 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
         >>> state["docling_status"]
         'completed'
     """
+    docling_node_start = time.perf_counter()
+
     logger.info(
         "node_docling_start",
         document_id=state["document_id"],
@@ -62,6 +65,16 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
 
     state["docling_status"] = "running"
     state["docling_start_time"] = time.time()
+
+    # Sprint 83 Feature 83.1: Log memory snapshot before Docling processing
+    import psutil
+    process = psutil.Process()
+    mem_info = process.memory_info()
+    log_memory_snapshot(
+        phase="docling_start",
+        ram_used_mb=mem_info.rss // (1024**2),
+        ram_available_mb=psutil.virtual_memory().available // (1024**2),
+    )
 
     try:
         # Get document path
@@ -200,10 +213,31 @@ async def docling_extraction_node(state: IngestionState) -> IngestionState:
         state["docling_end_time"] = time.time()
         state["overall_progress"] = calculate_progress(state)
 
+        docling_node_end = time.perf_counter()
+        total_docling_ms = (docling_node_end - docling_node_start) * 1000
+
         logger.info(
             "node_docling_complete",
             document_id=state["document_id"],
             duration_seconds=round(state["docling_end_time"] - state["docling_start_time"], 2),
+        )
+
+        # Sprint 83 Feature 83.1: Log Docling phase summary with memory metrics
+        log_phase_summary(
+            phase="docling_extraction",
+            total_time_ms=total_docling_ms,
+            items_processed=1,  # 1 document parsed
+            pages_extracted=len(page_dimensions),
+            tables_count=len(parsed.tables),
+            images_count=len(parsed.images),
+        )
+
+        # Sprint 83 Feature 83.1: Log memory snapshot after Docling processing
+        mem_info = process.memory_info()
+        log_memory_snapshot(
+            phase="docling_complete",
+            ram_used_mb=mem_info.rss // (1024**2),
+            ram_available_mb=psutil.virtual_memory().available // (1024**2),
         )
 
         return state
