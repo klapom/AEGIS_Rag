@@ -74,64 +74,62 @@ Output (JSON array only):
 """
 
 # Relationship Extraction Prompt with Few-Shot Examples
-RELATIONSHIP_EXTRACTION_PROMPT = """Extract relationships between entities from the following text.
+# Sprint 85: Enhanced with GraphRAG/LightRAG best practices
+RELATIONSHIP_EXTRACTION_PROMPT = """---Role---
+You are a Knowledge Graph Specialist extracting ALL relationships between entities.
 
-Few-shot examples:
+---Goal---
+Identify ALL relationships among the identified entities. Be EXHAUSTIVE.
+A good knowledge graph has at least 1 relationship per entity.
+
+---Few-shot Examples---
 
 Example 1:
-Entities:
-- John Smith (PERSON)
-- Google (ORGANIZATION)
-- machine learning (CONCEPT)
-
+Entities: John Smith (PERSON), Google (ORGANIZATION), machine learning (CONCEPT)
 Text: "John Smith is a software engineer at Google, working on machine learning projects."
 
 Relationships:
 [
-  {{"source": "John Smith", "target": "Google", "type": "WORKS_AT", "description": "John Smith is employed by Google as a software engineer"}},
-  {{"source": "John Smith", "target": "machine learning", "type": "WORKS_ON", "description": "John Smith works on machine learning projects"}}
+  {{"source": "John Smith", "target": "Google", "type": "WORKS_AT", "description": "John Smith is employed by Google as a software engineer", "strength": 9}},
+  {{"source": "John Smith", "target": "machine learning", "type": "WORKS_ON", "description": "John Smith works on machine learning projects", "strength": 8}},
+  {{"source": "Google", "target": "machine learning", "type": "USES", "description": "Google uses machine learning in its projects", "strength": 6}}
 ]
 
 Example 2:
-Entities:
-- Python (TECHNOLOGY)
-- Guido van Rossum (PERSON)
-
+Entities: Python (TECHNOLOGY), Guido van Rossum (PERSON), 1991 (EVENT)
 Text: "The Python programming language was created by Guido van Rossum in 1991."
 
 Relationships:
 [
-  {{"source": "Guido van Rossum", "target": "Python", "type": "CREATED", "description": "Guido van Rossum created the Python programming language"}}
+  {{"source": "Guido van Rossum", "target": "Python", "type": "CREATED", "description": "Guido van Rossum created the Python programming language", "strength": 10}},
+  {{"source": "Python", "target": "1991", "type": "CREATED_IN", "description": "Python was created in 1991", "strength": 9}}
 ]
 
-Now extract relationships from this text:
+---Task---
+Extract ALL relationships from this text:
 
-Entities found in this text:
+Entities found:
 {entities}
 
 Text:
 {text}
 
-For each relationship, identify:
-1. Source entity (must be from the list above)
-2. Target entity (must be from the list above)
-3. Relationship type (WORKS_AT, KNOWS, LOCATED_IN, USES, CREATES, PART_OF, MANAGES, etc.)
-4. Description (1 sentence explaining the relationship based on text)
+---Instructions---
+1. Extract ALL relationships - be exhaustive, not conservative
+2. Decompose N-ary relationships: "A and B founded C" → A FOUNDED C, B FOUNDED C
+3. Include implicit relationships (co-occurrence in same sentence often implies relation)
+4. Rate strength 1-10: 10=explicit statement, 7=strong implication, 4=weak inference
 
-Return relationships as a JSON array. Use this exact format:
+---Output Format---
 [
-  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "One sentence description"}},
+  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Why related", "strength": 8}},
   ...
 ]
 
-Guidelines:
-- Only extract relationships explicitly stated or strongly implied in the text
-- Use standard relationship types (uppercase with underscores, e.g., WORKS_AT)
-- Common types: WORKS_AT, KNOWS, LOCATED_IN, CREATED, USES, PART_OF, MANAGES, WORKS_ON
-- Ensure source and target entities exist in the list above
-- Return only valid JSON (no additional text)
+Common types: WORKS_AT, CREATED, FOUNDED, DIRECTED, PRODUCED, STARS_IN, LOCATED_IN,
+PART_OF, MANAGES, USES, COLLABORATES_WITH, BASED_ON, CONTAINS, LEADS_TO, ASSOCIATED_WITH
 
-Relationships:
+Output (JSON array only):
 """
 
 # Sprint 45 Feature 45.8: Generic Extraction Prompts for Domain Fallback
@@ -153,20 +151,37 @@ Return a JSON array of entities. Each entity should have:
 Output (JSON array only):
 """
 
-GENERIC_RELATION_EXTRACTION_PROMPT = """Extract relationships between the given entities from the text.
+GENERIC_RELATION_EXTRACTION_PROMPT = """Extract ALL relationships between the given entities from the text.
 
-Entities:
+---Role---
+You are a Knowledge Graph Specialist extracting relationships from text.
+
+---Goal---
+Identify ALL relationships among the provided entities. Be EXHAUSTIVE.
+A good knowledge graph has at least 1 relationship per entity.
+
+---Entities---
 {entities}
 
-Text:
+---Text---
 {text}
 
-Return subject-predicate-object triples where:
-- subject and object MUST be from the entity list above
-- predicate is a natural language description of the relationship
+---Instructions---
+1. For EVERY pair of entities that interact or relate, extract a relationship
+2. Decompose complex N-ary relationships into multiple binary pairs
+   Example: "John and Mary founded Company" → John FOUNDED Company, Mary FOUNDED Company
+3. Include both explicit relationships (stated in text) and implicit ones (strongly implied)
+4. Rate relationship strength from 1-10 (10 = explicitly stated, 5 = implied, 1 = weak inference)
 
-Output format (JSON array):
-[{{"subject": "Entity1", "predicate": "relationship description", "object": "Entity2"}}]
+---Output Format---
+Return a JSON array with this structure:
+[
+  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Why they are related", "strength": 8}},
+  ...
+]
+
+Common relationship types: WORKS_AT, CREATED, FOUNDED, LOCATED_IN, PART_OF, MANAGES, USES,
+COLLABORATES_WITH, DIRECTED, PRODUCED, STARS_IN, BASED_ON, CONTAINS, LEADS_TO
 
 Output (JSON array only):
 """

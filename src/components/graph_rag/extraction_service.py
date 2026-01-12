@@ -136,6 +136,72 @@ def _repair_json_string(json_str: str) -> str:
     return json_str
 
 
+def _normalize_predicate_to_type(predicate: str) -> str:
+    """Normalize a natural language predicate to an uppercase relationship type.
+
+    Sprint 85 Fix: Convert predicates like "is a setting that can be tried"
+    to relationship types like "HAS_SETTING".
+
+    Args:
+        predicate: Natural language predicate from LLM
+
+    Returns:
+        Uppercase relationship type with underscores
+    """
+    if not predicate:
+        return "RELATES_TO"
+
+    # Common predicate patterns to relationship types
+    predicate_lower = predicate.lower().strip()
+
+    # Direct mappings for common patterns
+    mapping = {
+        "works at": "WORKS_AT",
+        "works for": "WORKS_FOR",
+        "created": "CREATED",
+        "created by": "CREATED_BY",
+        "directed": "DIRECTED",
+        "directed by": "DIRECTED_BY",
+        "produced": "PRODUCED",
+        "produced by": "PRODUCED_BY",
+        "stars": "STARS",
+        "stars in": "STARS_IN",
+        "voiced by": "VOICED_BY",
+        "founded": "FOUNDED",
+        "founded by": "FOUNDED_BY",
+        "born in": "BORN_IN",
+        "located in": "LOCATED_IN",
+        "part of": "PART_OF",
+        "member of": "MEMBER_OF",
+        "contains": "CONTAINS",
+        "uses": "USES",
+        "has": "HAS",
+        "is a": "IS_A",
+        "is an": "IS_A",
+        "based on": "BASED_ON",
+        "released": "RELEASED",
+        "published": "PUBLISHED",
+        "wrote": "WROTE",
+        "written by": "WRITTEN_BY",
+    }
+
+    # Check for direct match
+    for pattern, rel_type in mapping.items():
+        if predicate_lower.startswith(pattern):
+            return rel_type
+
+    # Fallback: Convert first few words to uppercase type
+    # "is a setting that can be tried" → "IS_SETTING"
+    words = predicate_lower.split()[:3]
+    if words:
+        type_str = "_".join(words).upper()
+        # Clean up non-alphanumeric characters
+        type_str = re.sub(r"[^A-Z0-9_]", "", type_str)
+        return type_str if type_str else "RELATES_TO"
+
+    return "RELATES_TO"
+
+
 def _extract_json_objects_individually(
     text: str, data_type: str = "entity"
 ) -> list[dict[str, Any]]:
@@ -171,8 +237,20 @@ def _extract_json_objects_individually(
                     if "name" in obj and "type" in obj:
                         objects.append(obj)
                 elif data_type == "relationship":
+                    # Sprint 85 Fix: Accept both formats and normalize
+                    # Format 1: {source, target, type} (standard)
+                    # Format 2: {subject, predicate, object} (generic prompt)
                     if "source" in obj and "target" in obj and "type" in obj:
                         objects.append(obj)
+                    elif "subject" in obj and "object" in obj:
+                        # Map subject/predicate/object to source/target/type
+                        normalized = {
+                            "source": obj["subject"],
+                            "target": obj["object"],
+                            "type": _normalize_predicate_to_type(obj.get("predicate", "RELATES_TO")),
+                            "description": obj.get("predicate", ""),
+                        }
+                        objects.append(normalized)
                 else:
                     objects.append(obj)
 
@@ -446,22 +524,47 @@ class ExtractionService:
                         if data_type == "entity":
                             required_fields = ["name", "type"]
                             is_valid = all(field in item for field in required_fields)
+                            if is_valid:
+                                valid_items.append(item)
                         elif data_type == "relationship":
-                            required_fields = ["source", "target", "type"]
-                            is_valid = all(field in item for field in required_fields)
+                            # Sprint 85 Fix: Accept both formats
+                            # Format 1: {source, target, type} (standard)
+                            if "source" in item and "target" in item and "type" in item:
+                                valid_items.append(item)
+                            # Format 2: {subject, predicate, object} (generic prompt)
+                            elif "subject" in item and "object" in item:
+                                normalized = {
+                                    "source": item["subject"],
+                                    "target": item["object"],
+                                    "type": _normalize_predicate_to_type(item.get("predicate", "")),
+                                    "description": item.get("predicate", ""),
+                                }
+                                valid_items.append(normalized)
+                                logger.debug(
+                                    "relationship_format_normalized",
+                                    index=i,
+                                    original=item,
+                                    normalized=normalized,
+                                )
+                            else:
+                                logger.warning(
+                                    "invalid_relationship_structure",
+                                    index=i,
+                                    item=item,
+                                    missing_fields="source/target/type or subject/object",
+                                )
+                            is_valid = True  # Already handled above
                         else:
                             # Unknown data type - accept all dicts
                             is_valid = True
-                            required_fields = []
-
-                        if is_valid:
                             valid_items.append(item)
-                        else:
+
+                        if data_type == "entity" and not is_valid:
                             logger.warning(
                                 f"invalid_{data_type}_structure",
                                 index=i,
                                 item=item,
-                                missing_fields=[f for f in required_fields if f not in item],
+                                missing_fields=["name", "type"],
                             )
                     else:
                         logger.warning(
@@ -1473,7 +1576,7 @@ class ExtractionService:
         try:
             result = await self.llm_proxy.generate(
                 task=LLMTask(
-                    task_type=TaskType.CLASSIFICATION,
+                    task_type=TaskType.GENERATION,  # Sprint 85 Fix: CLASSIFICATION doesn't exist
                     prompt=prompt,
                     complexity=Complexity.LOW,
                     quality=QualityRequirement.STANDARD,

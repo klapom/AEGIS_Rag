@@ -438,7 +438,7 @@ Answer:"""
 
         try:
             task = LLMTask(
-                task_type=TaskType.CLASSIFICATION,
+                task_type=TaskType.GENERATION,  # Sprint 85 Fix: Use GENERATION for yes/no
                 prompt=prompt,
                 complexity=Complexity.LOW,
                 quality_requirement=QualityRequirement.STANDARD,
