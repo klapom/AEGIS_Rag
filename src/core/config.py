@@ -211,6 +211,40 @@ class Settings(BaseSettings):
         description="Ollama model for query routing and intent classification",
     )
 
+    # Sprint 87 Feature 87.4: Multi-Vector Embedding Configuration
+    embedding_backend: Literal["ollama", "sentence-transformers", "flag-embedding"] = Field(
+        default="ollama",
+        description="Embedding backend: 'ollama' (default), 'sentence-transformers' (dense-only), 'flag-embedding' (multi-vector)",
+    )
+    st_model_name: str = Field(
+        default="BAAI/bge-m3",
+        description="SentenceTransformers/FlagEmbedding model name (Sprint 87)",
+    )
+    st_device: Literal["auto", "cuda", "cpu"] = Field(
+        default="auto",
+        description="Device for SentenceTransformers/FlagEmbedding: 'auto' (CUDA if available), 'cuda', 'cpu'",
+    )
+    st_batch_size: int = Field(
+        default=32,
+        ge=1,
+        le=256,
+        description="Batch size for SentenceTransformers/FlagEmbedding embedding",
+    )
+    st_use_fp16: bool = Field(
+        default=True,
+        description="Use FP16 half-precision for faster inference (requires CUDA)",
+    )
+    st_sparse_min_weight: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="FlagEmbedding: Minimum weight for sparse tokens (0.0 = keep all)",
+    )
+    st_sparse_top_k: int | None = Field(
+        default=None,
+        description="FlagEmbedding: Keep only top-k sparse tokens (None = keep all, 100 = typical)",
+    )
+
     # Router Configuration (Sprint 4 Feature 4.2)
     router_temperature: float = Field(
         default=0.0,

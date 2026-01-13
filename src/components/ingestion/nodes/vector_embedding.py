@@ -1,11 +1,18 @@
 """Vector Embedding Node for LangGraph Ingestion Pipeline.
 
 Sprint 54 Feature 54.6: Extracted from langgraph_nodes.py
+Sprint 87 Feature 87.4: FlagEmbedding multi-vector integration
 
 This module handles embedding generation and Qdrant upload:
-- Generate BGE-M3 embeddings (1024D) via Ollama
+- Generate BGE-M3 embeddings (dense + sparse) via FlagEmbedding
 - Create Qdrant payloads with full provenance
-- Upload to Qdrant vector database
+- Upload to Qdrant vector database (multi-vector or dense-only)
+
+Multi-Vector Architecture (Sprint 87):
+    - FlagEmbedding backend: Generates both dense and sparse vectors in single call
+    - MultiVectorCollectionManager: Handles collections with named vectors
+    - Backward compatibility: Detects collection type and uses appropriate storage
+    - Feature flag: EMBEDDING_BACKEND=flag-embedding
 
 Node: embedding_node
 """
@@ -16,7 +23,7 @@ import uuid
 
 import structlog
 from qdrant_client import models
-from qdrant_client.models import PointStruct
+from qdrant_client.models import NamedVector, PointStruct
 
 from src.components.ingestion.ingestion_state import (
     IngestionState,
@@ -24,7 +31,8 @@ from src.components.ingestion.ingestion_state import (
     calculate_progress,
 )
 from src.components.ingestion.logging_utils import log_phase_summary
-from src.components.shared.embedding_service import get_embedding_service
+from src.components.shared.embedding_factory import get_embedding_service
+from src.components.vector_search.multi_vector_collection import get_multi_vector_manager
 from src.components.vector_search.qdrant_client import QdrantClientWrapper
 from src.core.config import settings
 from src.core.exceptions import IngestionError
@@ -127,7 +135,7 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                         f"Check: adaptive_chunking.py, document_parsers.py, or chunking_service.py"
                     )
 
-        # Generate embeddings
+        # Generate embeddings (Sprint 87: Dense + sparse if FlagEmbedding backend)
         embedding_gen_start = time.perf_counter()
         logger.info(
             "TIMING_embedding_generation_start",
@@ -141,6 +149,19 @@ async def embedding_node(state: IngestionState) -> IngestionState:
         embedding_gen_ms = (embedding_gen_end - embedding_gen_start) * 1000
         embeddings_per_sec = len(texts) / (embedding_gen_ms / 1000) if embedding_gen_ms > 0 else 0
 
+        # Detect backend type (Sprint 87: FlagEmbedding returns dict, others return list)
+        is_multi_vector = isinstance(embeddings[0], dict) if embeddings else False
+        embedding_dim = (
+            len(embeddings[0]["dense"])
+            if is_multi_vector
+            else len(embeddings[0]) if embeddings else 0
+        )
+        avg_sparse_tokens = (
+            sum(len(e["sparse_vector"].indices) for e in embeddings) / len(embeddings)
+            if is_multi_vector and embeddings
+            else 0
+        )
+
         logger.info(
             "TIMING_embedding_generation_complete",
             stage="embedding",
@@ -148,18 +169,43 @@ async def embedding_node(state: IngestionState) -> IngestionState:
             duration_ms=round(embedding_gen_ms, 2),
             embeddings_generated=len(embeddings),
             throughput_embeddings_per_sec=round(embeddings_per_sec, 2),
-            embedding_dim=len(embeddings[0]) if embeddings else 0,
+            embedding_dim=embedding_dim,
+            is_multi_vector=is_multi_vector,
+            avg_sparse_tokens=round(avg_sparse_tokens, 0) if is_multi_vector else None,
         )
 
-        # Upload to Qdrant
+        # Upload to Qdrant (Sprint 87: Multi-vector or dense-only)
         qdrant = QdrantClientWrapper()
         collection_name = settings.qdrant_collection
 
-        # Ensure collection exists
-        await qdrant.create_collection(
-            collection_name=collection_name,
-            vector_size=1024,  # BGE-M3 dimension
-        )
+        # Sprint 87: Check if multi-vector backend and create appropriate collection
+        multi_vector_manager = get_multi_vector_manager()
+
+        if is_multi_vector:
+            # Create multi-vector collection (dense + sparse)
+            await multi_vector_manager.create_multi_vector_collection(
+                collection_name=collection_name,
+                dense_dim=embedding_dim,
+            )
+            logger.info(
+                "multi_vector_collection_ensured",
+                collection=collection_name,
+                dense_dim=embedding_dim,
+            )
+        else:
+            # Create legacy dense-only collection
+            await qdrant.create_collection(
+                collection_name=collection_name,
+                vector_size=embedding_dim,
+            )
+            logger.info(
+                "dense_only_collection_ensured",
+                collection=collection_name,
+                vector_size=embedding_dim,
+            )
+
+        # Check collection capabilities for backward compatibility
+        has_sparse = await multi_vector_manager.collection_has_sparse(collection_name)
 
         # Create Qdrant points with full provenance
         page_dimensions = state.get("page_dimensions", {})
@@ -264,11 +310,44 @@ async def embedding_node(state: IngestionState) -> IngestionState:
                 "namespace_id": state.get("namespace_id", "default"),
             }
 
-            point = PointStruct(
-                id=chunk_id,
-                vector=embedding,
-                payload=payload,
-            )
+            # Sprint 87: Create point with multi-vector or dense-only format
+            if is_multi_vector and has_sparse:
+                # Multi-vector point: Named vectors (dense + sparse)
+                point = PointStruct(
+                    id=chunk_id,
+                    vector={
+                        "dense": embedding["dense"],
+                        "sparse": embedding["sparse_vector"],
+                    },
+                    payload=payload,
+                )
+                logger.debug(
+                    "multi_vector_point_created",
+                    chunk_id=chunk_id,
+                    dense_dim=len(embedding["dense"]),
+                    sparse_tokens=len(embedding["sparse_vector"].indices),
+                )
+            elif is_multi_vector and not has_sparse:
+                # Fallback: Multi-vector backend but dense-only collection
+                # Extract dense vector only (backward compatibility)
+                point = PointStruct(
+                    id=chunk_id,
+                    vector=embedding["dense"],
+                    payload=payload,
+                )
+                logger.warning(
+                    "multi_vector_backend_dense_only_collection",
+                    chunk_id=chunk_id,
+                    note="FlagEmbedding backend detected but collection does not support sparse vectors. Using dense-only.",
+                )
+            else:
+                # Dense-only point (legacy format)
+                point = PointStruct(
+                    id=chunk_id,
+                    vector=embedding,
+                    payload=payload,
+                )
+
             points.append(point)
 
         # Upload batch
