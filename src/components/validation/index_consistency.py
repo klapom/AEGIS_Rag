@@ -127,9 +127,10 @@ class IndexConsistencyValidator:
         )
 
         # Neo4j connection
+        # Note: neo4j_password is SecretStr, need .get_secret_value()
         self.neo4j_driver = AsyncGraphDatabase.driver(
             settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password),
+            auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
         )
 
         logger.info("validator_connected", qdrant_host=settings.qdrant_host)
@@ -217,7 +218,7 @@ class IndexConsistencyValidator:
         """Count total chunks in Qdrant."""
         try:
             collection_info = await self.qdrant_client.get_collection(
-                settings.qdrant_collection_name
+                settings.qdrant_collection
             )
             return collection_info.points_count
         except Exception as e:
@@ -464,7 +465,7 @@ async def fix_orphaned_entities(dry_run: bool = True) -> dict[str, int]:
     """
     neo4j_driver = AsyncGraphDatabase.driver(
         settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password),
+        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
     )
 
     try:
@@ -516,7 +517,7 @@ async def fix_orphaned_chunks(dry_run: bool = True) -> dict[str, int]:
     """
     neo4j_driver = AsyncGraphDatabase.driver(
         settings.neo4j_uri,
-        auth=(settings.neo4j_user, settings.neo4j_password),
+        auth=(settings.neo4j_user, settings.neo4j_password.get_secret_value()),
     )
 
     try:
