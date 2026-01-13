@@ -1,0 +1,134 @@
+[
+  {
+    "feature_name": "86.8_baseline_no_cross_sentence",
+    "feature_enabled": false,
+    "timestamp": "2026-01-13T09:20:29.701295",
+    "total_samples": 4,
+    "avg_entity_count": 9.25,
+    "avg_relation_count": 7.75,
+    "avg_er_ratio": 0.8625,
+    "avg_extraction_time_ms": 1573.4255909919739,
+    "total_coreference_resolutions": 0,
+    "samples_with_coreferences": 0,
+    "samples": [
+      {
+        "sample_id": "tech_pronouns",
+        "text_length": 373,
+        "entity_count": 10,
+        "relation_count": 7,
+        "er_ratio": 0.7,
+        "extraction_time_ms": 1224.5006561279297,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 7,
+        "avg_entity_name_length": 8.8,
+        "unique_relation_types": 5
+      },
+      {
+        "sample_id": "person_narrative",
+        "text_length": 321,
+        "entity_count": 9,
+        "relation_count": 9,
+        "er_ratio": 1.0,
+        "extraction_time_ms": 10.168790817260742,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 13.444444444444445,
+        "unique_relation_types": 9
+      },
+      {
+        "sample_id": "company_relations",
+        "text_length": 354,
+        "entity_count": 12,
+        "relation_count": 9,
+        "er_ratio": 0.75,
+        "extraction_time_ms": 11.491537094116211,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 11.166666666666666,
+        "unique_relation_types": 7
+      },
+      {
+        "sample_id": "research_complex",
+        "text_length": 424,
+        "entity_count": 6,
+        "relation_count": 6,
+        "er_ratio": 1.0,
+        "extraction_time_ms": 5047.541379928589,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 19.333333333333332,
+        "unique_relation_types": 6
+      }
+    ]
+  },
+  {
+    "feature_name": "86.8_with_cross_sentence",
+    "feature_enabled": true,
+    "timestamp": "2026-01-13T09:20:36.012915",
+    "total_samples": 4,
+    "avg_entity_count": 9.25,
+    "avg_relation_count": 21.0,
+    "avg_er_ratio": 2.302777777777778,
+    "avg_extraction_time_ms": 22195.86443901062,
+    "total_coreference_resolutions": 0,
+    "samples_with_coreferences": 0,
+    "samples": [
+      {
+        "sample_id": "tech_pronouns",
+        "text_length": 373,
+        "entity_count": 10,
+        "relation_count": 21,
+        "er_ratio": 2.1,
+        "extraction_time_ms": 24700.445652008057,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 7,
+        "avg_entity_name_length": 8.8,
+        "unique_relation_types": 15
+      },
+      {
+        "sample_id": "person_narrative",
+        "text_length": 321,
+        "entity_count": 9,
+        "relation_count": 16,
+        "er_ratio": 1.7777777777777777,
+        "extraction_time_ms": 17129.260778427124,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 13.444444444444445,
+        "unique_relation_types": 15
+      },
+      {
+        "sample_id": "company_relations",
+        "text_length": 354,
+        "entity_count": 12,
+        "relation_count": 30,
+        "er_ratio": 2.5,
+        "extraction_time_ms": 28294.159173965454,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 11.166666666666666,
+        "unique_relation_types": 18
+      },
+      {
+        "sample_id": "research_complex",
+        "text_length": 424,
+        "entity_count": 6,
+        "relation_count": 17,
+        "er_ratio": 2.8333333333333335,
+        "extraction_time_ms": 18659.592151641846,
+        "coreference_enabled": false,
+        "coreference_resolutions": 0,
+        "unique_entity_types": 6,
+        "avg_entity_name_length": 19.333333333333332,
+        "unique_relation_types": 14
+      }
+    ]
+  }
+]

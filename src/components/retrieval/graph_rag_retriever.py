@@ -1,11 +1,13 @@
 """GraphRAG Multi-Hop Retriever for Complex Query Answering.
 
 Sprint 38 Feature 38.4: Multi-hop graph reasoning with Neo4j integration.
+Sprint 86 Feature 86.5: Relation Weight Filtering (LightRAG-style)
 
 This module implements the GraphRAG retriever pattern with support for:
 - Simple queries (vector + optional graph expansion)
 - Compound queries (parallel sub-query execution)
 - Multi-hop queries (sequential reasoning with context injection)
+- Weight-filtered relations (Sprint 86.5)
 
 Architecture:
     Query → QueryDecomposer → Route → [Vector + Graph + LLM] → Answer
@@ -26,6 +28,7 @@ Example:
 """
 
 import asyncio
+import os
 from typing import Any
 
 import structlog
@@ -48,6 +51,22 @@ from src.components.vector_search.hybrid_search import HybridSearch
 from src.core.exceptions import GraphQueryError
 
 logger = structlog.get_logger(__name__)
+
+
+# ============================================================================
+# Sprint 86.5: Relation Weight Filtering Configuration
+# ============================================================================
+
+# Feature flag for relation weight filtering
+# Default: enabled (1) - filters low-weight relations in graph queries
+USE_RELATION_WEIGHT_FILTER = os.environ.get("AEGIS_USE_RELATION_WEIGHT_FILTER", "1") == "1"
+
+# Minimum relation strength (1-10 scale) to include in graph traversal
+# Default: 5 (0.5 on normalized 0-1 scale)
+# - 3 = exploratory (more relations, higher recall)
+# - 5 = balanced (default)
+# - 7 = strict (fewer relations, higher precision)
+MIN_RELATION_STRENGTH = int(os.environ.get("AEGIS_MIN_RELATION_STRENGTH", "5"))
 
 
 # ============================================================================
@@ -629,18 +648,37 @@ class GraphRAGRetriever:
             return
 
         try:
-            # Multi-hop traversal query
+            # Sprint 86.5: Build weight filter clause if enabled
+            weight_filter = ""
+            if USE_RELATION_WEIGHT_FILTER:
+                # Filter relations with strength >= MIN_RELATION_STRENGTH
+                # Strength is stored as integer 1-10 on relationships
+                weight_filter = f"""
+                AND ALL(rel IN relationships(path) WHERE
+                    COALESCE(rel.strength, 10) >= {MIN_RELATION_STRENGTH}
+                )
+                """
+                logger.debug(
+                    "relation_weight_filter_applied",
+                    min_strength=MIN_RELATION_STRENGTH,
+                    max_hops=max_hops,
+                )
+
+            # Multi-hop traversal query with optional weight filtering
             cypher = f"""
             MATCH path = (start:base)-[r:RELATES_TO|MENTIONED_IN*1..{max_hops}]-(connected:base)
             WHERE start.name IN $entity_names
+            {weight_filter}
             WITH connected, path, length(path) AS hops,
                  [rel IN relationships(path) | type(rel)] AS rel_types,
-                 [node IN nodes(path) | node.name] AS path_nodes
+                 [node IN nodes(path) | node.name] AS path_nodes,
+                 [rel IN relationships(path) | COALESCE(rel.strength, 10)] AS rel_strengths
             RETURN DISTINCT connected.name AS name,
                    connected.type AS type,
                    hops,
                    rel_types,
-                   path_nodes
+                   path_nodes,
+                   rel_strengths
             ORDER BY hops
             LIMIT 20
             """
@@ -684,6 +722,8 @@ class GraphRAGRetriever:
                 total_entities=len(context.entities),
                 total_relationships=len(context.relationships),
                 total_paths=len(context.paths),
+                weight_filter_enabled=USE_RELATION_WEIGHT_FILTER,
+                min_strength=MIN_RELATION_STRENGTH if USE_RELATION_WEIGHT_FILTER else None,
             )
 
         except Exception as e:

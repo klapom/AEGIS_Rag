@@ -268,6 +268,56 @@ class HybridExtractionService:
             entities.append(entity)
 
         logger.info(
+            "spacy_entities_extracted_raw",
+            count=len(entities),
+            language=language,
+            document_id=document_id,
+        )
+
+        # Sprint 86.6: Apply entity quality filter to remove noise
+        try:
+            from src.components.graph_rag.entity_quality_filter import (
+                get_entity_quality_filter,
+                USE_ENTITY_FILTER,
+            )
+
+            if USE_ENTITY_FILTER:
+                filter_instance = get_entity_quality_filter()
+
+                # Convert GraphEntity to dict for filtering
+                entity_dicts = [
+                    {"name": e.name, "type": e.properties.get("spacy_label", e.type)}
+                    for e in entities
+                ]
+
+                # Apply filter
+                filtered_dicts, stats = filter_instance.filter(entity_dicts, lang=language)
+
+                # Rebuild entity list with filtered entities
+                filtered_names = {d["name"].lower() for d in filtered_dicts}
+                entities = [
+                    e for e in entities
+                    if e.name.lower() in filtered_names or
+                    # Also check normalized name (article removed)
+                    filter_instance._remove_article(e.name, language).lower() in filtered_names
+                ]
+
+                logger.info(
+                    "spacy_entities_quality_filtered",
+                    original_count=stats.total_input,
+                    filtered_count=stats.total_output,
+                    filter_rate=f"{stats.filter_rate:.1f}%",
+                    document_id=document_id,
+                )
+
+        except Exception as e:
+            logger.warning(
+                "entity_quality_filter_failed",
+                error=str(e),
+                document_id=document_id,
+            )
+
+        logger.info(
             "spacy_entities_extracted",
             count=len(entities),
             language=language,

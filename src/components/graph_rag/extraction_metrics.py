@@ -1,6 +1,7 @@
 """Extraction Metrics for Knowledge Graph Quality Tracking.
 
 Sprint 85 Feature 85.6: Extraction Metrics (Log + LangGraph State)
+Sprint 86 Feature 86.9: Cascade Monitoring (Prometheus-style metrics)
 
 This module provides structured metrics tracking for entity and relationship extraction:
 - Entity metrics (SpaCy vs LLM counts, types)
@@ -8,10 +9,12 @@ This module provides structured metrics tracking for entity and relationship ext
 - Quality metrics (ratio, coverage, duplication)
 - Performance metrics (latency per phase)
 - Language detection tracking
+- Cascade success rates and fallback tracking (Sprint 86.9)
 
 Metrics are output to:
 1. Structured logs (structlog)
 2. LangGraph state (for pipeline aggregation)
+3. Prometheus-compatible format (Sprint 86.9)
 """
 
 from dataclasses import asdict, dataclass, field
@@ -305,3 +308,234 @@ def create_metrics_from_extraction(
     metrics.calculate_derived_metrics()
 
     return metrics
+
+
+# ============================================================================
+# Sprint 86.9: Cascade Monitoring
+# ============================================================================
+
+
+@dataclass
+class CascadeMetrics:
+    """Cascade extraction monitoring metrics.
+
+    Sprint 86.9: Tracks success rates and fallback events per cascade rank.
+
+    Attributes:
+        rank1_attempts: Total attempts at Rank 1 (Nemotron3)
+        rank1_successes: Successful extractions at Rank 1
+        rank2_attempts: Total attempts at Rank 2 (GPT-OSS:20b)
+        rank2_successes: Successful extractions at Rank 2
+        rank3_attempts: Total attempts at Rank 3 (Hybrid SpaCy)
+        rank3_successes: Successful extractions at Rank 3
+        fallback_1_to_2: Fallbacks from Rank 1 to Rank 2
+        fallback_2_to_3: Fallbacks from Rank 2 to Rank 3
+        total_extractions: Total extraction attempts
+        avg_latency_rank1_ms: Average latency for Rank 1
+        avg_latency_rank2_ms: Average latency for Rank 2
+        avg_latency_rank3_ms: Average latency for Rank 3
+    """
+
+    # Attempt and success counts per rank
+    rank1_attempts: int = 0
+    rank1_successes: int = 0
+    rank2_attempts: int = 0
+    rank2_successes: int = 0
+    rank3_attempts: int = 0
+    rank3_successes: int = 0
+
+    # Fallback events
+    fallback_1_to_2: int = 0
+    fallback_2_to_3: int = 0
+    total_failures: int = 0
+
+    # Total extractions
+    total_extractions: int = 0
+
+    # Latency tracking (running average)
+    avg_latency_rank1_ms: float = 0.0
+    avg_latency_rank2_ms: float = 0.0
+    avg_latency_rank3_ms: float = 0.0
+
+    @property
+    def rank1_success_rate(self) -> float:
+        """Success rate for Rank 1."""
+        return self.rank1_successes / self.rank1_attempts if self.rank1_attempts > 0 else 0.0
+
+    @property
+    def rank2_success_rate(self) -> float:
+        """Success rate for Rank 2."""
+        return self.rank2_successes / self.rank2_attempts if self.rank2_attempts > 0 else 0.0
+
+    @property
+    def rank3_success_rate(self) -> float:
+        """Success rate for Rank 3."""
+        return self.rank3_successes / self.rank3_attempts if self.rank3_attempts > 0 else 0.0
+
+    @property
+    def overall_success_rate(self) -> float:
+        """Overall success rate (any rank)."""
+        total_successes = self.rank1_successes + self.rank2_successes + self.rank3_successes
+        return total_successes / self.total_extractions if self.total_extractions > 0 else 0.0
+
+    @property
+    def fallback_rate(self) -> float:
+        """Percentage of extractions that required fallback."""
+        total_fallbacks = self.fallback_1_to_2 + self.fallback_2_to_3
+        return total_fallbacks / self.total_extractions if self.total_extractions > 0 else 0.0
+
+    def to_prometheus_format(self) -> str:
+        """Export metrics in Prometheus exposition format.
+
+        Returns:
+            String in Prometheus text format
+        """
+        lines = [
+            "# HELP aegis_cascade_attempts_total Total extraction attempts per rank",
+            "# TYPE aegis_cascade_attempts_total counter",
+            f'aegis_cascade_attempts_total{{rank="1"}} {self.rank1_attempts}',
+            f'aegis_cascade_attempts_total{{rank="2"}} {self.rank2_attempts}',
+            f'aegis_cascade_attempts_total{{rank="3"}} {self.rank3_attempts}',
+            "",
+            "# HELP aegis_cascade_successes_total Successful extractions per rank",
+            "# TYPE aegis_cascade_successes_total counter",
+            f'aegis_cascade_successes_total{{rank="1"}} {self.rank1_successes}',
+            f'aegis_cascade_successes_total{{rank="2"}} {self.rank2_successes}',
+            f'aegis_cascade_successes_total{{rank="3"}} {self.rank3_successes}',
+            "",
+            "# HELP aegis_cascade_fallbacks_total Fallback events between ranks",
+            "# TYPE aegis_cascade_fallbacks_total counter",
+            f'aegis_cascade_fallbacks_total{{from="1",to="2"}} {self.fallback_1_to_2}',
+            f'aegis_cascade_fallbacks_total{{from="2",to="3"}} {self.fallback_2_to_3}',
+            "",
+            "# HELP aegis_cascade_latency_ms Average extraction latency per rank",
+            "# TYPE aegis_cascade_latency_ms gauge",
+            f'aegis_cascade_latency_ms{{rank="1"}} {self.avg_latency_rank1_ms:.2f}',
+            f'aegis_cascade_latency_ms{{rank="2"}} {self.avg_latency_rank2_ms:.2f}',
+            f'aegis_cascade_latency_ms{{rank="3"}} {self.avg_latency_rank3_ms:.2f}',
+            "",
+            "# HELP aegis_cascade_success_rate Success rate per rank",
+            "# TYPE aegis_cascade_success_rate gauge",
+            f'aegis_cascade_success_rate{{rank="1"}} {self.rank1_success_rate:.4f}',
+            f'aegis_cascade_success_rate{{rank="2"}} {self.rank2_success_rate:.4f}',
+            f'aegis_cascade_success_rate{{rank="3"}} {self.rank3_success_rate:.4f}',
+            f'aegis_cascade_success_rate{{rank="overall"}} {self.overall_success_rate:.4f}',
+        ]
+        return "\n".join(lines)
+
+
+# Module-level cascade metrics singleton
+_cascade_metrics: CascadeMetrics | None = None
+
+
+def get_cascade_metrics() -> CascadeMetrics:
+    """Get the global cascade metrics instance.
+
+    Returns:
+        CascadeMetrics singleton
+    """
+    global _cascade_metrics
+    if _cascade_metrics is None:
+        _cascade_metrics = CascadeMetrics()
+    return _cascade_metrics
+
+
+def reset_cascade_metrics() -> None:
+    """Reset cascade metrics (for testing or new measurement period)."""
+    global _cascade_metrics
+    _cascade_metrics = CascadeMetrics()
+
+
+def record_cascade_attempt(rank: int, success: bool, latency_ms: float) -> None:
+    """Record a cascade extraction attempt.
+
+    Args:
+        rank: Cascade rank (1, 2, or 3)
+        success: Whether extraction succeeded
+        latency_ms: Extraction latency in milliseconds
+    """
+    metrics = get_cascade_metrics()
+    metrics.total_extractions += 1
+
+    # Running average latency update helper
+    def update_avg(current_avg: float, new_value: float, count: int) -> float:
+        if count == 0:
+            return new_value
+        return current_avg + (new_value - current_avg) / count
+
+    if rank == 1:
+        metrics.rank1_attempts += 1
+        if success:
+            metrics.rank1_successes += 1
+        metrics.avg_latency_rank1_ms = update_avg(
+            metrics.avg_latency_rank1_ms, latency_ms, metrics.rank1_attempts
+        )
+    elif rank == 2:
+        metrics.rank2_attempts += 1
+        if success:
+            metrics.rank2_successes += 1
+        metrics.avg_latency_rank2_ms = update_avg(
+            metrics.avg_latency_rank2_ms, latency_ms, metrics.rank2_attempts
+        )
+    elif rank == 3:
+        metrics.rank3_attempts += 1
+        if success:
+            metrics.rank3_successes += 1
+        metrics.avg_latency_rank3_ms = update_avg(
+            metrics.avg_latency_rank3_ms, latency_ms, metrics.rank3_attempts
+        )
+
+    if not success:
+        metrics.total_failures += 1
+
+    # Log the attempt
+    logger.debug(
+        "cascade_attempt_recorded",
+        rank=rank,
+        success=success,
+        latency_ms=round(latency_ms, 2),
+        rank_success_rate=getattr(metrics, f"rank{rank}_success_rate", 0),
+    )
+
+
+def record_cascade_fallback(from_rank: int, to_rank: int, reason: str) -> None:
+    """Record a cascade fallback event.
+
+    Args:
+        from_rank: Source rank (1 or 2)
+        to_rank: Target rank (2 or 3)
+        reason: Reason for fallback (e.g., "timeout", "parse_error")
+    """
+    metrics = get_cascade_metrics()
+
+    if from_rank == 1 and to_rank == 2:
+        metrics.fallback_1_to_2 += 1
+    elif from_rank == 2 and to_rank == 3:
+        metrics.fallback_2_to_3 += 1
+
+    logger.info(
+        "cascade_fallback_recorded",
+        from_rank=from_rank,
+        to_rank=to_rank,
+        reason=reason,
+        total_fallbacks_1_to_2=metrics.fallback_1_to_2,
+        total_fallbacks_2_to_3=metrics.fallback_2_to_3,
+    )
+
+
+def log_cascade_summary() -> None:
+    """Log a summary of cascade metrics."""
+    metrics = get_cascade_metrics()
+
+    logger.info(
+        "cascade_metrics_summary",
+        total_extractions=metrics.total_extractions,
+        rank1_success_rate=f"{metrics.rank1_success_rate:.1%}",
+        rank2_success_rate=f"{metrics.rank2_success_rate:.1%}",
+        rank3_success_rate=f"{metrics.rank3_success_rate:.1%}",
+        overall_success_rate=f"{metrics.overall_success_rate:.1%}",
+        fallback_rate=f"{metrics.fallback_rate:.1%}",
+        avg_latency_rank1=f"{metrics.avg_latency_rank1_ms:.0f}ms",
+        avg_latency_rank2=f"{metrics.avg_latency_rank2_ms:.0f}ms",
+        avg_latency_rank3=f"{metrics.avg_latency_rank3_ms:.0f}ms",
+    )
