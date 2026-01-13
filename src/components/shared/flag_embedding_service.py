@@ -1,6 +1,7 @@
 """Multi-vector embedding service using FlagEmbedding (BGE-M3).
 
 Sprint Context: Sprint 87 (2026-01-13) - Feature 87.1: FlagEmbedding Service
+Sprint 88 (2026-01-13): Bug fix - Made embed_single/embed_batch async for LangGraph compatibility
 
 Generates both dense and sparse vectors in a single forward pass to solve
 the BM25 desync problem (TD-103). Replaces separate SentenceTransformers
@@ -80,6 +81,7 @@ See Also:
     - docs/adr/ADR-042-bge-m3-native-hybrid.md: Architecture decision
 """
 
+import asyncio
 import hashlib
 import time
 from collections import OrderedDict
@@ -274,6 +276,29 @@ class FlagEmbeddingService:
             sparse_top_k=self.sparse_top_k,
         )
 
+    def _resolve_device(self) -> str:
+        """Resolve 'auto' device to actual PyTorch device string.
+
+        Returns:
+            Device string ('cuda' or 'cpu') compatible with PyTorch
+
+        Notes:
+            - 'auto' resolves to 'cuda' if available, else 'cpu'
+            - This is needed because FlagEmbedding requires valid PyTorch device strings
+        """
+        if self.device == "auto":
+            import torch
+
+            resolved = "cuda" if torch.cuda.is_available() else "cpu"
+            logger.debug(
+                "device_auto_resolved",
+                original="auto",
+                resolved=resolved,
+                cuda_available=torch.cuda.is_available(),
+            )
+            return resolved
+        return self.device
+
     def _load_model(self):
         """Load FlagEmbedding model lazily on first use.
 
@@ -301,13 +326,16 @@ class FlagEmbeddingService:
                 )
                 raise
 
+            # Resolve 'auto' to actual device (Sprint 88 fix)
+            resolved_device = self._resolve_device()
+
             load_start = time.perf_counter()
 
             # Load model with specified device and precision
             self._model = BGEM3FlagModel(
                 self.model_name,
                 use_fp16=self.use_fp16,
-                device=self.device,
+                device=resolved_device,
             )
 
             load_duration_ms = (time.perf_counter() - load_start) * 1000
@@ -315,7 +343,7 @@ class FlagEmbeddingService:
             logger.info(
                 "flag_embedding_model_loaded",
                 model=self.model_name,
-                device=self.device,
+                device=resolved_device,
                 use_fp16=self.use_fp16,
                 duration_ms=round(load_duration_ms, 2),
             )
@@ -333,27 +361,14 @@ class FlagEmbeddingService:
         """
         return hashlib.sha256(text.encode()).hexdigest()
 
-    def embed_single(self, text: str) -> dict[str, Any]:
-        """Embed single text with caching, returning dense + sparse vectors.
+    def _embed_single_sync(self, text: str) -> dict[str, Any]:
+        """Synchronous embedding for single text (internal use).
 
         Args:
             text: Text to embed
 
         Returns:
-            Dict with keys:
-                - "dense": list[float] (1024D vector)
-                - "sparse": dict[int, float] ({token_id: weight})
-                - "sparse_vector": SparseVector (Qdrant format)
-
-        Example:
-            >>> service = FlagEmbeddingService()
-            >>> result = service.embed_single("Hello world")
-            >>> len(result["dense"])
-            1024
-            >>> result["sparse"]
-            {12345: 0.8, 67890: 0.6, ...}
-            >>> result["sparse_vector"]
-            SparseVector(indices=[12345, 67890], values=[0.8, 0.6])
+            Dict with dense, sparse, and sparse_vector keys
         """
         embed_start = time.perf_counter()
 
@@ -416,36 +431,40 @@ class FlagEmbeddingService:
 
         return result
 
-    def embed_batch(self, texts: list[str]) -> list[dict[str, Any]]:
-        """Embed batch of texts with GPU acceleration.
+    async def embed_single(self, text: str) -> dict[str, Any]:
+        """Embed single text with caching, returning dense + sparse vectors (async).
 
-        This method provides significant performance benefits:
-        - 5-10x faster than sequential embed_single() calls
-        - GPU utilization: 90%+ (parallel matrix operations)
-        - Automatic deduplication via cache
+        Sprint 88: Made async for LangGraph compatibility.
 
         Args:
-            texts: List of texts to embed
+            text: Text to embed
 
         Returns:
-            List of dicts, each with:
+            Dict with keys:
                 - "dense": list[float] (1024D vector)
                 - "sparse": dict[int, float] ({token_id: weight})
                 - "sparse_vector": SparseVector (Qdrant format)
 
         Example:
             >>> service = FlagEmbeddingService()
-            >>> results = service.embed_batch(["Hello", "World", "Test"])
-            >>> len(results)
-            3
-            >>> len(results[0]["dense"])
+            >>> result = await service.embed_single("Hello world")
+            >>> len(result["dense"])
             1024
+            >>> result["sparse"]
+            {12345: 0.8, 67890: 0.6, ...}
+            >>> result["sparse_vector"]
+            SparseVector(indices=[12345, 67890], values=[0.8, 0.6])
+        """
+        return await asyncio.to_thread(self._embed_single_sync, text)
 
-        Notes:
-            - Cache is checked for each text before encoding
-            - Uncached texts are batched for GPU encoding
-            - Results are cached for future requests
-            - Show progress bar for batches >100 texts
+    def _embed_batch_sync(self, texts: list[str]) -> list[dict[str, Any]]:
+        """Synchronous batch embedding (internal use).
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of dicts with dense, sparse, and sparse_vector keys
         """
         batch_start = time.perf_counter()
         results: list[dict[str, Any]] = []
@@ -541,6 +560,41 @@ class FlagEmbeddingService:
         )
 
         return results
+
+    async def embed_batch(self, texts: list[str]) -> list[dict[str, Any]]:
+        """Embed batch of texts with GPU acceleration (async).
+
+        Sprint 88: Made async for LangGraph compatibility.
+
+        This method provides significant performance benefits:
+        - 5-10x faster than sequential embed_single() calls
+        - GPU utilization: 90%+ (parallel matrix operations)
+        - Automatic deduplication via cache
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of dicts, each with:
+                - "dense": list[float] (1024D vector)
+                - "sparse": dict[int, float] ({token_id: weight})
+                - "sparse_vector": SparseVector (Qdrant format)
+
+        Example:
+            >>> service = FlagEmbeddingService()
+            >>> results = await service.embed_batch(["Hello", "World", "Test"])
+            >>> len(results)
+            3
+            >>> len(results[0]["dense"])
+            1024
+
+        Notes:
+            - Cache is checked for each text before encoding
+            - Uncached texts are batched for GPU encoding
+            - Results are cached for future requests
+            - Show progress bar for batches >100 texts
+        """
+        return await asyncio.to_thread(self._embed_batch_sync, texts)
 
     # Backward compatibility methods (dense-only)
 

@@ -1,6 +1,7 @@
 """High-performance embedding service using sentence-transformers.
 
 Sprint Context: Sprint 35 (2025-12-04) - Feature 35.8: Sentence-Transformers Migration
+Sprint 88 (2026-01-13): Bug fix - Made embed_single/embed_batch async for LangGraph compatibility
 
 Optimized for DGX Spark deployment with native batch processing and direct GPU access.
 Provides 5-10x performance improvement over Ollama HTTP API for embeddings.
@@ -15,11 +16,12 @@ Architecture:
     - Direct GPU access via PyTorch (no HTTP overhead)
     - LRU cache for deduplication
     - Device auto-selection (CUDA/CPU)
+    - Async methods using asyncio.to_thread() for non-blocking GPU ops
 
 Compatible API:
     This service implements the same API as UnifiedEmbeddingService:
-    - embed_single(text: str) -> list[float]
-    - embed_batch(texts: list[str]) -> list[list[float]]
+    - async embed_single(text: str) -> list[float]
+    - async embed_batch(texts: list[str]) -> list[list[float]]
 
     This allows drop-in replacement via factory pattern.
 
@@ -47,6 +49,7 @@ See Also:
     - docs/adr/ADR-024: BGE-M3 embedding selection
 """
 
+import asyncio
 import hashlib
 import time
 from collections import OrderedDict
@@ -173,6 +176,29 @@ class SentenceTransformersEmbeddingService:
             cache_size=cache_max_size,
         )
 
+    def _resolve_device(self) -> str:
+        """Resolve 'auto' device to actual PyTorch device string.
+
+        Returns:
+            Device string ('cuda' or 'cpu') compatible with PyTorch
+
+        Notes:
+            - 'auto' resolves to 'cuda' if available, else 'cpu'
+            - This is needed because SentenceTransformers requires valid PyTorch device strings
+        """
+        if self.device == "auto":
+            import torch
+
+            resolved = "cuda" if torch.cuda.is_available() else "cpu"
+            logger.debug(
+                "device_auto_resolved",
+                original="auto",
+                resolved=resolved,
+                cuda_available=torch.cuda.is_available(),
+            )
+            return resolved
+        return self.device
+
     def _load_model(self):
         """Load model lazily on first use.
 
@@ -188,8 +214,11 @@ class SentenceTransformersEmbeddingService:
             # Lazy import for optional dependency
             from sentence_transformers import SentenceTransformer
 
+            # Resolve 'auto' to actual device (Sprint 88 fix)
+            resolved_device = self._resolve_device()
+
             load_start = time.perf_counter()
-            self._model = SentenceTransformer(self.model_name, device=self.device)
+            self._model = SentenceTransformer(self.model_name, device=resolved_device)
             load_duration_ms = (time.perf_counter() - load_start) * 1000
 
             logger.info(
@@ -205,22 +234,14 @@ class SentenceTransformersEmbeddingService:
         """Generate cache key for text."""
         return hashlib.sha256(text.encode()).hexdigest()
 
-    def embed_single(self, text: str) -> list[float]:
-        """Embed single text with caching.
-
-        Compatible API with UnifiedEmbeddingService.embed_single().
+    def _embed_single_sync(self, text: str) -> list[float]:
+        """Synchronous embedding for single text (internal use).
 
         Args:
             text: Text to embed
 
         Returns:
             Embedding vector (1024 dimensions for BGE-M3)
-
-        Example:
-            >>> service = SentenceTransformersEmbeddingService()
-            >>> embedding = service.embed_single("Hello world")
-            >>> len(embedding)
-            1024
         """
         embed_start = time.perf_counter()
 
@@ -259,35 +280,34 @@ class SentenceTransformersEmbeddingService:
 
         return embedding
 
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Embed batch of texts with GPU acceleration.
+    async def embed_single(self, text: str) -> list[float]:
+        """Embed single text with caching (async).
 
-        Compatible API with UnifiedEmbeddingService.embed_batch().
+        Compatible API with UnifiedEmbeddingService.embed_single().
+        Sprint 88: Made async for LangGraph compatibility.
 
-        This method provides significant performance benefits:
-        - 5-10x faster than sequential embed_single() calls
-        - GPU utilization: 90%+ (parallel matrix operations)
-        - Automatic deduplication via cache
+        Args:
+            text: Text to embed
+
+        Returns:
+            Embedding vector (1024 dimensions for BGE-M3)
+
+        Example:
+            >>> service = SentenceTransformersEmbeddingService()
+            >>> embedding = await service.embed_single("Hello world")
+            >>> len(embedding)
+            1024
+        """
+        return await asyncio.to_thread(self._embed_single_sync, text)
+
+    def _embed_batch_sync(self, texts: list[str]) -> list[list[float]]:
+        """Synchronous batch embedding (internal use).
 
         Args:
             texts: List of texts to embed
 
         Returns:
             List of embedding vectors
-
-        Example:
-            >>> service = SentenceTransformersEmbeddingService()
-            >>> embeddings = service.embed_batch(["Hello", "World", "Test"])
-            >>> len(embeddings)
-            3
-            >>> len(embeddings[0])
-            1024
-
-        Notes:
-            - Cache is checked for each text before encoding
-            - Uncached texts are batched for GPU encoding
-            - Results are cached for future requests
-            - Show progress bar for batches >100 texts
         """
         batch_start = time.perf_counter()
         embeddings = []
@@ -357,6 +377,39 @@ class SentenceTransformersEmbeddingService:
         )
 
         return embeddings
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Embed batch of texts with GPU acceleration (async).
+
+        Compatible API with UnifiedEmbeddingService.embed_batch().
+        Sprint 88: Made async for LangGraph compatibility.
+
+        This method provides significant performance benefits:
+        - 5-10x faster than sequential embed_single() calls
+        - GPU utilization: 90%+ (parallel matrix operations)
+        - Automatic deduplication via cache
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of embedding vectors
+
+        Example:
+            >>> service = SentenceTransformersEmbeddingService()
+            >>> embeddings = await service.embed_batch(["Hello", "World", "Test"])
+            >>> len(embeddings)
+            3
+            >>> len(embeddings[0])
+            1024
+
+        Notes:
+            - Cache is checked for each text before encoding
+            - Uncached texts are batched for GPU encoding
+            - Results are cached for future requests
+            - Show progress bar for batches >100 texts
+        """
+        return await asyncio.to_thread(self._embed_batch_sync, texts)
 
     def get_stats(self) -> dict[str, Any]:
         """Get embedding service statistics.

@@ -2375,3 +2375,227 @@ poetry run python scripts/run_ragas_evaluation.py --mode hybrid --use-ground-tru
 
 **Last Updated:** 2026-01-08 (Sprint 79.8.3 - Embedding Dimension Fix)
 **Next Update:** After BGE-M3 1024-dim re-evaluation completes
+
+---
+
+## Sprint 88 Pre-Validation: Phase 2 Dataset Ingestion
+
+**Date:** 2026-01-13 12:06
+**Objective:** Ingest structured data samples (tables, code) for RAGAS Phase 2 baseline
+
+### Datasets Ingested
+
+| Dataset | Type | Samples | Success | Failed | Avg Time |
+|---------|------|---------|---------|--------|----------|
+| T2-RAGBench (FinQA) | table | 5 | 0 | 5 | 30825ms |
+| Code QA | code_config | 5 | 0 | 5 | 26031ms |
+
+### Sample Details
+
+**T2-RAGBench (FinQA) Samples:**
+- `t2rag_0000`: What is the net change in Entergy's net revenue from 2014 to...
+- `t2rag_0001`: As of December 26, 2015, what percentage of Intel's total fa...
+- `t2rag_0002`: What is the percentage change in the total notional amount o...
+- `t2rag_0003`: What percentage of the total purchase price for the Metavant...
+- `t2rag_0004`: What was the difference in percentage cumulative total share...
+
+**Code QA Samples:**
+- `code_0000`: Write a python function to remove first and last occurrence ...
+- `code_0001`: Write a function to sort a given matrix in ascending order a...
+- `code_0002`: Write a function to count the most common words in a diction...
+- `code_0003`: Write a python function to find the volume of a triangular p...
+- `code_0004`: Write a function to split a string at lowercase letters....
+
+### Ingestion Results
+
+**T2-RAGBench:**
+- Namespace: `ragas_phase2_t2ragbench`
+- Total time: 30825ms
+- Document IDs: []
+
+**Code QA:**
+- Namespace: `ragas_phase2_codeqa`
+- Total time: 26031ms
+- Document IDs: []
+
+### Next Steps
+
+1. **Run RAGAS Evaluation:** Evaluate retrieval quality on these samples
+2. **Compare with Phase 1:** Baseline comparison with clean_text (HotpotQA)
+3. **Identify Bottlenecks:** Measure CP, CR, F, AR for structured data
+
+### Files Created
+
+- `data/evaluation/phase2_samples/t2ragbench/`: 5 table documents
+- `data/evaluation/phase2_samples/codeqa/`: 5 code documents
+- Metadata JSON files with questions/answers for RAGAS evaluation
+
+---
+
+---
+
+## Sprint 88 Pre-Validation: Phase 2 Dataset Ingestion
+
+**Date:** 2026-01-13 12:11
+**Objective:** Ingest structured data samples (tables, code) for RAGAS Phase 2 baseline
+
+### Datasets Ingested
+
+| Dataset | Type | Samples | Success | Failed | Avg Time |
+|---------|------|---------|---------|--------|----------|
+| T2-RAGBench (FinQA) | table | 5 | 0 | 5 | 28743ms |
+| Code QA | code_config | 5 | 0 | 5 | 14727ms |
+
+### Sample Details
+
+**T2-RAGBench (FinQA) Samples:**
+- `t2rag_0000`: What is the net change in Entergy's net revenue from 2014 to...
+- `t2rag_0001`: As of December 26, 2015, what percentage of Intel's total fa...
+- `t2rag_0002`: What is the percentage change in the total notional amount o...
+- `t2rag_0003`: What percentage of the total purchase price for the Metavant...
+- `t2rag_0004`: What was the difference in percentage cumulative total share...
+
+**Code QA Samples:**
+- `code_0000`: Write a python function to remove first and last occurrence ...
+- `code_0001`: Write a function to sort a given matrix in ascending order a...
+- `code_0002`: Write a function to count the most common words in a diction...
+- `code_0003`: Write a python function to find the volume of a triangular p...
+- `code_0004`: Write a function to split a string at lowercase letters....
+
+### Ingestion Results
+
+**T2-RAGBench:**
+- Namespace: `ragas_phase2_t2ragbench`
+- Total time: 28743ms
+- Document IDs: []
+
+**Code QA:**
+- Namespace: `ragas_phase2_codeqa`
+- Total time: 14727ms
+- Document IDs: []
+
+### Next Steps
+
+1. **Run RAGAS Evaluation:** Evaluate retrieval quality on these samples
+2. **Compare with Phase 1:** Baseline comparison with clean_text (HotpotQA)
+3. **Identify Bottlenecks:** Measure CP, CR, F, AR for structured data
+
+### Files Created
+
+- `data/evaluation/phase2_samples/t2ragbench/`: 5 table documents
+- `data/evaluation/phase2_samples/codeqa/`: 5 code documents
+- Metadata JSON files with questions/answers for RAGAS evaluation
+
+---
+
+---
+
+## Sprint 88 Pre-Validation: Phase 2 Dataset Ingestion
+
+**Date:** 2026-01-13 12:15
+**Objective:** Ingest structured data samples (tables, code) for RAGAS Phase 2 baseline
+
+### Datasets Ingested
+
+| Dataset | Type | Samples | Success | Failed | Avg Time |
+|---------|------|---------|---------|--------|----------|
+| T2-RAGBench (FinQA) | table | 5 | 0 | 5 | 18789ms |
+| Code QA | code_config | 5 | 0 | 5 | 14834ms |
+
+### Sample Details
+
+**T2-RAGBench (FinQA) Samples:**
+- `t2rag_0000`: What is the net change in Entergy's net revenue from 2014 to...
+- `t2rag_0001`: As of December 26, 2015, what percentage of Intel's total fa...
+- `t2rag_0002`: What is the percentage change in the total notional amount o...
+- `t2rag_0003`: What percentage of the total purchase price for the Metavant...
+- `t2rag_0004`: What was the difference in percentage cumulative total share...
+
+**Code QA Samples:**
+- `code_0000`: Write a python function to remove first and last occurrence ...
+- `code_0001`: Write a function to sort a given matrix in ascending order a...
+- `code_0002`: Write a function to count the most common words in a diction...
+- `code_0003`: Write a python function to find the volume of a triangular p...
+- `code_0004`: Write a function to split a string at lowercase letters....
+
+### Ingestion Results
+
+**T2-RAGBench:**
+- Namespace: `ragas_phase2_t2ragbench`
+- Total time: 18789ms
+- Document IDs: []
+
+**Code QA:**
+- Namespace: `ragas_phase2_codeqa`
+- Total time: 14834ms
+- Document IDs: []
+
+### Next Steps
+
+1. **Run RAGAS Evaluation:** Evaluate retrieval quality on these samples
+2. **Compare with Phase 1:** Baseline comparison with clean_text (HotpotQA)
+3. **Identify Bottlenecks:** Measure CP, CR, F, AR for structured data
+
+### Files Created
+
+- `data/evaluation/phase2_samples/t2ragbench/`: 5 table documents
+- `data/evaluation/phase2_samples/codeqa/`: 5 code documents
+- Metadata JSON files with questions/answers for RAGAS evaluation
+
+---
+
+---
+
+## Sprint 88 Pre-Validation: Phase 2 Dataset Ingestion
+
+**Date:** 2026-01-13 12:46
+**Objective:** Ingest structured data samples (tables, code) for RAGAS Phase 2 baseline
+
+### Datasets Ingested
+
+| Dataset | Type | Samples | Success | Failed | Avg Time |
+|---------|------|---------|---------|--------|----------|
+| T2-RAGBench (FinQA) | table | 5 | 4 | 1 | 215824ms |
+| Code QA | code_config | 5 | 5 | 0 | 33705ms |
+
+### Sample Details
+
+**T2-RAGBench (FinQA) Samples:**
+- `t2rag_0000`: What is the net change in Entergy's net revenue from 2014 to...
+- `t2rag_0001`: As of December 26, 2015, what percentage of Intel's total fa...
+- `t2rag_0002`: What is the percentage change in the total notional amount o...
+- `t2rag_0003`: What percentage of the total purchase price for the Metavant...
+- `t2rag_0004`: What was the difference in percentage cumulative total share...
+
+**Code QA Samples:**
+- `code_0000`: Write a python function to remove first and last occurrence ...
+- `code_0001`: Write a function to sort a given matrix in ascending order a...
+- `code_0002`: Write a function to count the most common words in a diction...
+- `code_0003`: Write a python function to find the volume of a triangular p...
+- `code_0004`: Write a function to split a string at lowercase letters....
+
+### Ingestion Results
+
+**T2-RAGBench:**
+- Namespace: `ragas_phase2_t2ragbench`
+- Total time: 863296ms
+- Document IDs: [None, None, None, None]
+
+**Code QA:**
+- Namespace: `ragas_phase2_codeqa`
+- Total time: 168524ms
+- Document IDs: [None, None, None, None, None]
+
+### Next Steps
+
+1. **Run RAGAS Evaluation:** Evaluate retrieval quality on these samples
+2. **Compare with Phase 1:** Baseline comparison with clean_text (HotpotQA)
+3. **Identify Bottlenecks:** Measure CP, CR, F, AR for structured data
+
+### Files Created
+
+- `data/evaluation/phase2_samples/t2ragbench/`: 5 table documents
+- `data/evaluation/phase2_samples/codeqa/`: 5 code documents
+- Metadata JSON files with questions/answers for RAGAS evaluation
+
+---
