@@ -405,15 +405,26 @@ class MultiVectorHybridSearch:
                     ]
                 )
 
-            # Search with sparse vector only
+            # Search with sparse vector only using query_points API
+            # Note: For sparse-only search, we use query_points with a single
+            # sparse prefetch instead of the search API with NamedVector,
+            # since NamedVector expects dense vectors (list of floats)
             search_start_api = time.perf_counter()
-            search_results = await self.qdrant_client.async_client.search(
+            query_response = await self.qdrant_client.async_client.query_points(
                 collection_name=self.collection_name,
-                query_vector=NamedVector(name="sparse", vector=sparse_vector),
+                prefetch=[
+                    Prefetch(
+                        query=sparse_vector,
+                        using="sparse",
+                        limit=top_k * 2,  # Prefetch more for better results
+                    )
+                ],
+                query=FusionQuery(fusion=Fusion.RRF),  # Single prefetch, RRF is no-op
                 limit=top_k,
                 query_filter=qdrant_filter,
                 with_payload=True,
             )
+            search_results = query_response.points
             search_duration_ms = (time.perf_counter() - search_start_api) * 1000
 
             # Format results

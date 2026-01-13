@@ -258,7 +258,10 @@ class TestMultiVectorHybridSearch:
                 },
             )
         ]
-        multi_vector_search.qdrant_client.async_client.search.return_value = mock_results
+        # Create mock response with .points attribute (query_points returns QueryResponse)
+        mock_response = Mock()
+        mock_response.points = mock_results
+        multi_vector_search.qdrant_client.async_client.query_points.return_value = mock_response
 
         # Execute sparse-only search
         results = await multi_vector_search.sparse_only_search(
@@ -270,8 +273,8 @@ class TestMultiVectorHybridSearch:
         # Verify embedding service called
         mock_embedding_service.embed_single.assert_called()
 
-        # Verify search called
-        assert multi_vector_search.qdrant_client.async_client.search.called
+        # Verify query_points called (sparse-only uses query_points API)
+        assert multi_vector_search.qdrant_client.async_client.query_points.called
 
         # Verify results
         assert len(results) == 1
