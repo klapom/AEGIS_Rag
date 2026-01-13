@@ -45,6 +45,7 @@ rank-bm25 = "^0.2.2"
 
 # Embeddings (Sprint 61: Native Sentence-Transformers - Feature 61.1)
 sentence-transformers = "^3.3.1"  # Native BGE-M3 embeddings (5x faster than Ollama)
+FlagEmbedding = "^1.2.0"  # Sprint 87: Multi-vector embeddings (dense + sparse) for native hybrid search
 
 # Utilities (Core)
 python-dotenv = "^1.0.0"

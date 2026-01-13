@@ -441,7 +441,7 @@ Answer:"""
                 task_type=TaskType.GENERATION,  # Sprint 85 Fix: Use GENERATION for yes/no
                 prompt=prompt,
                 complexity=Complexity.LOW,
-                quality_requirement=QualityRequirement.STANDARD,
+                quality_requirement=QualityRequirement.LOW,  # Sprint 85 Hotfix: STANDARD doesn't exist
                 temperature=0.1,
                 max_tokens=10,
                 model_local=self.model,

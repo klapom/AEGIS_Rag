@@ -2,7 +2,7 @@
 
 **Duration:** 3-5 days
 **Story Points:** 26 SP (8 features + bugfixes)
-**Status:** 🏗️ In Progress
+**Status:** 🏗️ In Progress (84.7, 84.8, 84.9 Complete)
 **Goal:** Fehlerfreie Ingestion von 500 RAGAS Phase 1 Samples mit Sprint 83 Features + Enhanced Logging
 
 ---
@@ -447,7 +447,7 @@ def upload_with_resume(
 
 ---
 
-### Feature 84.7: Neo4j Cypher Escaping Bug Fix (3 SP) ✅ CRITICAL
+### Feature 84.7: Neo4j Cypher Escaping Bug Fix (3 SP) ✅ COMPLETE
 
 **User Story:**
 **As a** Graph Storage System
@@ -612,7 +612,7 @@ message: Invalid input 'Dataset': expected a parameter, '&', ')', ':', 'WHERE', 
 
 ---
 
-### Feature 84.8: Section Extraction Performance Optimization (TD-078) (3 SP)
+### Feature 84.8: Section Extraction Performance Optimization (TD-078) (3 SP) ✅ COMPLETE
 
 **User Story:**
 **As a** Ingestion Pipeline
@@ -694,7 +694,7 @@ def detect_txt_sections(text: str) -> List[Section]:
 - **Scalability:** 500 .txt files: 5.8 hours → 41 minutes
 - **Cost**: Fewer LLM calls for section detection
 
-**Status:** 📊 ANALYSIS PHASE (Feature 84.8)
+**Status:** ✅ COMPLETE (O(n²) fix implemented in Sprint 85)
 
 ---
 
@@ -770,5 +770,5 @@ def detect_txt_sections(text: str) -> List[Section]:
 
 ---
 
-**Status:** 📝 Planned (Sprint 84)
-**Next Sprint:** Sprint 85 (RAGAS Phase 2 Evaluation)
+**Status:** 🏗️ In Progress (3/9 features complete)
+**Next Sprint:** Sprint 85 (Relation Extraction Improvement - TD-102)

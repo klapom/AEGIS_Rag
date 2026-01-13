@@ -170,6 +170,21 @@ class CommunitySummarizer:
             logger.warning("empty_community_skipped", community_id=community_id)
             return "Empty community with no entities."
 
+        # Sprint 85 Fix (TD-101): Skip LLM for single-entity communities with no relationships
+        # These isolated entities don't need LLM summarization - use entity description instead
+        if len(entities) == 1 and len(relationships) == 0:
+            entity = entities[0]
+            entity_name = entity.get("name", "Unknown")
+            entity_type = entity.get("type", "UNKNOWN")
+            simple_summary = f"{entity_name}: An entity of type {entity_type} without direct relationships in this community."
+            logger.info(
+                "single_entity_community_skipped_llm",
+                community_id=community_id,
+                entity_name=entity_name,
+                reason="td101_performance_optimization",
+            )
+            return simple_summary
+
         # Format entities for prompt
         entities_text = "\n".join(
             [f"- {entity['name']} ({entity.get('type', 'UNKNOWN')})" for entity in entities]

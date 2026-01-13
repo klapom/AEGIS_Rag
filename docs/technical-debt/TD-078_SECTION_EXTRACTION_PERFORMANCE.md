@@ -6,6 +6,7 @@
 **Created:** 2025-12-29 (Sprint 66 Analysis)
 **Target:** Sprint 67-68
 **Analysis:** [PERF-001](../analysis/PERF-001_Section_Extraction_Performance.md)
+**Updated:** 2026-01-11 (Sprint 85 - Root Cause Discovery)
 
 ---
 
@@ -26,17 +27,102 @@ Section extraction is the **slowest component** in the ingestion pipeline, takin
 
 ---
 
-## Root Cause Analysis
+## 🔴 CRITICAL DISCOVERY (Sprint 85): O(n²) Token Counting Bug
+
+**Date:** 2026-01-11
+**Severity:** CRITICAL - This is the PRIMARY bottleneck!
+
+### The Real Root Cause
+
+The non-linear scaling is NOT caused by section tree traversal or heading detection.
+**It's caused by re-tokenizing the ENTIRE accumulated text on every append!**
+
+**File:** `src/components/ingestion/section_extraction.py`, Line 532
+
+```python
+# ❌ CURRENT CODE - O(n²) complexity!
+current_section.text += text_content + "\n\n"
+current_section.token_count = count_tokens_func(current_section.text)  # Tokenizes EVERYTHING!
+```
+
+### Why This Is O(n²)
+
+```
+Text Block 1 added:  tokenize("Block 1")                    → 1 block
+Text Block 2 added:  tokenize("Block 1 + Block 2")          → 2 blocks
+Text Block 3 added:  tokenize("Block 1 + Block 2 + Block 3") → 3 blocks
+...
+Text Block n added:  tokenize("ALL n blocks")               → n blocks
+
+Total tokenization work: 1 + 2 + 3 + ... + n = n(n+1)/2 = O(n²)
+```
+
+**For 794 text blocks:** 794 × 795 / 2 = **315,615 tokenization operations!**
+
+### The Fix (3 SP - Quick Win)
+
+```python
+# ✅ FIX - O(n) complexity - Incremental token counting
+new_tokens = count_tokens_func(text_content)  # Only tokenize NEW text
+current_section.text += text_content + "\n\n"
+current_section.token_count += new_tokens + 2  # +2 for "\n\n" (approximate)
+```
+
+**Expected Improvement:** 10-50x speedup for large documents!
+
+---
+
+## 🟡 DISCOVERY: Docling Already Provides Section Labels!
+
+### What Docling Returns
+
+Docling already identifies sections via labels in the `texts` array:
+
+```json
+{
+  "texts": [
+    {"label": "title", "text": "Chapter 1: Introduction", ...},
+    {"label": "section_header", "text": "1.1 Overview", "level": 2, ...},
+    {"label": "paragraph", "text": "Body text...", ...},
+    {"label": "subtitle-level-1", "text": "Subsection", ...}
+  ]
+}
+```
+
+### Format Support Matrix
+
+| Format | Docling Labels | Section Detection | Performance |
+|--------|----------------|-------------------|-------------|
+| **PPTX** | `title`, `subtitle-level-1`, `subtitle-level-2` | ✅ Direct from labels | O(n) - Fast |
+| **PDF** | `title`, `section_header` | ✅ Direct from labels | O(n) - Fast |
+| **DOCX** | Only `paragraph`, `text`, `list_item` | ❌ Heuristics needed | O(n) but slower |
+
+### Why DOCX Needs Heuristics (Docling Bug!)
+
+DOCX files SHOULD have `section_header` labels (Word Heading 1, 2, 3 styles), but Docling has known bugs:
+
+| GitHub Issue | Problem |
+|--------------|---------|
+| [#795](https://github.com/docling-project/docling/issues/795) | Headings with numbering styles labeled as `list` not `section_header` |
+| [#2250](https://github.com/docling-project/docling/issues/2250) | Content after headers gets lost |
+| [#2392](https://github.com/docling-project/docling/issues/2392) | Header information not converted to Markdown |
+| [#1272](https://github.com/docling-project/docling/issues/1272) | Headers/footers treated as sections |
+
+**Workaround:** Our code falls back to formatting-based heuristics (bold + short text).
+
+---
+
+## Root Cause Analysis (Updated)
 
 **File:** `src/components/ingestion/section_extraction.py`
 
-### Identified Bottlenecks
+### Identified Bottlenecks (Priority Order)
 
-1. **Sequential Processing** - All text blocks processed one-by-one (no parallelization)
-2. **Repeated Tokenization** - Each text block tokenized individually without batching
-3. **Heading Detection** - Regex patterns recompiled on every block
-4. **No Caching** - Same heading patterns checked repeatedly
-5. **Inefficient Data Structures** - O(n) linear search for section tree traversal
+1. 🔴 **O(n²) Token Re-Counting** - Re-tokenizes entire section on every text append (LINE 532)
+2. 🟡 **DOCX Heuristic Detection** - Fallback due to Docling bugs (not our fault)
+3. 🟢 **Sequential Processing** - All text blocks processed one-by-one (minor impact)
+4. ✅ **Regex Patterns** - Already compiled at module level (Sprint 67 fix applied)
+5. ✅ **LRU Caching** - Already implemented for heading detection (Sprint 67 fix applied)
 
 ### Performance Characteristics
 
@@ -47,74 +133,74 @@ Section extraction is the **slowest component** in the ingestion pipeline, takin
 ```
 
 **Why does per-text time increase?**
-- Larger section trees require more traversal
-- More heading hierarchy levels → more comparisons
-- No algorithmic optimization for large documents
+- ~~Larger section trees require more traversal~~ ❌ Not the cause
+- ~~More heading hierarchy levels → more comparisons~~ ❌ Not the cause
+- **O(n²) token re-counting on accumulated text** ✅ PRIMARY CAUSE
 
 ---
 
-## Optimization Strategy
+## Optimization Strategy (Updated Sprint 85)
 
-### Sprint 67: Profiling + Quick Wins (7 SP)
+### 🔴 IMMEDIATE: Fix O(n²) Token Counting (3 SP)
 
-**Target:** 2-3x speedup (146 texts: 112s → 40-50s)
+**Target:** 10-50x speedup for large documents
+**Priority:** CRITICAL - Do this FIRST!
 
-#### Tasks
+```python
+# File: src/components/ingestion/section_extraction.py, Line 525-532
 
-1. **Add Profiling Instrumentation (2 SP)**
-   - Detailed timing logs per operation
-   - Memory usage tracking
-   - Export profiling data to CSV
+# ❌ BEFORE (O(n²))
+elif label in content_labels and text_content:
+    if current_section:
+        current_section.text += text_content + "\n\n"
+        current_section.token_count = count_tokens_func(current_section.text)  # BUG!
 
-2. **Run Benchmark Suite (1 SP)**
-   - Test with 3 document sizes (small/medium/large)
-   - Generate performance report
-   - Identify top 3 bottlenecks
+# ✅ AFTER (O(n))
+elif label in content_labels and text_content:
+    if current_section:
+        new_tokens = count_tokens_func(text_content)  # Only new text
+        current_section.text += text_content + "\n\n"
+        current_section.token_count += new_tokens + 2  # Incremental
+```
 
-3. **Implement Quick Wins (3 SP)**
-   - **Batch Tokenization** (30-50% faster)
-     ```python
-     # BEFORE: 550 individual calls
-     for text in texts:
-         tokens = tokenizer.encode(text)
+**Expected Results:**
+| Document | Before | After | Speedup |
+|----------|--------|-------|---------|
+| 146 texts | 112s | ~10s | 11x |
+| 550 texts | 545s | ~20s | 27x |
+| 794 texts | 920s | ~25s | 37x |
 
-     # AFTER: Single batch call
-     all_tokens = tokenizer.encode_batch([t["text"] for t in texts])
-     ```
+---
 
-   - **Compile Regex Patterns** (10-20% faster)
-     ```python
-     # BEFORE: Recompiled every call
-     def _is_heading(text):
-         if re.match(r'^[A-Z].*:', text):
-             return True
+### Sprint 67: Profiling + Quick Wins (7 SP) - ✅ PARTIALLY DONE
 
-     # AFTER: Module-level compilation
-     HEADING_PATTERNS = [
-         re.compile(r'^[A-Z].*:'),
-         re.compile(r'^\d+\.'),
-     ]
+**Status:** Regex compilation and LRU caching already implemented.
 
-     def _is_heading(text):
-         return any(p.match(text) for p in HEADING_PATTERNS)
-     ```
+#### Completed Tasks ✅
 
-   - **Early Exit Conditions** (5-10% faster)
-     ```python
-     def _is_heading(text):
-         # Quick checks first
-         if len(text) > 200:  # Headings are usually short
-             return False
-         if not text[0].isupper():  # Must start with capital
-             return False
-         # Expensive checks last
-         return self._check_heading_style(text)
-     ```
+1. **Compile Regex Patterns** - ✅ Done (Lines 94-99)
+   ```python
+   BULLET_PATTERN = re.compile(r"^[-*•→]")
+   SECTION_KEYWORD_PATTERN = re.compile(r"\b(kapitel|abschnitt|...)\\b", re.IGNORECASE)
+   ```
 
-4. **Verify Improvements (1 SP)**
-   - Re-run benchmarks
-   - Compare before/after metrics
-   - Document actual speedup achieved
+2. **LRU Caching** - ✅ Done (Line 199)
+   ```python
+   @lru_cache(maxsize=1000)
+   def _is_likely_heading_by_formatting_cached(text, label, is_bold):
+   ```
+
+3. **Profiling Instrumentation** - ✅ Done (Lines 101-150)
+   ```python
+   _PROFILING_STATS = {...}
+   def get_profiling_stats() -> dict[str, float]:
+   ```
+
+#### Remaining Tasks
+
+1. **Fix O(n²) Token Counting (3 SP)** - 🔴 CRITICAL
+2. **Batch Tokenization Pre-computation** - Already partially implemented (Lines 425-447)
+3. **Verify Improvements (1 SP)** - Re-run benchmarks after fix
 
 ---
 
@@ -298,6 +384,61 @@ Section extraction is the **slowest component** in the ingestion pipeline, takin
 - **ADR-039:** Adaptive Section-Aware Chunking (current implementation)
 - **PERF-001:** Section Extraction Performance Analysis (detailed investigation)
 
+### External Dependencies (Docling Bugs)
+
+| Issue | Status | Impact on Us |
+|-------|--------|--------------|
+| [docling#795](https://github.com/docling-project/docling/issues/795) | Open | DOCX headings not labeled correctly |
+| [docling#2250](https://github.com/docling-project/docling/issues/2250) | Open | Content after headers lost |
+| [docling#2392](https://github.com/docling-project/docling/issues/2392) | Open | Header info not in Markdown |
+| [docling#1272](https://github.com/docling-project/docling/issues/1272) | Open | Headers/footers as sections |
+
+**Recommendation:** Monitor Docling releases for fixes. Once fixed, remove DOCX heuristic fallback.
+
+---
+
+## Architecture Diagram
+
+```mermaid
+flowchart TB
+    subgraph Input["📄 Document Input"]
+        DOC[/"PDF/DOCX/PPTX"\]
+        DOCLING["Docling Parser"]
+    end
+
+    subgraph DoclingOutput["📦 Docling Output"]
+        TEXTS["texts[] array<br/>with labels"]
+        LABELS{"Has title/<br/>section_header?"}
+    end
+
+    subgraph Strategy["🔍 Extraction Strategy"]
+        FAST["✅ Labels Strategy<br/>O(n) - Direct"]
+        SLOW["⚠️ Formatting Strategy<br/>O(n) - Heuristics"]
+    end
+
+    subgraph Bottleneck["🔴 O(n²) BOTTLENECK"]
+        LOOP["For each text block"]
+        APPEND["Append to section.text"]
+        TOKENIZE["count_tokens(ENTIRE text)<br/>315,615 ops for 794 texts!"]
+    end
+
+    subgraph Fix["✅ FIX: Incremental Counting"]
+        NEWTOK["count_tokens(NEW text only)"]
+        ADD["section.token_count += new_tokens"]
+    end
+
+    DOC --> DOCLING --> TEXTS --> LABELS
+    LABELS -->|"PPTX/PDF"| FAST
+    LABELS -->|"DOCX (bug)"| SLOW
+    FAST --> LOOP
+    SLOW --> LOOP
+    LOOP --> APPEND --> TOKENIZE
+    TOKENIZE -.->|"Replace with"| NEWTOK --> ADD
+
+    style Bottleneck fill:#ffcccc,stroke:#ff0000
+    style Fix fill:#ccffcc,stroke:#00aa00
+```
+
 ---
 
 ## Monitoring & Alerts
@@ -318,7 +459,20 @@ section_extraction_errors_total.counter()
 
 ---
 
+## Changelog
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-12-29 | 1.0 | Initial analysis and optimization plan |
+| 2026-01-11 | 2.0 | **MAJOR UPDATE:** Discovered O(n²) token counting bug as PRIMARY cause |
+| 2026-01-11 | 2.0 | Added Docling bug references (DOCX `section_header` issue) |
+| 2026-01-11 | 2.0 | Updated bottleneck priority order |
+| 2026-01-11 | 2.0 | Added architecture diagram |
+| 2026-01-11 | 2.0 | Documented that Sprint 67 quick wins are partially done |
+
+---
+
 **Created by:** Claude Code
 **Analysis Date:** 2025-12-29
-**Last Updated:** 2025-12-29
-**Document Version:** 1.0
+**Last Updated:** 2026-01-11 (Sprint 85)
+**Document Version:** 2.0

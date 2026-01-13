@@ -61,10 +61,11 @@ class CascadeRankConfig:
 
 # Default 3-Rank Cascade Configuration
 DEFAULT_CASCADE: list[CascadeRankConfig] = [
-    # Rank 1: Nemotron3 (LLM-Only) - Fast, local, 300s timeout
+    # Rank 1: Nemotron-3-Nano (LLM-Only) - Fast, local, 300s timeout
+    # Sprint 85 Fix: Correct model name from "nemotron3" to "nemotron-3-nano:latest"
     CascadeRankConfig(
         rank=1,
-        model="nemotron3",
+        model="nemotron-3-nano:latest",
         method=ExtractionMethod.LLM_ONLY,
         entity_timeout_s=300,
         relation_timeout_s=300,

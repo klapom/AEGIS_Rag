@@ -1,11 +1,23 @@
 # BM25 Cache Discrepancy - Technical Debt
 
-**Status:** Open
+**Status:** ✅ RESOLVED (Sprint 87)
 **Priority:** Medium
-**Sprint:** Post-58
+**Sprint:** Post-58 → **Resolved Sprint 87**
 **Discovered:** 2025-12-20 during Sprint 53-58 refactoring validation
+**Resolution:** Sprint 87 eliminates BM25 pickle entirely by using BGE-M3 native sparse vectors stored in Qdrant
 
-## Issue Description
+## Resolution Note
+
+**Sprint 87 (BGE-M3 Native Hybrid)** resolves this TD by eliminating the separate BM25 cache entirely:
+- Sparse vectors are now stored IN Qdrant alongside dense vectors
+- No more pickle file = no more cache discrepancy
+- Sync guaranteed by design (both vectors in same Qdrant point)
+
+See: [TD-103: BM25 Index Desync](TD-103_BM25_INDEX_DESYNC.md) for full architecture details.
+
+---
+
+## Original Issue Description (Historical)
 
 The BM25 index cache shows a significant discrepancy between the number of documents loaded from disk cache versus the number of documents actually indexed in Qdrant.
 

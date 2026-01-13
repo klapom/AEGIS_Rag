@@ -1,9 +1,9 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-10 (Sprint 84 - Technical Debt Review & Cleanup)
+**Last Updated:** 2026-01-13 (Sprint 87 - BGE-M3 Native Hybrid)
 **Total Open Items:** 5
-**Total Story Points:** ~97 SP
-**Archived Items:** [26 items](archive/ARCHIVE_INDEX.md) (TD-059, TD-075, TD-077, TD-083, TD-100 added Sprint 84 Code Analysis)
+**Total Story Points:** ~110 SP
+**Archived Items:** [28 items](archive/ARCHIVE_INDEX.md) (TD-074, TD-103 resolved Sprint 87)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
 **Sprint 53-58:** Refactoring Initiative (ADR-046)
@@ -20,15 +20,17 @@
 
 | Priority | Count | Story Points |
 |----------|-------|--------------|
-| CRITICAL | 0     | 0 SP         |
+| CRITICAL | 1     | 21 SP        |
 | HIGH     | 1     | ~18 SP       |
-| MEDIUM   | 2     | ~18 SP       |
+| MEDIUM   | 1     | ~8 SP        |
 | LOW      | 2     | ~55 SP       |
 | PARTIAL  | 1     | ~6 SP        |
 
 **Sprint 81:** TD-096, TD-097 RESOLVED (8 SP) - Settings UI Integration complete
 **Sprint 83:** TD-044, TD-046, TD-052, TD-079, TD-099 RESOLVED (27 SP) - Logging improvements, namespace fixes, user upload, intent classifier
 **Sprint 84:** TD-059, TD-075, TD-077, TD-083, TD-100 RESOLVED (31 SP) - Code analysis revealed features already implemented but not archived
+**Sprint 85:** 🔴 **TD-101 DISCOVERED** (21 SP) - Community Summarization Bottleneck (Full Graph Re-Summarization)
+**Sprint 87:** ✅ **TD-074, TD-103 RESOLVED** (26 SP) - BGE-M3 Native Hybrid eliminates BM25 pickle (sync guaranteed)
 
 ---
 
@@ -68,6 +70,8 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 | TD-097 | Sprint 80 Settings UI/DB Integration | **Sprint 81** | **3** |
 | TD-099 | Namespace Not Set During RAGAS Ingestion | **Sprint 81** | **3** |
 | **TD-100** | **Gleaning Multi-Pass Extraction** | **Sprint 83** (Code Analysis Sprint 84) | **5** |
+| **TD-074** | **BM25 Cache Discrepancy** | **Sprint 87** (BGE-M3 Native Hybrid) | **5** |
+| **TD-103** | **BM25 Index Desync** | **Sprint 87** (BGE-M3 Native Hybrid) | **21** |
 
 ---
 
@@ -75,14 +79,21 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ### 🔴 CRITICAL Priority
 
-**None!** ✅ All critical technical debt resolved in Sprint 76.
+| TD# | Title | Status | SP | Target Sprint |
+|-----|-------|--------|-----|---------------|
+| [TD-101](TD-101_COMMUNITY_SUMMARIZATION_BOTTLENECK.md) | **Community Summarization Bottleneck** | 🔴 OPEN | 21 | **Sprint 86 URGENT** |
+
+**TD-101 Discovery (Sprint 85):** Multi-format ingestion testing revealed that EVERY document upload triggers community summarization for the ENTIRE Neo4j graph (~2000+ communities), not just new entities. This causes 40-60 minute ingestion times for small files.
 
 ### HIGH Priority
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-102](TD-102_RELATION_EXTRACTION_IMPROVEMENT.md) | **Relation Extraction Improvement** | 🔴 OPEN | 18 | **Sprint 86-88** |
 | [TD-080](TD-080_CONTEXT_RELEVANCE_GUARD.md) | Context Relevance Guard (Anti-Hallucination) | PHASE 1 COMPLETE | 5 | **Sprint 71-73** |
-| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | IN PROGRESS | 18 | **Sprint 67-68** |
+| [TD-078](TD-078_SECTION_EXTRACTION_PERFORMANCE.md) | Section Extraction Performance | ✅ O(n²) FIX DONE | 18 | **Sprint 67-68** |
+
+**TD-102 Discovery (Sprint 85):** Multi-format ingestion testing revealed Relation Ratio of only 0.27-0.61 (target: ≥1.0). Root causes: SpaCy only as fallback, generic RELATES_TO prompts, no Gleaning. 5 iterations planned: SpaCy-first → Typed Relations → Gleaning → DSPy → KG Hygiene.
 
 ### MEDIUM Priority
 
@@ -90,7 +101,7 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 |-----|-------|--------|-----|---------------|
 | [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 85+** |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 85** |
-| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | OPEN | 5 | **Sprint 85** |
+| [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | ✅ **RESOLVED Sprint 87** | 5 | **Sprint 87** |
 
 ### LOW Priority
 

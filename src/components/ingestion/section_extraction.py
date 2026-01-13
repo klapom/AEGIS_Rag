@@ -95,7 +95,7 @@ BULLET_PATTERN = re.compile(r"^[-*•→]")
 SECTION_KEYWORD_PATTERN = re.compile(
     r"\b(kapitel|abschnitt|teil|section|chapter|overview|introduction|"
     r"zusammenfassung|fazit|anhang|appendix|inhaltsverzeichnis|agenda)\b",
-    re.IGNORECASE
+    re.IGNORECASE,
 )
 
 # Performance profiling stats (global tracking)
@@ -136,9 +136,7 @@ def get_profiling_stats() -> dict[str, float]:
         stats["avg_extraction_time_ms"] = (
             stats["total_extraction_time_ms"] / stats["extraction_calls"]
         )
-        stats["avg_texts_per_call"] = (
-            stats["total_texts_processed"] / stats["extraction_calls"]
-        )
+        stats["avg_texts_per_call"] = stats["total_texts_processed"] / stats["extraction_calls"]
         stats["avg_sections_per_call"] = (
             stats["total_sections_extracted"] / stats["extraction_calls"]
         )
@@ -197,11 +195,7 @@ def _safe_log_text(text: str, max_len: int = 50) -> str:
 
 
 @lru_cache(maxsize=1000)
-def _is_likely_heading_by_formatting_cached(
-    text: str,
-    label: str,
-    is_bold: bool
-) -> bool:
+def _is_likely_heading_by_formatting_cached(text: str, label: str, is_bold: bool) -> bool:
     """Cached heading detection logic (LRU cache for repeated patterns).
 
     Separated from main function to enable caching of expensive checks.
@@ -443,7 +437,7 @@ def _extract_from_texts_array(
     logger.debug(
         "batch_tokenization_complete",
         texts_count=len(text_content_map),
-        tokenization_ms=round(tokenization_elapsed, 2)
+        tokenization_ms=round(tokenization_elapsed, 2),
     )
 
     # Detect which heading strategy to use
@@ -525,11 +519,15 @@ def _extract_from_texts_array(
         elif label in content_labels and text_content:
             # Accumulate content in current section
             if current_section:
+                # Fix TD-078 (Sprint 85): Incremental token counting - O(n) instead of O(n²)
+                # Previously: Re-tokenized ENTIRE accumulated text on every append
+                # Now: Only tokenize NEW text and add to running count
+                # Expected speedup: 10-50x for large documents (794 texts: 920s → ~25s)
+                new_tokens = token_count_map.get(idx, count_tokens_func(text_content))
                 current_section.text += text_content + "\n\n"
-                # Use pre-computed token count (avoids re-tokenization)
-                # We need to recompute for accumulated text, but this is still faster
-                # than tokenizing each individual piece
-                current_section.token_count = count_tokens_func(current_section.text)
+                current_section.token_count += (
+                    new_tokens + 2
+                )  # +2 for "\n\n" separator (approximate)
             else:
                 # Content before first heading - create implicit section
                 logger.debug(
@@ -563,7 +561,9 @@ def _extract_from_texts_array(
         heading_strategy=heading_strategy,
         extraction_time_ms=round(extraction_elapsed, 2),
         tokenization_time_ms=round(tokenization_elapsed, 2),
-        avg_ms_per_text=round(extraction_elapsed / texts_processed, 2) if texts_processed > 0 else 0,
+        avg_ms_per_text=(
+            round(extraction_elapsed / texts_processed, 2) if texts_processed > 0 else 0
+        ),
     )
 
     return sections
@@ -700,8 +700,10 @@ def _extract_from_body_tree(
                     node_text = getattr(node, "text", "").strip()
 
                 if node_text:
+                    # Fix TD-078 (Sprint 85): Incremental token counting - O(n) instead of O(n²)
+                    new_tokens = count_tokens_func(node_text)
                     current_section.text += node_text + "\n\n"
-                    current_section.token_count = count_tokens_func(current_section.text)
+                    current_section.token_count += new_tokens + 2  # +2 for "\n\n" separator
 
         # Recurse into children
         children = None
