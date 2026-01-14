@@ -1,9 +1,9 @@
-# Sprint 83 Plan: ER-Extraction Robustness & Observability
+# Sprint 83: ER-Extraction Robustness & Observability
 
 **Epic:** Ingestion Pipeline Reliability & Debugging
-**Duration:** 7-10 days
-**Total Story Points:** 26 SP (83.1: 5 + 83.2: 8 + 83.3: 5 + 83.4: 8)
-**Status:** 📝 In Progress (2026-01-10)
+**Duration:** 5-7 days
+**Total Story Points:** 21 SP
+**Status:** 📝 Planned
 
 ---
 
@@ -107,20 +107,14 @@
 
 ### Sprint 83 Features
 
-| # | Feature | SP | Priority | Status | Solves |
-|---|---------|-----|----------|--------|--------|
-| 83.1 | Comprehensive Ingestion Logging | 5 | P0 | 🔄 In Progress | Logging Gaps |
-| 83.2 | LLM Fallback & Retry Strategy | 8 | P0 | ⏳ Pending | HTTP 000 Failures |
-| 83.3 | Gleaning (Multi-Pass ER-Extraction) | 5 | P1 | ⏳ Pending | Low Entity Recall |
-| 83.4 | Fast User Upload + Background Refinement | 8 | P1 | ⏳ Pending | User Experience |
+| # | Feature | SP | Priority | Solves |
+|---|---------|-----|----------|--------|
+| 83.1 | Comprehensive Ingestion Logging | 5 | P0 | Logging Gaps |
+| 83.2 | LLM Fallback & Retry Strategy | 8 | P0 | HTTP 000 Failures |
+| 83.3 | Gleaning (Multi-Pass ER-Extraction) | 5 | P2 | Low Entity Recall (defer to Sprint 84) |
+| 83.4 | Fast User Upload + Background Refinement | 8 | P1 | User Experience (immediate feedback) |
 
-**Total:** 26 SP
-
-**Implementation Order:**
-1. Feature 83.1 (Logging) - Foundation for debugging all other features
-2. Feature 83.2 (Fallback) - Fixes critical upload failures (blocking RAGAS Phase 1)
-3. Feature 83.3 (Gleaning) - Improves entity recall (+20-40%)
-4. Feature 83.4 (Fast Upload) - Best user experience (2-5s feedback)
+**Total:** 26 SP (21 SP if Feature 83.3 deferred to Sprint 84)
 
 ---
 
@@ -647,181 +641,35 @@ class ParallelIngestionOrchestrator:
 
 ---
 
-## Feature 83.3: Gleaning (Multi-Pass ER-Extraction) (5 SP)
+## Feature 83.3: Gleaning (Multi-Pass ER-Extraction) (5 SP) [DEFERRED TO SPRINT 84]
 
-### Goal
-Implement Microsoft GraphRAG-style gleaning for +20-40% entity recall.
+### Status
+**Deferred to Sprint 84** - Logging and fallback (Features 83.1 & 83.2) are prerequisites for gleaning debugging.
 
 ### Documentation
 Full implementation details documented in **[TD-100: Gleaning Multi-Pass Extraction](../technical-debt/TD-100_GLEANING_MULTI_PASS_EXTRACTION.md)**
 
-### Implementation Summary
+### Summary
 
-**Multi-Round Extraction Process:**
-1. **Round 1 (Initial):** Extract entities with standard LLM prompt
-2. **Completeness Check:** Ask LLM "Did you extract ALL entities?" (logit bias: force yes/no)
-3. **Round 2+ (Gleaning):** Extract missing entities with continuation prompt
-4. **Early Exit:** Stop if LLM confirms all entities extracted
+**Goal:** Implement Microsoft GraphRAG-style gleaning for +20-40% entity recall.
 
-**Key Components:**
+**Implementation:**
+- Multi-round extraction: Initial pass → Completeness check → Extract missing entities
+- Logit bias forcing for yes/no decisions
+- Early exit if LLM confirms all entities extracted
+- Wire `gleaning_steps` from ChunkingConfig (field exists but not implemented)
 
-```python
-# src/components/graph_rag/extraction_service.py
+**Cost-Benefit:**
+- Gleaning Round 1: +20% entities, 2x LLM cost
+- Gleaning Round 2: +35% entities, 3x LLM cost
+- Gleaning Round 3: +40% entities, 4x LLM cost (diminishing returns)
 
-async def extract_entities_with_gleaning(
-    self,
-    document_text: str,
-    chunk_id: str,
-    max_gleanings: int = 0,  # 0=disabled, 1-3=enabled
-) -> List[Entity]:
-    """Extract entities with optional multi-pass gleaning."""
+**Why Deferred:**
+1. Feature 83.1 (logging) needed to debug gleaning performance
+2. Feature 83.2 (fallback) needed to handle gleaning LLM failures
+3. Sprint 83 focus: Upload reliability (Feature 83.2 is blocking RAGAS Phase 1 completion)
 
-    # Round 1: Initial extraction
-    entities = await self._extract_entities(document_text, chunk_id)
-
-    if max_gleanings == 0:
-        return entities  # Gleaning disabled
-
-    # Gleaning rounds 2..N
-    for gleaning_round in range(1, max_gleanings + 1):
-        # Check completeness with logit bias
-        if await self._check_extraction_completeness(document_text, entities):
-            logger.info("gleaning_complete_early", round=gleaning_round)
-            break
-
-        # Extract missing entities
-        additional = await self._extract_missing_entities(document_text, entities)
-        entities.extend(additional)
-
-    return entities
-```
-
-**Cost-Benefit Analysis:**
-
-| Gleaning Rounds | Entity Recall | LLM API Calls | Cost | Use Case |
-|-----------------|---------------|---------------|------|----------|
-| 0 (disabled) | Baseline | 1x | 1x | Fast throughput (default) |
-| **1** | **+20%** | **2x** | **2x** | **Recommended** ✅ |
-| 2 | +35% | 3x | 3x | High-precision |
-| 3 | +40% | 4x | 4x | Research/legal docs |
-
-**Configuration:**
-
-```python
-# src/components/chunking_config/chunking_config_service.py
-
-class ChunkingConfig(BaseModel):
-    gleaning_steps: int = 0  # NOW ACTUALLY IMPLEMENTED!
-    # 0 = disabled (default, fast)
-    # 1 = one gleaning round (+20% recall, 2x cost) ← RECOMMENDED
-    # 2 = two gleaning rounds (+35% recall, 3x cost)
-    # 3 = three gleaning rounds (+40% recall, 4x cost)
-```
-
-### Files to Modify
-
-1. **src/components/graph_rag/extraction_service.py** (+200 LOC)
-   - `extract_entities_with_gleaning()` - Main gleaning orchestration
-   - `_check_extraction_completeness()` - Logit bias yes/no check
-   - `_extract_missing_entities()` - Continuation prompt extraction
-   - `_merge_and_deduplicate()` - Merge gleaning rounds
-
-2. **src/components/graph_rag/lightrag/ingestion.py** (+50 LOC)
-   - Wire `gleaning_steps` from ChunkingConfig
-   - Pass to extraction_service calls
-
-3. **src/components/ingestion/nodes/graph_extraction.py** (+20 LOC)
-   - Read `state.get("gleaning_steps", 0)`
-   - Pass to LightRAG extraction
-
-4. **src/components/ingestion/ingestion_state.py** (+5 LOC)
-   - Add `gleaning_steps: int` field
-
-### Testing Strategy
-
-**Unit Tests (10 tests, 95%+ coverage):**
-```python
-# tests/unit/components/graph_rag/test_gleaning.py
-
-@pytest.mark.asyncio
-async def test_gleaning_early_exit():
-    """Test gleaning stops early if LLM says all entities found."""
-    service = ExtractionService()
-
-    # Mock completeness check to return True after Round 1
-    with patch.object(service, "_check_extraction_completeness", return_value=True):
-        entities = await service.extract_entities_with_gleaning(
-            document_text="Tesla was founded by Elon Musk.",
-            chunk_id="chunk_test",
-            max_gleanings=3,  # Could run 3 rounds, but stops at 1
-        )
-
-    # Verify only 1 round executed
-    assert len(entities) > 0
-
-
-@pytest.mark.asyncio
-async def test_gleaning_incremental_improvement():
-    """Test gleaning adds entities over multiple rounds."""
-    # Mock Round 1: 10 entities
-    # Mock Round 2: +3 entities (total 13)
-
-    entities = await service.extract_entities_with_gleaning(
-        document_text="...",
-        chunk_id="chunk_test",
-        max_gleanings=2,
-    )
-
-    assert len(entities) >= 13  # At least 30% improvement
-```
-
-**Integration Tests (2 tests):**
-```python
-# tests/integration/ingestion/test_gleaning_integration.py
-
-@pytest.mark.integration
-async def test_full_ingestion_with_gleaning():
-    """Test full ingestion pipeline with gleaning enabled."""
-
-    config = ChunkingConfig(gleaning_steps=1)
-
-    result = await upload_and_index(
-        file_path="test_document.txt",
-        chunking_config=config,
-    )
-
-    # Verify entities were extracted with gleaning
-    # (Check logs for "gleaning_round_2_complete")
-    assert result.entities_count > baseline_entities_count
-```
-
-### Acceptance Criteria
-
-- [x] Implement `extract_entities_with_gleaning()` in extraction_service.py
-- [x] Implement `_check_extraction_completeness()` with logit bias
-- [x] Implement `_extract_missing_entities()` continuation prompt
-- [x] Wire `gleaning_steps` from ChunkingConfig through full pipeline
-- [x] Add logging for each gleaning round (`gleaning_round_N_complete`)
-- [x] 10 unit tests verify early exit and incremental improvement (95%+ coverage)
-- [x] 2 integration tests show +20% entity recall with gleaning=1
-- [x] Document cost-benefit analysis in RAGAS_JOURNEY.md
-
-### Expected Impact
-
-**Before (Sprint 82 - Single-Pass Extraction):**
-- Entity recall: Baseline
-- LLM cost: 1x
-- No validation of completeness
-
-**After (Sprint 83 - Gleaning with max_gleanings=1):**
-- Entity recall: **+20%** ✅
-- LLM cost: 2x (acceptable for quality improvement)
-- Automatic completeness validation with early exit
-
-**Research Evidence (Microsoft GraphRAG Paper):**
-- Gleaning consistently improves entity recall by 15-25% per round
-- Diminishing returns after Round 3 (<5% improvement)
-- Cost-effective at gleaning_steps=1 (best ROI)
+**Next Steps:** Implement in Sprint 84 after logging/fallback infrastructure is in place.
 
 ---
 
