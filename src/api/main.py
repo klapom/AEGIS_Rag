@@ -127,26 +127,50 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             note="Can be initialized via /api/v1/retrieval/prepare-bm25",
         )
 
-    # Sprint 65 Feature 65.1: Pre-load BGE-M3 embedding model (81s on CPU, hidden during startup)
+    # Sprint 65 Feature 65.1 + Sprint 92 Fix: Pre-load embedding model via factory
+    # This now respects EMBEDDING_BACKEND setting (flag-embedding, sentence-transformers, ollama)
     try:
-        logger.info("Pre-loading BGE-M3 embedding model...")
-        from src.domains.vector_search.embedding import get_native_embedding_service
+        logger.info("Pre-loading embedding model via factory...")
+        from src.components.shared.embedding_factory import get_embedding_service
 
-        # Load model into memory (singleton pattern - only happens once)
-        # On CPU this takes 81s, but it's hidden during startup instead of first user request
-        embedding_service = get_native_embedding_service()
-        logger.info(
-            "bge_m3_preloaded",
-            status="success",
-            device=embedding_service.device,
-            embedding_dim=embedding_service.embedding_dim,
-        )
+        # Get service from factory (respects EMBEDDING_BACKEND config)
+        embedding_service = get_embedding_service()
+
+        # Trigger model loading with warmup embedding call
+        # FlagEmbeddingService loads model lazily on first embed_single() call
+        warmup_result = await embedding_service.embed_single("System warmup for model preload")
+
+        # Log success with backend-specific info
+        backend = getattr(embedding_service, "model_name", "unknown")
+        device = getattr(embedding_service, "device", "unknown")
+        embedding_dim = getattr(embedding_service, "embedding_dim", 1024)
+
+        # Check if we got multi-vector (FlagEmbedding) or dense-only result
+        if isinstance(warmup_result, dict):
+            logger.info(
+                "embedding_model_preloaded",
+                status="success",
+                backend="flag-embedding",
+                model=backend,
+                device=device,
+                embedding_dim=embedding_dim,
+                has_sparse=bool(warmup_result.get("sparse")),
+            )
+        else:
+            logger.info(
+                "embedding_model_preloaded",
+                status="success",
+                backend="dense-only",
+                model=backend,
+                device=device,
+                embedding_dim=embedding_dim,
+            )
     except Exception as e:
         # Non-fatal: Model will load on first request (slower but functional)
         logger.warning(
-            "bge_m3_preload_failed",
+            "embedding_preload_failed",
             error=str(e),
-            note="BGE-M3 will load on first request (may take 60-90s)",
+            note="Embedding model will load on first request (may take 60-90s)",
         )
 
     # Sprint 65 Feature 65.1: Pre-warm LLM for faster first follow-up question request
@@ -187,7 +211,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Sprint 32: Also initialize ingestion pipeline router
         try:
-            await langgraph_pipeline.initialize_ingestion_pipeline()
+            await langgraph_pipeline.initialize_pipeline_router()
             logger.info(
                 "format_router_initialized_ingestion",
                 docling_available=langgraph_pipeline._format_router.docling_available,
