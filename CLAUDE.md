@@ -19,13 +19,14 @@
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Vector Search | Qdrant + BM25 + RRF | Hybrid Retrieval |
+| Vector Search | Qdrant + BGE-M3 (Dense+Sparse) | Hybrid Retrieval (Sprint 87: replaces BM25) |
 | Graph Reasoning | LightRAG + Neo4j | Entity/Relation Queries |
 | Temporal Memory | Graphiti + Redis | 3-Layer Memory |
 | Orchestration | LangGraph | Multi-Agent System |
 | LLM Routing | AegisLLMProxy | Multi-Cloud (ADR-033) |
 | Ingestion | Docling CUDA | GPU-accelerated OCR |
 | Chunking | Section-Aware | 800-1800 tokens (ADR-039) |
+| Evaluation | RAGAS 0.4.2 | 4 metrics + operational metrics |
 
 ---
 
@@ -39,7 +40,7 @@ Package Manager: Poetry (pyproject.toml)
 Orchestration: LangGraph 0.6.10 + LangChain Core
 
 Databases:
-  Vector: Qdrant 1.11.0 (hybrid: vector + BM25 + RRF)
+  Vector: Qdrant 1.11.0 (Dense + Sparse vectors, server-side RRF)
   Graph: Neo4j 5.24 Community (entity/relation extraction)
   Memory: Redis 7.x + Graphiti (3-layer temporal memory)
 
@@ -47,8 +48,9 @@ LLM & Embeddings:
   Current Model: Nemotron3 Nano 30/3a (DGX Spark)
   LLM Routing: AegisLLMProxy (ADR-033) - Multi-cloud support
   Fallback: Alibaba Cloud DashScope, OpenAI
-  Embeddings: BGE-M3 (1024-dim, multilingual) - ADR-024
-  Reranking: 
+  Embeddings: BGE-M3 via FlagEmbedding (1024-dim Dense + Sparse lexical) - Sprint 87
+  Sparse Search: Learned lexical weights (replaces BM25) - Sprint 87
+  Reranking: Cross-encoder (top-k candidates) 
 
 Ingestion:
   Parser: Docling CUDA (GPU-accelerated OCR) - ADR-027
@@ -416,6 +418,13 @@ curl http://localhost:8000/health
 - **Active TD Count** und **Total SP** im TD_INDEX.md Footer aktualisieren
 - Beispiel: `TD-096` (RAGAS Timeouts) wird in Sprint 79 gelöst → nach `archive/TD-096-ragas-timeout.md`
 
+**J. scripts/README.md aktualisieren (bei Änderungen in /scripts):**
+- **IMMER** wenn Scripts hinzugefügt, geändert oder archiviert werden
+- Neue Scripts in entsprechende Sektion eintragen (RAGAS, Upload, Testing, etc.)
+- Veraltete Scripts ins `archive/` verschieben und README aktualisieren
+- `Last Updated` Datum und Sprint-Nummer aktualisieren
+- Quick Commands Sektion aktuell halten
+
 **⚠️ CRITICAL PROCESS GAP (Sprint 84 Erkenntnisse):**
 - **Problem:** TDs werden im Code gelöst, aber Dokumentation wird nicht aktualisiert → Documentation Drift
 - **Root Cause:** Fehlende Automatisierung der TD-Archivierung nach Feature-Abschluss
@@ -498,6 +507,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 81 Complete:** C-LARA SetFit Intent Classifier **95.22%** (Multi-Teacher training: 4 LLMs + 42 edge cases), 5-class intents, ~40ms inference, TD-079 resolved, namespace bug fix (TD-099).
 **Sprint 82 Complete:** RAGAS Phase 1 Text-Only Benchmark (8 SP), 500 samples (450 answerable + 50 unanswerable), HotpotQA + RAGBench adapters, stratified sampling engine, 49 unit tests (100%), SHA256: 8f6be17d...
 **Sprint 83 Complete:** ER-Extraction Improvements (26 SP, 4 features), 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid SpaCy NER, 99.9% success), Gleaning (+20-40% recall, Microsoft GraphRAG), Fast Upload (2-5s response, 10-15x faster), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost), Ollama Health Monitor, 94+ tests (100%), 7,638 LOC, 5 TDs archived (27 SP).
+**Sprint 87 Complete:** BGE-M3 Native Hybrid Search (replaces BM25), FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection with server-side RRF fusion, async embedding fix for LangGraph compatibility.
+**Sprint 88 In Progress:** RAGAS Phase 2 Evaluation (Tables + Code), T2-RAGBench (5/5 = 100%), MBPP Code QA (5/5 = 100%), comprehensive metrics schema (4 RAGAS + ingestion + retrieval + LLM eval metrics).
 
 ---
 

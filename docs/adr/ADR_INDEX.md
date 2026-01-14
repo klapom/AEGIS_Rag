@@ -60,6 +60,8 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 047 | Hybrid Agent Memory Architecture | Accepted | 2025-12-19 |
 | 048 | 1000-Sample RAGAS Benchmark Strategy | Proposed | 2026-01-09 |
 | 049 | 3-Rank LLM Cascade + Gleaning for ER-Extraction | Accepted | 2026-01-10 |
+| 050 | Intent-Based Skill Router Architecture | Accepted | 2026-01-14 |
+| 051 | Recursive Language Model Context Processing | Accepted | 2026-01-14 |
 
 ---
 

@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-13 (Sprint 87 - BGE-M3 Native Hybrid)
-**Total Open Items:** 5
-**Total Story Points:** ~110 SP
+**Last Updated:** 2026-01-13 (Sprint 87/89 - LightRAG CRUD Gap)
+**Total Open Items:** 6
+**Total Story Points:** ~121 SP
 **Archived Items:** [28 items](archive/ARCHIVE_INDEX.md) (TD-074, TD-103 resolved Sprint 87)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -22,7 +22,7 @@
 |----------|-------|--------------|
 | CRITICAL | 1     | 21 SP        |
 | HIGH     | 1     | ~18 SP       |
-| MEDIUM   | 1     | ~8 SP        |
+| MEDIUM   | 2     | ~19 SP       |
 | LOW      | 2     | ~55 SP       |
 | PARTIAL  | 1     | ~6 SP        |
 
@@ -31,6 +31,7 @@
 **Sprint 84:** TD-059, TD-075, TD-077, TD-083, TD-100 RESOLVED (31 SP) - Code analysis revealed features already implemented but not archived
 **Sprint 85:** 🔴 **TD-101 DISCOVERED** (21 SP) - Community Summarization Bottleneck (Full Graph Re-Summarization)
 **Sprint 87:** ✅ **TD-074, TD-103 RESOLVED** (26 SP) - BGE-M3 Native Hybrid eliminates BM25 pickle (sync guaranteed)
+**Sprint 89:** 🔴 **TD-104 PLANNED** (11 SP) - LightRAG CRUD Feature Gap (Entity/Relation CRUD, Data Export, Doc Deletion)
 
 ---
 
@@ -99,9 +100,12 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 | TD# | Title | Status | SP | Target Sprint |
 |-----|-------|--------|-----|---------------|
+| [TD-104](TD-104_LIGHTRAG_CRUD_FEATURE_GAP.md) | **LightRAG CRUD Feature Gap** | 🔴 OPEN | 11 | **Sprint 89** |
 | [TD-098](TD-098_CROSS_ENCODER_FINE_TUNING.md) | Cross-Encoder Fine-tuning | OPEN | 8 | **Sprint 85+** |
 | [TD-070](TD-070_INGESTION_PERFORMANCE_TUNING.md) | Ingestion Performance Tuning | **PHASE 1 COMPLETE (Sprint 83.1)** | 13 | **Sprint 85** |
 | [TD-074](TD-074_BM25_CACHE_DISCREPANCY.md) | BM25 Cache Discrepancy | ✅ **RESOLVED Sprint 87** | 5 | **Sprint 87** |
+
+**TD-104 Discovery (Sprint 87):** LightRAG vs AegisRAG comparison revealed 18+ LightRAG methods not exposed by our wrapper, including Entity/Relation CRUD, Data Export (CSV/Excel/MD), and Document Deletion. Planned for Sprint 89.
 
 ### LOW Priority
 

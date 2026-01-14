@@ -1,8 +1,199 @@
 # RAGAS Journey - Continuous RAG Metrics Optimization
 
 **Status:** 🔄 Active Development
-**Sprint:** 79+
+**Sprint:** 79+ (Current: Sprint 88)
 **Goal:** Achieve SOTA-level RAGAS metrics (F ≥ 0.90, AR ≥ 0.95, CP ≥ 0.85, CR ≥ 0.75)
+
+---
+
+## Sprint 88: Comprehensive Evaluation Plan (800 Samples)
+
+### Target Dataset Distribution
+
+| Phase | Data Type | Samples | Source | Status |
+|-------|-----------|---------|--------|--------|
+| Phase 1 | Clean Text | 500 | HotpotQA, RAGBench | ✅ Ready |
+| Phase 2a | Financial Tables | 150 | T2-RAGBench (FinQA) | ✅ Downloaded |
+| Phase 2b | Code Snippets | 150 | MBPP | ✅ Downloaded |
+| **Total** | - | **800** | - | **❌ Aborted (50/500)** |
+
+### Sprint 88 Progress (2026-01-13)
+
+**1. LightRAG Embedding Fix (Critical Bug)**
+- **Issue:** LightRAG initialization imported `embedding_service.py` (Ollama) directly, bypassing `embedding_factory.py`
+- **Impact:** When `EMBEDDING_BACKEND=flag-embedding`, Ollama tried to load "BAAI/bge-m3" → 404 error
+- **Fix:** Updated `src/components/graph_rag/lightrag/initialization.py`:
+  - Changed import from `embedding_service` to `embedding_factory`
+  - Added dict→list conversion for multi-vector results (LightRAG only needs dense vectors)
+
+**2. Multi-Vector Confirmation**
+- All Qdrant points now have both `dense` (1024D) and `sparse` (lexical weights) vectors
+- Server-side RRF fusion ready for hybrid search
+- Sparse vectors replace BM25 (TD-103 fully resolved)
+
+**3. Ingestion Pipeline - ABORTED (LLM-First Too Slow)**
+- **Start Time:** 2026-01-13 16:20 UTC
+- **End Time:** 2026-01-13 ~22:00 UTC (aborted after 50/500 docs)
+- **Result:** 28 ✅ successful, 23 ❌ failed (600s timeouts)
+- **Root Cause:** LLM-first cascade too slow (300-600s/doc vs target 60-90s)
+
+**Final Statistics (before abort):**
+| Metric | Value |
+|--------|-------|
+| Documents Processed | 50/500 (10%) |
+| Successful | 28 (56%) |
+| Failed (Timeout) | 23 (46%) |
+| Qdrant Vectors | 109 |
+| Neo4j Base Nodes | 660 |
+| Neo4j Chunks | 70 |
+| Neo4j RELATES_TO | 395 |
+| Neo4j MENTIONED_IN | 1,024 |
+
+**4. Solution: SpaCy-First Pipeline (Sprint 89)**
+
+Implemented 3-stage pipeline to replace slow LLM-first cascade:
+
+| Stage | Component | Time | Output |
+|-------|-----------|------|--------|
+| 1 | SpaCy NER | ~50ms | PERSON, ORG, LOC, DATE entities |
+| 2 | LLM Entity Enrichment | ~5-15s | CONCEPT, TECHNOLOGY, PRODUCT entities (MANDATORY) |
+| 3 | LLM Relation Extraction | ~10-30s | All relationships between entities |
+
+**Expected Improvement:** 300-600s → 30-60s per document (10-20x faster)
+
+**Files Modified:**
+- `src/config/extraction_cascade.py` - New pipeline config + feature flag
+- `src/prompts/extraction_prompts.py` - New prompts for enrichment + relation extraction
+- `src/components/graph_rag/extraction_service.py` - Pipeline implementation
+- `src/components/graph_rag/extraction_factory.py` - Routing to SpaCy-First
+
+**Feature Flag:** `AEGIS_USE_LEGACY_CASCADE=1` to revert to old LLM-first cascade
+
+### Comprehensive Metrics Schema
+
+**A. RAGAS Quality Metrics (4 Core)**
+
+| Metric | Formula | Target | Description |
+|--------|---------|--------|-------------|
+| **Context Precision (CP)** | Relevant contexts / Retrieved contexts | ≥ 0.85 | Are retrieved chunks relevant? |
+| **Context Recall (CR)** | Ground truth covered / Total GT facts | ≥ 0.75 | Did we find all relevant chunks? |
+| **Faithfulness (F)** | Claims supported by context / Total claims | ≥ 0.90 | Is the answer grounded in context? |
+| **Answer Relevancy (AR)** | Semantic similarity(answer, question) | ≥ 0.95 | Does answer match the question? |
+
+**B. Ingestion Metrics (Per Document)**
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `ingestion_time_ms` | ms | Time to fully process document |
+| `characters_count` | int | Total characters in document |
+| `chunks_count` | int | Number of chunks created |
+| `entities_count` | int | Entities extracted (Neo4j) |
+| `relations_count` | int | Relations extracted (Neo4j) |
+| `embeddings_time_ms` | ms | Time for BGE-M3 embedding |
+
+**C. Retrieval Metrics (Per Query)**
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `retrieval_latency_ms` | ms | Total retrieval time |
+| `dense_search_ms` | ms | Qdrant dense vector search |
+| `sparse_search_ms` | ms | Qdrant sparse (lexical) search |
+| `rrf_fusion_ms` | ms | Server-side RRF fusion |
+| `rerank_ms` | ms | Cross-encoder reranking |
+| `contexts_retrieved` | int | Number of chunks returned |
+
+**D. LLM Evaluation Metrics (Per Query)**
+
+| Metric | Unit | Description |
+|--------|------|-------------|
+| `llm_eval_time_ms` | ms | Time for RAGAS LLM evaluation |
+| `tokens_in` | int | Input tokens to LLM |
+| `tokens_out` | int | Output tokens from LLM |
+| `llm_model` | str | Model used for evaluation |
+
+### Evaluation Pipeline Architecture
+
+```
+                      ┌──────────────────────────────────────────────┐
+                      │           RAGAS Evaluation Pipeline           │
+                      └──────────────────────────────────────────────┘
+                                           │
+                      ┌────────────────────┼────────────────────┐
+                      │                    │                    │
+                      ▼                    ▼                    ▼
+               ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+               │   Phase 1    │    │  Phase 2a    │    │  Phase 2b    │
+               │  Clean Text  │    │    Tables    │    │     Code     │
+               │  (500 docs)  │    │ (150 tables) │    │ (150 funcs)  │
+               └──────┬───────┘    └──────┬───────┘    └──────┬───────┘
+                      │                    │                    │
+                      └────────────────────┼────────────────────┘
+                                           │
+                                           ▼
+               ┌──────────────────────────────────────────────────────┐
+               │          Ingestion (with Metrics Tracking)           │
+               │  • BGE-M3 Dense+Sparse Embeddings                    │
+               │  • Entity/Relation Extraction (3-Rank Cascade)       │
+               │  • Section-Aware Chunking (800-1800 tokens)          │
+               └──────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+               ┌──────────────────────────────────────────────────────┐
+               │              RAGAS Query Evaluation                  │
+               │  • Vector Mode (Dense + Sparse RRF)                  │
+               │  • Graph Mode (Entity→N-hop→Chunk Expansion)         │
+               │  • Hybrid Mode (Vector + Graph + Memory)             │
+               └──────────────────────────────────────────────────────┘
+                                           │
+                                           ▼
+               ┌──────────────────────────────────────────────────────┐
+               │                 Results Aggregation                  │
+               │  • Per doc_type breakdown (text/table/code)          │
+               │  • Per question_type breakdown (8 types)             │
+               │  • Per difficulty breakdown (D1/D2/D3)               │
+               │  • Statistical significance (±4% CI at n=800)        │
+               └──────────────────────────────────────────────────────┘
+```
+
+### Execution Plan (5 Phases)
+
+**Phase 1: Data Cleanup** (Est: 5 min)
+- Clear all Qdrant namespaces (`default`, `ragas_phase1`, `ragas_phase2_*`)
+- Clear Neo4j graph nodes (preserve schema)
+- Verify empty state with point counts
+
+**Phase 2: Dataset Preparation** (Est: 15 min)
+- Download 150 T2-RAGBench samples (FinQA financial tables)
+- Download 150 MBPP samples (Python code generation)
+- Export contexts as `.txt` files for ingestion
+
+**Phase 3: Full Ingestion with Metrics** (Est: 2-3 hours)
+- Upload 800 documents via `/api/v1/retrieval/upload`
+- Track per-document metrics: time, chunks, entities, relations
+- Validate index counts in Qdrant and Neo4j
+
+**Phase 4: RAGAS Evaluation** (Est: 4-6 hours)
+- Run all 800 questions through retrieval API
+- Calculate 4 RAGAS metrics per question
+- Track retrieval + LLM evaluation latencies
+
+**Phase 5: Documentation & Analysis** (Est: 1 hour)
+- Update RAGAS_JOURNEY.md with complete results
+- Generate statistical breakdowns by doc_type, question_type, difficulty
+- Compare with Sprint 82-87 baselines
+
+### Expected Outputs
+
+```
+docs/ragas/sprint88_full_eval/
+├── ingestion_metrics.jsonl       # Per-document ingestion stats
+├── retrieval_metrics.jsonl       # Per-query retrieval stats
+├── ragas_results.jsonl           # CP, CR, F, AR per question
+├── summary_by_doctype.json       # Aggregated by text/table/code
+├── summary_by_qtype.json         # Aggregated by question type
+├── summary_by_difficulty.json    # Aggregated by D1/D2/D3
+└── sprint88_final_report.md      # Full analysis report
+```
 
 ---
 
@@ -2597,5 +2788,87 @@ poetry run python scripts/run_ragas_evaluation.py --mode hybrid --use-ground-tru
 - `data/evaluation/phase2_samples/t2ragbench/`: 5 table documents
 - `data/evaluation/phase2_samples/codeqa/`: 5 code documents
 - Metadata JSON files with questions/answers for RAGAS evaluation
+
+---
+
+---
+
+## Sprint 88: Phase 2 Evaluation - Tables + Code
+
+**Date:** 2026-01-13 12:30
+**Objective:** Evaluate retrieval quality on structured data (financial tables, code snippets)
+
+### Datasets
+
+| Dataset | Source | Type | Samples | Chunks |
+|---------|--------|------|---------|--------|
+| T2-RAGBench | G4KMU/t2-ragbench (FinQA) | Financial Tables | 5 | 18 |
+| Code QA | MBPP | Python Code | 5 | 5 |
+| **Total** | - | - | **10** | **23** |
+
+### Evaluation Results
+
+| Dataset | GT Found | Success Rate | Avg Latency |
+|---------|----------|--------------|-------------|
+| T2-RAGBench (Tables) | 5/5 | **100%** | 19.7s |
+| Code QA | 4/5 | **80%** | 6.1s |
+| **Overall** | **9/10** | **90%** | **12.9s** |
+
+### Sample Responses
+
+**T2-RAGBench Examples:**
+1. Q: "What is the net change in Entergy's net revenue from 2014 to 2015?"
+   - A: "The net change is 94.0" ✅ (GT: 94.0)
+2. Q: "What percentage of Intel's total facilities were leased?"
+   - A: "0.14464285714285713" ✅ (GT: 0.144...)
+
+**Code QA Examples:**
+1. Q: "Write a function to sort a given matrix in ascending order according to row sum"
+   - A: `def sort_matrix(M): result = sorted(M, key=sum) return result` ✅
+2. Q: "Write a function to split a string at lowercase letters"
+   - A: Returned correct regex solution ❓ (GT match partial)
+
+### Key Observations
+
+1. **Table Understanding:** Excellent extraction of numerical data from financial tables
+2. **Code Retrieval:** High accuracy for simple Python functions
+3. **Latency:** Tables take 3x longer than code (more complex context)
+4. **Namespace Isolation:** Correct `namespace_id` parameter critical for multi-tenant isolation
+
+### Technical Fixes Applied
+
+1. **Bug Fix:** `namespace` → `namespace_id` in upload form data
+2. **Async Fix:** Embedding services now properly async for LangGraph compatibility
+3. **Qdrant Collection:** Confirmed using `documents_v1` (not `aegis_rag_docs`)
+
+### Files Created
+
+- `data/evaluation/phase2_samples/t2ragbench/` - 5 financial table documents
+- `data/evaluation/phase2_samples/codeqa/` - 5 code documents
+- `data/evaluation/phase2_ragas_corrected.jsonl` - RAGAS evaluation dataset
+- `docs/ragas/phase2_eval_1768307413.json` - Evaluation results
+
+### Next Steps
+
+1. **Run Full RAGAS Metrics:** Context Precision, Context Recall, Faithfulness
+2. **Compare with Phase 1:** Evaluate performance difference (text vs structured)
+3. **Optimize Table Parsing:** Consider structured table extraction improvements
+4. **Expand Dataset:** Add more diverse samples (50+ per category)
+
+---
+
+### Korrektur: Evaluationsfehler behoben
+
+**Update 2026-01-13 12:45:** Der vermeintliche Fehler bei Code QA (4/5) war ein **Auswertungsfehler**, kein echter Retrieval-Fehler.
+
+**Ursache:** Ground Truth enthielt Windows-Zeilenumbrüche (`\r\n`), die System-Antwort verwendete Leerzeichen. Nach Normalisierung sind beide Code-Snippets identisch.
+
+**Korrigierte Ergebnisse:**
+
+| Dataset | GT Found | Success Rate |
+|---------|----------|--------------|
+| T2-RAGBench (Tables) | 5/5 | **100%** |
+| Code QA | 5/5 | **100%** |
+| **Gesamt** | **10/10** | **100%** |
 
 ---

@@ -881,7 +881,126 @@ After implementing comprehensive logging (Sprint 83), we expect to discover addi
 
 **For detailed plans, see:**
 - [SPRINT_82_PLAN.md](SPRINT_82_PLAN.md) - Phase 1: Text-Only Benchmark ✅ COMPLETE
-- [SPRINT_83_PLAN.md](SPRINT_83_PLAN.md) - ER-Extraction Robustness 🔄 IN PROGRESS
+- [SPRINT_83_PLAN.md](SPRINT_83_PLAN.md) - ER-Extraction Robustness ✅ COMPLETE
 - [SPRINT_85_PLAN.md](SPRINT_85_PLAN.md) - Phase 2: Structured Data 📝 PLANNED
 - [SPRINT_86_PLAN.md](SPRINT_86_PLAN.md) - Phase 3: Visual Assets 📝 PLANNED
 - [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md) - Full strategy documentation
+
+---
+
+## Sprint 87: BGE-M3 Native Hybrid Search ✅ (COMPLETED 2026-01-13)
+**Epic:** Replace BM25 with Native BGE-M3 Sparse Vectors
+**Total Story Points:** 34 SP
+**Status:** ✅ **COMPLETE** - 4 Features, 2,200+ LOC
+
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 87.1 | FlagEmbedding Service Integration | 10 | P0 | ✅ DONE |
+| 87.2 | Qdrant Multi-Vector Collection | 8 | P0 | ✅ DONE |
+| 87.3 | Four-Way Hybrid Search (Dense+Sparse RRF) | 10 | P0 | ✅ DONE |
+| 87.4 | BM25 Deprecation & Migration | 6 | P1 | ✅ DONE |
+
+**Deliverables:**
+- BGE-M3 embeddings via FlagEmbedding (Dense 1024D + Sparse lexical)
+- Qdrant named vectors (dense + sparse in same point)
+- Server-side RRF fusion (no Python merge)
+- Async embedding fix for LangGraph compatibility
+- TD-103 (BM25 Index Desync) fully resolved
+
+**For detailed plan, see:** [SPRINT_87_PLAN.md](SPRINT_87_PLAN.md)
+
+---
+
+## Sprint 88: RAGAS Phase 2 Evaluation (Tables + Code) ✅ (COMPLETED 2026-01-13)
+**Epic:** Multi-Format RAG Evaluation
+**Total Story Points:** 28 SP
+**Status:** ✅ **COMPLETE** - 3 Features, 800-sample ingestion started
+
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 88.1 | T2-RAGBench Table Ingestion | 10 | P0 | ✅ DONE |
+| 88.2 | MBPP Code Ingestion | 8 | P0 | ✅ DONE |
+| 88.3 | Comprehensive Metrics Schema | 10 | P0 | ✅ DONE |
+
+**Deliverables:**
+- 150 T2-RAGBench financial table samples (FinQA)
+- 150 MBPP code samples (Python)
+- 500 Phase 1 plaintext samples (HotpotQA, RAGBench, LogQA)
+- Comprehensive metrics: 4 RAGAS + ingestion + retrieval + LLM eval
+- Multi-vector BGE-M3 embeddings validated
+
+**Ingestion Status (Sprint 88):**
+- Aborted after 50/500 docs (LLM-first cascade too slow: 300-600s/doc)
+- Led to Sprint 100 (SpaCy-First Pipeline) for 10-20x speedup
+
+**For detailed plan, see:** [SPRINT_88_PLAN.md](SPRINT_88_PLAN.md)
+
+---
+
+## Sprint 100: SpaCy-First Pipeline (MOVED from Sprint 89) 🔄 (IN PROGRESS 2026-01-13)
+**Epic:** Entity Extraction Performance Optimization
+**Total Story Points:** 18 SP
+**Status:** 🔄 **IN PROGRESS** - Implementation complete, full ingestion running
+**Note:** Originally planned as Sprint 89, moved to Sprint 100 to make room for Sprint 90 (Anthropic Agent Skills)
+
+| Feature | SP | Priority | Status |
+|---------|-----|----------|--------|
+| 100.1 | SpaCy NER Stage (Stage 1) | 5 | P0 | ✅ DONE |
+| 100.2 | LLM Entity Enrichment (Stage 2) | 5 | P0 | ✅ DONE |
+| 100.3 | LLM Relation Extraction (Stage 3) | 5 | P0 | ✅ DONE |
+| 100.4 | Feature Flag & Routing | 3 | P1 | ✅ DONE |
+
+**Deliverables:**
+- 3-Stage Pipeline (SpaCy ~50ms → LLM Enrichment ~5-15s → Relations ~10-30s)
+- **Performance:** 27-54s/doc (vs 300-600s LLM-first cascade = **6-10x faster**)
+- Feature flag: `AEGIS_USE_LEGACY_CASCADE=1` for rollback
+- Test ingestion: 4/5 successful (80% vs 56% with LLM-first)
+
+**Files Modified:**
+- `src/config/extraction_cascade.py` - Pipeline config
+- `src/prompts/extraction_prompts.py` - New prompts
+- `src/components/graph_rag/extraction_service.py` - Pipeline implementation
+- `src/components/graph_rag/extraction_factory.py` - Routing
+
+**For detailed plan, see:** [SPRINT_100_PLAN.md](SPRINT_100_PLAN.md) (formerly SPRINT_89_PLAN.md)
+
+---
+
+## Sprint 90: Anthropic Agent Skills Foundation 🔄 (STARTING 2026-01-13)
+**Epic:** Agentic Framework Transformation (Phase 1 of 7)
+**Total Story Points:** 36 SP
+**Status:** 🔄 **IN PROGRESS** - Implementation starting with parallel subagents
+
+| Feature | SP | Priority | Status | Agent |
+|---------|-----|----------|--------|-------|
+| 90.1 | Skill Registry Implementation | 10 | P0 | 🔄 STARTING | backend-agent |
+| 90.2 | Reflection Loop in Agent Core | 8 | P0 | 📝 PLANNED | backend-agent |
+| 90.3 | Hallucination Monitoring & Logging | 8 | P0 | 📝 PLANNED | backend-agent |
+| 90.4 | SKILL.md MVP Structure | 5 | P0 | 📝 PLANNED | documentation-agent |
+| 90.5 | Base Skills (Retrieval, Answer) | 5 | P1 | 📝 PLANNED | documentation-agent |
+
+**Target Outcomes:**
+- Skill Registry operational with embedding-based intent matching
+- Reflection loop for self-critique and validation
+- Hallucination detection and logging
+- RAGAS Faithfulness: 80% → 88%+
+
+**For detailed plan, see:** [SPRINT_90_PLAN.md](SPRINT_90_PLAN.md)
+
+---
+
+## Cumulative Story Points
+
+| Sprint | SP | Cumulative |
+|--------|-----|------------|
+| 1-70 | ~2,100 | 2,100 |
+| 71 | 50 | 2,150 |
+| 72 | 55 | 2,205 |
+| 73 | 48 | 2,253 |
+| 82 | 8 | 2,261 |
+| 83 | 26 | 2,287 |
+| 87 | 34 | 2,321 |
+| 88 | 28 | 2,349 |
+| 90 | 36 | 2,385 |
+| 100 | 18 | 2,403 |
+| **Total** | **2,403** | - |

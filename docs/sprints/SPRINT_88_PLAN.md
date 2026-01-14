@@ -5,8 +5,8 @@
 **ADR Reference:** [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md)
 **Prerequisite:** Sprint 87 (BGE-M3 Native Hybrid complete)
 **Duration:** 7-10 days
-**Total Story Points:** 13 SP
-**Status:** 📝 Planned
+**Total Story Points:** 15 SP (+2 SP for 88.5, +3 bugfixes)
+**Status:** 🚧 In Progress
 
 ---
 
@@ -44,6 +44,65 @@ Plus: **Statistical rigor package** for publication-ready metrics.
 | 88.2 | CodeRepoQA code extractor | 5 | P0 | 📝 Planned |
 | 88.3 | Statistical rigor package | 2 | P1 | 📝 Planned |
 | 88.4 | Phase 2 integration & export | 1 | P0 | 📝 Planned |
+| 88.5 | FourWayHybridSearch MultiVector Integration | 2 | P0 | ✅ Complete |
+
+---
+
+## Bugfixes & Infrastructure (Sprint 88)
+
+| # | Fix | Type | Status | Description |
+|---|-----|------|--------|-------------|
+| 88.F1 | JWT Token Auto-Refresh | Bugfix | ✅ Fixed | Token expired after 30min during batch ingestion → 10min auto-refresh |
+| 88.F2 | LightRAG Embedding Factory | Bugfix | ✅ Fixed | LightRAG bypassed `embedding_factory.py` → Now uses factory pattern |
+| 88.F3 | FourWayHybridSearch MultiVector | Feature | ✅ Complete | Replaced Vector+BM25 with `MultiVectorHybridSearch` (dense+sparse) |
+
+### 88.F1: JWT Token Auto-Refresh
+
+**Problem:** Batch ingestion script obtained JWT token once at startup. After 30 minutes, token expired causing HTTP 401 for all remaining documents (796/800 failed).
+
+**Solution:** Added token management with 10-minute refresh interval:
+```python
+# scripts/ingest_all_800_samples.py
+TOKEN_REFRESH_INTERVAL = 600  # 10 minutes
+async def get_auth_token(force_refresh: bool = False) -> Optional[str]:
+    """Auto-refresh token before expiration."""
+    if not force_refresh and _current_token:
+        if time.time() - _token_timestamp < TOKEN_REFRESH_INTERVAL:
+            return _current_token
+    # ... refresh token ...
+```
+
+### 88.F2: LightRAG Embedding Factory
+
+**Problem:** `UnifiedEmbeddingFunc` in `lightrag/initialization.py` imported directly from `embedding_service.py` (Ollama backend), bypassing the `embedding_factory.py` which respects `EMBEDDING_BACKEND=flag-embedding`.
+
+**Solution:** Updated import to use factory pattern and handle multi-vector results:
+```python
+# src/components/graph_rag/lightrag/initialization.py
+from src.components.shared.embedding_factory import get_embedding_service
+
+# Handle multi-vector backends (flag-embedding returns dicts)
+if results and isinstance(results[0], dict):
+    return [r["dense"] for r in results]
+```
+
+### 88.F3: FourWayHybridSearch MultiVector Integration
+
+**Problem:** `FourWayHybridSearch` used separate Vector + BM25 channels with Python-side RRF. BM25 used pickle index (desync risk).
+
+**Solution:** Replaced with unified `MultiVectorHybridSearch`:
+- **Before:** 4 channels (Vector, BM25, GraphLocal, GraphGlobal)
+- **After:** 3 channels (MultiVector, GraphLocal, GraphGlobal)
+- **Benefits:** Server-side RRF, no desync, single Qdrant call
+
+```python
+# src/components/retrieval/four_way_hybrid_search.py
+async def _multivector_search(self, query, top_k, allowed_namespaces):
+    """Dense + Sparse via Qdrant Query API with server-side RRF."""
+    results = await self.multi_vector_search.hybrid_search(
+        query=query, top_k=top_k, namespace_filter=namespace_filter
+    )
+```
 
 ---
 
@@ -276,6 +335,8 @@ class CodeRepoQAAdapter(DatasetAdapter):
         ".yaml": "yaml",
         ".json": "json",
         ".toml": "toml",
+        ".vb": "visual basic",
+        ".vbs": "visual basic script"
     }
 
     def get_doc_type(self) -> str:

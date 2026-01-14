@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-10 (Sprint 83: ER-Extraction Improvements - 3-Rank Cascade, Gleaning, Fast Upload)
+**Last Updated:** 2026-01-13 (Sprint 88: BGE-M3 Native Hybrid Search, RAGAS Phase 2 Evaluation)
 
 ---
 
@@ -11,7 +11,8 @@
 
 **Core Capabilities:**
 - **Local-First:** Ollama-based, zero cloud dependencies for development
-- **4-Way Hybrid Retrieval:** Vector + BM25 + Graph Local + Graph Global with Intent-Weighted RRF
+- **4-Way Hybrid Retrieval:** Dense + Sparse (BGE-M3) + Graph Local + Graph Global with Intent-Weighted RRF
+- **BGE-M3 Native Hybrid:** Single model generates Dense (1024D) + Sparse (lexical weights) vectors - replaces BM25
 - **3-Layer Memory:** Redis → Qdrant → Graphiti
 - **Multi-Agent:** LangGraph with 5+ specialized agents
 - **Bi-Temporal:** Entity versioning with time travel queries
@@ -151,7 +152,7 @@ src/
    └→ Routes to specialized agents
    ↓
 4. Parallel Agent Execution (LangGraph Send API)
-   ├→ Vector Agent: Qdrant + BM25 → RRF Fusion
+   ├→ Vector Agent: Qdrant Dense + Sparse (BGE-M3) → Server-Side RRF
    ├→ Graph Agent: Neo4j (local + global queries)
    └→ Memory Agent: Redis → Qdrant → Graphiti
    ↓
@@ -254,6 +255,66 @@ Phase 2: Background Refinement (30-60s async)
 | **81** | C-LARA Intent Classification | Multi-Teacher SetFit (4 LLMs + 42 edge cases), 5-class C-LARA intents, 95.22% accuracy, ~40ms inference |
 | **82** | RAGAS Phase 1 Benchmark | 500-sample text-only benchmark (HotpotQA + RAGBench + LogQA), stratified sampling, 8 question types, 3 difficulty levels |
 | **83** | ER-Extraction Improvements | 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid NER), Gleaning (+20-40% recall), Fast Upload (2-5s), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost) |
+| **87** | BGE-M3 Native Hybrid Search | FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection, Server-side RRF fusion, **Replaces BM25** |
+| **88** | RAGAS Phase 2 Evaluation | Tables (T2-RAGBench) + Code (MBPP) evaluation, 10/10 GT retrieval (100%), Async embedding fix, Comprehensive metrics schema |
+
+### Sprint 87-88: BGE-M3 Native Hybrid Search
+
+**Sprint 87: Architecture Evolution (BM25 → BGE-M3 Sparse)**
+
+The hybrid search architecture evolved from separate Vector + BM25 to unified BGE-M3 Dense + Sparse:
+
+```
+OLD (Sprints 1-86):
+┌─────────────────────────────────────────────────────────────┐
+│  Query → ┌─────────────────┐ ┌─────────────────┐            │
+│          │ SentenceTransf. │ │     BM25        │            │
+│          │ (Dense 1024D)   │ │ (Separate Index)│            │
+│          └────────┬────────┘ └────────┬────────┘            │
+│                   │                   │                      │
+│                   └───────┬───────────┘                      │
+│                           ↓                                  │
+│                    Client-Side RRF                           │
+│                           ↓                                  │
+│                      Results                                 │
+└─────────────────────────────────────────────────────────────┘
+
+NEW (Sprint 87+):
+┌─────────────────────────────────────────────────────────────┐
+│  Query → ┌─────────────────────────────────────────┐        │
+│          │          FlagEmbedding (BGE-M3)         │        │
+│          │  ┌──────────────┐ ┌──────────────────┐  │        │
+│          │  │ Dense (1024D)│ │ Sparse (Lexical) │  │        │
+│          │  └──────┬───────┘ └────────┬─────────┘  │        │
+│          └─────────┼──────────────────┼────────────┘        │
+│                    │                  │                      │
+│                    ↓                  ↓                      │
+│          ┌─────────────────────────────────────────┐        │
+│          │        Qdrant Multi-Vector Collection   │        │
+│          │  Named Vectors: "dense" + "sparse"      │        │
+│          │         Server-Side RRF Fusion          │        │
+│          └─────────────────────────────────────────┘        │
+│                           ↓                                  │
+│                      Results                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Benefits:**
+1. **Always in Sync:** Dense + Sparse generated in single forward pass
+2. **Learned Lexical Weights:** BGE-M3 learns better token importance than BM25
+3. **Server-Side RRF:** Qdrant Query API fuses vectors natively (lower latency)
+4. **Single Model:** Simpler deployment, lower memory footprint (~2GB VRAM)
+
+**Sprint 88: RAGAS Evaluation Framework**
+
+Comprehensive evaluation with 4 RAGAS metrics + operational metrics:
+
+| Metric Type | Metrics |
+|-------------|---------|
+| **RAGAS Quality** | Context Precision, Context Recall, Faithfulness, Answer Relevancy |
+| **Ingestion** | Time/doc, Chunks/doc, Characters/doc, Entities/doc, Relations/doc |
+| **Retrieval** | Latency (P50/P95/P99), Contexts retrieved, GT match rate |
+| **LLM Evaluation** | Eval time/sample, Token usage, Model used |
 
 ### Sprint 53-59: Major Refactoring
 
