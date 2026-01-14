@@ -25,7 +25,7 @@ class RetrievedContext(BaseModel):
     source: str = Field(default="unknown", description="Document source")
     document_id: str = Field(default="", description="Parent document ID")
     rank: int = Field(default=0, ge=0, description="Ranking position")
-    search_type: Literal["vector", "bm25", "hybrid", "graph", "graph_local", "graph_global"] = Field(
+    search_type: Literal["vector", "bm25", "hybrid", "graph", "graph_local", "graph_global", "multivector"] = Field(
         default="hybrid", description="Search type used"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
@@ -36,7 +36,7 @@ class SearchMetadata(BaseModel):
 
     latency_ms: float = Field(..., ge=0.0, description="Search latency in milliseconds")
     result_count: int = Field(..., ge=0, description="Number of results returned")
-    search_mode: Literal["vector", "bm25", "hybrid", "graph", "graph_local", "graph_global"] = Field(
+    search_mode: Literal["vector", "bm25", "hybrid", "graph", "graph_local", "graph_global", "multivector"] = Field(
         default="hybrid", description="Search mode used"
     )
     vector_results_count: int = Field(default=0, ge=0, description="Vector search result count")
