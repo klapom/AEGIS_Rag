@@ -853,11 +853,13 @@ class Settings(BaseSettings):
 
     # Embedding Backend Configuration (Sprint 35 Feature 35.8: Sentence-Transformers Migration)
     # Sprint 61 Feature 61.1: Default switched to native sentence-transformers (5x faster)
-    embedding_backend: Literal["ollama", "sentence-transformers"] = Field(
+    # Sprint 87 Feature 87.4: Added flag-embedding for multi-vector (dense + sparse)
+    embedding_backend: Literal["ollama", "sentence-transformers", "flag-embedding"] = Field(
         default="sentence-transformers",
         description=(
             "Embedding service backend selection:\n"
-            "- 'sentence-transformers': Native BGE-M3 (default, 5x faster, Sprint 61)\n"
+            "- 'flag-embedding': BGE-M3 multi-vector (Sprint 87, dense + sparse for native hybrid)\n"
+            "- 'sentence-transformers': Native BGE-M3 (default, 5x faster, Sprint 61, dense-only)\n"
             "- 'ollama': Ollama HTTP API (backward compatible, slower)"
         ),
     )

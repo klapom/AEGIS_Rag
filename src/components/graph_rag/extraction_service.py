@@ -53,8 +53,11 @@ from src.components.llm_proxy.models import (
 from src.config.extraction_cascade import (
     CascadeRankConfig,
     ExtractionMethod,
+    PipelineStageConfig,
     get_cascade_for_domain,
+    get_pipeline_config,
     log_cascade_fallback,
+    should_use_spacy_first_pipeline,
 )
 from src.core.config import settings
 from src.core.models import GraphEntity, GraphRelationship
@@ -63,9 +66,11 @@ from src.prompts.extraction_prompts import (
     CONTINUATION_EXTRACTION_PROMPT,
     DSPY_OPTIMIZED_ENTITY_PROMPT,
     DSPY_OPTIMIZED_RELATION_PROMPT,
+    ENTITY_ENRICHMENT_PROMPT,
     ENTITY_EXTRACTION_PROMPT,
     GENERIC_ENTITY_EXTRACTION_PROMPT,
     GENERIC_RELATION_EXTRACTION_PROMPT,
+    RELATION_EXTRACTION_FROM_ENTITIES_PROMPT,
     RELATIONSHIP_COMPLETENESS_CHECK_PROMPT,
     RELATIONSHIP_CONTINUATION_PROMPT,
     RELATIONSHIP_EXTRACTION_PROMPT,
@@ -1003,6 +1008,631 @@ class ExtractionService:
 
         return entities
 
+    # =========================================================================
+    # Sprint 89: SpaCy-First Pipeline (TD-102 Iteration 1)
+    # =========================================================================
+
+    async def extract_with_spacy_first_pipeline(
+        self,
+        text: str,
+        document_id: str | None = None,
+        domain: str | None = None,
+    ) -> tuple[list[GraphEntity], list[GraphRelationship]]:
+        """Extract entities AND relations using SpaCy-First 3-stage pipeline.
+
+        Sprint 89 Feature 89.1: SpaCy-First Pipeline (TD-102 Iteration 1)
+
+        This pipeline is 10-20x faster than the legacy LLM-first cascade:
+        - Stage 1: SpaCy NER (~50ms) - Deterministic entity baseline
+        - Stage 2: LLM Entity Enrichment (~5-15s) - Add CONCEPT, TECHNOLOGY, etc.
+        - Stage 3: LLM Relation Extraction (~10-30s) - Extract all relations
+
+        Args:
+            text: Document text to extract from
+            document_id: Source document ID (optional)
+            domain: Domain name for prompts (optional)
+
+        Returns:
+            Tuple of (entities, relations)
+        """
+        import time
+
+        pipeline_start = time.time()
+        pipeline = get_pipeline_config()
+
+        logger.info(
+            "spacy_first_pipeline_started",
+            document_id=document_id,
+            text_length=len(text),
+            stages=len(pipeline),
+        )
+
+        # Stage 1: SpaCy NER Entities
+        stage1_start = time.time()
+        spacy_entities = await self._pipeline_stage1_spacy_ner(text, document_id, pipeline[0])
+        stage1_duration = (time.time() - stage1_start) * 1000
+
+        logger.info(
+            "pipeline_stage1_complete",
+            stage="SpaCy NER",
+            entities_found=len(spacy_entities),
+            duration_ms=round(stage1_duration, 2),
+            document_id=document_id,
+        )
+
+        # Stage 2: LLM Entity Enrichment (MANDATORY)
+        stage2_start = time.time()
+        enriched_entities = await self._pipeline_stage2_entity_enrichment(
+            text, spacy_entities, document_id, domain, pipeline[1]
+        )
+        stage2_duration = (time.time() - stage2_start) * 1000
+
+        # Merge SpaCy + Enriched entities
+        all_entities = self._merge_entities(spacy_entities, enriched_entities)
+
+        logger.info(
+            "pipeline_stage2_complete",
+            stage="LLM Entity Enrichment",
+            spacy_entities=len(spacy_entities),
+            enriched_entities=len(enriched_entities),
+            total_entities=len(all_entities),
+            duration_ms=round(stage2_duration, 2),
+            document_id=document_id,
+        )
+
+        # Stage 3: LLM Relation Extraction
+        stage3_start = time.time()
+        relations = await self._pipeline_stage3_relation_extraction(
+            text, all_entities, document_id, domain, pipeline[2]
+        )
+        stage3_duration = (time.time() - stage3_start) * 1000
+
+        pipeline_duration = (time.time() - pipeline_start) * 1000
+
+        logger.info(
+            "spacy_first_pipeline_complete",
+            document_id=document_id,
+            total_entities=len(all_entities),
+            total_relations=len(relations),
+            er_ratio=round(len(relations) / max(1, len(all_entities)), 2),
+            stage1_ms=round(stage1_duration, 2),
+            stage2_ms=round(stage2_duration, 2),
+            stage3_ms=round(stage3_duration, 2),
+            total_ms=round(pipeline_duration, 2),
+        )
+
+        return all_entities, relations
+
+    async def _pipeline_stage1_spacy_ner(
+        self,
+        text: str,
+        document_id: str | None,
+        stage_config: PipelineStageConfig,
+    ) -> list[GraphEntity]:
+        """Stage 1: Extract entities using SpaCy NER.
+
+        Args:
+            text: Text to extract from
+            document_id: Document ID
+            stage_config: Stage configuration
+
+        Returns:
+            List of GraphEntity from SpaCy NER
+        """
+        try:
+            # Lazy import HybridExtractionService for SpaCy
+            from src.components.graph_rag.hybrid_extraction_service import (
+                HybridExtractionService,
+            )
+
+            hybrid_service = HybridExtractionService(self)
+            entities = await hybrid_service.extract_entities_with_spacy(
+                text=text,
+                document_id=document_id,
+            )
+
+            return entities
+
+        except Exception as e:
+            logger.warning(
+                "spacy_ner_failed",
+                error=str(e),
+                document_id=document_id,
+                fallback="llm_entity_extraction" if stage_config.fallback_to_llm else "empty",
+            )
+
+            # Fallback to LLM entity extraction if configured
+            if stage_config.fallback_to_llm:
+                logger.info("falling_back_to_llm_entity_extraction", document_id=document_id)
+                return await self._extract_entities_llm_only(
+                    text=text,
+                    document_id=document_id,
+                    model="nemotron-3-nano:latest",
+                    timeout_s=120,
+                )
+
+            return []
+
+    async def _pipeline_stage2_entity_enrichment(
+        self,
+        text: str,
+        spacy_entities: list[GraphEntity],
+        document_id: str | None,
+        domain: str | None,
+        stage_config: PipelineStageConfig,
+    ) -> list[GraphEntity]:
+        """Stage 2: Enrich SpaCy entities with LLM (find CONCEPT, TECHNOLOGY, etc.).
+
+        Args:
+            text: Text to extract from
+            spacy_entities: Entities already found by SpaCy
+            document_id: Document ID
+            domain: Domain for prompts
+            stage_config: Stage configuration
+
+        Returns:
+            List of NEW entities found by LLM (not in SpaCy list)
+        """
+        logger.info(
+            "stage2_entity_enrichment_started",
+            document_id=document_id,
+            spacy_entity_count=len(spacy_entities),
+            text_length=len(text),
+            model=stage_config.model,
+            timeout=stage_config.timeout_s,
+        )
+
+        # Format SpaCy entities for prompt
+        spacy_entities_str = ", ".join([
+            f"{e.name} ({e.type})" for e in spacy_entities
+        ]) or "None found"
+
+        prompt = ENTITY_ENRICHMENT_PROMPT.format(
+            spacy_entities=spacy_entities_str,
+            text=text[:8000],  # Limit text length for LLM
+        )
+
+        logger.info(
+            "stage2_prompt_formatted",
+            document_id=document_id,
+            prompt_length=len(prompt),
+            spacy_entities_preview=spacy_entities_str[:200],
+        )
+
+        try:
+            logger.info("stage2_calling_llm_proxy", document_id=document_id)
+            # Use LLM for enrichment
+            response = await asyncio.wait_for(
+                self.llm_proxy.generate(
+                    LLMTask(
+                        task_type=TaskType.EXTRACTION,
+                        complexity=Complexity.MEDIUM,
+                        quality=QualityRequirement.MEDIUM,
+                        prompt=prompt,
+                        model_override=stage_config.model,
+                        max_tokens=2000,
+                        temperature=0.1,
+                    )
+                ),
+                timeout=stage_config.timeout_s,
+            )
+
+            logger.info(
+                "stage2_llm_response_received",
+                document_id=document_id,
+                response_length=len(response.content) if response else 0,
+                response_preview=response.content[:200] if response else "None",
+            )
+
+            # Parse enriched entities
+            enriched = self._parse_entity_response(response.content, document_id)
+
+            logger.info(
+                "stage2_entities_parsed",
+                document_id=document_id,
+                enriched_count=len(enriched),
+            )
+
+            # Filter out any entities that duplicate SpaCy entities
+            spacy_names_lower = {e.name.lower() for e in spacy_entities}
+            new_entities = [
+                e for e in enriched
+                if e.name.lower() not in spacy_names_lower
+            ]
+
+            logger.info(
+                "stage2_entities_filtered",
+                document_id=document_id,
+                new_entities_count=len(new_entities),
+                filtered_duplicates=len(enriched) - len(new_entities),
+            )
+
+            return new_entities
+
+        except asyncio.TimeoutError:
+            logger.warning(
+                "entity_enrichment_timeout",
+                timeout_s=stage_config.timeout_s,
+                document_id=document_id,
+            )
+            return []
+
+        except Exception as e:
+            logger.warning(
+                "entity_enrichment_failed",
+                error=str(e),
+                document_id=document_id,
+            )
+            return []
+
+    async def _pipeline_stage3_relation_extraction(
+        self,
+        text: str,
+        all_entities: list[GraphEntity],
+        document_id: str | None,
+        domain: str | None,
+        stage_config: PipelineStageConfig,
+    ) -> list[GraphRelationship]:
+        """Stage 3: Extract relations between all entities using LLM.
+
+        Args:
+            text: Text to extract from
+            all_entities: All entities (SpaCy + enriched)
+            document_id: Document ID
+            domain: Domain for prompts
+            stage_config: Stage configuration
+
+        Returns:
+            List of GraphRelationship
+        """
+        logger.info(
+            "stage3_relation_extraction_started",
+            document_id=document_id,
+            entity_count=len(all_entities),
+            text_length=len(text),
+            model=stage_config.model,
+            timeout=stage_config.timeout_s,
+        )
+
+        if not all_entities:
+            logger.warning(
+                "no_entities_for_relation_extraction",
+                document_id=document_id,
+            )
+            return []
+
+        # Format entities for prompt
+        entities_str = "\n".join([
+            f"- {e.name} ({e.type}): {e.description or 'No description'}"
+            for e in all_entities
+        ])
+
+        prompt = RELATION_EXTRACTION_FROM_ENTITIES_PROMPT.format(
+            entities=entities_str,
+            text=text[:8000],  # Limit text length for LLM
+        )
+
+        logger.info(
+            "stage3_prompt_formatted",
+            document_id=document_id,
+            prompt_length=len(prompt),
+            entities_preview=entities_str[:200],
+        )
+
+        try:
+            logger.info("stage3_calling_llm_proxy", document_id=document_id)
+            response = await asyncio.wait_for(
+                self.llm_proxy.generate(
+                    LLMTask(
+                        task_type=TaskType.EXTRACTION,
+                        complexity=Complexity.HIGH,
+                        quality=QualityRequirement.HIGH,
+                        prompt=prompt,
+                        model_override=stage_config.model,
+                        max_tokens=4000,
+                        temperature=0.1,
+                    )
+                ),
+                timeout=stage_config.timeout_s,
+            )
+
+            logger.info(
+                "stage3_llm_response_received",
+                document_id=document_id,
+                response_length=len(response.content) if response else 0,
+                response_preview=response.content[:200] if response else "None",
+            )
+
+            # Parse relations
+            relations = self._parse_relationship_response(
+                response.content,
+                all_entities,
+                document_id,
+            )
+
+            logger.info(
+                "stage3_relations_parsed",
+                document_id=document_id,
+                relations_count=len(relations),
+            )
+
+            return relations
+
+        except asyncio.TimeoutError:
+            logger.error(
+                "relation_extraction_timeout",
+                timeout_s=stage_config.timeout_s,
+                document_id=document_id,
+                entity_count=len(all_entities),
+            )
+            return []
+
+        except Exception as e:
+            logger.error(
+                "relation_extraction_failed",
+                error=str(e),
+                document_id=document_id,
+            )
+            return []
+
+    def _merge_entities(
+        self,
+        spacy_entities: list[GraphEntity],
+        enriched_entities: list[GraphEntity],
+    ) -> list[GraphEntity]:
+        """Merge SpaCy and enriched entities, removing duplicates.
+
+        Args:
+            spacy_entities: Entities from SpaCy NER
+            enriched_entities: Additional entities from LLM enrichment
+
+        Returns:
+            Merged list with duplicates removed
+        """
+        # Use lowercase name as key for deduplication
+        seen = set()
+        merged = []
+
+        # Add SpaCy entities first (they have priority)
+        for entity in spacy_entities:
+            key = entity.name.lower()
+            if key not in seen:
+                seen.add(key)
+                merged.append(entity)
+
+        # Add enriched entities
+        for entity in enriched_entities:
+            key = entity.name.lower()
+            if key not in seen:
+                seen.add(key)
+                merged.append(entity)
+
+        return merged
+
+    def _parse_entity_response(
+        self, response_content: str, document_id: str | None = None
+    ) -> list[GraphEntity]:
+        """Parse LLM response into GraphEntity objects.
+
+        Args:
+            response_content: Raw LLM response text
+            document_id: Optional document ID for provenance
+
+        Returns:
+            List of GraphEntity objects
+        """
+        try:
+            logger.info(
+                "parse_entity_response_start",
+                document_id=document_id,
+                response_length=len(response_content),
+                response_content=response_content,
+            )
+
+            # Use existing _parse_json_response method
+            entities_dicts = self._parse_json_response(response_content, data_type="entity")
+
+            logger.info(
+                "parse_entity_response_json_extracted",
+                document_id=document_id,
+                entities_dicts_count=len(entities_dicts),
+                entities_dicts=entities_dicts,
+            )
+
+            # Convert dicts to GraphEntity objects
+            entities = []
+            for i, entity_dict in enumerate(entities_dicts):
+                logger.info(
+                    "parse_entity_response_creating_entity",
+                    document_id=document_id,
+                    index=i,
+                    entity_dict=entity_dict,
+                )
+
+                # Generate entity ID from name
+                entity_name = entity_dict.get("name", "")
+                entity_id = f"{entity_name.lower().replace(' ', '_')}_{i}"
+
+                entity = GraphEntity(
+                    id=entity_id,
+                    name=entity_name,
+                    type=entity_dict.get("type", "ENTITY"),
+                    description=entity_dict.get("description", ""),
+                    source_document=document_id or entity_dict.get("source_id", ""),
+                )
+                entities.append(entity)
+
+            logger.info(
+                "parse_entity_response_complete",
+                document_id=document_id,
+                entities_count=len(entities),
+            )
+
+            return entities
+
+        except Exception as e:
+            logger.warning(
+                "entity_response_parse_failed",
+                error=str(e),
+                document_id=document_id,
+                response_preview=response_content[:200],
+            )
+            return []
+
+    def _parse_relationship_response(
+        self,
+        response_content: str,
+        entities: list[GraphEntity],
+        document_id: str | None = None,
+    ) -> list[GraphRelationship]:
+        """Parse LLM response into GraphRelationship objects.
+
+        Args:
+            response_content: Raw LLM response text
+            entities: List of entities for validation
+            document_id: Optional document ID for provenance
+
+        Returns:
+            List of GraphRelationship objects
+        """
+        try:
+            logger.info(
+                "parse_relationship_response_start",
+                document_id=document_id,
+                response_length=len(response_content),
+                response_content=response_content,
+                entities_count=len(entities),
+                entity_names=[e.name for e in entities],
+            )
+
+            # Use existing _parse_json_response method
+            relations_dicts = self._parse_json_response(
+                response_content, data_type="relationship"
+            )
+
+            logger.info(
+                "parse_relationship_response_json_extracted",
+                document_id=document_id,
+                relations_dicts_count=len(relations_dicts),
+                relations_dicts=relations_dicts,
+            )
+
+            # Convert dicts to GraphRelationship objects
+            relationships = []
+            entity_names = {e.name.lower() for e in entities}
+
+            for i, rel_dict in enumerate(relations_dicts):
+                # Get source/target (handle both formats)
+                source = rel_dict.get("source") or rel_dict.get("subject", "")
+                target = rel_dict.get("target") or rel_dict.get("object", "")
+                rel_type = rel_dict.get("type") or rel_dict.get("predicate", "RELATES_TO")
+
+                logger.info(
+                    "parse_relationship_response_processing",
+                    document_id=document_id,
+                    index=i,
+                    rel_dict=rel_dict,
+                    source=source,
+                    target=target,
+                    rel_type=rel_type,
+                )
+
+                # Validate entities exist
+                if source.lower() not in entity_names or target.lower() not in entity_names:
+                    logger.warning(
+                        "relation_skipped_unknown_entity",
+                        source=source,
+                        target=target,
+                        available_entities=len(entity_names),
+                        entity_names_sample=list(entity_names)[:10],
+                    )
+                    continue
+
+                # Generate relationship ID from source/target/type
+                rel_id = f"{source.lower().replace(' ', '_')}__{rel_type}__{target.lower().replace(' ', '_')}_{i}"
+
+                relationship = GraphRelationship(
+                    id=rel_id,
+                    source=source,
+                    target=target,
+                    type=rel_type,
+                    description=rel_dict.get("description", ""),
+                    source_document=document_id or rel_dict.get("source_id", ""),
+                )
+                relationships.append(relationship)
+                logger.info(
+                    "parse_relationship_response_added",
+                    document_id=document_id,
+                    index=i,
+                    relationship=relationship,
+                )
+
+            logger.info(
+                "parse_relationship_response_complete",
+                document_id=document_id,
+                relationships_count=len(relationships),
+            )
+
+            return relationships
+
+        except Exception as e:
+            logger.warning(
+                "relationship_response_parse_failed",
+                error=str(e),
+                document_id=document_id,
+                response_preview=response_content[:200],
+            )
+            return []
+
+    async def _extract_entities_llm_only(
+        self,
+        text: str,
+        document_id: str | None,
+        model: str,
+        timeout_s: int,
+    ) -> list[GraphEntity]:
+        """Extract entities using LLM only (fallback for SpaCy failures).
+
+        Args:
+            text: Text to extract from
+            document_id: Document ID
+            model: LLM model to use
+            timeout_s: Timeout in seconds
+
+        Returns:
+            List of GraphEntity
+        """
+        prompt = DSPY_OPTIMIZED_ENTITY_PROMPT.format(
+            text=text[:8000],
+            domain="general",
+        )
+
+        try:
+            response = await asyncio.wait_for(
+                self.llm_proxy.generate(
+                    LLMTask(
+                        task_type=TaskType.EXTRACTION,
+                        complexity=Complexity.MEDIUM,
+                        quality=QualityRequirement.BALANCED,
+                        prompt=prompt,
+                        model_override=model,
+                        max_tokens=2000,
+                        temperature=0.1,
+                    )
+                ),
+                timeout=timeout_s,
+            )
+
+            return self._parse_entity_response(response.content, document_id)
+
+        except Exception as e:
+            logger.error("llm_only_entity_extraction_failed", error=str(e))
+            return []
+
+    # =========================================================================
+    # End Sprint 89: SpaCy-First Pipeline
+    # =========================================================================
+
     async def extract_entities(
         self,
         text: str,
@@ -1014,6 +1644,7 @@ class ExtractionService:
 
         Sprint 83 Feature 83.2: Cascade fallback strategy.
         Sprint 83 Feature 83.3: Optional gleaning multi-pass extraction.
+        Sprint 89 Feature 89.1: SpaCy-First Pipeline (when enabled).
 
         Tries each cascade rank in order until success:
         - Rank 1: Nemotron3 (LLM-Only)
@@ -1032,7 +1663,22 @@ class ExtractionService:
 
         Raises:
             Exception: If extraction fails on all ranks
+
+        Note:
+            Sprint 89: When SpaCy-First Pipeline is enabled (default), consider using
+            extract_with_spacy_first_pipeline() instead, which extracts both entities
+            AND relations in a single optimized flow.
         """
+        # Sprint 89: Check if SpaCy-First Pipeline is enabled
+        # Note: This method only returns entities. For the full pipeline with relations,
+        # use extract_with_spacy_first_pipeline() from the ingestion layer.
+        if should_use_spacy_first_pipeline():
+            logger.debug(
+                "spacy_first_pipeline_enabled_but_extract_entities_called",
+                document_id=document_id,
+                hint="Consider using extract_with_spacy_first_pipeline() for better performance",
+            )
+
         # Sprint 86.7: Apply coreference resolution as preprocessing
         # This resolves pronouns (he, she, it) to their antecedents
         text, coref_metadata = _apply_coreference_resolution(text)

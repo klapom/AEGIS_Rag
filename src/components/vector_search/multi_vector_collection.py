@@ -212,11 +212,13 @@ class MultiVectorCollectionManager:
                 )
                 return False
 
-            # Check if sparse_vectors_config exists and has "sparse" key
+            # Check if sparse_vectors exists and has "sparse" key
+            # Note: Qdrant API returns sparse vectors in info.config.params.sparse_vectors
             has_sparse = (
-                hasattr(info.config, "sparse_vectors_config")
-                and info.config.sparse_vectors_config is not None
-                and "sparse" in info.config.sparse_vectors_config
+                hasattr(info.config, "params")
+                and hasattr(info.config.params, "sparse_vectors")
+                and info.config.params.sparse_vectors is not None
+                and "sparse" in info.config.params.sparse_vectors
             )
 
             logger.debug(

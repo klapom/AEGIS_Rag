@@ -1,15 +1,24 @@
 """Extraction Cascade Configuration for LLM Fallback Strategy.
 
 Sprint 83 Feature 83.2: LLM Fallback & Retry Strategy
+Sprint 89 Feature 89.1: SpaCy-First Pipeline (TD-102 Iteration 1)
 
-This module defines the 3-rank cascade for entity/relationship extraction:
+This module defines extraction strategies:
+
+**Legacy Cascade (Sprint 83):**
 - Rank 1: Nemotron3 (LLM-Only) - Fast, local
 - Rank 2: GPT-OSS:20b (LLM-Only) - Larger model, more accurate
 - Rank 3: Hybrid SpaCy NER + LLM - Maximum recall with NER + LLM relations
 
-Configuration includes timeouts, retry settings, and extraction methods for each rank.
+**SpaCy-First Pipeline (Sprint 89 - DEFAULT):**
+- Stage 1: SpaCy NER - Deterministic entity baseline (~50ms)
+- Stage 2: LLM Entity Enrichment - Additional entities (optional, ~5-15s)
+- Stage 3: LLM Relation Extraction - All relations (~10-30s)
+
+Configuration includes timeouts, retry settings, and extraction methods for each stage.
 """
 
+import os
 from dataclasses import dataclass
 from enum import Enum
 
@@ -17,12 +26,25 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+# Sprint 89: SpaCy-First Pipeline Feature Flag
+# Default: enabled (1) - Use SpaCy-first pipeline for faster extraction
+# Disable: AEGIS_USE_LEGACY_CASCADE=1 to revert to old LLM-first cascade
+USE_SPACY_FIRST_PIPELINE = os.environ.get("AEGIS_USE_LEGACY_CASCADE", "0") != "1"
+
+# Sprint 89: Entity Enrichment is MANDATORY in SpaCy-First Pipeline
+# Stage 2 always runs to ensure CONCEPT, TECHNOLOGY entities are captured
+# (SpaCy NER only finds PERSON, ORG, LOC - misses domain-specific entities)
+
 
 class ExtractionMethod(str, Enum):
-    """Extraction method for each cascade rank."""
+    """Extraction method for each cascade rank or pipeline stage."""
 
     LLM_ONLY = "llm_only"  # Pure LLM extraction (entities + relations)
     HYBRID_NER_LLM = "hybrid_ner_llm"  # SpaCy NER entities + LLM relations
+    # Sprint 89: New methods for SpaCy-First Pipeline
+    SPACY_NER_ONLY = "spacy_ner_only"  # Stage 1: SpaCy NER entities only
+    LLM_ENTITY_ENRICHMENT = "llm_entity_enrichment"  # Stage 2: LLM adds missing entities
+    LLM_RELATION_ONLY = "llm_relation_only"  # Stage 3: LLM extracts relations from known entities
 
 
 @dataclass
@@ -95,8 +117,88 @@ DEFAULT_CASCADE: list[CascadeRankConfig] = [
 ]
 
 
+@dataclass
+class PipelineStageConfig:
+    """Configuration for a single pipeline stage (Sprint 89).
+
+    Attributes:
+        stage: Stage number (1-3)
+        name: Human-readable stage name
+        method: Extraction method for this stage
+        model: LLM model name (None for SpaCy stages)
+        timeout_s: Timeout in seconds
+        max_retries: Maximum retry attempts on failure
+        fallback_to_llm: If True, fall back to LLM-only on SpaCy failure
+    """
+
+    stage: int
+    name: str
+    method: ExtractionMethod
+    model: str | None
+    timeout_s: int
+    max_retries: int = 2
+    fallback_to_llm: bool = False
+
+
+# Sprint 89: SpaCy-First Pipeline Configuration (TD-102 Iteration 1)
+# This is the NEW DEFAULT - 10-20x faster than legacy cascade
+SPACY_FIRST_PIPELINE: list[PipelineStageConfig] = [
+    # Stage 1: SpaCy NER - Deterministic Entity Baseline (~50ms)
+    # Extracts: PERSON, ORG, LOC, DATE, etc.
+    PipelineStageConfig(
+        stage=1,
+        name="SpaCy NER Entities",
+        method=ExtractionMethod.SPACY_NER_ONLY,
+        model=None,  # SpaCy uses language-specific models (de_core_news_lg, en_core_web_lg)
+        timeout_s=60,  # SpaCy is fast, but allow time for model loading
+        max_retries=1,
+        fallback_to_llm=True,  # If SpaCy fails, fall back to LLM entity extraction
+    ),
+    # Stage 2: LLM Entity Enrichment (~5-15s) - MANDATORY
+    # Adds: CONCEPT, TECHNOLOGY, PRODUCT entities that SpaCy misses
+    # Prompt: "Given these SpaCy entities, find ONLY additional entities"
+    PipelineStageConfig(
+        stage=2,
+        name="LLM Entity Enrichment",
+        method=ExtractionMethod.LLM_ENTITY_ENRICHMENT,
+        model="nemotron-3-nano:latest",
+        timeout_s=120,  # Shorter timeout since SpaCy already provides baseline
+        max_retries=2,
+        fallback_to_llm=False,  # Already LLM, no fallback
+    ),
+    # Stage 3: LLM Relation Extraction (~10-30s)
+    # Uses ALL entities from Stage 1+2 as input
+    # Prompt: "Given these entities, extract ALL relations between them"
+    PipelineStageConfig(
+        stage=3,
+        name="LLM Relation Extraction",
+        method=ExtractionMethod.LLM_RELATION_ONLY,
+        model="nemotron-3-nano:latest",
+        timeout_s=180,  # Relations take longer
+        max_retries=3,
+        fallback_to_llm=False,
+    ),
+]
+
+
+def get_pipeline_config() -> list[PipelineStageConfig]:
+    """Get SpaCy-First Pipeline configuration.
+
+    Returns:
+        List of PipelineStageConfig objects for the 3-stage pipeline.
+
+    Example:
+        >>> pipeline = get_pipeline_config()
+        >>> for stage in pipeline:
+        ...     logger.info("stage", stage=stage.stage, name=stage.name)
+    """
+    return SPACY_FIRST_PIPELINE
+
+
 def get_cascade_for_domain(domain: str | None = None) -> list[CascadeRankConfig]:
-    """Get extraction cascade configuration for a domain.
+    """Get extraction cascade configuration for a domain (LEGACY).
+
+    Note: This is the LEGACY cascade. Use get_pipeline_config() for Sprint 89+.
 
     Args:
         domain: Domain name (e.g., "tech_docs", "legal_contracts")
@@ -122,6 +224,16 @@ def get_cascade_for_domain(domain: str | None = None) -> list[CascadeRankConfig]
         )
 
     return DEFAULT_CASCADE
+
+
+def should_use_spacy_first_pipeline() -> bool:
+    """Check if SpaCy-First Pipeline should be used.
+
+    Returns:
+        True if SpaCy-First Pipeline is enabled (default),
+        False if legacy cascade is forced via AEGIS_USE_LEGACY_CASCADE=1.
+    """
+    return USE_SPACY_FIRST_PIPELINE
 
 
 def log_cascade_fallback(

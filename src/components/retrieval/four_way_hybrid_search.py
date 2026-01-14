@@ -1,12 +1,15 @@
 """4-Way Hybrid Retrieval with Intent-Weighted RRF.
 
 Sprint 42 - Feature: 4-Way Hybrid RRF (TD-057)
+Sprint 88 - Feature: BGE-M3 Native Hybrid Search (replaces BM25 with sparse vectors)
 
 This module implements a 4-channel hybrid retrieval system:
-1. Vector (Qdrant): Semantic similarity search
-2. BM25: Keyword matching search
-3. Graph Local: Entity → Chunk expansion (MENTIONED_IN relationships)
-4. Graph Global: Community → Entity → Chunk expansion
+1. Multi-Vector (Qdrant): Dense + Sparse search with server-side RRF
+   - Sprint 88: Replaces separate Vector + BM25 channels
+   - Uses BGE-M3 sparse vectors instead of pickle-based BM25
+   - Server-side fusion eliminates desync issues
+2. Graph Local: Entity → Chunk expansion (MENTIONED_IN relationships)
+3. Graph Global: Community → Entity → Chunk expansion
 
 Each channel is weighted based on the classified query intent:
 - factual: High local, balanced vector/bm25, no global
@@ -19,6 +22,7 @@ Academic References:
 - LightRAG (Guo et al., EMNLP 2025) - arXiv:2410.05779
 - HybridRAG (2024) - arXiv:2408.04948
 - Adaptive-RAG (Jeong et al., NAACL 2024) - arXiv:2403.14403
+- BGE-M3 (Chen et al., 2024) - arXiv:2402.03216
 """
 
 import asyncio
@@ -37,6 +41,7 @@ from src.components.retrieval.intent_classifier import (
     classify_intent,
 )
 from src.components.vector_search.hybrid_search import HybridSearch
+from src.components.vector_search.multi_vector_search import MultiVectorHybridSearch
 from src.core.namespace import DEFAULT_NAMESPACE
 from src.utils.fusion import weighted_reciprocal_rank_fusion
 
@@ -79,14 +84,18 @@ class FourWaySearchMetadata:
 class FourWayHybridSearch:
     """4-Way Hybrid Retrieval with Intent-Weighted RRF.
 
-    This engine combines four retrieval channels:
-    1. Vector Search (Qdrant) - Semantic similarity
-    2. BM25 Search - Keyword matching
-    3. Graph Local - Entity facts (MENTIONED_IN relationships)
-    4. Graph Global - Community/theme context
+    Sprint 88: Updated to use BGE-M3 multi-vector search (dense + sparse).
+
+    This engine combines retrieval channels:
+    1. Multi-Vector Search (Qdrant) - Dense (semantic) + Sparse (lexical) with server-side RRF
+       - Replaces separate Vector + BM25 channels (Sprint 88)
+       - Uses BGE-M3 sparse vectors instead of pickle-based BM25
+    2. Graph Local - Entity facts (MENTIONED_IN relationships)
+    3. Graph Global - Community/theme context
 
     The weights for each channel are dynamically determined by
     classifying the query intent (factual, keyword, exploratory, summary).
+    Vector and BM25 weights are combined for multi-vector search.
 
     Example:
         search = FourWayHybridSearch()
@@ -97,23 +106,27 @@ class FourWayHybridSearch:
     def __init__(
         self,
         hybrid_search: HybridSearch | None = None,
+        multi_vector_search: MultiVectorHybridSearch | None = None,
         neo4j_client: Neo4jClient | None = None,
         rrf_k: int = 60,
     ):
         """Initialize 4-Way Hybrid Search.
 
         Args:
-            hybrid_search: Existing HybridSearch instance (for Vector + BM25)
+            hybrid_search: Existing HybridSearch instance (legacy, for fallback)
+            multi_vector_search: MultiVectorHybridSearch instance (Sprint 88)
             neo4j_client: Neo4j client for graph queries
             rrf_k: RRF constant (default: 60)
         """
         self.hybrid_search = hybrid_search or HybridSearch()
+        self.multi_vector_search = multi_vector_search or MultiVectorHybridSearch()
         self.neo4j_client = neo4j_client or Neo4jClient()
         self.rrf_k = rrf_k
 
         logger.info(
             "FourWayHybridSearch initialized",
             rrf_k=rrf_k,
+            multi_vector_enabled=True,
         )
 
     async def search(
@@ -222,20 +235,17 @@ class FourWayHybridSearch:
             },
         )
 
-        # Step 2: Execute all 4 channels in parallel
-        # Only execute channels with non-zero weights
+        # Step 2: Execute all channels in parallel
+        # Sprint 88: Vector + BM25 combined into multi-vector search
         tasks = []
         channels_executed = []
 
-        # Vector search (always execute if weight > 0)
-        if weights.vector > 0:
-            tasks.append(self._vector_search(query, top_k * 3, filters, allowed_namespaces))
-            channels_executed.append("vector")
-
-        # BM25 search (always execute if weight > 0)
-        if weights.bm25 > 0:
-            tasks.append(self._bm25_search(query, top_k * 3, allowed_namespaces))
-            channels_executed.append("bm25")
+        # Multi-Vector search (Sprint 88: replaces separate Vector + BM25)
+        # Execute if either vector or bm25 weight > 0
+        multivector_weight = max(weights.vector, weights.bm25)
+        if multivector_weight > 0:
+            tasks.append(self._multivector_search(query, top_k * 3, allowed_namespaces))
+            channels_executed.append("multivector")
 
         # Graph Local search (Entity → Chunk)
         if weights.local > 0:
@@ -272,16 +282,14 @@ class FourWayHybridSearch:
         )
 
         # Step 3: Prepare rankings and weights for RRF
+        # Sprint 88: Multi-vector replaces separate vector + bm25
         rankings = []
         weight_values = []
 
-        if "vector" in channel_results:
-            rankings.append(channel_results["vector"])
-            weight_values.append(weights.vector)
-
-        if "bm25" in channel_results:
-            rankings.append(channel_results["bm25"])
-            weight_values.append(weights.bm25)
+        if "multivector" in channel_results:
+            rankings.append(channel_results["multivector"])
+            # Combined weight: max of vector + bm25 (since they're now fused)
+            weight_values.append(max(weights.vector, weights.bm25))
 
         if "graph_local" in channel_results:
             rankings.append(channel_results["graph_local"])
@@ -366,9 +374,11 @@ class FourWayHybridSearch:
         total_latency_ms = (time.perf_counter() - start_time) * 1000
 
         # Build metadata
+        # Sprint 88: multivector_results_count replaces vector + bm25
+        multivector_count = len(channel_results.get("multivector", []))
         metadata = FourWaySearchMetadata(
-            vector_results_count=len(channel_results.get("vector", [])),
-            bm25_results_count=len(channel_results.get("bm25", [])),
+            vector_results_count=multivector_count,  # Sprint 88: multivector dense+sparse combined
+            bm25_results_count=0,  # Sprint 88: Deprecated, sparse vectors included in multivector
             graph_local_results_count=len(channel_results.get("graph_local", [])),
             graph_global_results_count=len(channel_results.get("graph_global", [])),
             intent=intent.value,
@@ -380,6 +390,7 @@ class FourWayHybridSearch:
                 "bm25": weights.bm25,
                 "local": weights.local,
                 "global": weights.global_,
+                "multivector": max(weights.vector, weights.bm25),  # Sprint 88
             },
             total_latency_ms=total_latency_ms,
             channels_executed=channels_executed,
@@ -394,8 +405,7 @@ class FourWayHybridSearch:
             total_results=len(fused_results),
             final_results=len(final_results),
             latency_ms=round(total_latency_ms, 2),
-            vector_count=metadata.vector_results_count,
-            bm25_count=metadata.bm25_results_count,
+            multivector_count=multivector_count,  # Sprint 88: dense + sparse combined
             local_count=metadata.graph_local_results_count,
             global_count=metadata.graph_global_results_count,
         )
@@ -420,14 +430,82 @@ class FourWayHybridSearch:
             "metadata": metadata,
         }
 
-    async def _vector_search(
+    async def _multivector_search(
+        self,
+        query: str,
+        top_k: int,
+        allowed_namespaces: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute multi-vector search (dense + sparse) via Qdrant Query API.
+
+        Sprint 88: Replaces separate _vector_search and _bm25_search methods.
+        Uses BGE-M3 embeddings with server-side RRF fusion in Qdrant.
+
+        Args:
+            query: Search query
+            top_k: Number of results
+            allowed_namespaces: Namespaces to search in
+
+        Returns:
+            List of search results with namespace info
+        """
+        try:
+            # Execute multi-vector hybrid search with first namespace
+            # MultiVectorHybridSearch handles both dense + sparse in one call
+            namespace_filter = allowed_namespaces[0] if allowed_namespaces else None
+
+            results = await self.multi_vector_search.hybrid_search(
+                query=query,
+                top_k=top_k,
+                prefetch_limit=min(top_k * 2, 100),  # Prefetch more for better recall
+                namespace_filter=namespace_filter,
+            )
+
+            # Format results for RRF compatibility
+            formatted_results = []
+            for rank, result in enumerate(results, start=1):
+                formatted_results.append(
+                    {
+                        "id": str(result.get("id", "")),
+                        "text": result.get("text", ""),
+                        "score": result.get("score", 0.0),
+                        "source": result.get("source", "unknown"),
+                        "document_id": result.get("document_id", ""),
+                        "namespace_id": result.get("namespace_id", DEFAULT_NAMESPACE),
+                        "rank": rank,
+                        "search_type": "multivector",  # Sprint 88: dense + sparse combined
+                        "source_channel": "multivector",
+                    }
+                )
+
+            logger.debug(
+                "multivector_search_with_namespaces",
+                query=query[:50],
+                namespaces=allowed_namespaces,
+                results=len(formatted_results),
+            )
+
+            return formatted_results
+
+        except Exception as e:
+            logger.warning(
+                "multivector_search_failed_falling_back",
+                error=str(e),
+                query=query[:50],
+            )
+            # Fallback to legacy vector search
+            return await self._vector_search_legacy(query, top_k, None, allowed_namespaces)
+
+    async def _vector_search_legacy(
         self,
         query: str,
         top_k: int,
         filters: MetadataFilters | None = None,
         allowed_namespaces: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute vector search via existing HybridSearch with namespace filtering.
+        """Legacy vector search (dense only) via HybridSearch.
+
+        Sprint 88: Fallback for when multi-vector search fails.
 
         Args:
             query: Search query
@@ -499,7 +577,7 @@ class FourWayHybridSearch:
             )
 
         logger.debug(
-            "vector_search_with_namespaces",
+            "vector_search_legacy_with_namespaces",
             query=query[:50],
             namespaces=allowed_namespaces,
             results=len(formatted_results),
@@ -513,7 +591,11 @@ class FourWayHybridSearch:
         top_k: int,
         allowed_namespaces: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute BM25 search via existing HybridSearch with namespace filtering.
+        """[DEPRECATED] Execute BM25 search via existing HybridSearch.
+
+        Sprint 88: DEPRECATED - Use _multivector_search instead.
+        BM25 has been replaced by BGE-M3 sparse vectors in Qdrant.
+        This method is kept for backward compatibility only.
 
         Args:
             query: Search query
@@ -523,6 +605,10 @@ class FourWayHybridSearch:
         Returns:
             List of BM25 search results filtered by namespace
         """
+        logger.warning(
+            "bm25_search_deprecated",
+            message="BM25 search is deprecated. Use multivector search with sparse vectors.",
+        )
         # Get BM25 results (retrieve more to account for filtering)
         results = await self.hybrid_search.keyword_search(
             query=query,
@@ -819,8 +905,13 @@ class FourWayHybridSearch:
                 }
 
                 # Add channel-specific metadata
-                if channel == "bm25":
-                    # For BM25: Show the query keywords
+                if channel == "multivector":
+                    # Sprint 88: Multi-vector shows both semantic + lexical info
+                    sample["search_type"] = "dense+sparse"
+                    sample["keywords"] = query_terms[:5]  # Sparse vector keywords
+
+                elif channel == "bm25":
+                    # [DEPRECATED] For BM25: Show the query keywords
                     sample["keywords"] = query_terms[:5]  # Limit to 5 keywords
 
                 elif channel == "graph_local":

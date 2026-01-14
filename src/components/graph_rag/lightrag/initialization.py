@@ -138,12 +138,16 @@ def create_aegis_llm_function(llm_model: str) -> Any:
 
 
 class UnifiedEmbeddingFunc:
-    """Wrapper for UnifiedEmbeddingService compatible with LightRAG.
+    """Wrapper for embedding service compatible with LightRAG.
 
-    Sprint 12: This wrapper is PICKLE-COMPATIBLE because UnifiedEmbeddingService
-    uses lazy AsyncClient creation instead of storing it as instance variable.
+    Sprint 12: This wrapper is PICKLE-COMPATIBLE because embedding services
+    use lazy AsyncClient creation instead of storing it as instance variable.
 
     Sprint 16: Uses BGE-M3 (1024 dimensions) for system-wide standardization.
+
+    Sprint 88: Updated to use embedding_factory for multi-backend support.
+    When EMBEDDING_BACKEND=flag-embedding, automatically extracts dense vectors
+    from multi-vector results (LightRAG only needs dense embeddings).
     """
 
     def __init__(self, embedding_dim: int = 1024):
@@ -157,9 +161,14 @@ class UnifiedEmbeddingFunc:
 
     @property
     def unified_service(self):
-        """Lazy-load the embedding service."""
+        """Lazy-load the embedding service via factory.
+
+        Sprint 88: Uses embedding_factory to respect EMBEDDING_BACKEND config.
+        This allows switching between ollama, sentence-transformers, and
+        flag-embedding backends without code changes.
+        """
         if self._service is None:
-            from src.components.shared.embedding_service import get_embedding_service
+            from src.components.shared.embedding_factory import get_embedding_service
 
             self._service = get_embedding_service()
         return self._service
@@ -172,9 +181,21 @@ class UnifiedEmbeddingFunc:
             **kwargs: Additional arguments (ignored)
 
         Returns:
-            List of embedding vectors
+            List of embedding vectors (dense only, compatible with LightRAG)
+
+        Notes:
+            Sprint 88: Handles multi-vector backends (flag-embedding) by
+            extracting dense vectors. LightRAG doesn't use sparse vectors.
         """
-        return await self.unified_service.embed_batch(texts)
+        results = await self.unified_service.embed_batch(texts)
+
+        # Sprint 88: Handle multi-vector backends (flag-embedding returns dicts)
+        # Other backends (ollama, sentence-transformers) return list[float] directly
+        if results and isinstance(results[0], dict):
+            # Extract dense vectors from multi-vector results
+            return [r["dense"] for r in results]
+
+        return results
 
     @property
     def async_func(self) -> None:

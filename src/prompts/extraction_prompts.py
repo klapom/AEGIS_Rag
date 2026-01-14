@@ -424,6 +424,89 @@ Output (JSON array only):
 """
 
 
+# Sprint 89 Feature 89.1: SpaCy-First Pipeline Prompts (TD-102 Iteration 1)
+# These prompts are used in the 3-stage pipeline: SpaCy → LLM Enrichment → LLM Relations
+
+ENTITY_ENRICHMENT_PROMPT = """You are enriching a SpaCy NER baseline with domain-specific entities.
+
+---Context---
+SpaCy has already extracted these entities: {spacy_entities}
+
+SpaCy is good at: PERSON, ORGANIZATION, LOCATION, DATE
+SpaCy MISSES: CONCEPT, TECHNOLOGY, PRODUCT, MODEL, ARCHITECTURE, PROGRAMMING_LANGUAGE
+
+---Your Task---
+Find ONLY entities that SpaCy MISSED. Do NOT repeat SpaCy entities.
+
+---Text---
+{text}
+
+---Instructions---
+1. Review SpaCy's entities - these are already captured
+2. Find ADDITIONAL entities of types SpaCy cannot detect:
+   - CONCEPT: Abstract ideas, theories, methods (e.g., "machine learning", "agile methodology")
+   - TECHNOLOGY: Frameworks, platforms, tools (e.g., "Docker", "Kubernetes", "React")
+   - PRODUCT: Software products, services (e.g., "ChatGPT", "iPhone")
+   - MODEL: AI/ML models (e.g., "GPT-4", "BERT", "ResNet")
+   - ARCHITECTURE: System/neural architectures (e.g., "Transformer", "microservices")
+   - PROGRAMMING_LANGUAGE: Languages (e.g., "Python", "TypeScript")
+3. Do NOT repeat any entity from SpaCy's list
+4. Be thorough but precise - only include clear entities
+
+---Output Format---
+Return ONLY a valid JSON array of NEW entities (not already in SpaCy list):
+[
+  {{"name": "Entity Name", "type": "ENTITY_TYPE", "description": "Brief description"}},
+  ...
+]
+
+If no additional entities found, return: []
+
+Entities (JSON array only):"""
+
+
+RELATION_EXTRACTION_FROM_ENTITIES_PROMPT = """Extract ALL relationships between the given entities.
+
+---Role---
+You are a Knowledge Graph Specialist. Your task is to find ALL relationships between entities.
+
+---Entities---
+{entities}
+
+---Text---
+{text}
+
+---Goal---
+Create a COMPLETE relationship graph. Every entity should have at least ONE relationship.
+
+---Instructions---
+1. Consider ALL entity pairs - check if any relationship exists
+2. Decompose complex relationships: "A and B work at C" → A WORKS_AT C, B WORKS_AT C
+3. Include implicit relationships from context
+4. Rate strength 1-10: 10=explicit, 7=implied, 4=inferred
+
+---Relationship Types---
+Use specific types when possible:
+- WORKS_AT, WORKS_FOR, EMPLOYS, MANAGES
+- CREATED, DEVELOPED, FOUNDED, INVENTED
+- USES, IMPLEMENTS, DEPENDS_ON, EXTENDS
+- LOCATED_IN, BASED_IN, HEADQUARTERED_IN
+- PART_OF, CONTAINS, BELONGS_TO
+- COLLABORATES_WITH, ASSOCIATED_WITH
+- RELATES_TO (only if no specific type fits)
+
+---Output Format---
+Return ONLY a valid JSON array:
+[
+  {{"source": "Entity1", "target": "Entity2", "type": "RELATIONSHIP_TYPE", "description": "Evidence from text", "strength": 8}},
+  ...
+]
+
+IMPORTANT: Every entity should have at least one relationship!
+
+Relationships (JSON array only):"""
+
+
 # Enhanced relationship extraction prompt for better ER ratio (Sprint 85)
 ENHANCED_RELATIONSHIP_EXTRACTION_PROMPT = """Extract ALL relationships between entities from the following text.
 

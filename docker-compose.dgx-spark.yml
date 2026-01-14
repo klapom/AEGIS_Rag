@@ -397,7 +397,7 @@ services:
       - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - VLM_BACKEND=ollama
-      - EMBEDDING_BACKEND=sentence-transformers
+      - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3
       - ST_DEVICE=cuda
       - ST_BATCH_SIZE=64
@@ -504,7 +504,7 @@ services:
       - LIGHTRAG_LLM_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - GEMMA_MODEL=${OLLAMA_MODEL_GENERATION:-nemotron-no-think:latest}
       - VLM_BACKEND=ollama
-      - EMBEDDING_BACKEND=sentence-transformers
+      - EMBEDDING_BACKEND=flag-embedding  # Sprint 87: Multi-vector (dense + sparse)
       - ST_MODEL_NAME=BAAI/bge-m3
       # Databases
       - QDRANT_HOST=qdrant
