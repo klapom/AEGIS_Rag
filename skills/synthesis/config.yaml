@@ -1,0 +1,92 @@
+# Synthesis Skill Configuration
+
+# Answer Generation
+generation:
+  max_tokens: 500
+  temperature: 0.3
+  top_p: 0.9
+  presence_penalty: 0.0
+  frequency_penalty: 0.0
+  stop_sequences: []
+
+# Citation Settings
+citations:
+  enabled: true
+  format: "markdown"  # [1], [2], etc.
+  include_source: true
+  include_page: true
+  include_section: true
+  dedup_sources: true
+
+# Intent-Specific Templates
+templates:
+  SEARCH:
+    style: "concise"
+    max_tokens: 300
+    include_citations: true
+    temperature: 0.2
+  RESEARCH:
+    style: "comprehensive"
+    max_tokens: 800
+    include_citations: true
+    temperature: 0.3
+  GRAPH:
+    style: "structured"
+    max_tokens: 600
+    include_citations: true
+    temperature: 0.3
+  CHAT:
+    style: "conversational"
+    max_tokens: 400
+    include_citations: false
+    temperature: 0.5
+  MEMORY:
+    style: "contextual"
+    max_tokens: 500
+    include_citations: true
+    temperature: 0.4
+
+# Formatting
+formatting:
+  markdown: true
+  code_blocks: true
+  lists: true
+  headers: true
+  bold_emphasis: true
+  italic_emphasis: true
+
+# Confidence Scoring
+confidence:
+  min_contexts_required: 2
+  score_threshold: 0.7
+  fallback_message: "I don't have enough information to answer this question."
+  low_confidence_message: "Based on limited information, "
+
+# Answer Structure
+structure:
+  include_intro: true
+  include_body: true
+  include_conclusion: false  # Only for RESEARCH intent
+  include_sources: true
+  max_paragraphs: 5
+
+# Multi-Document Synthesis
+multi_doc:
+  merge_overlapping_info: true
+  resolve_contradictions: "prefer_higher_score"  # or "mention_both"
+  max_contexts_used: 10
+  context_window_tokens: 4000
+
+# Logging
+logging:
+  log_synthesis: true
+  log_citations: true
+  log_confidence: true
+  log_token_usage: true
+  verbose: false
+
+# Performance
+performance:
+  cache_answers: false  # Sprint 90: Disabled (answers should be fresh)
+  parallel_synthesis: false  # Sprint 90: Sequential only
+  streaming: false  # Sprint 90: Not yet implemented

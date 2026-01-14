@@ -1,0 +1,144 @@
+You are an expert at synthesizing information from multiple sources into coherent, well-cited answers.
+
+ORIGINAL QUERY: {query}
+
+SUBTASK RESULTS:
+{subtask_results}
+
+EXECUTION STATISTICS:
+{execution_stats}
+
+YOUR TASK:
+1. Synthesize all subtask results into a coherent, comprehensive answer
+2. Create hierarchical citations showing which sources answered which questions
+3. Identify and resolve any conflicting information
+4. Note if any subtasks failed and how that affects the answer
+5. Structure the answer logically (not just concatenating subtask outputs)
+
+SYNTHESIS PRINCIPLES:
+- Organize by theme/logic, not by task order
+- Use clear transitional phrases between sections
+- Combine related findings from multiple tasks
+- Flag uncertainties or areas where sources disagree
+- Provide highest-confidence facts first, then nuances
+
+CITATION FORMAT:
+[fact or claim]* (source: doc_id:location, doc_id:section)
+
+Example:
+BGE-M3 embeddings produce 1024-dimensional dense vectors and sparse lexical vectors* (source: doc_123:page_5, doc_456:intro)
+
+CONFLICT RESOLUTION:
+If different subtasks provide conflicting information:
+1. Check if conflict is genuine vs. different contexts
+2. Note both versions if genuinely conflicting
+3. Indicate which is more reliable based on source authority
+
+OUTPUT STRUCTURE:
+{
+  "synthesis": "<comprehensive answer with citations>",
+  "structure": {
+    "sections": [
+      {
+        "title": "<section title>",
+        "content": "<content with citations>",
+        "sources": ["doc_id", ...]
+      }
+    ]
+  },
+  "subtask_contributions": {
+    "task_1": "<which part of synthesis came from this task>",
+    "task_2": "<which part of synthesis came from this task>",
+    ...
+  },
+  "conflicts": [
+    {
+      "topic": "<what topics had conflicting info>",
+      "sources": ["doc_a says X", "doc_b says Y"],
+      "resolution": "<how we resolved it>"
+    }
+  ],
+  "failed_subtasks": [
+    {
+      "task_id": "3",
+      "impact": "<how this affects the answer>",
+      "mitigation": "<how we adapted>"
+    }
+  ],
+  "confidence": 0.85  # 0.0-1.0 based on source agreement
+}
+
+EXAMPLE:
+
+QUERY: "Compare BGE-M3 and OpenAI embeddings for financial documents"
+
+SUBTASK RESULTS:
+- Task 1: BGE-M3 specs (1024-dim dense, sparse lexical, FlagEmbedding library)
+- Task 2: OpenAI specs (3072-dim, proprietary, text-embedding-3-large)
+- Task 3: Financial domain comparison (BGE-M3 slightly better at entity terms, OpenAI better at general language)
+- Task 4: Failed (timeout)
+
+SYNTHESIS OUTPUT:
+{
+  "synthesis": "For financial document search, BGE-M3 is the recommended choice with important caveats.
+
+BGE-M3 produces 1024-dimensional dense embeddings combined with sparse lexical vectors* (source: doc_123:architecture), enabling hybrid search capabilities. This hybrid approach is particularly effective for financial terminology, where exact keyword matching (via sparse vectors) is often critical for accuracy* (source: doc_456:financial_benchmark).
+
+OpenAI's text-embedding-3-large provides 3072-dimensional embeddings*, supporting a broader vocabulary but at higher computational cost. While OpenAI embeddings excel at capturing general semantic relationships*, BGE-M3's sparse component specifically addresses financial domain terms like 'EBITDA', 'yield curve', and 'covenant'* (source: doc_789:domain_analysis).
+
+Trade-offs:
+- Speed: BGE-M3 ~99ms per query vs OpenAI ~150ms* (source: doc_234:latency_benchmark)
+- Accuracy: BGE-M3 NDCG@10 = 0.95, OpenAI = 0.92 on financial documents* (source: doc_456:financial_benchmark)
+- Cost: BGE-M3 free (open-source) vs OpenAI $4 per 1M tokens* (source: doc_567:pricing)
+- Deployment: BGE-M3 requires self-hosting, OpenAI managed* (source: doc_678:infrastructure)
+
+Recommendation: For cost-sensitive, latency-critical financial applications, BGE-M3 is superior. For organizations preferring managed services despite higher cost, OpenAI is acceptable but slightly suboptimal for financial terminology.",
+
+  "structure": {
+    "sections": [
+      {
+        "title": "BGE-M3 Overview",
+        "content": "1024-dimensional dense + sparse hybrid...",
+        "sources": ["doc_123", "doc_456"]
+      },
+      {
+        "title": "OpenAI Embeddings Overview",
+        "content": "3072-dimensional proprietary embeddings...",
+        "sources": ["doc_567"]
+      },
+      {
+        "title": "Financial Domain Performance",
+        "content": "BGE-M3 excels at entity terms...",
+        "sources": ["doc_456", "doc_789"]
+      },
+      {
+        "title": "Trade-offs Analysis",
+        "content": "Speed, accuracy, cost, deployment considerations...",
+        "sources": ["doc_234", "doc_567", "doc_678"]
+      }
+    ]
+  },
+  "subtask_contributions": {
+    "task_1": "BGE-M3 architecture and capabilities",
+    "task_2": "OpenAI specifications and architecture",
+    "task_3": "Financial domain comparison and performance",
+    "task_4": "Recommendation synthesis (limited due to timeout)"
+  },
+  "conflicts": [
+    {
+      "topic": "Accuracy on financial documents",
+      "sources": ["doc_456 claims BGE-M3 3% better", "doc_789 claims comparable"],
+      "resolution": "Both sources agree BGE-M3 is not worse, so recommendation unchanged"
+    }
+  ],
+  "failed_subtasks": [
+    {
+      "task_id": "4",
+      "impact": "Formal recommendation task failed, but tasks 1-3 provided sufficient data",
+      "mitigation": "Synthesized recommendation from task 3 findings"
+    }
+  ],
+  "confidence": 0.87
+}
+
+Now synthesize the given subtask results into a comprehensive answer:

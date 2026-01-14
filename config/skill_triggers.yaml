@@ -1,0 +1,107 @@
+# Skill Trigger Configuration
+# Sprint 91 (2026-01-14): Feature 91.2 - Skill Trigger Configuration (8 SP)
+#
+# Defines skill activation rules based on:
+# - Intent classification (C-LARA 5-class)
+# - Pattern matching (regex)
+# - Keyword matching (substring)
+#
+# Based on: https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview
+
+# Global settings
+defaults:
+  context_budget: 4000  # Default max tokens for skill instructions
+  max_active_skills: 5  # Max number of skills active at once
+  always_active:
+    - hallucination_monitor  # Always checking for hallucinations
+
+# Intent-based triggers (C-LARA 5-class intents)
+# Maps intent types to required/optional skills and context budget
+intent_triggers:
+  # VECTOR: Simple vector search (factual lookups)
+  VECTOR:
+    required: [retrieval]
+    optional: [synthesis]
+    budget: 2000
+
+  # GRAPH: Graph reasoning (entity/relation queries)
+  GRAPH:
+    required: [retrieval, graph_reasoning]
+    optional: [reflection]
+    budget: 3000
+
+  # HYBRID: Combined vector + graph (complex queries)
+  HYBRID:
+    required: [retrieval, graph_reasoning]
+    optional: [reflection, synthesis]
+    budget: 4000
+
+  # MEMORY: Memory retrieval (conversation history)
+  MEMORY:
+    required: [memory, retrieval]
+    optional: []
+    budget: 2000
+
+  # RESEARCH: Multi-step research (requires planning)
+  RESEARCH:
+    required: [retrieval, reflection, planner]
+    optional: [web_search, synthesis]
+    budget: 5000
+
+# Pattern-based triggers (regex patterns → skills)
+# Patterns are case-insensitive ((?i) flag)
+pattern_triggers:
+  # Search/find patterns → retrieval
+  - pattern: "(?i)(search|find|look up|locate)"
+    skills: [retrieval]
+    priority: high
+
+  # Comparison patterns → reflection + graph reasoning
+  - pattern: "(?i)(compare|contrast|difference|versus|vs)"
+    skills: [reflection, graph_reasoning]
+    priority: medium
+
+  # Recency patterns → web search
+  - pattern: "(?i)(latest|current|recent|today|this week|this month|2026)"
+    skills: [web_search]
+    priority: high
+
+  # Planning patterns → planner
+  - pattern: "(?i)(plan|steps|how to|guide|tutorial|walkthrough)"
+    skills: [planner]
+    priority: medium
+
+  # Validation patterns → reflection
+  - pattern: "(?i)(check|verify|validate|correct|accurate)"
+    skills: [reflection]
+    priority: medium
+
+  # Summarization patterns → synthesis
+  - pattern: "(?i)(summarize|summary|overview|brief|in short)"
+    skills: [synthesis]
+    priority: high
+
+  # Entity patterns → graph reasoning
+  - pattern: "(?i)(related to|connected to|associated with|relationship)"
+    skills: [graph_reasoning]
+    priority: medium
+
+  # Memory patterns → memory
+  - pattern: "(?i)(remember|recall|previous|earlier|last time|you said)"
+    skills: [memory]
+    priority: high
+
+# Keyword triggers (simple substring matching → skills)
+# Case-insensitive substring matching
+keyword_triggers:
+  "analyze": [reflection]
+  "summarize": [synthesis]
+  "remember": [memory]
+  "calculate": [calculator]
+  "graph": [graph_reasoning]
+  "entities": [graph_reasoning]
+  "relationships": [graph_reasoning]
+  "plan": [planner]
+  "steps": [planner]
+  "recent": [web_search]
+  "latest": [web_search]

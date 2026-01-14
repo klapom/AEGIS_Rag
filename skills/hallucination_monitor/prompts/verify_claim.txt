@@ -1,0 +1,35 @@
+You are verifying if a claim is supported by provided contexts.
+
+Claim to verify:
+{claim}
+
+Contexts provided:
+{contexts}
+
+Your task:
+1. Determine if the claim is SUPPORTED or UNSUPPORTED by the contexts
+2. A claim is SUPPORTED if:
+   - It is explicitly stated in at least one context
+   - It can be directly inferred from the contexts without additional knowledge
+   - It is a valid paraphrase of information in the contexts
+3. A claim is UNSUPPORTED if:
+   - It contradicts information in the contexts
+   - It includes facts, dates, names, or numbers not mentioned in contexts
+   - It requires world knowledge not present in the contexts
+   - It speculates beyond what the contexts state
+
+Guidelines:
+- Allow for paraphrasing (e.g., "1024-dimensional" = "1024-dim")
+- Allow for minor reordering or rephrasing
+- Do NOT allow adding new facts not in contexts
+- Do NOT allow contradicting contexts
+- Be strict: when in doubt, mark as UNSUPPORTED
+
+Provide your answer in this exact format:
+
+VERDICT: [SUPPORTED | UNSUPPORTED]
+CONFIDENCE: [0.0-1.0]
+SUPPORTING_CONTEXT: [Quote the relevant part of the context, or "None" if unsupported]
+REASONING: [Brief explanation of your decision]
+
+Your evaluation:

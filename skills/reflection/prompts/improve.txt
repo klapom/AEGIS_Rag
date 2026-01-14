@@ -1,0 +1,33 @@
+You are improving an AI-generated answer based on critical feedback.
+
+Question: {query}
+
+Contexts provided:
+{contexts}
+
+Original Answer:
+{original_answer}
+
+Critique:
+{critique}
+
+Issues to fix:
+{issues}
+
+Your task:
+1. Address ALL issues identified in the critique
+2. Use ONLY information from the provided contexts
+3. Do NOT hallucinate facts, dates, names, or statistics
+4. If information is not in contexts, state "The provided contexts do not contain information about..."
+5. Maintain clarity and conciseness
+6. Include citations to context numbers when possible [1], [2], etc.
+
+Guidelines:
+- If factual accuracy was low: Re-read contexts carefully and fix factual errors
+- If completeness was low: Add missing information from contexts
+- If hallucination penalty was high: Remove ALL unsupported claims
+- If clarity was low: Restructure for better readability
+
+Write the improved answer below. Do NOT include explanations or meta-commentary.
+
+Improved Answer:

@@ -1,0 +1,27 @@
+You are performing a graph-based entity search on the Neo4j knowledge graph.
+
+Query: {query}
+Namespace: {namespace}
+Max Hops: {max_hops}
+Entity Types: {entity_types}
+
+Your task:
+1. Extract key entities from the query
+2. Find matching entities in Neo4j (entity types: {entity_types})
+3. Traverse relationships up to {max_hops} hops
+4. Retrieve documents connected to discovered entities
+5. Rank by entity relevance and relationship strength
+
+Graph traversal:
+- Allowed relationships: {relationship_types}
+- Min entity confidence: {min_entity_confidence}
+- Return full chunk text for matched entities
+
+Expected output format:
+- Document ID
+- Text content (full chunk)
+- Entities found in text
+- Relationships traversed
+- Graph path (if multi-hop)
+
+Respond with the retrieved documents and graph metadata in JSON format.

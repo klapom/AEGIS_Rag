@@ -1,0 +1,80 @@
+# Hallucination Monitor Skill Configuration
+
+# Hallucination Detection
+detection:
+  enabled: true
+  auto_active: true  # Runs automatically after answer generation
+  threshold: 0.1  # 10% unsupported claims triggers WARN
+  critical_threshold: 0.3  # 30% unsupported claims triggers FAIL
+
+# Claim Extraction
+claims:
+  method: "llm"  # "llm" or "spacy" (Sprint 90: LLM only)
+  min_claim_length: 10
+  max_claims_per_answer: 20
+  ignore_meta_statements: true  # Ignore "I don't know", "based on...", etc.
+  split_compound_claims: true
+
+# Claim Verification
+verification:
+  method: "llm"  # "llm" or "embedding" (Sprint 90: LLM only)
+  confidence_threshold: 0.7
+  use_embeddings_for_similarity: false  # Sprint 91+: Use BGE-M3
+  similarity_threshold: 0.85
+  allow_paraphrasing: true
+
+# Verdict Thresholds
+verdicts:
+  PASS:
+    max_hallucination_score: 0.1
+    description: "Answer is factually accurate"
+  WARN:
+    min_hallucination_score: 0.1
+    max_hallucination_score: 0.3
+    description: "Answer has minor unsupported claims"
+  FAIL:
+    min_hallucination_score: 0.3
+    description: "Answer has significant hallucinations"
+
+# Logging
+logging:
+  enabled: true
+  log_all_checks: true
+  log_unsupported_claims: true
+  log_verdict: true
+  log_metrics: true
+  log_claim_details: false  # Sprint 90: Too verbose
+  verbose: false
+
+# Metrics
+metrics:
+  track_total_checks: true
+  track_hallucinations: true
+  track_claims: true
+  track_pass_rate: true
+  track_average_score: true
+  reset_on_restart: false
+  export_to_prometheus: false  # Sprint 91+
+
+# Prompt Settings
+prompts:
+  claim_extraction_template: "prompts/extract_claims.txt"
+  claim_verification_template: "prompts/verify_claim.txt"
+  temperature: 0.1  # Low temperature for consistency
+  max_tokens: 500
+
+# Performance
+performance:
+  parallel_verification: false  # Sprint 90: Sequential only
+  cache_verifications: true
+  cache_ttl_seconds: 600
+  max_concurrent_checks: 1
+
+# Integration
+integration:
+  auto_activate_after:
+    - synthesis
+    - reflection
+  trigger_reflection_on_fail: true
+  reflection_threshold: 0.2  # >20% hallucination triggers reflection loop
+  block_answer_on_fail: false  # Sprint 90: Log only, don't block

@@ -1,0 +1,79 @@
+# Retrieval Skill Configuration
+
+# Hybrid Search Settings
+vector:
+  top_k: 10
+  score_threshold: 0.6
+  use_sparse: true  # Enable BGE-M3 sparse vectors
+  rrf_k: 60  # Reciprocal Rank Fusion parameter
+  collection_name: "multi_vector"
+
+# Graph Search Settings
+graph:
+  enabled: true
+  entity_types:
+    - PERSON
+    - ORGANIZATION
+    - CONCEPT
+    - TECHNOLOGY
+    - LOCATION
+    - DATE
+  relationship_types:
+    - RELATES_TO
+    - PART_OF
+    - USES
+    - MENTIONS
+    - CITES
+  max_hops: 2
+  min_entity_confidence: 0.7
+
+# Semantic Expansion
+expansion:
+  enabled: false  # Sprint 90: Disabled by default, activate via query parameters
+  llm_synonyms: true
+  graph_neighbors: true
+  similarity_threshold: 0.75
+  max_synonyms: 5
+
+# Reranking
+reranking:
+  enabled: true
+  model: "cross-encoder"
+  top_k_candidates: 30
+  final_k: 10
+  score_threshold: 0.5
+
+# Performance
+cache:
+  enabled: true
+  ttl_seconds: 300
+  key_prefix: "retrieval"
+  redis_enabled: true
+
+# Namespaces (Sprint 75+)
+namespaces:
+  default: "default"
+  ragas_phase2: "ragas_phase2_sprint83_v1"
+  research_papers: "research_papers"
+  documentation: "documentation"
+
+# Metadata Filtering
+filters:
+  domain:
+    - research_papers
+    - documentation
+    - code_examples
+    - technical_blogs
+  doc_type:
+    - pdf
+    - markdown
+    - txt
+    - code
+    - table
+
+# Logging
+logging:
+  log_queries: true
+  log_latency: true
+  log_retrieval_stats: true
+  verbose: false

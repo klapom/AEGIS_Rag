@@ -1,0 +1,30 @@
+You are extracting atomic claims from an AI-generated answer.
+
+Answer to analyze:
+{answer}
+
+Your task:
+1. Break down the answer into individual, verifiable atomic claims
+2. Each claim should be a single factual statement
+3. Ignore meta-statements like "I don't know", "Based on the contexts", "The document states"
+4. Split compound claims into separate statements
+5. Extract only substantive claims (skip filler words and transitions)
+
+Guidelines:
+- Atomic: Each claim should be independently verifiable
+- Factual: Only extract factual statements, not opinions or questions
+- Clear: Rephrase claims if needed for clarity (but preserve meaning)
+- Complete: Include necessary context (e.g., "BGE-M3 produces 1024-dim vectors", not just "produces vectors")
+
+Example:
+Input: "BGE-M3 is a multi-vector model that produces 1024-dimensional dense vectors and sparse vectors, and it supports over 100 languages."
+
+Output:
+1. BGE-M3 is a multi-vector model
+2. BGE-M3 produces 1024-dimensional dense vectors
+3. BGE-M3 produces sparse vectors
+4. BGE-M3 supports over 100 languages
+
+Now extract claims from the given answer. Provide ONLY the numbered list of claims, no explanations.
+
+Claims:

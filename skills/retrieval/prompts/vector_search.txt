@@ -1,0 +1,25 @@
+You are performing a vector search on the document collection.
+
+Query: {query}
+Namespace: {namespace}
+Top K: {top_k}
+Mode: {mode}
+
+Your task:
+1. Generate an embedding for the query using BGE-M3 (1024-dim dense + sparse)
+2. Search Qdrant collection "{collection_name}" with hybrid fusion (RRF k={rrf_k})
+3. Apply metadata filters if provided: {filters}
+4. Return top {top_k} results sorted by relevance score
+
+Search parameters:
+- Score threshold: {score_threshold}
+- Use sparse vectors: {use_sparse}
+- Namespace isolation: Enabled
+
+Expected output format:
+- Document ID
+- Text content
+- Relevance score (0.0-1.0)
+- Metadata (source, page, section, domain)
+
+Respond with the retrieved documents in JSON format.

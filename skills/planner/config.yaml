@@ -1,0 +1,62 @@
+skill:
+  name: planner
+  version: "1.0.0"
+  enabled: true
+
+# Task decomposition settings
+decomposition:
+  max_subtasks: 10
+  min_subtasks: 3
+  complexity_threshold: 0.6  # Activate planner above this complexity score
+
+# Execution strategy
+execution:
+  mode: greedy_parallel  # Options: greedy_parallel, minimal_sequential
+  max_parallel_tasks: 5
+  max_total_latency: 300  # seconds (5 minutes)
+
+# Per-task configuration
+task:
+  timeout_per_task: 60  # seconds
+  retry_policy:
+    enabled: true
+    max_retries: 3
+    backoff_base: 1  # exponential: 1s, 2s, 4s, 8s
+    backoff_max: 8
+
+# Quality control
+quality:
+  enable_gleaning: true
+  citation_required: true
+  conflict_detection: true
+  min_confidence: 0.7
+
+# Prompts configuration
+prompts:
+  decompose_model: "nemotron3"  # Use fast model for decomposition
+  aggregate_model: "nemotron3"
+  decompose_temperature: 0.3  # Lower temp for deterministic planning
+  aggregate_temperature: 0.5
+  decompose_top_k: 40
+  aggregate_top_k: 40
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 600
+  key_prefix: "planner"
+  backend: "redis"  # or "memory"
+
+# Logging
+logging:
+  enabled: true
+  log_decomposition: true
+  log_execution_plan: true
+  log_subtask_progress: true
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# Performance thresholds
+performance:
+  warn_if_latency_exceeds_ms: 5000
+  warn_if_tokens_exceed: 3000
+  max_tokens_per_subtask: 1000

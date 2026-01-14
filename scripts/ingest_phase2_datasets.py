@@ -278,8 +278,10 @@ async def upload_files(
         "total_time_ms": 0,
     }
 
-    # Sprint 88: 10 minute timeout for heavy processing (graph extraction, community summarization)
-    async with httpx.AsyncClient(timeout=600.0) as client:
+    # Sprint 88: Heavy processing (graph extraction, community summarization)
+    # Sprint 100 Fix: SpaCy-First Pipeline can take 10-15 minutes per document
+    # Increased timeout from 600s (10min) to 1800s (30min) to prevent premature failures
+    async with httpx.AsyncClient(timeout=1800.0) as client:
         for i, file_path in enumerate(file_paths):
             # Add delay between uploads to avoid rate limiting (10 requests/minute)
             if i > 0:

@@ -1,0 +1,59 @@
+# Reflection Skill Configuration
+
+# Reflection Parameters
+reflection:
+  max_iterations: 3
+  confidence_threshold: 0.85
+  min_confidence_delta: 0.05  # Minimum improvement per iteration
+  fail_fast_on_hallucination: false
+
+# Critique Aspects
+critique:
+  check_factual_accuracy: true
+  check_completeness: true
+  check_hallucination: true
+  check_clarity: true
+  check_citations: true
+  check_logical_consistency: true
+
+# Auto-Activation Rules
+auto_activate:
+  enabled: true
+  intents:
+    - RESEARCH
+    - GRAPH
+  min_confidence: 0.85
+  high_stakes_domains:
+    - medical
+    - legal
+    - financial
+    - safety_critical
+
+# Prompt Settings
+prompts:
+  critique_template: "prompts/critique.txt"
+  improve_template: "prompts/improve.txt"
+  temperature: 0.1  # Low temperature for consistency
+  max_tokens: 1000
+  top_p: 0.9
+
+# Scoring Weights
+scoring:
+  factual_accuracy: 0.4
+  completeness: 0.25
+  hallucination_penalty: 0.25
+  clarity: 0.1
+
+# Logging
+logging:
+  log_iterations: true
+  log_confidence_scores: true
+  log_issues: true
+  log_improvements: true
+  verbose: false
+
+# Performance
+performance:
+  parallel_critique: false  # Sprint 90: Sequential only
+  cache_critiques: true
+  cache_ttl_seconds: 300

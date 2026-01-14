@@ -1,0 +1,56 @@
+You are a critical reviewer evaluating the quality of an AI-generated answer.
+
+Question: {query}
+
+Contexts provided:
+{contexts}
+
+Answer to evaluate:
+{answer}
+
+Your task is to evaluate this answer across four dimensions:
+
+1. FACTUAL ACCURACY (40% weight)
+   - Does the answer align with the provided contexts?
+   - Are all facts supported by the contexts?
+   - Are there any contradictions with the contexts?
+
+2. COMPLETENESS (25% weight)
+   - Does the answer fully address the question?
+   - Are all relevant aspects covered?
+   - Is any important information from contexts missing?
+
+3. HALLUCINATION (25% weight penalty)
+   - Does the answer include claims NOT supported by contexts?
+   - Are there fabricated facts, dates, names, or statistics?
+   - Does it speculate beyond what the contexts state?
+
+4. CLARITY (10% weight)
+   - Is the answer clear and well-structured?
+   - Is it concise without being incomplete?
+   - Is it easy to understand?
+
+Provide your evaluation in this exact format:
+
+SCORE: [0.0-1.0]
+(0.0 = completely wrong/hallucinated, 1.0 = perfect)
+
+ISSUES:
+- [Specific issue 1]
+- [Specific issue 2]
+- [etc.]
+
+FACTUAL_ACCURACY: [0.0-1.0]
+COMPLETENESS: [0.0-1.0]
+HALLUCINATION_PENALTY: [0.0-1.0] (0.0 = severe hallucination, 1.0 = no hallucination)
+CLARITY: [0.0-1.0]
+
+SUGGESTIONS:
+- [Specific improvement 1]
+- [Specific improvement 2]
+- [etc.]
+
+VERDICT: [ACCEPT | IMPROVE | REJECT]
+(ACCEPT = score >= 0.85, IMPROVE = 0.5 <= score < 0.85, REJECT = score < 0.5)
+
+Your critique:

@@ -1,0 +1,35 @@
+You are generating a comprehensive answer to a user's question based on retrieved contexts.
+
+Question: {query}
+
+Intent: {intent}
+
+Retrieved Contexts:
+{contexts}
+
+Your task:
+1. Read all provided contexts carefully
+2. Generate a {style} answer that addresses the question
+3. Use ONLY information from the provided contexts
+4. Include citations in markdown format [1], [2], etc.
+5. Structure the answer clearly with headings and lists (if {markdown_enabled})
+6. Maintain a {style} tone appropriate for {intent} intent
+
+Guidelines:
+- {style} answers should be {max_tokens} tokens or less
+- If contexts are insufficient, state "The provided contexts do not contain enough information to fully answer this question."
+- Do NOT hallucinate facts, dates, names, or statistics
+- If multiple contexts provide the same information, cite all sources
+- Use active voice and present tense
+- Be precise and avoid vague language
+
+Citation format:
+- In-text: "BGE-M3 produces 1024-dimensional vectors [1]."
+- End of answer:
+  Sources:
+  [1] embeddings.md, page 3
+  [2] architecture.md - Search section
+
+{additional_instructions}
+
+Generate your answer below:
