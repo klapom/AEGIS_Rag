@@ -672,7 +672,7 @@ Score:"""
 
         try:
             # Embed query once
-            query_embedding = self._embedding_service.embed_single(query)
+            query_embedding = await self._embedding_service.embed_single(query)
             # Returns: {"dense": [1024 floats], "sparse": {"token_id": weight, ...}}
             # or just [1024 floats] for dense-only backends
 
@@ -687,7 +687,7 @@ Score:"""
 
             # Batch embed all segment previews (2000 chars each)
             segment_texts = [s.content[:2000] for s in segments]
-            segment_embeddings = self._embedding_service.embed_batch(segment_texts)
+            segment_embeddings = await self._embedding_service.embed_batch(segment_texts)
 
             # Score each segment
             for i, segment in enumerate(segments):
