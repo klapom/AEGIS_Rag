@@ -1,0 +1,89 @@
+{
+  "timestamp": "2026-01-13 13:30:13",
+  "total_samples": 10,
+  "t2rag_gt_found": "5/5",
+  "code_gt_found": "4/5",
+  "avg_latency_ms": 12898.6,
+  "results": [
+    {
+      "question": "What is the net change in Entergy's net revenue fr",
+      "namespace": "ragas_phase2_t2rag",
+      "answer": "The net change in Entergy's net revenue from 2014 to 2015 is 94.0 [1].",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 23110
+    },
+    {
+      "question": "As of December 26, 2015, what percentage of Intel'",
+      "namespace": "ragas_phase2_t2rag",
+      "answer": "0.14464285714285713 [1]",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 18358
+    },
+    {
+      "question": "What is the percentage change in the total notiona",
+      "namespace": "ragas_phase2_t2rag",
+      "answer": "**Antwort:** 0.09864188706218716 [1]",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 18352
+    },
+    {
+      "question": "What percentage of the total purchase price for th",
+      "namespace": "ragas_phase2_t2rag",
+      "answer": "The value of Metavante stock awards represents 0.0289889679545346 of the total purchase price for th",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 17669
+    },
+    {
+      "question": "What was the difference in percentage cumulative t",
+      "namespace": "ragas_phase2_t2rag",
+      "answer": "The difference in percentage cumulative total shareholder return on Masco common stock versus the S&",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 20852
+    },
+    {
+      "question": "Write a python function to remove first and last o",
+      "namespace": "ragas_phase2_code",
+      "answer": "def remove_Occ(s,ch): for i in range(len(s)): if (s[i] == ch): s = s[0 : i] + s[i + 1:] break for i ",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 7633
+    },
+    {
+      "question": "Write a function to sort a given matrix in ascendi",
+      "namespace": "ragas_phase2_code",
+      "answer": "def sort_matrix(M): result = sorted(M, key=sum) return result [1]",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 5660
+    },
+    {
+      "question": "Write a function to count the most common words in",
+      "namespace": "ragas_phase2_code",
+      "answer": "from collections import Counter def count_common(words): word_counts = Counter(words) top_four = wor",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 5727
+    },
+    {
+      "question": "Write a python function to find the volume of a tr",
+      "namespace": "ragas_phase2_code",
+      "answer": "def find_Volume(l,b,h) : return ((l * b * h) / 2) [1]",
+      "contexts_count": 3,
+      "gt_in_answer": true,
+      "latency_ms": 5907
+    },
+    {
+      "question": "Write a function to split a string at lowercase le",
+      "namespace": "ragas_phase2_code",
+      "answer": "import re def split_lowerstring(text): return (re.findall('[a-z][^a-z]*', text)) [1]",
+      "contexts_count": 3,
+      "gt_in_answer": false,
+      "latency_ms": 5718
+    }
+  ]
+}

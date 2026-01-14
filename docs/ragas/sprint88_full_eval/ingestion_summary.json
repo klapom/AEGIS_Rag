@@ -1,0 +1,9 @@
+{
+  "timestamp": "2026-01-14T07:16:12.830299",
+  "total_documents": 500,
+  "successful": 4,
+  "failed": 496,
+  "total_time_ms": 644183,
+  "total_characters": 33423,
+  "avg_time_ms": 1288.366
+}

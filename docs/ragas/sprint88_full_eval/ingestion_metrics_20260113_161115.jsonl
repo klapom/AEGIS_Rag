@@ -1,0 +1,2 @@
+{"file": "ragas_phase1_0003_hotpot_5a82171f.txt", "namespace": "ragas_phase1_sprint88", "status": "success", "ingestion_time_ms": 56442, "characters_count": 3579, "document_id": null, "error": null}
+{"file": "ragas_phase1_0004_logqa_emanual1.txt", "namespace": "ragas_phase1_sprint88", "status": "success", "ingestion_time_ms": 24496, "characters_count": 4108, "document_id": null, "error": null}
