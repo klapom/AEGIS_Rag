@@ -51,15 +51,17 @@ services:
       # Allow 2 models loaded simultaneously (Qwen3 + Qwen3-VL)
       # With 128GB unified memory, both fit comfortably
       - OLLAMA_MAX_LOADED_MODELS=2
-      # Sprint 61 Feature 61.3: Parallel request handling (+30% throughput)
-      # Process up to 4 requests in parallel (DGX Spark: 128GB RAM)
-      - OLLAMA_NUM_PARALLEL=4
+      # Sprint 61 Feature 61.3: Parallel request handling
+      # Sprint 92: Reduced from 4 to 2 for GPU memory compatibility with 32K context
+      # 32K context × 4 parallel exceeded GPU memory allocation on DGX Spark
+      - OLLAMA_NUM_PARALLEL=2
       # Sprint 61 Feature 61.3: Request queue size for high-throughput scenarios
       - OLLAMA_MAX_QUEUE=512
-      # Sprint 75: Increased to 32K for RAGAS evaluation with long contexts
+      # Sprint 75: 32K for RAGAS evaluation with long contexts (gpt-oss:20b supports 128K)
       # 32768 tokens = ~131K chars (covers even complex multi-document scenarios)
-      # gpt-oss:20b supports up to 128K context window
       - OLLAMA_NUM_CTX=32768
+      # Sprint 92: Disable flash attention for DGX Spark Blackwell GPU compatibility
+      - OLLAMA_FLASH_ATTENTION=false
       # Use all available CPU cores for prompt processing
       - OLLAMA_NUM_THREAD=20
       # Force ALL model layers to GPU (DGX Spark unified memory)
