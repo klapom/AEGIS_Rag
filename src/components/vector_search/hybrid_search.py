@@ -204,7 +204,7 @@ class HybridSearch:
             reranker: Cross-encoder reranker (optional, lazy-loaded if needed)
             collection_name: Qdrant collection name
         """
-        from src.components.shared.embedding_service import get_embedding_service
+        from src.components.shared.embedding_factory import get_embedding_service
 
         self.qdrant_client = qdrant_client or QdrantClientWrapper()
         self.embedding_service = embedding_service or get_embedding_service()
@@ -266,7 +266,13 @@ class HybridSearch:
         """
         try:
             # Generate query embedding
-            query_embedding = await self.embedding_service.embed_single(query)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            embedding_result = await self.embedding_service.embed_single(query)
+            query_embedding = (
+                embedding_result["dense"]
+                if isinstance(embedding_result, dict)
+                else embedding_result
+            )
 
             # Build Qdrant filter from metadata filters
             qdrant_filter = None

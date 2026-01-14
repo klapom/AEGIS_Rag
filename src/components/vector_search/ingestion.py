@@ -319,7 +319,12 @@ class DocumentIngestionPipeline:
             texts = [chunk.content for chunk in chunks]
 
             # Generate embeddings in batch
-            embeddings = await self.embedding_service.embed_batch(texts)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            batch_result = await self.embedding_service.embed_batch(texts)
+            embeddings = [
+                emb["dense"] if isinstance(emb, dict) else emb
+                for emb in batch_result
+            ]
 
             logger.info(
                 "Embeddings generated",

@@ -334,7 +334,13 @@ class IntentClassifier:
             init_start = time.perf_counter()
 
             for intent, description in INTENT_DESCRIPTIONS.items():
-                embedding = await embedding_service.embed_single(description)
+                # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+                embedding_result = await embedding_service.embed_single(description)
+                embedding = (
+                    embedding_result["dense"]
+                    if isinstance(embedding_result, dict)
+                    else embedding_result
+                )
                 self._intent_embeddings[intent] = embedding
 
             init_time_ms = (time.perf_counter() - init_start) * 1000
@@ -626,8 +632,14 @@ class IntentClassifier:
         embedding_service = get_embedding_service()
 
         # Get query embedding
+        # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
         embed_start = time.perf_counter()
-        query_embedding = await embedding_service.embed_single(query)
+        embedding_result = await embedding_service.embed_single(query)
+        query_embedding = (
+            embedding_result["dense"]
+            if isinstance(embedding_result, dict)
+            else embedding_result
+        )
         embed_time_ms = (time.perf_counter() - embed_start) * 1000
 
         # Calculate similarity with each intent

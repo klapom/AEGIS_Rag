@@ -268,7 +268,13 @@ class QueryCache:
             from src.components.shared.embedding_service import get_embedding_service
 
             embedding_service = get_embedding_service()
-            query_embedding = await embedding_service.embed_single(query)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            embedding_result = await embedding_service.embed_single(query)
+            query_embedding = (
+                embedding_result["dense"]
+                if isinstance(embedding_result, dict)
+                else embedding_result
+            )
 
             # Find most similar cached query
             best_similarity = 0.0
@@ -325,7 +331,13 @@ class QueryCache:
             from src.components.shared.embedding_service import get_embedding_service
 
             embedding_service = get_embedding_service()
-            query_embedding = await embedding_service.embed_single(query)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            embedding_result = await embedding_service.embed_single(query)
+            query_embedding = (
+                embedding_result["dense"]
+                if isinstance(embedding_result, dict)
+                else embedding_result
+            )
 
             # Build cache key
             cache_key = self._build_cache_key(cached.query_normalized, namespaces)

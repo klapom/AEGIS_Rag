@@ -232,10 +232,15 @@ class SemanticRelationDeduplicator:
         normalized_texts = [self._normalize_type_for_embedding(rt) for rt in unique_types]
 
         try:
-            embeddings_list = await self.embedding_service.embed_batch(
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            batch_result = await self.embedding_service.embed_batch(
                 normalized_texts,
                 max_concurrent=10,
             )
+            embeddings_list = [
+                emb["dense"] if isinstance(emb, dict) else emb
+                for emb in batch_result
+            ]
 
             for rel_type, embedding in zip(unique_types, embeddings_list, strict=True):
                 embeddings_dict[rel_type] = embedding

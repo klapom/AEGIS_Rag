@@ -547,7 +547,13 @@ class FourWayHybridSearch:
         from src.components.shared.embedding_service import get_embedding_service
 
         embedding_service = get_embedding_service()
-        query_embedding = await embedding_service.embed_single(query)
+        # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+        embedding_result = await embedding_service.embed_single(query)
+        query_embedding = (
+            embedding_result["dense"]
+            if isinstance(embedding_result, dict)
+            else embedding_result
+        )
 
         # Search with namespace filter
         results = await self.hybrid_search.qdrant_client.search(

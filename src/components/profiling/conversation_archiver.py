@@ -161,7 +161,13 @@ class ConversationArchiver:
             full_text = self._concatenate_messages(messages)
 
             # Generate embedding
-            embedding = await self.embedding_service.embed_single(full_text)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            embedding_result = await self.embedding_service.embed_single(full_text)
+            embedding = (
+                embedding_result["dense"]
+                if isinstance(embedding_result, dict)
+                else embedding_result
+            )
 
             # Extract metadata
             title = conversation_data.get("title")
@@ -235,7 +241,13 @@ class ConversationArchiver:
             await self.ensure_collection_exists()
 
             # Generate query embedding
-            query_embedding = await self.embedding_service.embed_single(request.query)
+            # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+            embedding_result = await self.embedding_service.embed_single(request.query)
+            query_embedding = (
+                embedding_result["dense"]
+                if isinstance(embedding_result, dict)
+                else embedding_result
+            )
 
             # Build filter (user-scoped)
             filter_conditions = [FieldCondition(key="user_id", match=MatchValue(value=user_id))]

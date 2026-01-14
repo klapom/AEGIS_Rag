@@ -237,7 +237,12 @@ async def run_fast_upload(
 
         embedding_service = get_embedding_service()
         texts = [chunk.content for chunk in chunks]
-        embeddings = await embedding_service.embed_batch(texts)
+        # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+        batch_result = await embedding_service.embed_batch(texts)
+        embeddings = [
+            emb["dense"] if isinstance(emb, dict) else emb
+            for emb in batch_result
+        ]
 
         embedding_duration_ms = (time.perf_counter() - embedding_start) * 1000
         logger.info(

@@ -519,9 +519,17 @@ class UnifiedEmbeddingService:
 _embedding_service: UnifiedEmbeddingService | None = None
 
 
-def get_embedding_service() -> UnifiedEmbeddingService:
-    """Get global UnifiedEmbeddingService instance."""
-    global _embedding_service
-    if _embedding_service is None:
-        _embedding_service = UnifiedEmbeddingService()
-    return _embedding_service
+def get_embedding_service():
+    """Get embedding service instance based on EMBEDDING_BACKEND configuration.
+
+    Sprint 92 Fix: Delegates to embedding_factory to respect EMBEDDING_BACKEND setting.
+    This ensures all imports from this module use the configured backend:
+    - 'ollama': UnifiedEmbeddingService (Ollama HTTP API)
+    - 'sentence-transformers': SentenceTransformersEmbeddingService
+    - 'flag-embedding': FlagEmbeddingService (dense + sparse)
+
+    Returns:
+        Embedding service instance (type varies by backend configuration)
+    """
+    from src.components.shared.embedding_factory import get_embedding_service as factory_get_service
+    return factory_get_service()

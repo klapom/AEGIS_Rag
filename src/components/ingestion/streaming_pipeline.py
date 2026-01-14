@@ -491,9 +491,15 @@ class StreamingPipelineOrchestrator:
 
                 try:
                     # Generate embedding
-                    embedding = await asyncio.wait_for(
+                    # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+                    embedding_result = await asyncio.wait_for(
                         embedding_service.embed_single(chunk_item.text),
                         timeout=self.config.embedding_timeout,
+                    )
+                    embedding = (
+                        embedding_result["dense"]
+                        if isinstance(embedding_result, dict)
+                        else embedding_result
                     )
 
                     # Create embedded chunk item

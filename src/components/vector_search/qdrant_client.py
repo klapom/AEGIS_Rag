@@ -325,7 +325,13 @@ class QdrantClient:
 
             for idx, chunk in enumerate(chunks):
                 # Generate embedding for chunk text
-                embedding = await embedding_service.embed_single(chunk.text)
+                # Sprint 92 Fix: Handle both list (Ollama/ST) and dict (FlagEmbedding) returns
+                embedding_result = await embedding_service.embed_single(chunk.text)
+                embedding = (
+                    embedding_result["dense"]
+                    if isinstance(embedding_result, dict)
+                    else embedding_result
+                )
 
                 # Build Qdrant payload with section metadata
                 payload = {
