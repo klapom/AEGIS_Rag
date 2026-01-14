@@ -182,7 +182,7 @@ class MultiVectorHybridSearch:
         try:
             # 1. Generate query embeddings (dense + sparse)
             embed_start = time.perf_counter()
-            query_embedding = self.embedding_service.embed_single(query)
+            query_embedding = await self.embedding_service.embed_single(query)
             embed_duration_ms = (time.perf_counter() - embed_start) * 1000
 
             dense_vector = query_embedding["dense"]
@@ -308,7 +308,7 @@ class MultiVectorHybridSearch:
         try:
             # Generate dense embedding only
             embed_start = time.perf_counter()
-            query_embedding = self.embedding_service.embed_single_dense(query)
+            query_embedding = await self.embedding_service.embed_single_dense(query)
             embed_duration_ms = (time.perf_counter() - embed_start) * 1000
 
             # Build namespace filter
@@ -388,7 +388,7 @@ class MultiVectorHybridSearch:
         try:
             # Generate sparse embedding only
             embed_start = time.perf_counter()
-            query_embedding = self.embedding_service.embed_single(query)
+            query_embedding = await self.embedding_service.embed_single(query)
             sparse_dict = query_embedding["sparse"]
             sparse_vector = dict_to_sparse_vector(sparse_dict)
             embed_duration_ms = (time.perf_counter() - embed_start) * 1000
