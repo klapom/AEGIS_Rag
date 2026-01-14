@@ -459,9 +459,12 @@ class QdrantClient:
                     num_sections=len(section_ids),
                 )
 
+            # Sprint 92 Fix: Specify vector name for collections with named vectors
+            # The collection uses "dense" for 1024-dim BGE-M3 vectors
             results = await self.async_client.search(
                 collection_name=collection_name,
                 query_vector=query_vector,
+                using="dense",  # Named vector for BGE-M3 dense embeddings
                 limit=limit,
                 score_threshold=score_threshold,
                 query_filter=combined_filter,
