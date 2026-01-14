@@ -54,8 +54,153 @@ See Also:
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class RecursiveLevelConfig(BaseModel):
+    """Configuration for a specific recursion level in Recursive LLM processing.
+
+    Sprint 92 Feature 92.6: Per-Level Configuration
+
+    Each level can have different segment sizes, overlap, scoring methods, and
+    relevance thresholds optimized for that level of detail.
+
+    Attributes:
+        level: Recursion depth (0=top level, 1=first recursion, etc.)
+        segment_size_tokens: Target segment size in tokens (1000-32000)
+        overlap_tokens: Overlap between segments to prevent information loss
+        top_k_subsegments: Number of sub-segments to explore at this level
+        scoring_method: Relevance scoring method for this level
+        relevance_threshold: Minimum relevance score to explore (0.0-1.0)
+
+    Example:
+        >>> level_0 = RecursiveLevelConfig(
+        ...     level=0,
+        ...     segment_size_tokens=16384,  # Large chunks for overview
+        ...     scoring_method="dense+sparse",  # Fast document-level
+        ...     relevance_threshold=0.5
+        ... )
+    """
+
+    level: int = Field(description="Recursion depth (0=top level)")
+
+    segment_size_tokens: int = Field(
+        description="Target segment size in tokens",
+        ge=1000,
+        le=32000
+    )
+
+    overlap_tokens: int = Field(
+        default=200,
+        description="Overlap between segments to prevent information loss"
+    )
+
+    top_k_subsegments: int = Field(
+        default=3,
+        description="Number of sub-segments to explore"
+    )
+
+    scoring_method: Literal["dense+sparse", "multi-vector", "llm", "adaptive"] = Field(
+        default="dense+sparse",
+        description="BGE-M3 scoring method: dense+sparse (fast), multi-vector (precise), llm (reasoning), adaptive (query-based)"
+    )
+
+    relevance_threshold: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Minimum relevance score to explore"
+    )
+
+
+class RecursiveLLMSettings(BaseModel):
+    """Recursive LLM processing configuration.
+
+    Sprint 92 Features:
+    - 92.6: Per-level configuration with adaptive sizing
+    - 92.10: Parallel worker configuration by LLM backend
+
+    Attributes:
+        max_depth: Maximum recursion depth (1-5 levels)
+        levels: Per-level configuration (adaptive sizing and scoring)
+        max_parallel_workers: Max parallel segment processing workers
+        worker_limits: Worker limits per LLM backend
+
+    Example:
+        >>> settings = RecursiveLLMSettings(
+        ...     max_depth=3,
+        ...     max_parallel_workers=1,  # DGX Spark (Ollama)
+        ...     levels=[
+        ...         RecursiveLevelConfig(level=0, segment_size_tokens=16384),
+        ...         RecursiveLevelConfig(level=1, segment_size_tokens=8192),
+        ...         RecursiveLevelConfig(level=2, segment_size_tokens=4096),
+        ...     ]
+        ... )
+    """
+
+    max_depth: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Maximum recursion depth (1-5 levels)"
+    )
+
+    levels: list[RecursiveLevelConfig] = Field(
+        default_factory=lambda: [
+            # Level 0: Overview (large chunks, fast dense+sparse)
+            RecursiveLevelConfig(
+                level=0,
+                segment_size_tokens=16384,  # 16K tokens
+                overlap_tokens=400,
+                top_k_subsegments=5,
+                scoring_method="dense+sparse",
+                relevance_threshold=0.5,
+            ),
+            # Level 1: Details (medium chunks, fast dense+sparse)
+            RecursiveLevelConfig(
+                level=1,
+                segment_size_tokens=8192,  # 8K tokens
+                overlap_tokens=300,
+                top_k_subsegments=4,
+                scoring_method="dense+sparse",
+                relevance_threshold=0.6,
+            ),
+            # Level 2: Fine-grained (small chunks, adaptive scoring)
+            RecursiveLevelConfig(
+                level=2,
+                segment_size_tokens=4096,  # 4K tokens
+                overlap_tokens=200,
+                top_k_subsegments=3,
+                scoring_method="adaptive",  # Query-adaptive (multi-vector or LLM)
+                relevance_threshold=0.7,
+            ),
+            # Level 3: Ultra-fine (tiny chunks, adaptive scoring)
+            RecursiveLevelConfig(
+                level=3,
+                segment_size_tokens=2048,  # 2K tokens
+                overlap_tokens=100,
+                top_k_subsegments=2,
+                scoring_method="adaptive",
+                relevance_threshold=0.8,
+            ),
+        ]
+    )
+
+    # Feature 92.10: Parallel worker configuration
+    max_parallel_workers: int = Field(
+        default=1,
+        description="Max parallel segment processing workers (1 for DGX Spark, 5-10 for cloud)"
+    )
+
+    worker_limits: dict[str, int] = Field(
+        default_factory=lambda: {
+            "ollama": 1,  # DGX Spark Ollama: single-threaded
+            "openai": 10,  # OpenAI: high parallelism
+            "alibaba": 5,  # Alibaba DashScope: moderate
+        },
+        description="Worker limits per LLM backend"
+    )
 
 
 class Settings(BaseSettings):
