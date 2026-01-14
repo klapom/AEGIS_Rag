@@ -62,6 +62,7 @@ ADRs dokumentieren wichtige Architektur-Entscheidungen mit Kontext, Alternativen
 | 049 | 3-Rank LLM Cascade + Gleaning for ER-Extraction | Accepted | 2026-01-10 |
 | 050 | Intent-Based Skill Router Architecture | Accepted | 2026-01-14 |
 | 051 | Recursive Language Model Context Processing | Accepted | 2026-01-14 |
+| 052 | Recursive LLM Adaptive Scoring with C-LARA Granularity Mapping | Accepted | 2026-01-14 |
 
 ---
 
