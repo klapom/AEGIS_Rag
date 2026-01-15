@@ -343,6 +343,7 @@ class SkillOrchestrator:
         llm: BaseChatModel | None = None,
         max_concurrent_skills: int = 3,
         enable_recovery: bool = True,
+        procedural_memory: Any | None = None,
     ) -> None:
         """Initialize SkillOrchestrator.
 
@@ -352,12 +353,14 @@ class SkillOrchestrator:
             llm: Default language model for supervisors
             max_concurrent_skills: Maximum parallel skill executions
             enable_recovery: Whether to enable automatic error recovery
+            procedural_memory: Optional ProceduralMemoryStore for execution tracking
         """
         self.skills = skill_manager
         self.bus = message_bus
         self.llm = llm
         self.max_concurrent = max_concurrent_skills
         self.enable_recovery = enable_recovery
+        self.procedural_memory = procedural_memory
 
         # Supervisor hierarchy
         self._supervisors: dict[str, SupervisorNode] = {}
@@ -372,6 +375,7 @@ class SkillOrchestrator:
             max_concurrent=max_concurrent_skills,
             enable_recovery=enable_recovery,
             has_message_bus=message_bus is not None,
+            has_procedural_memory=procedural_memory is not None,
         )
 
     def _setup_supervisor_hierarchy(self) -> None:
@@ -879,6 +883,10 @@ class SkillOrchestrator:
             Skill result
         """
         skill_name = invocation.skill_name
+        start_time = time.time()
+        success = False
+        error_msg = None
+        result = None
 
         logger.debug(
             "skill_execution_started",
@@ -910,17 +918,43 @@ class SkillOrchestrator:
                 # Direct execution (simplified)
                 result = {"output": f"Executed {skill_name}"}
 
+            success = True
             logger.info("skill_execution_completed", skill=skill_name, success=True)
 
             return result
 
         except Exception as e:
-            logger.error("skill_execution_failed", skill=skill_name, error=str(e))
+            success = False
+            error_msg = str(e)
+            logger.error("skill_execution_failed", skill=skill_name, error=error_msg)
             raise
 
         finally:
             # Deactivate to free context
             await self.skills.deactivate(skill_name)
+
+            # Record execution trace for procedural memory
+            if hasattr(self, "procedural_memory") and self.procedural_memory:
+                try:
+                    duration_ms = (time.time() - start_time) * 1000
+                    from src.agents.memory.procedural_memory import create_trace_from_orchestrator
+
+                    trace = create_trace_from_orchestrator(
+                        skill_name=skill_name,
+                        invocation=invocation,
+                        result=result if success else {},
+                        duration_ms=duration_ms,
+                        success=success,
+                        error=error_msg,
+                    )
+                    await self.procedural_memory.record_execution(trace)
+                except Exception as trace_error:
+                    # Don't fail execution if trace recording fails
+                    logger.warning(
+                        "procedural_trace_recording_failed",
+                        skill=skill_name,
+                        error=str(trace_error),
+                    )
 
     def _resolve_inputs(
         self,
