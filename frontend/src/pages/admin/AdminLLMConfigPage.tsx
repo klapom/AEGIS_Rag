@@ -283,10 +283,11 @@ export function AdminLLMConfigPage() {
         const data = await response.json();
 
         // Convert backend format to frontend format
+        // Sprint 100 Fix: Backend returns 'model_id' not 'model'
         const frontendConfig: UseCaseConfig[] = Object.entries(data.use_cases).map(
           ([useCase, config]: [string, any]) => ({
             useCase: useCase as UseCaseType,
-            modelId: backendToFrontend(config.model),
+            modelId: backendToFrontend(config.model_id || config.model), // Support both field names
             enabled: config.enabled,
           })
         );
