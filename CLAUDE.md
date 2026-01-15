@@ -527,6 +527,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 92 Complete (36 SP, 24 Features):** Graph Search **17-19s→<2s** (89% faster), FlagEmbedding Warmup (40s→<1s), Ollama GPU Fix (19→77 tok/s), Deep Research UI, Docker Frontend (Port 80), Vector display fix, Rank consistency (1-indexed), Stop Words Filter, **Community Detection GDS Fix** (2,387 communities), Context Relevance Guard (TD-080 resolved), Recursive LLM Scoring (ADR-052), 10+ unit tests, ADR-053.
 **Sprint 93 Complete:** Tool Composition Framework (ToolComposer, PolicyEngine, Browser Tool, Skill-Tool Mapping, DSL), LangGraph 1.0.6 upgrade, 227 tests (100%), 6 modules (3,609 LOC).
 **Sprint 94 Complete:** Multi-Agent Communication (Messaging Bus, Shared Memory, Skill Orchestrator), 144 tests (100%), 5,011 LOC, 26 SP (TD-101: RISE deferred).
+**Sprint 95 Complete:** Hierarchical Agents (Executive→Manager→Worker), Skill Libraries & Bundles (Research/Analysis/Synthesis/Development/Enterprise), Procedural Memory (LangSmith traces), 207 tests (100%), 3,620+ LOC, 30 SP.
 
 ---
 

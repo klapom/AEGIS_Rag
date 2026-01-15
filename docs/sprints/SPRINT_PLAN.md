@@ -714,8 +714,9 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 | **92** | **36** | **24** | ✅ | **Performance Optimization & Deep Research Enhancements (FlagEmbedding, GPU, Research UI)** |
 | **93** | **34** | **5** | ✅ | **Tool Composition Framework (ToolComposer, Browser, Skill-Tool Mapping, DSL, LangGraph 1.0)** |
 | **94** | **26** | **3** | ✅ | **Multi-Agent Communication (Messaging Bus, Shared Memory, Skill Orchestrator), 144 tests, TD-101 deferred** |
+| **95** | **30** | **5** | ✅ | **Hierarchical Agents + Skill Libraries (Executive→Manager→Worker, 3,620+ LOC, 207 tests, 100%)** |
 
-**Cumulative Story Points (Sprints 1-94):** 2,959 + 26 = 2,985 SP
+**Cumulative Story Points (Sprints 1-95):** 2,985 + 30 = 3,015 SP
 **Average Velocity (Sprints 61-79):** ~40 SP per sprint
 **E2E Test Improvement:** 337/594 (57% - Sprint 66) → 620/620 (100% - Sprint 72)
 **Code Quality:** 84% test coverage, 0 TypeScript errors, <500ms P95 query latency
@@ -756,9 +757,9 @@ Complete Frontend UI for Sprint 76-78 backend features (Graph Expansion Settings
 ---
 
 **Last Updated:** 2026-01-15
-**Current Sprint:** 94 (Completed - Multi-Agent Communication, 26 SP, 144 tests)
-**Previous Sprints:** 92-93 (Completed - Performance Optimization, Tool Composition)
-**Next Sprint:** 95 (Planned - Agentic Framework Phase 6)
+**Current Sprint:** 95 (Completed - Hierarchical Agents & Skill Libraries, 30 SP, 207 tests)
+**Previous Sprints:** 92-94 (Completed - Performance Optimization, Tool Composition, Multi-Agent Communication)
+**Next Sprint:** 96 (Planned - Agentic Framework Phase 7: Advanced Agent Capabilities)
 **Upcoming:** Sprint 100 (SpaCy-First Pipeline - 18 SP)
 
 ---
