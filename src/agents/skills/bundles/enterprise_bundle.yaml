@@ -1,0 +1,334 @@
+# Enterprise Bundle - Full AegisRAG Stack
+# Sprint 95, Feature 95.3: Standard Skill Bundles
+
+id: enterprise_bundle
+name: Enterprise Bundle
+version: 1.0.0
+description: |
+  Comprehensive enterprise-grade skill bundle containing all AegisRAG capabilities.
+  Includes research, analysis, synthesis, development, compliance, and monitoring
+  skills for complete enterprise deployment.
+
+# Skills included in bundle (20+ skills)
+skills:
+  # Research Skills
+  - name: web_search
+    version: "^1.0.0"
+    required: true
+    description: Web search with multiple engines
+    config:
+      max_results: 10
+      engines: [google, bing, duckduckgo]
+
+  - name: retrieval
+    version: "^1.0.0"
+    required: true
+    description: Vector + sparse hybrid retrieval
+    config:
+      top_k: 10
+      mode: "hybrid"
+      rerank: true
+
+  - name: graph_query
+    version: "^1.0.0"
+    required: true
+    description: Knowledge graph traversal
+    config:
+      max_hops: 3
+      max_entities: 50
+
+  - name: citation
+    version: "^1.0.0"
+    required: true
+    description: Citation management
+    config:
+      style: "APA"
+
+  # Analysis Skills
+  - name: validation
+    version: "^1.0.0"
+    required: true
+    description: Data quality validation
+    config:
+      check_types: true
+      check_nulls: true
+
+  - name: classification
+    version: "^1.0.0"
+    required: true
+    description: LLM-based classification
+    config:
+      confidence_threshold: 0.75
+
+  - name: comparison
+    version: "^1.0.0"
+    required: true
+    description: Semantic comparison
+    config:
+      method: "semantic"
+
+  - name: statistical_analysis
+    version: "^1.0.0"
+    required: true
+    description: Statistical computations
+    config:
+      confidence_level: 0.95
+
+  # Synthesis Skills
+  - name: summarize
+    version: "^1.0.0"
+    required: true
+    description: Multi-document summarization
+    config:
+      mode: "extractive_abstractive"
+
+  - name: format
+    version: "^1.0.0"
+    required: true
+    description: Content formatting
+    config:
+      target_format: "markdown"
+
+  - name: markdown_export
+    version: "^1.0.0"
+    required: true
+    description: Export to markdown
+    config:
+      include_toc: true
+
+  # Development Skills
+  - name: code_generation
+    version: "^1.0.0"
+    required: false
+    description: Generate production code
+    config:
+      style: "production"
+      include_tests: true
+
+  - name: code_review
+    version: "^1.0.0"
+    required: false
+    description: Code quality review
+    config:
+      checks: [style, security, performance]
+
+  - name: testing
+    version: "^1.0.0"
+    required: false
+    description: Test generation and execution
+    config:
+      coverage_threshold: 0.8
+
+  - name: debugging
+    version: "^1.0.0"
+    required: false
+    description: Debug assistance
+    config:
+      suggest_fixes: true
+
+  # Enterprise-Specific Skills
+  - name: compliance
+    version: "^1.0.0"
+    required: true
+    description: Regulatory compliance checking
+    config:
+      frameworks:
+        - GDPR
+        - SOC2
+        - HIPAA
+      audit_trail: true
+      pii_detection: true
+
+  - name: audit
+    version: "^1.0.0"
+    required: true
+    description: Audit logging and tracking
+    config:
+      log_level: "info"
+      retention_days: 90
+      include_llm_calls: true
+      include_data_access: true
+
+  - name: reporting
+    version: "^1.0.0"
+    required: true
+    description: Generate enterprise reports
+    config:
+      formats: [pdf, docx, html]
+      include_metrics: true
+      include_charts: true
+      schedule_support: true
+
+  - name: dashboard
+    version: "^1.0.0"
+    required: true
+    description: Real-time metrics dashboard
+    config:
+      update_interval_seconds: 30
+      metrics:
+        - query_volume
+        - latency_p95
+        - success_rate
+        - cost_tracking
+      alerts:
+        - high_latency
+        - error_spike
+        - budget_limit
+
+  # Memory and Context Skills
+  - name: memory_retrieval
+    version: "^1.0.0"
+    required: true
+    description: 3-layer memory system (Graphiti)
+    config:
+      layers: [episodic, semantic, procedural]
+      retention_policy: "smart"
+
+  - name: context_management
+    version: "^1.0.0"
+    required: true
+    description: Context budget optimization
+    config:
+      max_tokens: 100000
+      pruning_strategy: "relevance"
+
+  # Integration Skills
+  - name: mcp_server
+    version: "^1.0.0"
+    required: true
+    description: Model Context Protocol server
+    config:
+      protocol_version: "0.9.0"
+      transport: "stdio"
+
+  - name: tool_execution
+    version: "^1.0.0"
+    required: true
+    description: Execute external tools
+    config:
+      timeout_seconds: 300
+      retry_attempts: 3
+
+# Bundle configuration
+context_budget: 150000  # Large budget for enterprise workloads
+priority: "balanced"    # Balance quality, speed, cost
+
+# Auto-activation rules
+auto_activate:
+  - retrieval
+  - citation
+  - compliance
+  - audit
+  - memory_retrieval
+  - context_management
+
+# Natural language triggers
+triggers:
+  - enterprise
+  - production
+  - full stack
+  - complete system
+  - all features
+  - comprehensive
+
+# Required permissions
+permissions:
+  tools:
+    - all  # Enterprise bundle has full permissions
+  data:
+    - read_all
+    - write_controlled
+  llm:
+    - invoke_all
+  network:
+    - web_access
+    - api_access
+  system:
+    - monitoring
+    - audit_logging
+
+# External dependencies
+dependencies:
+  system:
+    - qdrant >= 1.11.0
+    - neo4j >= 5.0.0
+    - redis >= 7.0.0
+    - ollama >= 0.1.0
+    - postgres >= 14.0  # For audit logs
+  python:
+    - langchain >= 0.1.0
+    - fastapi >= 0.109.0
+    - pydantic >= 2.5.0
+    - numpy >= 1.24.0
+    - pandas >= 2.0.0
+
+# Skill execution order
+installation_order:
+  # Core infrastructure first
+  - audit
+  - compliance
+  - context_management
+  - memory_retrieval
+  # Research capabilities
+  - web_search
+  - retrieval
+  - graph_query
+  - citation
+  # Analysis
+  - validation
+  - classification
+  - comparison
+  - statistical_analysis
+  # Synthesis
+  - summarize
+  - format
+  - markdown_export
+  # Development
+  - code_generation
+  - code_review
+  - testing
+  - debugging
+  # Enterprise features
+  - reporting
+  - dashboard
+  - mcp_server
+  - tool_execution
+
+# Usage examples
+usage_examples:
+  - query: "Deploy full RAG system with compliance tracking"
+    skills_used: [all_research, all_analysis, compliance, audit, dashboard]
+
+  - query: "Generate quarterly report with metrics"
+    skills_used: [retrieval, statistical_analysis, reporting, dashboard]
+
+# Performance characteristics
+performance:
+  avg_latency_ms: 2000
+  p95_latency_ms: 5000
+  max_concurrent: 10
+  target_throughput_qps: 50
+
+# Resource requirements
+resources:
+  memory_mb: 8192
+  cpu_cores: 4
+  gpu_optional: true
+  disk_gb: 100
+
+# Bundle metadata
+metadata:
+  category: enterprise
+  use_case: production_deployment
+  complexity: very_high
+  maturity: stable
+  license: enterprise
+  support_level: premium
+  last_updated: "2026-01-15"
+  author: AegisRAG Team
+
+# Cost estimation
+cost_estimation:
+  monthly_llm_calls: 1000000
+  estimated_cost_usd: 500
+  cost_optimization: true

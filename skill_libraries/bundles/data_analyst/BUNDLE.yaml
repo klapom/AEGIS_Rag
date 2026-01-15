@@ -1,0 +1,53 @@
+name: data_analyst
+version: "1.0.0"
+description: Data analysis and visualization bundle with statistics and comparison skills
+
+skills:
+  - core/retrieval
+  - analysis/statistics
+  - analysis/data_viz
+  - analysis/comparison
+  - core/synthesis
+
+context_budget: 6000
+
+auto_activate:
+  - statistics
+  - synthesis
+
+triggers:
+  - "analyze"
+  - "visualize"
+  - "compare"
+  - "statistics"
+  - "data analysis"
+  - "plot"
+  - "chart"
+
+permissions:
+  tools:
+    - python_exec
+    - file_read
+    - file_write
+  network: false
+  filesystem: true
+
+dependencies:
+  - pandas>=2.0.0
+  - numpy>=1.24.0
+  - matplotlib>=3.7.0
+  - seaborn>=0.12.0
+
+metadata:
+  author: "AegisRAG Team"
+  category: "analysis"
+  tags:
+    - data
+    - statistics
+    - visualization
+    - analysis
+  use_cases:
+    - "Statistical data analysis"
+    - "Data visualization"
+    - "Comparative analysis"
+    - "Trend identification"

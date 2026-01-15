@@ -1,0 +1,54 @@
+name: code_reviewer
+version: "1.0.0"
+description: Code review and quality analysis bundle with security and performance checks
+
+skills:
+  - coding/review
+  - coding/security
+  - coding/performance
+  - core/reflection
+  - core/synthesis
+
+context_budget: 7000
+
+auto_activate:
+  - review
+  - security
+
+triggers:
+  - "review code"
+  - "check security"
+  - "analyze performance"
+  - "code quality"
+  - "security audit"
+  - "code smell"
+
+permissions:
+  tools:
+    - code_search
+    - static_analysis
+    - file_read
+    - git_operations
+  network: false
+  filesystem: true
+
+dependencies:
+  - pylint>=3.0.0
+  - bandit>=1.7.0
+  - radon>=6.0.0
+  - mypy>=1.5.0
+
+metadata:
+  author: "AegisRAG Team"
+  category: "development"
+  tags:
+    - code
+    - security
+    - quality
+    - performance
+    - review
+  use_cases:
+    - "Code review automation"
+    - "Security vulnerability detection"
+    - "Performance optimization"
+    - "Code quality assessment"

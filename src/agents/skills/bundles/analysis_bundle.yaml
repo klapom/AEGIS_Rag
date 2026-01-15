@@ -1,0 +1,132 @@
+# Analysis Bundle - Data Analysis and Validation
+# Sprint 95, Feature 95.3: Standard Skill Bundles
+
+id: analysis_bundle
+name: Analysis Bundle
+version: 1.0.0
+description: |
+  Comprehensive skill bundle for data analysis, validation, and comparison workflows.
+  Includes statistical analysis, classification, data validation, and comparison
+  capabilities for analytical tasks.
+
+# Skills included in bundle
+skills:
+  - name: validation
+    version: "^1.0.0"
+    required: true
+    description: Validate data quality and consistency
+    config:
+      check_types: true
+      check_nulls: true
+      check_ranges: true
+      check_duplicates: true
+      threshold_warnings: 0.05  # Warn if >5% invalid
+
+  - name: classification
+    version: "^1.0.0"
+    required: true
+    description: Classify data into categories using LLM
+    config:
+      mode: "intent"  # intent, sentiment, category
+      confidence_threshold: 0.7
+      max_classes: 10
+      output_probabilities: true
+
+  - name: comparison
+    version: "^1.0.0"
+    required: true
+    description: Compare datasets or documents
+    config:
+      method: "semantic"  # semantic, structural, statistical
+      similarity_metric: "cosine"
+      output_diff: true
+      highlight_changes: true
+
+  - name: statistical_analysis
+    version: "^1.0.0"
+    required: true
+    description: Compute statistical summaries and tests
+    config:
+      metrics:
+        - mean
+        - median
+        - std_dev
+        - percentiles
+      tests:
+        - t_test
+        - chi_square
+      confidence_level: 0.95
+
+# Bundle configuration
+context_budget: 6000  # Max tokens for all skills combined
+priority: "quality"  # Focus on accuracy over speed
+
+# Auto-activation rules
+auto_activate:
+  - validation  # Always validate inputs
+  - statistical_analysis  # Always compute stats
+
+# Natural language triggers
+triggers:
+  - analyze
+  - validate
+  - compare
+  - classify
+  - statistics
+  - data quality
+  - check data
+  - find patterns
+  - statistical test
+
+# Required permissions
+permissions:
+  tools:
+    - python_exec
+    - data_analysis
+  data:
+    - read_documents
+    - read_structured_data
+  llm:
+    - invoke_generation
+    - invoke_classification
+
+# External dependencies
+dependencies:
+  python:
+    - numpy >= 1.24.0
+    - pandas >= 2.0.0
+    - scipy >= 1.10.0
+    - scikit-learn >= 1.3.0
+
+# Skill execution order
+installation_order:
+  - validation
+  - classification
+  - comparison
+  - statistical_analysis
+
+# Usage examples
+usage_examples:
+  - query: "Analyze customer feedback sentiment distribution"
+    skills_used: [classification, statistical_analysis]
+
+  - query: "Compare Q3 and Q4 sales data"
+    skills_used: [validation, comparison, statistical_analysis]
+
+  - query: "Validate data quality of uploaded CSV"
+    skills_used: [validation, statistical_analysis]
+
+# Performance characteristics
+performance:
+  avg_latency_ms: 450
+  p95_latency_ms: 900
+  max_concurrent: 4
+
+# Bundle metadata
+metadata:
+  category: analysis
+  use_case: data_analysis
+  complexity: medium
+  maturity: stable
+  last_updated: "2026-01-15"
+  author: AegisRAG Team

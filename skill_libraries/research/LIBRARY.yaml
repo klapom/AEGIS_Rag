@@ -1,0 +1,22 @@
+name: research
+version: "1.0.0"
+description: Research library with web search, academic search, and fact-checking skills
+
+skills:
+  - web_search
+  - academic
+  - fact_check
+
+dependencies:
+  - playwright>=1.40.0
+  - beautifulsoup4>=4.11.0
+  - requests>=2.28.0
+
+metadata:
+  author: "AegisRAG Team"
+  category: "research"
+  tags:
+    - research
+    - web
+    - academic
+    - verification

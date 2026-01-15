@@ -1,0 +1,50 @@
+name: research_assistant
+version: "1.0.0"
+description: Complete research workflow bundle with web search, retrieval, and fact checking
+
+skills:
+  - core/retrieval
+  - core/synthesis
+  - core/reflection
+  - research/web_search
+  - research/academic
+  - research/fact_check
+
+context_budget: 8000
+
+auto_activate:
+  - retrieval
+  - synthesis
+
+triggers:
+  - "research"
+  - "find information"
+  - "investigate"
+  - "look up"
+  - "search for"
+
+permissions:
+  tools:
+    - browser
+    - web_fetch
+    - search_api
+  network: true
+  filesystem: false
+
+dependencies:
+  - playwright>=1.40.0
+  - beautifulsoup4>=4.11.0
+  - requests>=2.28.0
+
+metadata:
+  author: "AegisRAG Team"
+  category: "research"
+  tags:
+    - research
+    - web
+    - academic
+  use_cases:
+    - "Comprehensive research queries"
+    - "Academic paper search"
+    - "Fact verification"
+    - "Web-based information gathering"

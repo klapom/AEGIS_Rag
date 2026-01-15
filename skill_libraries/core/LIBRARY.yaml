@@ -1,0 +1,21 @@
+name: core
+version: "1.0.0"
+description: Core library with fundamental skills used across all workflows
+
+skills:
+  - retrieval
+  - synthesis
+  - reflection
+
+dependencies:
+  - langchain-core>=0.2.0
+  - qdrant-client>=1.11.0
+
+metadata:
+  author: "AegisRAG Team"
+  category: "core"
+  tags:
+    - fundamental
+    - rag
+    - reasoning
+  is_required: true

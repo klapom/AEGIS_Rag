@@ -9,6 +9,12 @@ Sprint 4: Multi-Agent Orchestration
 - Feature 4.4: Coordinator Agent with State Persistence (IMPLEMENTED)
 - Feature 4.5: LangSmith Integration (IMPLEMENTED)
 - Feature 4.6: Error Handling & Retry Logic (IMPLEMENTED)
+
+Sprint 95: Hierarchical Agents & Skill Libraries
+- Feature 95.1: Hierarchical Agent Pattern (IMPLEMENTED)
+- Feature 95.2: Skill Libraries & Bundles (PLANNED)
+- Feature 95.3: Standard Skill Bundles (PLANNED)
+- Feature 95.4: Procedural Memory System (PLANNED)
 """
 
 from src.agents.base_agent import BaseAgent
@@ -42,6 +48,17 @@ from src.agents.state import (
     update_state_metadata,
 )
 from src.agents.vector_search_agent import VectorSearchAgent, vector_search_node
+
+# Sprint 95: Hierarchical Agents
+from src.agents.hierarchy import (
+    AgentLevel,
+    DelegationResult,
+    ExecutiveAgent,
+    HierarchicalAgent,
+    ManagerAgent,
+    SkillTask,
+    WorkerAgent,
+)
 
 __all__ = [
     # State management
@@ -87,4 +104,12 @@ __all__ = [
     "retry_on_failure",
     "retry_with_fallback",
     "retry_async_operation",
+    # Hierarchical Agents (Sprint 95)
+    "AgentLevel",
+    "DelegationResult",
+    "ExecutiveAgent",
+    "HierarchicalAgent",
+    "ManagerAgent",
+    "SkillTask",
+    "WorkerAgent",
 ]

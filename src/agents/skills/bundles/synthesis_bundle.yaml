@@ -1,0 +1,126 @@
+# Synthesis Bundle - Content Generation and Formatting
+# Sprint 95, Feature 95.3: Standard Skill Bundles
+
+id: synthesis_bundle
+name: Synthesis Bundle
+version: 1.0.0
+description: |
+  Content synthesis and formatting skill bundle for document generation workflows.
+  Combines summarization, citation management, formatting, and export capabilities
+  for professional content creation.
+
+# Skills included in bundle
+skills:
+  - name: summarize
+    version: "^1.0.0"
+    required: true
+    description: Generate summaries from multiple sources
+    config:
+      mode: "extractive_abstractive"  # extractive, abstractive, or both
+      max_length: 500
+      min_length: 100
+      style: "concise"  # concise, detailed, bullet_points
+      preserve_structure: true
+
+  - name: citation
+    version: "^1.0.0"
+    required: true
+    description: Manage and format citations
+    config:
+      style: "APA"  # APA, MLA, Chicago, IEEE
+      include_urls: true
+      include_page_numbers: true
+      auto_deduplicate: true
+
+  - name: format
+    version: "^1.0.0"
+    required: true
+    description: Format text according to style guidelines
+    config:
+      target_format: "markdown"  # markdown, html, latex, docx
+      heading_levels: 3
+      code_highlighting: true
+      table_formatting: "github"  # github, grid, pipe
+
+  - name: markdown_export
+    version: "^1.0.0"
+    required: true
+    description: Export content to formatted markdown
+    config:
+      include_toc: true
+      include_metadata: true
+      link_format: "reference"  # inline, reference
+      wrap_width: 100
+      emoji_support: true
+
+# Bundle configuration
+context_budget: 7000  # Max tokens for all skills combined
+priority: "quality"  # Focus on output quality
+
+# Auto-activation rules
+auto_activate:
+  - citation  # Always track sources
+  - format    # Always format output
+
+# Natural language triggers
+triggers:
+  - summarize
+  - synthesize
+  - write report
+  - create document
+  - format text
+  - export to markdown
+  - generate summary
+  - compile information
+
+# Required permissions
+permissions:
+  tools:
+    - text_generation
+    - file_write
+  data:
+    - read_documents
+    - write_documents
+  llm:
+    - invoke_generation
+    - invoke_summarization
+
+# External dependencies
+dependencies:
+  python:
+    - markdown >= 3.5.0
+    - pyyaml >= 6.0.0
+    - python-docx >= 1.1.0  # Optional for DOCX export
+
+# Skill execution order
+installation_order:
+  - summarize
+  - citation
+  - format
+  - markdown_export
+
+# Usage examples
+usage_examples:
+  - query: "Summarize these 5 research papers into a literature review"
+    skills_used: [summarize, citation, format, markdown_export]
+
+  - query: "Create a formatted report from my notes"
+    skills_used: [format, citation, markdown_export]
+
+  - query: "Generate executive summary with citations"
+    skills_used: [summarize, citation, format]
+
+# Performance characteristics
+performance:
+  avg_latency_ms: 650
+  p95_latency_ms: 1200
+  max_concurrent: 3
+
+# Bundle metadata
+metadata:
+  category: synthesis
+  use_case: content_generation
+  complexity: medium
+  maturity: stable
+  last_updated: "2026-01-15"
+  author: AegisRAG Team
