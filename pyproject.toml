@@ -79,7 +79,9 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}  # JWT tokens
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}  # Password hashing
 
 # LangGraph & LangChain (Sprint 4: Multi-Agent Orchestration)
-langgraph = "^0.6.10"
+# UPGRADED Sprint 93: LangGraph 1.0 - Durable Execution, Memory, Human-in-Loop
+# Migration: Zero breaking changes (langgraph.prebuilt deprecated but functional)
+langgraph = "^1.0.0"  # LangGraph 1.0 GA (Oct 2025) - Production-ready, stable API
 langchain-core = "^1.1.2"  # Upgraded for langchain-openai 1.1.1 (RAGAS dependency)
 langchain-ollama = "^1.0.0"  # Latest version, requires ollama>=0.6.0
 
