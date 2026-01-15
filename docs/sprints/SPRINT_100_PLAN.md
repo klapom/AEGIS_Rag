@@ -1,948 +1,155 @@
-# Sprint 100 Plan: RAGAS Phase 3 - Visual Assets
+# Sprint 101 Plan: API Contract Fixes & Sprint 99 Integration Completion
 
-**Epic:** 1000-Sample Stratified RAGAS Evaluation Benchmark
-**Phase:** 3 of 3 (FINAL)
-**ADR Reference:** [ADR-048](../adr/ADR-048-ragas-1000-sample-benchmark.md)
-**Prerequisite:** Sprint 88 (Phase 2 complete)
-**Duration:** 10-14 days
-**Total Story Points:** 41 SP (21 SP Visual Assets + 11 SP LightRAG CRUD + 9 SP RAGAS Quality)
-**Status:** 📝 Planned
+**Sprint Duration:** TBD (Flexible, after Sprint 100)
+**Sprint Goal:** Fix all remaining API contract mismatches from Sprint 99 integration and complete backend testing
+**Total Story Points:** 24 SP
+**Priority:** P0 (Blocker for Production)
 
 ---
 
-## Sprint Goal
+## Sprint Context
 
-Complete the 1000-sample benchmark with **200 visual asset samples**:
-- **DocVQA:** Scanned document images with OCR (100 samples)
-- **SlideVQA:** Multi-slide presentation Q&A (50 samples)
-- **Open RAG Bench:** PDF text documents (50 samples)
+**Background:**
+Sprint 99 implemented 24 backend API endpoints (Features 99.1-99.4). Integration testing with Playwright MCP on 2026-01-15 revealed **8 critical contract mismatches** between Sprint 97-98 frontend and Sprint 99 backend.
 
-**Key Challenge:** This phase involves downloading 15-20GB of assets and handling complex image processing pipelines.
+**Already Fixed in Sprint 99:**
+- ✅ Bug #1-#5: Route mismatches (404 errors)
+- ✅ Bug #6: Missing activate/deactivate endpoints (2 SP)
+- ✅ Bug #7: Agent Hierarchy D3.js format mismatch (8 SP)
+- ✅ Bug #8: SkillSummary interface mismatch (`status` → `is_active`) (2 SP)
 
----
-
-## Context
-
-### After Sprint 88
-- 800 samples (clean_text, log_ticket, table, code_config)
-- Statistical rigor package integrated
-- ±3.5% confidence interval
-
-### Target State (Sprint 100)
-- **1000 total samples** (800 + 200)
-- **7 doc_types:** clean_text, log_ticket, table, code_config, pdf_ocr, slide, pdf_text
-- **Full benchmark complete**
-- ±3% confidence interval
+**Remaining:** 8 contract mismatches discovered by automated contract analysis agent
 
 ---
 
-## Features
+## Feature 101.1: HIGH-RISK Contract Fixes (12 SP)
 
-| # | Feature | SP | Priority | Status |
-|---|---------|-----|----------|--------|
-| 89.1 | Asset downloader with caching | 8 | P0 | 📝 Planned |
-| 89.2 | DocVQA OCR integration | 5 | P0 | 📝 Planned |
-| 89.3 | SlideVQA multi-image processor | 5 | P1 | 📝 Planned |
-| 89.4 | PDF text extraction fallback | 3 | P1 | 📝 Planned |
-| **LightRAG CRUD (TD-104)** | | | | |
-| 89.5 | Entity CRUD API | 4 | P1 | 📝 Planned |
-| 89.6 | Relation CRUD API | 3 | P1 | 📝 Planned |
-| 89.7 | Data Export API | 2 | P2 | 📝 Planned |
-| 89.8 | Document Deletion API | 2 | P1 | 📝 Planned |
+**Priority:** P0 (Blocker)
+**Risk:** High - Will cause runtime errors (404, 422, TypeErrors)
 
----
+### Mismatch #1: Skills List Response Format (3 SP)
 
-## Feature 89.1: Asset Downloader with Caching (8 SP)
+**Issue:** Frontend expects pagination metadata in response but backend only provides in query params.
 
-### Description
-Robust asset download infrastructure for visual datasets with local caching.
-
-### Challenge
-
-```yaml
-Problem:
-  - DocVQA images: ~2GB total (1200 document images)
-  - SlideVQA decks: ~5GB total (multi-image presentations)
-  - Open RAG Bench PDFs: ~10GB total (arXiv papers)
-  - Downloads may fail/timeout (network issues)
-  - Re-downloading wastes hours
-
-Solution:
-  - Persistent local cache with index
-  - Retry logic with exponential backoff
-  - SHA256 checksum verification
-  - Graceful degradation (skip unavailable, log reason)
-  - Progress reporting for long downloads
-```
-
-### Storage Structure
-
-```
-data/ragas_assets/
-├── cache_index.json           # Download status, checksums
-├── docvqa/
-│   ├── doc_001.png           # ~500KB each
-│   ├── doc_002.png
-│   └── ...                   # ~1200 files
-├── slidevqa/
-│   ├── deck_001/
-│   │   ├── slide_001.png
-│   │   ├── slide_002.png
-│   │   └── slide_003.png
-│   └── deck_002/
-│       └── ...
-└── pdfs/
-    ├── arxiv_2301.00001.pdf  # ~2-10MB each
-    └── ...
-```
-
-### Implementation
-
+**Current:**
 ```python
-# scripts/ragas_benchmark/asset_manager.py
-
-import asyncio
-import hashlib
-import json
-from pathlib import Path
-from typing import Dict, List, Optional
-import httpx
-from tqdm.asyncio import tqdm
-
-class AssetCache:
-    """Persistent cache for downloaded assets."""
-
-    def __init__(self, cache_dir: Path):
-        self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.index_path = self.cache_dir / "cache_index.json"
-        self.index = self._load_index()
-
-    def _load_index(self) -> Dict:
-        """Load cache index from disk."""
-        if self.index_path.exists():
-            return json.loads(self.index_path.read_text())
-        return {"files": {}, "stats": {"hits": 0, "misses": 0, "errors": 0}}
-
-    def _save_index(self):
-        """Save cache index to disk."""
-        self.index_path.write_text(json.dumps(self.index, indent=2))
-
-    def get_cached(self, url: str) -> Optional[Path]:
-        """Return cached path if exists and valid."""
-        if url in self.index["files"]:
-            entry = self.index["files"][url]
-            path = self.cache_dir / entry["path"]
-            if path.exists():
-                self.index["stats"]["hits"] += 1
-                return path
-        self.index["stats"]["misses"] += 1
-        return None
-
-    def add_to_cache(self, url: str, path: Path, checksum: str):
-        """Add downloaded file to cache index."""
-        relative_path = path.relative_to(self.cache_dir)
-        self.index["files"][url] = {
-            "path": str(relative_path),
-            "checksum": checksum,
-            "downloaded_at": datetime.now().isoformat(),
-        }
-        self._save_index()
-
-    def verify_checksum(self, path: Path, expected: str) -> bool:
-        """Verify SHA256 checksum of file."""
-        sha256 = hashlib.sha256()
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest() == expected
-
-
-class AssetDownloader:
-    """Download assets with retry logic and progress reporting."""
-
-    def __init__(
-        self,
-        cache: AssetCache,
-        max_retries: int = 3,
-        timeout: float = 60.0,
-        max_concurrent: int = 5
-    ):
-        self.cache = cache
-        self.max_retries = max_retries
-        self.timeout = timeout
-        self.max_concurrent = max_concurrent
-
-    async def download(
-        self,
-        url: str,
-        dest_subdir: str,
-        filename: Optional[str] = None,
-        expected_checksum: Optional[str] = None
-    ) -> Optional[Path]:
-        """
-        Download single asset with caching and retry.
-
-        Args:
-            url: Source URL
-            dest_subdir: Subdirectory within cache (e.g., "docvqa")
-            filename: Override filename (default: from URL)
-            expected_checksum: SHA256 to verify (optional)
-
-        Returns:
-            Path to downloaded file, or None if failed
-        """
-        # Check cache first
-        cached = self.cache.get_cached(url)
-        if cached:
-            return cached
-
-        # Determine destination path
-        if filename is None:
-            filename = url.split("/")[-1]
-        dest_dir = self.cache.cache_dir / dest_subdir
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        dest_path = dest_dir / filename
-
-        # Download with retry
-        for attempt in range(self.max_retries):
-            try:
-                async with httpx.AsyncClient(timeout=self.timeout) as client:
-                    response = await client.get(url, follow_redirects=True)
-                    response.raise_for_status()
-
-                    # Write to file
-                    dest_path.write_bytes(response.content)
-
-                    # Verify checksum if provided
-                    if expected_checksum:
-                        if not self.cache.verify_checksum(dest_path, expected_checksum):
-                            dest_path.unlink()
-                            raise ValueError(f"Checksum mismatch for {url}")
-
-                    # Compute and store checksum
-                    actual_checksum = hashlib.sha256(response.content).hexdigest()
-                    self.cache.add_to_cache(url, dest_path, actual_checksum)
-
-                    return dest_path
-
-            except Exception as e:
-                wait_time = 2 ** attempt  # Exponential backoff
-                if attempt < self.max_retries - 1:
-                    await asyncio.sleep(wait_time)
-                else:
-                    self.cache.index["stats"]["errors"] += 1
-                    logger.error(f"Failed to download {url} after {self.max_retries} attempts: {e}")
-                    return None
-
-    async def download_batch(
-        self,
-        urls: List[str],
-        dest_subdir: str,
-        progress_desc: str = "Downloading"
-    ) -> Dict[str, Optional[Path]]:
-        """
-        Download multiple assets with concurrency limit.
-
-        Returns:
-            Dict mapping URL -> Path (or None if failed)
-        """
-        semaphore = asyncio.Semaphore(self.max_concurrent)
-        results = {}
-
-        async def download_with_semaphore(url: str):
-            async with semaphore:
-                return url, await self.download(url, dest_subdir)
-
-        tasks = [download_with_semaphore(url) for url in urls]
-
-        for coro in tqdm.as_completed(tasks, desc=progress_desc, total=len(urls)):
-            url, path = await coro
-            results[url] = path
-
-        return results
+# Backend returns: List[SkillSummary]
+return paginated_skills
 ```
 
-### Usage
-
-```bash
-# Pre-download all Phase 3 assets (run before evaluation)
-poetry run python scripts/ragas_benchmark/download_assets.py \
-  --datasets docvqa slidevqa open_ragbench \
-  --cache-dir data/ragas_assets/ \
-  --max-concurrent 10
-
-# Expected output:
-# Downloading DocVQA assets: 100%|████████| 1200/1200 [15:23<00:00]
-# Downloading SlideVQA assets: 100%|████████| 500/500 [22:45<00:00]
-# Downloading PDF assets: 100%|████████| 200/200 [08:12<00:00]
-#
-# Summary:
-#   Downloaded: 1850 files (17.2 GB)
-#   Cached: 50 files (hit rate: 2.6%)
-#   Failed: 12 files (logged to errors.json)
-```
-
-### Acceptance Criteria
-
-- [ ] Cache hit rate >90% after first download
-- [ ] Failed downloads logged with reasons
-- [ ] Checksum verification for all assets
-- [ ] Progress reporting for batch downloads
-- [ ] Graceful handling of 404s and timeouts
-- [ ] Resume capability (partial downloads)
+**Fix:** Return proper `SkillListResponse` with `total`, `total_pages`, `page`, `page_size`.
 
 ---
 
-## Feature 89.2: DocVQA OCR Integration (5 SP)
+### Mismatch #2: GDPR Consent List - Field Name (2 SP)
 
-### Description
-Process DocVQA scanned document images with dual-mode OCR.
+**Issue:** Backend returns `items`, frontend expects `consents`.
 
-### Challenge
-
-```yaml
-Problem:
-  - DocVQA provides IMAGES, not text
-  - Dataset includes pre-extracted OCR tokens (Tesseract-based)
-  - Our Docling OCR may produce different text
-  - Comparison with benchmarks requires consistent OCR
-
-Solution:
-  - Mode A: Use dataset-provided OCR (benchmark comparison)
-  - Mode B: Use Docling CUDA OCR (end-to-end validation)
-  - Report BOTH metrics for transparency
-  - Compute OCR quality metrics (CER) on subset
-```
-
-### Dataset Schema (DocVQA)
-
-```python
-# nielsr/docvqa_1200_examples record
-{
-    "questionId": 1234,
-    "question": "What is the date on this invoice?",
-    "answers": ["March 15, 2019", "15 March 2019"],  # Multiple valid answers
-    "image": <PIL.Image>,  # Or path to image
-    "docId": "doc_001",
-    "ocr_tokens": ["March", "15", ",", "2019", "INVOICE", ...],
-    "ocr_boxes": [[x1, y1, x2, y2], ...],  # Bounding boxes
-}
-```
-
-### Implementation
-
-```python
-# scripts/ragas_benchmark/adapters/docvqa.py
-
-class DocVQAAdapter(DatasetAdapter):
-    """Adapter for DocVQA with dual OCR modes."""
-
-    def __init__(
-        self,
-        ocr_mode: str = "dataset",  # "dataset" or "docling"
-        docling_url: str = "http://localhost:5001"
-    ):
-        self.ocr_mode = ocr_mode
-        self.docling_client = None
-        if ocr_mode == "docling":
-            self.docling_client = DoclingClient(docling_url)
-
-    def get_doc_type(self) -> str:
-        return "pdf_ocr"
-
-    async def adapt(
-        self,
-        record: Dict,
-        image_path: Optional[Path] = None
-    ) -> NormalizedSample:
-        """
-        Adapt DocVQA record with specified OCR mode.
-
-        Args:
-            record: DocVQA record from HuggingFace
-            image_path: Path to downloaded image (for docling mode)
-        """
-        # Extract text based on OCR mode
-        if self.ocr_mode == "dataset":
-            # Use pre-extracted OCR tokens from dataset
-            context_text = self._tokens_to_text(record.get("ocr_tokens", []))
-        else:
-            # Use Docling CUDA OCR
-            if image_path is None:
-                raise ValueError("image_path required for docling mode")
-            context_text = await self._docling_ocr(image_path)
-
-        # Handle multiple valid answers (take first as ground truth)
-        answers = record.get("answers", [])
-        ground_truth = answers[0] if answers else ""
-
-        return NormalizedSample(
-            id=f"docvqa_{record.get('docId', record.get('questionId'))}",
-            question=record["question"],
-            ground_truth=ground_truth,
-            contexts=[context_text],
-            doc_type="pdf_ocr",
-            question_type=self._classify_question(record),
-            difficulty=self._assign_difficulty(record),
-            source_dataset="docvqa",
-            metadata={
-                "docId": record.get("docId"),
-                "questionId": record.get("questionId"),
-                "ocr_mode": self.ocr_mode,
-                "num_answers": len(answers),
-                "all_answers": answers,  # For evaluation flexibility
-                "image_path": str(image_path) if image_path else None,
-                "ocr_token_count": len(record.get("ocr_tokens", [])),
-            }
-        )
-
-    def _tokens_to_text(self, tokens: List[str]) -> str:
-        """
-        Convert OCR tokens to readable text.
-
-        Handles spacing around punctuation.
-        """
-        if not tokens:
-            return ""
-
-        text_parts = []
-        for i, token in enumerate(tokens):
-            # Don't add space before punctuation
-            if token in ".,;:!?)]}":
-                if text_parts:
-                    text_parts[-1] += token
-                else:
-                    text_parts.append(token)
-            # Don't add space after opening brackets
-            elif i > 0 and tokens[i-1] in "([{":
-                text_parts[-1] += token
-            else:
-                text_parts.append(token)
-
-        return " ".join(text_parts)
-
-    async def _docling_ocr(self, image_path: Path) -> str:
-        """
-        Run Docling CUDA OCR on image.
-
-        Uses existing Docling container (ADR-027).
-        """
-        return await self.docling_client.ocr_image(image_path)
-
-    def _classify_question(self, record: Dict) -> str:
-        """Classify DocVQA question type."""
-        question = record["question"].lower()
-
-        if any(w in question for w in ["date", "when", "year", "month"]):
-            return "entity"  # Date extraction
-        if any(w in question for w in ["how much", "total", "amount", "price"]):
-            return "numeric"
-        if any(w in question for w in ["what is", "name", "who"]):
-            return "lookup"
-        return "lookup"
-```
-
-### Target Quota
-
-| Category | Count |
-|----------|-------|
-| pdf_ocr (DocVQA) | 100 |
-| **By OCR Mode:** | |
-| - dataset_ocr | 50 (benchmark) |
-| - docling_ocr | 50 (validation) |
-| **Question Types:** | |
-| - lookup | 40 |
-| - entity | 30 |
-| - numeric | 30 |
-
-### Acceptance Criteria
-
-- [ ] 100 DocVQA samples processed
-- [ ] Both OCR modes functional
-- [ ] OCR quality metrics (CER/WER) computed on 20-sample subset
-- [ ] Multiple valid answers handled
-- [ ] Image paths stored in metadata
+**Fix:** Standardize on `items` field across all list endpoints (GDPR, Audit, Skills).
 
 ---
 
-## Feature 89.3: SlideVQA Multi-Image Processor (5 SP)
+### Mismatch #3: Audit Events List - Field Name (2 SP)
 
-### Description
-Process SlideVQA presentations with multi-slide context aggregation.
+**Issue:** Backend returns `items`, frontend expects `events`.
 
-### Challenge
-
-```yaml
-Problem:
-  - Single question spans MULTIPLE slide images
-  - Slide ordering matters for context
-  - Visual elements (charts, diagrams) carry meaning
-  - Evidence may be on specific slides only
-
-Solution:
-  - Process each slide independently (OCR + VLM)
-  - Preserve slide ordering in chunk structure
-  - Combine per-slide contexts with ordering metadata
-  - Track which slides contain answer evidence
-```
-
-### Dataset Schema (SlideVQA)
-
-```python
-# NTT-hil-insight/SlideVQA record
-{
-    "question": "What is the main conclusion of the presentation?",
-    "answer": "AI will transform healthcare by 2030",
-    "deck_id": "presentation_456",
-    "slides": [
-        {"slide_id": 1, "image_path": "deck_456/slide_001.png"},
-        {"slide_id": 2, "image_path": "deck_456/slide_002.png"},
-        {"slide_id": 3, "image_path": "deck_456/slide_003.png"},
-    ],
-    "evidence_slide_ids": [2, 3],  # Answer found on these slides
-    "ocr_per_slide": {
-        1: "Introduction to AI in Healthcare...",
-        2: "Current Applications: ...",
-        3: "Conclusion: AI will transform healthcare by 2030",
-    }
-}
-```
-
-### Implementation
-
-```python
-# scripts/ragas_benchmark/adapters/slidevqa.py
-
-class SlideVQAAdapter(DatasetAdapter):
-    """Adapter for SlideVQA with multi-slide handling."""
-
-    def __init__(
-        self,
-        docling_url: str = "http://localhost:5001",
-        use_vlm: bool = True
-    ):
-        self.docling_client = DoclingClient(docling_url)
-        self.use_vlm = use_vlm
-        if use_vlm:
-            # VLM from Sprint 66
-            self.vlm = VLMMetadataExtractor()
-
-    def get_doc_type(self) -> str:
-        return "slide"
-
-    async def adapt(
-        self,
-        record: Dict,
-        slide_paths: List[Path]
-    ) -> NormalizedSample:
-        """
-        Adapt SlideVQA record with multi-slide processing.
-
-        Args:
-            record: SlideVQA record
-            slide_paths: Ordered list of paths to slide images
-        """
-        slide_contexts = []
-
-        for idx, slide_path in enumerate(slide_paths):
-            slide_context = await self._process_slide(
-                slide_path,
-                slide_index=idx,
-                is_evidence=idx in record.get("evidence_slide_ids", [])
-            )
-            slide_contexts.append(slide_context)
-
-        # Combine all slide contexts
-        combined_context = self._combine_slide_contexts(slide_contexts)
-
-        return NormalizedSample(
-            id=f"slidevqa_{record['deck_id']}_{record.get('question_id', 0)}",
-            question=record["question"],
-            ground_truth=record["answer"],
-            contexts=[combined_context],
-            doc_type="slide",
-            question_type=self._classify_question(record),
-            difficulty=self._assign_difficulty(record),
-            source_dataset="slidevqa",
-            metadata={
-                "deck_id": record["deck_id"],
-                "num_slides": len(slide_paths),
-                "evidence_slide_ids": record.get("evidence_slide_ids", []),
-                "per_slide_contexts": slide_contexts,  # For detailed analysis
-                "vlm_enabled": self.use_vlm,
-            }
-        )
-
-    async def _process_slide(
-        self,
-        slide_path: Path,
-        slide_index: int,
-        is_evidence: bool
-    ) -> Dict:
-        """
-        Process single slide with OCR and optional VLM.
-
-        Returns:
-            Dict with slide_index, ocr_text, vlm_description, combined_text
-        """
-        # OCR extraction
-        ocr_text = await self.docling_client.ocr_image(slide_path)
-
-        # VLM description (optional)
-        vlm_description = ""
-        if self.use_vlm:
-            vlm_description = await self.vlm.describe_slide(slide_path)
-
-        # Combine for context
-        combined = f"[Slide {slide_index + 1}]"
-        if is_evidence:
-            combined += " [EVIDENCE]"
-        combined += f"\n{ocr_text}"
-        if vlm_description:
-            combined += f"\n\nVisual Description: {vlm_description}"
-
-        return {
-            "slide_index": slide_index,
-            "is_evidence": is_evidence,
-            "ocr_text": ocr_text,
-            "vlm_description": vlm_description,
-            "combined_text": combined,
-        }
-
-    def _combine_slide_contexts(
-        self,
-        slide_contexts: List[Dict]
-    ) -> str:
-        """
-        Combine per-slide contexts into single context string.
-
-        Preserves slide ordering and evidence markers.
-        """
-        parts = []
-        for ctx in slide_contexts:
-            parts.append(ctx["combined_text"])
-        return "\n\n---\n\n".join(parts)
-
-    def _classify_question(self, record: Dict) -> str:
-        """Classify SlideVQA question type."""
-        question = record["question"].lower()
-
-        if any(w in question for w in ["conclusion", "summary", "main point"]):
-            return "multihop"  # Requires reading multiple slides
-        if any(w in question for w in ["compare", "difference", "vs"]):
-            return "comparison"
-        if any(w in question for w in ["how many", "count", "number"]):
-            return "numeric"
-        if any(w in question for w in ["what is", "who", "when"]):
-            return "lookup"
-        return "multihop"  # Default for presentations
-```
-
-### Target Quota
-
-| Category | Count |
-|----------|-------|
-| slide (SlideVQA) | 50 |
-| **Question Types:** | |
-| - multihop | 25 |
-| - lookup | 15 |
-| - comparison | 10 |
-
-### Acceptance Criteria
-
-- [ ] 50 SlideVQA samples processed
-- [ ] Multi-slide contexts correctly ordered
-- [ ] VLM descriptions integrated
-- [ ] Evidence slides marked in metadata
-- [ ] Handles variable deck sizes (2-20 slides)
+**Fix:** Frontend changes to use `items` field.
 
 ---
 
-## Feature 89.4: PDF Text Extraction Fallback (3 SP)
+### Mismatch #4: Audit Reports Query Parameters (3 SP)
 
-### Description
-Process Open RAG Bench PDF documents with text extraction fallback chain.
+**Issue:** Frontend sends `timeRange`, backend expects `start_time` & `end_time`.
 
-### Implementation
-
-```python
-# scripts/ragas_benchmark/adapters/openragbench.py
-
-class OpenRAGBenchAdapter(DatasetAdapter):
-    """Adapter for Open RAG Bench (arXiv PDFs)."""
-
-    def __init__(self, docling_url: str = "http://localhost:5001"):
-        self.docling_client = DoclingClient(docling_url)
-
-    def get_doc_type(self) -> str:
-        return "pdf_text"
-
-    async def adapt(
-        self,
-        record: Dict,
-        pdf_path: Optional[Path] = None
-    ) -> NormalizedSample:
-        """
-        Adapt Open RAG Bench record with PDF fallback.
-
-        Priority:
-        1. Use dataset-provided extracted text (if available)
-        2. Fall back to Docling PDF extraction
-        """
-        # Try dataset-provided text first
-        context_text = record.get("context") or record.get("passage") or ""
-
-        # Fall back to Docling if text is short/missing
-        if len(context_text) < 100 and pdf_path:
-            context_text = await self.docling_client.parse_pdf(pdf_path)
-
-        return NormalizedSample(
-            id=f"openragbench_{record.get('paper_id', record.get('id'))}",
-            question=record["question"],
-            ground_truth=record.get("answer", record.get("ground_truth", "")),
-            contexts=[context_text],
-            doc_type="pdf_text",
-            question_type=self._classify_question(record),
-            difficulty="D2",  # Academic papers are generally medium difficulty
-            source_dataset="open_ragbench",
-            metadata={
-                "paper_id": record.get("paper_id"),
-                "extraction_method": "dataset" if len(record.get("context", "")) >= 100 else "docling",
-                "pdf_path": str(pdf_path) if pdf_path else None,
-            }
-        )
-```
-
-### Target Quota
-
-| Category | Count |
-|----------|-------|
-| pdf_text (Open RAG Bench) | 50 |
-| **Question Types:** | |
-| - lookup | 20 |
-| - definition | 15 |
-| - multihop | 15 |
+**Fix:** Frontend calculates ISO 8601 timestamps from `timeRange` selection.
 
 ---
 
-## Deliverables
+### Mismatch #5: Agent Hierarchy Status Enum (2 SP)
 
-| Artifact | Location | Description |
-|----------|----------|-------------|
-| Asset manager | `scripts/ragas_benchmark/asset_manager.py` | Download & cache |
-| DocVQA adapter | `scripts/ragas_benchmark/adapters/docvqa.py` | OCR integration |
-| SlideVQA adapter | `scripts/ragas_benchmark/adapters/slidevqa.py` | Multi-image |
-| OpenRAGBench adapter | `scripts/ragas_benchmark/adapters/openragbench.py` | PDF fallback |
-| Phase 3 dataset | `data/evaluation/ragas_phase3_200.jsonl` | 200 samples |
-| **Full 1000 dataset** | `data/evaluation/ragas_1000.jsonl` | **FINAL** |
-| Asset cache | `data/ragas_assets/` | 15-20GB |
+**Issue:** Backend uses `AgentStatus` enum, frontend expects lowercase string literals.
+
+**Fix:** Backend serializes enum values to lowercase strings.
 
 ---
 
-## Final Combined Dataset
+## Feature 101.2: MEDIUM-RISK Contract Fixes (8 SP)
 
-```
-data/evaluation/
-├── ragas_phase1_500.jsonl        # Phase 1: text, logs
-├── ragas_phase2_300.jsonl        # Phase 2: table, code
-├── ragas_phase3_200.jsonl        # Phase 3: pdf_ocr, slide, pdf_text
-├── ragas_1000.jsonl              # COMBINED FINAL
-├── ragas_manifest_1000.csv       # Full manifest
-└── ragas_1000_statistics.json    # Distribution stats
-```
+**Priority:** P1 (Important)
 
-### Final Distribution
+### Mismatch #6: GDPR Consent Status Enum (2 SP)
 
-| Doc Type | Count | % |
-|----------|-------|---|
-| clean_text | 450 | 45% |
-| log_ticket | 150 | 15% |
-| table | 100 | 10% |
-| code_config | 100 | 10% |
-| pdf_ocr | 100 | 10% |
-| slide | 50 | 5% |
-| pdf_text | 50 | 5% |
-| **Total** | **1000** | **100%** |
+**Issue:** Backend `granted`, frontend expects `active`.
 
-| Answerable | Count | % |
-|------------|-------|---|
-| True | 880 | 88% |
-| False (unanswerable) | 120 | 12% |
+**Fix:** Frontend maps `granted` → `active` in display logic.
+
+---
+
+### Mismatch #7: Agent Details Field Names (3 SP)
+
+**Issues:**
+- Backend: `name`, Frontend: `agent_name`
+- Backend: lowercase `level`, Frontend: UPPERCASE
+- Backend: decimal success_rate, Frontend: percentage
+- Missing: `p95_latency_ms`, `current_load`, `max_concurrent_tasks`
+
+**Fix:** Frontend adapts to backend field names + calculates derived values.
+
+---
+
+### Mismatch #8: Missing Config Validation Endpoint (3 SP)
+
+**Issue:** Frontend calls `POST /skills/{name}/config/validate` but endpoint doesn't exist.
+
+**Fix:** Implement config validation endpoint in backend.
+
+---
+
+## Feature 101.3: Integration Testing (4 SP)
+
+- Playwright E2E tests for all 8 fixes (2 SP)
+- Documentation updates (2 SP)
 
 ---
 
 ## Success Criteria
 
-- [ ] 1000 total samples in final dataset
-- [ ] All 7 doc_types represented
-- [ ] Asset download pipeline stable (>95% success rate)
-- [ ] Full RAGAS evaluation completes without errors
-- [ ] OCR quality metrics documented
-- [ ] Statistical report with CI for all metrics
-- [ ] Documentation complete
+1. ✅ All 8 contract mismatches fixed
+2. ✅ E2E tests pass (100%)
+3. ✅ Zero API errors (404/422/TypeError)
+4. ✅ All UI displays correct data
 
 ---
 
-## Evaluation Timeline
+## Implementation Priority
 
-After Sprint 88, run full evaluation:
-
-| Mode | Est. Time | Samples |
-|------|-----------|---------|
-| Hybrid | 100-160 hours | 1000 |
-| Vector | 100-160 hours | 1000 |
-| Graph | 100-160 hours | 1000 |
-| **Total** | **300-480 hours** | |
-
-**Recommendation:** Run in parallel across 3 machines, or evaluate Hybrid-only first for quick results.
+**Phase 1:** HIGH-RISK fixes (12 SP) - Days 1-3
+**Phase 2:** MEDIUM-RISK fixes (8 SP) - Days 4-5
+**Phase 3:** Testing & Docs (4 SP) - Days 6-7
 
 ---
 
-## Risks & Mitigations
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| Asset download failures | Medium | High | Retry logic, graceful degradation |
-| Docling OCR quality issues | Medium | Medium | Dual-mode evaluation |
-| SlideVQA deck size variance | Medium | Low | Variable slide handling |
-| Storage constraints | Low | High | External storage, compression |
-| VLM timeout | Medium | Low | Skip VLM, fallback to OCR-only |
+**Created:** 2026-01-15
+**Source:** Sprint 99 Playwright MCP testing + Automated contract analysis
+**Detailed Findings:** See contract analysis agent output (490KB report)
 
 ---
 
-## LightRAG CRUD Features (TD-104)
+## Detailed Mismatch Summary
 
-### Feature 89.5: Entity CRUD API (4 SP)
-
-Expose LightRAG's entity management methods via FastAPI:
-
-| Endpoint | Method | LightRAG Method |
-|----------|--------|-----------------|
-| `/api/v1/graph/entities` | POST | `acreate_entity()` |
-| `/api/v1/graph/entities/{name}` | PUT | `aedit_entity()` |
-| `/api/v1/graph/entities/{name}` | DELETE | `adelete_by_entity()` |
-| `/api/v1/graph/entities/merge` | POST | `amerge_entities()` |
-
-### Feature 89.6: Relation CRUD API (3 SP)
-
-| Endpoint | Method | LightRAG Method |
-|----------|--------|-----------------|
-| `/api/v1/graph/relations` | POST | `acreate_relation()` |
-| `/api/v1/graph/relations/{src}/{tgt}` | PUT | `aedit_relation()` |
-| `/api/v1/graph/relations/{src}/{tgt}` | DELETE | `adelete_by_relation()` |
-
-### Feature 89.7: Data Export API (2 SP)
-
-| Endpoint | Method | Formats |
-|----------|--------|---------|
-| `/api/v1/graph/export` | GET | CSV, Excel, Markdown |
-
-Uses `aexport_data()` to generate downloadable files.
-
-### Feature 89.8: Document Deletion API (2 SP)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/v1/documents/{doc_id}` | DELETE | Delete doc + Qdrant sync |
-
-Wraps `adelete_by_doc_id()` with additional Qdrant cleanup for guaranteed cross-DB sync.
-
-### TD-104 Context
-
-Sprint 87 analysis revealed LightRAG v1.4.9.8 provides 18+ methods not exposed by our wrapper:
-- Entity CRUD (create, edit, delete, merge)
-- Relation CRUD (create, edit, delete)
-- Data export (CSV, Excel, MD)
-- Document management (delete by doc_id)
-
-See [TD-104: LightRAG CRUD Feature Gap](../technical-debt/TD-104_LIGHTRAG_CRUD_FEATURE_GAP.md) for full comparison.
+| # | Endpoint | Issue | Risk | Type |
+|---|----------|-------|------|------|
+| 1 | GET /skills/registry | Pagination format | HIGH | Logic Error |
+| 2 | GET /gdpr/consents | Field: items vs consents | HIGH | 404 Data |
+| 3 | GET /audit/events | Field: items vs events | HIGH | 404 Data |
+| 4 | GET /audit/reports | Query param format | HIGH | 422 Error |
+| 5 | GET /agents/hierarchy | Status enum case | MEDIUM | Type Error |
+| 6 | GET /gdpr/consents | Status: granted vs active | MEDIUM | Display |
+| 7 | GET /agents/:id/details | Field names | MEDIUM | Render Error |
+| 8 | POST /skills/:name/config/validate | Missing endpoint | MEDIUM | 404 Error |
 
 ---
 
-## RAGAS Quality Improvements (Sprint 92 Baseline)
-
-Based on RAGAS evaluation results from Sprint 92 (2026-01-15, 20 samples, Hybrid mode):
-
-### Current Baseline
-
-| Metric | Result | Target | Status |
-|--------|--------|--------|--------|
-| **Context Precision** | 86.2% | >75% | ✅ Met |
-| **Context Recall** | 77.5% | >70% | ✅ Met |
-| **Faithfulness** | 73.7% | >90% | ⚠️ Gap: -16.3% |
-| **Answer Relevancy** | 78.9% | >80% | ⚠️ Gap: -1.1% |
-
-### Improvement Opportunities
-
-#### P0: Faithfulness Improvement (+16% needed)
-
-**Problem:** LLM generates content not grounded in retrieved contexts (hallucination)
-
-**Root Causes:**
-1. NO_HEDGING prompt encourages assertive answers even with weak evidence
-2. Context Relevance Guard threshold (0.3) may be too permissive
-3. Cross-document synthesis introduces unsupported claims
-
-**Proposed Solutions:**
-| Solution | Expected Impact | Sprint |
-|----------|-----------------|--------|
-| Increase Context Relevance threshold to 0.5 | +5-10% | 100 |
-| Add source citation validation step | +5-8% | 100 |
-| Cite-sources prompt engineering | +3-5% | 100 |
-| Disable NO_HEDGING for low-confidence contexts | +3-5% | 100 |
-
-**Implementation:**
-```python
-# Feature 100.1: Enhanced Faithfulness Guard
-MIN_CONTEXT_RELEVANCE_THRESHOLD = 0.5  # was 0.3
-REQUIRE_INLINE_CITATIONS = True
-HEDGING_THRESHOLD = 0.6  # Allow hedging below this score
-```
-
-#### P1: Answer Relevancy Improvement (+2% needed)
-
-**Problem:** Answers occasionally include tangential information
-
-**Root Causes:**
-1. Retrieved contexts contain relevant but off-topic sections
-2. LLM generation prompt doesn't emphasize focus
-
-**Proposed Solutions:**
-| Solution | Expected Impact | Sprint |
-|----------|-----------------|--------|
-| Question-focused generation prompt | +1-2% | 100 |
-| Post-generation relevancy check | +1-2% | 101 |
-| Chunk relevancy pre-filtering | +0.5-1% | 101 |
-
-### Sprint 100 RAGAS Features
-
-| # | Feature | SP | Priority | Description |
-|---|---------|-----|----------|-------------|
-| 100.1 | Context Relevance Threshold Increase | 2 | P0 | 0.3 → 0.5 threshold |
-| 100.2 | Cite-Sources Prompt Engineering | 3 | P0 | Enforce inline citations |
-| 100.3 | Conditional Hedging | 2 | P1 | Allow uncertainty for weak contexts |
-| 100.4 | Relevancy-Focused Prompt | 2 | P1 | "Answer ONLY the question asked" |
-
-**Total RAGAS Improvements: 9 SP**
-
-### Success Criteria (Updated)
-
-- [ ] Faithfulness ≥ 85% (from 73.7%)
-- [ ] Answer Relevancy ≥ 80% (from 78.9%)
-- [ ] Context Precision maintained ≥ 85%
-- [ ] Context Recall maintained ≥ 75%
-- [ ] No regression in query latency
-
----
-
-## References
-
-- [ADR-048: RAGAS 1000-Sample Benchmark Strategy](../adr/ADR-048-ragas-1000-sample-benchmark.md)
-- [Sprint 82 Plan](SPRINT_82_PLAN.md) - Phase 1
-- [Sprint 88 Plan](SPRINT_88_PLAN.md) - Phase 2
-- [ADR-027: Docling CUDA Ingestion](../adr/ADR-027-docling-cuda-ingestion.md)
-- [TD-104: LightRAG CRUD Feature Gap](../technical-debt/TD-104_LIGHTRAG_CRUD_FEATURE_GAP.md)
-- [DocVQA Dataset](https://huggingface.co/datasets/nielsr/docvqa_1200_examples)
-- [SlideVQA Repository](https://github.com/nttmdlab-nlp/SlideVQA)
-- [Open RAG Bench Paper](https://arxiv.org/abs/2410.11920)
+**Total SP:** 24
+**Risk Level:** P0 (Production Blocker)
+**Dependencies:** Sprint 99 Bug #6-#8 fixes must be merged first
