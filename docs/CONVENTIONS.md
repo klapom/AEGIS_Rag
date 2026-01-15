@@ -1,7 +1,7 @@
 # Code Conventions & Standards
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2025-12-21 (Sprint 60 - Documentation Consolidation)
+**Last Updated:** 2026-01-15 (Sprint 93 - Tool Composition Framework)
 
 ---
 
@@ -737,6 +737,479 @@ async def bash_execute(command: str, timeout: int = 30):
 
 ---
 
+## Sprint 81-87: Retrieval & Evaluation Conventions
+
+### Intent Classification Patterns (Sprint 81)
+
+**C-LARA SetFit Intent Classifier:**
+```python
+# Classification model saved to models/intent_classifier/
+# Inference: ~40ms latency
+# Accuracy: 95.22% (5-class intents)
+
+from src.adaptation.intent_classifier import IntentClassifier
+
+classifier = IntentClassifier.load("models/intent_classifier/")
+intent = classifier.predict("What is X?")  # Returns: factual, procedural, comparison, recommendation, navigation
+```
+
+**Intent-based routing adjusts query parameters:**
+```python
+INTENT_ROUTING_CONFIG = {
+    "factual": {"mode": "hybrid", "top_k": 5},
+    "procedural": {"mode": "hybrid", "top_k": 10},
+    "comparison": {"mode": "hybrid", "top_k": 15},
+    "recommendation": {"mode": "graph", "top_k": 7},
+    "navigation": {"mode": "vector", "top_k": 5},
+}
+```
+
+### RAGAS Evaluation Patterns (Sprint 82-84)
+
+**RAGAS Benchmark Infrastructure:**
+```python
+# Dataset structure: NormalizedSample with stratified sampling
+
+from dataclasses import dataclass
+
+@dataclass
+class NormalizedSample:
+    """RAGAS benchmark sample format."""
+    id: str
+    question: str
+    ground_truth: str
+    contexts: List[str]
+    doc_type: str  # clean_text, log_ticket, table, code_config (Sprint 88)
+    question_type: str  # lookup, definition, howto, multihop, comparison, etc.
+    difficulty: str  # D1 (easy), D2 (medium), D3 (hard)
+    answerable: bool = True
+    source_dataset: str = ""
+    metadata: Dict = None
+```
+
+**RAGAS Outlier Detection (Sprint 84):**
+```python
+from src.evaluation.ragas_logger import RAGASEvaluationLogger
+
+logger = RAGASEvaluationLogger()
+
+# Log each judgment + detect parsing errors
+is_outlier = logger.log_judgment(
+    question_id="hotpotqa_123",
+    metric="faithfulness",
+    score=0.0,  # Heuristic: F=0.0 with long answer = parsing error
+    llm_response="...",
+    judgment_latency_ms=2340,
+    error=None
+)
+
+if not is_outlier:
+    results["faithfulness"].append(score)
+```
+
+**RAGAS Outlier Detection Heuristics:**
+- F=0.0 with long answer (>100 chars) → Parsing error
+- AR=0.0 with substantive answer (>50 chars) → Parsing error
+- CP=0.0 with retrieved contexts → Always suspicious (remove)
+
+### BGE-M3 Hybrid Search (Sprint 87)
+
+**Multi-vector embeddings pattern:**
+```python
+# FlagEmbedding returns multi-vector results
+embedding_result = {
+    "dense": np.array([...]),  # 1024-dimensional dense vector
+    "sparse": {"token_id": weight, ...}  # Learned lexical weights
+}
+
+# Qdrant stores in multi-vector collection with server-side RRF
+# No separate BM25 index needed - all in Qdrant
+```
+
+**Hybrid search with multi-vectors:**
+```python
+# ONE Qdrant call returns both dense + sparse results with RRF fusion
+results = await multi_vector_search.hybrid_search(
+    query="What is X?",
+    top_k=10,
+    fusion_method="rrf"  # Reciprocal Rank Fusion at server-side
+)
+# Returns: List[Result] with unified relevance scores
+```
+
+---
+
+## Sprint 88: Structured Data Testing Conventions
+
+### RAGAS Dataset Composition (Sprint 82-88)
+
+**Phase 1 (Sprint 82): 500 samples**
+- 450 answerable, 50 unanswerable
+- Doc types: clean_text, log_ticket
+- Stratified by question_type and difficulty
+
+**Phase 2 (Sprint 88): +300 samples**
+- T2-RAGBench financial tables (100 samples)
+- CodeRepoQA code/config files (100 samples)
+- Additional clean_text (100 samples)
+- **Total: 800 samples, ±3.5% confidence interval**
+
+**Structured data preservation patterns:**
+```python
+# Tables converted to markdown with headers preserved
+table_context = """
+| Year | Revenue | Profit |
+|------|---------|--------|
+| 2019 | $10.5B  | $1.2B  |
+| 2020 | $12.1B  | $1.8B  |
+
+Source: annual_report_2020.pdf (Page 42)
+"""
+
+# Code samples include language + syntax highlighting hints
+code_context = """
+```python
+def analyze_data(file_path):
+    # Load and process data
+    return results
+```
+Path: analytics/processor.py
+"""
+```
+
+---
+
+## Sprint 92: Document Processing Conventions
+
+### Recursive LLM Processing (Sprint 92)
+
+**Hierarchical document analysis pattern:**
+```python
+# Process documents 10x larger than context window
+
+class RecursiveDocumentProcessor:
+    """
+    3-level hierarchical processing:
+    Level 1: Segment & Score - Break document, rate relevance
+    Level 2: Parallel Processing - Process relevant segments
+    Level 3: Recursive Deep-Dive - Re-analyze low-confidence sections
+    """
+
+    async def process_document(self, doc_text: str, query: str):
+        # Level 1: Segment (break 320K tokens into segments)
+        segments = self.segment_document(doc_text)
+
+        # Score each segment for query relevance
+        scored_segments = [
+            (seg, await self.score_relevance(seg, query))
+            for seg in segments
+        ]
+
+        # Level 2: Parallel processing of top-k segments
+        relevant_segments = sorted(scored_segments, key=lambda x: x[1], reverse=True)[:k]
+        results = await asyncio.gather(*[
+            self.llm.aprocess(seg) for seg, _ in relevant_segments
+        ])
+
+        # Level 3: Recursive deep-dive on low-confidence findings
+        if any(conf < 0.7 for _, conf in scored_segments):
+            deep_results = await self.recursive_analysis(low_conf_segments, query)
+```
+
+**Citation tracking pattern:**
+```python
+# Hierarchical citations maintain source segment
+
+class HierarchicalCitation:
+    segment_id: str  # Which segment provided this answer
+    confidence: float  # Level 1, 2, or 3 processing
+    recursion_depth: int  # How many recursive passes needed
+    quoted_text: str  # Direct quote from segment
+
+# Usage in generation
+response = {
+    "answer": "Full answer",
+    "citations": [
+        HierarchicalCitation(segment_id="seg_42", confidence=0.98, recursion_depth=1),
+        HierarchicalCitation(segment_id="seg_87", confidence=0.65, recursion_depth=2),
+    ]
+}
+```
+
+---
+
+## Sprint 93: LangGraph 1.0 & Tool Composition Conventions
+
+### LangGraph 1.0 ToolNode Pattern (Sprint 93)
+
+**Tool composition with automatic error handling:**
+```python
+from langgraph.prebuilt import ToolNode, InjectedState
+from langgraph.graph import StateGraph
+from typing import Annotated
+
+# Define tools with unified interface
+tools = [
+    web_search_tool,
+    file_parser_tool,
+    python_executor_tool,
+    browser_tool,  # NEW: Playwright-based web browsing
+]
+
+# Create ToolNode with automatic retry
+tool_node = ToolNode(
+    tools=tools,
+    handle_tool_errors=True  # Auto-retry on transient errors
+)
+
+# Add to LangGraph
+graph = StateGraph(AgentState)
+graph.add_node("tools", tool_node)
+```
+
+**InjectedState for skill-aware tool execution (Sprint 93.3):**
+```python
+from langgraph.prebuilt import InjectedState
+
+@tool
+def skill_aware_operation(
+    query: str,
+    state: Annotated[dict, InjectedState]  # Inject full graph state
+) -> str:
+    """Tool that has access to active skill context."""
+    active_skill = state.get("active_skill")
+    authorized_tools = state.get("skill_permissions", {}).get(active_skill, [])
+
+    # Only proceed if tool is authorized for this skill
+    if "skill_aware_operation" not in authorized_tools:
+        raise PermissionError(f"Tool not authorized for skill: {active_skill}")
+
+    # Skill-aware logic here
+    return f"Executed in context of {active_skill}"
+```
+
+**Tool composition workflow pattern:**
+```python
+# Chain multiple tools with data passing
+
+class ToolCompositionWorkflow:
+    """
+    Decompose complex requests into tool chains:
+    "Find latest Python version and create script that prints it"
+
+    Chain:
+    web_search (query="latest Python version")
+      → parse (extract version)
+        → python_exec (run script)
+    """
+
+    async def compose_tools(self, request: str, skill: str):
+        # Step 1: Tool selection (skill permissions)
+        available_tools = self.get_authorized_tools(skill)
+
+        # Step 2: Decompose into chain
+        tool_chain = await self.decompose_request(request, available_tools)
+
+        # Step 3: Execute with data passing
+        result = None
+        for tool_spec in tool_chain:
+            tool = available_tools[tool_spec.name]
+
+            # Pass previous result as input
+            input_data = tool_spec.prepare_input(result)
+            result = await tool.arun(input_data)
+
+        return result
+```
+
+### Tool Composition Types (Sprint 93)
+
+**Sequential composition (one tool → next tool):**
+```python
+# web_search → parse → python_exec
+# Output of tool N becomes input to tool N+1
+```
+
+**Parallel composition (multiple tools simultaneously):**
+```python
+# Run: [web_search, api_call, file_read] in parallel
+# Aggregate results
+results = await asyncio.gather(*[
+    web_search("query"),
+    api_call("endpoint"),
+    file_read("path")
+])
+```
+
+**Branching composition (conditional paths):**
+```python
+# If web_search returns result → use result
+# Else → fallback to knowledge_base_search
+```
+
+### Browser Tool Pattern (Sprint 93.2)
+
+**Playwright-based web browsing:**
+```python
+from langgraph.tools.playwright import BrowserTool
+
+browser_tool = BrowserTool(
+    headless=True,
+    viewport={"width": 1280, "height": 720},
+    timeout_ms=30000,
+)
+
+# Use with skills/permissions
+@tool
+async def research_with_browser(query: str, state: Annotated[dict, InjectedState]):
+    """Browse web for research with skill permission check."""
+    if "browser_tool" not in state.get("skill_permissions", {}).get(state["active_skill"], []):
+        raise PermissionError("Browser tool not authorized")
+
+    # Navigate + screenshot + extract content
+    await browser_tool.navigate(f"https://google.com/search?q={query}")
+    content = await browser_tool.get_visible_text()
+    return content
+```
+
+### Policy Guardrails Pattern (Sprint 93.4)
+
+**Per-skill tool authorization:**
+```python
+SKILL_TOOL_PERMISSIONS = {
+    "research_automation": {
+        "tools": ["web_search", "parse", "python_exec", "browser"],
+        "rate_limits": {"requests": 100, "window": 3600},
+        "timeout": 60,
+        "sandbox": True,
+    },
+    "file_operations": {
+        "tools": ["file_read", "file_write", "grep"],
+        "rate_limits": {"requests": 50, "window": 3600},
+        "timeout": 30,
+        "sandbox": True,
+        "allowed_paths": ["/data", "/output"],  # Whitelist
+    },
+    "system_commands": {
+        "tools": ["bash", "python_exec"],
+        "rate_limits": {"requests": 20, "window": 3600},
+        "timeout": 120,
+        "sandbox": True,
+        "allowed_commands": ["python", "git", "curl"],  # Whitelist
+    },
+}
+
+class PolicyGuardrails:
+    """Enforce tool permissions at execution time."""
+
+    async def validate_tool_access(self, skill: str, tool: str) -> bool:
+        """Check if skill can access tool."""
+        if skill not in SKILL_TOOL_PERMISSIONS:
+            return False
+
+        authorized_tools = SKILL_TOOL_PERMISSIONS[skill]["tools"]
+        return tool in authorized_tools
+
+    async def check_rate_limit(self, skill: str) -> bool:
+        """Enforce rate limits per skill."""
+        limits = SKILL_TOOL_PERMISSIONS[skill]["rate_limits"]
+        return self.rate_limiter.is_within_limit(skill, limits)
+```
+
+### Error Recovery Patterns (Sprint 93)
+
+**Built-in retry with ToolNode:**
+```python
+# ToolNode automatically retries on transient errors
+tool_node = ToolNode(
+    tools=tools,
+    handle_tool_errors=True,  # Enables automatic retry
+)
+
+# Override with custom error handler
+def custom_error_handler(error: Exception) -> str:
+    if isinstance(error, TimeoutError):
+        return "Tool timed out. Trying alternative approach..."
+    elif isinstance(error, RateLimitError):
+        return "Rate limited. Waiting before retry..."
+    return f"Tool error: {error}"
+
+tool_node = ToolNode(
+    tools=tools,
+    handle_tool_errors=custom_error_handler
+)
+```
+
+---
+
+## Sprint 84: Documentation & Testing Automation (Process Convention)
+
+### Technical Debt Archiving Convention
+
+**When resolving technical debt during development:**
+
+1. **Resolve the code issue** (implement fix)
+2. **Document in commit message:** Reference the TD number
+3. **Update TD index file immediately:**
+   ```bash
+   # Move file to archive
+   mv docs/technical-debt/TD-XXX-title.md docs/technical-debt/archive/
+
+   # Update docs/technical-debt/TD_INDEX.md
+   # Change status: "OPEN" → "✅ RESOLVED (Sprint YY)"
+   # Update "Active Count" and "Total Story Points" footer
+   ```
+
+**Example (Sprint 81):**
+```
+# TD-079 (C-LARA Intent Classification)
+Status: ✅ RESOLVED (Sprint 81)
+Resolution: C-LARA SetFit achieved 95.22% accuracy, replacing LLM-based routing
+File moved to: docs/technical-debt/archive/TD-079-c-lara-intent-routing.md
+```
+
+### Sprint-End Documentation Update Checklist
+
+**MANDATORY after every sprint:**
+
+1. **ADRs:** Create/update ADRs for architectural decisions
+   - File: `docs/adr/ADR-XXX-title.md`
+   - Update: `docs/adr/ADR_INDEX.md`
+
+2. **DECISION_LOG.md:** Document all sprint decisions
+   - Format: `### 2026-XX-XX | Decision Title (Sprint XX.Y)`
+   - Update footer: **Total Decisions**, **Current/Next Sprint**
+
+3. **CONVENTIONS.md:** Add new conventions discovered this sprint
+   - Section header: `## SprintXX: [Topic] Conventions`
+   - Include code examples and references
+
+4. **TECH_STACK.md:** Update for new dependencies/versions
+   - Add version numbers, rationale
+
+5. **ARCHITECTURE.md:** Update for system architecture changes
+   - New components, interaction diagrams
+
+6. **SPRINT_PLAN.md:** Mark sprint as complete, plan next sprint
+   - Section: `**Sprint XX Status:** ✅ Complete`
+
+7. **README.md:** Update current sprint status and metrics
+   - Key achievements, performance metrics
+
+8. **CLAUDE.md:** One-line sprint summary
+   - Format: `**Sprint XX Complete:** Features + Key Metrics`
+
+9. **scripts/README.md:** Update script inventory
+   - ALWAYS when scripts change
+   - Move old scripts to archive/
+   - Update "Last Updated: Sprint XX"
+
+10. **Root directory cleanup:** Remove temporary files
+    - Delete: `TEMP_*.md`, `NOTES.md`, sprint-specific scratch docs
+    - Archive: Move to `docs/sprints/archive/` or `docs/archive/`
+
+---
+
 These standards should be enforced in all code reviews. If unclear: Discuss in the team and update this document.
 
 ---
@@ -744,3 +1217,12 @@ These standards should be enforced in all code reviews. If unclear: Discuss in t
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Source:** NAMING_CONVENTIONS.md
 **Maintainer:** Claude Code with Human Review
+
+**Last Major Updates:**
+- Sprint 81: Intent Classification, RAGAS Evaluation (C-LARA SetFit)
+- Sprint 82: RAGAS Benchmark Infrastructure (Stratified Sampling)
+- Sprint 84: Outlier Detection, Technical Debt Archiving Process
+- Sprint 87: BGE-M3 Multi-Vector Hybrid Search
+- Sprint 88: Structured Data (Tables, Code) RAGAS Evaluation
+- Sprint 92: Recursive LLM Document Processing
+- Sprint 93: LangGraph 1.0 ToolNode, Tool Composition, InjectedState

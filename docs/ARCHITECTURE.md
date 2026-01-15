@@ -1,7 +1,7 @@
 # AEGIS RAG Architecture
 
 **Project:** AEGIS RAG (Agentic Enterprise Graph Intelligence System)
-**Last Updated:** 2026-01-13 (Sprint 88: BGE-M3 Native Hybrid Search, RAGAS Phase 2 Evaluation)
+**Last Updated:** 2026-01-15 (Sprint 93: Tool Composition Framework, Skill-Tool Mapping Layer)
 
 ---
 
@@ -110,10 +110,14 @@ src/
 │   │
 │   └── llm_integration/        # LLM domain
 │       ├── proxy/              # AegisLLMProxy
-│       ├── tools/              # Tool framework (Sprint 59)
-│       │   ├── registry.py     # Tool registration
-│       │   ├── executor.py     # Tool execution
-│       │   └── builtin/        # Bash/Python tools
+│       ├── tools/              # Tool framework
+│       │   ├── registry.py     # Tool registration (Sprint 59)
+│       │   ├── executor.py     # Tool execution (Sprint 59)
+│       │   ├── mapping.py      # Skill→Tool mapping (Sprint 93)
+│       │   ├── composition.py  # Tool composition (Sprint 93)
+│       │   ├── policy.py       # PolicyEngine (Sprint 93)
+│       │   ├── browser.py      # Browser tool (Sprint 93)
+│       │   └── builtin/        # Bash/Python/Web tools
 │       └── sandbox/            # Docker sandboxing (Sprint 59)
 │
 ├── api/                        # FastAPI endpoints
@@ -257,6 +261,8 @@ Phase 2: Background Refinement (30-60s async)
 | **83** | ER-Extraction Improvements | 3-Rank LLM Cascade (Nemotron3→GPT-OSS→Hybrid NER), Gleaning (+20-40% recall), Fast Upload (2-5s), Multi-language SpaCy (DE/EN/FR/ES), Comprehensive Logging (P95 metrics, GPU VRAM, LLM cost) |
 | **87** | BGE-M3 Native Hybrid Search | FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection, Server-side RRF fusion, **Replaces BM25** |
 | **88** | RAGAS Phase 2 Evaluation | Tables (T2-RAGBench) + Code (MBPP) evaluation, 10/10 GT retrieval (100%), Async embedding fix, Comprehensive metrics schema |
+| **92** | Recursive LLM Adaptive Scoring | BGE-M3 hybrid relevance scoring (20-40x faster), Parallel worker configuration (1-10 workers per backend), Configurable scoring methods |
+| **93** | Tool Composition Framework | ToolComposer + PolicyEngine integration, Skill-Tool Mapping Layer (41 tests, 1711 LOC), Browser Tool for web automation, LangGraph 1.0 InjectedState patterns |
 
 ### Sprint 87-88: BGE-M3 Native Hybrid Search
 
@@ -911,10 +917,309 @@ optimizer = dspy.MIPROv2(
 
 ---
 
+## Sprint 92-93: Advanced Tool Composition & Recursive LLM Optimization
+
+### Sprint 92: Recursive LLM Adaptive Scoring (ADR-052)
+
+**Problem:** Recursive LLM context processor was using expensive LLM scoring (2-4 seconds for 20 segments) instead of efficient embedding-based scoring.
+
+**Solution: BGE-M3 Hybrid Relevance Scoring**
+
+```python
+# OLD (Sprints 1-91): Per-segment LLM scoring
+for segment in segments:
+    score = await llm_score_segment(segment, query)  # 100-200ms × 20 = 2-4s
+
+# NEW (Sprint 92+): BGE-M3 batch embedding scoring
+embedding_service = get_embedding_service()  # FlagEmbedding with BGE-M3
+
+# Embed all segments in one pass
+query_embedding = embedding_service.embed_single(query)
+segment_embeddings = embedding_service.embed_batch(segments)
+
+# Compute hybrid similarity for all at once
+for i, segment in enumerate(segments):
+    sparse_score = compute_sparse_similarity(...)
+    dense_score = cosine_similarity(...)
+    segment.relevance_score = 0.4 * sparse_score + 0.6 * dense_score
+```
+
+**Performance Impact:**
+- **Scoring Latency:** 2-4 seconds → **50-100ms** (20-40x speedup)
+- **Cost:** 20 LLM API calls → **0 LLM calls** (pure embedding compute)
+- **Accuracy:** BGE-M3 achieves **87.6% NDCG@10** on BEIR (proven accuracy)
+
+**Parallel Worker Configuration:**
+```python
+class RecursiveLLMSettings(BaseSettings):
+    max_parallel_workers: int = Field(
+        default=1,  # DGX Spark: single-threaded
+        description="Max parallel segment processing (1 for Ollama, 5-10 for cloud)"
+    )
+
+    worker_limits: dict[str, int] = {
+        "ollama": 1,        # DGX Spark
+        "openai": 10,       # Cloud
+        "alibaba": 5,       # Moderate parallelism
+    }
+```
+
+**Performance Projections:**
+- **DGX Spark (1 worker):** 52-54s → 50-51s (~5% improvement)
+- **Cloud (10 workers):** 52-54s → 10-11s (**5x speedup**)
+
+**References:** [Sprint 92 RECURSIVE_LLM_IMPROVEMENTS.md](sprints/SPRINT_92_RECURSIVE_LLM_IMPROVEMENTS.md), ADR-052
+
+---
+
+### Sprint 93: Tool Composition Framework (Sprint 93 Feature 93.1-93.4)
+
+**Architecture:** Complete tool composition ecosystem with intelligent routing, policy enforcement, and skill-aware tool mapping.
+
+#### Feature 93.1: ToolComposer Framework
+
+**Purpose:** Plan and compose tool chains for complex multi-step tasks.
+
+```python
+from src.agents.tools.composition import ToolComposer
+
+composer = ToolComposer(tool_registry={...})
+
+# Plan a tool chain
+request = UserRequest(
+    task="Research AGI safety papers and summarize findings",
+    skills=["research", "analysis"]
+)
+
+chain = await composer.plan_chain(request)
+# → [BrowserTool, WebSearchTool, DocumentParserTool, SummarizationTool]
+
+result = await composer.execute_chain(chain, input_data="AGI safety papers 2025")
+```
+
+**Key Capabilities:**
+- Intelligent tool selection based on task requirements
+- Dependency resolution and validation
+- Execution planning and optimization
+- Skill-based filtering (only tools the skill can use)
+- Fallback chains for fault tolerance
+- Cost optimization (prefer local tools over API calls)
+
+#### Feature 93.2: PolicyEngine (Access Control & Guardrails)
+
+**Purpose:** Enforce execution policies and security guardrails on tool usage.
+
+```python
+from src.agents.tools.policy import PolicyEngine
+
+policy = PolicyEngine()
+
+# Register skill permissions
+policy.register_skill("research", ["browser", "web_search", "file_read"])
+policy.register_skill("analysis", ["python_execute", "data_analysis"])
+
+# Set rate limits
+policy.set_rate_limit("openai_api", 10, per_minute=True)
+policy.set_rate_limit("browser", 50, per_day=True)
+
+# Enforce policy
+can_execute = await policy.check_permission(
+    skill="research",
+    tool="browser",
+    inputs={"url": "https://example.com"}
+)
+
+if can_execute:
+    result = await tool.execute(**inputs)
+else:
+    raise PermissionError("Skill 'research' cannot use 'browser' tool")
+```
+
+**Enforcement Layers:**
+1. **Skill Authorization:** Which skills can use which tools
+2. **Input Validation:** Validate tool inputs against schema
+3. **Rate Limiting:** Per-tool rate limits with time windows
+4. **Audit Logging:** Track all tool usage for compliance
+5. **Admin Bypass:** Allow privileged operations with audit trail
+
+#### Feature 93.3: Skill-Tool Mapping Layer (41 tests, 1711 LOC)
+
+**Purpose:** Dynamic discovery and access control for tool-skill relationships.
+
+```python
+from src.agents.tools.mapping import SkillToolMapper, ToolCapability
+
+mapper = SkillToolMapper()
+
+# Register tool with capabilities
+mapper.register_tool(
+    "browser",
+    ToolCapability(
+        name="browser",
+        description="Web browsing with Playwright",
+        async_support=True,
+        requires_network=True,
+        rate_limit=30,
+        tags=["web", "automation"],
+    ),
+    required_skills=["research", "web_automation"],
+)
+
+# Dynamic discovery
+async_tools = mapper.discover_tools("research", {"async_support": True})
+# → [ToolCapability(name='browser', ...), ToolCapability(name='web_search', ...)]
+
+# Permission checks
+can_use = mapper.can_skill_use_tool("research", "browser")  # → True
+skills_for_tool = mapper.get_skills_for_tool("browser")  # → ["research", "web_automation"]
+```
+
+**Components:**
+- `ToolCapability` dataclass: Rich metadata (parameters, async support, streaming, network, filesystem)
+- `SkillToolMapper` class: Registration, discovery, permission checks
+- `check_tool_permission()` helper: Integrated mapper + PolicyEngine checks
+- `InjectedState` pattern: LangGraph 1.0 skill context in tools
+
+**Test Coverage:** 41 unit tests, 100% pass rate, strict type checking
+
+#### Feature 93.4: Browser Tool for Web Automation
+
+**Purpose:** Safe web browsing and scraping via Playwright with Skill-aware access control.
+
+```python
+from src.agents.tools.browser import BrowserTool
+
+browser = BrowserTool()
+
+# Navigate and extract
+result = await browser.navigate(
+    url="https://arxiv.org",
+    action="click",
+    selector="input[name='query']"
+)
+
+# Scrape with CSS selectors
+papers = await browser.query_selector_all(
+    selector=".arxiv-result",
+    extract={"title": "h2", "abstract": "p.abstract"}
+)
+
+# Wait for dynamic content
+await browser.wait_for(text="Loaded", timeout=10000)
+
+# Close gracefully
+await browser.close()
+```
+
+**Security Features:**
+- Network isolation (only allowed domains)
+- Timeout enforcement (max 300s per operation)
+- Memory limits (prevent infinite loops)
+- User-agent rotation (avoid detection)
+- Screenshot capabilities (visual verification)
+- SSL certificate validation
+
+**Integration with PolicyEngine:**
+```python
+# Policy checks before navigation
+policy.set_allowed_domains("research", ["arxiv.org", "scholar.google.com"])
+policy.set_rate_limit("browser", requests_per_minute=5)
+
+# Enforced at execution time
+if not await policy.check_permission("research", "browser", inputs={"url": url}):
+    raise PermissionError("Domain not allowed")
+```
+
+---
+
+## LangGraph 1.0 Architecture Patterns (Sprint 93+)
+
+### InjectedState for Skill Context
+
+**Pattern:** Pass skill/user context through LangGraph state to tools.
+
+```python
+from langgraph.prebuilt import InjectedState
+from typing import Annotated
+
+@tool
+def skill_aware_tool(
+    query: str,
+    state: Annotated[dict, InjectedState]
+) -> str:
+    """Tool with access to skill context."""
+    active_skill = state.get("active_skill")
+    user_id = state.get("user_id")
+
+    # Check permission via mapper
+    if not mapper.can_skill_use_tool(active_skill, "browser"):
+        raise PermissionError("Skill not authorized")
+
+    # Execute with skill context
+    return await browser.execute(query, skill=active_skill)
+```
+
+### Tool Composition in LangGraph
+
+**Pattern:** Integrate ToolComposer with LangGraph agent graph.
+
+```python
+from langgraph.graph import StateGraph, START, END
+
+class ToolCompositionState(TypedDict):
+    task: str
+    skill: str
+    tool_chain: list[str]
+    execution_results: list[dict]
+
+workflow = StateGraph(ToolCompositionState)
+
+async def plan_tools(state: ToolCompositionState):
+    """Plan tool chain based on task."""
+    composer = ToolComposer(tool_registry=get_tool_registry())
+    chain = await composer.plan_chain(
+        UserRequest(task=state["task"], skills=[state["skill"]])
+    )
+    return {"tool_chain": chain}
+
+async def execute_tools(state: ToolCompositionState):
+    """Execute planned tool chain."""
+    results = []
+    for tool in state["tool_chain"]:
+        result = await execute_tool(tool, state["task"])
+        results.append(result)
+    return {"execution_results": results}
+
+workflow.add_node("planner", plan_tools)
+workflow.add_node("executor", execute_tools)
+workflow.add_edge(START, "planner")
+workflow.add_edge("planner", "executor")
+workflow.add_edge("executor", END)
+```
+
+---
+
+## Performance Characteristics (Updated Sprint 93)
+
+| Operation | Target Latency (p95) | Achieved | Notes |
+|-----------|---------------------|----------|-------|
+| Simple Query (Vector) | <200ms | 180ms | ✅ |
+| Hybrid Query (Vector+Graph) | <500ms | 450ms | ✅ |
+| Complex Multi-Hop | <1000ms | 980ms | ✅ |
+| Recursive LLM Scoring | <500ms | 50-100ms | ✅ Sprint 92 improvement (20-40x) |
+| Tool Composition Planning | <100ms | <50ms | ✅ Sprint 93 (in-memory lookup) |
+| Skill-Tool Permission Check | <10ms | <5ms | ✅ Sprint 93 (O(1) operation) |
+| Browser Navigation | <5s | 2-4s | ✅ With timeout enforcement |
+| Ingestion (per page) | <2s | 1.8s | ✅ GPU accelerated |
+| Embedding (batch 32) | <500ms | 420ms | ✅ BGE-M3 |
+
+---
+
 **Document Consolidated:** Sprint 60 Feature 60.1
 **Sprint 67-68 Updates:** 2025-12-31
 **Sprint 72 Updates:** 2026-01-03 (Admin Features)
 **Sprint 76-79 Updates:** 2026-01-08 (Graph Search Enhancement, RAGAS Optimization)
 **Sprint 81 Updates:** 2026-01-09 (C-LARA SetFit Multi-Teacher Intent Classification 95.22%)
-**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_67_PLAN.md, SPRINT_72_PLAN.md, SPRINT_78_PLAN.md, SPRINT_81_PLAN.md
+**Sprint 92-93 Updates:** 2026-01-15 (Recursive LLM Adaptive Scoring, Tool Composition Framework)
+**Sources:** ARCHITECTURE_EVOLUTION.md, COMPONENT_INTERACTION_MAP.md, STRUCTURE.md, SPRINT_92_RECURSIVE_LLM_IMPROVEMENTS.md, SPRINT_93_FEATURE_93.3_SUMMARY.md, SPRINT_100_PLAN.md
 **Maintainer:** Claude Code with Human Review

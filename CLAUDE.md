@@ -525,6 +525,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Sprint 87 Complete:** BGE-M3 Native Hybrid Search (replaces BM25), FlagEmbedding Service (Dense 1024D + Sparse lexical), Qdrant multi-vector collection with server-side RRF fusion, async embedding fix for LangGraph compatibility.
 **Sprint 88 In Progress:** RAGAS Phase 2 Evaluation (Tables + Code), T2-RAGBench (5/5 = 100%), MBPP Code QA (5/5 = 100%), comprehensive metrics schema (4 RAGAS + ingestion + retrieval + LLM eval metrics).
 **Sprint 92 Complete (36 SP, 24 Features):** Graph Search **17-19s→<2s** (89% faster), FlagEmbedding Warmup (40s→<1s), Ollama GPU Fix (19→77 tok/s), Deep Research UI, Docker Frontend (Port 80), Vector display fix, Rank consistency (1-indexed), Stop Words Filter, **Community Detection GDS Fix** (2,387 communities), Context Relevance Guard (TD-080 resolved), Recursive LLM Scoring (ADR-052), 10+ unit tests, ADR-053.
+**Sprint 93 Complete:** Tool Composition Framework (ToolComposer, PolicyEngine, Browser Tool, Skill-Tool Mapping, DSL), LangGraph 1.0.6 upgrade, 227 tests (100%), 6 modules (3,609 LOC).
 
 ---
 

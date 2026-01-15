@@ -1,3 +1,9 @@
+# ARCHIVED (Sprint 17) - Outdated, see current docs
+
+> This document is archived and obsolete. Conversation archiving functionality may have been superseded by newer memory management features. Please refer to the current documentation for memory management and conversation handling.
+
+---
+
 # Quick Start: Conversation Archiving (Sprint 17 Feature 17.4 Phase 1)
 
 **5-Minute Setup Guide**
