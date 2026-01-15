@@ -1,401 +1,143 @@
-# AegisRAG Guides
+# Guides Directory
 
-Comprehensive guides for administering, deploying, tuning, and troubleshooting AegisRAG.
-
----
-
-## Available Guides (Sprint 72 Update)
-
-**NEW in Sprint 72:**
-- [MCP Tools Admin Guide](#4-mcp-tools-admin-guide) - Tool execution and server management
-- [Memory Management Guide](#5-memory-management-guide) - Memory debugging and optimization
-
-### 1. [Sprint 68 Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
-
-**Purpose:** Step-by-step instructions for deploying Sprint 68 to production
-
-**For:** DevOps engineers, deployment teams, infrastructure managers
-
-**Contents:**
-- Prerequisites and environment setup
-- Docker image rebuild procedure (10 steps)
-- Redis configuration (8GB limit, LRU eviction)
-- Database index creation (Neo4j, Qdrant)
-- Full service startup and health checks
-- Memory consolidation cron job setup
-- Query cache verification
-- Production deployment checklist
-- Troubleshooting and rollback procedures
-
-**Time Required:** 30-45 minutes for full deployment
-
-**Quick Start:** Go to [Step 1: Docker Image Rebuild](../deployment/SPRINT_68_DEPLOYMENT.md#step-1-docker-image-rebuild)
-
----
-
-### 2. [Performance Tuning Guide](PERFORMANCE_TUNING.md)
-
-**Purpose:** Strategies for optimizing AegisRAG performance
-
-**For:** Operations engineers, performance analysts, infrastructure teams
-
-**Contents:**
-- Query caching optimization (two-tier strategy)
-- Model selection tuning strategies
-- Memory budget optimization per service
-- Database tuning (Neo4j, Qdrant, Redis)
-- Profiling and benchmarking workflows
-- Section community detection tuning
-- Advanced optimization strategies
-- Performance targets and SLOs
-- Monitoring and alerting setup
-- Performance troubleshooting
-
-**Performance Baselines:**
-- Cache hit latency: **52ms** (93% faster)
-- Vector search: **40% faster** (ef=64)
-- PDF memory: **75% reduction**
-- Expected cache hit rate: **>50%**
-
-**Quick Start:** Go to [Section 1: Query Caching Optimization](PERFORMANCE_TUNING.md#1-query-caching-optimization)
-
----
-
-### 3. [Troubleshooting Guide](TROUBLESHOOTING.md)
-
-**Purpose:** Solutions for common issues and problems
-
-**For:** Support teams, operators, developers, QA engineers
-
-**Contents:**
-- 15+ common issues organized by category
-- Each issue: Symptoms, Root Causes, Diagnosis, Solutions, Prevention
-- Categories:
-  1. E2E Test Failures (3 issues)
-  2. Memory and Performance (2 issues)
-  3. Database Connectivity (3 issues)
-  4. API and Service Issues (2 issues)
-  5. Permission and Configuration (2 issues)
-  6. LLM and Ollama (2 issues)
-  7. Frontend Issues (1 issue)
-
-**Quick Start:** Go to [Category 1: E2E Test Failures](TROUBLESHOOTING.md#category-1-e2e-test-failures) or use the [Quick Troubleshooting Checklist](TROUBLESHOOTING.md#quick-troubleshooting-checklist)
-
----
-
-### 4. [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md)
-
-**Purpose:** Managing Model Context Protocol (MCP) servers and executing tools via UI
-
-**For:** Admins, developers, operations engineers
-
-**Contents (Sprint 72.1):**
-- MCP server management (connect/disconnect)
-- Tool execution with parameter input
-- Real-time health monitoring (CPU, memory, latency)
-- Common use cases (3 detailed scenarios)
-- Troubleshooting server and tool issues
-- API reference and best practices
-
-**Key Features:**
-- Execute tools without SSH/CLI access
-- Real-time server health metrics
-- Type-safe parameter validation
-- Responsive design (desktop + mobile)
-
-**Quick Start:** Go to [`/admin/tools`](../../frontend/src/pages/admin/MCPToolsPage.tsx) page or read [Tool Execution Guide](MCP_TOOLS_ADMIN_GUIDE.md#executing-tools)
-
----
-
-### 5. [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md)
-
-**Purpose:** Administering and debugging the 3-layer memory system
-
-**For:** Admins, developers, operations engineers
-
-**Contents (Sprint 72.3):**
-- Understanding 3-layer architecture (Redis, Qdrant, Graphiti)
-- Statistics tab: Real-time memory metrics
-- Search tab: Cross-layer memory search
-- Consolidation tab: Manual triggers and history
-- Common use cases (monitoring, investigation, export)
-- Troubleshooting memory issues
-- API reference and best practices
-
-**Key Features:**
-- No Neo4j browser needed for debugging
-- Cross-layer search by user/session/keywords
-- Manual memory consolidation control
-- Memory export for backup
-
-**Quick Start:** Go to [`/admin/memory`](../../frontend/src/pages/admin/MemoryManagementPage.tsx) page or read [Statistics Tab Guide](MEMORY_MANAGEMENT_GUIDE.md#tab-1-statistics)
-
----
+Complete user guides for AegisRAG administration, compliance, and monitoring.
 
 ## Quick Navigation
 
-### By Role
+### Skill Management
+- **[Skill Management Guide](SKILL_MANAGEMENT_GUIDE.md)** - Sprint 97
+  - Skill Registry Browser, Configuration Editor, Tool Authorization
+  - Lifecycle Dashboard, SKILL.md Editor
+  - Best practices and troubleshooting
 
-**DevOps / Deployment Engineers:**
-1. Start with [Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
-2. Use [Performance Tuning](PERFORMANCE_TUNING.md) for post-deployment optimization
-3. Reference [Troubleshooting](TROUBLESHOOTING.md) for issues during deployment
+### Governance & Compliance
+- **[Governance & Compliance Guide](GOVERNANCE_COMPLIANCE_GUIDE.md)** - Sprint 98
+  - GDPR Consent Management (Articles 6, 7, 13-22, 30)
+  - Audit Trail Management with integrity verification
+  - Explainability Dashboard (3-level explanations)
+  - Skill Certification Framework
+  - EU AI Act compliance
 
-**Operations / SRE:**
-1. Use [Troubleshooting Guide](TROUBLESHOOTING.md) for incident response
-2. Configure monitoring from [Performance Tuning](PERFORMANCE_TUNING.md#9-monitoring-and-alerting)
-3. Schedule maintenance from [Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md#step-5-memory-consolidation-cron-job)
+### Agent Monitoring
+- **[Agent Monitoring Guide](AGENT_MONITORING_GUIDE.md)** - Sprint 98
+  - Multi-agent architecture overview
+  - Agent Communication Dashboard
+  - Agent Hierarchy Visualizer
+  - Troubleshooting and performance tuning
+  - Monitoring checklists
 
-**Developers:**
-1. Read [MCP Tools Guide](MCP_TOOLS_ADMIN_GUIDE.md) for tool framework understanding
-2. Review [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) for memory layer debugging
-3. Check [Performance Tuning](PERFORMANCE_TUNING.md) for optimization ideas
-4. Reference [Troubleshooting](TROUBLESHOOTING.md) for debugging tips
+### Reference
+- **[API Documentation](../api/ADMIN_API_REFERENCE.md)** - Sprint 97-98
+  - 24 REST API endpoints
+  - Skill management, GDPR, Audit, Agent monitoring
+  - Complete request/response examples
+  - Error handling and rate limiting
 
-**Admins / System Operators:**
-1. Start with [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md) for tool management
-2. Use [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) for memory debugging
-3. Reference [Troubleshooting](TROUBLESHOOTING.md) for issues
-4. Follow [Performance Tuning](PERFORMANCE_TUNING.md) for optimization
+## Document Statistics
 
-**QA / Testing:**
-1. Review [Troubleshooting Category 1](TROUBLESHOOTING.md#category-1-e2e-test-failures) for E2E test fixes
-2. Use performance baseline from [Performance Guide](PERFORMANCE_TUNING.md#81-query-latency-targets)
+| Document | Lines | Size | Status |
+|----------|-------|------|--------|
+| Skill Management Guide | 1,025 | 42 KB | ✅ Complete |
+| Governance & Compliance Guide | 1,069 | 50 KB | ✅ Complete |
+| Agent Monitoring Guide | 735 | 34 KB | ✅ Complete |
+| Admin API Reference | 1,444 | 28 KB | ✅ Complete |
+| **Total** | **4,273** | **169 KB** | **✅ Ready** |
 
-### By Task
+## Target Audience
 
-**Deploying to Production:**
-1. [Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md) - Complete procedure
-2. [Deployment Checklist](../deployment/SPRINT_68_DEPLOYMENT.md#step-8-production-deployment-checklist)
+### System Administrators
+Start with: **Skill Management Guide** + **Agent Monitoring Guide**
+Time: 30 minutes
+Daily task: 5-minute monitoring checklist
 
-**Fixing Performance Issues:**
-1. [Troubleshooting: Query Latency](TROUBLESHOOTING.md#issue-22-query-latency-degradation)
-2. [Performance Tuning: Query Caching](PERFORMANCE_TUNING.md#1-query-caching-optimization)
-3. [Performance Tuning: Database Tuning](PERFORMANCE_TUNING.md#4-database-tuning)
+### Compliance Officers
+Start with: **Governance & Compliance Guide**
+Time: 45 minutes
+Monthly task: Generate compliance reports, verify audit integrity
 
-**Fixing Database Issues:**
-1. [Troubleshooting: Qdrant Connection](TROUBLESHOOTING.md#issue-31-qdrant-connection-failures)
-2. [Troubleshooting: Neo4j Connection](TROUBLESHOOTING.md#issue-32-neo4j-connection-failures)
-3. [Troubleshooting: Redis Connection](TROUBLESHOOTING.md#issue-33-redis-connection-failures)
+### Backend Developers
+Start with: **Admin API Reference**
+Time: 30 minutes
+Task: Implement UI backend, integrate with API
 
-**Fixing Memory Issues:**
-1. [Troubleshooting: Memory Leaks](TROUBLESHOOTING.md#issue-21-memory-leaks-during-pdf-ingestion)
-2. [Performance Tuning: Memory Budget](PERFORMANCE_TUNING.md#3-memory-budget-optimization)
-3. [Deployment: Redis Configuration](../deployment/SPRINT_68_DEPLOYMENT.md#step-2-redis-configuration)
+### DevOps Engineers
+Start with: **Agent Monitoring Guide** + **API Reference**
+Time: 45 minutes
+Task: Set up monitoring, configure alerts, deployment
 
-**Fixing E2E Test Failures:**
-1. [Troubleshooting: E2E Timeouts](TROUBLESHOOTING.md#issue-11-e2e-tests-timing-out)
-2. [Troubleshooting: Selector Errors](TROUBLESHOOTING.md#issue-12-selector-not-found-errors)
-3. [Troubleshooting: Memory/Domain Tests](TROUBLESHOOTING.md#issue-13-memorydomain-training-test-failures)
+## Key Features Covered
 
-**Monitoring and Alerting:**
-1. [Performance Tuning: Monitoring Section](PERFORMANCE_TUNING.md#9-monitoring-and-alerting)
-2. [Deployment: Post-Deployment Operations](../deployment/SPRINT_68_DEPLOYMENT.md#step-10-post-deployment-operations)
+### Sprint 97: Skill Management UI
+- ✅ Skill Registry Browser (search, filter, activate/deactivate)
+- ✅ Configuration Editor (YAML validation, live preview)
+- ✅ Tool Authorization (access levels, rate limits, domains)
+- ✅ Lifecycle Dashboard (metrics, performance, monitoring)
+- ✅ SKILL.md Editor (frontmatter and markdown)
+- ✅ 9 API endpoints for management
 
----
+### Sprint 98: Governance & Monitoring UI
+- ✅ Agent Communication Dashboard (MessageBus, Blackboard)
+- ✅ Agent Hierarchy Visualizer (D3.js tree, task delegation)
+- ✅ GDPR Consent Manager (Articles 6, 7, 13-22, 30)
+- ✅ Audit Trail Viewer (events, integrity, export)
+- ✅ Explainability Dashboard (User/Expert/Audit views)
+- ✅ Certification Dashboard (3-tier validation)
+- ✅ 15 API endpoints for governance/monitoring/agents
 
-## Key Concepts
+## Quick Start
 
-### Two-Tier Query Caching
+### For Administrators
+1. Read SKILL_MANAGEMENT_GUIDE sections 1-2 (10 min)
+2. Review AGENT_MONITORING_GUIDE sections 1-2 (10 min)
+3. Bookmark troubleshooting sections
+4. Set up daily 5-minute checklist from Section 6.1
 
-```
-User Query
-    ↓
-[Exact Cache] ← 52ms (if match)
-    ↓
-[Semantic Cache] ← 100ms (if similar)
-    ↓
-[Full Retrieval] ← 612ms (if no match)
-```
+### For Compliance Teams
+1. Read GOVERNANCE_COMPLIANCE_GUIDE sections 1-4 (30 min)
+2. Review legal references (Section 6)
+3. Implement compliance workflows
+4. Set up monthly audit tasks (Section 5.1)
 
-**Result:** 93% latency reduction for common queries, >50% cache hit rate
+### For Developers
+1. Review ADMIN_API_REFERENCE sections 1-3 (20 min)
+2. Study endpoint documentation (Sections 4-7)
+3. Test example curl commands
+4. Implement API integration
 
-### Sprint 68 Performance Improvements
+## Cross-References
 
-| Component | Improvement | Baseline | Target |
-|-----------|-------------|----------|--------|
-| Query latency (cache hit) | 93% faster | 680ms | 52ms |
-| Query latency (cache miss) | 11% faster | 680ms | 612ms |
-| Vector search | 40% faster | - | - |
-| PDF memory | 75% reduction | 2GB+ | <500MB |
-| Graph queries | 30-50% faster | - | - |
+All guides include comprehensive "See Also" sections linking to:
+- Related guides
+- API documentation
+- Architecture Decision Records (ADRs)
+- Configuration references
+- Troubleshooting guides
 
----
+## Updates & Maintenance
 
-## Configuration Examples
+**Last Updated:** 2026-01-15 (Sprint 97-98)
+**Status:** Ready for implementation
+**Versioning:** See individual document headers
 
-### Enable Query Caching
+## Contributing
 
-```bash
-# Edit .env
-ENABLE_QUERY_CACHE=true
-QUERY_CACHE_TTL=3600          # 1 hour (default)
-```
+To update these guides:
+1. Edit the relevant .md file
+2. Update "Last Updated" date and status
+3. Maintain consistent formatting with other sections
+4. Test all code examples
+5. Verify all cross-references
 
-### Configure Redis Memory
+## Legend
 
-```bash
-# .env
-REDIS_MAX_MEMORY=8589934592   # 8GB hard limit
-REDIS_EVICTION_POLICY=allkeys-lru
-```
-
-### Optimize Vector Search
-
-```bash
-python scripts/optimize_qdrant_params.py \
-    --collection documents \
-    --ef 64                    # 40% faster than 128
-```
-
-### Create Database Indexes
-
-```bash
-python scripts/optimize_neo4j_indexes.py   # Neo4j indexes
-python scripts/optimize_qdrant_params.py   # Qdrant indexes
-```
-
----
-
-## Common Commands
-
-### Health Check
-```bash
-curl http://localhost:8000/health
-```
-
-### Cache Statistics
-```bash
-curl http://localhost:8000/api/v1/admin/cache/stats
-```
-
-### Performance Metrics
-```bash
-curl http://localhost:8000/api/v1/admin/metrics
-```
-
-### Benchmark Query Latency
-```bash
-python scripts/benchmark_query_latency.py --iterations 30
-```
-
-### View Logs
-```bash
-docker compose logs -f api          # API logs
-docker compose logs -f qdrant       # Vector DB logs
-docker compose logs -f neo4j        # Graph DB logs
-```
+- ✅ Complete and tested
+- ⏳ In progress
+- 📋 Planned
+- 🔧 Maintenance required
 
 ---
 
-## Performance Targets (Sprint 68)
-
-**Latency Targets:**
-- Simple Query (Vector only): <200ms ✅
-- Hybrid Query (cached): <100ms ✅
-- Hybrid Query (no cache): <500ms ⚠️
-- Complex Multi-hop: <1000ms ✅
-
-**Throughput:**
-- Sustained: 50 QPS ✅
-- Peak: 100 QPS (with caching) ✅
-
-**Memory:**
-- API: <2GB ✅
-- Qdrant: 8GB ✅
-- Neo4j: 8GB ✅
-- Redis: 8GB (hard limit) ✅
-
----
-
-## Troubleshooting Quick Links
-
-**E2E Tests:**
-- [Timeouts](TROUBLESHOOTING.md#issue-11-e2e-tests-timing-out)
-- [Selector errors](TROUBLESHOOTING.md#issue-12-selector-not-found-errors)
-- [Memory test failures](TROUBLESHOOTING.md#issue-13-memorydomain-training-test-failures)
-
-**Performance:**
-- [Slow queries](TROUBLESHOOTING.md#issue-22-query-latency-degradation)
-- [Memory leaks](TROUBLESHOOTING.md#issue-21-memory-leaks-during-pdf-ingestion)
-
-**Database:**
-- [Qdrant failures](TROUBLESHOOTING.md#issue-31-qdrant-connection-failures)
-- [Neo4j failures](TROUBLESHOOTING.md#issue-32-neo4j-connection-failures)
-- [Redis failures](TROUBLESHOOTING.md#issue-33-redis-connection-failures)
-
-**API & Services:**
-- [API not responding](TROUBLESHOOTING.md#issue-41-api-health-check-fails)
-- [500 errors](TROUBLESHOOTING.md#issue-42-500-internal-server-errors)
-
-**Configuration:**
-- [Permission errors](TROUBLESHOOTING.md#issue-51-permission-denied-errors)
-- [Missing variables](TROUBLESHOOTING.md#issue-52-missing-environment-variables)
-
----
-
-## Additional Resources
-
-**Related Documentation:**
-- [Sprint 68 Summary](../sprints/SPRINT_68_SUMMARY.md) - Complete feature overview
-- [CLAUDE.md](../../CLAUDE.md) - Project context and standards
-- [TECH_STACK.md](../TECH_STACK.md) - Technology details
-- [ADR Index](../adr/ADR_INDEX.md) - Architecture decisions
-
-**External Resources:**
-- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
-- [Qdrant Documentation](https://qdrant.tech/documentation/)
-- [Neo4j Documentation](https://neo4j.com/docs/)
-- [Docker Documentation](https://docs.docker.com/)
-
----
-
-## How to Use These Guides
-
-### For Your First Deployment
-1. Read [Deployment Guide Introduction](../deployment/SPRINT_68_DEPLOYMENT.md#overview)
-2. Follow steps 1-10 sequentially
-3. Use [verification checklist](../deployment/SPRINT_68_DEPLOYMENT.md#step-7-verification-steps)
-4. Bookmark [Troubleshooting Guide](TROUBLESHOOTING.md) for reference
-
-### For Performance Optimization
-1. Establish performance baseline (see [Performance Guide Section 5](PERFORMANCE_TUNING.md#5-profiling-and-benchmarking))
-2. Identify bottleneck using profiling
-3. Apply tuning from relevant section
-4. Benchmark improvement
-5. Monitor with metrics in [Section 9](PERFORMANCE_TUNING.md#9-monitoring-and-alerting)
-
-### For Incident Response
-1. Consult [Troubleshooting Checklist](TROUBLESHOOTING.md#quick-troubleshooting-checklist)
-2. Find relevant issue category
-3. Follow diagnosis and solution steps
-4. Escalate if solution doesn't work
-
----
-
-## Feedback and Updates
-
-These guides are living documents based on Sprint 68 learnings. As you encounter new issues or optimizations:
-
-1. Document your solution
-2. Test thoroughly
-3. Add to appropriate guide
-4. Update this README
-
----
-
-**Last Updated:** 2026-01-03 (Sprint 72)
-**Status:** Complete and production-ready
-**Version:** 1.1 (Added Sprint 72 admin guides)
-
-**Latest Guides:**
-- [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md) - NEW in Sprint 72
-- [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md) - NEW in Sprint 72
-
----
-
-**Start here:**
-- First deployment? → [Sprint 68 Deployment Guide](../deployment/SPRINT_68_DEPLOYMENT.md)
-- Want to manage tools? → [MCP Tools Admin Guide](MCP_TOOLS_ADMIN_GUIDE.md)
-- Need memory debugging? → [Memory Management Guide](MEMORY_MANAGEMENT_GUIDE.md)
-- Troubleshooting? → [Troubleshooting Guide](TROUBLESHOOTING.md)
+**Guides Directory**
+Last Updated: 2026-01-15
+Total Documentation: 4,273 lines
+Status: Ready for Sprint 97-98 Implementation

@@ -603,3 +603,177 @@ export interface ReindexDomainAdminResponse {
   domain_name: string;
   documents_queued: number;
 }
+
+// ============================================================================
+// Sprint 98 Feature 98.5: Explainability Dashboard Types
+// ============================================================================
+
+/**
+ * Explanation level for decision traces
+ */
+export type ExplanationLevel = 'user' | 'expert' | 'audit';
+
+/**
+ * Source document with relevance score
+ */
+export interface SourceDocument {
+  name: string;
+  relevance: number;
+  page?: number;
+  snippet?: string;
+  confidence?: 'high' | 'medium' | 'low';
+}
+
+/**
+ * User-level explanation (simplified for end users)
+ */
+export interface UserExplanation {
+  summary: string;
+  sources: SourceDocument[];
+  capabilities_used: number;
+  capabilities_list?: string[];
+}
+
+/**
+ * Skill consideration in decision process
+ */
+export interface SkillConsideration {
+  name: string;
+  confidence: number;
+  trigger?: string;
+  selected: boolean;
+}
+
+/**
+ * Tool invocation in decision process
+ */
+export interface ToolInvocation {
+  tool: string;
+  outcome: string;
+  duration_ms?: number;
+}
+
+/**
+ * Expert-level explanation (technical details)
+ */
+export interface ExpertExplanation extends UserExplanation {
+  technical_details: {
+    skills_considered: SkillConsideration[];
+    retrieval_mode: string;
+    chunks_retrieved: number;
+    chunks_used: number;
+    tools_invoked: ToolInvocation[];
+    performance_metrics: {
+      duration: number;
+      skill_times: Record<string, number>;
+    };
+  };
+}
+
+/**
+ * Audit-level explanation (complete trace for compliance)
+ */
+export interface AuditExplanation extends ExpertExplanation {
+  full_trace: Record<string, unknown>;
+}
+
+/**
+ * Decision flow stage
+ */
+export interface DecisionStage {
+  stage: 'intent' | 'skills' | 'retrieval' | 'response';
+  status: 'completed' | 'in_progress' | 'pending' | 'error';
+  details: string;
+  timestamp?: string;
+}
+
+/**
+ * Recent decision trace summary
+ */
+export interface TraceListItem {
+  trace_id: string;
+  query: string;
+  timestamp: string;
+  confidence: number;
+  user_id?: string;
+}
+
+/**
+ * Complete decision trace
+ */
+export interface DecisionTrace {
+  trace_id: string;
+  query: string;
+  timestamp: string;
+  user_id?: string;
+  intent: {
+    classification: string;
+    confidence: number;
+  };
+  decision_flow: DecisionStage[];
+  confidence_overall: number;
+  hallucination_risk: number;
+}
+
+// ============================================================================
+// Sprint 98 Feature 98.6: Certification Status Dashboard Types
+// ============================================================================
+
+/**
+ * Certification level for skills
+ */
+export type CertificationLevel = 'uncertified' | 'basic' | 'standard' | 'enterprise';
+
+/**
+ * Certification status
+ */
+export type CertificationStatus = 'valid' | 'expiring_soon' | 'expired' | 'pending';
+
+/**
+ * Certification check result
+ */
+export interface CertificationCheck {
+  check_name: string;
+  category: 'gdpr' | 'security' | 'audit' | 'explainability';
+  passed: boolean;
+  details?: string;
+}
+
+/**
+ * Skill certification details
+ */
+export interface SkillCertification {
+  skill_name: string;
+  version: string;
+  level: CertificationLevel;
+  status: CertificationStatus;
+  valid_until?: string;
+  last_validated: string;
+  checks: CertificationCheck[];
+  issues?: string[];
+}
+
+/**
+ * Validation report for a skill
+ */
+export interface ValidationReport {
+  skill_name: string;
+  timestamp: string;
+  passed_checks: number;
+  total_checks: number;
+  checks: CertificationCheck[];
+  recommendations: string[];
+  certification_level: CertificationLevel;
+}
+
+/**
+ * Certification overview statistics
+ */
+export interface CertificationOverview {
+  enterprise_count: number;
+  standard_count: number;
+  basic_count: number;
+  uncertified_count: number;
+  expiring_soon_count: number;
+  expired_count: number;
+}

@@ -19,6 +19,10 @@ import {
   Wrench,
   Database,
   Layers,
+  Award,
+  Package,
+  ShieldCheck,
+  FileCheck,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -95,6 +99,36 @@ const navItems: NavItem[] = [
     label: 'Memory',
     icon: <Database className="w-4 h-4" />,
     testId: 'admin-nav-memory',
+  },
+  {
+    href: '/admin/explainability',
+    label: 'Explainability',
+    icon: <FileText className="w-4 h-4" />,
+    testId: 'admin-nav-explainability',
+  },
+  {
+    href: '/admin/certification',
+    label: 'Certification',
+    icon: <Award className="w-4 h-4" />,
+    testId: 'admin-nav-certification',
+  },
+  {
+    href: '/admin/skills/registry',
+    label: 'Skills',
+    icon: <Package className="w-4 h-4" />,
+    testId: 'admin-nav-skills',
+  },
+  {
+    href: '/admin/gdpr',
+    label: 'GDPR',
+    icon: <ShieldCheck className="w-4 h-4" />,
+    testId: 'admin-nav-gdpr',
+  },
+  {
+    href: '/admin/audit',
+    label: 'Audit',
+    icon: <FileCheck className="w-4 h-4" />,
+    testId: 'admin-nav-audit',
   },
 ];
 

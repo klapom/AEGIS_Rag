@@ -21,6 +21,12 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.16",
+    "@types/d3": "^7.4.3",
+    "@types/d3-hierarchy": "^3.1.7",
+    "d3": "^7.9.0",
+    "d3-hierarchy": "^3.1.2",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
     "lucide-react": "^0.554.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

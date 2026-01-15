@@ -921,3 +921,282 @@ export async function exportMemory(sessionId: string): Promise<void> {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+// ============================================================================
+// Sprint 98 Feature 98.5: Explainability Dashboard API
+// ============================================================================
+
+/**
+ * Get decision trace by trace ID
+ * Sprint 98 Feature 98.5: Explainability Dashboard
+ *
+ * @param traceId The trace ID to retrieve
+ * @returns DecisionTrace with full trace details
+ */
+export async function getDecisionTrace(
+  traceId: string
+): Promise<import('../types/admin').DecisionTrace> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/explainability/trace/${encodeURIComponent(traceId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get recent decision traces for a user
+ * Sprint 98 Feature 98.5: Explainability Dashboard
+ *
+ * @param userId Optional user ID to filter traces
+ * @param limit Maximum number of traces to return (default: 10)
+ * @returns Array of recent traces
+ */
+export async function getRecentTraces(
+  userId?: string,
+  limit: number = 10
+): Promise<import('../types/admin').TraceListItem[]> {
+  const params = new URLSearchParams();
+  if (userId) params.append('userId', userId);
+  params.append('limit', String(limit));
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/explainability/recent?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get explanation for a trace at specified level
+ * Sprint 98 Feature 98.5: Explainability Dashboard
+ *
+ * @param traceId The trace ID to explain
+ * @param level Explanation level: 'user', 'expert', or 'audit'
+ * @returns Explanation object (UserExplanation, ExpertExplanation, or AuditExplanation)
+ */
+export async function getExplanation(
+  traceId: string,
+  level: import('../types/admin').ExplanationLevel
+): Promise<
+  | import('../types/admin').UserExplanation
+  | import('../types/admin').ExpertExplanation
+  | import('../types/admin').AuditExplanation
+> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/explainability/explain/${encodeURIComponent(traceId)}?level=${level}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get source attribution for a trace
+ * Sprint 98 Feature 98.5: Explainability Dashboard
+ *
+ * @param traceId The trace ID to get sources for
+ * @param claim Optional specific claim to find sources for
+ * @returns Array of source documents
+ */
+export async function getSourceAttribution(
+  traceId: string,
+  claim?: string
+): Promise<import('../types/admin').SourceDocument[]> {
+  const params = new URLSearchParams();
+  if (claim) params.append('claim', claim);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/explainability/attribution/${encodeURIComponent(traceId)}?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// ============================================================================
+// Sprint 98 Feature 98.6: Certification Status Dashboard API
+// ============================================================================
+
+/**
+ * Get all skill certifications with optional filtering
+ * Sprint 98 Feature 98.6: Certification Status Dashboard
+ *
+ * @param level Optional certification level to filter by
+ * @param status Optional certification status to filter by
+ * @returns Array of skill certifications
+ */
+export async function getSkillCertifications(
+  level?: import('../types/admin').CertificationLevel,
+  status?: import('../types/admin').CertificationStatus
+): Promise<import('../types/admin').SkillCertification[]> {
+  const params = new URLSearchParams();
+  if (level) params.append('level', level);
+  if (status) params.append('status', status);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/certification/skills?${params.toString()}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get validation report for a specific skill
+ * Sprint 98 Feature 98.6: Certification Status Dashboard
+ *
+ * @param skillName The name of the skill
+ * @returns Validation report with checks and recommendations
+ */
+export async function getSkillValidationReport(
+  skillName: string
+): Promise<import('../types/admin').ValidationReport> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/certification/skill/${encodeURIComponent(skillName)}/report`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Trigger validation for a specific skill
+ * Sprint 98 Feature 98.6: Certification Status Dashboard
+ *
+ * @param skillName The name of the skill to validate
+ * @returns Updated validation report
+ */
+export async function validateSkill(
+  skillName: string
+): Promise<import('../types/admin').ValidationReport> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/certification/skill/${encodeURIComponent(skillName)}/validate`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get skills with expiring certifications
+ * Sprint 98 Feature 98.6: Certification Status Dashboard
+ *
+ * @param days Number of days threshold (default: 30)
+ * @returns Array of skills with expiring certifications
+ */
+export async function getExpiringCertifications(
+  days: number = 30
+): Promise<import('../types/admin').SkillCertification[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/certification/expiring?days=${days}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get certification overview statistics
+ * Sprint 98 Feature 98.6: Certification Status Dashboard
+ *
+ * @returns Certification overview with counts by level
+ */
+export async function getCertificationOverview(): Promise<
+  import('../types/admin').CertificationOverview
+> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/certification/overview`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP ${response.status}: ${errorText}`);
+  }
+
+  return response.json();
+}

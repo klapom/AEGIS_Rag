@@ -34,6 +34,8 @@ from src.api.v1.admin_tools import router as admin_tools_router  # Sprint 70 Fea
 from src.api.v1.admin_chunking import router as admin_chunking_router  # TD-096: Chunking UI
 from src.api.v1.admin_generation import router as admin_generation_router  # TD-097: Generation UI
 from src.api.v1.analytics import router as analytics_router  # Sprint 62 Feature 62.9
+from src.api.v1.gdpr import router as gdpr_router  # Sprint 99 Feature 99.3
+from src.api.v1.audit import router as audit_router  # Sprint 99 Feature 99.4
 from src.api.v1.annotations import router as annotations_router  # Feature 21.6
 from src.api.v1.auth import router as auth_router  # Sprint 22 Feature 22.2.4
 from src.api.v1.chat import router as chat_router
@@ -46,6 +48,9 @@ from src.api.v1.mcp import router as mcp_router  # Sprint 40 Feature 40.2: MCP T
 from src.api.v1.memory import router as memory_router
 from src.api.v1.research import router as research_router  # Sprint 62 Feature 62.10
 from src.api.v1.retrieval import router as retrieval_router
+from src.api.v1.skills import router as skills_router  # Sprint 99 Feature 99.1: Skill Management APIs
+from src.api.v1.agents import router as agents_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 1)
+from src.api.v1.orchestration import router as orchestration_router  # Sprint 99 Feature 99.2: Agent Monitoring APIs (Part 2)
 from src.core.config import get_settings
 from src.core.exceptions import AegisRAGException
 from src.core.logging import get_logger, setup_logging
@@ -488,6 +493,32 @@ logger.info(
     note="Sprint 40: MCP tool discovery and execution",
 )
 
+# Skills Management API router (Sprint 99: Feature 99.1 - Skill Management APIs)
+app.include_router(skills_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="skills_router",
+    prefix="/api/v1/skills",
+    note="Sprint 99: Skill Management APIs (9 endpoints for Sprint 90-92 backend)",
+)
+
+# Agent Monitoring API router (Sprint 99: Feature 99.2 - Agent Monitoring APIs)
+app.include_router(agents_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="agents_router",
+    prefix="/api/v1/agents",
+    note="Sprint 99: Agent Monitoring APIs Part 1 (WebSocket, Blackboard, Hierarchy, Details)",
+)
+
+app.include_router(orchestration_router, prefix="/api/v1")
+logger.info(
+    "router_registered",
+    router="orchestration_router",
+    prefix="/api/v1/orchestration",
+    note="Sprint 99: Agent Monitoring APIs Part 2 (Active, Trace, Metrics)",
+)
+
 # Domain Training API router (Sprint 45: Feature 45.3 - Domain Training API)
 app.include_router(domain_training_router)
 logger.info(
@@ -512,6 +543,24 @@ app.include_router(graph_analytics.router, prefix="/api/v1", tags=["analytics"])
 
 # Enhanced graph visualization router (Sprint 12: Feature 12.8)
 app.include_router(graph_viz.router)
+
+# GDPR & Audit Trail API routers (Sprint 99: Features 99.3 & 99.4)
+# Sprint 101 Fix: Uncommented routers - all endpoints already have Request parameter
+app.include_router(gdpr_router)
+logger.info(
+    "router_registered",
+    router="gdpr_router",
+    prefix="/api/v1/gdpr",
+    note="Sprint 99 Feature 99.3: GDPR compliance (Articles 6,7,13-22,30)",
+)
+
+app.include_router(audit_router)
+logger.info(
+    "router_registered",
+    router="audit_router",
+    prefix="/api/v1/audit",
+    note="Sprint 99 Feature 99.4: Audit trail with SHA-256 chain (EU AI Act Art. 12)",
+)
 
 # Prometheus metrics endpoint
 metrics_app = make_asgi_app()
