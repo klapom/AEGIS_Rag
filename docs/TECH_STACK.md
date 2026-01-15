@@ -160,7 +160,7 @@ pip install --break-system-packages <package>
 
 | Priority | Provider | Models | Cost | Use Case |
 |----------|----------|--------|------|----------|
-| **1** | **Ollama (DGX Spark)** | llama3.2, gemma-3, BGE-M3 | $0 | Primary (Dev + Prod) |
+| **1** | **Ollama (DGX Spark)** | nemotron-nano  gpt-oss:20 | $0 | Primary (Dev + Prod) |
 | **2** | **Alibaba Cloud DashScope** | qwen-turbo/plus/max, qwen3-vl | $0-120/mo | Cloud Fallback |
 | **3** | **OpenAI** | gpt-4o, gpt-4o-mini | Optional | Optional Fallback |
 
@@ -168,16 +168,15 @@ pip install --break-system-packages <package>
 
 | Task | Model | Provider | Size | Purpose |
 |------|-------|----------|------|---------|
-| **Query Understanding** | llama3.2:3b | Ollama | 2GB | Fast intent classification |
-| **Answer Generation** | llama3.2:8b | Ollama | 4.7GB | Quality responses |
+| **Query Understanding** | nemotron-nano | Ollama | 2,5GB | Fast intent classification |
+| **Answer Generation** | nemotron-nano | Ollama | 2,5GB | Quality responses |
 | **Entity Extraction (Rank 1)** | Nemotron3 Nano 30/3a | Ollama | 2.5GB | Primary ER-Extraction (Sprint 83) |
 | **Entity Extraction (Rank 2)** | gpt-oss:20b | Ollama | 12GB | Fallback ER-Extraction (Sprint 83) |
 | **Entity Extraction (Rank 3)** | SpaCy NER + gpt-oss:20b | SpaCy + Ollama | - | Hybrid NER (DE/EN/FR/ES) + LLM relations (Sprint 83) |
-| **Complex Reasoning** | qwen2.5:7b | Ollama | 4.7GB | Multi-hop queries |
-| **Embeddings** | BGE-M3 (1024-dim) | Ollama | 2.3GB | Universal semantic embeddings |
-| **Reranking** | bge-reranker-v2-m3 | Ollama | - | Cross-encoder reranking |
+| **Complex Reasoning** | 2,5 | Ollama | 4.7GB | Multi-hop queries |
+| **Embeddings** | BGE-M3 (1024-dim) | flag-embedding | 2.3GB | Universal semantic embeddings |
+| **Reranking** | bge-reranker-v2-m3 | flag-embedding | - | Cross-encoder reranking |
 | **VLM (Images)** | qwen3-vl-30b-a3b | DashScope | - | Image descriptions (cloud) |
-| **VLM (Local Alt)** | llava:7b-v1.6-mistral-q2_K | Ollama | 4.7GB | Local image descriptions |
 
 **Total Model Storage:** ~23GB (all Ollama models)
 **Typical VRAM Usage:** 8-12GB (2-3 models loaded simultaneously)
