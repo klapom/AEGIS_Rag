@@ -1,3 +1,16 @@
+# ARCHIVED (Sprint 62) - Section-Based Community Detection Cypher Queries
+
+**Status:** 📦 Archived  
+**Original Sprint:** Sprint 62 Feature 62.8  
+**Archive Date:** 2026-01-15  
+**Reason:** Implementation updated in Sprint 77 (Community Summarization Batch Job)
+
+**Current Implementation:** See Sprint 77 batch processing in `src/domains/knowledge_graph/community_summary/`
+
+**Note:** These Cypher queries are still valid but the architecture has evolved. The section-based community detection was enhanced in Sprint 77 with batch processing, improved algorithms, and performance optimizations.
+
+---
+
 # Section-Based Community Detection - Cypher Queries
 
 **Sprint 62 Feature 62.8: Section-Based Community Detection**
