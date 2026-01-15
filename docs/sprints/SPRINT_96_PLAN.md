@@ -2,11 +2,60 @@
 
 **Epic:** AegisRAG Agentic Framework Transformation
 **Phase:** 7 of 7 (Governance)
-**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md)
+**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md), [ADR-055](../adr/ADR-055-langgraph-1.0-migration.md)
 **Prerequisite:** Sprint 95 (Hierarchical Agents)
 **Duration:** 14-18 days
 **Total Story Points:** 32 SP
 **Status:** 📝 Planned
+
+---
+
+## LangGraph 1.0 Pattern Adoptions (ADR-055)
+
+Sprint 96 leverages **LangGraph 1.0** governance features:
+
+| Pattern | Feature | Implementation |
+|---------|---------|----------------|
+| **Human-in-the-Loop** | 96.1 GDPR Compliance | First-class approval workflows for data operations |
+| **output_mode="full_history"** | 96.2 Audit Trail | Preserve complete conversation history |
+| **Durable Execution** | 96.2 Audit Trail | State persistence for audit recovery |
+| **LangSmith Traces** | 96.3 Explainability | Production observability for decision transparency |
+
+### Key Code Patterns
+
+```python
+# Human-in-the-Loop for GDPR Consent (Feature 96.1)
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import create_react_agent
+
+# Agent with human approval checkpoints
+gdpr_agent = create_react_agent(
+    model=llm,
+    tools=[data_access_tool, data_deletion_tool],
+    checkpointer=MemorySaver(),  # Enables pause/resume for approval
+    state_modifier="Before any data operation, request explicit user consent."
+)
+
+# Full History for Audit Trail (Feature 96.2)
+# When creating supervisors, use output_mode="full_history"
+# This preserves all messages for audit compliance
+supervisor = create_react_agent(
+    model=llm,
+    tools=[...],
+    # Note: Implemented via state management, not direct parameter
+)
+
+# LangSmith Traces for Explainability (Feature 96.3)
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "aegis-rag-audit"
+# All agent decisions automatically traced for compliance review
+```
+
+**Key LangGraph 1.0 Features for EU AI Act:**
+- **Durable Execution:** Recover agent state for audit investigations
+- **Human-in-the-Loop:** Required for high-risk AI decisions
+- **Full Tracing:** Complete decision lineage for transparency
 
 ---
 

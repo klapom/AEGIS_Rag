@@ -2,11 +2,53 @@
 
 **Epic:** AegisRAG Agentic Framework Transformation
 **Phase:** 4 of 7 (Tools)
-**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md)
-**Prerequisite:** Sprint 92 (Context Processing & Skill Lifecycle)
+**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md), [ADR-055](../adr/ADR-055-langgraph-1.0-migration.md)
+**Prerequisite:** Sprint 92 (Context Processing & Skill Lifecycle) ✅ COMPLETE
 **Duration:** 14-18 days
 **Total Story Points:** 34 SP
-**Status:** 📝 Planned
+**Status:** 🚀 Ready to Start
+
+---
+
+## LangGraph 1.0 Pattern Adoptions (ADR-055)
+
+Sprint 93 leverages **LangGraph 1.0** features (upgraded 2026-01-15):
+
+| Pattern | Feature | Implementation |
+|---------|---------|----------------|
+| **ToolNode** | 93.1 Tool Composition | `ToolNode(tools=[...], handle_tool_errors=True)` |
+| **InjectedState** | 93.3 Skill-Tool Mapping | State injection for skill context in tools |
+| **Error Recovery** | 93.4 Policy Guardrails | Built-in retry with `handle_tool_errors` |
+| **Durable Execution** | All Features | State persistence for long-running chains |
+
+### Key Code Patterns
+
+```python
+# LangGraph 1.0 ToolNode with Error Recovery (Feature 93.1)
+from langgraph.prebuilt import ToolNode, InjectedState
+from typing import Annotated
+
+# Create ToolNode with automatic error handling
+tool_node = ToolNode(
+    tools=[browser_tool, file_tool, api_tool],
+    handle_tool_errors=True  # ← Auto retry on failure
+)
+
+# InjectedState for Skill Context (Feature 93.3)
+@tool
+def skill_aware_tool(
+    query: str,
+    state: Annotated[dict, InjectedState]
+) -> str:
+    """Tool with access to full graph state including skill context."""
+    active_skill = state.get("active_skill")
+    skill_permissions = state.get("skill_permissions", [])
+    # ... tool logic with skill awareness
+```
+
+**References:**
+- [LangGraph ToolNode Docs](https://langchain-ai.github.io/langgraph/reference/prebuilt/)
+- [LangGraph 1.0 Release Notes](https://changelog.langchain.com/announcements/langgraph-1-0-is-now-generally-available)
 
 ---
 

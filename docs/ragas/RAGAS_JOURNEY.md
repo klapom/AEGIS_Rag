@@ -1,8 +1,57 @@
 # RAGAS Journey - Continuous RAG Metrics Optimization
 
 **Status:** 🔄 Active Development
-**Sprint:** 79+ (Current: Sprint 92)
+**Sprint:** 79+ (Current: Sprint 93)
 **Goal:** Achieve SOTA-level RAGAS metrics (F ≥ 0.90, AR ≥ 0.95, CP ≥ 0.85, CR ≥ 0.75)
+
+---
+
+## Sprint 93: LangGraph 1.0 Migration & Ingestion Pause (2026-01-15)
+
+### LangGraph 1.0 Upgrade
+
+Successfully migrated to LangGraph 1.0.6 (from 0.6.11) for Sprint 93-96 Agentic Framework:
+
+| Package | Before | After |
+|---------|--------|-------|
+| `langgraph` | 0.6.11 | 1.0.6 |
+| `langgraph-prebuilt` | 0.6.5 | 1.0.6 |
+| `langgraph-sdk` | 0.2.14 | 0.3.3 |
+
+**Key Features Enabled:**
+- Durable Execution (agent state persistence)
+- Built-in Memory (short-term + long-term)
+- Human-in-the-Loop APIs (Sprint 96 compliance)
+
+**ADR:** [ADR-055: LangGraph 1.0 Migration](../adr/ADR-055-langgraph-1.0-migration.md)
+
+### Ingestion Status (Paused for Development)
+
+**Phase 1 Progress (paused 2026-01-15):**
+
+| Metric | Value |
+|--------|-------|
+| Documents Processed | 293/500 (58.6%) |
+| Successful | 245 (99.2%) |
+| Failed (Timeout) | 2 (0.8%) |
+| Namespace | `ragas_phase1_sprint88` |
+
+**Ingestion will resume after Sprint 93 development completion.**
+
+### RAGAS Baseline Evaluation (Sprint 92)
+
+Evaluated on available 245 documents with RAGAS 0.4.2:
+
+| Metric | Result | Target | Status |
+|--------|--------|--------|--------|
+| **Context Precision** | 86.2% | ≥85% | ✅ Achieved |
+| **Context Recall** | 77.5% | ≥75% | ✅ Achieved |
+| **Faithfulness** | 73.7% | ≥90% | ⚠️ Gap: -16.3% |
+| **Answer Relevancy** | 78.9% | ≥95% | ⚠️ Gap: -16.1% |
+
+**Improvement Priorities (Sprint 100):**
+1. Faithfulness: +16% via cite-sources prompt engineering
+2. Answer Relevancy: +16% via query-focused generation
 
 ---
 

@@ -2,11 +2,60 @@
 
 **Epic:** AegisRAG Agentic Framework Transformation
 **Phase:** 6 of 7 (Hierarchy)
-**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md)
+**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md), [ADR-055](../adr/ADR-055-langgraph-1.0-migration.md)
 **Prerequisite:** Sprint 94 (Multi-Agent Communication)
 **Duration:** 14-18 days
 **Total Story Points:** 30 SP
 **Status:** 📝 Planned
+
+---
+
+## LangGraph 1.0 Pattern Adoptions (ADR-055)
+
+Sprint 95 leverages **LangGraph 1.0** hierarchical patterns:
+
+| Pattern | Feature | Implementation |
+|---------|---------|----------------|
+| **Multi-Level Supervisors** | 95.1 Hierarchical Agent | Supervisors managing sub-supervisors (Executive→Manager→Worker) |
+| **Subgraph Composition** | 95.2 Skill Libraries | Skills as reusable subgraphs |
+| **LangSmith Integration** | 95.4 Procedural Memory | Trajectory learning from execution traces |
+
+### Key Code Patterns
+
+```python
+# Hierarchical Agent Pattern (Feature 95.1) - Based on LangGraph Tutorial
+from langgraph.prebuilt import create_react_agent
+
+# Worker Agents (leaf nodes)
+retrieval_worker = create_react_agent(
+    model=llm,
+    tools=[vector_search, bm25_search],
+    name="retrieval_worker"
+)
+
+synthesis_worker = create_react_agent(
+    model=llm,
+    tools=[summarize_tool],
+    name="synthesis_worker"
+)
+
+# Manager Supervisor (mid-level) - manages workers
+research_manager = create_react_agent(
+    model=llm,
+    tools=[handoff_to_retrieval, handoff_to_synthesis],
+    name="research_manager"
+)
+
+# Executive Supervisor (top-level) - manages managers
+executive = create_react_agent(
+    model=llm,
+    tools=[handoff_to_research_manager, handoff_to_analysis_manager],
+    state_modifier="Strategic decision making and delegation.",
+    name="executive"
+)
+```
+
+**Reference:** [Hierarchical Agent Teams Tutorial](https://langchain-ai.github.io/langgraph/tutorials/multi_agent/hierarchical_agent_teams/)
 
 ---
 

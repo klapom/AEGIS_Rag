@@ -2,11 +2,52 @@
 
 **Epic:** AegisRAG Agentic Framework Transformation
 **Phase:** 5 of 7 (Communication)
-**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md)
+**ADR Reference:** [ADR-049](../adr/ADR-049-agentic-framework-architecture.md), [ADR-055](../adr/ADR-055-langgraph-1.0-migration.md)
 **Prerequisite:** Sprint 93 (Tool Composition & Skill-Tool Mapping)
 **Duration:** 14-18 days
 **Total Story Points:** 32 SP
 **Status:** 📝 Planned
+
+---
+
+## LangGraph 1.0 Pattern Adoptions (ADR-055)
+
+Sprint 94 leverages **LangGraph 1.0** communication patterns:
+
+| Pattern | Feature | Implementation |
+|---------|---------|----------------|
+| **create_handoff_tool()** | 94.1 Agent Messaging | Tool-based handoff (recommended over langgraph-supervisor) |
+| **add_handoff_messages** | 94.1 Agent Messaging | Preserve conversation in handoffs |
+| **Redis Checkpointer** | 94.2 Shared Memory | LangGraph + Redis for persistent shared state |
+| **Multi-Level Supervisor** | 94.3 Skill Orchestrator | Supervisors managing sub-supervisors |
+
+### Key Code Patterns
+
+```python
+# Tool-based Handoff (Feature 94.1) - Recommended over langgraph-supervisor library
+from langchain_core.tools import tool
+
+@tool
+def handoff_to_retrieval(query: str) -> str:
+    """Hand off to retrieval agent for document search."""
+    return retrieval_agent.invoke({"query": query})
+
+@tool
+def handoff_to_synthesis(chunks: list) -> str:
+    """Hand off to synthesis agent for summarization."""
+    return synthesis_agent.invoke({"chunks": chunks})
+
+# Multi-Level Supervisor (Feature 94.3)
+from langgraph.prebuilt import create_react_agent
+
+research_supervisor = create_react_agent(
+    model=llm,
+    tools=[handoff_to_retrieval, handoff_to_synthesis],
+    state_modifier="Coordinate research tasks between agents."
+)
+```
+
+**Note:** LangChain recommends tool-based supervisor pattern over `langgraph-supervisor` library for better control.
 
 ---
 
