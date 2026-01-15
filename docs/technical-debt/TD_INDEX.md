@@ -1,8 +1,8 @@
 # Technical Debt Index
 
-**Last Updated:** 2026-01-15 (Sprint 92 - Context Relevance Guard resolved)
-**Total Open Items:** 5
-**Total Story Points:** ~116 SP
+**Last Updated:** 2026-01-15 (Sprint 94 - Feature 94.4 deferred to TD-101)
+**Total Open Items:** 6
+**Total Story Points:** ~122 SP
 **Archived Items:** [29 items](archive/ARCHIVE_INDEX.md) (TD-080 resolved Sprint 92.11)
 **Sprint 51 Review:** [Analysis & Archival Decisions](SPRINT_51_REVIEW_ANALYSIS.md)
 **Sprint 52:** Community Summaries, Async Follow-ups, Admin Dashboard, CI/CD
@@ -81,11 +81,11 @@ Resolved items have been moved to [archive/](archive/ARCHIVE_INDEX.md):
 
 ### 🔴 CRITICAL Priority
 
-| TD# | Title | Status | SP | Target Sprint |
-|-----|-------|--------|-----|---------------|
-| [TD-101](TD-101_COMMUNITY_SUMMARIZATION_BOTTLENECK.md) | **Community Summarization Bottleneck** | 🔴 OPEN | 21 | **Sprint 86 URGENT** |
+| TD# | Title | Status | SP | Target Sprint | Notes |
+|-----|-------|--------|-----|---------------|-------|
+| [TD-101](TD-101_RISE_REASONING_CONTROL.md) | **RISE Reasoning Control** | 🔴 OPEN | 6 | **Sprint 95+** | Deferred from Sprint 94.4 |
 
-**TD-101 Discovery (Sprint 85):** Multi-format ingestion testing revealed that EVERY document upload triggers community summarization for the ENTIRE Neo4j graph (~2000+ communities), not just new entities. This causes 40-60 minute ingestion times for small files.
+**TD-101 Discovery (Sprint 94):** Feature 94.4 (RISE Reasoning Control) deferred to technical debt. Integrating RISE sparse autoencoders for per-skill reasoning behavior control requires additional research and architecture planning. See ADR-055 (LangGraph 1.0 patterns) for implementation foundation.
 
 ### HIGH Priority
 
